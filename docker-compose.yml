@@ -1,0 +1,66 @@
+services:
+  frontend:
+    image: node:20-alpine
+    container_name: myapp_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev"
+    stdin_open: true
+    tty: true
+
+  nginx:
+    image: nginx:alpine
+    container_name: myapp_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - backend
+    profiles:
+      - production
+
+  backend:
+    build: ./backend
+    container_name: myapp_backend
+    working_dir: /app
+    volumes:
+      # Sync local code to container (live reload for development)
+      - ./backend:/app
+      # Persist node_modules in named volume (survives docker-compose down)
+      - backend_node_modules:/app/node_modules
+    ports:
+      - "5001:5001"
+      - "9229:9229"  # Debug port
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    depends_on:
+      - db
+    command: sh -c "npm install && npm run dev"
+
+  db:
+    image: postgres:15-alpine
+    container_name: myapp_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist PostgreSQL data (survives docker-compose down)
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  # Named volumes persist data across container restarts/rebuilds
+  db_data:  # PostgreSQL database files
+  backend_node_modules:  # Node.js dependencies
+  frontend_node_modules:  # Frontend dependencies
