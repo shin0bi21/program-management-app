@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useNavigate } from 'react-router-dom';
 import { isTokenExpired } from '../utils/jwt';
 import { clearAuthData, getToken } from '../utils/storage';
+import { api } from '../api/config';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -49,11 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   };
 
-  const logout = () => {
+  const logout = async () => {
     // Call backend to clear cookie
-    fetch('http://localhost:5001/api/auth/logout', {
+    await fetch(api('/auth/logout'), {
       method: 'POST',
-      credentials: 'include'
+      credentials: 'include',
     }).catch(() => {});
     
     clearAuthData();

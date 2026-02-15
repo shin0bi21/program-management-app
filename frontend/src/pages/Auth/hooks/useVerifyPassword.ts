@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { verifyPassword, resendVerificationCode } from '../api/auth.api';
+import { verify2FA, resend2FA } from '../api/auth.api';
 import { useAuth } from '../../../common/context/AuthContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../common/utils/deviceFingerprint';
 import { getErrorMessage } from '../../../common/utils/errors';
@@ -70,10 +70,10 @@ export const useVerifyPassword = () => {
       const deviceFingerprint = data.trustDevice ? getDeviceFingerprint() : undefined;
       const deviceName = data.trustDevice ? getDeviceName() : undefined;
 
-      const response = await verifyPassword(
+      const response = await verify2FA(
         userId,
         data.code,
-        data.trustDevice,
+        data.trustDevice ?? false,
         deviceFingerprint,
         deviceName
       );
@@ -99,7 +99,7 @@ export const useVerifyPassword = () => {
     setMessage('');
 
     try {
-      await resendVerificationCode(userId);
+      await resend2FA(userId);
       setMessage('New verification code sent to your email');
       setResendCooldown(60); // 60 second cooldown
       setTimeRemaining(300); // Reset to 5 minutes

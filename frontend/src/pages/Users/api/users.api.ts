@@ -1,15 +1,14 @@
-const API_BASE = 'http://localhost:5001/api';
+import { api } from '../../../common/api/config';
+import { handleApiError } from '../../../common/utils/errors';
 
-export async function fetchAllUsers(token: string | null) {
-  const response = await fetch(`${API_BASE}/users/all`, {
+export async function getUsers(token: string | null) {
+  const res = await fetch(api('/users/all'), {
+    credentials: 'include',
     headers: {
       Authorization: `Bearer ${token ?? ''}`,
     },
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch users');
-  }
-
-  return response.json();
+  await handleApiError(res);
+  return res.json();
 }

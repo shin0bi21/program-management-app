@@ -39,7 +39,6 @@ export interface AuthCodes {
 export interface BaseTable {
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  id: Generated<string>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }

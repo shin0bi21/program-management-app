@@ -550,7 +550,7 @@ export const verify2FA = async (req: Request, res: Response) => {
   }
 };
 
-export const resend2FACode = async (req: Request, res: Response) => {
+export const resend2FA = async (req: Request, res: Response) => {
   const { userId } = req.body;
 
   try {

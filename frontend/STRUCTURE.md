@@ -7,13 +7,43 @@ This project uses page-scoped organization with a small `common/` area for share
 - Promote shared code only when reused by 2+ pages.
 - Make imports predictable and reduce cross-folder hopping.
 
+## Data Flow
+
+Every request follows the same path through the stack:
+
+```
+Component (.tsx)  →  Hook (useX.ts)  →  API (.api.ts)  →  Backend Route  →  Controller  →  DB
+     UI only         form state,         fetch() call       middleware        business       SQL
+                     submit logic        + error check      chain             logic          queries
+```
+
+### Example: Login
+
+1. **Login.tsx** — renders the form, delegates to `useLogin()` hook
+2. **useLogin.ts** — React Hook Form + Zod validates fields, calls `login()` from auth.api.ts on submit
+3. **auth.api.ts** — `fetch(api('/auth/login'), { ... })` sends JSON to backend
+4. **authRoutes.ts** — `POST /api/auth/login` → rate limiter → Zod body validation → controller
+5. **authController.ts** — queries DB for user, bcrypt compares password, generates 2FA code or JWT
+6. **client.ts** — `sql` tagged template executes parameterized queries against PostgreSQL
+
+Response flows back: DB → controller JSON response → fetch resolves → hook stores token → component re-renders.
+
+### Shared utilities
+
+- **`common/api/config.ts`** — `api()` helper prefixes base URL so fetch calls use short routes like `api('/auth/login')`
+- **`common/utils/errors.ts`** — `handleApiError()` checks `res.ok` and throws, `getErrorMessage()` extracts messages in catch blocks
+- **`common/context/AuthContext.tsx`** — global `isAuthenticated` state, used by Header, ProtectedRoute, and auth hooks
+
 ## Layout
 ```
 src/
   App.tsx
   main.tsx
   index.css
+  vite-env.d.ts
   common/
+    api/
+      config.ts
     components/
       Header/
       ProtectedRoute/
@@ -38,9 +68,9 @@ src/
       Login/
         Login.tsx
         Login.css
-      Verify2FA/
-        Verify2FA.tsx
-        Verify2FA.css
+      VerifyPassword/
+        VerifyPassword.tsx
+        VerifyPassword.css
       ForgotPassword/
         ForgotPassword.tsx
         ForgotPassword.css
@@ -52,7 +82,7 @@ src/
         tokenRefresh.ts
       hooks/
         useLogin.ts
-        useVerify2FA.ts
+        useVerifyPassword.ts
         useForgotPassword.ts
         useResetPassword.ts
       validation/
@@ -64,6 +94,8 @@ src/
 - Shared utilities live in `common/utils`.
 - Shared UI components live in `common/components`.
 - Shared app state lives in `common/context`.
+- API config lives in `common/api`.
+- `common/` never imports from `pages/`. Dependencies flow one way: `pages/ → common/`.
 
 ## Promotion Criteria
 Move code to `common/` when:
