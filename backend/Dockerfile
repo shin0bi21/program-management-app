@@ -9,7 +9,7 @@ WORKDIR /app
 # This keeps the image lightweight for development
 
 # Expose port for API
-EXPOSE 3000
+EXPOSE 5001
 
 # Keep container running for exec commands (migrations, npm scripts)
 CMD ["tail", "-f", "/dev/null"]

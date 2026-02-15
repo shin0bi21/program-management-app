@@ -1,4 +1,14 @@
 /**
+ * Throw if response is not ok, parsing the error message from JSON body
+ */
+export async function handleApiError(res: Response) {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || err.message || 'Request failed');
+  }
+}
+
+/**
  * Extract error message from unknown error type
  */
 export const getErrorMessage = (err: unknown, fallback = 'An error occurred'): string => {

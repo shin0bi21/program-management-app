@@ -1,11 +1,10 @@
 import { getTimeUntilExpiry } from '../../../common/utils/jwt';
 import { clearAuthData, getToken, getUser, setAuthData } from '../../../common/utils/storage';
-
-const API_BASE = 'http://localhost:5001/api';
+import { api } from '../../../common/api/config';
 
 let refreshPromise: Promise<string> | null = null;
 
-export async function refreshAccessToken(): Promise<string> {
+export async function refreshToken(): Promise<string> {
   // Prevent multiple simultaneous refresh requests
   if (refreshPromise) {
     return refreshPromise;
@@ -13,16 +12,15 @@ export async function refreshAccessToken(): Promise<string> {
 
   refreshPromise = (async () => {
     try {
-      const response = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetch(api('/auth/refresh'), {
         method: 'POST',
-        credentials: 'include', // Send httpOnly cookie
+        credentials: 'include',
       });
 
-      if (!response.ok) {
-        throw new Error('Refresh failed');
-      }
+      if (!res.ok) throw new Error('Token refresh failed');
 
-      const data = await response.json();
+      const data = await res.json();
+
       const existingUser = getUser();
       if (existingUser) {
         setAuthData(data.token, existingUser);
@@ -57,7 +55,7 @@ export function startTokenRefreshTimer() {
       // Refresh if token expires in less than 2 minutes
       if (timeUntilExpiry < 2 * 60 * 1000 && timeUntilExpiry > 0) {
         console.log('Auto-refreshing token...');
-        await refreshAccessToken();
+        await refreshToken();
       }
     } catch (error) {
       // Invalid token format, ignore

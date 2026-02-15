@@ -53,20 +53,21 @@ CREATE TYPE contact_type AS ENUM ('parent', 'sibling', 'guardian', 'emergency');
 -- BASE TABLE PATTERN
 -- ============================================================================
 
--- Base table with common columns (not for data storage, template only)
+-- Base table with audit columns only (not for data storage, template only)
+-- ID should ALWAYS be defined first in each table, then custom columns, then LIKE base_table for audit columns
 CREATE TABLE IF NOT EXISTS base_table (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_by UUID,
   updated_by UUID
 );
 
--- Note: Use "LIKE base_table INCLUDING ALL" when creating new tables
+-- Note: Always structure tables with ID FIRST, custom columns, then audit columns via LIKE
 -- Example:
 --   CREATE TABLE new_table (
---     LIKE base_table INCLUDING ALL,
---     custom_column VARCHAR(255)
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     custom_column VARCHAR(255),
+--     LIKE base_table INCLUDING ALL
 --   );
 
 -- ============================================================================
@@ -75,12 +76,14 @@ CREATE TABLE IF NOT EXISTS base_table (
 
 -- 1. User Groups (kept as table since groups can be dynamic)
 CREATE TABLE IF NOT EXISTS user_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(50) NOT NULL UNIQUE,
   LIKE base_table INCLUDING ALL
 );
 
 -- 2. Users Table (Profile Data Only)
 CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   permission permission_level NOT NULL DEFAULT 'youth',
   group_id UUID,
   first_name VARCHAR(120) NOT NULL,
@@ -97,6 +100,7 @@ CREATE INDEX idx_users_group_id ON users(group_id);
 
 -- 3. User Credentials Table (Authentication Data)
 CREATE TABLE IF NOT EXISTS user_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
@@ -116,6 +120,7 @@ CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 
 -- 4. Youth Profiles Table (Youth-Specific Data)
 CREATE TABLE IF NOT EXISTS youth_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE,
   date_of_birth DATE,
   school_name VARCHAR(255),
@@ -220,6 +225,7 @@ CREATE INDEX idx_token_blacklist_expires ON token_blacklist(expires_at);
 
 -- 6. Contacts (using contact_type enum)
 CREATE TABLE IF NOT EXISTS contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   first_name VARCHAR(120) NOT NULL,
   last_name VARCHAR(120) NOT NULL,
   phone_number VARCHAR(50),
@@ -254,6 +260,7 @@ CREATE TABLE IF NOT EXISTS user_has_contacts (
 
 -- 8. Youth Worksheets (File uploads and assignments)
 CREATE TABLE IF NOT EXISTS youth_worksheets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   youth_id UUID NOT NULL,
   title VARCHAR(255) NOT NULL,
   file_data BYTEA,

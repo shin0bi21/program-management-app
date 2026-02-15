@@ -1,105 +1,87 @@
-const API_BASE = 'http://localhost:5001/api';
-
-const parseErrorMessage = async (res: Response) => {
-  try {
-    const data = await res.json();
-    return data?.error || data?.message;
-  } catch {
-    return null;
-  }
-};
-
-const handleResponse = async (res: Response) => {
-  if (!res.ok) {
-    const message = await parseErrorMessage(res);
-    throw new Error(message || 'Request failed');
-  }
-  return res.json();
-};
+import { api } from '../../../common/api/config';
+import { handleApiError } from '../../../common/utils/errors';
 
 export async function login(
   email: string,
   password: string,
   deviceFingerprint?: string
 ) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetch(api('/auth/login'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, deviceFingerprint }),
   });
 
-  const data = await handleResponse(res);
+  await handleApiError(res);
+  const data = await res.json();
+
   if (data && typeof data === 'object' && 'requires2FA' in data) {
     return { ...data, requiresVerification: (data as any).requires2FA };
   }
   return data;
 }
 
-export async function verifyPassword(
+export async function verify2FA(
   userId: string,
   code: string,
   trustDevice: boolean,
   deviceFingerprint?: string,
   deviceName?: string
 ) {
-  const res = await fetch(`${API_BASE}/auth/verify`, {
+  const res = await fetch(api('/auth/verify'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({
-      userId,
-      code,
-      trustDevice,
-      deviceFingerprint,
-      deviceName,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, code, trustDevice, deviceFingerprint, deviceName }),
   });
 
-  return handleResponse(res);
+  await handleApiError(res);
+  return res.json();
 }
 
-export async function resendVerificationCode(userId: string) {
-  const res = await fetch(`${API_BASE}/auth/resend`, {
+export async function resend2FA(userId: string) {
+  const res = await fetch(api('/auth/resend'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
   });
 
-  return handleResponse(res);
+  await handleApiError(res);
+  return res.json();
 }
 
 export async function forgotPassword(email: string) {
-  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+  const res = await fetch(api('/auth/forgot-password'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
 
-  return handleResponse(res);
+  await handleApiError(res);
+  return res.json();
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+  const res = await fetch(api('/auth/reset-password'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, newPassword }),
   });
 
-  return handleResponse(res);
+  await handleApiError(res);
+  return res.json();
 }
 
 export async function logout() {
-  const res = await fetch(`${API_BASE}/auth/logout`, {
+  const res = await fetch(api('/auth/logout'), {
     method: 'POST',
     credentials: 'include',
   });
 
-  if (!res.ok) {
-    const message = await parseErrorMessage(res);
-    throw new Error(message || 'Logout failed');
-  }
+  await handleApiError(res);
+  return res.json();
 }
