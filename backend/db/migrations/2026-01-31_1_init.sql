@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS users (
   group_id UUID,
   first_name VARCHAR(120) NOT NULL,
   last_name VARCHAR(120) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
   LIKE base_table INCLUDING ALL,
   FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE SET NULL,
   -- Check constraints
@@ -103,6 +104,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX idx_users_permission ON users(permission);
 CREATE INDEX idx_users_group_id ON users(group_id);
+CREATE INDEX idx_users_active ON users(active);
+
+COMMENT ON COLUMN users.active IS 'Active status: true for current cohort youth and enabled staff logins';
 
 -- 3. User Credentials Table (Authentication Data)
 CREATE TABLE IF NOT EXISTS user_credentials (
@@ -240,6 +244,43 @@ CREATE INDEX idx_token_blacklist_jti ON token_blacklist(jti);
 CREATE INDEX idx_token_blacklist_token_hash ON token_blacklist(token_hash);
 CREATE INDEX idx_token_blacklist_user_id ON token_blacklist(user_id);
 CREATE INDEX idx_token_blacklist_expires ON token_blacklist(expires_at);
+
+-- ============================================================================
+-- ADDRESSES SYSTEM
+-- ============================================================================
+
+-- Addresses Table (shared by users, contacts, etc.)
+CREATE TABLE IF NOT EXISTS addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  address VARCHAR(255) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  province VARCHAR(100) NOT NULL,
+  postal_code VARCHAR(20) NOT NULL,
+  country VARCHAR(100) NOT NULL DEFAULT 'Canada',
+  LIKE base_table INCLUDING ALL,
+  -- Validation
+  CHECK (LENGTH(TRIM(address)) > 0),
+  CHECK (LENGTH(TRIM(city)) > 0),
+  CHECK (LENGTH(TRIM(province)) > 0),
+  CHECK (LENGTH(TRIM(postal_code)) > 0)
+);
+
+CREATE INDEX idx_addresses_postal_code ON addresses(postal_code);
+CREATE INDEX idx_addresses_city ON addresses(city);
+
+-- User Has Addresses Junction
+CREATE TABLE IF NOT EXISTS user_has_addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  address_id UUID NOT NULL,
+  LIKE base_table INCLUDING ALL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE CASCADE,
+  UNIQUE(user_id, address_id)
+);
+
+CREATE INDEX idx_user_has_addresses_user_id ON user_has_addresses(user_id);
+CREATE INDEX idx_user_has_addresses_address_id ON user_has_addresses(address_id);
 
 -- ============================================================================
 -- CONTACTS SYSTEM

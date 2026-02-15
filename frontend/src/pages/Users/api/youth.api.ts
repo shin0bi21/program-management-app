@@ -16,10 +16,23 @@ export async function getYouth(token: string | null) {
 export async function createYouth(token: string | null, data: {
   firstName: string;
   lastName: string;
+  active: boolean;
   dateOfBirth?: string;
   schoolId?: string;
   gradeLevel?: string;
   groupId?: string;
+  address?: {
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  };
+  contact?: {
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    type: 'parent' | 'sibling' | 'guardian';
+  };
 }) {
   const res = await fetch(api('/users/youth'), {
     method: 'POST',

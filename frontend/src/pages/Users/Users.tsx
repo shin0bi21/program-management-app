@@ -98,6 +98,7 @@ export default function Users() {
                     <th>Age</th>
                     <th>School</th>
                     <th>Grade</th>
+                    <th>Active</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -109,6 +110,11 @@ export default function Users() {
                       <td>{calculateAge(profile.dateOfBirth)}</td>
                       <td>{profile.schoolName ?? 'N/A'}</td>
                       <td>{profile.gradeLevel ?? 'N/A'}</td>
+                      <td>
+                        <span className={`status-badge ${profile.active ? 'status-active' : 'status-inactive'}`}>
+                          {profile.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
                       <td>
                         <button className="users-action-btn">View</button>
                       </td>

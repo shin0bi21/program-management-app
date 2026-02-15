@@ -7,6 +7,7 @@ export interface YouthProfile {
   id: string;
   firstName: string;
   lastName: string;
+  active: boolean;
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;

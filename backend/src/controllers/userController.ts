@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { sql } from '../db/client';
-import type { Contacts, Schools, UserCredentials, UserGroups, Users, YouthProfiles } from '../types/database';
+import type { Addresses, Contacts, Schools, UserCredentials, UserGroups, Users, YouthProfiles } from '../types/database';
 import type { DbRow } from '../types/db';
 
 type StaffRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'group_id' | 'created_at' | 'updated_at'>> &
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'group_id' | 'active' | 'created_at' | 'updated_at'>> &
   DbRow<Pick<UserGroups, 'name'>> &
   DbRow<Pick<UserCredentials, 'email' | 'last_login'>> & {
     contacts: Array<{
@@ -18,7 +18,7 @@ type StaffRow =
   };
 
 type YouthRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'created_at'>> &
   DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level'>> &
   DbRow<Pick<Schools, 'name'>>;
 
@@ -32,6 +32,7 @@ export const getStaff = async (req: Request, res: Response) => {
         u.last_name,
         u.permission,
         u.group_id,
+        u.active,
         u.created_at,
         u.updated_at,
         ug.name as group_name,
@@ -68,7 +69,7 @@ export const getStaff = async (req: Request, res: Response) => {
 };
 
 export const createStaff = async (req: Request, res: Response) => {
-  const { firstName, lastName, groupId, email, password, permission } = req.body;
+  const { firstName, lastName, groupId, email, password, permission, active } = req.body;
 
   try {
     // 1. Hash Password
@@ -81,13 +82,15 @@ export const createStaff = async (req: Request, res: Response) => {
         first_name, 
         last_name, 
         permission,
-        group_id
+        group_id,
+        active
       )
       VALUES (
         ${firstName}, 
         ${lastName}, 
         ${permission}::permission_level,
-        ${groupId || null}
+        ${groupId || null},
+        ${active}
       )
       RETURNING *; 
     `;
@@ -126,7 +129,7 @@ export const createStaff = async (req: Request, res: Response) => {
 };
 
 export const createYouth = async (req: Request, res: Response) => {
-  const { firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel } = req.body;
+  const { firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel, active, address, contact } = req.body;
 
   try {
     // 1. Insert user with permission = 'youth'
@@ -135,13 +138,15 @@ export const createYouth = async (req: Request, res: Response) => {
         first_name, 
         last_name, 
         permission,
-        group_id
+        group_id,
+        active
       )
       VALUES (
         ${firstName}, 
         ${lastName}, 
         'youth'::permission_level,
-        ${groupId || null}
+        ${groupId || null},
+        ${active}
       )
       RETURNING *; 
     `;
@@ -163,6 +168,76 @@ export const createYouth = async (req: Request, res: Response) => {
         ${gradeLevel || null}
       )
     `;
+
+    // 3. Handle address if provided
+    if (address) {
+      // Insert address with default country = 'Canada'
+      const newAddresses = await sql<DbRow<Addresses>[]>`
+        INSERT INTO addresses (
+          address,
+          city,
+          province,
+          postal_code,
+          country
+        )
+        VALUES (
+          ${address.address},
+          ${address.city},
+          ${address.province},
+          ${address.postalCode},
+          'Canada'
+        )
+        RETURNING *;
+      `;
+
+      const newAddress = newAddresses[0];
+
+      // Link user to address
+      await sql`
+        INSERT INTO user_has_addresses (
+          user_id,
+          address_id
+        )
+        VALUES (
+          ${newUser.id},
+          ${newAddress.id}
+        )
+      `;
+    }
+
+    // 4. Handle emergency contact if provided
+    if (contact) {
+      // Insert contact with the specified type (parent/sibling/guardian)
+      const newContacts = await sql<DbRow<Contacts>[]>`
+        INSERT INTO contacts (
+          first_name,
+          last_name,
+          phone_number,
+          type
+        )
+        VALUES (
+          ${contact.firstName},
+          ${contact.lastName},
+          ${contact.phoneNumber || null},
+          ${contact.type}::contact_type
+        )
+        RETURNING *;
+      `;
+
+      const newContact = newContacts[0];
+
+      // Link user to contact
+      await sql`
+        INSERT INTO user_has_contacts (
+          user_id,
+          contact_id
+        )
+        VALUES (
+          ${newUser.id},
+          ${newContact.id}
+        )
+      `;
+    }
 
     res.status(201).json({
       id: newUser.id,
@@ -188,6 +263,7 @@ export const getYouth = async (req: Request, res: Response) => {
         u.id,
         u.first_name,
         u.last_name,
+        u.active,
         yp.date_of_birth,
         yp.school_id,
         s.name as school_name,
