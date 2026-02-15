@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { sql } from '../db/client';
-import type { Contacts, UserCredentials, UserGroups, Users } from '../types/database';
+import type { Contacts, Schools, UserCredentials, UserGroups, Users, YouthProfiles } from '../types/database';
 import type { DbRow } from '../types/db';
 
-type UserWithContactsRow =
+type StaffRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'group_id' | 'created_at' | 'updated_at'>> &
   DbRow<Pick<UserGroups, 'name'>> &
   DbRow<Pick<UserCredentials, 'email' | 'last_login'>> & {
@@ -17,10 +17,15 @@ type UserWithContactsRow =
     }> | null;
   };
 
-export const getUsers = async (req: Request, res: Response) => {
+type YouthRow =
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level'>> &
+  DbRow<Pick<Schools, 'name'>>;
+
+export const getStaff = async (req: Request, res: Response) => {
   try {
     // Select users with their groups and contacts
-    const users = await sql<UserWithContactsRow[]>`
+    const users = await sql<StaffRow[]>`
       SELECT 
         u.id,
         u.first_name,
@@ -49,6 +54,8 @@ export const getUsers = async (req: Request, res: Response) => {
       FROM users u
       LEFT JOIN user_groups ug ON u.group_id = ug.id
       LEFT JOIN user_credentials uc ON u.id = uc.user_id
+      WHERE u.permission IN ('staff', 'admin')
+      ORDER BY u.first_name ASC, u.last_name ASC
     `;
 
     res.json(users);
@@ -60,7 +67,7 @@ export const getUsers = async (req: Request, res: Response) => {
   }
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const createStaff = async (req: Request, res: Response) => {
   const { firstName, lastName, groupId, email, password, permission } = req.body;
 
   try {
@@ -79,7 +86,7 @@ export const createUser = async (req: Request, res: Response) => {
       VALUES (
         ${firstName}, 
         ${lastName}, 
-        ${permission || 'youth'}::permission_level,
+        ${permission}::permission_level,
         ${groupId || null}
       )
       RETURNING *; 
@@ -114,6 +121,90 @@ export const createUser = async (req: Request, res: Response) => {
     if (process.env.NODE_ENV !== 'test') {
       console.error(error);
     }
-    res.status(500).json({ error: 'Failed to create user' });
+    res.status(500).json({ error: 'Failed to create staff user' });
+  }
+};
+
+export const createYouth = async (req: Request, res: Response) => {
+  const { firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel } = req.body;
+
+  try {
+    // 1. Insert user with permission = 'youth'
+    const newUsers = await sql<DbRow<Users>[]>`
+      INSERT INTO users (
+        first_name, 
+        last_name, 
+        permission,
+        group_id
+      )
+      VALUES (
+        ${firstName}, 
+        ${lastName}, 
+        'youth'::permission_level,
+        ${groupId || null}
+      )
+      RETURNING *; 
+    `;
+
+    const newUser = newUsers[0];
+
+    // 2. Insert youth profile
+    await sql`
+      INSERT INTO youth_profiles (
+        user_id,
+        date_of_birth,
+        school_id,
+        grade_level
+      )
+      VALUES (
+        ${newUser.id},
+        ${dateOfBirth || null},
+        ${schoolId || null},
+        ${gradeLevel || null}
+      )
+    `;
+
+    res.status(201).json({
+      id: newUser.id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      permission: newUser.permission,
+      dateOfBirth: dateOfBirth || null,
+      schoolId: schoolId || null,
+      gradeLevel: gradeLevel || null,
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(error);
+    }
+    res.status(500).json({ error: 'Failed to create youth profile' });
+  }
+};
+
+export const getYouth = async (req: Request, res: Response) => {
+  try {
+    const youth = await sql<YouthRow[]>`
+      SELECT 
+        u.id,
+        u.first_name,
+        u.last_name,
+        yp.date_of_birth,
+        yp.school_id,
+        s.name as school_name,
+        yp.grade_level,
+        u.created_at
+      FROM youth_profiles yp
+      INNER JOIN users u ON u.id = yp.user_id
+      LEFT JOIN schools s ON s.id = yp.school_id
+      WHERE u.permission = 'youth'
+      ORDER BY u.first_name ASC, u.last_name ASC
+    `;
+
+    res.json(youth);
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(error);
+    }
+    res.status(500).json({ error: 'Failed to fetch youth profiles' });
   }
 };

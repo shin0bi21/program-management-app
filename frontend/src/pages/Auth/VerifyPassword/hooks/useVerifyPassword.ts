@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { verify2FA, resend2FA } from '../api/auth.api';
-import { useAuth } from '../../../common/context/AuthContext';
-import { getDeviceFingerprint, getDeviceName } from '../../../common/utils/deviceFingerprint';
-import { getErrorMessage } from '../../../common/utils/errors';
-import { setAuthData } from '../../../common/utils/storage';
-import { formatTime } from '../../../common/utils/time';
-import { verifyPasswordSchema, type VerifyPasswordFormData } from '../validation/authSchemas';
+import { verify2FA, resend2FA } from '../../api/auth.api';
+import { useAuth } from '../../../../common/context/AuthContext';
+import { getDeviceFingerprint, getDeviceName } from '../../../../common/utils/deviceFingerprint';
+import { getErrorMessage } from '../../../../common/utils/errors';
+import { setAuthData } from '../../../../common/utils/storage';
+import { formatTime } from '../../../../common/utils/time';
+import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../validation/authSchemas';
 
 export const useVerifyPassword = () => {
   const [error, setError] = useState('');

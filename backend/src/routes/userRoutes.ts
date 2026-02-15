@@ -1,17 +1,22 @@
 import { Router } from 'express';
-import { getUsers, createUser } from '../controllers/userController';
+import { getStaff, createStaff, getYouth, createYouth } from '../controllers/userController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { validateRequest } from '../middleware/validateRequest';
-import { createUserSchema } from '../validation/userSchemas';
+import { createStaffSchema, createYouthSchema } from '../validation/userSchemas';
 
 const router = Router();
 
-// Get users - admin/staff only
-router.get('/', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, getUsers);
-router.get('/all', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, getUsers);
+// Get staff/admin users
+router.get('/staff', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, getStaff);
 
-// Create user - admin only
-router.post('/', authenticateToken, requirePermission('admin'), generalLimiter, validateRequest(createUserSchema), createUser);
+// Get youth profiles
+router.get('/youth', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, getYouth);
+
+// Create staff - admin only
+router.post('/staff', authenticateToken, requirePermission('admin'), generalLimiter, validateRequest(createStaffSchema), createStaff);
+
+// Create youth - admin/staff
+router.post('/youth', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, validateRequest(createYouthSchema), createYouth);
 
 export default router;

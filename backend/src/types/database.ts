@@ -25,6 +25,10 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type PermissionLevel = "admin" | "staff" | "youth";
 
+export type SchoolBoard = "catholic" | "public";
+
+export type SchoolType = "grade_school" | "high_school" | "middle_school";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface AuthCodes {
@@ -104,6 +108,35 @@ export interface SchemaMigrations {
   id: Generated<number>;
   name: string | null;
   version: string;
+}
+
+export interface Schools {
+  address: string;
+  board: SchoolBoard | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  name: string;
+  postal_code: string | null;
+  school_type: SchoolType;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface SchoolsBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  address: string | null;
+  board: SchoolBoard | null;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  id: string | null;
+  name: string | null;
+  postal_code: string | null;
+  school_type: SchoolType | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
 }
 
 export interface TokenBlacklist {
@@ -205,7 +238,7 @@ export interface YouthProfiles {
   date_of_birth: Timestamp | null;
   grade_level: string | null;
   id: Generated<string>;
-  school_name: string | null;
+  school_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
@@ -220,7 +253,7 @@ export interface YouthProfilesBackup {
   date_of_birth: Timestamp | null;
   grade_level: string | null;
   id: string | null;
-  school_name: string | null;
+  school_id: string | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
   user_id: string | null;
@@ -268,6 +301,8 @@ export interface DB {
   refresh_tokens: RefreshTokens;
   schema_backup_tracking: SchemaBackupTracking;
   schema_migrations: SchemaMigrations;
+  schools: Schools;
+  schools_backup: SchoolsBackup;
   token_blacklist: TokenBlacklist;
   trusted_devices: TrustedDevices;
   user_credentials: UserCredentials;

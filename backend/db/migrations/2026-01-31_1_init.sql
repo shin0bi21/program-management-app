@@ -49,6 +49,12 @@ CREATE TYPE permission_level AS ENUM ('youth', 'staff', 'admin');
 -- Contact types (replaces lookup table pattern)
 CREATE TYPE contact_type AS ENUM ('parent', 'sibling', 'guardian', 'emergency');
 
+-- School types
+CREATE TYPE school_type AS ENUM ('grade_school', 'middle_school', 'high_school');
+
+-- School boards
+CREATE TYPE school_board AS ENUM ('public', 'catholic');
+
 -- ============================================================================
 -- BASE TABLE PATTERN
 -- ============================================================================
@@ -118,12 +124,27 @@ CREATE TABLE IF NOT EXISTS user_credentials (
 CREATE INDEX idx_user_credentials_email ON user_credentials(email);
 CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 
--- 4. Youth Profiles Table (Youth-Specific Data)
+-- 4. Schools Table (Reference Data)
+CREATE TABLE IF NOT EXISTS schools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL UNIQUE,
+  address VARCHAR(255) NOT NULL,
+  school_type school_type NOT NULL,
+  board school_board,
+  postal_code VARCHAR(20),
+  LIKE base_table INCLUDING ALL
+);
+
+CREATE INDEX idx_schools_name ON schools(name);
+CREATE INDEX idx_schools_type ON schools(school_type);
+CREATE INDEX idx_schools_board ON schools(board);
+
+-- 5. Youth Profiles Table (Youth-Specific Data)
 CREATE TABLE IF NOT EXISTS youth_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE,
   date_of_birth DATE,
-  school_name VARCHAR(255),
+  school_id UUID,
   grade_level VARCHAR(50),
   LIKE base_table INCLUDING ALL,
   -- Date of birth must be in the past
@@ -131,8 +152,9 @@ CREATE TABLE IF NOT EXISTS youth_profiles (
 );
 
 CREATE INDEX idx_youth_profiles_user_id ON youth_profiles(user_id);
+CREATE INDEX idx_youth_profiles_school_id ON youth_profiles(school_id);
 
--- 5. Password Reset Tokens Table
+-- 6. Password Reset Tokens Table
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -290,6 +312,9 @@ ADD CONSTRAINT fk_user_credentials_user FOREIGN KEY (user_id) REFERENCES users(i
 ALTER TABLE youth_profiles 
 ADD CONSTRAINT fk_youth_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
+ALTER TABLE youth_profiles 
+ADD CONSTRAINT fk_youth_profiles_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE SET NULL;
+
 ALTER TABLE password_reset_tokens 
 ADD CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
@@ -312,6 +337,10 @@ ADD CONSTRAINT fk_creds_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
 ALTER TABLE youth_profiles 
 ADD CONSTRAINT fk_youth_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
 ADD CONSTRAINT fk_youth_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE schools 
+ADD CONSTRAINT fk_schools_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_schools_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
 
 ALTER TABLE contacts 
 ADD CONSTRAINT fk_contacts_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,

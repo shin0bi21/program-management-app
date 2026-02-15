@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resetPassword } from '../api/auth.api';
-import { getErrorMessage } from '../../../common/utils/errors';
-import { resetPasswordSchema, type ResetPasswordFormData } from '../validation/authSchemas';
+import { resetPassword } from '../../api/auth.api';
+import { getErrorMessage } from '../../../../common/utils/errors';
+import { resetPasswordSchema, type ResetPasswordFormData } from '../../validation/authSchemas';
 
 export const useResetPassword = () => {
   const [error, setError] = useState('');
