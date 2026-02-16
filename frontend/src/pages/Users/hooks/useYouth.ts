@@ -13,6 +13,21 @@ export interface YouthProfile {
   schoolName: string | null;
   gradeLevel: string | null;
   createdAt: string;
+  addresses: Array<{
+    id: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
+  }> | null;
+  contacts: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string | null;
+    type: string;
+  }> | null;
 }
 
 export function useYouth() {

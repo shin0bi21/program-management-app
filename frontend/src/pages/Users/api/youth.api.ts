@@ -1,8 +1,8 @@
 import { api } from '../../../common/api/config';
 import { handleApiError } from '../../../common/utils/errors';
 
-export async function getYouth(token: string | null) {
-  const res = await fetch(api('/users/youth'), {
+export async function getYouth(token: string | null, id?: string) {
+  const res = await fetch(api(`/users/youth${id ? `?id=${id}` : ''}`), {
     credentials: 'include',
     headers: {
       Authorization: `Bearer ${token ?? ''}`,
@@ -13,7 +13,8 @@ export async function getYouth(token: string | null) {
   return res.json();
 }
 
-export async function createYouth(token: string | null, data: {
+export async function setYouth(token: string | null, data: {
+  id?: string;
   firstName: string;
   lastName: string;
   active: boolean;

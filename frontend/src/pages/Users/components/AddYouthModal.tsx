@@ -25,26 +25,40 @@ export default function AddYouthModal({ isOpen, onClose, onSuccess }: AddYouthMo
   const [schoolId, setSchoolId] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [active, setActive] = useState(true);
+
   const [showAddressFields, setShowAddressFields] = useState(false);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
   const [showContactFields, setShowContactFields] = useState(false);
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactType, setContactType] = useState<'parent' | 'sibling' | 'guardian'>('parent');
+
   const [schools, setSchools] = useState<School[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      getSchools(getToken())
-        .then(setSchools)
-        .catch(() => {}); // Schools dropdown is optional
-    }
+    if (!isOpen) return;
+
+    let cancelled = false;
+    const token = getToken();
+
+    getSchools(token)
+      .then((data) => {
+        if (!cancelled) setSchools(data);
+      })
+      .catch(() => {
+        // Schools dropdown is optional
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
   const resetForm = () => {
@@ -54,16 +68,19 @@ export default function AddYouthModal({ isOpen, onClose, onSuccess }: AddYouthMo
     setSchoolId('');
     setGradeLevel('');
     setActive(true);
+
     setShowAddressFields(false);
     setAddress('');
     setCity('');
     setProvince('');
     setPostalCode('');
+
     setShowContactFields(false);
     setContactFirstName('');
     setContactLastName('');
     setContactPhone('');
     setContactType('parent');
+
     setError('');
   };
 
@@ -77,31 +94,44 @@ export default function AddYouthModal({ isOpen, onClose, onSuccess }: AddYouthMo
     setSubmitting(true);
     setError('');
 
+    const token = getToken();
+
+    const hasAnyAddress =
+      address.trim() || city.trim() || province.trim() || postalCode.trim();
+
+    // tighten this rule to match backend expectations
+    const hasEmergencyContact =
+      contactFirstName.trim() && contactLastName.trim();
+
     try {
-      await createYouth(getToken(), {
-        firstName,
-        lastName,
+      await createYouth(token, {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         active,
+
         ...(dateOfBirth && { dateOfBirth }),
         ...(schoolId && { schoolId }),
-        ...(gradeLevel && { gradeLevel }),
-        ...(address && {
+        ...(gradeLevel.trim() && { gradeLevel: gradeLevel.trim() }),
+
+        ...(hasAnyAddress && {
           address: {
-            address,
-            city,
-            province,
-            postalCode,
+            address: address.trim(),
+            city: city.trim(),
+            province: province.trim(),
+            postalCode: postalCode.trim(),
           },
         }),
-        ...(contactFirstName && {
+
+        ...(hasEmergencyContact && {
           contact: {
-            firstName: contactFirstName,
-            lastName: contactLastName,
-            phoneNumber: contactPhone,
+            firstName: contactFirstName.trim(),
+            lastName: contactLastName.trim(),
+            phoneNumber: contactPhone.trim(),
             type: contactType,
           },
         }),
       });
+
       resetForm();
       onSuccess();
     } catch (err: unknown) {

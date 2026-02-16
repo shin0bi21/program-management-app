@@ -15,9 +15,10 @@ export const createStaffSchema = z.object({
 
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 
-// Create Youth
-export const createYouthSchema = z.object({
+// Set Youth (Create or Update)
+export const setYouthSchema = z.object({
   body: z.object({
+    id: z.string().uuid('Invalid youth ID').optional(),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     dateOfBirth: z.string().optional(),
@@ -40,4 +41,4 @@ export const createYouthSchema = z.object({
   }),
 });
 
-export type CreateYouthInput = z.infer<typeof createYouthSchema>;
+export type SetYouthInput = z.infer<typeof setYouthSchema>;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Header from '../../common/components/Header/Header';
 import { useUsers } from './hooks/useUsers';
 import { useYouth } from './hooks/useYouth';
-import AddYouthModal from './components/AddYouthModal';
+import YouthModal from './components/YouthModal';
 import './Users.css';
 
 type TabType = 'staff' | 'youth';
@@ -22,6 +22,7 @@ function calculateAge(dateOfBirth: string | null): string {
 export default function Users() {
   const [activeTab, setActiveTab] = useState<TabType>('staff');
   const [showAddYouth, setShowAddYouth] = useState(false);
+  const [youthToEdit, setYouthToEdit] = useState<typeof youth[number] | undefined>(undefined);
   const { users, loading: usersLoading, error: usersError } = useUsers();
   const { youth, loading: youthLoading, error: youthError, refetch: refetchYouth } = useYouth();
 
@@ -116,7 +117,15 @@ export default function Users() {
                         </span>
                       </td>
                       <td>
-                        <button className="users-action-btn">View</button>
+                        <button 
+                          className="users-action-btn"
+                          onClick={() => {
+                            setYouthToEdit(profile);
+                            setShowAddYouth(true);
+                          }}
+                        >
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -131,11 +140,16 @@ export default function Users() {
         )}
       </div>
 
-      <AddYouthModal
+      <YouthModal
         isOpen={showAddYouth}
-        onClose={() => setShowAddYouth(false)}
+        youthData={youthToEdit}
+        onClose={() => {
+          setShowAddYouth(false);
+          setYouthToEdit(undefined);
+        }}
         onSuccess={() => {
           setShowAddYouth(false);
+          setYouthToEdit(undefined);
           refetchYouth();
         }}
       />
