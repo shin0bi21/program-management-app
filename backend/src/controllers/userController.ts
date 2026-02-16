@@ -308,14 +308,7 @@ export const setYouth = async (req: Request, res: Response) => {
       await setContact(userId, contact);
     }
 
-    res.status(id ? 200 : 201).json({
-      id: userId,
-      firstName,
-      lastName,
-      dateOfBirth: dateOfBirth || null,
-      schoolId: schoolId || null,
-      gradeLevel: gradeLevel || null,
-    });
+    res.status(id ? 200 : 201).json({ id: userId });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       console.error(error);

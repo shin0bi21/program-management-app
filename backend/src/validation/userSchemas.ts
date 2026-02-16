@@ -21,7 +21,7 @@ export const setYouthSchema = z.object({
     id: z.string().uuid('Invalid youth ID').optional(),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
-    dateOfBirth: z.string().optional(),
+    dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
     gradeLevel: z.string().max(50).optional(),
     groupId: z.string().uuid('Invalid group ID').optional(),

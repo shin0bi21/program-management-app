@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { setYouth, getSchools } from '../api/youth.api';
+import { setYouth, getYouth, getSchools } from '../api/youth.api';
 import { getErrorMessage } from '../../../common/utils/errors';
 import { getToken } from '../../../common/utils/storage';
 import Modal from '../../../common/components/Modal/Modal';
@@ -16,7 +16,7 @@ interface School {
 interface YouthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (youthData: YouthProfile) => void;
   youthData?: YouthProfile;
 }
 
@@ -159,7 +159,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     }
 
     try {
-      await setYouth(token, {
+      const result = await setYouth(token, {
         ...(youthData && { id: youthData.id }),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -188,12 +188,15 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         }),
       });
 
+      // Fetch full profile using existing method
+      const savedYouth = await getYouth(token, result.id);
+
       setSubmitStatus('success');
       
       // Show success message briefly, then close
       setTimeout(() => {
         resetForm();
-        onSuccess();
+        onSuccess(savedYouth);
       }, 800);
     } catch (err: unknown) {
       setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
