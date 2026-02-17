@@ -136,7 +136,7 @@ export default function Users() {
             error={usersError}
             emptyMessage="No staff users found"
             keyExtractor={(user) => user.id}
-            maxHeight="calc(100vh - 250px)"
+            maxHeight="calc(100vh - 200px)"
           />
         )}
 
@@ -148,7 +148,7 @@ export default function Users() {
             error={youthError}
             emptyMessage="No youth profiles found"
             keyExtractor={(profile) => profile.id}
-            maxHeight="calc(100vh - 250px)"
+            maxHeight="calc(100vh - 200px)"
           />
         )}
       </div>

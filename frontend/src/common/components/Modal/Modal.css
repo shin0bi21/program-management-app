@@ -115,6 +115,29 @@
   gap: 0.75rem;
   font-size: 0.95rem;
   font-weight: 500;
+  position: relative;
+}
+
+.modal-status-dismiss {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.modal-status-dismiss:hover {
+  opacity: 1;
 }
 
 .modal-status-submitting {

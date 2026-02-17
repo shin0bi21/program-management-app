@@ -3,8 +3,8 @@ import { z } from 'zod';
 // Create Staff
 export const createStaffSchema = z.object({
   body: z.object({
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
+    firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+    lastName: z.string().min(1, 'Last name is required').regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
     email: z.string().email('Invalid email format'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     permission: z.enum(['staff', 'admin']).optional(),
@@ -19,8 +19,8 @@ export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export const setYouthSchema = z.object({
   body: z.object({
     id: z.string().uuid('Invalid youth ID').optional(),
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
+    firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+    lastName: z.string().min(1, 'Last name is required').regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
     dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
     gradeLevel: z.string().max(50).optional(),
@@ -33,8 +33,8 @@ export const setYouthSchema = z.object({
       postalCode: z.string().min(1, 'Postal code is required'),
     }).optional(),
     contact: z.object({
-      firstName: z.string().min(1, 'Contact first name is required'),
-      lastName: z.string().min(1, 'Contact last name is required'),
+      firstName: z.string().min(1, 'Contact first name is required').regex(/^[a-zA-Z\s'-]+$/, 'Contact first name can only contain letters, spaces, hyphens, and apostrophes'),
+      lastName: z.string().min(1, 'Contact last name is required').regex(/^[a-zA-Z\s'-]+$/, 'Contact last name can only contain letters, spaces, hyphens, and apostrophes'),
       phoneNumber: z.string().optional(),
       type: z.enum(['parent', 'sibling', 'guardian']).default('parent'),
     }).optional(),

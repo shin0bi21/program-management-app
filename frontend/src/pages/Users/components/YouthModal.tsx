@@ -4,7 +4,7 @@ import { getErrorMessage } from '../../../common/utils/errors';
 import { getToken } from '../../../common/utils/storage';
 import Modal from '../../../common/components/Modal/Modal';
 import type { YouthProfile } from '../hooks/useYouth';
-import './AddYouthModal.css';
+import './YouthModal.css';
 
 interface School {
   id: string;
@@ -133,6 +133,20 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
 
     const token = getToken();
 
+    // Validate names contain only letters, spaces, hyphens, and apostrophes
+    const namePattern = /^[a-zA-Z\s'-]+$/;
+    if (!namePattern.test(firstName.trim())) {
+      setError('First name can only contain letters, spaces, hyphens, and apostrophes');
+      setSubmitStatus('error');
+      return;
+    }
+
+    if (!namePattern.test(lastName.trim())) {
+      setError('Last name can only contain letters, spaces, hyphens, and apostrophes');
+      setSubmitStatus('error');
+      return;
+    }
+
     const hasAnyAddress =
       address.trim() || city.trim() || province.trim() || postalCode.trim();
     
@@ -156,6 +170,21 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
       setError('Please provide at least first name and last name for the emergency contact or leave all fields empty');
       setSubmitStatus('error');
       return;
+    }
+
+    // Validate contact names if provided
+    if (hasCompleteContact) {
+      if (!namePattern.test(contactFirstName.trim())) {
+        setError('Contact first name can only contain letters, spaces, hyphens, and apostrophes');
+        setSubmitStatus('error');
+        return;
+      }
+
+      if (!namePattern.test(contactLastName.trim())) {
+        setError('Contact last name can only contain letters, spaces, hyphens, and apostrophes');
+        setSubmitStatus('error');
+        return;
+      }
     }
 
     try {
