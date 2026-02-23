@@ -22,18 +22,18 @@ export async function setYouth(token: string | null, data: {
   schoolId?: string;
   gradeLevel?: string;
   groupId?: string;
-  address?: {
+  addresses?: Array<{
     address: string;
     city: string;
     province: string;
     postalCode: string;
-  };
-  contact?: {
+  }>;
+  contacts?: Array<{
     firstName: string;
     lastName: string;
     phoneNumber: string;
     type: 'parent' | 'sibling' | 'guardian';
-  };
+  }>;
 }) {
   const res = await fetch(api('/users/youth'), {
     method: 'POST',

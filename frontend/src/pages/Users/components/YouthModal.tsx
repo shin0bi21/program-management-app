@@ -1,16 +1,28 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { setYouth, getYouth, getSchools } from '../api/youth.api';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { setYouth, getYouth } from '../api/youth.api';
 import { getErrorMessage } from '../../../common/utils/errors';
 import { getToken } from '../../../common/utils/storage';
 import Modal from '../../../common/components/Modal/Modal';
-import type { YouthProfile } from '../hooks/useYouth';
+import { useSchools } from '../../../common/hooks/useSchools';
+import type { YouthProfile } from '../../../common/hooks/useYouth';
 import './YouthModal.css';
 
-interface School {
+interface Address {
   id: string;
-  name: string;
-  schoolType: string;
-  board: string | null;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  type: 'parent' | 'sibling' | 'guardian';
 }
 
 interface YouthModalProps {
@@ -21,6 +33,7 @@ interface YouthModalProps {
 }
 
 export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: YouthModalProps) {
+  // Basic youth info
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -28,41 +41,21 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
   const [gradeLevel, setGradeLevel] = useState('');
   const [active, setActive] = useState(true);
 
-  const [showAddressFields, setShowAddressFields] = useState(false);
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [province, setProvince] = useState('');
-  const [postalCode, setPostalCode] = useState('');
+  // Addresses (array-based) - starts with one empty item
+  const [addresses, setAddresses] = useState<Address[]>([
+    { id: '', address: '', city: '', province: '', postalCode: '' }
+  ]);
+  const [showAddressesSection, setShowAddressesSection] = useState(false);
 
-  const [showContactFields, setShowContactFields] = useState(false);
-  const [contactFirstName, setContactFirstName] = useState('');
-  const [contactLastName, setContactLastName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactType, setContactType] = useState<'parent' | 'sibling' | 'guardian'>('parent');
+  // Contacts (array-based) - starts with one empty item
+  const [contacts, setContacts] = useState<Contact[]>([
+    { id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }
+  ]);
+  const [showContactsSection, setShowContactsSection] = useState(false);
 
-  const [schools, setSchools] = useState<School[]>([]);
+  const { schools } = useSchools();
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
-
-  // Fetch schools
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let cancelled = false;
-    const token = getToken();
-
-    getSchools(token)
-      .then((data) => {
-        if (!cancelled) setSchools(data);
-      })
-      .catch(() => {
-        // Schools dropdown is optional
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -70,30 +63,35 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
 
     setFirstName(youthData.firstName || '');
     setLastName(youthData.lastName || '');
-    // Extract YYYY-MM-DD from ISO date string (e.g., "2010-05-15T00:00:00.000Z" → "2010-05-15")
     setDateOfBirth(youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '');
     setSchoolId(youthData.schoolId || '');
     setGradeLevel(youthData.gradeLevel || '');
     setActive(youthData.active ?? true);
 
-    // Pre-fill address if exists
+    // Load existing addresses (or keep default empty one)
     if (youthData.addresses && youthData.addresses.length > 0) {
-      const addr = youthData.addresses[0];
-      setShowAddressFields(true);
-      setAddress(addr.address || '');
-      setCity(addr.city || '');
-      setProvince(addr.province || '');
-      setPostalCode(addr.postalCode || '');
+      setAddresses(youthData.addresses.map(addr => ({
+        id: addr.id,
+        address: addr.address,
+        city: addr.city,
+        province: addr.province,
+        postalCode: addr.postalCode,
+      })));
+    } else {
+      setAddresses([{ id: '', address: '', city: '', province: '', postalCode: '' }]);
     }
 
-    // Pre-fill contact if exists
+    // Load existing contacts (or keep default empty one)
     if (youthData.contacts && youthData.contacts.length > 0) {
-      const cont = youthData.contacts[0];
-      setShowContactFields(true);
-      setContactFirstName(cont.firstName || '');
-      setContactLastName(cont.lastName || '');
-      setContactPhone(cont.phoneNumber || '');
-      setContactType((cont.type as 'parent' | 'sibling' | 'guardian') || 'parent');
+      setContacts(youthData.contacts.map(cont => ({
+        id: cont.id,
+        firstName: cont.firstName,
+        lastName: cont.lastName,
+        phoneNumber: cont.phoneNumber || '',
+        type: (cont.type as 'parent' | 'sibling' | 'guardian') || 'parent',
+      })));
+    } else {
+      setContacts([{ id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
     }
   }, [isOpen, youthData]);
 
@@ -104,18 +102,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     setSchoolId('');
     setGradeLevel('');
     setActive(true);
-
-    setShowAddressFields(false);
-    setAddress('');
-    setCity('');
-    setProvince('');
-    setPostalCode('');
-
-    setShowContactFields(false);
-    setContactFirstName('');
-    setContactLastName('');
-    setContactPhone('');
-    setContactType('parent');
+    
+    setAddresses([{ id: '', address: '', city: '', province: '', postalCode: '' }]);
+    setContacts([{ id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
 
     setError('');
     setSubmitStatus('idle');
@@ -126,6 +115,36 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     onClose();
   };
 
+  // Address handlers
+  const handleAddAddress = () => {
+    setAddresses([...addresses, { id: '', address: '', city: '', province: '', postalCode: '' }]);
+  };
+
+  const handleDeleteAddress = (index: number) => {
+    setAddresses(addresses.filter((_, i) => i !== index));
+  };
+
+  const handleAddressChange = (index: number, field: keyof Address, value: string) => {
+    const updated = [...addresses];
+    updated[index] = { ...updated[index], [field]: value };
+    setAddresses(updated);
+  };
+
+  // Contact handlers
+  const handleAddContact = () => {
+    setContacts([...contacts, { id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
+  };
+
+  const handleDeleteContact = (index: number) => {
+    setContacts(contacts.filter((_, i) => i !== index));
+  };
+
+  const handleContactChange = (index: number, field: keyof Contact, value: string) => {
+    const updated = [...contacts];
+    updated[index] = { ...updated[index], [field]: value };
+    setContacts(updated);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitStatus('submitting');
@@ -133,7 +152,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
 
     const token = getToken();
 
-    // Validate names contain only letters, spaces, hyphens, and apostrophes
+    // Validate youth names
     const namePattern = /^[a-zA-Z\s'-]+$/;
     if (!namePattern.test(firstName.trim())) {
       setError('First name can only contain letters, spaces, hyphens, and apostrophes');
@@ -147,82 +166,109 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
       return;
     }
 
-    const hasAnyAddress =
-      address.trim() || city.trim() || province.trim() || postalCode.trim();
-    
-    const hasCompleteAddress =
-      address.trim() && city.trim() && province.trim() && postalCode.trim();
-
-    const hasAnyContact =
-      contactFirstName.trim() || contactLastName.trim() || contactPhone.trim();
-
-    const hasCompleteContact =
-      contactFirstName.trim() && contactLastName.trim();
-
-    // Validate partial data
-    if (hasAnyAddress && !hasCompleteAddress) {
-      setError('Please complete all address fields (street, city, province, postal code) or leave them all empty');
-      setSubmitStatus('error');
-      return;
-    }
-
-    if (hasAnyContact && !hasCompleteContact) {
-      setError('Please provide at least first name and last name for the emergency contact or leave all fields empty');
-      setSubmitStatus('error');
-      return;
-    }
-
-    // Validate contact names if provided
-    if (hasCompleteContact) {
-      if (!namePattern.test(contactFirstName.trim())) {
-        setError('Contact first name can only contain letters, spaces, hyphens, and apostrophes');
-        setSubmitStatus('error');
-        return;
+    // Validate addresses: if any field is filled, all required fields must be filled
+    for (let i = 0; i < addresses.length; i++) {
+      const addr = addresses[i];
+      const hasAnyField = addr.address.trim() || addr.city.trim() || addr.province.trim() || addr.postalCode.trim();
+      
+      if (hasAnyField) {
+        if (!addr.address.trim()) {
+          setError(`Address ${i + 1}: Street address is required`);
+          setSubmitStatus('error');
+          return;
+        }
+        if (!addr.city.trim()) {
+          setError(`Address ${i + 1}: City is required`);
+          setSubmitStatus('error');
+          return;
+        }
+        if (!addr.province.trim()) {
+          setError(`Address ${i + 1}: Province is required`);
+          setSubmitStatus('error');
+          return;
+        }
+        if (!addr.postalCode.trim()) {
+          setError(`Address ${i + 1}: Postal code is required`);
+          setSubmitStatus('error');
+          return;
+        }
       }
+    }
 
-      if (!namePattern.test(contactLastName.trim())) {
-        setError('Contact last name can only contain letters, spaces, hyphens, and apostrophes');
-        setSubmitStatus('error');
-        return;
+    // Validate contacts: if any field is filled, first and last name must be filled
+    for (let i = 0; i < contacts.length; i++) {
+      const cont = contacts[i];
+      const hasAnyField = cont.firstName.trim() || cont.lastName.trim() || cont.phoneNumber.trim();
+      
+      if (hasAnyField) {
+        if (!cont.firstName.trim()) {
+          setError(`Contact ${i + 1}: First name is required`);
+          setSubmitStatus('error');
+          return;
+        }
+        if (!cont.lastName.trim()) {
+          setError(`Contact ${i + 1}: Last name is required`);
+          setSubmitStatus('error');
+          return;
+        }
+        // Validate name pattern for contacts
+        if (!namePattern.test(cont.firstName.trim())) {
+          setError(`Contact ${i + 1}: First name can only contain letters, spaces, hyphens, and apostrophes`);
+          setSubmitStatus('error');
+          return;
+        }
+        if (!namePattern.test(cont.lastName.trim())) {
+          setError(`Contact ${i + 1}: Last name can only contain letters, spaces, hyphens, and apostrophes`);
+          setSubmitStatus('error');
+          return;
+        }
       }
     }
 
     try {
-      const result = await setYouth(token, {
+      // Filter out empty addresses (all fields empty)
+      const nonEmptyAddresses = addresses.filter(addr => 
+        addr.address.trim() || addr.city.trim() || addr.province.trim() || addr.postalCode.trim()
+      );
+
+      // Filter out empty contacts (no first/last name)
+      const nonEmptyContacts = contacts.filter(cont => 
+        cont.firstName.trim() || cont.lastName.trim()
+      );
+
+      const payload = {
         ...(youthData && { id: youthData.id }),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         active,
-
         ...(dateOfBirth && { dateOfBirth }),
         ...(schoolId && { schoolId }),
         ...(gradeLevel.trim() && { gradeLevel: gradeLevel.trim() }),
+        // Always send addresses array (even if empty) to trigger backend delete when updating
+        addresses: nonEmptyAddresses.map(addr => ({
+          ...(addr.id && { id: addr.id }), // Include ID if it exists (for update)
+          address: addr.address.trim(),
+          city: addr.city.trim(),
+          province: addr.province.trim(),
+          postalCode: addr.postalCode.trim(),
+        })),
+        // Always send contacts array (even if empty) to trigger backend delete when updating
+        contacts: nonEmptyContacts.map(cont => ({
+          ...(cont.id && { id: cont.id }), // Include ID if it exists (for update)
+          firstName: cont.firstName.trim(),
+          lastName: cont.lastName.trim(),
+          phoneNumber: cont.phoneNumber.trim(),
+          type: cont.type,
+        })),
+      };
 
-        ...(hasCompleteAddress && {
-          address: {
-            address: address.trim(),
-            city: city.trim(),
-            province: province.trim(),
-            postalCode: postalCode.trim(),
-          },
-        }),
+      const result = await setYouth(token, payload);
 
-        ...(hasCompleteContact && {
-          contact: {
-            firstName: contactFirstName.trim(),
-            lastName: contactLastName.trim(),
-            phoneNumber: contactPhone.trim(),
-            type: contactType,
-          },
-        }),
-      });
-
-      // Fetch full profile using existing method
+      // Fetch full profile
       const savedYouth = await getYouth(token, result.id);
 
       setSubmitStatus('success');
       
-      // Show success message briefly, then close
       setTimeout(() => {
         resetForm();
         onSuccess(savedYouth);
@@ -259,7 +305,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
       }
     >
       <form id="youth-form" onSubmit={handleSubmit}>
-
+        {/* Basic Info */}
         <div className="form-row">
           <div className="form-field">
             <label htmlFor="firstName">First Name *</label>
@@ -332,126 +378,169 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           </label>
         </div>
 
-        <div className="form-field">
-          <button
-            type="button"
-            className="btn-toggle"
-            onClick={() => setShowAddressFields(!showAddressFields)}
-          >
-            {showAddressFields ? 'Hide Address' : 'Add Address'}
-          </button>
+        {/* Addresses Section */}
+        <div className="section-divider">
+          <div className="section-header" onClick={() => setShowAddressesSection(!showAddressesSection)}>
+            <h3>Addresses</h3>
+            <span className="chevron">{showAddressesSection ? '▲' : '▼'}</span>
+          </div>
+          
+          {showAddressesSection && (
+            <div className="section-content">
+              {addresses.map((addr, index) => (
+                <div key={index} className="address-form-item">
+                  <div className="form-item-header">
+                    <span className="form-item-label">Address {index + 1}</span>
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      onClick={() => handleDeleteAddress(index)}
+                      aria-label="Delete address"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                      Delete
+                    </button>
+                  </div>
+                  
+                  <div className="form-field">
+                    <label htmlFor={`address-${index}`}>Street Address</label>
+                    <input
+                      id={`address-${index}`}
+                      type="text"
+                      value={addr.address}
+                      onChange={(e) => handleAddressChange(index, 'address', e.target.value)}
+                      placeholder="123 Main Street"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label htmlFor={`city-${index}`}>City</label>
+                      <input
+                        id={`city-${index}`}
+                        type="text"
+                        value={addr.city}
+                        onChange={(e) => handleAddressChange(index, 'city', e.target.value)}
+                        placeholder="Toronto"
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label htmlFor={`province-${index}`}>Province</label>
+                      <input
+                        id={`province-${index}`}
+                        type="text"
+                        value={addr.province}
+                        onChange={(e) => handleAddressChange(index, 'province', e.target.value)}
+                        placeholder="ON"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor={`postalCode-${index}`}>Postal Code</label>
+                    <input
+                      id={`postalCode-${index}`}
+                      type="text"
+                      value={addr.postalCode}
+                      onChange={(e) => handleAddressChange(index, 'postalCode', e.target.value)}
+                      placeholder="A1A 1A1"
+                    />
+                  </div>
+                </div>
+              ))}
+              
+              <button
+                type="button"
+                className="btn-add"
+                onClick={handleAddAddress}
+              >
+                + Add Address
+              </button>
+            </div>
+          )}
         </div>
 
-        {showAddressFields && (
-          <div className="address-section">
-            <div className="form-field">
-              <label htmlFor="address">Street Address</label>
-              <input
-                id="address"
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="123 Main Street"
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label htmlFor="city">City</label>
-                <input
-                  id="city"
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Toronto"
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="province">Province</label>
-                <input
-                  id="province"
-                  type="text"
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  placeholder="ON"
-                />
-              </div>
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="postalCode">Postal Code</label>
-              <input
-                id="postalCode"
-                type="text"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="A1A 1A1"
-              />
-            </div>
+        {/* Contacts Section */}
+        <div className="section-divider">
+          <div className="section-header" onClick={() => setShowContactsSection(!showContactsSection)}>
+            <h3>Emergency Contacts</h3>
+            <span className="chevron">{showContactsSection ? '▲' : '▼'}</span>
           </div>
-        )}
-
-        <div className="form-field">
-          <button
-            type="button"
-            className="btn-toggle"
-            onClick={() => setShowContactFields(!showContactFields)}
-          >
-            {showContactFields ? 'Hide Emergency Contact' : 'Add Emergency Contact'}
-          </button>
+          
+          {showContactsSection && (
+            <div className="section-content">
+              {contacts.map((cont, index) => (
+                <div key={index} className="contact-form-item">
+                  <div className="form-item-header">
+                    <span className="form-item-label">Contact {index + 1}</span>
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      onClick={() => handleDeleteContact(index)}
+                      aria-label="Delete contact"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                      Delete
+                    </button>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label htmlFor={`firstName-${index}`}>First Name</label>
+                      <input
+                        id={`firstName-${index}`}
+                        type="text"
+                        value={cont.firstName}
+                        onChange={(e) => handleContactChange(index, 'firstName', e.target.value)}
+                        placeholder="John"
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label htmlFor={`lastName-${index}`}>Last Name</label>
+                      <input
+                        id={`lastName-${index}`}
+                        type="text"
+                        value={cont.lastName}
+                        onChange={(e) => handleContactChange(index, 'lastName', e.target.value)}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label htmlFor={`phoneNumber-${index}`}>Phone Number</label>
+                      <input
+                        id={`phoneNumber-${index}`}
+                        type="tel"
+                        value={cont.phoneNumber}
+                        onChange={(e) => handleContactChange(index, 'phoneNumber', e.target.value)}
+                        placeholder="(416) 555-1234"
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label htmlFor={`type-${index}`}>Relationship</label>
+                      <select
+                        id={`type-${index}`}
+                        value={cont.type}
+                        onChange={(e) => handleContactChange(index, 'type', e.target.value)}
+                      >
+                        <option value="parent">Parent</option>
+                        <option value="guardian">Guardian</option>
+                        <option value="sibling">Sibling</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <button
+                type="button"
+                className="btn-add"
+                onClick={handleAddContact}
+              >
+                + Add Emergency Contact
+              </button>
+            </div>
+          )}
         </div>
-
-        {showContactFields && (
-          <div className="contact-section">
-            <div className="form-row">
-              <div className="form-field">
-                <label htmlFor="contactFirstName">First Name</label>
-                <input
-                  id="contactFirstName"
-                  type="text"
-                  value={contactFirstName}
-                  onChange={(e) => setContactFirstName(e.target.value)}
-                  placeholder="John"
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="contactLastName">Last Name</label>
-                <input
-                  id="contactLastName"
-                  type="text"
-                  value={contactLastName}
-                  onChange={(e) => setContactLastName(e.target.value)}
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label htmlFor="contactPhone">Phone Number</label>
-                <input
-                  id="contactPhone"
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="(416) 555-1234"
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="contactType">Relationship</label>
-                <select
-                  id="contactType"
-                  value={contactType}
-                  onChange={(e) => setContactType(e.target.value as 'parent' | 'sibling' | 'guardian')}
-                >
-                  <option value="parent">Parent</option>
-                  <option value="guardian">Guardian</option>
-                  <option value="sibling">Sibling</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
       </form>
     </Modal>
   );

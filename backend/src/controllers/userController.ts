@@ -132,78 +132,242 @@ export const createStaff = async (req: Request, res: Response) => {
 // HELPER FUNCTIONS
 // ============================================================================
 
-async function setAddress(userId: string, addressData: { address: string; city: string; province: string; postalCode: string }) {
-  // Delete existing address links for this user
-  await sql`DELETE FROM user_has_addresses WHERE user_id = ${userId}`;
+async function setAddresses(userId: string, addressesData: Array<{ id?: string; address: string; city: string; province: string; postalCode: string }>) {
+  // Get existing addresses for this user (full objects, not just IDs)
+  const existingLinks = await sql<{ addressId: string; address: string; city: string; province: string; postalCode: string }[]>`
+    SELECT uha.address_id as "addressId", a.address, a.city, a.province, a.postal_code as "postalCode"
+    FROM user_has_addresses uha
+    JOIN addresses a ON uha.address_id = a.id
+    WHERE uha.user_id = ${userId}
+  `;
   
-  // Insert new address
-  const newAddresses = await sql<DbRow<Addresses>[]>`
-    INSERT INTO addresses (
-      address,
-      city,
-      province,
-      postal_code,
-      country
-    )
-    VALUES (
-      ${addressData.address},
-      ${addressData.city},
-      ${addressData.province},
-      ${addressData.postalCode},
-      'Canada'
-    )
-    RETURNING *
-  `;
+  const existingAddressMap = new Map(
+    existingLinks
+      .filter(link => link.addressId) // Filter out any entries with undefined/null addressId
+      .map(link => [link.addressId, {
+        address: link.address,
+        city: link.city,
+        province: link.province,
+        postalCode: link.postalCode
+      }])
+  );
+  
+  // Separate items into categories
+  const toInsert: typeof addressesData = [];
+  const toUpdate: typeof addressesData = [];
+  const requestedIds = new Set<string>();
+  
+  for (const addressData of addressesData) {
+    if (addressData.id) {
+      requestedIds.add(addressData.id);
+      const existing = existingAddressMap.get(addressData.id);
+      if (existing) {
+        const hasChanged = 
+          existing.address !== addressData.address ||
+          existing.city !== addressData.city ||
+          existing.province !== addressData.province ||
+          existing.postalCode !== addressData.postalCode;
+        
+        if (hasChanged) {
+          toUpdate.push(addressData);
+        }
+      }
+    } else {
+      toInsert.push(addressData);
+    }
+  }
+  
+  // Delete addresses not in request
+  const toDelete = [...existingAddressMap.keys()].filter(id => !requestedIds.has(id));
+  
+  if (toDelete.length > 0) {
+    await sql`
+      DELETE FROM user_has_addresses 
+      WHERE user_id = ${userId} AND address_id IN ${sql(toDelete)}
+    `;
+  }
+  
+  // Batch UPDATE changed addresses using parameterized arrays
+  if (toUpdate.length > 0) {
+    // Extract arrays of values in same order
+    const ids = toUpdate.map(item => item.id!);
+    const addresses = toUpdate.map(item => item.address);
+    const cities = toUpdate.map(item => item.city);
+    const provinces = toUpdate.map(item => item.province);
+    const postalCodes = toUpdate.map(item => item.postalCode);
+    
+    await sql`
+      UPDATE addresses AS a
+      SET 
+        address = updates.address,
+        city = updates.city,
+        province = updates.province,
+        postal_code = updates.postal_code,
+        updated_at = NOW()
+      FROM (
+        SELECT * FROM UNNEST(
+          ${sql.array(ids)}::uuid[],
+          ${sql.array(addresses)}::text[],
+          ${sql.array(cities)}::text[],
+          ${sql.array(provinces)}::text[],
+          ${sql.array(postalCodes)}::text[]
+        ) AS t(id, address, city, province, postal_code)
+      ) AS updates
+      WHERE a.id = updates.id
+    `;
+  }
+  
+  // INSERT new addresses
+  for (const addressData of toInsert) {
+    const newAddresses = await sql<DbRow<Addresses>[]>`
+      INSERT INTO addresses (
+        address,
+        city,
+        province,
+        postal_code,
+        country
+      )
+      VALUES (
+        ${addressData.address},
+        ${addressData.city},
+        ${addressData.province},
+        ${addressData.postalCode},
+        'Canada'
+      )
+      RETURNING *
+    `;
 
-  const newAddress = newAddresses[0];
+    const newAddress = newAddresses[0];
 
-  // Link user to address
-  await sql`
-    INSERT INTO user_has_addresses (
-      user_id,
-      address_id
-    )
-    VALUES (
-      ${userId},
-      ${newAddress.id}
-    )
-  `;
+    await sql`
+      INSERT INTO user_has_addresses (
+        user_id,
+        address_id
+      )
+      VALUES (
+        ${userId},
+        ${newAddress.id}
+      )
+    `;
+  }
 }
 
-async function setContact(userId: string, contactData: { firstName: string; lastName: string; phoneNumber?: string; type: string }) {
-  // Delete existing contact links for this user
-  await sql`DELETE FROM user_has_contacts WHERE user_id = ${userId}`;
+async function setContacts(userId: string, contactsData: Array<{ id?: string; firstName: string; lastName: string; phoneNumber?: string; type: string }>) {
+  // Get existing contacts for this user (full objects, not just IDs)
+  const existingLinks = await sql<{ contactId: string; firstName: string; lastName: string; phoneNumber: string | null; type: string }[]>`
+    SELECT uhc.contact_id as "contactId", c.first_name as "firstName", c.last_name as "lastName", c.phone_number as "phoneNumber", c.type
+    FROM user_has_contacts uhc
+    JOIN contacts c ON uhc.contact_id = c.id
+    WHERE uhc.user_id = ${userId}
+  `;
   
-  // Insert new contact
-  const newContacts = await sql<DbRow<Contacts>[]>`
-    INSERT INTO contacts (
-      first_name,
-      last_name,
-      phone_number,
-      type
-    )
-    VALUES (
-      ${contactData.firstName},
-      ${contactData.lastName},
-      ${contactData.phoneNumber || null},
-      ${contactData.type}::contact_type
-    )
-    RETURNING *
-  `;
+  const existingContactMap = new Map(
+    existingLinks
+      .filter(link => link.contactId) // Filter out any entries with undefined/null contactId
+      .map(link => [link.contactId, {
+        firstName: link.firstName,
+        lastName: link.lastName,
+        phoneNumber: link.phoneNumber || '',
+        type: link.type
+      }])
+  );
+  
+  // Separate items into categories
+  const toInsert: typeof contactsData = [];
+  const toUpdate: typeof contactsData = [];
+  const requestedIds = new Set<string>();
+  
+  for (const contactData of contactsData) {
+    if (contactData.id) {
+      requestedIds.add(contactData.id);
+      const existing = existingContactMap.get(contactData.id);
+      if (existing) {
+        const hasChanged = 
+          existing.firstName !== contactData.firstName ||
+          existing.lastName !== contactData.lastName ||
+          existing.phoneNumber !== (contactData.phoneNumber || '') ||
+          existing.type !== contactData.type;
+        
+        if (hasChanged) {
+          toUpdate.push(contactData);
+        }
+      }
+    } else {
+      toInsert.push(contactData);
+    }
+  }
+  
+  // Delete contacts not in request
+  const toDelete = [...existingContactMap.keys()].filter(id => !requestedIds.has(id));
+  
+  if (toDelete.length > 0) {
+    await sql`
+      DELETE FROM user_has_contacts 
+      WHERE user_id = ${userId} AND contact_id IN ${sql(toDelete)}
+    `;
+  }
+  
+  // Batch UPDATE changed contacts using parameterized arrays
+  if (toUpdate.length > 0) {
+    // Extract arrays of values in same order
+    const ids = toUpdate.map(item => item.id!);
+    const firstNames = toUpdate.map(item => item.firstName);
+    const lastNames = toUpdate.map(item => item.lastName);
+    const phoneNumbers = toUpdate.map(item => item.phoneNumber || null);
+    const types = toUpdate.map(item => item.type);
+    
+    await sql`
+      UPDATE contacts AS c
+      SET 
+        first_name = updates.first_name,
+        last_name = updates.last_name,
+        phone_number = updates.phone_number,
+        type = updates.type::contact_type,
+        updated_at = NOW()
+      FROM (
+        SELECT * FROM UNNEST(
+          ${sql.array(ids)}::uuid[],
+          ${sql.array(firstNames)}::text[],
+          ${sql.array(lastNames)}::text[],
+          ${sql.array(phoneNumbers)}::text[],
+          ${sql.array(types)}::text[]
+        ) AS t(id, first_name, last_name, phone_number, type)
+      ) AS updates
+      WHERE c.id = updates.id
+    `;
+  }
+  
+  // INSERT new contacts
+  for (const contactData of toInsert) {
+    const newContacts = await sql<DbRow<Contacts>[]>`
+      INSERT INTO contacts (
+        first_name,
+        last_name,
+        phone_number,
+        type
+      )
+      VALUES (
+        ${contactData.firstName},
+        ${contactData.lastName},
+        ${contactData.phoneNumber || null},
+        ${contactData.type}::contact_type
+      )
+      RETURNING *
+    `;
 
-  const newContact = newContacts[0];
+    const newContact = newContacts[0];
 
-  // Link user to contact
-  await sql`
-    INSERT INTO user_has_contacts (
-      user_id,
-      contact_id
-    )
-    VALUES (
-      ${userId},
-      ${newContact.id}
-    )
-  `;
+    await sql`
+      INSERT INTO user_has_contacts (
+        user_id,
+        contact_id
+      )
+      VALUES (
+        ${userId},
+        ${newContact.id}
+      )
+    `;
+  }
 }
 
 // ============================================================================
@@ -211,7 +375,7 @@ async function setContact(userId: string, contactData: { firstName: string; last
 // ============================================================================
 
 export const setYouth = async (req: Request, res: Response) => {
-  const { id, firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel, active, address, contact } = req.body;
+  const { id, firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel, active, addresses, contacts } = req.body;
 
   try {
     let userId: string;
@@ -298,14 +462,20 @@ export const setYouth = async (req: Request, res: Response) => {
       `;
     }
 
-    // Handle address using helper function
-    if (address) {
-      await setAddress(userId, address);
+    // Handle addresses - for updates, always sync (delete old + insert new) even if empty
+    // For new youth, only set if provided
+    if (id) {
+      await setAddresses(userId, addresses || []);
+    } else if (addresses && addresses.length > 0) {
+      await setAddresses(userId, addresses);
     }
 
-    // Handle contact using helper function
-    if (contact) {
-      await setContact(userId, contact);
+    // Handle contacts - for updates, always sync (delete old + insert new) even if empty
+    // For new youth, only set if provided
+    if (id) {
+      await setContacts(userId, contacts || []);
+    } else if (contacts && contacts.length > 0) {
+      await setContacts(userId, contacts);
     }
 
     res.status(id ? 200 : 201).json({ id: userId });

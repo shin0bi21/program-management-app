@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import Header from '../../common/components/Header/Header';
 import Table, { TableColumn } from '../../common/components/Table/Table';
-import { useUsers } from './hooks/useUsers';
-import { useYouth } from './hooks/useYouth';
+import { useStaff } from '../../common/hooks/useStaff';
+import { useYouth, YouthProfile } from '../../common/hooks/useYouth';
 import YouthModal from './components/YouthModal';
-import type { YouthProfile } from './hooks/useYouth';
 import './Users.css';
 
 type TabType = 'staff' | 'youth';
@@ -25,11 +24,11 @@ export default function Users() {
   const [activeTab, setActiveTab] = useState<TabType>('staff');
   const [showAddYouth, setShowAddYouth] = useState(false);
   const [youthToEdit, setYouthToEdit] = useState<YouthProfile | undefined>(undefined);
-  const { users, loading: usersLoading, error: usersError } = useUsers();
+  const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaff();
   const { youth, setYouth, loading: youthLoading, error: youthError, refetch: refetchYouth } = useYouth();
 
   // Staff table columns
-  const staffColumns: TableColumn<typeof users[number]>[] = [
+  const staffColumns: TableColumn<typeof staff[number]>[] = [
     {
       key: 'firstName',
       header: 'First Name',
@@ -131,9 +130,9 @@ export default function Users() {
         {activeTab === 'staff' && (
           <Table
             columns={staffColumns}
-            data={users}
-            loading={usersLoading}
-            error={usersError}
+            data={staff}
+            loading={staffLoading}
+            error={staffError}
             emptyMessage="No staff users found"
             keyExtractor={(user) => user.id}
             maxHeight="calc(100vh - 200px)"

@@ -26,18 +26,20 @@ export const setYouthSchema = z.object({
     gradeLevel: z.string().max(50).optional(),
     groupId: z.string().uuid('Invalid group ID').optional(),
     active: z.boolean(),
-    address: z.object({
+    addresses: z.array(z.object({
+      id: z.string().uuid('Invalid address ID').optional(),
       address: z.string().min(1, 'Street address is required'),
       city: z.string().min(1, 'City is required'),
       province: z.string().min(1, 'Province is required'),
       postalCode: z.string().min(1, 'Postal code is required'),
-    }).optional(),
-    contact: z.object({
+    })).optional(),
+    contacts: z.array(z.object({
+      id: z.string().uuid('Invalid contact ID').optional(),
       firstName: z.string().min(1, 'Contact first name is required').regex(/^[a-zA-Z\s'-]+$/, 'Contact first name can only contain letters, spaces, hyphens, and apostrophes'),
       lastName: z.string().min(1, 'Contact last name is required').regex(/^[a-zA-Z\s'-]+$/, 'Contact last name can only contain letters, spaces, hyphens, and apostrophes'),
       phoneNumber: z.string().optional(),
       type: z.enum(['parent', 'sibling', 'guardian']).default('parent'),
-    }).optional(),
+    })).optional(),
   }),
 });
 
