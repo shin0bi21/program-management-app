@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getYouth } from '../../pages/Users/api/youth.api';
-import { getErrorMessage } from '../utils/errors';
-import { getToken } from '../utils/storage';
+import { getYouth } from '../api/youth.api';
+import { getErrorMessage } from '../../../common/utils/errors';
+import { getToken } from '../../../common/utils/storage';
 
 export interface YouthProfile {
   id: string;
@@ -11,7 +11,7 @@ export interface YouthProfile {
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;
-  gradeLevel: string | null;
+  gradeLevel: number | null;
   createdAt: string;
   addresses: Array<{
     id: string;

@@ -3,7 +3,8 @@ import { useEffect } from 'react'
 import { AuthProvider } from './common/context/AuthContext'
 import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import Homepage from './pages/Homepage/Homepage'
-import Users from './pages/Users/Users'
+import Youth from './pages/Youth/Youth'
+import Staff from './pages/Staff/Staff'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -21,9 +22,14 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Homepage />} />
-          <Route path="/users" element={
+          <Route path="/youth" element={
             <ProtectedRoute>
-              <Users />
+              <Youth />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff" element={
+            <ProtectedRoute>
+              <Staff />
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />

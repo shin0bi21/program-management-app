@@ -13,9 +13,14 @@ export default function Header() {
           Home
         </button>
         {isAuthenticated && (
-          <button onClick={() => navigate('/users')} className="header-link">
-            Users
-          </button>
+          <>
+            <button onClick={() => navigate('/staff')} className="header-link">
+              Staff
+            </button>
+            <button onClick={() => navigate('/youth')} className="header-link">
+              Youth
+            </button>
+          </>
         )}
       </div>
       <div className="header-right">

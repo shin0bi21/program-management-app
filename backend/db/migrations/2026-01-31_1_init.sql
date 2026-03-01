@@ -149,10 +149,12 @@ CREATE TABLE IF NOT EXISTS youth_profiles (
   user_id UUID NOT NULL UNIQUE,
   date_of_birth DATE,
   school_id UUID,
-  grade_level VARCHAR(50),
+  grade_level SMALLINT,
   LIKE base_table INCLUDING ALL,
   -- Date of birth must be in the past
-  CHECK (date_of_birth IS NULL OR date_of_birth < CURRENT_DATE)
+  CHECK (date_of_birth IS NULL OR date_of_birth < CURRENT_DATE),
+  -- Grade must be between 0 (Kindergarten) and 12
+  CHECK (grade_level IS NULL OR grade_level BETWEEN 0 AND 12)
 );
 
 CREATE INDEX idx_youth_profiles_user_id ON youth_profiles(user_id);

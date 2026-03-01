@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS youth_profiles_backup (
   user_id UUID,
   date_of_birth DATE,
   school_id UUID,
-  grade_level VARCHAR(50),
+  grade_level SMALLINT,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -293,9 +293,9 @@ BEGIN
   IF NEW.user_id IS NULL THEN
     RAISE EXCEPTION '[youth_profiles] user_id cannot be NULL';
   END IF;
-  -- Validate VARCHAR length: grade_level
-  IF NEW.grade_level IS NOT NULL AND LENGTH(NEW.grade_level) > 50 THEN
-    RAISE EXCEPTION '[youth_profiles] grade_level exceeds maximum length of 50 characters';
+  -- Validate grade range
+  IF NEW.grade_level IS NOT NULL AND (NEW.grade_level < 0 OR NEW.grade_level > 12) THEN
+    RAISE EXCEPTION '[youth_profiles] grade_level must be between 0 and 12';
   END IF;
 
   -- Debug log (optional - comment out in production)

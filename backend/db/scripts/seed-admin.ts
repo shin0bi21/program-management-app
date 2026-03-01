@@ -17,7 +17,7 @@
  */
 
 import postgres from 'postgres';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 const DATABASE_URL = process.env.DATABASE_URL;

@@ -1,12 +1,9 @@
 import { useState } from 'react';
 import Header from '../../common/components/Header/Header';
 import Table, { TableColumn } from '../../common/components/Table/Table';
-import { useStaff } from '../../common/hooks/useStaff';
-import { useYouth, YouthProfile } from '../../common/hooks/useYouth';
-import YouthModal from './components/YouthModal';
-import './Users.css';
-
-type TabType = 'staff' | 'youth';
+import { useYouth, YouthProfile } from './hooks/useYouth';
+import YouthModal from './components/YouthModal/YouthModal';
+import './Youth.css';
 
 function calculateAge(dateOfBirth: string | null): string {
   if (!dateOfBirth) return 'N/A';
@@ -20,28 +17,11 @@ function calculateAge(dateOfBirth: string | null): string {
   return age.toString();
 }
 
-export default function Users() {
-  const [activeTab, setActiveTab] = useState<TabType>('staff');
+export default function Youth() {
   const [showAddYouth, setShowAddYouth] = useState(false);
   const [youthToEdit, setYouthToEdit] = useState<YouthProfile | undefined>(undefined);
-  const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaff();
-  const { youth, setYouth, loading: youthLoading, error: youthError, refetch: refetchYouth } = useYouth();
+  const { youth, setYouth, loading, error } = useYouth();
 
-  // Staff table columns
-  const staffColumns: TableColumn<typeof staff[number]>[] = [
-    {
-      key: 'firstName',
-      header: 'First Name',
-      render: (user) => user.firstName,
-    },
-    {
-      key: 'lastName',
-      header: 'Last Name',
-      render: (user) => user.lastName,
-    },
-  ];
-
-  // Youth table columns
   const youthColumns: TableColumn<YouthProfile>[] = [
     {
       key: 'firstName',
@@ -85,7 +65,7 @@ export default function Users() {
       header: 'Actions',
       render: (profile) => (
         <button
-          className="users-action-btn"
+          className="page-action-btn"
           onClick={() => {
             setYouthToEdit(profile);
             setShowAddYouth(true);
@@ -101,55 +81,25 @@ export default function Users() {
   return (
     <>
       <Header />
-      <div className="users-container">
-        <div className="users-header">
-          <div className="users-title-row">
-            <h1 className="users-title">Users</h1>
-            {activeTab === 'youth' && (
-              <button className="users-add-btn" onClick={() => setShowAddYouth(true)}>
-                + Add Youth
-              </button>
-            )}
-          </div>
-          <div className="users-tabs">
-            <button
-              className={`users-tab ${activeTab === 'staff' ? 'active' : ''}`}
-              onClick={() => setActiveTab('staff')}
-            >
-              Staff
-            </button>
-            <button
-              className={`users-tab ${activeTab === 'youth' ? 'active' : ''}`}
-              onClick={() => setActiveTab('youth')}
-            >
-              Youth
+      <div className="page-container">
+        <div className="page-header">
+          <div className="page-title-row">
+            <h1 className="page-title">Youth</h1>
+            <button className="page-add-btn" onClick={() => setShowAddYouth(true)}>
+              + Add Youth
             </button>
           </div>
         </div>
 
-        {activeTab === 'staff' && (
-          <Table
-            columns={staffColumns}
-            data={staff}
-            loading={staffLoading}
-            error={staffError}
-            emptyMessage="No staff users found"
-            keyExtractor={(user) => user.id}
-            maxHeight="calc(100vh - 200px)"
-          />
-        )}
-
-        {activeTab === 'youth' && (
-          <Table
-            columns={youthColumns}
-            data={youth}
-            loading={youthLoading}
-            error={youthError}
-            emptyMessage="No youth profiles found"
-            keyExtractor={(profile) => profile.id}
-            maxHeight="calc(100vh - 200px)"
-          />
-        )}
+        <Table
+          columns={youthColumns}
+          data={youth}
+          loading={loading}
+          error={error}
+          emptyMessage="No youth profiles found"
+          keyExtractor={(profile) => profile.id}
+          maxHeight="calc(100vh - 200px)"
+        />
       </div>
 
       <YouthModal
@@ -162,13 +112,9 @@ export default function Users() {
         onSuccess={(savedYouth) => {
           setShowAddYouth(false);
           setYouthToEdit(undefined);
-          
-          // Update local state instead of refetching
           if (youthToEdit) {
-            // Update existing youth
             setYouth(youth.map(y => y.id === savedYouth.id ? savedYouth : y));
           } else {
-            // Add new youth
             setYouth([...youth, savedYouth]);
           }
         }}

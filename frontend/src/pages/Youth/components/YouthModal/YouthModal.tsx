@@ -1,29 +1,18 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
-import { setYouth, getYouth } from '../api/youth.api';
-import { getErrorMessage } from '../../../common/utils/errors';
-import { getToken } from '../../../common/utils/storage';
-import Modal from '../../../common/components/Modal/Modal';
-import { useSchools } from '../../../common/hooks/useSchools';
-import type { YouthProfile } from '../../../common/hooks/useYouth';
+import { setYouth, getYouth } from '../../api/youth.api';
+import { getErrorMessage } from '../../../../common/utils/errors';
+import { getToken } from '../../../../common/utils/storage';
+import Modal from '../../../../common/components/Modal/Modal';
+import { useSchools } from '../../../../common/hooks/useSchools';
+import { useContacts } from '../../../../common/hooks/useContacts';
+import { useAddresses } from '../../../../common/hooks/useAddresses';
+import { youthSchema, type YouthFormData } from './youthSchema';
+import type { YouthProfile } from '../../hooks/useYouth';
 import './YouthModal.css';
-
-interface Address {
-  id: string;
-  address: string;
-  city: string;
-  province: string;
-  postalCode: string;
-}
-
-interface Contact {
-  id: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  type: 'parent' | 'sibling' | 'guardian';
-}
 
 interface YouthModalProps {
   isOpen: boolean;
@@ -32,80 +21,56 @@ interface YouthModalProps {
   youthData?: YouthProfile;
 }
 
+const defaultValues: YouthFormData = {
+  firstName: '',
+  lastName: '',
+  dateOfBirth: '',
+  schoolId: '',
+  gradeLevel: undefined,
+  active: true,
+};
+
 export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: YouthModalProps) {
-  // Basic youth info
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [schoolId, setSchoolId] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('');
-  const [active, setActive] = useState(true);
-
-  // Addresses (array-based) - starts with one empty item
-  const [addresses, setAddresses] = useState<Address[]>([
-    { id: '', address: '', city: '', province: '', postalCode: '' }
-  ]);
   const [showAddressesSection, setShowAddressesSection] = useState(false);
-
-  // Contacts (array-based) - starts with one empty item
-  const [contacts, setContacts] = useState<Contact[]>([
-    { id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }
-  ]);
   const [showContactsSection, setShowContactsSection] = useState(false);
-
-  const { schools } = useSchools();
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit: rhfHandleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<YouthFormData>({
+    resolver: zodResolver(youthSchema),
+    defaultValues,
+  });
+
+  const { schools } = useSchools();
+  const { addresses, initialize: initAddresses, reset: resetAddresses, handleAdd: handleAddAddress, handleDelete: handleDeleteAddress, handleChange: handleAddressChange, validate: validateAddresses, getPayload: getAddressPayload } = useAddresses();
+  const { contacts, initialize: initContacts, reset: resetContacts, handleAdd: handleAddContact, handleDelete: handleDeleteContact, handleChange: handleContactChange, validate: validateContacts, getPayload: getContactPayload } = useContacts();
 
   // Pre-fill form when editing
   useEffect(() => {
     if (!isOpen || !youthData) return;
 
-    setFirstName(youthData.firstName || '');
-    setLastName(youthData.lastName || '');
-    setDateOfBirth(youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '');
-    setSchoolId(youthData.schoolId || '');
-    setGradeLevel(youthData.gradeLevel || '');
-    setActive(youthData.active ?? true);
+    reset({
+      firstName: youthData.firstName || '',
+      lastName: youthData.lastName || '',
+      dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
+      schoolId: youthData.schoolId || '',
+      gradeLevel: youthData.gradeLevel ?? undefined,
+      active: youthData.active ?? true,
+    });
 
-    // Load existing addresses (or keep default empty one)
-    if (youthData.addresses && youthData.addresses.length > 0) {
-      setAddresses(youthData.addresses.map(addr => ({
-        id: addr.id,
-        address: addr.address,
-        city: addr.city,
-        province: addr.province,
-        postalCode: addr.postalCode,
-      })));
-    } else {
-      setAddresses([{ id: '', address: '', city: '', province: '', postalCode: '' }]);
-    }
-
-    // Load existing contacts (or keep default empty one)
-    if (youthData.contacts && youthData.contacts.length > 0) {
-      setContacts(youthData.contacts.map(cont => ({
-        id: cont.id,
-        firstName: cont.firstName,
-        lastName: cont.lastName,
-        phoneNumber: cont.phoneNumber || '',
-        type: (cont.type as 'parent' | 'sibling' | 'guardian') || 'parent',
-      })));
-    } else {
-      setContacts([{ id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
-    }
+    initAddresses(youthData.addresses);
+    initContacts(youthData.contacts);
   }, [isOpen, youthData]);
 
   const resetForm = () => {
-    setFirstName('');
-    setLastName('');
-    setDateOfBirth('');
-    setSchoolId('');
-    setGradeLevel('');
-    setActive(true);
-    
-    setAddresses([{ id: '', address: '', city: '', province: '', postalCode: '' }]);
-    setContacts([{ id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
-
+    reset(defaultValues);
+    resetAddresses();
+    resetContacts();
     setError('');
     setSubmitStatus('idle');
   };
@@ -115,151 +80,37 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     onClose();
   };
 
-  // Address handlers
-  const handleAddAddress = () => {
-    setAddresses([...addresses, { id: '', address: '', city: '', province: '', postalCode: '' }]);
-  };
-
-  const handleDeleteAddress = (index: number) => {
-    setAddresses(addresses.filter((_, i) => i !== index));
-  };
-
-  const handleAddressChange = (index: number, field: keyof Address, value: string) => {
-    const updated = [...addresses];
-    updated[index] = { ...updated[index], [field]: value };
-    setAddresses(updated);
-  };
-
-  // Contact handlers
-  const handleAddContact = () => {
-    setContacts([...contacts, { id: '', firstName: '', lastName: '', phoneNumber: '', type: 'parent' }]);
-  };
-
-  const handleDeleteContact = (index: number) => {
-    setContacts(contacts.filter((_, i) => i !== index));
-  };
-
-  const handleContactChange = (index: number, field: keyof Contact, value: string) => {
-    const updated = [...contacts];
-    updated[index] = { ...updated[index], [field]: value };
-    setContacts(updated);
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const onValid = async (data: YouthFormData) => {
     setSubmitStatus('submitting');
     setError('');
 
     const token = getToken();
 
-    // Validate youth names
-    const namePattern = /^[a-zA-Z\s'-]+$/;
-    if (!namePattern.test(firstName.trim())) {
-      setError('First name can only contain letters, spaces, hyphens, and apostrophes');
+    const addressError = validateAddresses();
+    if (addressError) {
+      setError(addressError);
       setSubmitStatus('error');
       return;
     }
 
-    if (!namePattern.test(lastName.trim())) {
-      setError('Last name can only contain letters, spaces, hyphens, and apostrophes');
+    const contactError = validateContacts();
+    if (contactError) {
+      setError(contactError);
       setSubmitStatus('error');
       return;
-    }
-
-    // Validate addresses: if any field is filled, all required fields must be filled
-    for (let i = 0; i < addresses.length; i++) {
-      const addr = addresses[i];
-      const hasAnyField = addr.address.trim() || addr.city.trim() || addr.province.trim() || addr.postalCode.trim();
-      
-      if (hasAnyField) {
-        if (!addr.address.trim()) {
-          setError(`Address ${i + 1}: Street address is required`);
-          setSubmitStatus('error');
-          return;
-        }
-        if (!addr.city.trim()) {
-          setError(`Address ${i + 1}: City is required`);
-          setSubmitStatus('error');
-          return;
-        }
-        if (!addr.province.trim()) {
-          setError(`Address ${i + 1}: Province is required`);
-          setSubmitStatus('error');
-          return;
-        }
-        if (!addr.postalCode.trim()) {
-          setError(`Address ${i + 1}: Postal code is required`);
-          setSubmitStatus('error');
-          return;
-        }
-      }
-    }
-
-    // Validate contacts: if any field is filled, first and last name must be filled
-    for (let i = 0; i < contacts.length; i++) {
-      const cont = contacts[i];
-      const hasAnyField = cont.firstName.trim() || cont.lastName.trim() || cont.phoneNumber.trim();
-      
-      if (hasAnyField) {
-        if (!cont.firstName.trim()) {
-          setError(`Contact ${i + 1}: First name is required`);
-          setSubmitStatus('error');
-          return;
-        }
-        if (!cont.lastName.trim()) {
-          setError(`Contact ${i + 1}: Last name is required`);
-          setSubmitStatus('error');
-          return;
-        }
-        // Validate name pattern for contacts
-        if (!namePattern.test(cont.firstName.trim())) {
-          setError(`Contact ${i + 1}: First name can only contain letters, spaces, hyphens, and apostrophes`);
-          setSubmitStatus('error');
-          return;
-        }
-        if (!namePattern.test(cont.lastName.trim())) {
-          setError(`Contact ${i + 1}: Last name can only contain letters, spaces, hyphens, and apostrophes`);
-          setSubmitStatus('error');
-          return;
-        }
-      }
     }
 
     try {
-      // Filter out empty addresses (all fields empty)
-      const nonEmptyAddresses = addresses.filter(addr => 
-        addr.address.trim() || addr.city.trim() || addr.province.trim() || addr.postalCode.trim()
-      );
-
-      // Filter out empty contacts (no first/last name)
-      const nonEmptyContacts = contacts.filter(cont => 
-        cont.firstName.trim() || cont.lastName.trim()
-      );
-
       const payload = {
         ...(youthData && { id: youthData.id }),
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        active,
-        ...(dateOfBirth && { dateOfBirth }),
-        ...(schoolId && { schoolId }),
-        ...(gradeLevel.trim() && { gradeLevel: gradeLevel.trim() }),
-        // Always send addresses array (even if empty) to trigger backend delete when updating
-        addresses: nonEmptyAddresses.map(addr => ({
-          ...(addr.id && { id: addr.id }), // Include ID if it exists (for update)
-          address: addr.address.trim(),
-          city: addr.city.trim(),
-          province: addr.province.trim(),
-          postalCode: addr.postalCode.trim(),
-        })),
-        // Always send contacts array (even if empty) to trigger backend delete when updating
-        contacts: nonEmptyContacts.map(cont => ({
-          ...(cont.id && { id: cont.id }), // Include ID if it exists (for update)
-          firstName: cont.firstName.trim(),
-          lastName: cont.lastName.trim(),
-          phoneNumber: cont.phoneNumber.trim(),
-          type: cont.type,
-        })),
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        active: data.active,
+        ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
+        ...(data.schoolId && { schoolId: data.schoolId }),
+        ...(data.gradeLevel != null && { gradeLevel: data.gradeLevel }),
+        addresses: getAddressPayload(),
+        contacts: getContactPayload(),
       };
 
       const result = await setYouth(token, payload);
@@ -304,7 +155,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         undefined
       }
     >
-      <form id="youth-form" onSubmit={handleSubmit}>
+      <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
         {/* Basic Info */}
         <div className="form-row">
           <div className="form-field">
@@ -312,20 +163,18 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
             <input
               id="firstName"
               type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
+              {...register('firstName')}
             />
+            {errors.firstName && <span className="field-error">{errors.firstName.message}</span>}
           </div>
           <div className="form-field">
             <label htmlFor="lastName">Last Name *</label>
             <input
               id="lastName"
               type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
+              {...register('lastName')}
             />
+            {errors.lastName && <span className="field-error">{errors.lastName.message}</span>}
           </div>
         </div>
 
@@ -335,19 +184,20 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
             <input
               id="dateOfBirth"
               type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
+              {...register('dateOfBirth')}
             />
           </div>
           <div className="form-field">
-            <label htmlFor="gradeLevel">Grade Level</label>
+            <label htmlFor="gradeLevel">Grade</label>
             <input
               id="gradeLevel"
-              type="text"
-              value={gradeLevel}
-              onChange={(e) => setGradeLevel(e.target.value)}
-              placeholder="e.g. Grade 5"
+              type="number"
+              min="0"
+              max="12"
+              placeholder="0–12"
+              {...register('gradeLevel', { valueAsNumber: true })}
             />
+            {errors.gradeLevel && <span className="field-error">{errors.gradeLevel.message}</span>}
           </div>
         </div>
 
@@ -355,8 +205,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <label htmlFor="school">School</label>
           <select
             id="school"
-            value={schoolId}
-            onChange={(e) => setSchoolId(e.target.value)}
+            {...register('schoolId')}
           >
             <option value="">Select a school</option>
             {schools.map((school) => (
@@ -371,8 +220,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <label className="checkbox-label">
             <input
               type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
+              {...register('active')}
             />
             <span>Active (currently participating in cohort)</span>
           </label>
@@ -484,9 +332,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                   
                   <div className="form-row">
                     <div className="form-field">
-                      <label htmlFor={`firstName-${index}`}>First Name</label>
+                      <label htmlFor={`contact-firstName-${index}`}>First Name</label>
                       <input
-                        id={`firstName-${index}`}
+                        id={`contact-firstName-${index}`}
                         type="text"
                         value={cont.firstName}
                         onChange={(e) => handleContactChange(index, 'firstName', e.target.value)}
@@ -494,9 +342,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                       />
                     </div>
                     <div className="form-field">
-                      <label htmlFor={`lastName-${index}`}>Last Name</label>
+                      <label htmlFor={`contact-lastName-${index}`}>Last Name</label>
                       <input
-                        id={`lastName-${index}`}
+                        id={`contact-lastName-${index}`}
                         type="text"
                         value={cont.lastName}
                         onChange={(e) => handleContactChange(index, 'lastName', e.target.value)}

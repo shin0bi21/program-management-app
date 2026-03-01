@@ -293,7 +293,7 @@ export interface YouthProfiles {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: string | null;
+  grade_level: number | null;
   id: Generated<string>;
   school_id: string | null;
   updated_at: Generated<Timestamp>;
@@ -308,7 +308,7 @@ export interface YouthProfilesBackup {
   created_at: Timestamp | null;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: string | null;
+  grade_level: number | null;
   id: string | null;
   school_id: string | null;
   updated_at: Timestamp | null;

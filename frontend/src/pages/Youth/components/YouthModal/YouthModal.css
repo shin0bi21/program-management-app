@@ -1,5 +1,12 @@
 /* YouthModal-specific styles */
 
+.field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #dc3545;
+}
+
 .btn-toggle {
   padding: 0.5rem 1rem;
   border: 1px solid #007bff;

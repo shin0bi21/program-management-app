@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSchools } from '../../pages/Users/api/youth.api';
+import { getSchools } from '../../pages/Youth/api/youth.api';
 import { getToken } from '../utils/storage';
 
 export interface School {

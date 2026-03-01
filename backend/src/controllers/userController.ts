@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { sql } from '../db/client';
 import type { Addresses, Contacts, Schools, UserCredentials, UserGroups, Users, YouthProfiles } from '../types/database';
 import type { DbRow } from '../types/db';
@@ -412,7 +412,7 @@ export const setYouth = async (req: Request, res: Response) => {
           ${userId},
           ${dateOfBirth || null},
           ${schoolId || null},
-          ${gradeLevel || null},
+          ${gradeLevel ?? null},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${userId}), NOW()),
           NOW()
         )
@@ -457,7 +457,7 @@ export const setYouth = async (req: Request, res: Response) => {
           ${userId},
           ${dateOfBirth || null},
           ${schoolId || null},
-          ${gradeLevel || null}
+          ${gradeLevel ?? null}
         )
       `;
     }

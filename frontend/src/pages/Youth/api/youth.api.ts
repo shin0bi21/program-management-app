@@ -20,7 +20,7 @@ export async function setYouth(token: string | null, data: {
   active: boolean;
   dateOfBirth?: string;
   schoolId?: string;
-  gradeLevel?: string;
+  gradeLevel?: number;
   groupId?: string;
   addresses?: Array<{
     address: string;
