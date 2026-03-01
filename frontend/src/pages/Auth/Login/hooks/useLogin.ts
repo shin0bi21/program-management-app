@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { login } from '../../api/auth.api';
+import { login } from '../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint } from '../../../../common/utils/deviceFingerprint';
 import { getErrorMessage } from '../../../../common/utils/errors';
 import { setAuthData } from '../../../../common/utils/storage';
-import { loginSchema, type LoginFormData } from '../../validation/authSchemas';
+import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
 
 export const useLogin = () => {
   const [error, setError] = useState('');

@@ -9,7 +9,7 @@ import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
 import ResetPassword from './pages/Auth/ResetPassword/ResetPassword'
-import { startTokenRefreshTimer } from './pages/Auth/api/tokenRefresh'
+import { startTokenRefreshTimer } from './pages/Auth/common/api/tokenRefresh'
 
 function App() {
   useEffect(() => {
