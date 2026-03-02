@@ -5,13 +5,15 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
-import userRoutes from '../../src/routes/userRoutes';
+import staffRoutes from '../../src/routes/staffRoutes';
+import youthRoutes from '../../src/routes/youthRoutes';
 
 export function createApp() {
   const app = express();
   app.use(express.json());
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
-  app.use('/api/users', userRoutes);
+  app.use('/api/staff', staffRoutes);
+  app.use('/api/youth', youthRoutes);
   return app;
 }

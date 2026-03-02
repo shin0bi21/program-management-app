@@ -24,6 +24,19 @@
   color: white;
 }
 
+/* Section title for General Info */
+.section-title {
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.section-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
 /* Section header with border-top */
 .section-divider {
   margin-top: 24px;
@@ -35,9 +48,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  cursor: pointer;
-  user-select: none;
+  padding: 4px 0 12px;
 }
 
 .section-header h3 {
@@ -47,14 +58,14 @@
   color: #333;
 }
 
-.chevron {
-  font-size: 14px;
-  color: #666;
-  transition: transform 0.2s;
+.section-optional {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6c757d;
 }
 
 .section-content {
-  padding-top: 12px;
+  padding-top: 4px;
 }
 
 /* Form item styling */

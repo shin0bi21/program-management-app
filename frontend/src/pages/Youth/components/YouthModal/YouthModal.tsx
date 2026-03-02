@@ -31,8 +31,6 @@ const defaultValues: YouthFormData = {
 };
 
 export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: YouthModalProps) {
-  const [showAddressesSection, setShowAddressesSection] = useState(false);
-  const [showContactsSection, setShowContactsSection] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
 
@@ -156,7 +154,10 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
       }
     >
       <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
-        {/* Basic Info */}
+        {/* General Info */}
+        <div className="section-title">
+          <h3>General Info</h3>
+        </div>
         <div className="form-row">
           <div className="form-field">
             <label htmlFor="firstName">First Name *</label>
@@ -228,14 +229,12 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
 
         {/* Addresses Section */}
         <div className="section-divider">
-          <div className="section-header" onClick={() => setShowAddressesSection(!showAddressesSection)}>
-            <h3>Addresses</h3>
-            <span className="chevron">{showAddressesSection ? '▲' : '▼'}</span>
+          <div className="section-header">
+            <h3>Addresses <span className="section-optional">(optional)</span></h3>
           </div>
           
-          {showAddressesSection && (
-            <div className="section-content">
-              {addresses.map((addr, index) => (
+          <div className="section-content">
+            {addresses.map((addr, index) => (
                 <div key={index} className="address-form-item">
                   <div className="form-item-header">
                     <span className="form-item-label">Address {index + 1}</span>
@@ -302,20 +301,17 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
               >
                 + Add Address
               </button>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Contacts Section */}
         <div className="section-divider">
-          <div className="section-header" onClick={() => setShowContactsSection(!showContactsSection)}>
-            <h3>Emergency Contacts</h3>
-            <span className="chevron">{showContactsSection ? '▲' : '▼'}</span>
+          <div className="section-header">
+            <h3>Emergency Contacts <span className="section-optional">(optional)</span></h3>
           </div>
           
-          {showContactsSection && (
-            <div className="section-content">
-              {contacts.map((cont, index) => (
+          <div className="section-content">
+            {contacts.map((cont, index) => (
                 <div key={index} className="contact-form-item">
                   <div className="form-item-header">
                     <span className="form-item-label">Contact {index + 1}</span>
@@ -386,8 +382,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
               >
                 + Add Emergency Contact
               </button>
-            </div>
-          )}
+          </div>
         </div>
       </form>
     </Modal>

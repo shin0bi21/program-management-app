@@ -1,6 +1,6 @@
-import { getTimeUntilExpiry } from '../../../common/utils/jwt';
-import { clearAuthData, getToken, getUser, setAuthData } from '../../../common/utils/storage';
-import { api } from '../../../common/api/config';
+import { getTimeUntilExpiry } from '../../../../common/utils/jwt';
+import { clearAuthData, getToken, getUser, setAuthData } from '../../../../common/utils/storage';
+import { api } from '../../../../common/api/config';
 
 let refreshPromise: Promise<string> | null = null;
 

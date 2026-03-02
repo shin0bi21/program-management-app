@@ -22,9 +22,17 @@ npm run seed:admin
 npm run dev
 
 # Run tests
-npm test
-npm run test:watch
-npm run test:coverage
+# Tests run inside the Docker container. From the project root (my-webapp/):
+
+# Via helper scripts (recommended)
+bash scripts/run-auth-tests.sh
+bash scripts/run-user-tests.sh
+
+# Or directly via docker-compose (from project root)
+docker-compose exec backend npm run test:auth
+docker-compose exec backend npm run test:users
+docker-compose exec backend npm test          # all suites
+docker-compose exec backend npm run test:coverage
 
 # Database migrations
 npm run db:migrate
@@ -188,14 +196,17 @@ Tests require `DATABASE_URL` to be set. Rate limiting is skipped when `NODE_ENV=
 
 ### Running Tests
 ```bash
-# Run all tests
-npm test
+# All tests must run inside the Docker container, from the project root (my-webapp/)
 
-# Watch mode (auto-rerun on changes)
-npm run test:watch
+# Via helper scripts (recommended)
+bash scripts/run-auth-tests.sh
+bash scripts/run-user-tests.sh
 
-# Coverage report
-npm run test:coverage
+# Or directly via docker-compose
+docker-compose exec backend npm test           # all suites
+docker-compose exec backend npm run test:auth  # auth suite only
+docker-compose exec backend npm run test:users # staff suite only
+docker-compose exec backend npm run test:coverage
 ```
 
 ### Test Structure
@@ -203,15 +214,18 @@ npm run test:coverage
 - **tests/shared/db.ts** - Database seed/cleanup helpers (`seedTestUser`, `deleteTestUser`)
 - **tests/auth/auth.test.ts** - Full auth flow (login, 2FA verify, resend, refresh, logout, password-reset)
 - **tests/auth/helpers.ts** - Auth-specific helpers (trusted devices, 2FA codes, tokens, cookies)
-- **tests/users/users.test.ts** - User CRUD operations, permissions, and validation
-- **tests/users/helpers.ts** - User-specific helpers (token generation with permission levels)
-- **tests/setup.ts** - Test configuration and database cleanup
+- **tests/staff/users.test.ts** - Staff CRUD operations, permissions, and validation
+- **tests/staff/helpers.ts** - Staff-specific helpers (token generation with permission levels)
+- **tests/youth/youth.test.ts** - Youth CRUD operations, permissions, upsert, address/contact sync
+- **tests/youth/helpers.ts** - Youth-specific helpers (token generation, `deleteTestYouth` cleanup)
 
 ### Running Individual Suites
 ```bash
-npm run test:auth    # Auth suite only
-npm run test:users   # Users suite only
-npm test             # All suites
+# From project root (my-webapp/)
+docker-compose exec backend npm run test:auth   # Auth suite
+docker-compose exec backend npm run test:staff  # Staff suite
+docker-compose exec backend npm run test:youth  # Youth suite
+docker-compose exec backend npm test            # All suites
 ```
 
 ### Writing Tests
@@ -269,6 +283,18 @@ describe('Feature Tests', () => {
 - `POST /logout` - Invalidate tokens and clear session
 - `POST /forgot-password` - Request password reset email
 - `POST /reset-password` - Reset password with token
+
+### Staff (`/api/staff`) — requires `admin` or `staff` token
+- `GET /` - List all staff and admin users
+- `POST /` - Create a new staff user (admin only)
+
+### Youth (`/api/youth`) — requires `admin` or `staff` token
+- `GET /` - List all youth profiles
+- `GET /?id=<uuid>` - Get a single youth profile
+- `POST /` - Create or update a youth profile (upsert by `id`)
+
+### Schools (`/api/schools`) — requires `admin` or `staff` token
+- `GET /` - List all schools
 
 ## Development Workflow
 

@@ -6,7 +6,7 @@ import type { SeededUser } from '../shared/db';
 
 const app = createApp();
 
-describe('User API', () => {
+describe('Staff API', () => {
   let adminUser: SeededUser;
   let adminToken: string;
 
@@ -20,19 +20,19 @@ describe('User API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // GET /api/users/all
+  // GET /api/staff
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('GET /api/users/all', () => {
+  describe('GET /api/staff', () => {
     it('should require authentication', async () => {
-      const res = await request(app).get('/api/users/all');
+      const res = await request(app).get('/api/staff');
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/token/i);
     });
 
-    it('should return users list with valid admin token', async () => {
+    it('should return staff list with valid admin token', async () => {
       const res = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -43,7 +43,7 @@ describe('User API', () => {
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${staffToken}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -56,7 +56,7 @@ describe('User API', () => {
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${youthToken}`);
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/permission/i);
@@ -68,7 +68,7 @@ describe('User API', () => {
       const expiredToken = generateExpiredToken(adminUser.userId);
 
       const res = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${expiredToken}`);
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/expired/i);
@@ -76,29 +76,10 @@ describe('User API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // GET /api/users/ (root — same handler as /all)
+  // POST /api/staff
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('GET /api/users/', () => {
-    it('should require authentication', async () => {
-      const res = await request(app).get('/api/users/');
-      expect(res.status).toBe(401);
-    });
-
-    it('should return users list (same as /all)', async () => {
-      const res = await request(app)
-        .get('/api/users/')
-        .set('Authorization', `Bearer ${adminToken}`);
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    });
-  });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // POST /api/users/
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  describe('POST /api/users/', () => {
+  describe('POST /api/staff', () => {
     const createdUserIds: string[] = [];
 
     afterAll(async () => {
@@ -109,22 +90,23 @@ describe('User API', () => {
 
     it('should require authentication', async () => {
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .send({ firstName: 'A', lastName: 'B', email: 'a@b.com', password: 'password123' });
       expect(res.status).toBe(401);
     });
 
-    it('should create user with valid data (admin)', async () => {
+    it('should create staff user with valid data (admin)', async () => {
       const uniqueEmail = `create-${Date.now()}@test.local`;
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           firstName: 'Created',
           lastName: 'User',
           email: uniqueEmail,
           password: 'password123',
-          permission: 'youth',
+          permission: 'staff',
+          active: true,
         });
 
       expect(res.status).toBe(201);
@@ -135,7 +117,7 @@ describe('User API', () => {
 
     it('should reject missing firstName', async () => {
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ lastName: 'User', email: 'x@x.com', password: 'password123' });
       expect(res.status).toBe(400);
@@ -143,7 +125,7 @@ describe('User API', () => {
 
     it('should reject missing lastName', async () => {
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', email: 'x@x.com', password: 'password123' });
       expect(res.status).toBe(400);
@@ -151,7 +133,7 @@ describe('User API', () => {
 
     it('should reject invalid email', async () => {
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User', email: 'not-email', password: 'password123' });
       expect(res.status).toBe(400);
@@ -159,24 +141,25 @@ describe('User API', () => {
 
     it('should reject short password', async () => {
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'short' });
       expect(res.status).toBe(400);
     });
 
-    it('should reject staff from creating users (403)', async () => {
+    it('should reject staff from creating staff (403)', async () => {
       const staffUser = await seedTestUser({ email: `create-staff-${Date.now()}@test.local`, permission: 'staff' });
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${staffToken}`)
         .send({
           firstName: 'Blocked',
           lastName: 'User',
           email: `blocked-${Date.now()}@test.local`,
           password: 'password123',
+          active: true,
         });
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/permission/i);
@@ -184,18 +167,19 @@ describe('User API', () => {
       await deleteTestUser(staffUser.userId);
     });
 
-    it('should reject youth from creating users (403)', async () => {
+    it('should reject youth from creating staff (403)', async () => {
       const youthUser = await seedTestUser({ email: `create-youth-${Date.now()}@test.local`, permission: 'youth' });
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${youthToken}`)
         .send({
           firstName: 'Blocked',
           lastName: 'User',
           email: `blocked-${Date.now()}@test.local`,
           password: 'password123',
+          active: true,
         });
       expect(res.status).toBe(403);
 
@@ -203,30 +187,28 @@ describe('User API', () => {
     });
 
     it('should reject duplicate email', async () => {
-      // Create a user first
       const dupeEmail = `dupe-${Date.now()}@test.local`;
       const firstRes = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123' });
+        .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123', permission: 'staff', active: true });
       expect(firstRes.status).toBe(201);
       createdUserIds.push(firstRes.body.id);
 
-      // Try the same email again
       const dupeRes = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Second', lastName: 'User', email: dupeEmail, password: 'password123' });
-      expect(dupeRes.status).toBe(500); // DB constraint violation → 500
+        .send({ firstName: 'Second', lastName: 'User', email: dupeEmail, password: 'password123', active: true });
+      expect(dupeRes.status).toBe(500);
     });
 
     it('should reject expired access token', async () => {
       const expiredToken = generateExpiredToken(adminUser.userId);
 
       const res = await request(app)
-        .post('/api/users')
+        .post('/api/staff')
         .set('Authorization', `Bearer ${expiredToken}`)
-        .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'password123' });
+        .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'password123', active: true });
       expect(res.status).toBe(401);
     });
   });

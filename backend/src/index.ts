@@ -3,8 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
+import staffRoutes from './routes/staffRoutes';
+import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 
 const app = express();
@@ -29,8 +30,9 @@ app.get('/health', (req, res) => {
 });
 
 // --- Routes ---
-app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/youth', youthRoutes);
 app.use('/api/schools', schoolRoutes);
 
 app.listen(PORT, () => {

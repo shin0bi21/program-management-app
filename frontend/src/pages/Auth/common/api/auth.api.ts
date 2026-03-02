@@ -1,5 +1,5 @@
-import { api } from '../../../common/api/config';
-import { handleApiError } from '../../../common/utils/errors';
+import { api } from '../../../../common/api/config';
+import { handleApiError } from '../../../../common/utils/errors';
 
 export async function login(
   email: string,

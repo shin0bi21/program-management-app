@@ -2,7 +2,7 @@ import { api } from '../../../common/api/config';
 import { handleApiError } from '../../../common/utils/errors';
 
 export async function getYouth(token: string | null, id?: string) {
-  const res = await fetch(api(`/users/youth${id ? `?id=${id}` : ''}`), {
+  const res = await fetch(api(`/youth${id ? `?id=${id}` : ''}`), {
     credentials: 'include',
     headers: {
       Authorization: `Bearer ${token ?? ''}`,
@@ -35,7 +35,7 @@ export async function setYouth(token: string | null, data: {
     type: 'parent' | 'sibling' | 'guardian';
   }>;
 }) {
-  const res = await fetch(api('/users/youth'), {
+  const res = await fetch(api('/youth'), {
     method: 'POST',
     credentials: 'include',
     headers: {
