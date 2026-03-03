@@ -531,6 +531,7 @@ CREATE TABLE IF NOT EXISTS user_has_addresses_backup (
   id UUID,
   user_id UUID,
   address_id UUID,
+  active BOOLEAN,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -575,9 +576,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO user_has_addresses_backup (
-    _backup_action, id, user_id, address_id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, address_id, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.id, OLD.user_id, OLD.address_id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.user_id, OLD.address_id, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -607,9 +608,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO user_has_addresses_backup (
-    _backup_action, id, user_id, address_id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, address_id, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.id, OLD.user_id, OLD.address_id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.user_id, OLD.address_id, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -764,6 +765,7 @@ CREATE TABLE IF NOT EXISTS user_has_contacts_backup (
   _backup_action VARCHAR(10),
   user_id UUID,
   contact_id UUID,
+  active BOOLEAN,
   assigned_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
@@ -809,9 +811,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO user_has_contacts_backup (
-    _backup_action, user_id, contact_id, assigned_at, created_at, updated_at, created_by, updated_by
+    _backup_action, user_id, contact_id, active, assigned_at, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.user_id, OLD.contact_id, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.user_id, OLD.contact_id, OLD.active, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -841,9 +843,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO user_has_contacts_backup (
-    _backup_action, user_id, contact_id, assigned_at, created_at, updated_at, created_by, updated_by
+    _backup_action, user_id, contact_id, active, assigned_at, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.user_id, OLD.contact_id, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.user_id, OLD.contact_id, OLD.active, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)

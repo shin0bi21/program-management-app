@@ -275,6 +275,7 @@ CREATE TABLE IF NOT EXISTS user_has_addresses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   address_id UUID NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
   LIKE base_table INCLUDING ALL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE CASCADE,
@@ -283,6 +284,7 @@ CREATE TABLE IF NOT EXISTS user_has_addresses (
 
 CREATE INDEX idx_user_has_addresses_user_id ON user_has_addresses(user_id);
 CREATE INDEX idx_user_has_addresses_address_id ON user_has_addresses(address_id);
+CREATE INDEX idx_user_has_addresses_active ON user_has_addresses(active);
 
 -- ============================================================================
 -- CONTACTS SYSTEM
@@ -309,6 +311,7 @@ CREATE INDEX idx_contacts_type ON contacts(type);
 CREATE TABLE IF NOT EXISTS user_has_contacts (
   user_id UUID NOT NULL,
   contact_id UUID NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
   assigned_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -318,6 +321,8 @@ CREATE TABLE IF NOT EXISTS user_has_contacts (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_user_has_contacts_active ON user_has_contacts(active);
 
 -- ============================================================================
 -- YOUTH WORKSHEETS

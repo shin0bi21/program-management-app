@@ -1,6 +1,65 @@
 # Youth Services Application - Backend
 
-Express + TypeScript + PostgreSQL backend with comprehensive security features.
+Express + TypeScript + PostgreSQL backend for a youth services management system.
+
+---
+
+## For AI Agents — Project Context
+
+> **Read this section first.** It gives the full picture of what this app is, how it's structured, and what conventions to follow when making changes.
+
+### What This App Is
+
+A management system for organisations running youth programs. It has two types of human users:
+
+| Role | Access |
+|------|--------|
+| `admin` | Full access — can manage staff, create/edit all youth profiles |
+| `staff` | Can view and create/edit youth profiles; cannot manage other staff |
+
+Youth profiles are **not login users** — they are data records (name, DOB, school, group, addresses, emergency contacts).
+
+### Architecture at a Glance
+
+```
+[Browser / React app :5173]
+        │  HTTP (proxied via Nginx in prod)
+        ▼
+[Express API :5001]  ←  postgres.js  →  [PostgreSQL :5432]
+        │
+  Docker network (all services defined in docker-compose.yml at project root)
+```
+
+### Domain Model
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Admin and staff accounts (login users) |
+| `user_credentials` | Hashed passwords, 2FA codes, device fingerprints |
+| `user_groups` | Groups that staff/youth belong to |
+| `youth_profiles` | Youth data records (no login) |
+| `addresses` | Addresses linked to youth via `youth_addresses` junction |
+| `contacts` | Emergency contacts linked via `youth_contacts` junction |
+| `schools` | School lookup table |
+| `schema_migrations` | Tracks applied migration files + SHA-256 checksums |
+
+### Key Conventions
+
+- **DB uses `snake_case`**, TypeScript uses `camelCase` — handled automatically by `DbRow<T>` (see Architecture section)
+- **Never alias SQL columns** to produce camelCase (`first_name AS "firstName"` is wrong — omit the alias)
+- **No ORM** — raw SQL via postgres.js
+- **All protected routes** require `authenticateToken` + `requirePermission` middleware
+- **Tests run inside Docker** — never run Jest locally against a remote DB
+- **Migrations are forward-only** — never modify an applied migration file
+
+### Repo Info
+
+- **GitHub**: `shin0bi21/be-original`, branch `1-user-setup`
+- **Project root**: `my-webapp/` (contains `docker-compose.yml`)
+- **Frontend README**: `frontend/README.md`
+- **Backend README**: `backend/README.md` ← you are here
+
+---
 
 ## Quick Start
 
@@ -26,12 +85,14 @@ npm run dev
 
 # Via helper scripts (recommended)
 bash scripts/run-auth-tests.sh
-bash scripts/run-user-tests.sh
+bash scripts/run-staff-tests.sh
+bash scripts/run-youth-tests.sh
 
 # Or directly via docker-compose (from project root)
-docker-compose exec backend npm run test:auth
-docker-compose exec backend npm run test:users
-docker-compose exec backend npm test          # all suites
+docker-compose exec backend npm run test:auth   # auth suite
+docker-compose exec backend npm run test:staff  # staff suite
+docker-compose exec backend npm run test:youth  # youth suite
+docker-compose exec backend npm test            # all suites
 docker-compose exec backend npm run test:coverage
 
 # Database migrations
@@ -43,6 +104,89 @@ npm run db:generate-backup
 # Type checking
 npm run typecheck
 ```
+
+## Project Structure
+
+### Folder Layout
+
+```
+backend/
+├── src/
+│   ├── index.ts              # Express entry point (see below)
+│   ├── controllers/
+│   │   ├── authController.ts  # Login, 2FA verify/resend, refresh, logout, password reset
+│   │   ├── staffController.ts # getStaff, createStaff
+│   │   ├── youthController.ts # getYouth, setYouth (upsert), private setAddresses/setContacts
+│   │   └── schoolController.ts# getSchools
+│   ├── routes/
+│   │   ├── authRoutes.ts      # Mounted at /api/auth
+│   │   ├── staffRoutes.ts     # Mounted at /api/staff
+│   │   ├── youthRoutes.ts     # Mounted at /api/youth
+│   │   └── schoolRoutes.ts    # Mounted at /api/schools
+│   ├── middleware/
+│   │   ├── authMiddleware.ts  # authenticateToken (JWT verify + blacklist), requirePermission
+│   │   ├── rateLimiter.ts     # 4-tier rate limiting (general, auth, strict, password-reset)
+│   │   └── validateRequest.ts # Wraps Zod schema validation — call validateRequest(schema)
+│   ├── validation/
+│   │   ├── authSchemas.ts     # Zod schemas for auth endpoints
+│   │   ├── staffSchemas.ts    # createStaffSchema
+│   │   └── youthSchemas.ts    # setYouthSchema
+│   ├── db/
+│   │   └── client.ts          # postgres.js connection instance
+│   ├── types/
+│   │   ├── database.ts        # kysely-codegen generated types — mirrors DB schema in snake_case
+│   │   └── db.ts              # DbRow<T> utility — converts snake_case keys → camelCase at type level
+│   └── utils/
+│       ├── emailService.ts    # Nodemailer transporter + sendEmail helper
+│       └── deviceUtils.ts     # SHA-256 device fingerprint hashing
+├── db/
+│   ├── migrations/            # SQL migration files — YYYY-MM-DD_#_description.sql
+│   └── scripts/               # Migration runner, seed-admin, type generation
+└── tests/
+    ├── shared/
+    │   ├── app.ts             # Express app factory used by all test suites
+    │   └── db.ts              # Seed/cleanup helpers (seedTestUser, deleteTestUser)
+    ├── auth/                  # Auth test suite (44 tests)
+    ├── staff/                 # Staff test suite (15 tests)
+    └── youth/                 # Youth test suite (25 tests)
+```
+
+### `src/index.ts` — Entry Point
+
+What it does, in order:
+
+1. Load `.env` via `dotenv/config`
+2. Create Express `app`
+3. Apply global middleware: `helmet`, `cors` (origin: `FRONTEND_URL`), `express.json()`, `cookieParser()`
+4. Mount `/health` → `{ status: 'ok' }`
+5. Mount route groups: `/api/auth`, `/api/staff`, `/api/youth`, `/api/schools`
+6. Start HTTP server on `PORT` (default `5001`)
+
+### Request Lifecycle (Protected Route)
+
+```
+HTTP Request
+  → Express router (e.g. staffRoutes.ts)
+  → authenticateToken       — verify JWT signature, check blacklist
+  → requirePermission(...)  — check user.permission against allowed roles
+  → rateLimiter             — tier-specific (general / auth / strict / password-reset)
+  → validateRequest(schema) — Zod parse; returns 400 with field errors on failure
+  → controller              — SQL query via postgres.js → JSON response
+```
+
+### Adding a New Domain
+
+To add a new route group (e.g. `/api/events`):
+
+1. Create `src/validation/eventSchemas.ts` with Zod schemas
+2. Create `src/controllers/eventController.ts` with handler functions
+3. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
+4. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
+5. Mount the same routes in `tests/shared/app.ts` for test coverage
+6. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
+7. Add `"test:events": "jest --testPathPattern=tests/events"` to `package.json`
+
+---
 
 ## Architecture
 
@@ -200,12 +344,14 @@ Tests require `DATABASE_URL` to be set. Rate limiting is skipped when `NODE_ENV=
 
 # Via helper scripts (recommended)
 bash scripts/run-auth-tests.sh
-bash scripts/run-user-tests.sh
+bash scripts/run-staff-tests.sh
+bash scripts/run-youth-tests.sh
 
 # Or directly via docker-compose
-docker-compose exec backend npm test           # all suites
-docker-compose exec backend npm run test:auth  # auth suite only
-docker-compose exec backend npm run test:users # staff suite only
+docker-compose exec backend npm test            # all suites
+docker-compose exec backend npm run test:auth   # auth suite only
+docker-compose exec backend npm run test:staff  # staff suite only
+docker-compose exec backend npm run test:youth  # youth suite only
 docker-compose exec backend npm run test:coverage
 ```
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { getSchools } from '../../pages/Youth/api/youth.api';
-import { getToken } from '../utils/storage';
 
 export interface School {
   id: string;
@@ -19,8 +18,7 @@ export function useSchools() {
     setError('');
 
     try {
-      const token = getToken();
-      const data = await getSchools(token);
+      const data = await getSchools();
       setSchools(data);
     } catch (err: unknown) {
       setError('Failed to load schools');

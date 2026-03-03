@@ -20,7 +20,7 @@ async function setAddresses(
     SELECT uha.address_id as "addressId", a.address, a.city, a.province, a.postal_code as "postalCode"
     FROM user_has_addresses uha
     JOIN addresses a ON uha.address_id = a.id
-    WHERE uha.user_id = ${userId}
+    WHERE uha.user_id = ${userId} AND uha.active = true
   `;
 
   const existingAddressMap = new Map(
@@ -59,7 +59,8 @@ async function setAddresses(
 
   if (toDelete.length > 0) {
     await sql`
-      DELETE FROM user_has_addresses 
+      UPDATE user_has_addresses
+      SET active = false, updated_at = NOW()
       WHERE user_id = ${userId} AND address_id IN ${sql(toDelete)}
     `;
   }
@@ -100,8 +101,9 @@ async function setAddresses(
     `;
 
     await sql`
-      INSERT INTO user_has_addresses (user_id, address_id)
-      VALUES (${userId}, ${newAddresses[0].id})
+      INSERT INTO user_has_addresses (user_id, address_id, active)
+      VALUES (${userId}, ${newAddresses[0].id}, true)
+      ON CONFLICT (user_id, address_id) DO UPDATE SET active = true, updated_at = NOW()
     `;
   }
 }
@@ -114,7 +116,7 @@ async function setContacts(
     SELECT uhc.contact_id as "contactId", c.first_name as "firstName", c.last_name as "lastName", c.phone_number as "phoneNumber", c.type
     FROM user_has_contacts uhc
     JOIN contacts c ON uhc.contact_id = c.id
-    WHERE uhc.user_id = ${userId}
+    WHERE uhc.user_id = ${userId} AND uhc.active = true
   `;
 
   const existingContactMap = new Map(
@@ -153,7 +155,8 @@ async function setContacts(
 
   if (toDelete.length > 0) {
     await sql`
-      DELETE FROM user_has_contacts 
+      UPDATE user_has_contacts
+      SET active = false, updated_at = NOW()
       WHERE user_id = ${userId} AND contact_id IN ${sql(toDelete)}
     `;
   }
@@ -194,8 +197,9 @@ async function setContacts(
     `;
 
     await sql`
-      INSERT INTO user_has_contacts (user_id, contact_id)
-      VALUES (${userId}, ${newContacts[0].id})
+      INSERT INTO user_has_contacts (user_id, contact_id, active)
+      VALUES (${userId}, ${newContacts[0].id}, true)
+      ON CONFLICT (user_id, contact_id) DO UPDATE SET active = true, updated_at = NOW()
     `;
   }
 }
@@ -232,7 +236,7 @@ export const getYouth = async (req: Request, res: Response) => {
           )
           FROM addresses a
           INNER JOIN user_has_addresses uha ON uha.address_id = a.id
-          WHERE uha.user_id = u.id
+          WHERE uha.user_id = u.id AND uha.active = true
         ) as addresses,
         (
           SELECT json_agg(
@@ -246,7 +250,7 @@ export const getYouth = async (req: Request, res: Response) => {
           )
           FROM contacts c
           INNER JOIN user_has_contacts uhc ON uhc.contact_id = c.id
-          WHERE uhc.user_id = u.id
+          WHERE uhc.user_id = u.id AND uhc.active = true
         ) as contacts
       FROM youth_profiles yp
       INNER JOIN users u ON u.id = yp.user_id

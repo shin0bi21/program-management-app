@@ -7,7 +7,7 @@ export default function Homepage() {
       <Header />
       <div className="homepage-container">
         <img 
-          src="/logo.png" 
+          src="/logo.jpg" 
           alt="Logo"
           className="homepage-logo"
         />

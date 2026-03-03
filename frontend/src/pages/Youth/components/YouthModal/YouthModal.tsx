@@ -5,7 +5,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { setYouth, getYouth } from '../../api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/errors';
-import { getToken } from '../../../../common/utils/storage';
 import Modal from '../../../../common/components/Modal/Modal';
 import { useSchools } from '../../../../common/hooks/useSchools';
 import { useContacts } from '../../../../common/hooks/useContacts';
@@ -82,8 +81,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     setSubmitStatus('submitting');
     setError('');
 
-    const token = getToken();
-
     const addressError = validateAddresses();
     if (addressError) {
       setError(addressError);
@@ -111,10 +108,10 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         contacts: getContactPayload(),
       };
 
-      const result = await setYouth(token, payload);
+      const result = await setYouth(payload);
 
       // Fetch full profile
-      const savedYouth = await getYouth(token, result.id);
+      const savedYouth = await getYouth(result.id);
 
       setSubmitStatus('success');
       

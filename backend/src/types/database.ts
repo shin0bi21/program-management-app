@@ -212,6 +212,7 @@ export interface UserGroups {
 }
 
 export interface UserHasAddresses {
+  active: Generated<boolean>;
   address_id: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -225,6 +226,7 @@ export interface UserHasAddressesBackup {
   _backup_action: string | null;
   _backup_timestamp: Generated<Timestamp | null>;
   _uuid: Generated<string>;
+  active: boolean | null;
   address_id: string | null;
   created_at: Timestamp | null;
   created_by: string | null;
@@ -235,6 +237,7 @@ export interface UserHasAddressesBackup {
 }
 
 export interface UserHasContacts {
+  active: Generated<boolean>;
   assigned_at: Generated<Timestamp | null>;
   contact_id: string;
   created_at: Generated<Timestamp | null>;
@@ -248,6 +251,7 @@ export interface UserHasContactsBackup {
   _backup_action: string | null;
   _backup_timestamp: Generated<Timestamp | null>;
   _uuid: Generated<string>;
+  active: boolean | null;
   assigned_at: Timestamp | null;
   contact_id: string | null;
   created_at: Timestamp | null;

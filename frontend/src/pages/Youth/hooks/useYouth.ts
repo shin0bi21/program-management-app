@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getYouth } from '../api/youth.api';
 import { getErrorMessage } from '../../../common/utils/errors';
-import { getToken } from '../../../common/utils/storage';
 
 export interface YouthProfile {
   id: string;
@@ -40,7 +39,7 @@ export function useYouth() {
     setError('');
 
     try {
-      const data = await getYouth(getToken());
+      const data = await getYouth();
       setYouth(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to load youth profiles'));

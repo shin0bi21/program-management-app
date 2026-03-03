@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../../common/utils/errors';
-import { getToken } from '../../../common/utils/storage';
 import { getStaff } from '../api/staff.api';
 
 export interface StaffUser {
@@ -19,7 +18,7 @@ export const useStaff = () => {
     setError('');
 
     try {
-      const data = await getStaff(getToken());
+      const data = await getStaff();
       setStaff(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to fetch staff users'));

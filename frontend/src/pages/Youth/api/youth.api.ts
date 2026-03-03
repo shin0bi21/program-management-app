@@ -1,19 +1,14 @@
 import { api } from '../../../common/api/config';
+import { fetchWithAuth } from '../../../common/api/fetchWithAuth';
 import { handleApiError } from '../../../common/utils/errors';
 
-export async function getYouth(token: string | null, id?: string) {
-  const res = await fetch(api(`/youth${id ? `?id=${id}` : ''}`), {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token ?? ''}`,
-    },
-  });
-
+export async function getYouth(id?: string) {
+  const res = await fetchWithAuth(api(`/youth${id ? `?id=${id}` : ''}`));
   await handleApiError(res);
   return res.json();
 }
 
-export async function setYouth(token: string | null, data: {
+export async function setYouth(data: {
   id?: string;
   firstName: string;
   lastName: string;
@@ -35,13 +30,9 @@ export async function setYouth(token: string | null, data: {
     type: 'parent' | 'sibling' | 'guardian';
   }>;
 }) {
-  const res = await fetch(api('/youth'), {
+  const res = await fetchWithAuth(api('/youth'), {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token ?? ''}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
 
@@ -49,14 +40,8 @@ export async function setYouth(token: string | null, data: {
   return res.json();
 }
 
-export async function getSchools(token: string | null) {
-  const res = await fetch(api('/schools'), {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token ?? ''}`,
-    },
-  });
-
+export async function getSchools() {
+  const res = await fetchWithAuth(api('/schools'));
   await handleApiError(res);
   return res.json();
 }

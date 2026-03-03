@@ -1,14 +1,9 @@
 import { api } from '../../../common/api/config';
+import { fetchWithAuth } from '../../../common/api/fetchWithAuth';
 import { handleApiError } from '../../../common/utils/errors';
 
-export async function getStaff(token: string | null) {
-  const res = await fetch(api('/staff'), {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token ?? ''}`,
-    },
-  });
-
+export async function getStaff() {
+  const res = await fetchWithAuth(api('/staff'));
   await handleApiError(res);
   return res.json();
 }
