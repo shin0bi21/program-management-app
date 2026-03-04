@@ -5,6 +5,8 @@
 
 import type { ColumnType } from "kysely";
 
+export type AgeGroup = "junior_youth" | "senior_youth";
+
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
@@ -202,15 +204,6 @@ export interface UserCredentials {
   user_id: string;
 }
 
-export interface UserGroups {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  id: Generated<string>;
-  name: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface UserHasAddresses {
   active: Generated<boolean>;
   address_id: string;
@@ -269,7 +262,6 @@ export interface Users {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   first_name: string;
-  group_id: string | null;
   id: Generated<string>;
   last_name: string;
   permission: Generated<PermissionLevel>;
@@ -285,7 +277,6 @@ export interface UsersBackup {
   created_at: Timestamp | null;
   created_by: string | null;
   first_name: string | null;
-  group_id: string | null;
   id: string | null;
   last_name: string | null;
   permission: PermissionLevel | null;
@@ -294,6 +285,7 @@ export interface UsersBackup {
 }
 
 export interface YouthProfiles {
+  age_group: AgeGroup | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   date_of_birth: Timestamp | null;
@@ -309,6 +301,7 @@ export interface YouthProfilesBackup {
   _backup_action: string | null;
   _backup_timestamp: Generated<Timestamp | null>;
   _uuid: Generated<string>;
+  age_group: AgeGroup | null;
   created_at: Timestamp | null;
   created_by: string | null;
   date_of_birth: Timestamp | null;
@@ -369,7 +362,6 @@ export interface DB {
   token_blacklist: TokenBlacklist;
   trusted_devices: TrustedDevices;
   user_credentials: UserCredentials;
-  user_groups: UserGroups;
   user_has_addresses: UserHasAddresses;
   user_has_addresses_backup: UserHasAddressesBackup;
   user_has_contacts: UserHasContacts;

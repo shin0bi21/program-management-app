@@ -1,6 +1,6 @@
 -- ============================================================================
 -- BACKUP SYSTEM FOR: 2026-01-31_1_init.sql
--- Generated: 2026-02-15T18:54:45.503Z
+-- Generated: 2026-03-04T02:50:28.655Z
 -- Tables: users, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
 -- ============================================================================
 
@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS users_backup (
   _backup_action VARCHAR(10),
   id UUID,
   permission permission_level,
-  group_id UUID,
   first_name VARCHAR(120),
   last_name VARCHAR(120),
   active BOOLEAN,
@@ -79,9 +78,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO users_backup (
-    _backup_action, id, permission, group_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
+    _backup_action, id, permission, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.id, OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.permission, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -111,9 +110,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO users_backup (
-    _backup_action, id, permission, group_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
+    _backup_action, id, permission, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.id, OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.permission, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -276,6 +275,7 @@ CREATE TABLE IF NOT EXISTS youth_profiles_backup (
   date_of_birth DATE,
   school_id UUID,
   grade_level SMALLINT,
+  age_group age_group,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -292,10 +292,6 @@ BEGIN
   -- Validate NOT NULL: user_id
   IF NEW.user_id IS NULL THEN
     RAISE EXCEPTION '[youth_profiles] user_id cannot be NULL';
-  END IF;
-  -- Validate grade range
-  IF NEW.grade_level IS NOT NULL AND (NEW.grade_level < 0 OR NEW.grade_level > 12) THEN
-    RAISE EXCEPTION '[youth_profiles] grade_level must be between 0 and 12';
   END IF;
 
   -- Debug log (optional - comment out in production)
@@ -320,9 +316,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO youth_profiles_backup (
-    _backup_action, id, user_id, date_of_birth, school_id, grade_level, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.age_group, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -352,9 +348,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO youth_profiles_backup (
-    _backup_action, id, user_id, date_of_birth, school_id, grade_level, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.age_group, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
