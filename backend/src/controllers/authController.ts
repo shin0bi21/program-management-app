@@ -190,7 +190,7 @@ export const login = async (req: Request, res: Response) => {
             id: cred.userId,
             firstName: cred.firstName,
             lastName: cred.lastName,
-            email: cred.email
+            email: cred.email,
           }
         });
       }
@@ -539,7 +539,7 @@ export const verify2FA = async (req: Request, res: Response) => {
         id: cred.userId,
         firstName: cred.firstName,
         lastName: cred.lastName,
-        email: cred.email
+        email: cred.email,
       }
     });
 

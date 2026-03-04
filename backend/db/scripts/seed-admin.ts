@@ -35,8 +35,8 @@ if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_FIRST_NAME = process.env.ADMIN_FIRST_NAME || 'Admin';
-const ADMIN_LAST_NAME = process.env.ADMIN_LAST_NAME || 'User';
+const ADMIN_FIRST_NAME = process.env.ADMIN_FIRST_NAME || 'Bilal';
+const ADMIN_LAST_NAME = process.env.ADMIN_LAST_NAME || 'Khan';
 
 const sql = postgres(DATABASE_URL);
 

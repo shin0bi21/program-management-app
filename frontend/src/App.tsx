@@ -6,6 +6,7 @@ import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
 import Staff from './pages/Staff/Staff'
+import Account from './pages/Settings/Account/Account'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -31,8 +32,13 @@ function App() {
               <Youth />
             </ProtectedRoute>
           } />
-          <Route path="/staff" element={
+          <Route path="/settings/account" element={
             <ProtectedRoute>
+              <Account />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/staff" element={
+            <ProtectedRoute requiredPermission="admin">
               <Staff />
             </ProtectedRoute>
           } />

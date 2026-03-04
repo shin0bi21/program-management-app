@@ -25,7 +25,7 @@ export default function Staff() {
       <div className="page-container">
         <div className="page-header">
           <div className="page-title-row">
-            <h1 className="page-title">Staff</h1>
+            <h1 className="page-title">Manage Staff</h1>
           </div>
         </div>
 

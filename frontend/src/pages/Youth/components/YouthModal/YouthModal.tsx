@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { setYouth, getYouth } from '../../api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/errors';
 import Modal from '../../../../common/components/Modal/Modal';
@@ -44,8 +44,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
   });
 
   const { schools } = useSchools();
-  const { addresses, initialize: initAddresses, reset: resetAddresses, handleAdd: handleAddAddress, handleDelete: handleDeleteAddress, handleChange: handleAddressChange, validate: validateAddresses, getPayload: getAddressPayload } = useAddresses();
-  const { contacts, initialize: initContacts, reset: resetContacts, handleAdd: handleAddContact, handleDelete: handleDeleteContact, handleChange: handleContactChange, validate: validateContacts, getPayload: getContactPayload } = useContacts();
+  const { addresses, initialize: initAddresses, reset: resetAddresses, /* handleAdd: handleAddAddress, handleDelete: handleDeleteAddress, */ handleChange: handleAddressChange, validate: validateAddresses, getPayload: getAddressPayload } = useAddresses();
+  const { contacts, initialize: initContacts, reset: resetContacts, /* handleAdd: handleAddContact, handleDelete: handleDeleteContact, */ handleChange: handleContactChange, validate: validateContacts, getPayload: getContactPayload } = useContacts();
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         active: data.active,
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
-        ...(data.gradeLevel != null && { gradeLevel: data.gradeLevel }),
+        ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
         addresses: getAddressPayload(),
         contacts: getContactPayload(),
       };
@@ -233,19 +233,13 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <div className="section-content">
             {addresses.map((addr, index) => (
                 <div key={index} className="address-form-item">
+                  {/* To re-enable per-item delete:
                   <div className="form-item-header">
                     <span className="form-item-label">Address {index + 1}</span>
-                    <button
-                      type="button"
-                      className="btn-delete"
-                      onClick={() => handleDeleteAddress(index)}
-                      aria-label="Delete address"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                      Delete
+                    <button type="button" className="btn-delete" onClick={() => handleDeleteAddress(index)} aria-label="Delete address">
+                      <FontAwesomeIcon icon={faTrash} /> Delete
                     </button>
-                  </div>
-                  
+                  </div> */}
                   <div className="form-field">
                     <label htmlFor={`address-${index}`}>Street Address</label>
                     <input
@@ -290,14 +284,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                   </div>
                 </div>
               ))}
-              
-              <button
-                type="button"
-                className="btn-add"
-                onClick={handleAddAddress}
-              >
-                + Add Address
-              </button>
+              {/* To re-enable adding multiple addresses:
+              <button type="button" className="btn-add" onClick={handleAddAddress}>+ Add Address</button> */}
           </div>
         </div>
 
@@ -310,19 +298,13 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <div className="section-content">
             {contacts.map((cont, index) => (
                 <div key={index} className="contact-form-item">
+                  {/* To re-enable per-item delete:
                   <div className="form-item-header">
                     <span className="form-item-label">Contact {index + 1}</span>
-                    <button
-                      type="button"
-                      className="btn-delete"
-                      onClick={() => handleDeleteContact(index)}
-                      aria-label="Delete contact"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                      Delete
+                    <button type="button" className="btn-delete" onClick={() => handleDeleteContact(index)} aria-label="Delete contact">
+                      <FontAwesomeIcon icon={faTrash} /> Delete
                     </button>
-                  </div>
-                  
+                  </div> */}
                   <div className="form-row">
                     <div className="form-field">
                       <label htmlFor={`contact-firstName-${index}`}>First Name</label>
@@ -371,14 +353,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                   </div>
                 </div>
               ))}
-              
-              <button
-                type="button"
-                className="btn-add"
-                onClick={handleAddContact}
-              >
-                + Add Emergency Contact
-              </button>
+              {/* To re-enable adding multiple contacts:
+              <button type="button" className="btn-add" onClick={handleAddContact}>+ Add Emergency Contact</button> */}
           </div>
         </div>
       </form>
