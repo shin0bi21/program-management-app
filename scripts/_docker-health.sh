@@ -5,9 +5,19 @@
 #
 # Expects: working directory is the project root.
 # Provides: running containers with DB + backend ready.
+#
+# If containers are already running when the script is sourced, they will
+# be LEFT RUNNING after tests complete (dev environment preserved).
+# If this script had to start them, they will be stopped on exit.
 
 MAX_RETRIES=30
 RETRY_INTERVAL=2
+
+# Remember whether containers were already up before we touched anything
+_CONTAINERS_WERE_RUNNING=false
+if docker-compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
+  _CONTAINERS_WERE_RUNNING=true
+fi
 
 cleanup() {
   local exit_code=$?
@@ -17,9 +27,14 @@ cleanup() {
     echo "Tests Failed! (exit code: $exit_code)"
     echo "=========================================="
   fi
-  echo ""
-  echo "Cleaning up containers..."
-  docker-compose down --remove-orphans 2>/dev/null || true
+  if [ "$_CONTAINERS_WERE_RUNNING" = "true" ]; then
+    echo ""
+    echo "Dev containers left running (they were already up before tests)."
+  else
+    echo ""
+    echo "Cleaning up containers..."
+    docker-compose down --remove-orphans 2>/dev/null || true
+  fi
   exit $exit_code
 }
 trap cleanup EXIT INT TERM
@@ -63,3 +78,5 @@ until docker-compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || 
 done
 echo ""
 echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
+

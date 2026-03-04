@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useResetPassword } from '../hooks/useResetPassword';
+import { useResetPassword } from './hooks/useResetPassword';
 import './ResetPassword.css';
 
 export default function ResetPassword() {

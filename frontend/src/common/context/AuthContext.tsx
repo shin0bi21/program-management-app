@@ -1,11 +1,14 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isTokenExpired } from '../utils/jwt';
+import { isTokenExpired, decodeToken } from '../utils/jwt';
 import { clearAuthData, getToken } from '../utils/storage';
 import { api } from '../api/config';
 
+type Permission = 'admin' | 'staff' | null;
+
 interface AuthContextType {
   isAuthenticated: boolean;
+  permission: Permission;
   loading: boolean;
   login: () => void;
   logout: () => void;
@@ -15,35 +18,46 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [permission, setPermission] = useState<Permission>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const checkAuth = () => {
-    const token = getToken();
-    
-    if (!token) {
+  const applyToken = (token: string | null) => {
+    if (!token || isTokenExpired(token)) {
+      clearAuthData();
       setIsAuthenticated(false);
+      setPermission(null);
       return;
     }
-
     try {
-      // Decode JWT to check expiry (without verification - backend will verify)
-      if (isTokenExpired(token)) {
-        clearAuthData();
-        setIsAuthenticated(false);
-      } else {
-        setIsAuthenticated(true);
-      }
+      const payload = decodeToken(token);
+      setIsAuthenticated(true);
+      setPermission((payload?.permission as Permission) ?? null);
     } catch {
       clearAuthData();
       setIsAuthenticated(false);
+      setPermission(null);
     }
   };
 
+  const checkAuth = () => {
+    applyToken(getToken());
+  };
+
   useEffect(() => {
-    // Check if token exists and is valid
     checkAuth();
     setLoading(false);
+
+    // Sync logout across tabs
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'token' && !e.newValue) {
+        setIsAuthenticated(false);
+        setPermission(null);
+        navigate('/login');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const login = () => {
@@ -51,19 +65,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    // Call backend to clear cookie
-    await fetch(api('/auth/logout'), {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(() => {});
-    
-    clearAuthData();
-    setIsAuthenticated(false);
-    navigate('/login');
+    try {
+      await fetch(api('/auth/logout'), {
+        method: 'POST',
+        credentials: 'include',
+      }).catch(() => {});
+    } finally {
+      clearAuthData();
+      setIsAuthenticated(false);
+      setPermission(null);
+      navigate('/login');
+    }
   };
 
+  const value = useMemo(
+    () => ({ isAuthenticated, permission, loading, login, logout }),
+    [isAuthenticated, permission, loading]
+  );
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

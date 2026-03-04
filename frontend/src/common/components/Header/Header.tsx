@@ -1,34 +1,89 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHouse, faUsers, faGear, faChevronDown, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 export default function Header() {
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, permission, logout } = useAuth();
+  const isAdmin = permission === 'admin';
+  const [settingsOpen, setSettingsOpen] = useState(
+    location.pathname.startsWith('/settings')
+  );
+
+  const isActive = (path: string) => location.pathname === path;
+  const isSettingsActive = location.pathname.startsWith('/settings');
 
   return (
-    <header className="app-header">
-      <div className="header-left">
-        <button onClick={() => navigate('/')} className="header-link">
-          Home
+    <aside className="sidebar">
+      <nav className="sidebar-nav">
+        <button
+          onClick={() => navigate('/')}
+          className={`sidebar-link${isActive('/') ? ' active' : ''}`}
+        >
+          <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
+          <span>Home</span>
         </button>
+
         {isAuthenticated && (
-          <button onClick={() => navigate('/users')} className="header-link">
-            Users
+          <button
+            onClick={() => navigate('/youth')}
+            className={`sidebar-link${isActive('/youth') ? ' active' : ''}`}
+          >
+            <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
+            <span>Youth</span>
           </button>
         )}
-      </div>
-      <div className="header-right">
+
+        {isAuthenticated && (
+          <>
+            <button
+              onClick={() => setSettingsOpen(o => !o)}
+              className={`sidebar-link sidebar-link-accordion${isSettingsActive ? ' active' : ''}`}
+            >
+              <span className="sidebar-link-icon"><FontAwesomeIcon icon={faGear} /></span>
+              <span className="sidebar-link-label">Settings</span>
+              <FontAwesomeIcon icon={faChevronDown} style={{ transition: 'transform 0.2s', transform: settingsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+            </button>
+
+            {settingsOpen && (
+              <div className="sidebar-subnav">
+                <button
+                  onClick={() => navigate('/settings/account')}
+                  className={`sidebar-sublink${isActive('/settings/account') ? ' active' : ''}`}
+                >
+                  My Account
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate('/settings/staff')}
+                    className={`sidebar-sublink${isActive('/settings/staff') ? ' active' : ''}`}
+                  >
+                    Manage Staff
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </nav>
+
+      <div className="sidebar-footer">
         {isAuthenticated ? (
-          <button onClick={logout} className="header-link">
-            Logout
+          <button onClick={logout} className="sidebar-logout">
+            <FontAwesomeIcon icon={faRightFromBracket} />
+            <span>Logout</span>
           </button>
         ) : (
-          <button onClick={() => navigate('/login')} className="header-link">
+          <button onClick={() => navigate('/login')} className="sidebar-link">
             Login
           </button>
         )}
       </div>
-    </header>
+    </aside>
   );
 }
+

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useForgotPassword } from '../hooks/useForgotPassword';
+import { useForgotPassword } from './hooks/useForgotPassword';
 import './ForgotPassword.css';
 
 export default function ForgotPassword() {

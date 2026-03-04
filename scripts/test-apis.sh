@@ -14,10 +14,15 @@ echo ""
 echo "── Auth Suite ───────────────────────────"
 docker-compose exec -T backend npm run test:auth
 
-# ── Users suite (GET/POST users, permissions)
+# ── Staff suite (GET/POST/PATCH/DELETE staff users, permissions)
 echo ""
-echo "── Users Suite ──────────────────────────"
-docker-compose exec -T backend npm run test:users
+echo "── Staff Suite ──────────────────────────"
+docker-compose exec -T backend npm run test:staff
+
+# ── Youth suite (GET/POST/PATCH/DELETE youth, addresses, contacts)
+echo ""
+echo "── Youth Suite ──────────────────────────"
+docker-compose exec -T backend npm run test:youth
 
 echo ""
 echo "=========================================="

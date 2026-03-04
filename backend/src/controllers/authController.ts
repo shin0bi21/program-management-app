@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sql } from '../db/client';
@@ -23,8 +23,9 @@ const generateJTI = () => crypto.randomBytes(16).toString('hex');
 
 // Security constants
 const TRUSTED_DEVICE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const ACCESS_TOKEN_EXPIRY = '15m';
+const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
+const REFRESH_TOKEN_EXPIRY = '8h';
+const ACCESS_TOKEN_EXPIRY = '1h';
 const AUTH_CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 // Generate dummy hash at startup for timing attack protection
@@ -157,7 +158,7 @@ export const login = async (req: Request, res: Response) => {
         const refreshToken = jwt.sign(
           { userId: cred.userId, email: cred.email, jti: refreshJTI },
           REFRESH_SECRET,
-          { expiresIn: '7d' }
+          { expiresIn: REFRESH_TOKEN_EXPIRY }
         );
 
         // Store refresh token in database
@@ -189,7 +190,7 @@ export const login = async (req: Request, res: Response) => {
             id: cred.userId,
             firstName: cred.firstName,
             lastName: cred.lastName,
-            email: cred.email
+            email: cred.email,
           }
         });
       }
@@ -305,7 +306,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = jwt.sign(
       { userId: decoded.userId, email: decoded.email, jti: newRefreshJTI },
       REFRESH_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
 
     // Revoke old refresh token and create new one
@@ -505,7 +506,7 @@ export const verify2FA = async (req: Request, res: Response) => {
     const refreshToken = jwt.sign(
       { userId: cred.userId, email: cred.email, jti: refreshJTI },
       REFRESH_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
 
     // 10. Store refresh token in database
@@ -538,7 +539,7 @@ export const verify2FA = async (req: Request, res: Response) => {
         id: cred.userId,
         firstName: cred.firstName,
         lastName: cred.lastName,
-        email: cred.email
+        email: cred.email,
       }
     });
 

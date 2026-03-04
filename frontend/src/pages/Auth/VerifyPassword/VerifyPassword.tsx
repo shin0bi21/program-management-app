@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useVerifyPassword } from '../hooks/useVerifyPassword';
+import { useVerifyPassword } from './hooks/useVerifyPassword';
 import './VerifyPassword.css';
 
 export default function VerifyPassword() {
