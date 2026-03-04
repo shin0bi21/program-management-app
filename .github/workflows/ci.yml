@@ -135,7 +135,7 @@ jobs:
   # Deploy job - only runs when merging to main (production)
   deploy:
     name: Deploy to Production
-    needs: test
+    needs: test-main
     runs-on: ubuntu-latest
     # Only run on main branch (after PR from develop is merged)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'

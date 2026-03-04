@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { sql } from '../db/client';
-import type { Contacts, UserCredentials, UserGroups, Users } from '../types/database';
+import type { Contacts, UserCredentials, Users } from '../types/database';
 import type { DbRow } from '../types/db';
 
 type StaffRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'group_id' | 'active' | 'created_at' | 'updated_at'>> &
-  DbRow<Pick<UserGroups, 'name'>> &
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'active' | 'created_at' | 'updated_at'>> &
   DbRow<Pick<UserCredentials, 'email' | 'last_login'>> & {
     contacts: Array<{
       id: DbRow<Pick<Contacts, 'id'>>['id'];
@@ -25,11 +24,9 @@ export const getStaff = async (req: Request, res: Response) => {
         u.first_name,
         u.last_name,
         u.permission,
-        u.group_id,
         u.active,
         u.created_at,
         u.updated_at,
-        ug.name as group_name,
         uc.email,
         uc.last_login,
         (
@@ -47,7 +44,6 @@ export const getStaff = async (req: Request, res: Response) => {
           WHERE uhc.user_id = u.id
         ) as contacts
       FROM users u
-      LEFT JOIN user_groups ug ON u.group_id = ug.id
       LEFT JOIN user_credentials uc ON u.id = uc.user_id
       WHERE u.permission IN ('staff', 'admin')
       ORDER BY u.first_name ASC, u.last_name ASC
@@ -63,7 +59,7 @@ export const getStaff = async (req: Request, res: Response) => {
 };
 
 export const createStaff = async (req: Request, res: Response) => {
-  const { firstName, lastName, groupId, email, password, permission, active } = req.body;
+  const { firstName, lastName, email, password, permission, active } = req.body;
 
   try {
     const saltRounds = 10;
@@ -74,14 +70,12 @@ export const createStaff = async (req: Request, res: Response) => {
         first_name, 
         last_name, 
         permission,
-        group_id,
         active
       )
       VALUES (
         ${firstName}, 
         ${lastName}, 
         ${permission}::permission_level,
-        ${groupId || null},
         ${active}
       )
       RETURNING *; 

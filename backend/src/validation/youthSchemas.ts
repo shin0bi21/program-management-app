@@ -17,7 +17,6 @@ export const setYouthSchema = z.object({
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
-    groupId: z.string().uuid('Invalid group ID').optional(),
     active: z.boolean(),
     addresses: z
       .array(

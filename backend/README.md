@@ -252,7 +252,7 @@ Never modify an applied migration file. If you need to change something, create 
 ### All Protected Routes Require Both Middleware
 
 ```typescript
-router.get('/', authenticateToken, requirePermission(['admin', 'staff']), handler);
+router.get('/', authenticateToken, requirePermission('admin', 'staff'), handler);
 ```
 
 Never skip either. Never check permissions manually inside a controller.
@@ -267,8 +267,8 @@ Never skip either. Never check permissions manually inside a controller.
 | `user_credentials` | Hashed passwords, 2FA codes, device fingerprints, lockout state |
 | `user_groups` | Groups that staff and youth belong to |
 | `youth_profiles` | Youth data records — no login, managed by staff |
-| `addresses` | Addresses linked to youth via `youth_addresses` junction |
-| `contacts` | Emergency contacts linked via `youth_contacts` junction |
+| `addresses` | Addresses linked to youth via `user_has_addresses` junction |
+| `contacts` | Emergency contacts linked via `user_has_contacts` junction |
 | `schools` | School lookup table |
 | `schema_migrations` | Applied migration files + SHA-256 checksums |
 
@@ -346,10 +346,10 @@ Trusted devices skip step 2 (2FA bypassed for 30 days after first verify on that
 
 | Tier | Applied To | Strictness |
 |------|-----------|------------|
-| General | All API routes | Permissive |
-| Auth | Login, verify, resend | Strict |
-| Strict | Refresh, logout | Very strict |
-| Password reset | Forgot/reset password | Most strict |
+| General | All protected routes (`/api/staff`, `/api/youth`, `/api/schools`) | Permissive |
+| Auth | `/login`, `/refresh` | Strict |
+| Strict | `/verify`, `/resend` | Very strict |
+| Password reset | `/forgot-password`, `/reset-password` | Most strict |
 
 Rate limiting is disabled when `NODE_ENV=test`.
 

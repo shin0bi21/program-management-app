@@ -35,13 +35,6 @@ export const resetPasswordSchema = z.object({
   }),
 });
 
-// Logout
-export const logoutSchema = z.object({
-  body: z.object({
-    refreshToken: z.string().optional(),
-  }),
-});
-
 // Resend 2FA Code
 export const resend2FASchema = z.object({
   body: z.object({

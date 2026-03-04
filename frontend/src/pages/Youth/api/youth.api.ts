@@ -16,7 +16,6 @@ export async function setYouth(data: {
   dateOfBirth?: string;
   schoolId?: string;
   gradeLevel?: number;
-  groupId?: string;
   addresses?: Array<{
     address: string;
     city: string;

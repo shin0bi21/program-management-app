@@ -11,6 +11,7 @@ export interface YouthProfile {
   schoolId: string | null;
   schoolName: string | null;
   gradeLevel: number | null;
+  ageGroup: 'junior_youth' | 'senior_youth' | null;
   createdAt: string;
   addresses: Array<{
     id: string;

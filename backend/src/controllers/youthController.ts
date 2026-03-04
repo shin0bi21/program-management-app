@@ -5,7 +5,7 @@ import type { DbRow } from '../types/db';
 
 type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
   DbRow<Pick<Schools, 'name'>>;
 
 // ============================================================================
@@ -222,6 +222,7 @@ export const getYouth = async (req: Request, res: Response) => {
         yp.school_id,
         s.name as school_name,
         yp.grade_level,
+        yp.age_group,
         u.created_at,
         (
           SELECT json_agg(
@@ -270,20 +271,20 @@ export const getYouth = async (req: Request, res: Response) => {
 };
 
 export const setYouth = async (req: Request, res: Response) => {
-  const { id, firstName, lastName, groupId, dateOfBirth, schoolId, gradeLevel, active, addresses, contacts } = req.body;
+  const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, active, addresses, contacts } = req.body;
+  const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
 
   try {
     let userId: string;
 
     if (id) {
       const users = await sql<DbRow<Users>[]>`
-        INSERT INTO users (id, first_name, last_name, permission, group_id, active, created_at, updated_at)
+        INSERT INTO users (id, first_name, last_name, permission, active, created_at, updated_at)
         VALUES (
           ${id},
           ${firstName},
           ${lastName},
           'youth'::permission_level,
-          ${groupId || null},
           ${active},
           COALESCE((SELECT created_at FROM users WHERE id = ${id}), NOW()),
           NOW()
@@ -291,7 +292,6 @@ export const setYouth = async (req: Request, res: Response) => {
         ON CONFLICT (id) DO UPDATE SET
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,
-          group_id = EXCLUDED.group_id,
           active = EXCLUDED.active,
           updated_at = EXCLUDED.updated_at
         RETURNING *
@@ -300,12 +300,13 @@ export const setYouth = async (req: Request, res: Response) => {
       userId = users[0].id;
 
       await sql`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, created_at, updated_at)
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at)
         VALUES (
           ${userId},
           ${dateOfBirth || null},
           ${schoolId || null},
           ${gradeLevel ?? null},
+          ${ageGroup},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${userId}), NOW()),
           NOW()
         )
@@ -313,20 +314,21 @@ export const setYouth = async (req: Request, res: Response) => {
           date_of_birth = EXCLUDED.date_of_birth,
           school_id = EXCLUDED.school_id,
           grade_level = EXCLUDED.grade_level,
+          age_group = EXCLUDED.age_group,
           updated_at = EXCLUDED.updated_at
       `;
     } else {
       const newUsers = await sql<DbRow<Users>[]>`
-        INSERT INTO users (first_name, last_name, permission, group_id, active)
-        VALUES (${firstName}, ${lastName}, 'youth'::permission_level, ${groupId || null}, ${active})
+        INSERT INTO users (first_name, last_name, permission, active)
+        Values (${firstName}, ${lastName}, 'youth'::permission_level, ${active})
         RETURNING *
       `;
 
       userId = newUsers[0].id;
 
       await sql`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level)
-        VALUES (${userId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null})
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)
+        Values (${userId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup})
       `;
     }
 

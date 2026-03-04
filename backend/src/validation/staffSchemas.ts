@@ -13,7 +13,6 @@ export const createStaffSchema = z.object({
     email: z.string().email('Invalid email format'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     permission: z.enum(['staff', 'admin']).optional(),
-    groupId: z.string().uuid('Invalid group ID').optional(),
     active: z.boolean(),
   }),
 });
