@@ -55,6 +55,9 @@ CREATE TYPE school_type AS ENUM ('grade_school', 'middle_school', 'high_school')
 -- School boards
 CREATE TYPE school_board AS ENUM ('public', 'catholic');
 
+-- Age groups for youth profiles
+CREATE TYPE age_group AS ENUM ('junior_youth', 'senior_youth');
+
 -- ============================================================================
 -- BASE TABLE PATTERN
 -- ============================================================================
@@ -81,29 +84,20 @@ CREATE TABLE IF NOT EXISTS base_table (
 -- ============================================================================
 
 -- 1. User Groups (kept as table since groups can be dynamic)
-CREATE TABLE IF NOT EXISTS user_groups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(50) NOT NULL UNIQUE,
-  LIKE base_table INCLUDING ALL
-);
-
--- 2. Users Table (Profile Data Only)
+-- 1. Users Table (Profile Data Only)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   permission permission_level NOT NULL DEFAULT 'youth',
-  group_id UUID,
   first_name VARCHAR(120) NOT NULL,
   last_name VARCHAR(120) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT true,
   LIKE base_table INCLUDING ALL,
-  FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE SET NULL,
   -- Check constraints
   CHECK (LENGTH(TRIM(first_name)) > 0),
   CHECK (LENGTH(TRIM(last_name)) > 0)
 );
 
 CREATE INDEX idx_users_permission ON users(permission);
-CREATE INDEX idx_users_group_id ON users(group_id);
 CREATE INDEX idx_users_active ON users(active);
 
 COMMENT ON COLUMN users.active IS 'Active status: true for current cohort youth and enabled staff logins';
@@ -150,6 +144,7 @@ CREATE TABLE IF NOT EXISTS youth_profiles (
   date_of_birth DATE,
   school_id UUID,
   grade_level SMALLINT,
+  age_group age_group,
   LIKE base_table INCLUDING ALL,
   -- Date of birth must be in the past
   CHECK (date_of_birth IS NULL OR date_of_birth < CURRENT_DATE),
@@ -370,10 +365,6 @@ ALTER TABLE token_blacklist
 ADD CONSTRAINT fk_token_blacklist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Add audit FKs (created_by/updated_by) back to users
-ALTER TABLE user_groups 
-ADD CONSTRAINT fk_groups_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-ADD CONSTRAINT fk_groups_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
-
 ALTER TABLE users 
 ADD CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
 ADD CONSTRAINT fk_users_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
@@ -405,10 +396,6 @@ ADD CONSTRAINT fk_worksheets_updated_by FOREIGN KEY (updated_by) REFERENCES user
 -- ============================================================================
 -- SEED DATA
 -- ============================================================================
-
--- Seed user groups (lookup data)
-INSERT INTO user_groups (name) VALUES ('Staff'), ('Junior Youth'), ('Senior Youth')
-ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name;
 
 -- Note: Admin user creation moved to db/scripts/seed-admin.ts
 -- Run after first deployment: npm run seed:admin
