@@ -1,2 +1,2 @@
 // Re-exported from common — import from here or from common/api/tokenRefresh directly.
-export { refreshToken, startTokenRefreshTimer } from '../../../../common/api/tokenRefresh';
+export { refreshToken } from '../../../../common/api/tokenRefresh';
