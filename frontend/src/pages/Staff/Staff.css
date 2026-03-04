@@ -1,0 +1,23 @@
+.page-container {
+  margin-left: 200px;
+  padding: 40px 36px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: #333;
+  margin: 0;
+}

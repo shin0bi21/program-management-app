@@ -1,0 +1,71 @@
+.page-container {
+  margin-left: 200px;
+  padding: 40px 36px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: #333;
+  margin: 0;
+}
+
+.page-add-btn {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.page-add-btn:hover {
+  background-color: #0056b3;
+}
+
+.page-action-btn {
+  padding: 0.35rem 0.85rem;
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.page-action-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.status-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}

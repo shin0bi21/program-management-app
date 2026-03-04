@@ -480,7 +480,7 @@ describe('POST /api/auth/logout', () => {
 
       // Token should now be rejected on protected route
       const protectedRes = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${accessToken}`);
       expect(protectedRes.status).toBe(401);
       expect(protectedRes.body.error).toMatch(/revoked/i);
@@ -537,7 +537,7 @@ describe('POST /api/auth/logout', () => {
 
       // Access token rejected
       const protectedRes = await request(app)
-        .get('/api/users/all')
+        .get('/api/staff')
         .set('Authorization', `Bearer ${accessToken}`);
       expect(protectedRes.status).toBe(401);
 
@@ -734,7 +734,7 @@ describe('Full Auth Flow', () => {
 
     // 3. Access protected route
     const protectedRes = await request(app)
-      .get('/api/users/all')
+      .get('/api/staff')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(protectedRes.status).toBe(200);
     expect(Array.isArray(protectedRes.body)).toBe(true);
@@ -752,7 +752,7 @@ describe('Full Auth Flow', () => {
 
     // New access token works
     const protectedRes2 = await request(app)
-      .get('/api/users/all')
+      .get('/api/staff')
       .set('Authorization', `Bearer ${newAccessToken}`);
     expect(protectedRes2.status).toBe(200);
 
@@ -771,7 +771,7 @@ describe('Full Auth Flow', () => {
 
     // 6. Verify everything is revoked
     const revokedAccessRes = await request(app)
-      .get('/api/users/all')
+      .get('/api/staff')
       .set('Authorization', `Bearer ${newAccessToken}`);
     expect(revokedAccessRes.status).toBe(401);
 

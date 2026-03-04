@@ -25,7 +25,40 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type PermissionLevel = "admin" | "staff" | "youth";
 
+export type SchoolBoard = "catholic" | "public";
+
+export type SchoolType = "grade_school" | "high_school" | "middle_school";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface Addresses {
+  address: string;
+  city: string;
+  country: Generated<string>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  postal_code: string;
+  province: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface AddressesBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  id: string | null;
+  postal_code: string | null;
+  province: string | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+}
 
 export interface AuthCodes {
   code: string;
@@ -106,6 +139,35 @@ export interface SchemaMigrations {
   version: string;
 }
 
+export interface Schools {
+  address: string;
+  board: SchoolBoard | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  name: string;
+  postal_code: string | null;
+  school_type: SchoolType;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface SchoolsBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  address: string | null;
+  board: SchoolBoard | null;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  id: string | null;
+  name: string | null;
+  postal_code: string | null;
+  school_type: SchoolType | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+}
+
 export interface TokenBlacklist {
   blacklisted_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
@@ -149,7 +211,33 @@ export interface UserGroups {
   updated_by: string | null;
 }
 
+export interface UserHasAddresses {
+  active: Generated<boolean>;
+  address_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  user_id: string;
+}
+
+export interface UserHasAddressesBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  active: boolean | null;
+  address_id: string | null;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  id: string | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+  user_id: string | null;
+}
+
 export interface UserHasContacts {
+  active: Generated<boolean>;
   assigned_at: Generated<Timestamp | null>;
   contact_id: string;
   created_at: Generated<Timestamp | null>;
@@ -163,6 +251,7 @@ export interface UserHasContactsBackup {
   _backup_action: string | null;
   _backup_timestamp: Generated<Timestamp | null>;
   _uuid: Generated<string>;
+  active: boolean | null;
   assigned_at: Timestamp | null;
   contact_id: string | null;
   created_at: Timestamp | null;
@@ -173,6 +262,10 @@ export interface UserHasContactsBackup {
 }
 
 export interface Users {
+  /**
+   * Active status: true for current cohort youth and enabled staff logins
+   */
+  active: Generated<boolean>;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   first_name: string;
@@ -188,6 +281,7 @@ export interface UsersBackup {
   _backup_action: string | null;
   _backup_timestamp: Generated<Timestamp | null>;
   _uuid: Generated<string>;
+  active: boolean | null;
   created_at: Timestamp | null;
   created_by: string | null;
   first_name: string | null;
@@ -203,9 +297,9 @@ export interface YouthProfiles {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: string | null;
+  grade_level: number | null;
   id: Generated<string>;
-  school_name: string | null;
+  school_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
@@ -218,9 +312,9 @@ export interface YouthProfilesBackup {
   created_at: Timestamp | null;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: string | null;
+  grade_level: number | null;
   id: string | null;
-  school_name: string | null;
+  school_id: string | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
   user_id: string | null;
@@ -260,6 +354,8 @@ export interface YouthWorksheetsBackup {
 }
 
 export interface DB {
+  addresses: Addresses;
+  addresses_backup: AddressesBackup;
   auth_codes: AuthCodes;
   base_table: BaseTable;
   contacts: Contacts;
@@ -268,10 +364,14 @@ export interface DB {
   refresh_tokens: RefreshTokens;
   schema_backup_tracking: SchemaBackupTracking;
   schema_migrations: SchemaMigrations;
+  schools: Schools;
+  schools_backup: SchoolsBackup;
   token_blacklist: TokenBlacklist;
   trusted_devices: TrustedDevices;
   user_credentials: UserCredentials;
   user_groups: UserGroups;
+  user_has_addresses: UserHasAddresses;
+  user_has_addresses_backup: UserHasAddressesBackup;
   user_has_contacts: UserHasContacts;
   user_has_contacts_backup: UserHasContactsBackup;
   users: Users;

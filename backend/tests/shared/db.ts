@@ -2,7 +2,7 @@
  * Shared database helpers for all test suites.
  * Provides: seedTestUser, deleteTestUser, and raw sql access.
  */
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { sql } from '../../src/db/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- BACKUP SYSTEM FOR: 2026-01-31_1_init.sql
--- Generated: 2026-02-05T05:03:11.102Z
--- Tables: users, youth_profiles, contacts, user_has_contacts, youth_worksheets
+-- Generated: 2026-02-15T18:54:45.503Z
+-- Tables: users, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
 -- ============================================================================
 
 -- ============================================================================
@@ -13,11 +13,12 @@ CREATE TABLE IF NOT EXISTS users_backup (
   _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
   _backup_action VARCHAR(10),
+  id UUID,
   permission permission_level,
   group_id UUID,
   first_name VARCHAR(120),
   last_name VARCHAR(120),
-  id UUID,
+  active BOOLEAN,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -78,9 +79,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO users_backup (
-    _backup_action, permission, group_id, first_name, last_name, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, permission, group_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -110,9 +111,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO users_backup (
-    _backup_action, permission, group_id, first_name, last_name, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, permission, group_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.permission, OLD.group_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -129,6 +130,139 @@ FOR EACH ROW
 EXECUTE FUNCTION users_before_delete();
 
 -- ============================================================================
+-- TABLE: schools
+-- ============================================================================
+
+-- Backup table for schools
+CREATE TABLE IF NOT EXISTS schools_backup (
+  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
+  _backup_action VARCHAR(10),
+  id UUID,
+  name VARCHAR(255),
+  address VARCHAR(255),
+  school_type school_type,
+  board school_board,
+  postal_code VARCHAR(20),
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
+);
+
+-- BEFORE INSERT trigger for schools
+DROP FUNCTION IF EXISTS schools_before_insert() CASCADE;
+CREATE OR REPLACE FUNCTION schools_before_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Validate NOT NULL: name
+  IF NEW.name IS NULL THEN
+    RAISE EXCEPTION '[schools] name cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: name
+  IF NEW.name IS NOT NULL AND LENGTH(NEW.name) > 255 THEN
+    RAISE EXCEPTION '[schools] name exceeds maximum length of 255 characters';
+  END IF;
+  -- Validate not empty: name
+  IF LENGTH(TRIM(NEW.name)) = 0 THEN
+    RAISE EXCEPTION '[schools] name cannot be empty';
+  END IF;
+  -- Validate NOT NULL: address
+  IF NEW.address IS NULL THEN
+    RAISE EXCEPTION '[schools] address cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: address
+  IF NEW.address IS NOT NULL AND LENGTH(NEW.address) > 255 THEN
+    RAISE EXCEPTION '[schools] address exceeds maximum length of 255 characters';
+  END IF;
+  -- Validate not empty: address
+  IF LENGTH(TRIM(NEW.address)) = 0 THEN
+    RAISE EXCEPTION '[schools] address cannot be empty';
+  END IF;
+  -- Validate NOT NULL: school_type
+  IF NEW.school_type IS NULL THEN
+    RAISE EXCEPTION '[schools] school_type cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: postal_code
+  IF NEW.postal_code IS NOT NULL AND LENGTH(NEW.postal_code) > 20 THEN
+    RAISE EXCEPTION '[schools] postal_code exceeds maximum length of 20 characters';
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Inserting into schools: %', NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_schools_before_insert ON schools;
+CREATE TRIGGER trigger_schools_before_insert
+BEFORE INSERT ON schools
+FOR EACH ROW
+EXECUTE FUNCTION schools_before_insert();
+
+-- BEFORE UPDATE trigger for schools
+DROP FUNCTION IF EXISTS schools_before_update() CASCADE;
+CREATE OR REPLACE FUNCTION schools_before_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot old state to backup table
+  INSERT INTO schools_backup (
+    _backup_action, id, name, address, school_type, board, postal_code, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'UPDATE', OLD.id, OLD.name, OLD.address, OLD.school_type, OLD.board, OLD.postal_code, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Auto-update updated_at if column exists
+  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
+    NEW.updated_at = NOW();
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Updating schools - OLD: % | NEW: %', OLD, NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_schools_before_update ON schools;
+CREATE TRIGGER trigger_schools_before_update
+BEFORE UPDATE ON schools
+FOR EACH ROW
+EXECUTE FUNCTION schools_before_update();
+
+-- BEFORE DELETE trigger for schools
+DROP FUNCTION IF EXISTS schools_before_delete() CASCADE;
+CREATE OR REPLACE FUNCTION schools_before_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot before deletion
+  INSERT INTO schools_backup (
+    _backup_action, id, name, address, school_type, board, postal_code, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'DELETE', OLD.id, OLD.name, OLD.address, OLD.school_type, OLD.board, OLD.postal_code, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Deleting from schools: %', OLD;
+
+  RETURN OLD;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_schools_before_delete ON schools;
+CREATE TRIGGER trigger_schools_before_delete
+BEFORE DELETE ON schools
+FOR EACH ROW
+EXECUTE FUNCTION schools_before_delete();
+
+-- ============================================================================
 -- TABLE: youth_profiles
 -- ============================================================================
 
@@ -137,11 +271,11 @@ CREATE TABLE IF NOT EXISTS youth_profiles_backup (
   _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
   _backup_action VARCHAR(10),
+  id UUID,
   user_id UUID,
   date_of_birth DATE,
-  school_name VARCHAR(255),
-  grade_level VARCHAR(50),
-  id UUID,
+  school_id UUID,
+  grade_level SMALLINT,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -159,13 +293,9 @@ BEGIN
   IF NEW.user_id IS NULL THEN
     RAISE EXCEPTION '[youth_profiles] user_id cannot be NULL';
   END IF;
-  -- Validate VARCHAR length: school_name
-  IF NEW.school_name IS NOT NULL AND LENGTH(NEW.school_name) > 255 THEN
-    RAISE EXCEPTION '[youth_profiles] school_name exceeds maximum length of 255 characters';
-  END IF;
-  -- Validate VARCHAR length: grade_level
-  IF NEW.grade_level IS NOT NULL AND LENGTH(NEW.grade_level) > 50 THEN
-    RAISE EXCEPTION '[youth_profiles] grade_level exceeds maximum length of 50 characters';
+  -- Validate grade range
+  IF NEW.grade_level IS NOT NULL AND (NEW.grade_level < 0 OR NEW.grade_level > 12) THEN
+    RAISE EXCEPTION '[youth_profiles] grade_level must be between 0 and 12';
   END IF;
 
   -- Debug log (optional - comment out in production)
@@ -190,9 +320,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO youth_profiles_backup (
-    _backup_action, user_id, date_of_birth, school_name, grade_level, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, date_of_birth, school_id, grade_level, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.user_id, OLD.date_of_birth, OLD.school_name, OLD.grade_level, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -222,9 +352,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO youth_profiles_backup (
-    _backup_action, user_id, date_of_birth, school_name, grade_level, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, user_id, date_of_birth, school_id, grade_level, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.user_id, OLD.date_of_birth, OLD.school_name, OLD.grade_level, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -241,6 +371,262 @@ FOR EACH ROW
 EXECUTE FUNCTION youth_profiles_before_delete();
 
 -- ============================================================================
+-- TABLE: addresses
+-- ============================================================================
+
+-- Backup table for addresses
+CREATE TABLE IF NOT EXISTS addresses_backup (
+  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
+  _backup_action VARCHAR(10),
+  id UUID,
+  address VARCHAR(255),
+  city VARCHAR(100),
+  province VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100),
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
+);
+
+-- BEFORE INSERT trigger for addresses
+DROP FUNCTION IF EXISTS addresses_before_insert() CASCADE;
+CREATE OR REPLACE FUNCTION addresses_before_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Validate NOT NULL: address
+  IF NEW.address IS NULL THEN
+    RAISE EXCEPTION '[addresses] address cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: address
+  IF NEW.address IS NOT NULL AND LENGTH(NEW.address) > 255 THEN
+    RAISE EXCEPTION '[addresses] address exceeds maximum length of 255 characters';
+  END IF;
+  -- Validate not empty: address
+  IF LENGTH(TRIM(NEW.address)) = 0 THEN
+    RAISE EXCEPTION '[addresses] address cannot be empty';
+  END IF;
+  -- Validate NOT NULL: city
+  IF NEW.city IS NULL THEN
+    RAISE EXCEPTION '[addresses] city cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: city
+  IF NEW.city IS NOT NULL AND LENGTH(NEW.city) > 100 THEN
+    RAISE EXCEPTION '[addresses] city exceeds maximum length of 100 characters';
+  END IF;
+  -- Validate not empty: city
+  IF LENGTH(TRIM(NEW.city)) = 0 THEN
+    RAISE EXCEPTION '[addresses] city cannot be empty';
+  END IF;
+  -- Validate NOT NULL: province
+  IF NEW.province IS NULL THEN
+    RAISE EXCEPTION '[addresses] province cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: province
+  IF NEW.province IS NOT NULL AND LENGTH(NEW.province) > 100 THEN
+    RAISE EXCEPTION '[addresses] province exceeds maximum length of 100 characters';
+  END IF;
+  -- Validate not empty: province
+  IF LENGTH(TRIM(NEW.province)) = 0 THEN
+    RAISE EXCEPTION '[addresses] province cannot be empty';
+  END IF;
+  -- Validate NOT NULL: postal_code
+  IF NEW.postal_code IS NULL THEN
+    RAISE EXCEPTION '[addresses] postal_code cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: postal_code
+  IF NEW.postal_code IS NOT NULL AND LENGTH(NEW.postal_code) > 20 THEN
+    RAISE EXCEPTION '[addresses] postal_code exceeds maximum length of 20 characters';
+  END IF;
+  -- Validate not empty: postal_code
+  IF LENGTH(TRIM(NEW.postal_code)) = 0 THEN
+    RAISE EXCEPTION '[addresses] postal_code cannot be empty';
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Inserting into addresses: %', NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_addresses_before_insert ON addresses;
+CREATE TRIGGER trigger_addresses_before_insert
+BEFORE INSERT ON addresses
+FOR EACH ROW
+EXECUTE FUNCTION addresses_before_insert();
+
+-- BEFORE UPDATE trigger for addresses
+DROP FUNCTION IF EXISTS addresses_before_update() CASCADE;
+CREATE OR REPLACE FUNCTION addresses_before_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot old state to backup table
+  INSERT INTO addresses_backup (
+    _backup_action, id, address, city, province, postal_code, country, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'UPDATE', OLD.id, OLD.address, OLD.city, OLD.province, OLD.postal_code, OLD.country, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Auto-update updated_at if column exists
+  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
+    NEW.updated_at = NOW();
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Updating addresses - OLD: % | NEW: %', OLD, NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_addresses_before_update ON addresses;
+CREATE TRIGGER trigger_addresses_before_update
+BEFORE UPDATE ON addresses
+FOR EACH ROW
+EXECUTE FUNCTION addresses_before_update();
+
+-- BEFORE DELETE trigger for addresses
+DROP FUNCTION IF EXISTS addresses_before_delete() CASCADE;
+CREATE OR REPLACE FUNCTION addresses_before_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot before deletion
+  INSERT INTO addresses_backup (
+    _backup_action, id, address, city, province, postal_code, country, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'DELETE', OLD.id, OLD.address, OLD.city, OLD.province, OLD.postal_code, OLD.country, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Deleting from addresses: %', OLD;
+
+  RETURN OLD;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_addresses_before_delete ON addresses;
+CREATE TRIGGER trigger_addresses_before_delete
+BEFORE DELETE ON addresses
+FOR EACH ROW
+EXECUTE FUNCTION addresses_before_delete();
+
+-- ============================================================================
+-- TABLE: user_has_addresses
+-- ============================================================================
+
+-- Backup table for user_has_addresses
+CREATE TABLE IF NOT EXISTS user_has_addresses_backup (
+  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
+  _backup_action VARCHAR(10),
+  id UUID,
+  user_id UUID,
+  address_id UUID,
+  active BOOLEAN,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
+);
+
+-- BEFORE INSERT trigger for user_has_addresses
+DROP FUNCTION IF EXISTS user_has_addresses_before_insert() CASCADE;
+CREATE OR REPLACE FUNCTION user_has_addresses_before_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Validate NOT NULL: user_id
+  IF NEW.user_id IS NULL THEN
+    RAISE EXCEPTION '[user_has_addresses] user_id cannot be NULL';
+  END IF;
+  -- Validate NOT NULL: address_id
+  IF NEW.address_id IS NULL THEN
+    RAISE EXCEPTION '[user_has_addresses] address_id cannot be NULL';
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Inserting into user_has_addresses: %', NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_has_addresses_before_insert ON user_has_addresses;
+CREATE TRIGGER trigger_user_has_addresses_before_insert
+BEFORE INSERT ON user_has_addresses
+FOR EACH ROW
+EXECUTE FUNCTION user_has_addresses_before_insert();
+
+-- BEFORE UPDATE trigger for user_has_addresses
+DROP FUNCTION IF EXISTS user_has_addresses_before_update() CASCADE;
+CREATE OR REPLACE FUNCTION user_has_addresses_before_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot old state to backup table
+  INSERT INTO user_has_addresses_backup (
+    _backup_action, id, user_id, address_id, active, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'UPDATE', OLD.id, OLD.user_id, OLD.address_id, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Auto-update updated_at if column exists
+  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
+    NEW.updated_at = NOW();
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Updating user_has_addresses - OLD: % | NEW: %', OLD, NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_has_addresses_before_update ON user_has_addresses;
+CREATE TRIGGER trigger_user_has_addresses_before_update
+BEFORE UPDATE ON user_has_addresses
+FOR EACH ROW
+EXECUTE FUNCTION user_has_addresses_before_update();
+
+-- BEFORE DELETE trigger for user_has_addresses
+DROP FUNCTION IF EXISTS user_has_addresses_before_delete() CASCADE;
+CREATE OR REPLACE FUNCTION user_has_addresses_before_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot before deletion
+  INSERT INTO user_has_addresses_backup (
+    _backup_action, id, user_id, address_id, active, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'DELETE', OLD.id, OLD.user_id, OLD.address_id, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Deleting from user_has_addresses: %', OLD;
+
+  RETURN OLD;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_has_addresses_before_delete ON user_has_addresses;
+CREATE TRIGGER trigger_user_has_addresses_before_delete
+BEFORE DELETE ON user_has_addresses
+FOR EACH ROW
+EXECUTE FUNCTION user_has_addresses_before_delete();
+
+-- ============================================================================
 -- TABLE: contacts
 -- ============================================================================
 
@@ -249,11 +635,11 @@ CREATE TABLE IF NOT EXISTS contacts_backup (
   _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
   _backup_action VARCHAR(10),
+  id UUID,
   first_name VARCHAR(120),
   last_name VARCHAR(120),
   phone_number VARCHAR(50),
   type contact_type,
-  id UUID,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -318,9 +704,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO contacts_backup (
-    _backup_action, first_name, last_name, phone_number, type, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, first_name, last_name, phone_number, type, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.first_name, OLD.last_name, OLD.phone_number, OLD.type, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.first_name, OLD.last_name, OLD.phone_number, OLD.type, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -350,9 +736,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO contacts_backup (
-    _backup_action, first_name, last_name, phone_number, type, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, first_name, last_name, phone_number, type, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.first_name, OLD.last_name, OLD.phone_number, OLD.type, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.first_name, OLD.last_name, OLD.phone_number, OLD.type, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -379,6 +765,7 @@ CREATE TABLE IF NOT EXISTS user_has_contacts_backup (
   _backup_action VARCHAR(10),
   user_id UUID,
   contact_id UUID,
+  active BOOLEAN,
   assigned_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
@@ -424,9 +811,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO user_has_contacts_backup (
-    _backup_action, user_id, contact_id, assigned_at, created_at, updated_at, created_by, updated_by
+    _backup_action, user_id, contact_id, active, assigned_at, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.user_id, OLD.contact_id, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.user_id, OLD.contact_id, OLD.active, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -456,9 +843,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO user_has_contacts_backup (
-    _backup_action, user_id, contact_id, assigned_at, created_at, updated_at, created_by, updated_by
+    _backup_action, user_id, contact_id, active, assigned_at, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.user_id, OLD.contact_id, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.user_id, OLD.contact_id, OLD.active, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
@@ -483,6 +870,7 @@ CREATE TABLE IF NOT EXISTS youth_worksheets_backup (
   _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
   _backup_action VARCHAR(10),
+  id UUID,
   youth_id UUID,
   title VARCHAR(255),
   file_data BYTEA,
@@ -490,7 +878,6 @@ CREATE TABLE IF NOT EXISTS youth_worksheets_backup (
   file_type VARCHAR(100),
   note TEXT,
   metadata JSONB,
-  id UUID,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
@@ -547,9 +934,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO youth_worksheets_backup (
-    _backup_action, youth_id, title, file_data, file_size, file_type, note, metadata, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, youth_id, title, file_data, file_size, file_type, note, metadata, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.youth_id, OLD.title, OLD.file_data, OLD.file_size, OLD.file_type, OLD.note, OLD.metadata, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.youth_id, OLD.title, OLD.file_data, OLD.file_size, OLD.file_type, OLD.note, OLD.metadata, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -579,9 +966,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO youth_worksheets_backup (
-    _backup_action, youth_id, title, file_data, file_size, file_type, note, metadata, id, created_at, updated_at, created_by, updated_by
+    _backup_action, id, youth_id, title, file_data, file_size, file_type, note, metadata, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.youth_id, OLD.title, OLD.file_data, OLD.file_size, OLD.file_type, OLD.note, OLD.metadata, OLD.id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.youth_id, OLD.title, OLD.file_data, OLD.file_size, OLD.file_type, OLD.note, OLD.metadata, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)
