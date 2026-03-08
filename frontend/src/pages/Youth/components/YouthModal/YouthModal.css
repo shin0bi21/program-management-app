@@ -69,14 +69,14 @@
 }
 
 /* Form item styling */
-.address-form-item,
+/* .address-form-item,
 .contact-form-item {
   margin-bottom: 16px;
   padding: 16px;
   border: 1px solid #dee2e6;
   border-radius: 6px;
   background: #f8f9fa;
-}
+} */
 
 .form-item-header {
   display: flex;
@@ -98,7 +98,6 @@
   padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
   background-color: white;
-  border: 1px solid #dee2e6;
   border-radius: 6px;
   transition: box-shadow 0.2s;
 }

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // import { faTrash } from '@fortawesome/free-solid-svg-icons';
-import { setYouth, getYouth } from '../../api/youth.api';
+import { setYouth } from '../../api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/errors';
 import Modal from '../../../../common/components/Modal/Modal';
 import { useSchools } from '../../../../common/hooks/useSchools';
@@ -108,10 +108,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         contacts: getContactPayload(),
       };
 
-      const result = await setYouth(payload);
-
-      // Fetch full profile
-      const savedYouth = await getYouth(result.id);
+      const savedYouth = await setYouth(payload);
 
       setSubmitStatus('success');
       
@@ -227,7 +224,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         {/* Addresses Section */}
         <div className="section-divider">
           <div className="section-header">
-            <h3>Addresses <span className="section-optional">(optional)</span></h3>
+            <h3>Address <span className="section-optional">(optional)</span></h3>
           </div>
           
           <div className="section-content">
@@ -292,7 +289,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         {/* Contacts Section */}
         <div className="section-divider">
           <div className="section-header">
-            <h3>Emergency Contacts <span className="section-optional">(optional)</span></h3>
+            <h3>Emergency Contact <span className="section-optional">(optional)</span></h3>
           </div>
           
           <div className="section-content">
