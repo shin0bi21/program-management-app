@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { setYouth, getYouth } from '../../api/youth.api';
+import { setYouth } from '../../api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/errors';
 import { useSchools } from '../../../../common/hooks/useSchools';
 import { useContacts } from '../../../../common/hooks/useContacts';
@@ -126,8 +126,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         contacts: getContactPayload(),
       };
 
-      const result = await setYouth(payload);
-      const savedYouth = await getYouth(result.id);
+      const savedYouth = await setYouth(payload);
 
       setSubmitStatus('success');
 

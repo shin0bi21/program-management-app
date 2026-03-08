@@ -535,9 +535,13 @@ git add . && git commit -m "Description" && git push
 The backend container runs with the Node.js inspector on port 9229.
 
 1. Open the Run and Debug panel (`Cmd+Shift+D`)
-2. Select your debug configuration from the dropdown
-3. Press `F5` to attach
+2. Select **"Docker: Debug Backend"** from the dropdown at the top of the panel
+3. Press `F5` to attach — if `F5` doesn't work, click the green ▶ play button in the panel directly
 4. Set breakpoints in `src/` — they'll pause on the next matching request
+
+> **Note:** The panel must be open and focused with the correct config selected for `F5` to trigger the right debugger. If breakpoints aren't hitting, confirm the session is attached (you'll see the debug toolbar — step over/in/out buttons — appear at the top of the screen).
+
+> **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, TypeScript doesn't emit `.js.map` files and the debugger can't map compiled JS back to the original `.ts` source — breakpoints in service files will be silently skipped. If you ever lose breakpoints after a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
 
 ---
 
