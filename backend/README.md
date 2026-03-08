@@ -130,9 +130,15 @@ backend/
 │   ├── index.ts                   # Express entry point — boots app, mounts routes
 │   ├── controllers/
 │   │   ├── authController.ts      # Login, 2FA verify/resend, refresh, logout, password reset
-│   │   ├── staffController.ts     # getStaff, createStaff
-│   │   ├── youthController.ts     # getYouth, setYouth (upsert), setAddresses, setContacts
-│   │   └── schoolController.ts    # getSchools
+│   │   ├── staffController.ts     # HTTP wrappers — handleGetStaff, handleCreateStaff
+│   │   ├── youthController.ts     # HTTP wrappers — handleGetYouth, handleSetYouth
+│   │   └── schoolController.ts    # HTTP wrapper — handleGetSchools
+│   ├── services/
+│   │   ├── youthService.ts        # getYouth, setYouth — all SQL + business logic for youth
+│   │   ├── staffService.ts        # getStaff, createStaff
+│   │   ├── schoolService.ts       # getSchools
+│   │   ├── addressService.ts      # setAddresses — reusable address sync for any entity
+│   │   └── contactService.ts      # setContacts — reusable contact sync for any entity
 │   ├── routes/
 │   │   ├── authRoutes.ts          # Mounted at /api/auth
 │   │   ├── staffRoutes.ts         # Mounted at /api/staff
@@ -190,7 +196,8 @@ HTTP Request
   → requirePermission(...)  — check user.permission against allowed roles
   → rateLimiter             — tier-specific (general / auth / strict / password-reset)
   → validateRequest(schema) — Zod parse; returns 400 with field errors on failure
-  → controller              — SQL query via postgres.js → JSON response
+  → controller (handle*)    — extract params, call service, send HTTP response
+  → service                 — SQL query via postgres.js, business logic, return typed data
 ```
 
 Middleware is applied in route files, not globally. Each route explicitly lists which middleware it needs. This makes the chain visible and auditable.
@@ -200,12 +207,13 @@ Middleware is applied in route files, not globally. Each route explicitly lists 
 To add a new route group (e.g. `/api/events`):
 
 1. Create `src/validation/eventSchemas.ts` — Zod schemas
-2. Create `src/controllers/eventController.ts` — handler functions
-3. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
-4. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
-5. Mount the same routes in `tests/shared/app.ts` for test coverage
-6. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
-7. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
+2. Create `src/services/eventService.ts` — all SQL queries and business logic
+3. Create `src/controllers/eventController.ts` — thin `handle*` wrappers that call the service
+4. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
+5. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
+6. Mount the same routes in `tests/shared/app.ts` for test coverage
+7. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
+8. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
 
 ---
 
