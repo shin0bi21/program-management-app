@@ -1,55 +1,9 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import { sql } from '../db/client';
-import type { Contacts, UserCredentials, Users } from '../types/database';
-import type { DbRow } from '../types/db';
+import { getStaff, createStaff } from '../services/staffService';
 
-type StaffRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'permission' | 'active' | 'created_at' | 'updated_at'>> &
-  DbRow<Pick<UserCredentials, 'email' | 'last_login'>> & {
-    contacts: Array<{
-      id: DbRow<Pick<Contacts, 'id'>>['id'];
-      firstName: DbRow<Pick<Contacts, 'first_name'>>['firstName'];
-      lastName: DbRow<Pick<Contacts, 'last_name'>>['lastName'];
-      phoneNumber: DbRow<Pick<Contacts, 'phone_number'>>['phoneNumber'];
-      type: DbRow<Pick<Contacts, 'type'>>['type'];
-    }> | null;
-  };
-
-export const getStaff = async (req: Request, res: Response) => {
+export const handleGetStaff = async (req: Request, res: Response) => {
   try {
-    const users = await sql<StaffRow[]>`
-      SELECT 
-        u.id,
-        u.first_name,
-        u.last_name,
-        u.permission,
-        u.active,
-        u.created_at,
-        u.updated_at,
-        uc.email,
-        uc.last_login,
-        (
-          SELECT json_agg(
-            json_build_object(
-              'id', c.id,
-              'first_name', c.first_name,
-              'last_name', c.last_name,
-              'phone_number', c.phone_number,
-              'type', c.type
-            )
-          )
-          FROM user_has_contacts uhc
-          JOIN contacts c ON uhc.contact_id = c.id
-          WHERE uhc.user_id = u.id
-        ) as contacts
-      FROM users u
-      LEFT JOIN user_credentials uc ON u.id = uc.user_id
-      WHERE u.permission IN ('staff', 'admin')
-      ORDER BY u.first_name ASC, u.last_name ASC
-    `;
-
-    res.json(users);
+    res.json(await getStaff());
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       console.error(error);
@@ -58,53 +12,10 @@ export const getStaff = async (req: Request, res: Response) => {
   }
 };
 
-export const createStaff = async (req: Request, res: Response) => {
-  const { firstName, lastName, email, password, permission, active } = req.body;
-
+export const handleCreateStaff = async (req: Request, res: Response) => {
   try {
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    const newUsers = await sql<DbRow<Users>[]>`
-      INSERT INTO users (
-        first_name, 
-        last_name, 
-        permission,
-        active
-      )
-      VALUES (
-        ${firstName}, 
-        ${lastName}, 
-        ${permission}::permission_level,
-        ${active}
-      )
-      RETURNING *; 
-    `;
-
-    const newUser = newUsers[0];
-
-    await sql`
-      INSERT INTO user_credentials (
-        user_id,
-        email,
-        password_hash,
-        email_verified
-      )
-      VALUES (
-        ${newUser.id},
-        ${email},
-        ${passwordHash},
-        false
-      )
-    `;
-
-    res.status(201).json({
-      id: newUser.id,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      permission: newUser.permission,
-      email,
-    });
+    const staff = await createStaff(req.body);
+    res.status(201).json(staff);
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       console.error(error);

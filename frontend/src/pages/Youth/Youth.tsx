@@ -86,7 +86,7 @@ export default function Youth() {
           <div className="page-title-row">
             <h1 className="page-title">Youth</h1>
             <button className="page-add-btn" onClick={() => setShowAddYouth(true)}>
-              + Add Youth
+              + Sign Up
             </button>
           </div>
         </div>
