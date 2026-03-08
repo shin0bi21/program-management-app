@@ -1,16 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // import { faTrash } from '@fortawesome/free-solid-svg-icons';
-import { setYouth, getYouth } from '../../api/youth.api';
-import { getErrorMessage } from '../../../../common/utils/errors';
 import Modal from '../../../../common/components/Modal/Modal';
-import { useSchools } from '../../../../common/hooks/useSchools';
-import { useContacts } from '../../../../common/hooks/useContacts';
-import { useAddresses } from '../../../../common/hooks/useAddresses';
-import { youthSchema, type YouthFormData } from './youthSchema';
 import type { YouthProfile } from '../../hooks/useYouth';
+import { useYouthModal } from './useYouthModal';
 import './YouthModal.css';
 
 interface YouthModalProps {
@@ -20,110 +12,21 @@ interface YouthModalProps {
   youthData?: YouthProfile;
 }
 
-const defaultValues: YouthFormData = {
-  firstName: '',
-  lastName: '',
-  dateOfBirth: '',
-  schoolId: '',
-  gradeLevel: undefined,
-  active: true,
-};
-
 export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: YouthModalProps) {
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [error, setError] = useState('');
-
   const {
     register,
-    handleSubmit: rhfHandleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<YouthFormData>({
-    resolver: zodResolver(youthSchema),
-    defaultValues,
-  });
-
-  const { schools } = useSchools();
-  const { addresses, initialize: initAddresses, reset: resetAddresses, /* handleAdd: handleAddAddress, handleDelete: handleDeleteAddress, */ handleChange: handleAddressChange, validate: validateAddresses, getPayload: getAddressPayload } = useAddresses();
-  const { contacts, initialize: initContacts, reset: resetContacts, /* handleAdd: handleAddContact, handleDelete: handleDeleteContact, */ handleChange: handleContactChange, validate: validateContacts, getPayload: getContactPayload } = useContacts();
-
-  // Pre-fill form when editing
-  useEffect(() => {
-    if (!isOpen || !youthData) return;
-
-    reset({
-      firstName: youthData.firstName || '',
-      lastName: youthData.lastName || '',
-      dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
-      schoolId: youthData.schoolId || '',
-      gradeLevel: youthData.gradeLevel ?? undefined,
-      active: youthData.active ?? true,
-    });
-
-    initAddresses(youthData.addresses);
-    initContacts(youthData.contacts);
-  }, [isOpen, youthData]);
-
-  const resetForm = () => {
-    reset(defaultValues);
-    resetAddresses();
-    resetContacts();
-    setError('');
-    setSubmitStatus('idle');
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const onValid = async (data: YouthFormData) => {
-    setSubmitStatus('submitting');
-    setError('');
-
-    const addressError = validateAddresses();
-    if (addressError) {
-      setError(addressError);
-      setSubmitStatus('error');
-      return;
-    }
-
-    const contactError = validateContacts();
-    if (contactError) {
-      setError(contactError);
-      setSubmitStatus('error');
-      return;
-    }
-
-    try {
-      const payload = {
-        ...(youthData && { id: youthData.id }),
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        active: data.active,
-        ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
-        ...(data.schoolId && { schoolId: data.schoolId }),
-        ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
-        addresses: getAddressPayload(),
-        contacts: getContactPayload(),
-      };
-
-      const result = await setYouth(payload);
-
-      // Fetch full profile
-      const savedYouth = await getYouth(result.id);
-
-      setSubmitStatus('success');
-      
-      setTimeout(() => {
-        resetForm();
-        onSuccess(savedYouth);
-      }, 800);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
-      setSubmitStatus('error');
-    }
-  };
+    errors,
+    rhfHandleSubmit,
+    onValid,
+    schools,
+    addresses,
+    handleAddressChange,
+    contacts,
+    handleContactChange,
+    submitStatus,
+    error,
+    handleClose,
+  } = useYouthModal({ isOpen, youthData, onClose, onSuccess });
 
   const footer = (
     <>
@@ -227,7 +130,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         {/* Addresses Section */}
         <div className="section-divider">
           <div className="section-header">
-            <h3>Addresses <span className="section-optional">(optional)</span></h3>
+            <h3>Address <span className="section-optional">(optional)</span></h3>
           </div>
           
           <div className="section-content">
@@ -292,7 +195,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         {/* Contacts Section */}
         <div className="section-divider">
           <div className="section-header">
-            <h3>Emergency Contacts <span className="section-optional">(optional)</span></h3>
+            <h3>Emergency Contact <span className="section-optional">(optional)</span></h3>
           </div>
           
           <div className="section-content">
