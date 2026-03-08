@@ -106,3 +106,161 @@ Move code to `common/` when:
 - Pages use PascalCase folders (e.g., `Auth`, `Users`).
 - Hooks follow `useX.ts` naming.
 - API files end with `.api.ts`.
+
+---
+
+## State Architecture
+
+### Overview
+
+State is split by concern and lives as close to where it is used as possible. There are three tiers:
+
+| Tier | What it owns | Where it lives |
+|---|---|---|
+| Page state | Master list of records | `pages/X/hooks/useX.ts` |
+| Modal state | Form fields, submit status | `pages/X/components/XModal/useXModal.ts` |
+| Sub-entity state | Dynamic arrays (contacts, addresses) | `common/hooks/` |
+
+---
+
+### Pattern: Page + Modal
+
+Every data page follows this structure:
+
+```
+pages/X/
+  X.tsx                          ← renders table + modal, owns master list state
+  hooks/
+    useX.ts                      ← fetches list on mount, exposes setX for updates
+  components/
+    XModal/
+      XModal.tsx                 ← pure UI, no logic
+      useXModal.ts               ← all form logic, submit, state orchestration
+      xSchema.ts                 ← Zod schema for RHF fields
+```
+
+```
+XModal.tsx
+  └── useXModal({ isOpen, xData, onClose, onSuccess })
+        ├── useState              submitStatus, error
+        ├── useForm (RHF + Zod)  scalar fields (name, date, etc.)
+        ├── useAddresses()       address array state
+        ├── useContacts()        contact array state
+        └── useSchools()         read-only lookup data
+```
+
+---
+
+### Page State — Master List
+
+The page hook fetches once on mount and exposes `setX` for local updates:
+
+```ts
+// Standard page hook shape
+export function useX() {
+  const [items, setItems] = useState<XProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const load = async () => { ... };
+  useEffect(() => { load(); }, []);
+  return { items, setItems, loading, error, refetch: load };
+}
+```
+
+After a modal save, the page updates its list by UUID splice — no full refetch:
+
+```ts
+// UPDATE — swap one row by id
+setItems(prev => prev.map(x => x.id === saved.id ? saved : x));
+
+// CREATE — append
+setItems(prev => [...prev, saved]);
+
+// DELETE — remove
+setItems(prev => prev.filter(x => x.id !== deletedId));
+```
+
+---
+
+### Modal State Lifecycle
+
+**Mount (create mode):** all state initializes to empty defaults.
+
+**Open with existing record (edit mode):** `useEffect` fires and distributes the record across state owners:
+
+```ts
+useEffect(() => {
+  if (!isOpen || !data) return;
+  reset({ ...scalarFields });        // → RHF
+  initAddresses(data.addresses);     // → useAddresses
+  initContacts(data.contacts);       // → useContacts
+}, [isOpen, data]);
+```
+
+The incoming record (`data`) is never mutated. It is the pre-fill source only.
+
+**User edits:** each state owner handles its own slice independently. Edits to contacts do not affect RHF state and vice versa.
+
+**Submit:**
+```
+rhfHandleSubmit(onValid)
+  → Zod validates RHF fields
+  → validateAddresses() / validateContacts()   manual partial validation
+  → payload = RHF fields + getAddressPayload() + getContactPayload()
+  → API call(s)
+  → onSuccess(savedRecord)                     page splices by UUID
+  → resetForm()                                all state cleared
+```
+
+**Close:** `resetForm()` wipes all state owners back to empty defaults.
+
+---
+
+### Sub-Entity Hooks (useContacts, useAddresses)
+
+These hooks are entity-agnostic. They manage an array without knowing what the parent entity is.
+
+```ts
+// Same hook, any entity
+const contacts = useContacts();   // youth, staff, school, partner — doesn't matter
+const addresses = useAddresses();
+```
+
+Standard interface every sub-entity hook exposes:
+
+| Method | Purpose |
+|---|---|
+| `initialize(data)` | Pre-fill from existing record on modal open |
+| `reset()` | Wipe back to one empty row on modal close |
+| `handleChange(index, field, value)` | Update one field on one row |
+| `validate()` | Returns error string or undefined — skips blank rows |
+| `getPayload()` | Returns filtered, trimmed array ready for API |
+
+Partial validation rule: if all fields on a row are empty, the row is skipped. Only rows with any data filled in are validated and included in the payload.
+
+---
+
+### Submit State Machine
+
+Every modal hook uses a single state value (not multiple booleans):
+
+```ts
+type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
+const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+const [error, setError] = useState('');
+```
+
+This drives button disabled state and status messages from one source. Only one status can be true at a time — no contradictory states possible.
+
+---
+
+### Known Pattern: Double Network Call
+
+Current save flow does two requests — upsert returns `{ id }` only, then a second fetch gets the full record:
+
+```ts
+const result = await setX(payload);    // returns { id }
+const saved = await getX(result.id);   // fetch full record
+```
+
+**Planned fix:** upsert endpoint returns the full record directly (same SELECT as the GET endpoint, extracted into a shared helper function in the controller). Eliminates the second request and the two-failure-mode risk.

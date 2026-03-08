@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { sql } from '../db/client';
+import type { PermissionLevel } from '../types/database';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -8,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 interface JWTPayload {
   userId: string;
   email: string;
-  permission: string;
+  permission: PermissionLevel;
   jti?: string;
   iat: number;
   exp: number;
@@ -87,7 +88,7 @@ export const authenticateToken = async (
 };
 
 // Optional: Permission-based authorization
-export const requirePermission = (...allowedPermissions: string[]) => {
+export const requirePermission = (...allowedPermissions: PermissionLevel[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const authReq = req as AuthRequest;
     
@@ -96,11 +97,7 @@ export const requirePermission = (...allowedPermissions: string[]) => {
     }
     
     if (!allowedPermissions.includes(authReq.user.permission)) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
-        required: allowedPermissions,
-        current: authReq.user.permission
-      });
+      return res.status(403).json({ error: 'Insufficient permissions' });
     }
     
     next();
