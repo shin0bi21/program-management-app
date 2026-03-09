@@ -1,18 +1,14 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
-  push:
-    branches: [develop, main]
   pull_request:
-    branches: [main]
+    branches: [develop, main]
 
 jobs:
-  # Develop branch - comprehensive testing
-  test-develop:
-    name: Validate Develop Branch
+  test:
+    name: Typecheck, Migrate & Test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -27,131 +23,50 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+
       - name: Install dependencies
         working-directory: backend
         run: npm ci
-      
+
       - name: Type check
         working-directory: backend
         run: npm run typecheck
-      
+
       - name: Apply migrations
         working-directory: backend
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
         run: npm run db:migrate
-      
-      - name: Build
-        working-directory: backend
-        run: npm run build
-      
-      - name: ✅ Develop validated
-        run: echo "Develop branch is stable!"
-  
-  # Develop → main PRs (production readiness)
-  test-main:
-    name: Production Validation
-    runs-on: ubuntu-latest
-    if: github.base_ref == 'main' && github.event_name == 'pull_request'
-    
-    # PostgreSQL service for integration tests
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: backend
-        run: npm ci
-      
-      - name: Type check
-        working-directory: backend
-        run: npm run typecheck
-      
-      - name: Run migrations (dry-run)
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-        run: npm run db:migrate:dry
-      
-      - name: Apply migrations to test DB
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-        run: npm run db:migrate
-      
+
       - name: Validate migration checksums
         working-directory: backend
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
         run: npm run db:status
-      
-      - name: Run tests (when added)
+
+      - name: Run tests
         working-directory: backend
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
-        run: npm test || echo "No tests yet - add them before production!"
-      
+          JWT_SECRET: ci-test-secret
+          REFRESH_SECRET: ci-test-refresh-secret
+          EMAIL_USER: test@example.com
+          EMAIL_PASS: test
+          EMAIL_FROM: test@example.com
+          NODE_ENV: test
+        run: npm test
+
       - name: Build
         working-directory: backend
         run: npm run build
-      
-      - name: ✅ Production-ready
-        run: echo "All checks passed - safe to merge to main!"
-  
-  # Deploy job - only runs when merging to main (production)
-  deploy:
-    name: Deploy to Production
-    needs: test-main
-    runs-on: ubuntu-latest
-    # Only run on main branch (after PR from develop is merged)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: 🚀 Deploy to production
-        run: |
-          echo "Deploying to production..."
-          echo "Run migrations: npm run db:migrate"
-          echo "Restart server: pm2 restart myapp"
-          # Add your actual deployment commands here
