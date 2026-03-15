@@ -17,4 +17,4 @@ export const createStaffSchema = z.object({
   }),
 });
 
-export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type CreateStaffInput = z.infer<typeof createStaffSchema.shape.body>;

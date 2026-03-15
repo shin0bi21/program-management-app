@@ -2,20 +2,12 @@ import bcrypt from 'bcryptjs';
 import { sql } from '../db/client';
 import type { Users, UserCredentials } from '../types/database';
 import type { DbRow } from '../types/db';
+import type { CreateStaffInput } from '../validation/staffSchemas';
 
 type StaffRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'permission' | 'created_at'>> & {
     email: string;
   };
-
-export interface CreateStaffInput {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  permission?: 'staff' | 'admin';
-  active: boolean;
-}
 
 export async function getStaff() {
   return sql<StaffRow[]>`

@@ -34,7 +34,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         Cancel
       </button>
       <button type="submit" form="youth-form" className="btn-submit" disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
-        {youthData ? 'Update Youth' : 'Add Youth'}
+        {youthData ? 'Update Form' : 'Sign Up Form'}
       </button>
     </>
   );
@@ -43,7 +43,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     <Modal 
       isOpen={isOpen} 
       onClose={handleClose} 
-      title={youthData ? 'Edit Youth' : 'Add Youth'} 
+      title={youthData ? 'Update Form' : 'Sign Up Form'} 
       footer={footer}
       status={submitStatus}
       statusMessage={

@@ -36,6 +36,12 @@ export const sql = postgres(DATABASE_URL, {
   }
 });
 
+// Temporary compatibility helper: postgres.js TransactionSql loses callable
+// signature in current typings, so cast through this utility in transaction code.
+export function asTransactionSql(tx: unknown): typeof sql {
+  return tx as unknown as typeof sql;
+}
+
 /**
  * Connection health check
  * Tests if the database is reachable and responsive

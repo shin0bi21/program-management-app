@@ -153,7 +153,7 @@ backend/
 │   │   ├── staffSchemas.ts        # createStaffSchema
 │   │   └── youthSchemas.ts        # setYouthSchema
 │   ├── db/
-│   │   └── client.ts              # postgres.js connection instance
+│   │   └── client.ts              # postgres.js connection + asTransactionSql() helper for tx typing
 │   ├── types/
 │   │   ├── database.ts            # kysely-codegen generated types — DB schema in snake_case
 │   │   └── db.ts                  # DbRow<T> utility — converts snake_case keys → camelCase
@@ -222,6 +222,19 @@ To add a new route group (e.g. `/api/events`):
 ### No ORM — Raw SQL via postgres.js
 
 All database queries are written as plain SQL. No Sequelize, Prisma, or TypeORM. This keeps queries transparent, predictable, and fast.
+
+### Transactions + TypeScript (Required)
+
+When using `sql.begin(...)`, run all transaction queries through `asTransactionSql(tx)` from `src/db/client.ts`.
+
+Reason: current postgres.js typings in this project do not expose callable tagged-template signatures on `TransactionSql`, even though runtime behavior works. `asTransactionSql` provides the TypeScript compatibility cast in one central place.
+
+**Required pattern:**
+
+1. Start transaction with `await sql.begin(async (tx) => { ... })`
+2. Inside callback, create `const trx = asTransactionSql(tx)`
+3. Use `trx` for every query in the transaction block (`trx\`...\``, `trx.array(...)`)
+4. Do not mix root `sql` and `trx` in the same transaction flow
 
 ### snake_case → camelCase (Never Break This)
 
