@@ -9,6 +9,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
+  if (process.env.NODE_ENV === 'test') return;
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,

@@ -130,9 +130,15 @@ backend/
 │   ├── index.ts                   # Express entry point — boots app, mounts routes
 │   ├── controllers/
 │   │   ├── authController.ts      # Login, 2FA verify/resend, refresh, logout, password reset
-│   │   ├── staffController.ts     # getStaff, createStaff
-│   │   ├── youthController.ts     # getYouth, setYouth (upsert), setAddresses, setContacts
-│   │   └── schoolController.ts    # getSchools
+│   │   ├── staffController.ts     # HTTP wrappers — handleGetStaff, handleCreateStaff
+│   │   ├── youthController.ts     # HTTP wrappers — handleGetYouth, handleSetYouth
+│   │   └── schoolController.ts    # HTTP wrapper — handleGetSchools
+│   ├── services/
+│   │   ├── youthService.ts        # getYouth, setYouth — all SQL + business logic for youth
+│   │   ├── staffService.ts        # getStaff, createStaff
+│   │   ├── schoolService.ts       # getSchools
+│   │   ├── addressService.ts      # setAddresses — reusable address sync for any entity
+│   │   └── contactService.ts      # setContacts — reusable contact sync for any entity
 │   ├── routes/
 │   │   ├── authRoutes.ts          # Mounted at /api/auth
 │   │   ├── staffRoutes.ts         # Mounted at /api/staff
@@ -147,7 +153,7 @@ backend/
 │   │   ├── staffSchemas.ts        # createStaffSchema
 │   │   └── youthSchemas.ts        # setYouthSchema
 │   ├── db/
-│   │   └── client.ts              # postgres.js connection instance
+│   │   └── client.ts              # postgres.js connection + asTransactionSql() helper for tx typing
 │   ├── types/
 │   │   ├── database.ts            # kysely-codegen generated types — DB schema in snake_case
 │   │   └── db.ts                  # DbRow<T> utility — converts snake_case keys → camelCase
@@ -190,7 +196,8 @@ HTTP Request
   → requirePermission(...)  — check user.permission against allowed roles
   → rateLimiter             — tier-specific (general / auth / strict / password-reset)
   → validateRequest(schema) — Zod parse; returns 400 with field errors on failure
-  → controller              — SQL query via postgres.js → JSON response
+  → controller (handle*)    — extract params, call service, send HTTP response
+  → service                 — SQL query via postgres.js, business logic, return typed data
 ```
 
 Middleware is applied in route files, not globally. Each route explicitly lists which middleware it needs. This makes the chain visible and auditable.
@@ -200,12 +207,13 @@ Middleware is applied in route files, not globally. Each route explicitly lists 
 To add a new route group (e.g. `/api/events`):
 
 1. Create `src/validation/eventSchemas.ts` — Zod schemas
-2. Create `src/controllers/eventController.ts` — handler functions
-3. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
-4. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
-5. Mount the same routes in `tests/shared/app.ts` for test coverage
-6. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
-7. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
+2. Create `src/services/eventService.ts` — all SQL queries and business logic
+3. Create `src/controllers/eventController.ts` — thin `handle*` wrappers that call the service
+4. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
+5. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
+6. Mount the same routes in `tests/shared/app.ts` for test coverage
+7. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
+8. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
 
 ---
 
@@ -214,6 +222,19 @@ To add a new route group (e.g. `/api/events`):
 ### No ORM — Raw SQL via postgres.js
 
 All database queries are written as plain SQL. No Sequelize, Prisma, or TypeORM. This keeps queries transparent, predictable, and fast.
+
+### Transactions + TypeScript (Required)
+
+When using `sql.begin(...)`, run all transaction queries through `asTransactionSql(tx)` from `src/db/client.ts`.
+
+Reason: current postgres.js typings in this project do not expose callable tagged-template signatures on `TransactionSql`, even though runtime behavior works. `asTransactionSql` provides the TypeScript compatibility cast in one central place.
+
+**Required pattern:**
+
+1. Start transaction with `await sql.begin(async (tx) => { ... })`
+2. Inside callback, create `const trx = asTransactionSql(tx)`
+3. Use `trx` for every query in the transaction block (`trx\`...\``, `trx.array(...)`)
+4. Do not mix root `sql` and `trx` in the same transaction flow
 
 ### snake_case → camelCase (Never Break This)
 
@@ -535,9 +556,13 @@ git add . && git commit -m "Description" && git push
 The backend container runs with the Node.js inspector on port 9229.
 
 1. Open the Run and Debug panel (`Cmd+Shift+D`)
-2. Select your debug configuration from the dropdown
-3. Press `F5` to attach
+2. Select **"Docker: Debug Backend"** from the dropdown at the top of the panel
+3. Press `F5` to attach — if `F5` doesn't work, click the green ▶ play button in the panel directly
 4. Set breakpoints in `src/` — they'll pause on the next matching request
+
+> **Note:** The panel must be open and focused with the correct config selected for `F5` to trigger the right debugger. If breakpoints aren't hitting, confirm the session is attached (you'll see the debug toolbar — step over/in/out buttons — appear at the top of the screen).
+
+> **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, TypeScript doesn't emit `.js.map` files and the debugger can't map compiled JS back to the original `.ts` source — breakpoints in service files will be silently skipped. If you ever lose breakpoints after a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
 
 ---
 

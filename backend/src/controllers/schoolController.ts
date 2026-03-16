@@ -1,15 +1,9 @@
 import { Request, Response } from 'express';
-import { sql } from '../db/client';
+import { getSchools } from '../services/schoolService';
 
-export const getSchools = async (req: Request, res: Response) => {
+export const handleGetSchools = async (req: Request, res: Response) => {
   try {
-    const schools = await sql`
-      SELECT id, name, school_type, board
-      FROM schools
-      ORDER BY name ASC
-    `;
-
-    res.json(schools);
+    res.json(await getSchools());
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       console.error(error);

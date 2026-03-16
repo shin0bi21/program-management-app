@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { setYouth, getYouth } from '../../api/youth.api';
+import { setYouth } from '../../api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/errors';
 import { useSchools } from '../../../../common/hooks/useSchools';
 import { useContacts } from '../../../../common/hooks/useContacts';
 import { useAddresses } from '../../../../common/hooks/useAddresses';
+import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { youthSchema, type YouthFormData } from './youthSchema';
 import type { YouthProfile } from '../../hooks/useYouth';
-
-type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 const defaultValues: YouthFormData = {
   firstName: '',
@@ -28,8 +27,7 @@ interface UseYouthModalProps {
 }
 
 export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYouthModalProps) {
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [error, setError] = useState('');
+  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
 
   const {
     register,
@@ -86,8 +84,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
     reset(defaultValues);
     resetAddresses();
     resetContacts();
-    setError('');
-    setSubmitStatus('idle');
+    resetStatus();
   };
 
   const handleClose = () => {
@@ -126,8 +123,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         contacts: getContactPayload(),
       };
 
-      const result = await setYouth(payload);
-      const savedYouth = await getYouth(result.id);
+      const savedYouth = await setYouth(payload);
 
       setSubmitStatus('success');
 
