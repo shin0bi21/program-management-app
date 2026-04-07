@@ -33,8 +33,9 @@ export const useLogin = () => {
         // Update auth context
         updateAuthState();
 
-        // Navigate to homepage
-        navigate('/');
+        // Navigate to last visited authenticated page, or settings as default
+        const lastPath = localStorage.getItem('lastAuthPath') || '/settings/account';
+        navigate(lastPath);
       } else if (response.requiresVerification) {
         // Redirect to verification page
         navigate('/verify-password', { state: { userId: response.userId } });
