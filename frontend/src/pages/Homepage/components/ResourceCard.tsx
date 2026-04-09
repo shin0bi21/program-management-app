@@ -4,7 +4,6 @@ type ResourceCardProps = {
   bio: string
   imageSrc?: string
   imageAlt?: string
-  reverseLayout?: boolean
 }
 
 export default function ResourceCard({
@@ -13,16 +12,17 @@ export default function ResourceCard({
   bio,
   imageSrc,
   imageAlt,
-  reverseLayout = false,
 }: ResourceCardProps) {
+  const initial = name.charAt(0).toUpperCase();
+
   return (
-    <article className={`resource-card${reverseLayout ? ' resource-card-reverse' : ''}`}>
+    <article className="resource-card">
       <div className="resource-photo-panel">
         {imageSrc ? (
           <img className="resource-photo" src={imageSrc} alt={imageAlt || name} />
         ) : (
           <div className="resource-photo resource-photo-placeholder">
-            <span>Photo Placeholder</span>
+            <span>{initial}</span>
           </div>
         )}
       </div>

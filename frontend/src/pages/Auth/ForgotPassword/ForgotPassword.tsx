@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useForgotPassword } from './hooks/useForgotPassword';
-import './ForgotPassword.css';
+import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 
 export default function ForgotPassword() {
   const { form, error, message, onSubmit } = useForgotPassword();
@@ -11,19 +11,26 @@ export default function ForgotPassword() {
   } = form;
 
   return (
-    <div className="forgot-password-container">
-      <div className="forgot-password-card">
-        <h1 className="forgot-password-title">Forgot Password</h1>
-        <p className="forgot-password-subtitle">
-          Enter your email to receive a password reset link.
-        </p>
+    <AuthLayout>
+      <div className="auth-card">
+        <p className="auth-card-kicker">Account access</p>
+        <h1 className="auth-title">Forgot password?</h1>
+        <p className="auth-subtitle">Enter your email and we'll send you a reset link.</p>
 
-        {message && <div className="forgot-password-success">{message}</div>}
-        {error && <div className="forgot-password-error">{error}</div>}
+        {message && (
+          <div className="auth-success" role="status">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="auth-error" role="alert">
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="forgot-password-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email address</label>
             <input
               id="email"
               type="email"
@@ -39,19 +46,19 @@ export default function ForgotPassword() {
 
           <button
             type="submit"
-            className="forgot-password-submit"
+            className="auth-submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Sending...' : 'Send reset link'}
+            {isSubmitting ? 'Sending…' : 'Send reset link'}
           </button>
         </form>
 
-        <div className="forgot-password-links">
-          <Link to="/login" className="forgot-password-link">
-            Back to login
+        <div className="auth-links auth-links--centered">
+          <Link to="/login" className="auth-link">
+            ← Back to login
           </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

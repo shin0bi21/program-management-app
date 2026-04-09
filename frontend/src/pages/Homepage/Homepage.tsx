@@ -130,13 +130,12 @@ export default function Homepage() {
           <div className="section-inner">
             <h2 id="resources-section-title" className="resources-title section-title">Our Team</h2>
             <div className="resource-cards-grid" aria-label="Employee and resource contacts">
-              {teamResources.map((resource, index) => (
+              {teamResources.map((resource) => (
                 <ResourceCard
                   key={resource.name}
                   name={resource.name}
                   role={resource.role}
                   bio={resource.bio}
-                  reverseLayout={index % 2 === 1}
                 />
               ))}
             </div>

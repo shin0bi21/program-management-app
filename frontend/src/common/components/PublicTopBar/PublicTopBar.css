@@ -48,7 +48,7 @@
 .topbar-link {
   background: none;
   border: none;
-  color: #4a5568;
+  color: var(--brand-muted);
   cursor: pointer;
   font-size: 0.92rem;
   font-weight: 500;
@@ -58,13 +58,13 @@
 }
 
 .topbar-link:hover {
-  color: #12161f;
+  color: var(--brand-ink);
   background: rgba(18, 22, 31, 0.05);
 }
 
 .topbar-login {
   margin-left: 20px;
-  background: #12161f;
+  background: var(--brand-ink);
   color: #ffffff;
   border: none;
   cursor: pointer;
@@ -77,6 +77,6 @@
 }
 
 .topbar-login:hover {
-  background: #f3a524;
-  color: #12161f;
+  background: var(--brand-accent);
+  color: var(--brand-ink);
 }
