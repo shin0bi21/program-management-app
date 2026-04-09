@@ -1,0 +1,22 @@
+:root {
+  --brand-page-bg: radial-gradient(circle at 8% 10%, #fff8dd 0%, #f7f9ff 32%, #eef3ff 100%);
+  --brand-panel-bg: #ffffff;
+
+  --brand-ink: #0f1b3f;
+  --brand-muted: #43506f;
+
+  --brand-blue-900: #182f76;
+  --brand-blue-800: #1f3f9e;
+  --brand-blue-700: #2e54c7;
+  --brand-blue-600: #203a8f;
+
+  --brand-gold-500: #d6b557;
+  --brand-gold-300: #ffe59a;
+  --brand-gold-100: #fff4cf;
+
+  --brand-line-100: #d4dff4;
+  --brand-line-200: #d7e1f7;
+  --brand-line-300: #cedaf4;
+  --brand-line-400: #d6e0f6;
+  --brand-line-500: #d7e2f8;
+}
