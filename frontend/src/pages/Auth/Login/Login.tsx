@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLogin } from './hooks/useLogin';
-import './Login.css';
+import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 
 export default function Login() {
   const { form, error, onSubmit } = useLogin();
@@ -11,19 +11,21 @@ export default function Login() {
   } = form;
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Login</h1>
+    <AuthLayout>
+      <div className="auth-card">
+        <p className="auth-card-kicker">Welcome back</p>
+        <h1 className="auth-title">Sign in</h1>
+        <p className="auth-subtitle">Enter your credentials to continue.</p>
 
         {error && (
-          <div className="login-error" role="alert">
+          <div className="auth-error" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email address</label>
             <input
               id="email"
               type="email"
@@ -53,22 +55,22 @@ export default function Login() {
 
           <button
             type="submit"
-            className="login-submit"
+            className="auth-submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Logging in...' : 'Login'}
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <div className="login-links">
-          <Link to="/forgot-password" className="login-link">
+        <div className="auth-links">
+          <Link to="/forgot-password" className="auth-link">
             Forgot password?
           </Link>
-          <Link to="/" className="login-link">
-            Back to Home
+          <Link to="/" className="auth-link">
+            ← Back to home
           </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useResetPassword } from './hooks/useResetPassword';
-import './ResetPassword.css';
+import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 
 export default function ResetPassword() {
   const { form, error, message, onSubmit, token } = useResetPassword();
@@ -11,21 +11,31 @@ export default function ResetPassword() {
   } = form;
 
   return (
-    <div className="reset-password-container">
-      <div className="reset-password-card">
-        <h1 className="reset-password-title">Reset Password</h1>
+    <AuthLayout>
+      <div className="auth-card">
+        <p className="auth-card-kicker">Account access</p>
+        <h1 className="auth-title">Reset password</h1>
+        <p className="auth-subtitle">Choose a new password for your account.</p>
+
         {!token && (
-          <p className="reset-password-subtitle">
+          <div className="auth-error" role="alert">
             Invalid or missing reset token.
-          </p>
+          </div>
+        )}
+        {message && (
+          <div className="auth-success" role="status">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="auth-error" role="alert">
+            {error}
+          </div>
         )}
 
-        {message && <div className="reset-password-success">{message}</div>}
-        {error && <div className="reset-password-error">{error}</div>}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="reset-password-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label htmlFor="password">New Password</label>
+            <label htmlFor="password">New password</label>
             <input
               id="password"
               type="password"
@@ -39,7 +49,7 @@ export default function ResetPassword() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">Confirm password</label>
             <input
               id="confirmPassword"
               type="password"
@@ -54,19 +64,19 @@ export default function ResetPassword() {
 
           <button
             type="submit"
-            className="reset-password-submit"
+            className="auth-submit"
             disabled={isSubmitting || !token}
           >
-            {isSubmitting ? 'Resetting...' : 'Reset Password'}
+            {isSubmitting ? 'Resetting…' : 'Reset password'}
           </button>
         </form>
 
-        <div className="reset-password-links">
-          <Link to="/login" className="reset-password-link">
-            Back to login
+        <div className="auth-links auth-links--centered">
+          <Link to="/login" className="auth-link">
+            ← Back to login
           </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

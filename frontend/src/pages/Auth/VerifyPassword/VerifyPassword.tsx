@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useVerifyPassword } from './hooks/useVerifyPassword';
+import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 import './VerifyPassword.css';
 
 export default function VerifyPassword() {
@@ -23,19 +24,18 @@ export default function VerifyPassword() {
   } = form;
 
   return (
-    <div className="verify-container">
-      <div className="verify-card">
-        <h1 className="verify-title">Verify Password</h1>
-        <p className="verify-subtitle">
-          Enter the 6-digit verification code from your email.
-        </p>
+    <AuthLayout>
+      <div className="auth-card">
+        <p className="auth-card-kicker">Two-step verification</p>
+        <h1 className="auth-title">Check your email</h1>
+        <p className="auth-subtitle">Enter the 6-digit code we sent to your email address.</p>
 
-        {error && <div className="verify-error" role="alert">{error}</div>}
-        {message && <div className="verify-message">{message}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
+        {message && <div className="auth-success" role="status">{message}</div>}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="verify-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label htmlFor="code">Verification Code</label>
+            <label htmlFor="code">Verification code</label>
             <input
               id="code"
               type="text"
@@ -62,43 +62,42 @@ export default function VerifyPassword() {
 
           <button
             type="submit"
-            className="verify-submit"
+            className="auth-submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Verifying...' : 'Verify'}
+            {isSubmitting ? 'Verifying…' : 'Verify'}
           </button>
         </form>
 
-        <div className="verify-timer">
-          {timeRemaining > 0 ? (
-            <p className="timer">Code expires in {formatTime(timeRemaining)}</p>
-          ) : (
-            <p className="timer expired">Code has expired</p>
-          )}
-        </div>
-
-        <div className="verify-actions">
-          <button
-            type="button"
-            className="verify-link"
-            onClick={handleResendCode}
-            disabled={isResending || resendCooldown > 0}
-          >
-            {resendCooldown > 0
-              ? `Resend available in ${resendCooldown}s`
-              : isResending
-              ? 'Resending...'
-              : 'Resend code'}
-          </button>
-          <button
-            type="button"
-            className="verify-link secondary"
-            onClick={() => navigate('/login')}
-          >
-            Back to Login
-          </button>
+        <div className="verify-footer">
+          <p className="verify-timer">
+            {timeRemaining > 0
+              ? `Code expires in ${formatTime(timeRemaining)}`
+              : <span className="verify-timer--expired">Code has expired</span>}
+          </p>
+          <div className="verify-actions">
+            <button
+              type="button"
+              className="auth-link"
+              onClick={handleResendCode}
+              disabled={isResending || resendCooldown > 0}
+            >
+              {resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : isResending
+                ? 'Resending…'
+                : 'Resend code'}
+            </button>
+            <button
+              type="button"
+              className="auth-link"
+              onClick={() => navigate('/login')}
+            >
+              ← Back to login
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

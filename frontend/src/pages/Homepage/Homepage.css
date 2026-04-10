@@ -1,6 +1,4 @@
 .homepage-container {
-  --accent-dark: #12161f;
-  --accent-orange: #f3a524;
   --section-line: rgba(18, 22, 31, 0.1);
 
   display: flex;
@@ -29,14 +27,14 @@
   flex-direction: column;
   justify-content: center;
   gap: 0;
-  padding: 80px 1rem 80px;
+  padding: 72px 1rem 72px;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(18, 22, 31, 0.08);
 }
 
 .hero-kicker {
   margin: 0 auto;
-  color: var(--accent-dark);
+  color: var(--brand-ink);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -47,7 +45,7 @@
 
 .hero-title {
   margin: 16px 0 0;
-  color: var(--accent-dark);
+  color: var(--brand-ink);
   font-size: clamp(2.6rem, 6vw, 5rem);
   line-height: 1.0;
   letter-spacing: -0.03em;
@@ -69,28 +67,32 @@
 
 /* ── Shared section spacing ─────────────────────────── */
 .timeline-section {
-  background: #1a1f2e;
-  padding: 80px 0 0;
+  background: var(--brand-dark-section);
+  padding: 72px 0 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  scroll-margin-top: 80px;
 }
 
 .offerings-section {
-  background: #edeae4;
-  padding: 80px 0;
+  background: #f0f2f5;
+  padding: 72px 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(18, 22, 31, 0.08);
+  scroll-margin-top: 80px;
 }
 
 .resources-section {
   background: #ffffff;
-  padding: 80px 0 70px;
+  padding: 72px 0 63px;
+  border-top: 1px solid rgba(18, 22, 31, 0.08);
+  scroll-margin-top: 80px;
 }
 
 /* ── Shared section title ───────────────────────────── */
 .section-title {
   margin: 0 0 40px;
-  color: var(--accent-dark);
+  color: var(--brand-ink);
   font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: 800;
   line-height: 1.0;
@@ -127,7 +129,7 @@
 
 .timeline-year {
   margin: 0;
-  color: var(--accent-orange);
+  color: var(--brand-accent);
   font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -195,7 +197,7 @@
 
 .analytics-stat-number {
   margin: 0;
-  color: var(--accent-orange);
+  color: var(--brand-accent);
   font-size: clamp(3.5rem, 6vw, 5.5rem);
   font-weight: 800;
   line-height: 1;
@@ -259,7 +261,7 @@
 
 .program-age {
   margin: 0;
-  color: var(--accent-orange);
+  color: var(--brand-accent);
   font-size: 1rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -273,43 +275,27 @@
   font-size: 1.05rem;
 }
 
-.resources-section {
-  background: #f5f3ef;
-  padding: 80px 0 90px;
-  margin-top: -40px;
-}
-
-.resources-title {
-  margin: 0;
-  color: var(--accent-dark);
-  font-size: clamp(1.66rem, 2.35vw, 2.15rem);
-  letter-spacing: -0.015em;
-  font-weight: 800;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
 .resource-cards-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 340px));
+  justify-content: center;
+  gap: 24px;
+  margin-top: 48px;
 }
 
 .resource-card {
-  border: none;
-  border-bottom: 1px solid rgba(18, 22, 31, 0.14);
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
-  display: grid;
-  grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
-  align-items: stretch;
-  min-height: 100%;
-  padding: 16px 0;
+  border: 1px solid rgba(18, 22, 31, 0.1);
+  border-radius: 12px;
+  background: #fafafa;
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   opacity: 0;
   transform: translateY(28px);
   will-change: opacity, transform;
-  transition: background-color 0.2s ease, opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.2s ease;
 }
 
 .resource-card--visible {
@@ -318,88 +304,62 @@
 }
 
 .resource-card:hover {
-  background: linear-gradient(90deg, rgba(243, 165, 36, 0.06) 0%, rgba(243, 165, 36, 0) 65%);
-}
-
-.resource-card:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.resource-card-reverse {
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 180px);
-}
-
-.resource-card-reverse .resource-photo-panel {
-  order: 2;
-}
-
-.resource-card-reverse .resource-content {
-  order: 1;
+  box-shadow: 0 8px 24px rgba(18, 22, 31, 0.08);
 }
 
 .resource-photo-panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px 4px 0;
-  background: transparent;
+  margin-bottom: 20px;
 }
 
 .resource-photo {
-  width: min(150px, 100%);
-  aspect-ratio: 1 / 1;
-  height: auto;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
   border: 3px solid #ffffff;
-  box-shadow: 0 10px 24px rgba(18, 22, 31, 0.2);
+  box-shadow: 0 4px 16px rgba(18, 22, 31, 0.12);
 }
 
 .resource-photo-placeholder {
   display: grid;
   place-items: center;
-  background: repeating-linear-gradient(
-    -45deg,
-    #f1f1f1,
-    #f1f1f1 12px,
-    #ffe8bf 12px,
-    #ffe8bf 24px
-  );
-  color: var(--accent-dark);
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1.25;
-  padding: 12px;
+  background: var(--brand-ink);
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .resource-content {
-  padding: 18px 18px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  align-items: center;
 }
 
 .resource-name {
   margin: 0;
-  font-size: 1.06rem;
+  font-size: 1.05rem;
+  font-weight: 700;
   line-height: 1.3;
+  color: var(--brand-ink);
 }
 
 .resource-role {
-  margin: 6px 0 8px;
-  color: var(--accent-dark);
+  margin: 6px 0 12px;
+  color: var(--brand-accent);
   font-weight: 600;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .resource-bio {
   margin: 0;
   color: var(--brand-muted);
-  font-size: 0.94rem;
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: center;
 }
 
 @media (max-width: 1024px) {
@@ -477,35 +437,8 @@
     padding: 12px 0;
   }
 
-  .resources-section {
-    padding: 18px;
-    border-radius: 14px;
-  }
-
   .resource-cards-grid {
-    gap: 0;
-  }
-
-  .resource-card,
-  .resource-card-reverse {
-    grid-template-columns: 1fr;
-    padding: 12px 0;
-  }
-
-  .resources-section {
-    margin-bottom: 10px;
-  }
-
-  .resource-card-reverse .resource-photo-panel,
-  .resource-card-reverse .resource-content {
-    order: initial;
-  }
-
-  .resource-photo {
-    width: min(140px, 100%);
-  }
-
-  .resource-content {
-    padding: 14px 14px 16px;
+    grid-template-columns: repeat(2, minmax(0, 340px));
+    gap: 16px;
   }
 }
