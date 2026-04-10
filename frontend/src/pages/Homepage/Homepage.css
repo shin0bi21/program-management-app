@@ -276,14 +276,15 @@
 }
 
 .resource-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 340px));
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
   margin-top: 48px;
 }
 
 .resource-card {
+  flex: 0 0 340px;
   border: 1px solid rgba(18, 22, 31, 0.1);
   border-radius: 12px;
   background: #fafafa;
