@@ -1,0 +1,14 @@
+:root {
+  /* Core palette */
+  --brand-ink: #12161f;         /* near-black — headings, labels, buttons */
+  --brand-muted: #4a5568;       /* slate grey — body copy, subtitles */
+  --brand-accent: #f3a524;      /* amber/orange — highlights, hover states */
+  --brand-dark-section: #1a1f2e; /* deep navy — dark section backgrounds */
+
+  /* Surfaces */
+  --brand-panel-bg: #ffffff;
+  --brand-surface-alt: #f0f2f5; /* light grey panels */
+
+  /* Borders / lines */
+  --brand-line: rgba(18, 22, 31, 0.08);
+}

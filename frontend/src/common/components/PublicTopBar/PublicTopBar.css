@@ -1,0 +1,82 @@
+.public-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 80px;
+  background: transparent;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  padding: 0 48px;
+  gap: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.public-topbar--scrolled {
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(18, 22, 31, 0.08);
+}
+
+.topbar-logo-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.topbar-link {
+  background: none;
+  border: none;
+  color: var(--brand-muted);
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.topbar-link:hover {
+  color: var(--brand-ink);
+  background: rgba(18, 22, 31, 0.05);
+}
+
+.topbar-login {
+  margin-left: 20px;
+  background: var(--brand-ink);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 9px 22px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.topbar-login:hover {
+  background: var(--brand-accent);
+  color: var(--brand-ink);
+}
