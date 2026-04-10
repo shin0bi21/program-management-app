@@ -1,29 +1,9 @@
-import { useEffect } from 'react'
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar'
 import Footer from '../../common/components/Footer/Footer'
 import ResourceCard from './components/ResourceCard'
 import './Homepage.css'
 
 export default function Homepage() {
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          (entry.target as HTMLElement).classList.add('resource-card--visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { rootMargin: '0px 0px -40px 0px' });
-
-    const raf = requestAnimationFrame(() => {
-      document.querySelectorAll<HTMLElement>('.resource-card').forEach((card, i) => {
-        card.style.transitionDelay = `${i * 80}ms`;
-        observer.observe(card);
-      });
-    });
-
-    return () => { cancelAnimationFrame(raf); observer.disconnect(); };
-  }, []);
   const teamResources = [
     {
       name: 'Amanat',

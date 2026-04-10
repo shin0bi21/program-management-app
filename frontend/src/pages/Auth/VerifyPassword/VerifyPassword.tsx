@@ -26,9 +26,7 @@ export default function VerifyPassword() {
   return (
     <AuthLayout>
       <div className="auth-card">
-        <p className="auth-card-kicker">Two-step verification</p>
         <h1 className="auth-title">Check your email</h1>
-        <p className="auth-subtitle">Enter the 6-digit code we sent to your email address.</p>
 
         {error && <div className="auth-error" role="alert">{error}</div>}
         {message && <div className="auth-success" role="status">{message}</div>}

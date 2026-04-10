@@ -13,9 +13,7 @@ export default function ForgotPassword() {
   return (
     <AuthLayout>
       <div className="auth-card">
-        <p className="auth-card-kicker">Account access</p>
-        <h1 className="auth-title">Forgot password?</h1>
-        <p className="auth-subtitle">Enter your email and we'll send you a reset link.</p>
+        <h1 className="auth-title">Forgot password</h1>
 
         {message && (
           <div className="auth-success" role="status">
