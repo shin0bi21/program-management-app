@@ -13,9 +13,7 @@ export default function Login() {
   return (
     <AuthLayout>
       <div className="auth-card">
-        <p className="auth-card-kicker">Welcome back</p>
         <h1 className="auth-title">Sign in</h1>
-        <p className="auth-subtitle">Enter your credentials to continue.</p>
 
         {error && (
           <div className="auth-error" role="alert">
