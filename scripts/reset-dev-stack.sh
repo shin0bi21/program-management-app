@@ -3,7 +3,7 @@
 set -e  # Exit on error
 
 echo "=========================================="
-echo "DATABASE RESET & MIGRATION"
+echo "DEV STACK RESET & MIGRATION"
 echo "=========================================="
 
 # Step 1: Stop and remove volumes
@@ -44,7 +44,7 @@ fi
 
 echo ""
 echo "=========================================="
-echo "DATABASE RESET COMPLETE!"
+echo "DEV STACK RESET COMPLETE!"
 echo "=========================================="
 echo ""
 echo "Frontend: http://localhost:5173"

@@ -627,7 +627,7 @@ SELECT * FROM pg_locks WHERE locktype = 'advisory';
 The test DB is in a bad state. Reset it:
 
 ```bash
-bash scripts/reset-db.sh
+bash scripts/reset-dev-stack.sh
 ```
 
 ---
