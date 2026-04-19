@@ -8,8 +8,16 @@ import { hashDeviceFingerprint } from '../../src/utils/deviceUtils';
 import { sql, seedTestUser, deleteTestUser } from '../shared/db';
 import type { SeededUser } from '../shared/db';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const REFRESH_SECRET = process.env.REFRESH_SECRET || JWT_SECRET + '_refresh';
+function requireEnv(name: 'JWT_SECRET' | 'REFRESH_SECRET'): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set for auth tests`);
+  }
+  return value;
+}
+
+const JWT_SECRET = requireEnv('JWT_SECRET');
+const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
 
 // ─── Trusted Device ──────────────────────────────────────────────────────────
 

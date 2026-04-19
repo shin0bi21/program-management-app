@@ -13,9 +13,7 @@ export default function ResetPassword() {
   return (
     <AuthLayout>
       <div className="auth-card">
-        <p className="auth-card-kicker">Account access</p>
         <h1 className="auth-title">Reset password</h1>
-        <p className="auth-subtitle">Choose a new password for your account.</p>
 
         {!token && (
           <div className="auth-error" role="alert">

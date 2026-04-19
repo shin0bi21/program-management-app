@@ -10,7 +10,7 @@ interface JWTPayload {
   userId: string;
   email: string;
   permission: PermissionLevel;
-  jti?: string;
+  jti: string;
   iat: number;
   exp: number;
 }

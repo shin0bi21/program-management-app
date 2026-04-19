@@ -34,7 +34,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
         Cancel
       </button>
       <button type="submit" form="youth-form" className="btn-submit" disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
-        {youthData ? 'Update Form' : 'Sign Up Form'}
+        {youthData ? 'Update Form' : 'Sign Up'}
       </button>
     </>
   );
@@ -54,10 +54,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
       }
     >
       <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
-        {/* General Info */}
-        <div className="section-title">
-          <h3>General Info</h3>
-        </div>
+        {/* General Information */}
+        <div className="section-title">General Information</div>
         <div className="form-row">
           <div className="form-field">
             <label htmlFor="firstName">First Name *</label>

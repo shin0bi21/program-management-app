@@ -14,8 +14,16 @@ import type {
 } from '../types/database';
 import type { DbRow } from '../types/db';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const REFRESH_SECRET = process.env.REFRESH_SECRET || JWT_SECRET + '_refresh';
+function requireEnv(name: 'JWT_SECRET' | 'REFRESH_SECRET'): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before the auth service starts`);
+  }
+  return value;
+}
+
+const JWT_SECRET = requireEnv('JWT_SECRET');
+const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
 
 // Security constants
 const TRUSTED_DEVICE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -483,25 +491,33 @@ export async function rotateRefreshToken(
 
 export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: string): Promise<void> {
   if (rawRefreshToken) {
-    const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as any;
-    await sql`
-      UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
-    `;
+    try {
+      const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as any;
+      await sql`
+        UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
+      `;
+    } catch {
+      // Token already expired or invalid — still proceed with access token cleanup
+    }
   }
 
   if (rawAccessToken) {
-    const decoded = jwt.verify(rawAccessToken, JWT_SECRET) as any;
-    const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
-    const expiresAt = new Date(decoded.exp * 1000);
+    try {
+      const decoded = jwt.verify(rawAccessToken, JWT_SECRET) as any;
+      const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
+      const expiresAt = new Date(decoded.exp * 1000);
 
-    await sql`
-      INSERT INTO token_blacklist (jti, user_id, token_hash, expires_at, reason)
-      VALUES (${decoded.jti}, ${decoded.userId}, ${tokenHash}, ${expiresAt}, 'logout')
-      ON CONFLICT (jti) DO NOTHING
-    `;
+      await sql`
+        INSERT INTO token_blacklist (jti, user_id, token_hash, expires_at, reason)
+        VALUES (${decoded.jti}, ${decoded.userId}, ${tokenHash}, ${expiresAt}, 'logout')
+        ON CONFLICT (jti) DO NOTHING
+      `;
 
-    if (decoded.jti) {
-      blacklistCache.add(decoded.jti);
+      if (decoded.jti) {
+        blacklistCache.add(decoded.jti);
+      }
+    } catch {
+      // Token already expired or invalid — nothing to blacklist
     }
   }
 }
