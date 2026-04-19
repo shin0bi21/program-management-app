@@ -24,9 +24,9 @@ export default function PublicTopBar() {
       </button>
 
       <nav className="topbar-nav" aria-label="Page sections">
-        <button className="topbar-link" onClick={() => scrollTo('about')}>Program History</button>
         <button className="topbar-link" onClick={() => scrollTo('programming')}>Programming</button>
-        <button className="topbar-link" onClick={() => scrollTo('team')}>Our Team</button>
+        <button className="topbar-link" onClick={() => scrollTo('about')}>Program History</button>
+        <button className="topbar-link" onClick={() => scrollTo('team')}>Staff</button>
       </nav>
 
       <button className="topbar-login" onClick={() => navigate('/login')}>
