@@ -28,13 +28,9 @@
 .section-title {
   margin-top: 4px;
   margin-bottom: 12px;
-}
-
-.section-title h3 {
-  margin: 0;
-  font-size: 16px;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: #495057;
 }
 
 /* Section header with border-top */
