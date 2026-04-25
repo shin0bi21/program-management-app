@@ -3,6 +3,7 @@ export const STORAGE_KEYS = {
   TOKEN: 'token',
   USER: 'user',
   DEVICE_ID: 'deviceId',
+  LAST_AUTH_PATH: 'lastAuthPath',
 } as const;
 
 /**

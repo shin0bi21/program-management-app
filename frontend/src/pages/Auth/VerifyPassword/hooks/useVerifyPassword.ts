@@ -6,7 +6,6 @@ import { verify2FA, resend2FA } from '../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../common/utils/deviceFingerprint';
 import { getErrorMessage } from '../../../../common/utils/errors';
-import { setAuthData } from '../../../../common/utils/storage';
 import { formatTime } from '../../../../common/utils/time';
 import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';
 
@@ -19,7 +18,7 @@ export const useVerifyPassword = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login: updateAuthState } = useAuth();
+  const { completeLogin } = useAuth();
 
   const userId = (location.state as { userId?: string } | undefined)?.userId;
 
@@ -78,14 +77,8 @@ export const useVerifyPassword = () => {
         deviceName
       );
 
-      // Store token and user data
-      setAuthData(response.token, response.user);
-
-      // Update auth context
-      updateAuthState();
-
-      // Navigate to homepage
-      navigate('/');
+      // Store token, update auth state, and navigate — all via completeLogin
+      completeLogin(response.token, response.user, '/');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Verification failed'));
     }

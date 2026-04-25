@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { flushSync } from 'react-dom';
 import { isTokenExpired, decodeToken } from '../utils/jwt';
-import { clearAuthData, getToken } from '../utils/storage';
+import { clearAuthData, setAuthData, getToken } from '../utils/storage';
 import { api } from '../api/config';
 
 type Permission = 'admin' | 'staff' | null;
@@ -10,7 +11,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   permission: Permission;
   loading: boolean;
-  login: () => void;
+  completeLogin: (token: string, user: unknown, redirectTo?: string) => void;
   logout: () => void;
 }
 
@@ -40,12 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const checkAuth = () => {
-    applyToken(getToken());
-  };
-
   useEffect(() => {
-    checkAuth();
+    applyToken(getToken());
     setLoading(false);
 
     // Sync logout across tabs
@@ -60,8 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const login = () => {
-    checkAuth();
+  const completeLogin = (token: string, user: unknown, redirectTo = '/settings/account') => {
+    setAuthData(token, user);
+    // flushSync ensures state is committed before navigate so ProtectedRoute
+    // sees isAuthenticated: true on its first render
+    flushSync(() => {
+      applyToken(token);
+    });
+    navigate(redirectTo);
   };
 
   const logout = async () => {
@@ -79,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ isAuthenticated, permission, loading, login, logout }),
+    () => ({ isAuthenticated, permission, loading, completeLogin, logout }),
     [isAuthenticated, permission, loading]
   );
 

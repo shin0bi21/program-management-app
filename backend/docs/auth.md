@@ -16,6 +16,7 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 8. [Shared Utilities](#8-shared-utilities)
 9. [Module Boundaries](#9-module-boundaries)
 10. [What Is Out of Scope (and Why)](#10-what-is-out-of-scope-and-why)
+11. [Frontend Login Flow](#11-frontend-login-flow)
 
 ---
 
@@ -24,19 +25,25 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 Auth uses two separate JWTs — an **access token** and a **refresh token** — signed with two different secrets (`JWT_SECRET` and `REFRESH_SECRET`). They are distinguished at the payload level by a `tokenType` discriminator claim, not just by which secret was used to sign them.
 
 ```
-Login flow
-  POST /login   →  validates credentials, sends 2FA email, returns { type: 'requires2FA' }
-  POST /verify  →  validates 2FA code, issues access token (1h) + refresh token (8h httpOnly cookie)
+Login flow (standard)
+  /login page      →  POST /login     →  sends 2FA email, returns { requiresVerification, userId }
+  /verify-password →  POST /verify    →  validates 2FA code
+                   →  completeLogin() →  stores token, updates AuthContext, navigates to /
+
+Login flow (trusted device)
+  /login page      →  POST /login     →  returns { token, user } directly (no 2FA)
+                   →  completeLogin() →  stores token, updates AuthContext, navigates to lastAuthPath
 
 Session flow
-  Every request →  Authorization: Bearer <accessToken>
-  Token expiry  →  POST /refresh rotates refresh token, issues new access token
+  Every request    →  Authorization: Bearer <accessToken>  (injected by fetchWithAuth)
+  Token expiry     →  POST /refresh rotates refresh token, issues new access token
 
 Logout
-  POST /logout  →  blacklists access token JTI, revokes refresh token in DB
+  POST /logout     →  blacklists access token JTI, revokes refresh token in DB
+                   →  AuthContext.logout() clears localStorage, navigates to /login
 ```
 
-Trusted devices skip the 2FA step for 30 days after first verify.
+Trusted devices skip the 2FA step for 30 days after first verify. See [§11](#11-frontend-login-flow) for the frontend side of this flow.
 
 ---
 
@@ -217,3 +224,9 @@ Middleware depends on services/utils. Services depend on utils. Nothing depends 
 | RS256 / asymmetric keys | Not implemented | Only valuable when downstream services need to verify tokens without the signing secret. HS256 with a strong 64-byte secret is appropriate for a monolith. |
 | Token expiry changes | Out of scope | Security policy decision, separate from structural type changes. Current: access = 1h, refresh = 8h. |
 | Frontend `jwt.ts` utils | Not updated | Frontend only reads the `permission` claim from access tokens for UI routing. It never validates `tokenType` and has no need to. |
+
+---
+
+## 11. Frontend Login Flow
+
+See **[frontend/docs/auth.md](../../frontend/docs/auth.md)** for the full frontend auth flow — including the login path flowchart, `completeLogin`, the `flushSync` race condition explanation, session maintenance, and route protection.

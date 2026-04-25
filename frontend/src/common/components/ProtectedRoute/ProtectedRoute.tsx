@@ -1,7 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
-const LAST_AUTH_PATH_KEY = 'lastAuthPath';
+import { STORAGE_KEYS } from '../../utils/storage';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
@@ -25,7 +24,7 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
   }
 
   // Persist the current path so login can redirect back here
-  localStorage.setItem(LAST_AUTH_PATH_KEY, location.pathname);
+  localStorage.setItem(STORAGE_KEYS.LAST_AUTH_PATH, location.pathname);
 
   return children;
 }
