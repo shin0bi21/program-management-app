@@ -20,6 +20,7 @@ Express + TypeScript + PostgreSQL backend for a youth services management system
 12. [Deployment](#12-deployment)
 13. [Troubleshooting](#13-troubleshooting)
 14. [Commands Reference](#14-commands-reference)
+15. [Architecture Docs](#15-architecture-docs)
 
 ---
 
@@ -126,50 +127,25 @@ That's it — the dev server runs automatically inside the container.
 
 ```
 backend/
+├── docs/               # Architecture references (auth.md, db.md)
 ├── src/
-│   ├── index.ts                   # Express entry point — boots app, mounts routes
-│   ├── controllers/
-│   │   ├── authController.ts      # Login, 2FA verify/resend, refresh, logout, password reset
-│   │   ├── staffController.ts     # HTTP wrappers — handleGetStaff, handleCreateStaff
-│   │   ├── youthController.ts     # HTTP wrappers — handleGetYouth, handleSetYouth
-│   │   └── schoolController.ts    # HTTP wrapper — handleGetSchools
-│   ├── services/
-│   │   ├── youthService.ts        # getYouth, setYouth — all SQL + business logic for youth
-│   │   ├── staffService.ts        # getStaff, createStaff
-│   │   ├── schoolService.ts       # getSchools
-│   │   ├── addressService.ts      # setAddresses — reusable address sync for any entity
-│   │   └── contactService.ts      # setContacts — reusable contact sync for any entity
-│   ├── routes/
-│   │   ├── authRoutes.ts          # Mounted at /api/auth
-│   │   ├── staffRoutes.ts         # Mounted at /api/staff
-│   │   ├── youthRoutes.ts         # Mounted at /api/youth
-│   │   └── schoolRoutes.ts        # Mounted at /api/schools
-│   ├── middleware/
-│   │   ├── authMiddleware.ts      # authenticateToken (JWT verify + blacklist), requirePermission
-│   │   ├── rateLimiter.ts         # 4-tier rate limiting (general, auth, strict, password-reset)
-│   │   └── validateRequest.ts     # Wraps Zod schema validation — call validateRequest(schema)
-│   ├── validation/
-│   │   ├── authSchemas.ts         # Zod schemas for auth endpoints
-│   │   ├── staffSchemas.ts        # createStaffSchema
-│   │   └── youthSchemas.ts        # setYouthSchema
-│   ├── db/
-│   │   └── client.ts              # postgres.js connection + asTransactionSql() helper for tx typing
-│   ├── types/
-│   │   ├── database.ts            # kysely-codegen generated types — DB schema in snake_case
-│   │   └── db.ts                  # DbRow<T> utility — converts snake_case keys → camelCase
-│   └── utils/
-│       ├── emailService.ts        # Nodemailer transporter + sendEmail helper
-│       └── deviceUtils.ts         # SHA-256 device fingerprint hashing
+│   ├── index.ts        # Entry point — middleware, routes, server start
+│   ├── controllers/    # HTTP layer — extract params, call service, send response
+│   ├── services/       # Business logic and all SQL queries
+│   ├── routes/         # Route definitions with middleware chains
+│   ├── middleware/     # authenticateToken, requirePermission, rateLimiter, validateRequest
+│   ├── validation/     # Zod schemas per domain
+│   ├── db/             # postgres.js client + asTransactionSql() helper
+│   ├── types/          # JWT payload types, DB schema types, DbRow<T> utility
+│   └── utils/          # requireEnv, emailService, deviceUtils
 ├── db/
-│   ├── migrations/                # SQL files — YYYY-MM-DD_#_description.sql
-│   └── scripts/                   # Migration runner, seed-admin, type generation
+│   ├── migrations/     # SQL files — YYYY-MM-DD_#_description.sql
+│   └── scripts/        # Migration runner, seed-admin, type generation
 └── tests/
-    ├── shared/
-    │   ├── app.ts                  # Express app factory shared by all test suites
-    │   └── db.ts                   # seedTestUser, deleteTestUser helpers
-    ├── auth/                       # 44 tests — login, 2FA, refresh, logout, password reset
-    ├── staff/                      # 15 tests — CRUD, permissions, validation
-    └── youth/                      # 25 tests — CRUD, upsert, address/contact sync
+    ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
+    ├── auth/           # 44 tests
+    ├── staff/          # 15 tests
+    └── youth/          # 25 tests
 ```
 
 ### Entry Point — `src/index.ts`
@@ -190,14 +166,45 @@ What it does, in order:
 Every protected API request passes through this chain in order:
 
 ```
-HTTP Request
-  → Express router          — matches route to handler file (e.g. staffRoutes.ts)
-  → authenticateToken       — verify JWT signature, check blacklist
-  → requirePermission(...)  — check user.permission against allowed roles
-  → rateLimiter             — tier-specific (general / auth / strict / password-reset)
-  → validateRequest(schema) — Zod parse; returns 400 with field errors on failure
-  → controller (handle*)    — extract params, call service, send HTTP response
-  → service                 — SQL query via postgres.js, business logic, return typed data
+                  HTTP Request
+                       │
+                       ▼
+             ┌───────────────────┐
+             │   Express router   │  matches route → handler file
+             └─────────┬─────────┘
+                       │
+                       ▼
+             ┌───────────────────┐
+             │ authenticateToken │  verify JWT signature + blacklist check
+             └─────────┬─────────┘  ✗ → 401
+                       │
+                       ▼
+             ┌───────────────────┐
+             │ requirePermission │  check permission level
+             └─────────┬─────────┘  ✗ → 403
+                       │
+                       ▼
+             ┌───────────────────┐
+             │    rateLimiter    │  tier-specific (general / auth / strict / password-reset)
+             └─────────┬─────────┘  ✗ → 429
+                       │
+                       ▼
+             ┌───────────────────┐
+             │  validateRequest  │  Zod parse request body
+             └─────────┬─────────┘  ✗ → 400 with field errors
+                       │
+                       ▼
+             ┌───────────────────┐
+             │    controller     │  extract params, call service, send response
+             └─────────┬─────────┘
+                       │
+                       ▼
+             ┌───────────────────┐
+             │      service      │  SQL via postgres.js +       business logic
+             └─────────┬─────────┘
+                       │
+                       ▼
+                  HTTP Response
 ```
 
 Middleware is applied in route files, not globally. Each route explicitly lists which middleware it needs. This makes the chain visible and auditable.
@@ -219,7 +226,7 @@ To add a new route group (e.g. `/api/events`):
 
 ## 5. Core Conventions
 
-### No ORM — Raw SQL via postgres.js
+### Raw SQL via postgres.js
 
 All database queries are written as plain SQL. No Sequelize, Prisma, or TypeORM. This keeps queries transparent, predictable, and fast.
 
@@ -382,57 +389,21 @@ Rate limiting is disabled when `NODE_ENV=test`.
 - **Device fingerprinting** — SHA-256 hashed, used for trusted device logic
 - **Input validation** — Zod on every endpoint, 400 with field-level errors on failure
 
+For full JWT architecture, token payload types, signing helpers, and module design see [docs/auth.md](docs/auth.md).
+
 ---
 
 ## 9. Database & Migrations
 
-### Migration Files
+Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_description.sql`. They run in filename order, each inside a single transaction with full rollback on error. Applied files are tracked with SHA-256 checksums — never edit an applied migration, create a new one instead.
 
-Location: `db/migrations/YYYY-MM-DD_#_description.sql`
-
-All migrations run in a single transaction with automatic rollback on error. Advisory locks prevent concurrent runs.
-
-### Creating a New Migration
-
-**Step 1 — Write the SQL file:**
-
-```sql
--- db/migrations/2026-02-01_3_add_posts.sql
-
-CREATE TABLE posts (
-  LIKE base_table INCLUDING ALL,       -- includes id, created_at, updated_at, created_by, updated_by
-  title VARCHAR(255) NOT NULL,
-  content TEXT,
-  user_id UUID NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_posts_user_id ON posts(user_id);
-```
-
-The `LIKE base_table INCLUDING ALL` pattern gives every table consistent audit columns. Always use it.
-
-**Step 2 — Test locally:**
+### Commands
 
 ```bash
 docker-compose exec backend npm run db:migrate:dry   # preview — no changes applied
-docker-compose exec backend npm run db:migrate       # apply
-docker-compose exec backend npm run db:status        # verify
-```
-
-**Step 3 — Generate backup infrastructure (if the table holds important data):**
-
-```bash
-docker-compose exec backend npm run db:generate-backup   # generates a new backup migration SQL file
-docker-compose exec backend npm run db:migrate           # apply that file to create the backup tables + triggers
-```
-
-**Step 4 — Commit:**
-
-```bash
-git add .
-git commit -m "Add posts migration"
-git push origin main
+docker-compose exec backend npm run db:migrate       # apply pending migrations
+docker-compose exec backend npm run db:status        # show applied migrations + checksum status
+docker-compose exec backend npm run db:generate-backup   # generate backup tables + triggers
 ```
 
 ### Safety Features
@@ -440,20 +411,11 @@ git push origin main
 | Feature | Detail |
 |---------|--------|
 | Transaction safety | All statements in one transaction — error = full rollback |
-| Concurrency | Advisory lock ID 123456789 prevents parallel runs |
+| Concurrency | Advisory lock prevents parallel runs |
 | Checksum validation | SHA-256 per file — warns if an applied file is modified |
 | Dry-run mode | `npm run db:migrate:dry` previews without applying |
 
-### Backup System
-
-`docker-compose exec backend npm run db:generate-backup` auto-generates for each data table:
-
-- `{table}_backup` — backup table with all original columns + metadata
-- `BEFORE INSERT` trigger — tracks new records
-- `BEFORE UPDATE` trigger — saves old values before changes
-- `BEFORE DELETE` trigger — archives deleted records
-
-Tables excluded from backups: `base_table`, lookup tables, security tables (`user_credentials`, `password_reset_tokens`), and system tables (`schema_migrations`, `schema_backup_tracking`).
+For full migration design, backup system architecture, and the base table pattern see [docs/db.md](docs/db.md).
 
 ---
 
@@ -495,6 +457,22 @@ The helper scripts detect if Docker containers are already running and **will no
 | `tests/staff/helpers.ts` | Token generation with permission levels |
 | `tests/youth/youth.test.ts` | Youth CRUD, upsert, address/contact sync |
 | `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
+
+### Jest + Node16 Module Resolution
+
+The backend uses `"moduleResolution": "node16"` in `tsconfig.json`. Under Node16, TypeScript requires explicit `.js` extensions on relative imports in source files (e.g. `import('../shared/db.js')`). However, `ts-jest` resolves tests against raw `.ts` source files — not compiled output — so those `.js` extensions don't resolve at runtime inside Jest.
+
+The fix is a `moduleNameMapper` entry in `jest.config.js` that strips `.js` from any relative import path before Jest resolves it:
+
+```js
+moduleNameMapper: {
+  '^(\\.{1,2}/.*)\\.js$': '$1',
+},
+```
+
+This is a well-known pattern in the `ts-jest` community for Node16/NodeNext projects. See [ts-jest issue #4207](https://github.com/kulshekhar/ts-jest/issues/4207) for the original discussion.
+
+**Rule:** When writing test files, use `.js` extensions on dynamic `import()` calls if the TypeScript compiler requires it — the mapper will handle the rest at runtime.
 
 ### Writing a Test
 
@@ -654,5 +632,16 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 | `db:generate-backup` | Generate backup tables + triggers |
 | `db:types` | Regenerate TypeScript types from DB schema |
 | `seed:admin` | Seed the admin user (idempotent) |
+
+---
+
+## 15. Architecture Docs
+
+Detailed design and architecture references live in `docs/`:
+
+| File | Covers |
+|------|--------|
+| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, module boundaries |
+| [docs/db.md](docs/db.md) | Migration system design, backup architecture, base table pattern, safety guarantees |
 
 

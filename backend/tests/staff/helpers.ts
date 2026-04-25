@@ -3,9 +3,10 @@
  */
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { requireEnv } from '../../src/utils/env';
 import { seedTestUser, deleteTestUser } from '../shared/db';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = requireEnv('JWT_SECRET');
 
 /**
  * Generate a valid access token with a specific permission level.
@@ -16,7 +17,7 @@ export function generateToken(
   email: string = 'test@test.local',
 ) {
   return jwt.sign(
-    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex') },
+    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
     JWT_SECRET,
     { expiresIn: 900 },
   );
@@ -32,6 +33,7 @@ export function generateExpiredToken(userId: string, permission: 'admin' | 'staf
       email: 'test@test.local',
       permission,
       jti: crypto.randomBytes(16).toString('hex'),
+      tokenType: 'access',
       iat: Math.floor(Date.now() / 1000) - 3600,
       exp: Math.floor(Date.now() / 1000) - 1,
     },

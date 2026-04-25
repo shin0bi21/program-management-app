@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sql } from '../db/client';
+import { sql, asTransactionSql } from '../db/client';
 import { sendEmail, send2FACode } from '../utils/emailService';
 import { hashDeviceFingerprint } from '../utils/deviceUtils';
-import { blacklistCache } from '../middleware/authMiddleware';
+import { revokeAccessToken } from './tokenRevocationService';
 import type {
+  PermissionLevel,
   UserCredentials,
   Users,
   RefreshTokens,
@@ -13,14 +14,8 @@ import type {
   TrustedDevices,
 } from '../types/database';
 import type { DbRow } from '../types/db';
-
-function requireEnv(name: 'JWT_SECRET' | 'REFRESH_SECRET'): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be set before the auth service starts`);
-  }
-  return value;
-}
+import { requireEnv } from '../utils/env';
+import type { AccessTokenPayload, RefreshTokenPayload } from '../types/auth';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
@@ -80,6 +75,14 @@ function generateJTI(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
+function signAccessToken(payload: Omit<AccessTokenPayload, 'iat' | 'exp' | 'tokenType'>): string {
+  return jwt.sign({ ...payload, tokenType: 'access' }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+}
+
+function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'tokenType'>): string {
+  return jwt.sign({ ...payload, tokenType: 'refresh' }, REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+}
+
 /**
  * Signs a new access + refresh token pair and persists the refresh token.
  * Used in: loginUser (trusted device), verify2FACode, rotateRefreshToken.
@@ -87,23 +90,15 @@ function generateJTI(): string {
 async function generateAndStoreTokenPair(
   userId: string,
   email: string,
-  permission: string,
+  permission: PermissionLevel,
   tokenFamily: string,
 ): Promise<TokenPair> {
   const accessJTI = generateJTI();
   const refreshJTI = generateJTI();
 
-  const accessToken = jwt.sign(
-    { userId, email, permission, jti: accessJTI },
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY },
-  );
+  const accessToken = signAccessToken({ userId, email, permission, jti: accessJTI });
 
-  const refreshToken = jwt.sign(
-    { userId, email, jti: refreshJTI },
-    REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY },
-  );
+  const refreshToken = signRefreshToken({ userId, email, jti: refreshJTI });
 
   const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
 
@@ -404,9 +399,9 @@ export async function resend2FACode(userId: string): Promise<void> {
 export async function rotateRefreshToken(
   rawRefreshToken: string,
 ): Promise<{ newAccessToken: string; newRefreshToken: string }> {
-  let decoded: any;
+  let decoded: RefreshTokenPayload;
   try {
-    decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET);
+    decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
   } catch {
     throw new AuthError(403, 'Invalid refresh token');
   }
@@ -458,33 +453,38 @@ export async function rotateRefreshToken(
   const newAccessJTI = generateJTI();
   const newRefreshJTI = generateJTI();
 
-  const newAccessToken = jwt.sign(
-    { userId: decoded.userId, email: decoded.email, permission: users[0].permission, jti: newAccessJTI },
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY },
-  );
+  const newAccessToken = signAccessToken({
+    userId: decoded.userId,
+    email: decoded.email,
+    permission: users[0].permission,
+    jti: newAccessJTI,
+  });
 
-  const newRefreshToken = jwt.sign(
-    { userId: decoded.userId, email: decoded.email, jti: newRefreshJTI },
-    REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY },
-  );
+  const newRefreshToken = signRefreshToken({
+    userId: decoded.userId,
+    email: decoded.email,
+    jti: newRefreshJTI,
+  });
 
   const newRefreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
   const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
-  // 4. Insert new token, revoke old one, link via replaced_by
-  const newTokenRows = await sql<{ id: string }[]>`
-    INSERT INTO refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
-    VALUES (${decoded.userId}, ${newRefreshJTI}, ${newTokenHash}, ${storedToken.tokenFamily}, ${newRefreshExpiresAt})
-    RETURNING id
-  `;
+  // 4. Atomically insert new token and revoke old one — must succeed or fail together
+  await sql.begin(async (rawTx) => {
+    const tx = asTransactionSql(rawTx);
 
-  await sql`
-    UPDATE refresh_tokens
-    SET revoked_at = NOW(), replaced_by = ${newTokenRows[0].id}
-    WHERE jti = ${decoded.jti}
-  `;
+    const newTokenRows = await tx<{ id: string }[]>`
+      INSERT INTO refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
+      VALUES (${decoded.userId}, ${newRefreshJTI}, ${newTokenHash}, ${storedToken.tokenFamily}, ${newRefreshExpiresAt})
+      RETURNING id
+    `;
+
+    await tx`
+      UPDATE refresh_tokens
+      SET revoked_at = NOW(), replaced_by = ${newTokenRows[0].id}
+      WHERE jti = ${decoded.jti}
+    `;
+  });
 
   return { newAccessToken, newRefreshToken };
 }
@@ -492,7 +492,7 @@ export async function rotateRefreshToken(
 export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: string): Promise<void> {
   if (rawRefreshToken) {
     try {
-      const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as any;
+      const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
       await sql`
         UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
       `;
@@ -503,19 +503,10 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
 
   if (rawAccessToken) {
     try {
-      const decoded = jwt.verify(rawAccessToken, JWT_SECRET) as any;
+      const decoded = jwt.verify(rawAccessToken, JWT_SECRET) as AccessTokenPayload;
       const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
       const expiresAt = new Date(decoded.exp * 1000);
-
-      await sql`
-        INSERT INTO token_blacklist (jti, user_id, token_hash, expires_at, reason)
-        VALUES (${decoded.jti}, ${decoded.userId}, ${tokenHash}, ${expiresAt}, 'logout')
-        ON CONFLICT (jti) DO NOTHING
-      `;
-
-      if (decoded.jti) {
-        blacklistCache.add(decoded.jti);
-      }
+      await revokeAccessToken(decoded.jti, decoded.userId, tokenHash, expiresAt);
     } catch {
       // Token already expired or invalid — nothing to blacklist
     }
