@@ -16,4 +16,8 @@ module.exports = {
   bail: false,
   // Run sequentially to avoid DB contention between suites
   maxWorkers: 1,
+  // Node16 moduleResolution emits .js extensions in source; Jest resolves .ts files directly
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
 };

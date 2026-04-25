@@ -24,7 +24,7 @@ describe('Youth API', () => {
 
   afterAll(async () => {
     // Admin user has no youth_profiles so use shared deleteTestUser pattern
-    const { deleteTestUser } = await import('../shared/db');
+    const { deleteTestUser } = await import('../shared/db.js');
     await deleteTestUser(adminUserId);
   });
 
@@ -57,7 +57,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
 
-      const { deleteTestUser } = await import('../shared/db');
+      const { deleteTestUser } = await import('../shared/db.js');
       await deleteTestUser(staff.userId);
     });
 
@@ -71,7 +71,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/permission/i);
 
-      const { deleteTestUser } = await import('../shared/db');
+      const { deleteTestUser } = await import('../shared/db.js');
       await deleteTestUser(youth.userId);
     });
 
@@ -171,7 +171,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(201);
       createdIds.push(res.body.id);
 
-      const { deleteTestUser } = await import('../shared/db');
+      const { deleteTestUser } = await import('../shared/db.js');
       await deleteTestUser(staff.userId);
     });
 
@@ -233,7 +233,7 @@ describe('Youth API', () => {
         .send(baseYouth);
       expect(res.status).toBe(403);
 
-      const { deleteTestUser } = await import('../shared/db');
+      const { deleteTestUser } = await import('../shared/db.js');
       await deleteTestUser(youth.userId);
     });
 

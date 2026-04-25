@@ -1,43 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { sql } from '../db/client';
 import type { PermissionLevel } from '../types/database';
+import type { AccessTokenPayload } from '../types/auth';
+import { requireEnv } from '../utils/env';
+import { isBlacklisted } from '../services/tokenRevocationService';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-
-// JWT Payload type
-interface JWTPayload {
-  userId: string;
-  email: string;
-  permission: PermissionLevel;
-  jti: string;
-  iat: number;
-  exp: number;
-}
+const JWT_SECRET = requireEnv('JWT_SECRET');
 
 // Extend Express Request
 export interface AuthRequest extends Request {
-  user?: JWTPayload;
-}
-
-// Simple in-memory blacklist cache
-const blacklistCache = new Set<string>();
-let lastCacheUpdate = 0;
-const CACHE_TTL = 60 * 1000; // 1 minute
-
-async function refreshBlacklistCache() {
-  try {
-    const blacklisted = await sql<{ jti: string }[]>`
-      SELECT jti FROM token_blacklist
-      WHERE expires_at > NOW()
-    `;
-    
-    blacklistCache.clear();
-    blacklisted.forEach(row => blacklistCache.add(row.jti));
-    lastCacheUpdate = Date.now();
-  } catch (error) {
-    console.error('Failed to refresh blacklist cache:', error);
-  }
+  user?: AccessTokenPayload;
 }
 
 export const authenticateToken = async (
@@ -55,19 +27,16 @@ export const authenticateToken = async (
 
   try {
     // Verify JWT signature and decode
-    const verified = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const verified = jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
+
+    // Reject refresh tokens sent to protected routes
+    if (verified.tokenType !== 'access') {
+      return res.status(403).json({ error: 'Invalid token type' });
+    }
     
-    // Check if token is blacklisted (with caching)
-    if (verified.jti) {
-      // Refresh cache if stale
-      if (Date.now() - lastCacheUpdate > CACHE_TTL) {
-        await refreshBlacklistCache();
-      }
-      
-      // Check in-memory cache
-      if (blacklistCache.has(verified.jti)) {
-        return res.status(401).json({ error: 'Token has been revoked' });
-      }
+    // Check if token is blacklisted
+    if (verified.jti && await isBlacklisted(verified.jti)) {
+      return res.status(401).json({ error: 'Token has been revoked' });
     }
     
     // Attach user to request
@@ -104,8 +73,4 @@ export const requirePermission = (...allowedPermissions: PermissionLevel[]) => {
   };
 };
 
-// Initialize cache on startup
-refreshBlacklistCache();
 
-// Export cache for use in logout
-export { blacklistCache };
