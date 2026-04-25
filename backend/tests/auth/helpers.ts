@@ -5,16 +5,9 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { hashDeviceFingerprint } from '../../src/utils/deviceUtils';
+import { requireEnv } from '../../src/utils/env';
 import { sql, seedTestUser, deleteTestUser } from '../shared/db';
 import type { SeededUser } from '../shared/db';
-
-function requireEnv(name: 'JWT_SECRET' | 'REFRESH_SECRET'): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be set for auth tests`);
-  }
-  return value;
-}
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
@@ -62,7 +55,7 @@ export async function insertExpired2FACode(userId: string, code: string = '99999
 
 export function generateAccessToken(userId: string, email: string, permission: string = 'admin') {
   return jwt.sign(
-    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex') },
+    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
     JWT_SECRET,
     { expiresIn: 900 },
   );
@@ -70,12 +63,12 @@ export function generateAccessToken(userId: string, email: string, permission: s
 
 export function generateRefreshToken(userId: string, email: string = 'test@test.local') {
   const jti = crypto.randomBytes(16).toString('hex');
-  const token = jwt.sign({ userId, email, jti }, REFRESH_SECRET, { expiresIn: 604800 });
+  const token = jwt.sign({ userId, email, jti, tokenType: 'refresh' }, REFRESH_SECRET, { expiresIn: 604800 });
   return { token, jti };
 }
 
 export function generateRefreshTokenWithoutJTI(userId: string, email: string = 'test@test.local') {
-  return jwt.sign({ userId, email }, REFRESH_SECRET, { expiresIn: 604800 });
+  return jwt.sign({ userId, email, tokenType: 'refresh' }, REFRESH_SECRET, { expiresIn: 604800 });
 }
 
 export async function storeRefreshToken(userId: string, jti: string, token: string): Promise<string> {
