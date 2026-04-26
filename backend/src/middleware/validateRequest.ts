@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { sendError } from '../errors/AppError';
 
 /**
  * Middleware wrapper that validates request data against a Zod schema
@@ -8,33 +9,22 @@ import { ZodSchema, ZodError } from 'zod';
 export const validateRequest = (schema: ZodSchema) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate the request against the schema
       await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
       });
-      
-      // If validation passes, continue to the next middleware
       next();
     } catch (error) {
-      // Handle Zod validation errors
       if (error instanceof ZodError) {
-        const errorMessages = error.issues.map((issue: any) => ({
+        const details = error.issues.map((issue: any) => ({
           field: issue.path.join('.'),
           message: issue.message,
         }));
-        
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: errorMessages,
-        });
+        sendError(res, 400, 'Validation failed', { details });
+        return;
       }
-      
-      // Handle unexpected errors
-      return res.status(500).json({
-        error: 'Internal server error during validation',
-      });
+      next(error);
     }
   };
 };

@@ -4,9 +4,12 @@ import App from './App'
 import './index.css'
 import './common/styles/brand.css'
 import './common/styles/forms.css'
+import ErrorBoundary from './common/components/ErrorBoundary/ErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )

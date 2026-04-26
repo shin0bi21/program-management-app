@@ -60,6 +60,22 @@ done
 echo ""
 echo "Database is ready (after ~$((retries * RETRY_INTERVAL))s)"
 
+# Wait for test database (tmpfs — empty on every container start)
+echo ""
+echo "Waiting for test database..."
+retries=0
+until docker-compose exec -T db_test pg_isready -U root -d myapp_db_test > /dev/null 2>&1; do
+  retries=$((retries + 1))
+  if [ $retries -ge $MAX_RETRIES ]; then
+    echo "Test database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s"
+    exit 1
+  fi
+  printf "."
+  sleep $RETRY_INTERVAL
+done
+echo ""
+echo "Test database is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
 # Wait for backend
 echo ""
 echo "Waiting for backend..."
@@ -78,5 +94,15 @@ until docker-compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || 
 done
 echo ""
 echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
+# Apply migrations against the test DB (idempotent — safe to run every time)
+echo ""
+echo "Migrating test database..."
+docker-compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
+  echo "Test DB migration failed"
+  docker-compose exec -T backend npm run db:migrate:test
+  exit 1
+}
+echo "Test database migrated"
 
 

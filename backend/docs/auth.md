@@ -133,6 +133,8 @@ The `tokenType` guard provides an explicit payload-level check on top of signatu
 
 `requirePermission(...allowedPermissions)` is a separate middleware that runs after `authenticateToken`. It reads `req.user.permission` and rejects the request if the user's role isn't in the allowed list.
 
+**Error responses:** All auth and rate limiter rejections use `sendError()` and return a consistent `ErrorResponse` JSON shape with a `requestId` field. They respond inline (not via `errorHandler`). See [errors.md §5](./errors.md#5-middleware-order-and-where-auth-errors-slot-in) for the full middleware flow and bypass path tradeoffs.
+
 ---
 
 ## 6. Refresh Token Rotation
