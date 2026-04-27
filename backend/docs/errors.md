@@ -1,20 +1,32 @@
 # Backend Error Handling
 
-## 1. Error class hierarchy
+## Overview 
 
-`src/errors/AppError.ts` defines the base class, named subclasses, and the stable response type contract:
+When something goes wrong in the backend:
+
+1. A service (or middleware) **throws a typed error** — e.g. `throw new NotFoundError('User not found')`
+2. That error flows to the **global error handler**, which reads the status code, logs it, and sends a clean JSON response
+3. The client **always gets the same shape** — `{ error: "..." }` — regardless of what went wrong or where
+
+You never need to `res.json()` an error yourself. Just throw the right class and the rest is handled.
+
+---
+
+## 1. Error classes — what to throw
+
+All errors live in `src/errors/AppError.ts`. Pick the one that matches the situation:
 
 ```
-AppError (base, statusCode = 500)
-├── BadRequestError        400
-├── UnauthorizedError      401
-├── ForbiddenError         403
-├── NotFoundError          404
-├── LockedError            423  (account lockout)
-└── TooManyRequestsError   429  (rate limiting)
+AppError (base, default 500)
+├── BadRequestError        400  — invalid input that passed schema validation
+├── UnauthorizedError      401  — missing or invalid auth token
+├── ForbiddenError         403  — authenticated but not allowed
+├── NotFoundError          404  — resource doesn't exist
+├── LockedError            423  — account locked out
+└── TooManyRequestsError   429  — rate limit hit
 ```
 
-Services throw the appropriate subclass. The global error handler reads `statusCode` automatically.
+**Usage in a service:**
 
 ```ts
 import { NotFoundError } from '../errors/AppError';
@@ -22,60 +34,70 @@ import { NotFoundError } from '../errors/AppError';
 throw new NotFoundError('User not found');
 ```
 
-**Adding a new error type:** subclass `AppError`, set `statusCode` and `name`, then throw it from your service. The global handler picks it up automatically — no other wiring required.
+That's it. No `try/catch` in the controller, no `res.status().json()` — the global handler takes it from here.
 
-`ConflictError` (409) is deferred until needed (e.g. duplicate email on staff create).
+**Adding a new error type:** subclass `AppError`, set `statusCode` and `name`, export it. The global handler picks it up automatically with no other changes required.
 
----
-
-## 2. Response shape contract
-
-All error responses from this API conform to `ErrorResponse` (exported from `src/errors/AppError.ts`):
-
-```ts
-interface ErrorResponse {
-  error: string;
-  details?: ValidationDetail[];  // only present on validation errors
-  requestId?: string;            // present when requestId middleware is active
-}
-
-interface ValidationDetail {
-  field: string;
-  message: string;
-}
-```
-
-`errorHandler`, `validateRequest`, and `authMiddleware` all call `sendError()` (exported from `AppError.ts`) rather than `res.json()` directly. `sendError` is the single formatting function — it assembles `ErrorResponse`, attaches `requestId` from `res.locals`, and sets the status. Changing the shape means changing one place.
-
-Only `validateRequest` ever populates `details`. Auth middleware, the global handler, and the 404 handler all return `{ error: string }` only — `details` exists solely to surface per-field Zod failures to the client.
+> `ConflictError` (409) isn't here yet — it'll be added when we need it (e.g. duplicate email on staff create).
 
 ---
 
-## 3. Global error handler
+## 2. What the client receives
 
-`src/middleware/errorHandler.ts` is registered in `src/index.ts` **after all routes and the 404 handler**:
+Every error response from this API has the same shape:
 
 ```ts
-app.use((req, res) => sendError(res, 404, 'Not found')); // unmatched routes
-app.use(errorHandler);
+{
+  error: string;           // always present — human-readable message
+  details?: [              // only on validation errors (400)
+    { field: string; message: string }
+  ];
+  requestId?: string;      // always present — use this when reporting bugs
+}
 ```
 
-Behaviour:
-- If response already started, log with `requestId` and discard — forwarding to Express default could leak HTML or stack traces
-- Always returns `ErrorResponse` JSON — never HTML, never a stack trace to the client
-- Reads status from `err.statusCode`, validated as a number in 400–599 range; anything outside that (including plain thrown objects with garbage `statusCode`) falls back to 500
-- 5xx → `console.error` (with stack); 4xx → `console.warn` (message only — pattern visibility without noise)
-- In production: 5xx errors return a generic message; 4xx return the actual message (safe and useful to callers)
-- In development: all errors return the actual message
+**Example — wrong password:**
+```json
+{ "error": "Invalid email or password", "requestId": "abc-123" }
+```
 
-Structured logging / Sentry / external error reporting is out of scope — extend `errorHandler` when needed.
+**Example — validation failure:**
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    { "field": "email", "message": "Invalid email address" }
+  ],
+  "requestId": "def-456"
+}
+```
 
-**Error handler decision flow:**
+The `requestId` links this response to a specific log line on the server — useful for debugging. See §6 for more.
+
+All error responses are assembled by a single function: `sendError()` in `AppError.ts`. Nothing calls `res.json()` directly for errors. Changing the shape means changing one place.
+
+---
+
+## 3. The global error handler
+
+`src/middleware/errorHandler.ts` is registered in `src/index.ts` **after all routes**:
+
+```ts
+app.use((req, res) => sendError(res, 404, 'Not found')); // catch-all for unmatched routes
+app.use(errorHandler);                                    // handles all thrown errors
+```
+
+What it does when an error arrives:
+
+- **If the response has already started sending** — logs a warning and stops. Nothing else can be done safely at this point.
+- **If the error is an `AppError` subclass** — uses its `statusCode` (only 400–599 are valid — anything else becomes 500)
+- **If the error is anything else** (e.g. a plain `throw new Error(...)`) — treats it as a 500
+- **Logging:** 5xx errors → `console.error` with full stack. 4xx errors → `console.warn` with message only (less noise).
+- **Response message:** In production, 5xx errors return a generic `"An unexpected error occurred"` — no internal details leak to the client. 4xx errors always return the actual message. In development/test, all errors return the actual message.
 
 ```mermaid
 flowchart TD
-    E([err reaches errorHandler]) --> HS{headers
-already sent?}
+    E([err reaches errorHandler]) --> HS{headers\nalready sent?}
     HS -->|yes| FW[log + return\nno further action]
     HS -->|no| AE{instanceof\nAppError?}
     AE -->|yes| SC[use err.statusCode]
@@ -87,40 +109,51 @@ already sent?}
     SEV -->|no| PROD{production\n+ 5xx?}
     PROD -->|yes| GEN[generic message]
     PROD -->|no| ACT[actual err.message]
-    GEN --> RES([res.status.json ErrorResponse])
+    GEN --> RES([sendError → ErrorResponse JSON])
     ACT --> RES
 ```
+
 ---
 
-## 4. `asyncHandler` — bridging Express 4 and async/await
+## 4. `asyncHandler` — why every route needs it
 
-Express 4 does not automatically catch rejected async route handlers. `asyncHandler` (exported from `errorHandler.ts`) wraps any async handler so rejections are forwarded to `next(err)`:
+Express 4 doesn't automatically catch errors from `async` route handlers. If an async function throws and there's no `asyncHandler` wrapper, Express never sees the error — it silently disappears.
+
+`asyncHandler` (exported from `errorHandler.ts`) fixes this by forwarding any rejection to `next(err)`:
 
 ```ts
+// correct — error is forwarded to the global handler
 router.get('/', authenticateToken, asyncHandler(handleGetYouth));
+
+// wrong — an error here silently disappears in Express 4
+router.get('/', authenticateToken, handleGetYouth);
 ```
 
-**Every route must use `asyncHandler`.** One missed route = a silent unhandled promise rejection that Express never sees. There are no exceptions.
+**Every route must use `asyncHandler`.** There are no exceptions. One missed route means a silent crash.
 
-Sync throws inside `async` functions become rejected promises, so `asyncHandler` catches them too — you don't need try/catch in controllers.
+You don't need `try/catch` in your controllers because of this — just throw and let the handler deal with it.
 
-**Express 5 note:** Express 5 handles async errors natively. When we upgrade, `asyncHandler` can be deleted from every route with no other changes needed.
+> **Express 5 note:** Express 5 handles async errors natively. When we upgrade, `asyncHandler` can be removed from every route with no other changes.
 
 ---
 
-## 5. Middleware order and where auth errors slot in
+## 5. How a request flows through the system
+
+A request passes through middleware layers in order — rate limiter, auth, validation, then the controller. Any error at any step ends up in the global handler.
+
+Here's the full path:
 
 ```mermaid
 flowchart TD
     REQ([Incoming request]) --> RID[requestId middleware\nassigns UUID to res.locals]
     RID --> RL{rate limiter}
-    RL -->|limit exceeded| R429[429 inline\nsendError — no next err]
+    RL -->|limit exceeded| R429[429 via sendError]
     RL -->|ok| AT{authenticateToken}
-    AT -->|invalid token| R401[401/403 inline\nsendError — no next err]
+    AT -->|invalid/missing token| R401[401 or 403 via sendError]
     AT -->|ok| RP{requirePermission}
-    RP -->|insufficient role| R403[403 inline\nsendError — no next err]
+    RP -->|wrong role| R403[403 via sendError]
     RP -->|ok| VR{validateRequest\nZod schema}
-    VR -->|Zod failure| R400[400 direct\nsendError with details]
+    VR -->|validation fails| R400[400 via sendError\nwith details array]
     VR -->|unexpected error| NE1[next err]
     VR -->|ok| CTL{asyncHandler\ncontroller}
     CTL -->|AppError thrown| NE2[next err]
@@ -131,28 +164,28 @@ flowchart TD
     EH --> RESERR([sendError → ErrorResponse JSON])
 ```
 
-No route matched at all → 404 handler → `sendError(res, 404, 'Not found')` (never reaches `errorHandler`).
+**A few things worth noting:**
 
-**404s are not logged by design.** The 404 path is fast and intentional — scan bots and bad routes are expected noise, not actionable signal. If you ever want to detect abuse patterns via 404 frequency, route through `next(new NotFoundError('Not found'))` instead so `errorHandler`'s warn logging picks it up.
-
-**Bypass paths — be aware:** Rate limiter (429), auth (401/403), and 404 all respond directly via `sendError` and never reach `errorHandler`. Auth and rate limiter paths log via `console.warn` inline — repeated 401s and 429s are visible in logs without routing through the handler. The tradeoff is that any cross-cutting logic later added to `errorHandler` (metrics, tracing hooks) still won't apply to these paths; at that point, route them through `next(err)` instead.
-
-`validateRequest` calls `sendError` directly for Zod errors (not `next(err)`) because the response shape includes `details`, which the global handler doesn't produce. Unexpected errors inside `validateRequest` do call `next(err)`. Its own `try/catch` around `schema.parseAsync()` makes it safe even if Zod parsing becomes async (e.g. DB-backed uniqueness checks).
+- **Rate limiter, auth, and 404** all call `sendError` directly and never reach `errorHandler`. This is intentional — they're fast, well-understood paths. The tradeoff is that any future cross-cutting logic added to `errorHandler` (metrics, tracing) won't apply to them without extra work.
+- **Validation errors (400)** also bypass `errorHandler` because they include a `details` array that the global handler doesn't produce.
+- **404s are not logged.** Unmatched routes are expected noise (scan bots, bad links). If you want to detect abuse via 404 patterns, route through `next(new NotFoundError(...))` instead.
 
 ---
 
-## 6. Request tracing — requestId
+## 6. Request tracing with `requestId`
 
-`requestId` (exported from `src/middleware/errorHandler.ts`) is registered as the first middleware in `index.ts`. It assigns a UUID to every request:
+Every request gets a unique ID the moment it arrives. This is what `requestId` middleware does (registered as the very first middleware in `index.ts`).
 
-- Stored on `res.locals.requestId`
-- Returned as `X-Request-ID` response header so clients can correlate their requests with server logs
-- `sendError()` picks it up automatically and includes it in `ErrorResponse` as `requestId`
-- Auth inline logs include the `requestId` (e.g. `[auth] 401 Token expired [abc-123]`)
+- The ID is stored on `res.locals.requestId`
+- It's returned to the client as the `X-Request-ID` response header
+- `sendError()` automatically includes it in every error response body as `requestId`
+- All server log lines include it
 
-If the client sends an `X-Request-ID` request header, that value is used as-is (useful for end-to-end tracing across services).
+**Why this matters:** If a user reports a bug and shares their `requestId`, you can find the exact log line that corresponds to their request — even across thousands of concurrent requests.
 
-**Log format standard:** All layers use the same format so logs are grep-friendly:
+If the client sends an `X-Request-ID` request header, that value is used instead of generating a new one. Useful for tracing a request across multiple services.
+
+**Log format:** Every layer logs in the same format so logs are easy to search:
 
 ```
 [requestId] layer status message
@@ -163,80 +196,61 @@ Examples:
 [abc-123] auth 401 Token expired
 [def-456] auth 403 Insufficient permissions — user: staff
 [ghi-789] errorHandler 500 Database connection refused
-[ghi-789] errorHandler error after response start (discarded): ...
 ```
 
-The `requestId` field is always first so log lines can be sorted and correlated by request ID. Error messages are logged as plain strings — no `Error:` prefix — so all lines stay consistent.
-
-**Future: include route in logs.** When request logging middleware is added, consider extending the format to `[requestId] layer status METHOD /path message` (e.g. `[abc-123] auth 401 GET /api/youth Token expired`). Deferred — not needed until log volume makes route context useful for triage.
-
-**`sendError` scope:** `sendError` is purely a formatting + send function. It must not grow to include logging, metrics, or branching logic — those belong in `errorHandler` or dedicated middleware. Keeping it pure means every call site behaves identically and the function stays trivially testable.
-
-**Success correlation follow-up:** `requestId` is on every response header (`X-Request-ID`) and in error bodies. Success response bodies do not include it — the header is sufficient for tracing. When request logging middleware is added (e.g. `[abc-123] GET /api/youth 200 45ms`), full request traces will tie errors and successes together by `requestId`.
+> **`sendError` is just a formatter** — it only assembles and sends the JSON. Logging, metrics, and branching logic belong in `errorHandler` or dedicated middleware, not in `sendError`.
 
 ---
 
-## 7. Process-level crash protection
+## 7. Crash protection
 
-`src/index.ts` registers `process.on('uncaughtException')` and `process.on('unhandledRejection')` after `app.listen`. Both log the error and `process.exit(1)` so the container/process manager restarts cleanly rather than leaving the server in an undefined state. This covers errors that escape Express entirely — e.g. a rejected promise with no `.catch()` outside any request context.
-
-**Requires a process manager** (Docker with restart policy, PM2, systemd, etc.). Without one, `process.exit(1)` terminates the server permanently and it won't come back.
-
-**Test environments:** Both handlers are guarded behind `NODE_ENV !== 'test'`. Without the guard, an unhandled rejection in a test would call `process.exit(1)` and terminate the Jest runner mid-run with no output or test summary.
-
----
-
-## 8. Frontend counterpart — ErrorBoundary
-
-> Cross-cutting note. When the frontend error system grows, move this section into `frontend/docs/errors.md`.
-
-`frontend/src/common/components/ErrorBoundary/ErrorBoundary.tsx` wraps the entire app in `main.tsx`.
-
-It catches **render errors** (errors thrown during React's render or lifecycle phase). It does **not** catch:
-
-- Errors inside event handlers (use try/catch in the handler)
-- Errors in async code (promises, setTimeout)
-- Server-side rendering errors
-
-On error it shows a clean fallback UI with a reload button and logs the error + component stack to the console.
-
-### Follow-up: frontend global error system (separate issue)
-
-The backend now reliably returns consistent status codes + `ErrorResponse` JSON. The frontend error handling has not yet caught up:
-
-1. **No global error UI** — each page handles errors independently, so error presentation is inconsistent across the app.
-2. **`handleApiError` doesn't distinguish status codes** — it throws a plain `Error` with no `statusCode` property, so the frontend can't act differently on 400 vs 403 vs 500.
-3. **No toast/notification system** — errors from background fetches or mutations with no visible error container are silently swallowed.
-
-What a proper solution needs:
-- Global notification/toast context (similar to the existing `ReLoginModal` pattern)
-- `handleApiError` upgraded to throw a typed `ApiError` with a `statusCode` property
-- Optionally: a global `unhandledrejection` listener for anything that slips through
-
-Build this after this branch merges.
-
----
-
-## 9. Future: domain errors vs transport errors
-
-Currently services throw `AppError` subclasses directly (e.g. `throw new NotFoundError('User not found')`). This works well at this scale.
-
-Longer term, consider separating domain errors from HTTP transport errors at the boundary between the service layer and the HTTP layer:
+Beyond request-level errors, `src/index.ts` also handles crashes that escape Express entirely — e.g. a rejected promise with no `.catch()` running outside a request:
 
 ```ts
-// service layer — domain language, HTTP-unaware
-throw new UserNotFoundError();
-
-// HTTP layer (route/controller) — maps domain errors to transport errors
-catch (err) {
-  if (err instanceof UserNotFoundError) throw new NotFoundError(err.message);
-  throw err;
-}
+process.on('uncaughtException', ...)
+process.on('unhandledRejection', ...)
 ```
 
-This keeps services unaware of HTTP, making them easier to test and reuse. Not needed now — add when services start being called from multiple contexts (e.g. HTTP + background jobs).
+Both log the error and call `process.exit(1)` so the container restarts cleanly (via Docker restart policy) rather than limping along in a broken state.
 
-**Future: machine-readable error codes.** Adding a `code` field to `ErrorResponse` (e.g. `"NOT_FOUND"`, `"VALIDATION_ERROR"`) lets frontend logic branch on error type without string-matching `message`. Deferred until the frontend `ApiError` class is built — design both together so the contract is consistent end-to-end. Once introduced, codes must be treated as a stable, versioned contract: renaming or removing a code is a breaking change for any client that has branched on it.
+> These handlers are disabled in `NODE_ENV=test`. Without that guard, an unhandled rejection in a test would call `process.exit(1)` and kill the Jest runner with no output.
+
+---
+
+## 8. Frontend — ErrorBoundary
+
+`frontend/src/common/components/ErrorBoundary/ErrorBoundary.tsx` wraps the entire React app. It catches **render-phase errors** — errors thrown during React's render or component lifecycle.
+
+It does **not** catch:
+- Errors inside event handlers (use `try/catch` in the handler)
+- Errors in async code (`fetch`, `setTimeout`, etc.)
+
+On error it shows a clean fallback UI with a reload button rather than a blank screen.
+
+### What's still missing on the frontend
+
+The backend consistently returns `{ error, requestId }` with correct status codes. The frontend hasn't caught up yet:
+
+| Problem | Impact |
+|---|---|
+| Each page handles errors independently | Inconsistent error UI across the app |
+| `handleApiError` throws a plain `Error` with no status code | Frontend can't distinguish 400 vs 403 vs 500 |
+| No toast/notification system | Errors from background fetches are silently swallowed |
+
+Planned fix (separate issue after this branch merges):
+- Global notification/toast context
+- `handleApiError` upgraded to a typed `ApiError` with a `statusCode` property
+- Optional: global `unhandledrejection` listener for anything that slips through
+
+---
+
+## 9. Future improvements
+
+Not needed yet, but worth considering later:
+
+- Add machine-readable error codes once the frontend has a typed `ApiError`.
+- Consider domain errors if services are reused outside HTTP routes.
+- Add structured logging or external error reporting when log volume grows.
 
 
 
