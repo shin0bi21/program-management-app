@@ -30,8 +30,13 @@ done
 
 # Step 4: Run migrations
 echo ""
-echo "Running migrations..."
+echo "Running migrations (dev DB)..."
 docker-compose exec -T backend npm run db:migrate 2>&1 | grep -v "CREATE\|DROP\|INSERT\|NOTICE\|ALTER" | grep -E "Applying:|Applied:|Failed:|Error:|error" || echo "  Migrations applied successfully"
+
+# Step 4b: Run migrations against the test DB (tmpfs, fresh on every restart)
+echo ""
+echo "Running migrations (test DB)..."
+docker-compose exec -T backend npm run db:migrate:test 2>&1 | grep -v "CREATE\|DROP\|INSERT\|NOTICE\|ALTER" | grep -E "Applying:|Applied:|Failed:|Error:|error" || echo "  Test DB migrations applied successfully"
 
 # Step 5: Seed admin user (if env vars are set)
 echo ""
