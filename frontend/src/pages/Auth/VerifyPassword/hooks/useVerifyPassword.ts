@@ -84,8 +84,10 @@ export const useVerifyPassword = () => {
       // Update auth context
       updateAuthState();
 
-      // Navigate to homepage
-      navigate('/');
+      // Navigate to last visited authenticated page, or settings as default
+      // (matches the trusted-device branch in useLogin)
+      const lastPath = localStorage.getItem('lastAuthPath') || '/settings/account';
+      navigate(lastPath);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Verification failed'));
     }

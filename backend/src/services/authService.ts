@@ -16,6 +16,14 @@ import type {
 import type { DbRow } from '../types/db';
 import { requireEnv } from '../utils/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types/auth';
+import {
+  LockedError,
+  UnauthorizedError,
+  TooManyRequestsError,
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError,
+} from '../errors/AppError';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
@@ -58,13 +66,6 @@ export type LoginResult =
 export interface VerifyResult {
   tokens: TokenPair;
   user: UserInfo;
-}
-
-export class AuthError extends Error {
-  constructor(public statusCode: number, message: string) {
-    super(message);
-    this.name = 'AuthError';
-  }
 }
 
 // ============================================================================
@@ -149,7 +150,7 @@ export async function loginUser(
 
     if (cred.lockedUntil && new Date(cred.lockedUntil) > new Date()) {
       const minutesLeft = Math.ceil((new Date(cred.lockedUntil).getTime() - Date.now()) / 60000);
-      throw new AuthError(423, `Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`);
+      throw new LockedError(`Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`);
     }
 
     if (cred.lockedUntil && new Date(cred.lockedUntil) <= new Date()) {
@@ -177,7 +178,7 @@ export async function loginUser(
           SET failed_login_attempts = ${newFailedAttempts}, locked_until = ${lockUntil}
           WHERE user_id = ${cred.userId}
         `;
-        throw new AuthError(423, 'Account locked due to too many failed attempts. Try again in 15 minutes.');
+        throw new LockedError('Account locked due to too many failed attempts. Try again in 15 minutes.');
       } else {
         await sql`
           UPDATE user_credentials
@@ -186,7 +187,7 @@ export async function loginUser(
         `;
       }
     }
-    throw new AuthError(401, 'Invalid email or password');
+    throw new UnauthorizedError('Invalid email or password');
   }
 
   const cred = credentials[0];
@@ -266,7 +267,7 @@ export async function verify2FACode(
   `;
 
   if (Number(recentAttempts[0]?.count) > 10) {
-    throw new AuthError(429, 'Too many verification attempts. Please try again later.');
+    throw new TooManyRequestsError('Too many verification attempts. Please try again later.');
   }
 
   // 2. Atomically mark code as used (prevents race conditions)
@@ -281,7 +282,7 @@ export async function verify2FACode(
   `;
 
   if (codes.length === 0) {
-    throw new AuthError(401, 'Invalid or expired code');
+    throw new UnauthorizedError('Invalid or expired code');
   }
 
   // 3. Fetch user details
@@ -299,7 +300,7 @@ export async function verify2FACode(
   `;
 
   if (credentials.length === 0) {
-    throw new AuthError(404, 'User not found');
+    throw new NotFoundError('User not found');
   }
 
   const cred = credentials[0];
@@ -357,7 +358,7 @@ export async function resend2FACode(userId: string): Promise<void> {
   `;
 
   if (Number(recentCodes[0]?.count) >= 3) {
-    throw new AuthError(429, 'Too many code requests. Please wait before requesting another code.');
+    throw new TooManyRequestsError('Too many code requests. Please wait before requesting another code.');
   }
 
   // 2. Fetch user details
@@ -373,7 +374,7 @@ export async function resend2FACode(userId: string): Promise<void> {
   `;
 
   if (credentials.length === 0) {
-    throw new AuthError(404, 'User not found');
+    throw new NotFoundError('User not found');
   }
 
   const cred = credentials[0];
@@ -403,11 +404,11 @@ export async function rotateRefreshToken(
   try {
     decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
   } catch {
-    throw new AuthError(403, 'Invalid refresh token');
+    throw new ForbiddenError('Invalid refresh token');
   }
 
   if (!decoded.jti) {
-    throw new AuthError(403, 'Invalid token format - please log in again');
+    throw new ForbiddenError('Invalid token format - please log in again');
   }
 
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
@@ -432,9 +433,9 @@ export async function rotateRefreshToken(
       await sql`
         UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_family = ${familyTokens[0].tokenFamily}
       `;
-      throw new AuthError(403, 'Token reuse detected - all sessions revoked');
+      throw new ForbiddenError('Token reuse detected - all sessions revoked');
     } else {
-      throw new AuthError(403, 'Invalid or expired refresh token');
+      throw new ForbiddenError('Invalid or expired refresh token');
     }
   }
 
@@ -446,7 +447,7 @@ export async function rotateRefreshToken(
   `;
 
   if (users.length === 0) {
-    throw new AuthError(403, 'User not found');
+    throw new ForbiddenError('User not found');
   }
 
   // 3. Generate new token pair in the same family
@@ -564,7 +565,7 @@ export async function resetUserPassword(token: string, newPassword: string): Pro
   `;
 
   if (tokens.length === 0) {
-    throw new AuthError(400, 'Invalid or expired reset token');
+    throw new BadRequestError('Invalid or expired reset token');
   }
 
   const resetToken = tokens[0];

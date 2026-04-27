@@ -4,6 +4,7 @@ import type { PermissionLevel } from '../types/database';
 import type { AccessTokenPayload } from '../types/auth';
 import { requireEnv } from '../utils/env';
 import { isBlacklisted } from '../services/tokenRevocationService';
+import { sendError } from '../errors/AppError';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
@@ -22,7 +23,10 @@ export const authenticateToken = async (
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
+    const rid = res.locals.requestId as string | undefined;
+    console.warn(`[${rid ?? '-'}] auth 401 No token`);
+    sendError(res, 401, 'Access denied. No token provided.');
+    return;
   }
 
   try {
@@ -31,12 +35,18 @@ export const authenticateToken = async (
 
     // Reject refresh tokens sent to protected routes
     if (verified.tokenType !== 'access') {
-      return res.status(403).json({ error: 'Invalid token type' });
+      const rid = res.locals.requestId as string | undefined;
+      console.warn(`[${rid ?? '-'}] auth 403 Invalid token type`);
+      sendError(res, 403, 'Invalid token type');
+      return;
     }
     
     // Check if token is blacklisted
     if (verified.jti && await isBlacklisted(verified.jti)) {
-      return res.status(401).json({ error: 'Token has been revoked' });
+      const rid = res.locals.requestId as string | undefined;
+      console.warn(`[${rid ?? '-'}] auth 401 Revoked token`);
+      sendError(res, 401, 'Token has been revoked');
+      return;
     }
     
     // Attach user to request
@@ -44,29 +54,40 @@ export const authenticateToken = async (
     next();
     
   } catch (error) {
+    const rid = res.locals.requestId as string | undefined;
     if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ error: 'Token expired' });
+      console.warn(`[${rid ?? '-'}] auth 401 Token expired`);
+      sendError(res, 401, 'Token expired');
+      return;
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(403).json({ error: 'Invalid token' });
+      console.warn(`[${rid ?? '-'}] auth 403 Invalid token`);
+      sendError(res, 403, 'Invalid token');
+      return;
     }
     
-    console.error('Authentication error:', error);
-    res.status(403).json({ error: 'Authentication failed' });
+    console.error(`[${rid ?? '-'}] auth 403 Authentication error`, error);
+    sendError(res, 403, 'Authentication failed');
   }
 };
 
-// Optional: Permission-based authorization
+// Permission-based authorization — use after authenticateToken
 export const requirePermission = (...allowedPermissions: PermissionLevel[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const authReq = req as AuthRequest;
     
     if (!authReq.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      const rid = res.locals.requestId as string | undefined;
+      console.warn(`[${rid ?? '-'}] auth 401 Not authenticated`);
+      sendError(res, 401, 'Not authenticated');
+      return;
     }
     
     if (!allowedPermissions.includes(authReq.user.permission)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      const rid = res.locals.requestId as string | undefined;
+      console.warn(`[${rid ?? '-'}] auth 403 Insufficient permissions — user: ${authReq.user.permission}`);
+      sendError(res, 403, 'Insufficient permissions');
+      return;
     }
     
     next();
