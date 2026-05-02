@@ -4,6 +4,7 @@ import App from './App'
 import './index.css'
 import './common/styles/brand.css'
 import './common/styles/forms.css'
+import './common/components/Button/Button.css'
 import ErrorBoundary from './common/components/ErrorBoundary/ErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

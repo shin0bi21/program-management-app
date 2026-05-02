@@ -1,0 +1,90 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn {
+  border: 1px solid var(--brand-ink);
+  background-color: var(--brand-ink);
+  color: #ffffff;
+}
+
+.btn:hover {
+  background-color: var(--brand-accent);
+  color: var(--brand-ink);
+  border-color: var(--brand-accent);
+}
+
+.btn--secondary {
+  border: 1px solid var(--brand-line);
+  background: var(--brand-panel-bg);
+  color: var(--brand-ink);
+}
+
+.btn--secondary:hover {
+  background-color: rgba(243, 165, 36, 0.12);
+  border-color: rgba(243, 165, 36, 0.5);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(243, 165, 36, 0.28);
+}
+
+.btn:disabled {
+  background-color: rgba(18, 22, 31, 0.35);
+  border-color: rgba(18, 22, 31, 0.2);
+  color: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--secondary:disabled,
+.btn--ghost:disabled {
+  background-color: rgba(18, 22, 31, 0.04);
+  border-color: var(--brand-line);
+  color: rgba(18, 22, 31, 0.4);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--brand-ink);
+}
+
+.btn--ghost:hover {
+  background: rgba(243, 165, 36, 0.12);
+  border-color: rgba(243, 165, 36, 0.2);
+}
+
+.btn--danger {
+  border: 1px solid #c53030;
+  background: #c53030;
+  color: #ffffff;
+}
+
+.btn--danger:hover {
+  background: #9b2c2c;
+  color: #ffffff;
+  border-color: #9b2c2c;
+}
+
+.btn--full {
+  width: 100%;
+}
+
+.btn--sm {
+  padding: 0.35rem 0.85rem;
+  border-radius: 5px;
+  font-size: 0.875rem;
+}
