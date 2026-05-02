@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useVerifyPassword } from './hooks/useVerifyPassword';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
+import Button from '../../../common/components/Button/Button';
 import './VerifyPassword.css';
 
 export default function VerifyPassword() {
@@ -58,13 +59,9 @@ export default function VerifyPassword() {
             <span>Remember this device for 30 days</span>
           </label>
 
-          <button
-            type="submit"
-            className="auth-submit"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" fullWidth disabled={isSubmitting}>
             {isSubmitting ? 'Verifying…' : 'Verify'}
-          </button>
+          </Button>
         </form>
 
         <div className="verify-footer">

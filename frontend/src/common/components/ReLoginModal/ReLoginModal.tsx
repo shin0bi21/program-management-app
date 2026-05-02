@@ -4,6 +4,7 @@ import { getDeviceFingerprint, getDeviceName } from '../../utils/deviceFingerpri
 import { login, verify2FA, resend2FA } from '../../../pages/Auth/common/api/auth.api';
 import { resolveReLogin } from '../../api/sessionExpired';
 import { getErrorMessage } from '../../utils/errors';
+import Button from '../Button/Button';
 import './ReLoginModal.css';
 
 interface ReLoginModalProps {
@@ -124,9 +125,9 @@ export default function ReLoginModal({ isOpen, onClose }: ReLoginModalProps) {
 
             {error && <p className="relogin-error">{error}</p>}
 
-            <button type="submit" className="relogin-btn" disabled={submitting}>
+            <Button type="submit" fullWidth disabled={submitting}>
               {submitting ? 'Verifying...' : 'Continue'}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -150,18 +151,13 @@ export default function ReLoginModal({ isOpen, onClose }: ReLoginModalProps) {
 
             {error && <p className="relogin-error">{error}</p>}
 
-            <button type="submit" className="relogin-btn" disabled={submitting}>
+            <Button type="submit" fullWidth disabled={submitting}>
               {submitting ? 'Verifying...' : 'Verify'}
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              className="relogin-btn relogin-btn--ghost"
-              onClick={handleResend}
-              disabled={resending}
-            >
+            <Button type="button" variant="ghost" fullWidth onClick={handleResend} disabled={resending}>
               {resending ? 'Sending...' : 'Resend code'}
-            </button>
+            </Button>
           </form>
         )}
       </div>

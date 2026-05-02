@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Button from '../../common/components/Button/Button';
 import Header from '../../common/components/Header/Header';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import { useYouth, YouthProfile } from './hooks/useYouth';
@@ -64,15 +65,16 @@ export default function Youth() {
       key: 'actions',
       header: 'Actions',
       render: (profile) => (
-        <button
-          className="page-action-btn"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => {
             setYouthToEdit(profile);
             setShowAddYouth(true);
           }}
         >
           Edit
-        </button>
+        </Button>
       ),
       width: '100px',
     },
@@ -85,9 +87,9 @@ export default function Youth() {
         <div className="page-header">
           <div className="page-title-row">
             <h1 className="page-title">Youth</h1>
-            <button className="page-add-btn" onClick={() => setShowAddYouth(true)}>
+            <Button onClick={() => setShowAddYouth(true)}>
               + Sign Up
-            </button>
+            </Button>
           </div>
         </div>
 

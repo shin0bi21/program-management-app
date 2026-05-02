@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useResetPassword } from './hooks/useResetPassword';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
+import Button from '../../../common/components/Button/Button';
 
 export default function ResetPassword() {
   const { form, error, message, onSubmit, token } = useResetPassword();
@@ -60,13 +61,9 @@ export default function ResetPassword() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="auth-submit"
-            disabled={isSubmitting || !token}
-          >
+          <Button type="submit" fullWidth disabled={isSubmitting || !token}>
             {isSubmitting ? 'Resetting…' : 'Reset password'}
-          </button>
+          </Button>
         </form>
 
         <div className="auth-links auth-links--centered">

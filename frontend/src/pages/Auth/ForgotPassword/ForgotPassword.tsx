@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useForgotPassword } from './hooks/useForgotPassword';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
+import Button from '../../../common/components/Button/Button';
 
 export default function ForgotPassword() {
   const { form, error, message, onSubmit } = useForgotPassword();
@@ -42,13 +43,9 @@ export default function ForgotPassword() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="auth-submit"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" fullWidth disabled={isSubmitting}>
             {isSubmitting ? 'Sending…' : 'Send reset link'}
-          </button>
+          </Button>
         </form>
 
         <div className="auth-links auth-links--centered">

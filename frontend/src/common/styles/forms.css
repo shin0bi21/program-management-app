@@ -51,46 +51,8 @@
 .form-field input:focus,
 .form-field select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
-}
-
-/* Buttons */
-.btn-cancel {
-  padding: 0.6rem 1.25rem;
-  border: 1px solid #ced4da;
-  background: white;
-  color: #495057;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel:hover {
-  background-color: #f8f9fa;
-}
-
-.btn-submit {
-  padding: 0.6rem 1.25rem;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-submit:hover {
-  background-color: #0056b3;
-}
-
-.btn-submit:disabled {
-  background-color: #6c9bd1;
-  cursor: not-allowed;
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(243, 165, 36, 0.18);
 }
 
 /* Checkbox */

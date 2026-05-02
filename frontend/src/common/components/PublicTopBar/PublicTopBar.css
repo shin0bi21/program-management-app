@@ -62,21 +62,10 @@
   background: rgba(18, 22, 31, 0.05);
 }
 
-.topbar-login {
+.topbar-login-btn {
   margin-left: 20px;
-  background: var(--brand-ink);
-  color: #ffffff;
-  border: none;
-  cursor: pointer;
   font-size: 0.92rem;
-  font-weight: 600;
   padding: 9px 22px;
   border-radius: 8px;
-  transition: background 0.15s;
   flex-shrink: 0;
-}
-
-.topbar-login:hover {
-  background: var(--brand-accent);
-  color: var(--brand-ink);
 }

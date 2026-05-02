@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useLogin } from './hooks/useLogin';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
+import Button from '../../../common/components/Button/Button';
 
 export default function Login() {
   const { form, error, onSubmit } = useLogin();
@@ -51,13 +52,9 @@ export default function Login() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="auth-submit"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" fullWidth disabled={isSubmitting}>
             {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
+          </Button>
         </form>
 
         <div className="auth-links">
