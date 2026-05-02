@@ -60,7 +60,7 @@
 }
 
 .sidebar-link.active {
-  background: var(--brand-accent);
+  background: rgba(243, 165, 36, 0.16);
   color: var(--brand-ink);
   font-weight: 600;
 }
@@ -116,7 +116,7 @@
 }
 
 .sidebar-sublink.active {
-  background: rgba(243, 165, 36, 0.16);
+  background: rgba(243, 165, 36, 0.12);
   color: var(--brand-ink);
   font-weight: 600;
 }

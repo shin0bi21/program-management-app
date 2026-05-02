@@ -7,15 +7,6 @@
   color: #dc3545;
 }
 
-/* Section title for General Info */
-.section-title {
-  margin-top: 4px;
-  margin-bottom: 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #495057;
-}
-
 /* Section header with border-top */
 .section-divider {
   margin-top: 24px;

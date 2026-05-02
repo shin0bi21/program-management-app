@@ -63,7 +63,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     >
       <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
         {/* General Information */}
-        <div className="section-title">General Information</div>
+        <div className="section-header">
+          <h3>General Information</h3>
+        </div>
         <div className="form-row">
           <div className="form-field">
             <label htmlFor="firstName">First Name *</label>
