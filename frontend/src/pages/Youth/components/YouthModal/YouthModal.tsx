@@ -1,5 +1,4 @@
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
 import type { YouthProfile } from '../../hooks/useYouth';
 import { useYouthModal } from './useYouthModal';
@@ -30,12 +29,21 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
 
   const footer = (
     <>
-      <button type="button" className="btn-cancel" onClick={handleClose} disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={handleClose}
+        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+      >
         Cancel
-      </button>
-      <button type="submit" form="youth-form" className="btn-submit" disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
+      </Button>
+      <Button
+        type="submit"
+        form="youth-form"
+        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+      >
         {youthData ? 'Update Form' : 'Sign Up'}
-      </button>
+      </Button>
     </>
   );
 
@@ -134,13 +142,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <div className="section-content">
             {addresses.map((addr, index) => (
                 <div key={index} className="address-form-item">
-                  {/* To re-enable per-item delete:
-                  <div className="form-item-header">
-                    <span className="form-item-label">Address {index + 1}</span>
-                    <button type="button" className="btn-delete" onClick={() => handleDeleteAddress(index)} aria-label="Delete address">
-                      <FontAwesomeIcon icon={faTrash} /> Delete
-                    </button>
-                  </div> */}
                   <div className="form-field">
                     <label htmlFor={`address-${index}`}>Street Address</label>
                     <input
@@ -185,8 +186,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                   </div>
                 </div>
               ))}
-              {/* To re-enable adding multiple addresses:
-              <button type="button" className="btn-add" onClick={handleAddAddress}>+ Add Address</button> */}
           </div>
         </div>
 
@@ -199,13 +198,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <div className="section-content">
             {contacts.map((cont, index) => (
                 <div key={index} className="contact-form-item">
-                  {/* To re-enable per-item delete:
-                  <div className="form-item-header">
-                    <span className="form-item-label">Contact {index + 1}</span>
-                    <button type="button" className="btn-delete" onClick={() => handleDeleteContact(index)} aria-label="Delete contact">
-                      <FontAwesomeIcon icon={faTrash} /> Delete
-                    </button>
-                  </div> */}
                   <div className="form-row">
                     <div className="form-field">
                       <label htmlFor={`contact-firstName-${index}`}>First Name</label>
@@ -254,8 +246,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                   </div>
                 </div>
               ))}
-              {/* To re-enable adding multiple contacts:
-              <button type="button" className="btn-add" onClick={handleAddContact}>+ Add Emergency Contact</button> */}
           </div>
         </div>
       </form>

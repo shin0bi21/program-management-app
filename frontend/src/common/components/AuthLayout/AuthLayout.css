@@ -210,33 +210,8 @@
   font-weight: 500;
 }
 
-/* ── Primary button ─────────────────────────────────── */
-.auth-submit {
+.auth-form .btn {
   margin-top: 4px;
-  padding: 12px;
-  background: var(--brand-ink);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.auth-submit:hover:not(:disabled) {
-  background: var(--brand-accent);
-  transform: translateY(-1px);
-}
-
-.auth-submit:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.auth-submit:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
 }
 
 /* ── Footer links ───────────────────────────────────── */

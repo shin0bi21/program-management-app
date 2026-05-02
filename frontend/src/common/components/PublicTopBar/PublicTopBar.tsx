@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../Button/Button';
 import './PublicTopBar.css';
 
 export default function PublicTopBar() {
@@ -29,9 +30,9 @@ export default function PublicTopBar() {
         <button className="topbar-link" onClick={() => scrollTo('team')}>Staff</button>
       </nav>
 
-      <button className="topbar-login" onClick={() => navigate('/login')}>
+      <Button className="topbar-login-btn" onClick={() => navigate('/login')}>
         Login
-      </button>
+      </Button>
     </header>
   );
 }

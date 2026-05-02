@@ -1,4 +1,5 @@
 import { Component, ReactNode } from 'react';
+import Button from '../Button/Button';
 import Modal from '../Modal/Modal';
 
 interface Props {
@@ -29,9 +30,9 @@ export default class ErrorBoundary extends Component<Props, State> {
           onClose={() => window.location.reload()}
           title="Something went wrong"
           footer={
-            <button className="btn-submit" onClick={() => window.location.reload()}>
+            <Button onClick={() => window.location.reload()}>
               Reload page
-            </button>
+            </Button>
           }
         >
           <p>An unexpected error occurred. Please reload the page.</p>
