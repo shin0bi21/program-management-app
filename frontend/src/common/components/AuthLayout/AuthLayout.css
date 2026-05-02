@@ -1,105 +1,78 @@
 /* ── Shell ──────────────────────────────────────────── */
 .auth-container {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-/* ── Left brand panel ───────────────────────────────── */
-.auth-brand-panel {
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  align-items: center;
-  padding: 64px 56px;
-  background: #ffffff;
-  border-right: 1px solid var(--brand-line);
   position: relative;
   overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(245, 200, 66, 0.16) 0%, transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.82) 100%),
+    var(--homepage-bg, #f7f6f2);
 }
 
-.auth-brand-logo {
-  position: relative;
-  z-index: 1;
-}
-
-.auth-brand-logo-img {
-  height: 180px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
-/* ── Decorative shapes ─────────────────────────────── */
-.auth-brand-shapes {
+.auth-container::before {
+  content: '';
   position: absolute;
-  inset: 0;
+  bottom: -110px;
+  right: -120px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 200, 66, 0.18);
   pointer-events: none;
 }
 
-.auth-shape--sq-lg {
+.auth-container::after {
+  content: '';
   position: absolute;
-  width: 320px;
-  height: 320px;
-  border: 2px solid rgba(18, 22, 31, 0.08);
-  border-radius: 16px;
-  bottom: -110px;
-  right: -110px;
-  transform: rotate(18deg);
-}
-
-.auth-shape--sq-lg2 {
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border: 1px solid rgba(18, 22, 31, 0.04);
-  border-radius: 16px;
-  bottom: -88px;
-  right: -88px;
-  transform: rotate(30deg);
-}
-
-.auth-shape--sq-md {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border: 2px solid rgba(243, 165, 36, 0.15);
-  border-radius: 10px;
-  top: -70px;
-  left: -70px;
-  transform: rotate(-14deg);
-}
-
-.auth-shape--sq-md2 {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border: 1px solid rgba(243, 165, 36, 0.07);
-  border-radius: 10px;
-  top: -52px;
-  left: -52px;
-  transform: rotate(-26deg);
-}
-
-.auth-shape--sq-sm {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  border-radius: 5px;
-  background: rgba(243, 165, 36, 0.14);
-  top: 38%;
-  right: 44px;
-  transform: rotate(22deg);
+  top: -72px;
+  left: -68px;
+  width: 240px;
+  height: 240px;
+  border-radius: 18px;
+  border: 1.5px solid rgba(18, 22, 31, 0.07);
+  transform: rotate(-18deg);
+  pointer-events: none;
 }
 
 /* ── Right form panel ───────────────────────────────── */
 .auth-form-panel {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  min-height: 100vh;
+  width: 100%;
   padding: 64px 40px;
-  background: var(--brand-surface-alt);
+}
+
+.auth-form-panel::before {
+  content: '';
+  position: absolute;
+  top: 18%;
+  right: 8%;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: rgba(243, 165, 36, 0.16);
+  transform: rotate(24deg);
+  pointer-events: none;
+}
+
+.auth-form-panel::after {
+  content: '';
+  position: absolute;
+  left: 10%;
+  bottom: 10%;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 1px solid rgba(18, 22, 31, 0.05);
+  pointer-events: none;
 }
 
 /* ── Card ───────────────────────────────────────────── */
@@ -108,9 +81,10 @@
   border-radius: 16px;
   padding: 48px 44px;
   box-shadow: 0 8px 32px rgba(18, 22, 31, 0.1), 0 2px 8px rgba(18, 22, 31, 0.06);
-  clip-path: inset(0px -40px 0px 0px);
   width: 100%;
-  max-width: 440px;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card-kicker {
@@ -252,19 +226,25 @@
 
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 768px) {
-  .auth-container {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-brand-panel {
-    display: none;
-  }
-
   .auth-form-panel {
     padding: 40px 20px;
   }
 
   .auth-card {
     padding: 36px 28px;
+  }
+
+  .auth-container::before {
+    width: 300px;
+    height: 300px;
+    right: -130px;
+    bottom: -100px;
+  }
+
+  .auth-container::after {
+    width: 180px;
+    height: 180px;
+    left: -64px;
+    top: -48px;
   }
 }
