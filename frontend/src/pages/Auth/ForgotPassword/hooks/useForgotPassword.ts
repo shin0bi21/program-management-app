@@ -18,8 +18,8 @@ export const useForgotPassword = () => {
     setMessage('');
 
     try {
-      const response = await forgotPassword(data.email);
-      setMessage(response?.message || 'Password reset email sent');
+      await forgotPassword(data.email);
+      setMessage('Password reset email sent');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to send reset email'));
     }
