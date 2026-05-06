@@ -1,12 +1,12 @@
 /**
- * Promise bridge between fetchWithAuth and ReLoginModal.
+ * Promise bridge between apiClient and ReLoginModal.
  *
- * When a request hits an expired token:
- *  1. fetchWithAuth calls awaitReLogin() — this fires 'auth:sessionExpired' and
+ * When a request hits an expired or rejected token:
+ *  1. apiClient calls awaitReLogin() — this fires 'auth:sessionExpired' and
  *     returns a promise that all concurrent callers share.
  *  2. ReLoginModal listens for the event, shows itself, and calls resolveReLogin()
  *     on successful re-authentication.
- *  3. All waiting fetchWithAuth calls unblock and retry their requests.
+ *  3. All waiting apiClient calls unblock and retry their requests.
  */
 
 let pendingPromise: Promise<void> | null = null;
