@@ -1,3 +1,4 @@
+import escapeHtml from 'escape-html';
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
@@ -24,12 +25,14 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
 
 export const send2FACode = async (to: string, code: string, firstName: string) => {
   const subject = 'Your Verification Code';
+  const safeFirstName = escapeHtml(firstName);
+  const safeCode = escapeHtml(code);
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Hi ${firstName},</h2>
+      <h2>Hi ${safeFirstName},</h2>
       <p>Your verification code is:</p>
       <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;">
-        ${code}
+        ${safeCode}
       </div>
       <p>This code will expire in 5 minutes.</p>
       <p>If you didn't request this code, please ignore this email.</p>

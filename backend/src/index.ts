@@ -9,13 +9,17 @@ import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 import { errorHandler, requestId } from './middleware/errorHandler';
 import { sendError } from './errors/AppError';
+import { checkConnection } from './db/client';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const allowedOrigins = new Set([frontendUrl, 'http://localhost:5173']);
 
 // Assign a unique ID to every request — first middleware so all subsequent
 // handlers can access res.locals.requestId for logging and error responses
 app.use(requestId);
+app.set('trust proxy', 1);
 
 // Security headers
 app.use(helmet({
@@ -24,15 +28,27 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Health check endpoint for monitoring
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check endpoint — returns DB connectivity status for monitoring/diagnostics
+app.get('/health', async (req, res) => {
+  const dbOk = await checkConnection();
+  const status = dbOk ? 200 : 503;
+  res.status(status).json({
+    status: dbOk ? 'ok' : 'degraded',
+    db: dbOk ? 'connected' : 'unavailable',
+  });
 });
 
 // --- Routes ---

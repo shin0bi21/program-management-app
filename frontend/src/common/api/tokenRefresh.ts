@@ -1,5 +1,6 @@
 import { clearAuthData, getUser, setAuthData } from '../utils/storage';
 import { api } from './config';
+import { NetworkError } from '../utils/errors';
 
 let refreshPromise: Promise<string> | null = null;
 
@@ -11,10 +12,16 @@ export async function refreshToken(): Promise<string> {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch(api('/auth/refresh'), {
-        method: 'POST',
-        credentials: 'include',
-      });
+      let res: Response;
+      try {
+        res = await fetch(api('/auth/refresh'), {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch (err) {
+        if (err instanceof TypeError) throw new NetworkError();
+        throw err;
+      }
 
       if (!res.ok) throw new Error('Token refresh failed');
 

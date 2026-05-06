@@ -1,14 +1,10 @@
-import { api } from '../../../common/api/config';
-import { fetchWithAuth } from '../../../common/api/fetchWithAuth';
-import { handleApiError } from '../../../common/utils/errors';
+import { apiClient } from '../../../common/api/client';
 
-export async function getYouth(id?: string) {
-  const res = await fetchWithAuth(api(`/youth${id ? `?id=${id}` : ''}`));
-  await handleApiError(res);
-  return res.json();
+export function getYouth(id?: string) {
+  return apiClient.get(`/youth${id ? `?id=${id}` : ''}`);
 }
 
-export async function setYouth(data: {
+export function setYouth(data: {
   id?: string;
   firstName: string;
   lastName: string;
@@ -29,18 +25,9 @@ export async function setYouth(data: {
     type: 'parent' | 'sibling' | 'guardian';
   }>;
 }) {
-  const res = await fetchWithAuth(api('/youth'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-
-  await handleApiError(res);
-  return res.json();
+  return apiClient.post('/youth', data);
 }
 
-export async function getSchools() {
-  const res = await fetchWithAuth(api('/schools'));
-  await handleApiError(res);
-  return res.json();
+export function getSchools() {
+  return apiClient.get('/schools');
 }
