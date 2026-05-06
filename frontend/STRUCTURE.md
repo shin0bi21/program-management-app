@@ -11,82 +11,75 @@ This project uses page-scoped organization with a small `common/` area for share
 
 Every request follows the same path through the stack:
 
-```
-Component (.tsx)  →  Hook (useX.ts)  →  API (.api.ts)  →  Backend Route  →  Controller  →  DB
-     UI only         form state,         fetch() call       middleware        business       SQL
-                     submit logic        + error check      chain             logic          queries
+```mermaid
+flowchart LR
+    A["Component (.tsx)\nUI only"] --> B["Hook (useX.ts)\nform state + submit logic"]
+    B --> C["API (.api.ts)\napiClient call"]
+    C --> D["Backend Route\nmiddleware chain"]
+    D --> E["Controller\nbusiness logic"]
+    E --> F[("DB\nSQL")]
+    F -->|result| E
+    E -->|JSON| C
+    C -->|typed response| B
+    B -->|setState| A
 ```
 
 ### Example: Login
 
 1. **Login.tsx** — renders the form, delegates to `useLogin()` hook
 2. **useLogin.ts** — React Hook Form + Zod validates fields, calls `login()` from auth.api.ts on submit
-3. **auth.api.ts** — `fetch(api('/auth/login'), { ... })` sends JSON to backend
+3. **auth.api.ts** — `apiClient.post('/auth/login', { email, password }, { auth: false })` sends JSON to backend via the centralized API client
 4. **authRoutes.ts** — `POST /api/auth/login` → rate limiter → Zod body validation → controller
 5. **authController.ts** — queries DB for user, bcrypt compares password, generates 2FA code or JWT
 6. **client.ts** — `sql` tagged template executes parameterized queries against PostgreSQL
 
 Response flows back: DB → controller JSON response → fetch resolves → hook stores token → component re-renders.
 
-### Shared utilities
-
-- **`common/api/config.ts`** — `api()` helper prefixes base URL so fetch calls use short routes like `api('/auth/login')`
-- **`common/utils/errors.ts`** — `handleApiError()` checks `res.ok` and throws, `getErrorMessage()` extracts messages in catch blocks
-- **`common/context/AuthContext.tsx`** — global `isAuthenticated` state, used by Header, ProtectedRoute, and auth hooks
-
 ## Layout
+
+`common/` contains all shared code — annotated below. `pages/` follows the page-scoped pattern described in the rules below; each page is self-contained.
+
 ```
 src/
-  App.tsx
-  main.tsx
-  index.css
-  vite-env.d.ts
   common/
     api/
-      config.ts
+      client.ts           ← apiClient — all HTTP calls go through here
+      config.ts           ← api() URL helper
+      sessionExpired.ts   ← awaitReLogin / resolveReLogin
+      tokenRefresh.ts     ← proactive refresh with deduplication
     components/
+      AuthLayout/         ← shared wrapper for auth pages
+      Button/
+      ErrorBoundary/      ← wraps entire app, catches render errors
+      Footer/
       Header/
-      ProtectedRoute/
+      Modal/
+      ProtectedRoute/     ← redirects unauthenticated users
+      PublicTopBar/
+      ReLoginModal/       ← shown when access token expires mid-session
+      Table/              ← shared data table
     context/
-      AuthContext.tsx
+      AuthContext.tsx     ← isAuthenticated, user, setAuthData, clearAuthData
+    hooks/
+      useAddresses.ts     ← entity-agnostic address array state
+      useContacts.ts      ← entity-agnostic contact array state
+      useSchools.ts       ← read-only school lookup
+      useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
+    styles/
+      brand.css
+      forms.css
     utils/
+      errors.ts           ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
+      storage.ts          ← getToken, setAuthData, clearAuthData, getUser
       deviceFingerprint.ts
-      errors.ts
-      jwt.ts
-      storage.ts
       time.ts
   pages/
+    Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/
-      Homepage.tsx
-      Homepage.css
-    Users/
-      Users.tsx
-      Users.css
-      api/
-        users.api.ts
-    Auth/
-      Login/
-        Login.tsx
-        Login.css
-      VerifyPassword/
-        VerifyPassword.tsx
-        VerifyPassword.css
-      ForgotPassword/
-        ForgotPassword.tsx
-        ForgotPassword.css
-      ResetPassword/
-        ResetPassword.tsx
-        ResetPassword.css
-      api/
-        auth.api.ts
-        tokenRefresh.ts
-      hooks/
-        useLogin.ts
-        useVerifyPassword.ts
-        useForgotPassword.ts
-        useResetPassword.ts
-      validation/
-        authSchemas.ts
+    Settings/
+    Staff/                ← Staff.tsx + api/ + hooks/ + (no modal yet)
+    Youth/                ← Youth.tsx + api/ + hooks/ + components/YouthModal/
 ```
 
 ## Rules of Thumb
@@ -139,14 +132,14 @@ pages/X/
       xSchema.ts                 ← Zod schema for RHF fields
 ```
 
-```
-XModal.tsx
-  └── useXModal({ isOpen, xData, onClose, onSuccess })
-        ├── useState              submitStatus, error
-        ├── useForm (RHF + Zod)  scalar fields (name, date, etc.)
-        ├── useAddresses()       address array state
-        ├── useContacts()        contact array state
-        └── useSchools()         read-only lookup data
+```mermaid
+flowchart TD
+    M[XModal.tsx] --> HK["useXModal({ isOpen, xData, onClose, onSuccess })"]
+    HK --> S["useState — submitStatus, error"]
+    HK --> F["useForm (RHF + Zod) — scalar fields"]
+    HK --> A["useAddresses() — address array state"]
+    HK --> C["useContacts() — contact array state"]
+    HK --> SC["useSchools() — read-only lookup"]
 ```
 
 ---
@@ -201,18 +194,21 @@ The incoming record (`data`) is never mutated. It is the pre-fill source only.
 
 **User edits:** each state owner handles its own slice independently. Edits to contacts do not affect RHF state and vice versa.
 
-**Submit:**
-```
-rhfHandleSubmit(onValid)
-  → Zod validates RHF fields
-  → validateAddresses() / validateContacts()   manual partial validation
-  → payload = RHF fields + getAddressPayload() + getContactPayload()
-  → API call(s)
-  → onSuccess(savedRecord)                     page splices by UUID
-  → resetForm()                                all state cleared
-```
+**Submit / Close:**
 
-**Close:** `resetForm()` wipes all state owners back to empty defaults.
+```mermaid
+flowchart TD
+    SB([Submit button]) --> RHF["rhfHandleSubmit — Zod validates RHF fields"]
+    RHF -->|invalid| FE[Set RHF field errors]
+    RHF -->|valid| VA["validateAddresses() / validateContacts()"]
+    VA -->|invalid| AE[Set array error message]
+    VA -->|valid| PL["Build payload\nRHF fields + getAddressPayload() + getContactPayload()"]
+    PL --> API[API call]
+    API -->|error| ER["setError(getErrorMessage(err))\nsetSubmitStatus('error')"]
+    API -->|success| OK["onSuccess(savedRecord) — page splices by UUID"]
+    OK --> RS[resetForm — all state cleared]
+    CB([Close button]) --> RS
+```
 
 ---
 
@@ -242,25 +238,34 @@ Partial validation rule: if all fields on a row are empty, the row is skipped. O
 
 ### Submit State Machine
 
-Every modal hook uses a single state value (not multiple booleans):
+Every modal hook uses `useSubmitStatus()` from `common/hooks/useSubmitStatus.ts`:
 
 ```ts
-type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
-const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-const [error, setError] = useState('');
+const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
 ```
 
-This drives button disabled state and status messages from one source. Only one status can be true at a time — no contradictory states possible.
+It encapsulates the state pair and exposes a `resetStatus()` helper that clears both at once. `SubmitStatus` is exported from the same file:
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> submitting : form submitted
+    submitting --> success : API resolves
+    submitting --> error : API throws
+    success --> idle : modal closes / resetStatus()
+    error --> idle : user edits / resetStatus()
+    error --> submitting : form re-submitted
+```
+
+Only one status can be true at a time — no contradictory states possible.
 
 ---
 
-### Known Pattern: Double Network Call
+### Save Flow — Upsert Returns Full Record
 
-Current save flow does two requests — upsert returns `{ id }` only, then a second fetch gets the full record:
+The save flow does a single request. `setYouth` / `setStaff` return the full saved record directly — the upsert endpoint runs the same SELECT as the GET endpoint and returns it in one response:
 
 ```ts
-const result = await setX(payload);    // returns { id }
-const saved = await getX(result.id);   // fetch full record
+const savedYouth = await setYouth(payload);  // returns full YouthProfile
+onSuccess(savedYouth);                        // page splices by UUID
 ```
-
-**Planned fix:** upsert endpoint returns the full record directly (same SELECT as the GET endpoint, extracted into a shared helper function in the controller). Eliminates the second request and the two-failure-mode risk.

@@ -23,6 +23,37 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 
 Auth uses two separate JWTs — an **access token** and a **refresh token** — signed with two different secrets (`JWT_SECRET` and `REFRESH_SECRET`). They are distinguished at the payload level by a `tokenType` discriminator claim, not just by which secret was used to sign them.
 
+```mermaid
+flowchart TD
+    A([POST /auth/login]) --> B[Validate email + password\nauthService.ts]
+    B --> C{Credentials valid?}
+    C -->|No| C1([401 Invalid credentials])
+    C -->|Yes| D{Trusted device?}
+    D -->|Yes — skip 2FA| E
+    D -->|No| D1[Send 2FA code via email\nemailService.ts]
+    D1 --> D2([200 — requires2FA: true\nuserId returned to client])
+
+    D2 -.->|client calls| A2
+
+    A2([POST /auth/verify]) --> F[Validate 2FA code + userId\nauthService.ts]
+    F --> G{Code valid and not expired?}
+    G -->|No| G1([401 Invalid or expired code])
+    G -->|Yes| E[Issue access token — 1h\nJWT_SECRET · tokenType: access]
+    E --> H[Issue refresh token — 8h\nREFRESH_SECRET · tokenType: refresh\nstored in refresh_tokens table]
+    H --> I([200 — { token, user }\nrefresh token set as httpOnly cookie])
+
+    I -.->|session active| A3
+
+    A3([POST /auth/refresh]) --> J[Read httpOnly cookie\nvalidate refresh token signature + DB record]
+    J --> K{Token valid?}
+    K -->|No| K1([401 — redirect to login])
+    K -->|Yes| L[Rotate — revoke old refresh token\nissue new access token + new refresh token]
+    L --> M([200 — { token }\nnew httpOnly cookie set])
+
+    A4([POST /auth/logout]) --> N[Blacklist access token JTI\nrevoke refresh token in DB]
+    N --> O([200 — session cleared])
+```
+
 ```
 Login flow
   POST /login   →  validates credentials, sends 2FA email, returns { type: 'requires2FA' }
@@ -151,6 +182,17 @@ The `tokenType` guard provides an explicit payload-level check on top of signatu
 8. Return `{ newAccessToken, newRefreshToken }`
 
 Token families (`token_family` UUID) group all tokens from a single login session. Reuse detection works at the family level — if any revoked token in a family is presented, all active tokens in that family are revoked, forcing a full re-login.
+
+### Atomic Single-Use Consumption
+
+Auth also uses an atomic check-and-consume pattern for one-time secrets. The goal is to avoid the classic race where two concurrent requests both pass a `SELECT ... WHERE used_at IS NULL` check before either request marks the row as used.
+
+There are two places this shows up in `authService.ts`:
+
+- `verify2FACode()` uses `UPDATE auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement.
+- `resetUserPassword()` uses `UPDATE password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse.
+
+This is the same design principle as refresh token rotation: the state transition that makes the secret unusable happens atomically with the validation step, so a code or token cannot be successfully consumed twice.
 
 ---
 

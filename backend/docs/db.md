@@ -19,6 +19,29 @@ For commands and quick reference see [README.md § 9 Database & Migrations](../R
 
 Migrations are plain `.sql` files — no ORM migration DSL, no `up`/`down` pairs. Every file runs once, in filename order, inside a single DB transaction. Applied files are tracked in `schema_migrations` with a SHA-256 checksum per file.
 
+```mermaid
+flowchart TD
+    A([npm run db:migrate]) --> B["Read + sort migration files\ndb/migrations/ — lexicographic order"]
+    B --> D[Acquire advisory lock\nID 123456789]
+    D --> E{File in\nschema_migrations?}
+    E -->|Yes — check checksum| F{Checksum\nmatch?}
+    F -->|No| WARN["⚠ Warn — file modified after apply\nContinue"]
+    F -->|Yes| SKIP[Skip]
+    WARN --> SKIP
+    E -->|No — new file| TX[BEGIN transaction]
+    TX --> SQL[Execute SQL statements]
+    SQL --> ERR{Error?}
+    ERR -->|Yes| RB[ROLLBACK\nrelease lock, exit 1]
+    ERR -->|No| INS["INSERT into schema_migrations\nwith SHA-256 checksum"]
+    INS --> CMT[COMMIT]
+    CMT --> NEXT{More files?}
+    SKIP --> NEXT
+    NEXT -->|Yes| E
+    NEXT -->|No| REL[Release advisory lock]
+    REL --> TYPES["npm run db:types\nRegenerate src/types/database.ts"]
+    TYPES --> DONE([Done])
+```
+
 ```
 db/
 ├── migrations/
@@ -137,16 +160,45 @@ Security tables are excluded because backing up credential hashes or reset token
 
 ## 6. Base Table Pattern
 
-All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns:
+All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns. `INCLUDING ALL` copies constraints, indexes, defaults, and triggers — not just column definitions, so the `updated_at` auto-update trigger is inherited automatically.
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `id` | `UUID` | Primary key, auto-generated |
-| `created_at` | `TIMESTAMPTZ` | Row creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | Last update timestamp (auto-updated via trigger) |
-| `created_by` | `UUID` | User who created the row |
-| `updated_by` | `UUID` | User who last updated the row |
-
-`INCLUDING ALL` copies constraints, indexes, defaults, and triggers — not just column definitions. This means the `updated_at` auto-update trigger is inherited automatically.
+```mermaid
+erDiagram
+    base_table {
+        uuid id PK
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+    }
+    users {
+        string email
+        string first_name
+        string last_name
+        permission_level permission
+    }
+    youth_profiles {
+        string first_name
+        string last_name
+        date date_of_birth
+        uuid school_id FK
+    }
+    addresses {
+        string street
+        string city
+        string province
+        string postal_code
+    }
+    contacts {
+        string first_name
+        string last_name
+        string phone
+        string relationship
+    }
+    base_table ||--o{ users : "LIKE base_table INCLUDING ALL"
+    base_table ||--o{ youth_profiles : "LIKE base_table INCLUDING ALL"
+    base_table ||--o{ addresses : "LIKE base_table INCLUDING ALL"
+    base_table ||--o{ contacts : "LIKE base_table INCLUDING ALL"
+```
 
 **Rule:** every new data table must use `LIKE base_table INCLUDING ALL`. Never define `id`, `created_at`, `updated_at` manually.
