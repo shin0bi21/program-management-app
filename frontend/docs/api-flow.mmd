@@ -1,0 +1,82 @@
+flowchart TD
+  A["UI action or data hook"] --> B{"Endpoint type"}
+
+  %% ─── AUTH ENDPOINTS (no token needed) ───────────────────────────────────
+  B -->|"Auth endpoint\n{ auth: false }"| C["auth.api.ts\nsrc/pages/Auth/common/api/auth.api.ts"]
+  C --> CLIENT["apiClient.post(path, body, { auth: false })\nsrc/common/api/client.ts"]
+
+  C -. "outgoing request body" .-> JR1["{ email, password, deviceFingerprint? }\nor { userId, code, trustDevice }\nor { token, newPassword } etc."]
+
+  %% ─── PROTECTED ENDPOINTS (token required) ───────────────────────────────
+  B -->|"Protected endpoint\n{ auth: true (default) }"| F["feature api module\nsrc/pages/Staff/api/staff.api.ts\nsrc/pages/Youth/api/youth.api.ts"]
+  F --> CLIENT
+
+  %% ─── APICLIENT — TOKEN VALIDATION ───────────────────────────────────────
+  CLIENT --> G{"auth: true?"}
+  G -->|No| FETCH
+  G -->|Yes| H["getValidToken()\nsrc/common/api/client.ts"]
+
+  H --> J{"Token in storage?"}
+  J -->|No| K["throw new AuthError()
+src/common/utils/errors.ts"]
+  J -->|Yes| L{"Access token expired?"}
+
+  L -->|Yes| M["awaitReLogin()\nsrc/common/api/sessionExpired.ts"]
+  M --> N["Dispatch auth:sessionExpired"]
+  N --> O["App opens ReLoginModal"]
+  O --> P["User re-authenticates via login / verify2FA"]
+  P --> Q["setAuthData(new token, user)\nsrc/common/utils/storage.ts"]
+  Q --> R["resolveReLogin()\nsrc/common/api/sessionExpired.ts"]
+  R --> S["Return fresh token string"]
+
+  L -->|No| T{"Near expiry and\nrefresh cooldown passed?"}
+  T -->|Yes| U["refreshToken()\nsrc/common/api/tokenRefresh.ts"]
+  U --> V["fetch POST /auth/refresh\ncredentials: include — httpOnly cookie"]
+  V --> W{"Refresh ok?"}
+  W -->|Yes| X["Store new token — return token string"]
+  W -->|No or NetworkError| Y["clearAuthData() → window.location /login\nsrc/common/utils/storage.ts"]
+  T -->|No| Z["Return existing token string"]
+
+  S --> FETCH["rawFetch(url, init, timeout)\nsrc/common/api/client.ts"]
+  X --> FETCH
+  Z --> FETCH
+
+  FETCH -. "outgoing request headers (auth)" .-> JR2["Authorization: Bearer eyJhbGci...\nContent-Type: application/json"]
+
+  %% ─── NETWORK TRANSPORT ──────────────────────────────────────────────────
+  FETCH --> NE{"fetch outcome"}
+  NE -->|"TypeError — no response"| AF["throw NetworkError\nsrc/common/utils/errors.ts"]
+  NE -->|"AbortController timeout"| AG["throw RequestTimeoutError\nsrc/common/utils/errors.ts"]
+  NE -->|"Caller AbortSignal fired"| AH["rethrow AbortError"]
+  NE -->|"HTTP response received"| AK["Response object"]
+
+  %% ─── 401 RETRY ───────────────────────────────────────────────────────────
+  AK --> AM{"auth: true\nand status 401?"}
+  AM -->|Yes| AN["awaitReLogin()\nsrc/common/api/sessionExpired.ts"]
+  AN --> AO["User re-authenticates"]
+  AO --> AP["rawFetch retry with fresh token"]
+  AP --> AQ["Response object"]
+  AM -->|No| AQ
+
+  %% ─── RESPONSE HANDLING (inside apiClient.execute) ────────────────────────
+  AQ --> AU{"response.ok?"}
+  AU -->|"No — 4xx / 5xx"| AW["res.json() → error object"]
+  AW --> AX["throw new ApiError(status, message, details?, requestId?)
+src/common/utils/errors.ts"]
+  AU -->|"Yes — 2xx"| AV["res.json() → typed data T"]
+
+  AQ -. "raw HTTP response body" .-> JRS["2xx: { token, user } · { ...record } · [...records]\n4xx/5xx: { error: string, details?: [{ field, message }], requestId?: string }"]
+  AV -. "parsed success examples" .-> JRS2["Auth: { token, user: { id, email, firstName, lastName, permissionLevel } }\nStaff: StaffProfile[]\nYouth: YouthProfile[]\nSchools: School[]"]
+
+  %% ─── ERROR CONVERGENCE ───────────────────────────────────────────────────
+  AF --> ERR["Hook or component catch block"]
+  AG --> ERR
+  AH --> ERR
+  K --> ERR
+  AX --> ERR
+  Y --> REDIR["Page navigates to /login\nhook catch never reached"]
+
+  ERR --> AZ["getErrorMessage(err, fallback)\nsrc/common/utils/errors.ts"]
+  AZ --> BA["Render error message in UI"]
+
+  AV --> BB["Update component state / navigate / render data"]

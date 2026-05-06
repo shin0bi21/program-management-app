@@ -38,7 +38,7 @@ That's it. No `try/catch` in the controller, no `res.status().json()` — the gl
 
 **Adding a new error type:** subclass `AppError`, set `statusCode` and `name`, export it. The global handler picks it up automatically with no other changes required.
 
-> `ConflictError` (409) isn't here yet — it'll be added when we need it (e.g. duplicate email on staff create).
+> `ConflictError` (409) is not yet defined — add it in `AppError.ts` when you need it (e.g. duplicate email on staff create).
 
 ---
 
@@ -112,6 +112,16 @@ flowchart TD
     GEN --> RES([sendError → ErrorResponse JSON])
     ACT --> RES
 ```
+
+### DB connection errors → 503
+
+`errorHandler` has a special branch for postgres.js connection failures. If the error is not an `AppError` but matches known connection error patterns (`ECONNREFUSED`, `connect`, `57P03`, or `PostgresError` constructor name), it is treated as a 503 Service Unavailable rather than a 500:
+
+- **Log:** `[rid] DATABASE UNAVAILABLE — query failed with no DB connection`
+- **Response message:** `"The server is temporarily unavailable. Please try again shortly."` — generic, safe for clients
+- **Status:** 503 (not 500 — allows load balancers and clients to distinguish a DB outage from a code bug)
+
+The `/health` endpoint also pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with a 200 or 503.
 
 ---
 
@@ -227,20 +237,20 @@ It does **not** catch:
 
 On error it shows a clean fallback UI with a reload button rather than a blank screen.
 
-### What's still missing on the frontend
+### Frontend error handling
 
-The backend consistently returns `{ error, requestId }` with correct status codes. The frontend hasn't caught up yet:
+The frontend now has a typed error hierarchy in `src/common/utils/errors.ts` that mirrors what the backend sends:
 
-| Problem | Impact |
-|---|---|
-| Each page handles errors independently | Inconsistent error UI across the app |
-| `handleApiError` throws a plain `Error` with no status code | Frontend can't distinguish 400 vs 403 vs 500 |
-| No toast/notification system | Errors from background fetches are silently swallowed |
+| Class | Thrown by | When |
+|---|---|---|
+| `ApiError(status, message, details?, requestId?)` | `apiClient` | Server returned 4xx/5xx — preserves status, Zod field errors, and requestId |
+| `AuthError` | `apiClient` | No token in storage when a protected call is made |
+| `NetworkError` | `apiClient`, `tokenRefresh` | `fetch` threw TypeError — no connection |
+| `RequestTimeoutError` | `apiClient` | AbortController timeout fired |
 
-Planned fix (separate issue after this branch merges):
-- Global notification/toast context
-- `handleApiError` upgraded to a typed `ApiError` with a `statusCode` property
-- Optional: global `unhandledrejection` listener for anything that slips through
+`handleApiError` has been removed. All HTTP calls go through `apiClient` (`src/common/api/client.ts`) which throws typed errors. Hooks catch with `getErrorMessage(err, fallback)` for display; they can also do `err instanceof ApiError && err.details` to map field-level validation errors.
+
+Still outstanding: no global toast/notification system — errors from background fetches rely on component-level state.
 
 ---
 
