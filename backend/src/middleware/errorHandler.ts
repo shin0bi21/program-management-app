@@ -19,16 +19,16 @@ export function errorHandler(
 
   const isAppError = err instanceof AppError;
 
-  // Detect postgres.js connection errors and treat as 503 Service Unavailable
+  // Detect postgres.js connection/availability errors and treat as 503 Service Unavailable.
+  // Only match genuine connectivity failures — NOT constraint violations (e.g. 23505 unique,
+  // 23503 foreign key) which should fall through as 500 or be caught in the service layer.
+  const postgresConnectionCodes = new Set(['57P03', '08000', '08003', '08006', '08001', '08004', '53300', '53400']);
   const isDbConnectionError =
     !isAppError &&
     err instanceof Error &&
-    (err.message.includes('connect') ||
-      err.message.includes('ECONNREFUSED') ||
-      err.message.includes('connection') ||
+    (err.message.includes('ECONNREFUSED') ||
       (err as any).code === 'ECONNREFUSED' ||
-      (err as any).code === '57P03' || // postgres: cannot connect now
-      err.constructor?.name === 'PostgresError');
+      postgresConnectionCodes.has((err as any).code));
 
   const rawStatus = isAppError ? err.statusCode : isDbConnectionError ? 503 : 500;
   // Guard against non-AppError objects thrown with out-of-range or non-numeric statusCode

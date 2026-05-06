@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { login } from '../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint } from '../../../../common/utils/deviceFingerprint';
-import { getErrorMessage } from '../../../../common/utils/errors';
+import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { setAuthData } from '../../../../common/utils/storage';
 import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
 
