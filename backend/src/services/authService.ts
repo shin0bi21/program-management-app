@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import escapeHtml from 'escape-html';
 import { sql, asTransactionSql } from '../db/client';
 import { sendEmail, send2FACode } from '../utils/emailService';
 import { hashDeviceFingerprint } from '../utils/deviceUtils';
@@ -541,9 +542,10 @@ export async function requestPasswordReset(email: string): Promise<void> {
   `;
 
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+  const safeFirstName = escapeHtml(cred.firstName);
   const emailHtml = `
     <h2>Password Reset Request</h2>
-    <p>Hi ${cred.firstName},</p>
+    <p>Hi ${safeFirstName},</p>
     <p>You requested to reset your password. Click the link below to reset it:</p>
     <a href="${resetUrl}">Reset Password</a>
     <p>This link will expire in 1 hour.</p>
@@ -556,22 +558,29 @@ export async function requestPasswordReset(email: string): Promise<void> {
 export async function resetUserPassword(token: string, newPassword: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const tokens = await sql<DbRow<PasswordResetTokens>[]>`
-    SELECT * FROM password_reset_tokens
-    WHERE token = ${tokenHash}
-      AND expires_at > NOW()
-      AND used_at IS NULL
-    LIMIT 1
+  const consumedTokens = await sql<DbRow<PasswordResetTokens>[]>`
+    UPDATE password_reset_tokens
+    SET used_at = NOW()
+    WHERE id = (
+      SELECT id
+      FROM password_reset_tokens
+      WHERE token = ${tokenHash}
+        AND expires_at > NOW()
+        AND used_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *
   `;
 
-  if (tokens.length === 0) {
+  if (consumedTokens.length === 0) {
     throw new BadRequestError('Invalid or expired reset token');
   }
 
-  const resetToken = tokens[0];
+  const resetToken = consumedTokens[0];
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
   await sql`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
   await sql`UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
-  await sql`UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ${resetToken.id}`;
 }

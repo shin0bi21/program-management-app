@@ -1,9 +1,5 @@
-import { api } from '../../../common/api/config';
-import { fetchWithAuth } from '../../../common/api/fetchWithAuth';
-import { handleApiError } from '../../../common/utils/errors';
+import { apiClient } from '../../../common/api/client';
 
-export async function getStaff() {
-  const res = await fetchWithAuth(api('/staff'));
-  await handleApiError(res);
-  return res.json();
+export function getStaff() {
+  return apiClient.get('/staff');
 }

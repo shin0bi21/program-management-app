@@ -18,7 +18,19 @@ export function errorHandler(
   }
 
   const isAppError = err instanceof AppError;
-  const rawStatus = isAppError ? err.statusCode : 500;
+
+  // Detect postgres.js connection errors and treat as 503 Service Unavailable
+  const isDbConnectionError =
+    !isAppError &&
+    err instanceof Error &&
+    (err.message.includes('connect') ||
+      err.message.includes('ECONNREFUSED') ||
+      err.message.includes('connection') ||
+      (err as any).code === 'ECONNREFUSED' ||
+      (err as any).code === '57P03' || // postgres: cannot connect now
+      err.constructor?.name === 'PostgresError');
+
+  const rawStatus = isAppError ? err.statusCode : isDbConnectionError ? 503 : 500;
   // Guard against non-AppError objects thrown with out-of-range or non-numeric statusCode
   const status =
     typeof rawStatus === 'number' && rawStatus >= 400 && rawStatus <= 599
@@ -28,15 +40,18 @@ export function errorHandler(
 
   const rid = res.locals.requestId as string | undefined;
   // 5xx → error (with stack); 4xx → warn (pattern visibility, no stack)
-  if (isServerError) {
+  if (isDbConnectionError) {
+    console.error(`[${rid ?? '-'}] DATABASE UNAVAILABLE — query failed with no DB connection`, err instanceof Error ? err.message : err);
+  } else if (isServerError) {
     console.error(`[${rid ?? '-'}] errorHandler ${status}`, err);
   } else {
     console.warn(`[${rid ?? '-'}] errorHandler ${status}`, err instanceof Error ? err.message : err);
   }
 
   const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
-  const message =
-    !isServerError || isDev
+  const message = isDbConnectionError
+    ? 'The server is temporarily unavailable. Please try again shortly.'
+    : !isServerError || isDev
       ? (err instanceof Error ? err.message : 'An unexpected error occurred')
       : 'An unexpected error occurred';
 
