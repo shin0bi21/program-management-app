@@ -1,0 +1,331 @@
+# Copilot Instructions — Youth Services App
+
+Full-stack youth services management system.
+**Stack:** React 18 + TypeScript + Vite (frontend) · Express 4 + TypeScript + postgres.js (backend) · PostgreSQL · Docker Compose.
+
+---
+
+## Repo Layout
+
+```
+my-webapp/
+  backend/          Express API
+  frontend/         React SPA
+  scripts/          Shell scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
+  docker-compose.yml
+  nginx.conf
+```
+
+---
+
+## Frontend
+
+### File Locations — where to look first
+
+```
+frontend/src/
+  common/
+    api/
+      client.ts           ← THE entry point for all HTTP calls — apiClient.get/post/put/patch/delete
+      config.ts           ← api(path) — builds full URL from base
+      sessionExpired.ts   ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
+      tokenRefresh.ts     ← refreshToken() — proactive refresh, deduplication, redirect on failure
+    components/
+      ReLoginModal/       ← shown when access token expires mid-session
+      ErrorBoundary/      ← wraps entire app, catches render errors
+      ProtectedRoute/     ← redirects unauthenticated users
+      AuthLayout/         ← shared wrapper for login/verify/forgot/reset pages
+      Table/              ← shared data table component
+    context/
+      AuthContext.tsx     ← isAuthenticated, user, setAuthData, clearAuthData
+    hooks/
+      useSubmitStatus.ts  ← SubmitStatus type + state pair used by every modal hook
+      useAddresses.ts     ← entity-agnostic address array state for modal forms
+      useContacts.ts      ← entity-agnostic contact array state for modal forms
+      useSchools.ts       ← read-only school lookup data
+    utils/
+      errors.ts           ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      storage.ts          ← getToken, setAuthData, clearAuthData, getUser
+      jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
+      deviceFingerprint.ts
+  pages/
+    Auth/
+      common/api/auth.api.ts        ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
+      common/validation/authSchemas.ts
+      Login/hooks/useLogin.ts
+      VerifyPassword/hooks/useVerifyPassword.ts
+      ForgotPassword/hooks/useForgotPassword.ts
+      ResetPassword/hooks/useResetPassword.ts
+    Staff/
+      api/staff.api.ts              ← getStaff
+      hooks/useStaff.ts
+    Youth/
+      api/youth.api.ts              ← getYouth, setYouth, getSchools
+      hooks/useYouth.ts
+      components/YouthModal/useYouthModal.ts   ← all form + submit logic
+      components/YouthModal/youthSchema.ts     ← Zod schema for RHF
+    Settings/Account/
+    Homepage/
+```
+
+### How to make an API call
+
+All calls go through `apiClient` — never use raw `fetch`:
+
+```ts
+import { apiClient } from '../../../common/api/client';
+
+// Protected (default — attaches Bearer token):
+const data = await apiClient.get<StaffProfile[]>('/staff');
+
+// Auth endpoints (no token):
+const result = await apiClient.post('/auth/login', { email, password }, { auth: false });
+
+// With caller AbortSignal (useEffect cleanup):
+const data = await apiClient.get('/youth', { signal: controller.signal });
+```
+
+`apiClient` handles: token validation → proactive refresh → rawFetch with timeout → 401 retry via re-login modal → typed error throws.
+
+### Error types — what `catch (err)` will receive
+
+All from `frontend/src/common/utils/errors.ts`:
+
+| Class | When |
+|---|---|
+| `ApiError(status, message, details?, requestId?)` | Server returned 4xx/5xx |
+| `AuthError` | No token in storage when `auth: true` call is made |
+| `NetworkError` | `fetch` threw TypeError — server unreachable |
+| `RequestTimeoutError extends NetworkError` | Our 15s AbortController fired |
+
+```ts
+} catch (err) {
+  if (err instanceof ApiError && err.status === 422 && err.details) {
+    // err.details: Array<{ field: string; message: string }> — Zod field errors
+  }
+  setError(getErrorMessage(err, 'Fallback message'));
+}
+```
+
+### Page + Modal pattern (every data page)
+
+```
+pages/X/
+  X.tsx                      ← renders <Table> + <XModal>, passes setItems splice callbacks
+  hooks/useX.ts              ← fetches list on mount via apiClient, exposes setX for splice
+  components/XModal/
+    XModal.tsx               ← pure UI, zero logic
+    useXModal.ts             ← useForm (RHF+Zod) + useSubmitStatus + useAddresses + useContacts
+    xSchema.ts               ← Zod schema matching backend validation schema
+```
+
+After modal save, page splices by UUID — no refetch:
+```ts
+setItems(prev => prev.map(x => x.id === saved.id ? saved : x));  // update
+setItems(prev => [...prev, saved]);                                // create
+setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
+```
+
+### Adding a new page
+
+1. Create `src/pages/NewPage/` with `NewPage.tsx`, `NewPage.css`, `api/newPage.api.ts`, `hooks/useNewPage.ts`
+2. API module: one-liners calling `apiClient` — no logic in api files
+3. Hook: fetch on mount, expose state + `refetch`
+4. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
+5. Wire route in `App.tsx` under `<ProtectedRoute>`
+
+---
+
+## Backend
+
+### File Locations — where to look first
+
+```
+backend/src/
+  index.ts                    ← middleware stack order, route mounts, /health endpoint
+  errors/AppError.ts          ← ALL error classes + sendError() formatter + ErrorResponse type
+  middleware/
+    errorHandler.ts           ← asyncHandler wrapper + global errorHandler + requestId middleware
+    authMiddleware.ts         ← authenticateToken + requirePermission
+    validateRequest.ts        ← Zod body validation → 400 with details array
+    rateLimiter.ts            ← generalLimiter, authLimiter, strictLimiter, passwordResetLimiter
+  db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection(), withRetry()
+  types/
+    auth.ts                   ← AccessTokenPayload, RefreshTokenPayload, BaseTokenPayload
+    database.ts               ← kysely-codegen generated types (DO NOT edit manually)
+    db.ts                     ← DbRow<T> camelCase utility type
+  services/
+    authService.ts            ← all auth logic — login, 2FA, token signing, refresh rotation, logout
+    tokenRevocationService.ts ← isBlacklisted(), revokeAccessToken() — in-memory cache + DB
+    youthService.ts
+    staffService.ts
+    schoolService.ts
+    addressService.ts
+    contactService.ts
+  controllers/                ← thin — extract params, call service, res.json()
+  routes/                     ← middleware chain per route, asyncHandler on every handler
+  validation/                 ← Zod schemas per domain
+  utils/
+    emailService.ts           ← sendEmail, 2FA email, password reset email (escapeHtml applied)
+    env.ts                    ← requireEnv() — throws at startup on missing vars
+    deviceUtils.ts
+```
+
+### Middleware order in index.ts (important — do not reorder)
+
+```
+requestId → helmet → cors → express.json → cookieParser
+  → /health (no auth)
+  → /api/auth routes (auth limiter, no requirePermission)
+  → /api/staff routes (authenticateToken → requirePermission → rateLimiter → validateRequest → asyncHandler)
+  → /api/youth routes (same)
+  → /api/schools routes (same)
+  → 404 catch-all → errorHandler
+```
+
+### Route pattern — copy this exactly
+
+```ts
+router.get('/',
+  authenticateToken,
+  requirePermission('admin', 'staff'),
+  generalLimiter,
+  asyncHandler(handleGetX)
+);
+router.post('/',
+  authenticateToken,
+  requirePermission('admin', 'staff'),
+  generalLimiter,
+  validateRequest(setXSchema),
+  asyncHandler(handleSetX)
+);
+```
+
+**`asyncHandler` is required on every route.** Express 4 silently drops async errors without it.
+
+### Throwing errors in services
+
+Never call `res.json()` for errors — just throw:
+
+```ts
+import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/AppError';
+
+throw new NotFoundError('Youth profile not found');   // → 404
+throw new BadRequestError('Invalid reset token');     // → 400
+throw new ForbiddenError('Token reuse detected');     // → 403
+```
+
+Available error classes (all in `src/errors/AppError.ts`):
+- `BadRequestError` 400
+- `UnauthorizedError` 401
+- `ForbiddenError` 403
+- `NotFoundError` 404
+- `LockedError` 423
+- `TooManyRequestsError` 429
+
+Adding a new one: subclass `AppError`, set `statusCode` and `this.name` — errorHandler picks it up automatically.
+
+### Database queries
+
+Always use the `sql` tagged template — never string concatenation:
+
+```ts
+import { sql } from '../db/client';
+
+// Simple query
+const rows = await sql<UserRow[]>`SELECT * FROM users WHERE id = ${userId}`;
+
+// Transaction — must use asTransactionSql()
+import { sql, asTransactionSql } from '../db/client';
+
+await sql.begin(async (tx) => {
+  const trx = asTransactionSql(tx);
+  await trx`UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${jti}`;
+  await trx`INSERT INTO token_blacklist ...`;
+});
+// Never mix root sql and trx inside the same transaction
+```
+
+DB returns `snake_case` columns; postgres.js `transform: postgres.camel` converts to camelCase automatically.
+Use `DbRow<T>` from `src/types/db.ts` for type-level conversion.
+`database.ts` is auto-generated by `npm run db:types` — do not edit manually.
+
+### Adding a new domain (e.g. /api/events)
+
+1. `src/validation/eventSchemas.ts` — Zod schemas
+2. `src/services/eventService.ts` — all SQL + business logic
+3. `src/controllers/eventController.ts` — thin handlers calling service
+4. `src/routes/eventRoutes.ts` — middleware chain + `asyncHandler`
+5. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
+6. Mount same in `tests/shared/app.ts`
+7. Create `tests/events/events.test.ts` + `tests/events/helpers.ts`
+8. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
+
+---
+
+## Auth System Summary
+
+Two JWTs with different secrets:
+- **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `token_blacklist`)
+- **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `refresh_tokens` table
+
+Login flow: `POST /auth/login` → credentials check → send 2FA email → `POST /auth/verify` → issue token pair.
+Trusted devices skip 2FA for 30 days.
+Refresh rotation: each `/auth/refresh` revokes old refresh token, issues new pair. Token reuse (presenting a rotated-out token) revokes the entire family → forced re-login.
+
+Frontend session model: access token in localStorage → `apiClient` checks expiry before each call → proactive refresh at 10min before expiry (max once per 5min) → if expired, show `ReLoginModal` and suspend all in-flight requests → resolve all when user re-authenticates.
+
+---
+
+## Error Response Shape (always this, everywhere)
+
+```ts
+// Backend sends (AppError.ts ErrorResponse):
+{ error: string; details?: { field: string; message: string }[]; requestId?: string }
+
+// Frontend receives as (errors.ts ApiError):
+new ApiError(res.status, err.error, err.details, err.requestId)
+```
+
+---
+
+## Key Conventions
+
+- **snake_case** in SQL, **camelCase** in TypeScript — postgres.js handles the conversion
+- **`DbRow<T>`** for type-safe camelCase DB result types
+- **`requireEnv(name)`** for all env var access — throws at startup, never mid-request
+- **`asyncHandler`** on every route handler — no exceptions
+- **`sendError(res, status, message, { details? })`** — only function allowed to send error responses
+- **No `res.json()` for errors** — throw the right AppError subclass
+- **No raw `fetch()`** on frontend — always `apiClient`
+- **`{ auth: false }`** on all auth endpoint calls in `auth.api.ts`
+- **`escapeHtml()`** on any user-supplied data interpolated into email HTML
+
+---
+
+## Running Tests
+
+Tests run inside Docker against a real test DB:
+
+```bash
+./scripts/run-auth-tests.sh    # 44 auth tests
+./scripts/run-staff-tests.sh   # 15 staff tests
+./scripts/run-youth-tests.sh   # 25 youth tests
+```
+
+Frontend UI tests are not yet configured.
+
+---
+
+## Docs Index
+
+| What | File |
+|---|---|
+| Full-stack overview + Mermaid diagram | `README.md` |
+| Frontend structure, patterns, state architecture | `frontend/STRUCTURE.md` |
+| Frontend HTTP pipeline diagram | `frontend/docs/request-response-flow.mmd` |
+| Backend auth architecture | `backend/docs/auth.md` |
+| Backend error handling | `backend/docs/errors.md` |
+| Database schema + migrations | `backend/docs/db.md` |
+| Backend setup + API reference + commands | `backend/README.md` |
+| Security audit | `vulnerabilities.md` |

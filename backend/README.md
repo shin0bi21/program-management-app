@@ -155,7 +155,7 @@ What it does, in order:
 1. Load `.env` via `dotenv/config`
 2. Create Express `app`
 3. Apply global middleware: `helmet`, `cors` (origin: `FRONTEND_URL`), `express.json()`, `cookieParser()`
-4. Mount `/health` → `{ status: 'ok' }`
+4. Mount `/health` → `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` — pings the DB; returns 503 if unreachable
 5. Mount route groups: `/api/auth`, `/api/staff`, `/api/youth`, `/api/schools`
 6. Start HTTP server on `PORT` (default `5001`)
 
@@ -165,62 +165,30 @@ What it does, in order:
 
 Every protected API request passes through this chain in order:
 
-```
-                  HTTP Request
-                       │
-                       ▼
-             ┌───────────────────┐
-             │   Express router   │  matches route → handler file
-             └─────────┬─────────┘
-                       │
-                       ▼
-             ┌───────────────────┐
-             │ authenticateToken │  verify JWT signature + blacklist check
-             └─────────┬─────────┘  ✗ → 401
-                       │
-                       ▼
-             ┌───────────────────┐
-             │ requirePermission │  check permission level
-             └─────────┬─────────┘  ✗ → 403
-                       │
-                       ▼
-             ┌───────────────────┐
-             │    rateLimiter    │  tier-specific (general / auth / strict / password-reset)
-             └─────────┬─────────┘  ✗ → 429
-                       │
-                       ▼
-             ┌───────────────────┐
-             │  validateRequest  │  Zod parse request body
-             └─────────┬─────────┘  ✗ → 400 with field errors
-                       │
-                       ▼
-             ┌───────────────────┐
-             │    controller     │  extract params, call service, send response
-             └─────────┬─────────┘
-                       │
-                       ▼
-             ┌───────────────────┐
-             │      service      │  SQL via postgres.js +       business logic
-             └─────────┬─────────┘
-                       │
-                       ▼
-                  HTTP Response
+```mermaid
+flowchart TD
+    REQ([HTTP Request]) --> RT[Express router\nmatches route]
+    RT --> AT[authenticateToken\nverify JWT + blacklist check]
+    AT -->|invalid / missing| R401([401 Unauthorized])
+    AT -->|valid| RP[requirePermission\ncheck role]
+    RP -->|wrong role| R403([403 Forbidden])
+    RP -->|ok| RL[rateLimiter\ntier-specific]
+    RL -->|limit exceeded| R429([429 Too Many Requests])
+    RL -->|ok| VR[validateRequest\nZod parse body]
+    VR -->|invalid| R400(["400 Bad Request\n{ details: [{ field, message }] }"])
+    VR -->|valid| CTL[controller\nextract params, call service]
+    CTL --> SVC[service\nbusiness logic + SQL]
+    SVC -->|throws AppError| EH[errorHandler]
+    SVC -->|result| CTL
+    CTL -->|2xx JSON| RES([HTTP Response])
+    EH -->|4xx / 5xx JSON| RES
 ```
 
 Middleware is applied in route files, not globally. Each route explicitly lists which middleware it needs. This makes the chain visible and auditable.
 
 ### Adding a New Domain
 
-To add a new route group (e.g. `/api/events`):
-
-1. Create `src/validation/eventSchemas.ts` — Zod schemas
-2. Create `src/services/eventService.ts` — all SQL queries and business logic
-3. Create `src/controllers/eventController.ts` — thin `handle*` wrappers that call the service
-4. Create `src/routes/eventRoutes.ts` — apply middleware chain, call controllers
-5. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
-6. Mount the same routes in `tests/shared/app.ts` for test coverage
-7. Create `tests/events/events.test.ts` and `tests/events/helpers.ts`
-8. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
+See the step-by-step checklist in [`.github/copilot-instructions.md`](../.github/copilot-instructions.md#adding-a-new-domain-eg-apievents).
 
 ---
 
@@ -289,16 +257,58 @@ Never skip either. Never check permissions manually inside a controller.
 
 ## 6. Domain Model
 
-| Table | Purpose |
-|-------|---------|
-| `users` | Admin and staff accounts (the people who log in) |
-| `user_credentials` | Hashed passwords, 2FA codes, device fingerprints, lockout state |
-| `user_groups` | Groups that staff and youth belong to |
-| `youth_profiles` | Youth data records — no login, managed by staff |
-| `addresses` | Addresses linked to youth via `user_has_addresses` junction |
-| `contacts` | Emergency contacts linked via `user_has_contacts` junction |
-| `schools` | School lookup table |
-| `schema_migrations` | Applied migration files + SHA-256 checksums |
+```mermaid
+erDiagram
+    users {
+        uuid id PK
+        string email
+        string first_name
+        string last_name
+        permission_level permission
+    }
+    user_credentials {
+        uuid user_id FK
+        string password_hash
+        int failed_attempts
+        timestamptz locked_until
+    }
+    user_groups {
+        uuid id PK
+        string name
+    }
+    youth_profiles {
+        uuid id PK
+        string first_name
+        string last_name
+        date date_of_birth
+        uuid school_id FK
+        uuid group_id FK
+    }
+    addresses {
+        uuid id PK
+        string street
+        string city
+        string province
+        string postal_code
+    }
+    contacts {
+        uuid id PK
+        string first_name
+        string last_name
+        string phone
+        string relationship
+    }
+    schools {
+        uuid id PK
+        string name
+    }
+    users ||--|| user_credentials : "1-to-1"
+    users }o--o{ user_groups : "user_group_members"
+    youth_profiles }o--o{ user_groups : "user_group_members"
+    youth_profiles }|--o{ addresses : "user_has_addresses"
+    youth_profiles }|--o{ contacts : "user_has_contacts"
+    youth_profiles }o--|| schools : "school_id"
+```
 
 Youth profiles carry: name, DOB, gender, school, group, grade level, addresses, and emergency contacts. All address and contact changes go through the youth upsert (`POST /api/youth`) which syncs junction tables atomically.
 
@@ -351,12 +361,42 @@ Requires `admin` or `staff` token.
 
 ### Authentication Flow
 
-1. `POST /login` — validates credentials, sends 2FA code via email
-2. `POST /verify` — validates 2FA code, issues access token (1h) + refresh token (8h httpOnly cookie)
-3. Subsequent requests — `Authorization: Bearer <access_token>` header
-4. `POST /refresh` — rotates refresh token, issues new access token
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as Express API
+    participant DB as PostgreSQL
 
-Trusted devices skip step 2 (2FA bypassed for 30 days after first verify on that device).
+    C->>API: POST /auth/login { email, password }
+    API->>DB: lookup user, bcrypt compare
+    DB-->>API: user row
+    API->>DB: insert auth_code, send 2FA email
+    API-->>C: 200 { requires2FA: true, userId }
+
+    C->>API: POST /auth/verify { userId, code }
+    API->>DB: UPDATE auth_codes SET used_at=NOW() WHERE ... RETURNING *
+    DB-->>API: consumed code row
+    API->>DB: insert refresh_tokens (hashed)
+    API-->>C: 200 { token } + Set-Cookie: refreshToken (httpOnly)
+
+    Note over C,API: Subsequent requests
+    C->>API: GET /api/youth  Authorization: Bearer &lt;accessToken&gt;
+    API->>DB: check JTI blacklist
+    API-->>C: 200 { data }
+
+    Note over C,API: Token refresh
+    C->>API: POST /auth/refresh  (cookie)
+    API->>DB: validate + revoke old refresh token
+    API->>DB: insert new refresh token
+    API-->>C: 200 { token } + new cookie
+
+    Note over C,API: Logout
+    C->>API: POST /auth/logout
+    API->>DB: revoke refresh token, blacklist access JTI
+    API-->>C: 200
+```
+
+Trusted devices skip the 2FA step for 30 days after first verify on that device.
 
 ### Token Security
 
