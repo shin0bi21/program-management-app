@@ -44,7 +44,7 @@ frontend/src/
       useContacts.ts      ← entity-agnostic contact array state for modal forms
       useSchools.ts       ← read-only school lookup data
     utils/
-      errors.ts           ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
       storage.ts          ← getToken, setAuthData, clearAuthData, getUser
       jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
       deviceFingerprint.ts
@@ -57,16 +57,24 @@ frontend/src/
       ForgotPassword/hooks/useForgotPassword.ts
       ResetPassword/hooks/useResetPassword.ts
     Staff/
-      api/staff.api.ts              ← getStaff
+      types.ts                      ← StaffUser interface
+      api/staff.api.ts              ← getStaff (typed via apiClient.get<StaffUser[]>)
       hooks/useStaff.ts
     Youth/
-      api/youth.api.ts              ← getYouth, setYouth, getSchools
+      types.ts                      ← YouthProfile, SetYouthInput interfaces
+      api/youth.api.ts              ← getYouth, setYouth, getSchools (all typed)
       hooks/useYouth.ts
       components/YouthModal/useYouthModal.ts   ← all form + submit logic
       components/YouthModal/youthSchema.ts     ← Zod schema for RHF
     Settings/Account/
     Homepage/
 ```
+
+### Type ownership (per-page)
+
+Each page owns a `types.ts` declaring its domain interfaces. API modules type their `apiClient` calls with these — never leave them as `unknown`. Hooks/components must NOT cast (`data as Foo`) — if a cast is needed, the API function is missing a type parameter.
+
+Dependency direction within a page: `types.ts` ← `api/` ← `hooks/` ← `components/`. A page never imports another page's `types.ts` — promote shared types to `common/types/`.
 
 ### How to make an API call
 
@@ -89,7 +97,7 @@ const data = await apiClient.get('/youth', { signal: controller.signal });
 
 ### Error types — what `catch (err)` will receive
 
-All from `frontend/src/common/utils/errors.ts`:
+All from `frontend/src/common/utils/clientErrors.ts`:
 
 | Class | When |
 |---|---|
@@ -128,11 +136,12 @@ setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 
 ### Adding a new page
 
-1. Create `src/pages/NewPage/` with `NewPage.tsx`, `NewPage.css`, `api/newPage.api.ts`, `hooks/useNewPage.ts`
-2. API module: one-liners calling `apiClient` — no logic in api files
-3. Hook: fetch on mount, expose state + `refetch`
-4. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
-5. Wire route in `App.tsx` under `<ProtectedRoute>`
+1. Create `src/pages/NewPage/` with `NewPage.tsx`, `NewPage.css`, `types.ts`, `api/newPage.api.ts`, `hooks/useNewPage.ts`
+2. Define domain interfaces in `types.ts` first
+3. API module: one-liners calling `apiClient.get<T>/post<T>` with types from `../types` — no logic in api files
+4. Hook: fetch on mount, expose state + `refetch`
+5. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
+6. Wire route in `App.tsx` under `<ProtectedRoute>`
 
 ---
 
@@ -283,7 +292,7 @@ Frontend session model: access token in localStorage → `apiClient` checks expi
 // Backend sends (AppError.ts ErrorResponse):
 { error: string; details?: { field: string; message: string }[]; requestId?: string }
 
-// Frontend receives as (errors.ts ApiError):
+// Frontend receives as (clientErrors.ts ApiError):
 new ApiError(res.status, err.error, err.details, err.requestId)
 ```
 

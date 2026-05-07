@@ -68,8 +68,10 @@ src/
     styles/
       brand.css
       forms.css
+    types/
+      school.ts           ← cross-page domain types
     utils/
-      errors.ts           ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
       jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
       storage.ts          ← getToken, setAuthData, clearAuthData, getUser
       deviceFingerprint.ts
@@ -78,8 +80,8 @@ src/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/
     Settings/
-    Staff/                ← Staff.tsx + api/ + hooks/ + (no modal yet)
-    Youth/                ← Youth.tsx + api/ + hooks/ + components/YouthModal/
+    Staff/                ← Staff.tsx + types.ts + api/ + hooks/
+    Youth/                ← Youth.tsx + types.ts + api/ + hooks/ + components/YouthModal/
 ```
 
 ## Rules of Thumb
@@ -89,6 +91,27 @@ src/
 - Shared app state lives in `common/context`.
 - API config lives in `common/api`.
 - `common/` never imports from `pages/`. Dependencies flow one way: `pages/ → common/`.
+
+### Type Ownership
+
+Each page owns a `types.ts` that declares its domain interfaces (e.g. `YouthProfile`, `StaffUser`, `SetYouthInput`). Truly shared types live in `common/types/` (e.g. `School`).
+
+Dependency direction within a page:
+
+```
+types.ts        ← pure, no runtime imports
+  ↑
+api/*.api.ts    ← imports types, types its apiClient.get<T>/post<T> calls
+  ↑
+hooks/use*.ts   ← imports types + api functions, returns typed state
+  ↑
+components/     ← imports types + hooks
+```
+
+**Rules:**
+- API modules type their `apiClient` calls with the domain interface — never leave them as `unknown`.
+- Hooks and components must NOT cast (`data as Foo[]`) — if a cast is needed, the API function is missing a type parameter.
+- A page never imports another page's `types.ts`. If two pages need the same type, promote it to `common/types/`.
 
 ## Promotion Criteria
 Move code to `common/` when:

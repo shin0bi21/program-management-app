@@ -14,6 +14,11 @@ export async function login(
   return data;
 }
 
+interface AuthVerifyResponse {
+  token: string;
+  user: unknown;
+}
+
 export function verify2FA(
   userId: string,
   code: string,
@@ -21,7 +26,7 @@ export function verify2FA(
   deviceFingerprint?: string,
   deviceName?: string,
 ) {
-  return apiClient.post('/auth/verify', { userId, code, trustDevice, deviceFingerprint, deviceName }, NO_AUTH);
+  return apiClient.post<AuthVerifyResponse>('/auth/verify', { userId, code, trustDevice, deviceFingerprint, deviceName }, NO_AUTH);
 }
 
 export function resend2FA(userId: string) {
