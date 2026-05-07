@@ -250,7 +250,7 @@ On error it shows a clean fallback UI with a reload button rather than a blank s
 
 ### Frontend error handling
 
-The frontend now has a typed error hierarchy in `src/common/utils/errors.ts` that mirrors what the backend sends:
+The frontend now has a typed error hierarchy in `src/common/utils/clientErrors.ts` that mirrors what the backend sends:
 
 | Class | Thrown by | When |
 |---|---|---|

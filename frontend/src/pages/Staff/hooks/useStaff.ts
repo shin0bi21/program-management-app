@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { getStaff } from '../api/staff.api';
+import type { StaffUser } from '../types';
 
-export interface StaffUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
+export type { StaffUser };
 
 export const useStaff = () => {
   const [staff, setStaff] = useState<StaffUser[]>([]);

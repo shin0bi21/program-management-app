@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getSchools } from '../../pages/Youth/api/youth.api';
+import type { School } from '../types/school';
 
-export interface School {
-  id: string;
-  name: string;
-  schoolType: string;
-  board: string | null;
-}
+export type { School };
 
 export function useSchools() {
   const [schools, setSchools] = useState<School[]>([]);

@@ -2,6 +2,9 @@
 
 Express + TypeScript + PostgreSQL backend for a youth services management system.
 
+For the full-stack overview and request flow diagram see the [root README](../README.md).
+For backend conventions (SQL patterns, route structure, error throwing) see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
+
 ---
 
 ## Table of Contents
@@ -9,29 +12,25 @@ Express + TypeScript + PostgreSQL backend for a youth services management system
 1. [What This Is](#1-what-this-is)
 2. [Get Running](#2-get-running)
 3. [Project Structure](#3-project-structure)
-4. [How a Request Flows](#4-how-a-request-flows)
-5. [Core Conventions](#5-core-conventions)
-6. [Domain Model](#6-domain-model)
-7. [API Reference](#7-api-reference)
-8. [Security](#8-security)
-9. [Database & Migrations](#9-database--migrations)
-10. [Testing](#10-testing)
-11. [Development Workflow](#11-development-workflow)
-12. [Deployment](#12-deployment)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Commands Reference](#14-commands-reference)
-15. [Architecture Docs](#15-architecture-docs)
+4. [API Reference](#4-api-reference)
+5. [Database & Migrations](#5-database--migrations)
+6. [Testing](#6-testing)
+7. [Development Workflow](#7-development-workflow)
+8. [Deployment](#8-deployment)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Commands Reference](#10-commands-reference)
+11. [Architecture Docs](#11-architecture-docs)
 
 ---
 
 ## 1. What This Is
 
-A management system for organisations running youth programs. It has two types of human users:
+A management system for organisations running youth programs.
 
 | Role | Access |
 |------|--------|
 | `admin` | Full access — manage staff, create/edit all youth profiles |
-| `staff` | Can view and create/edit youth profiles; cannot manage other staff |
+| `staff` | View and create/edit youth profiles; cannot manage other staff |
 
 **Youth profiles are not login users.** They are data records (name, DOB, school, group, addresses, emergency contacts) that staff manage through the app.
 
@@ -65,19 +64,17 @@ A management system for organisations running youth programs. It has two types o
 
 ### Environment Variables
 
-Copy the example and fill in your values:
-
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
+Required:
 
 ```bash
 # Database
 DATABASE_URL=postgresql://user:pass@db:5432/dbname
 
-# JWT Secrets
+# JWT
 JWT_SECRET=your-secret-key-here
 REFRESH_SECRET=your-refresh-secret-here
 
@@ -91,7 +88,7 @@ PORT=5001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 
-# Admin seed (first-time setup only)
+# Admin seed (first-time only)
 ADMIN_EMAIL=you@yourdomain.com
 ADMIN_PASSWORD=StrongPasswordHere!
 ADMIN_FIRST_NAME=Your
@@ -101,17 +98,10 @@ ADMIN_LAST_NAME=Name
 ### First-Time Setup
 
 ```bash
-# 1. Start all services (Docker)
 docker-compose up -d
-
-# 2. Apply migrations
 docker-compose exec backend npm run db:migrate
-
-# 3. Seed the admin account (one time only)
-docker-compose exec backend npm run seed:admin
+docker-compose exec backend npm run seed:admin   # idempotent
 ```
-
-The dev server starts automatically inside the container. The seed script is idempotent — re-running it on an existing admin is a no-op.
 
 ### Daily Start
 
@@ -119,7 +109,7 @@ The dev server starts automatically inside the container. The seed script is ide
 docker-compose up -d
 ```
 
-That's it — the dev server runs automatically inside the container.
+The dev server starts automatically inside the container.
 
 ---
 
@@ -127,7 +117,7 @@ That's it — the dev server runs automatically inside the container.
 
 ```
 backend/
-├── docs/               # Architecture references (auth.md, db.md)
+├── docs/               # Architecture references (auth.md, db.md, errors.md)
 ├── src/
 │   ├── index.ts        # Entry point — middleware, routes, server start
 │   ├── controllers/    # HTTP layer — extract params, call service, send response
@@ -136,7 +126,8 @@ backend/
 │   ├── middleware/     # authenticateToken, requirePermission, rateLimiter, validateRequest
 │   ├── validation/     # Zod schemas per domain
 │   ├── db/             # postgres.js client + asTransactionSql() helper
-│   ├── types/          # JWT payload types, DB schema types, DbRow<T> utility
+│   ├── errors/         # AppError + subclasses + sendError()
+│   ├── types/          # JWT payload types, generated DB schema, DbRow<T>
 │   └── utils/          # requireEnv, emailService, deviceUtils
 ├── db/
 │   ├── migrations/     # SQL files — YYYY-MM-DD_#_description.sql
@@ -148,173 +139,11 @@ backend/
     └── youth/          # 25 tests
 ```
 
-### Entry Point — `src/index.ts`
-
-What it does, in order:
-
-1. Load `.env` via `dotenv/config`
-2. Create Express `app`
-3. Apply global middleware: `helmet`, `cors` (origin: `FRONTEND_URL`), `express.json()`, `cookieParser()`
-4. Mount `/health` → `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` — pings the DB; returns 503 if unreachable
-5. Mount route groups: `/api/auth`, `/api/staff`, `/api/youth`, `/api/schools`
-6. Start HTTP server on `PORT` (default `5001`)
+For middleware order, route patterns, error throwing, and "adding a new domain" see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 
 ---
 
-## 4. How a Request Flows
-
-Every protected API request passes through this chain in order:
-
-```mermaid
-flowchart TD
-    REQ([HTTP Request]) --> RT[Express router\nmatches route]
-    RT --> AT[authenticateToken\nverify JWT + blacklist check]
-    AT -->|invalid / missing| R401([401 Unauthorized])
-    AT -->|valid| RP[requirePermission\ncheck role]
-    RP -->|wrong role| R403([403 Forbidden])
-    RP -->|ok| RL[rateLimiter\ntier-specific]
-    RL -->|limit exceeded| R429([429 Too Many Requests])
-    RL -->|ok| VR[validateRequest\nZod parse body]
-    VR -->|invalid| R400(["400 Bad Request\n{ details: [{ field, message }] }"])
-    VR -->|valid| CTL[controller\nextract params, call service]
-    CTL --> SVC[service\nbusiness logic + SQL]
-    SVC -->|throws AppError| EH[errorHandler]
-    SVC -->|result| CTL
-    CTL -->|2xx JSON| RES([HTTP Response])
-    EH -->|4xx / 5xx JSON| RES
-```
-
-Middleware is applied in route files, not globally. Each route explicitly lists which middleware it needs. This makes the chain visible and auditable.
-
-### Adding a New Domain
-
-See the step-by-step checklist in [`.github/copilot-instructions.md`](../.github/copilot-instructions.md#adding-a-new-domain-eg-apievents).
-
----
-
-## 5. Core Conventions
-
-### Raw SQL via postgres.js
-
-All database queries are written as plain SQL. No Sequelize, Prisma, or TypeORM. This keeps queries transparent, predictable, and fast.
-
-### Transactions + TypeScript (Required)
-
-When using `sql.begin(...)`, run all transaction queries through `asTransactionSql(tx)` from `src/db/client.ts`.
-
-Reason: current postgres.js typings in this project do not expose callable tagged-template signatures on `TransactionSql`, even though runtime behavior works. `asTransactionSql` provides the TypeScript compatibility cast in one central place.
-
-**Required pattern:**
-
-1. Start transaction with `await sql.begin(async (tx) => { ... })`
-2. Inside callback, create `const trx = asTransactionSql(tx)`
-3. Use `trx` for every query in the transaction block (`trx\`...\``, `trx.array(...)`)
-4. Do not mix root `sql` and `trx` in the same transaction flow
-
-### snake_case → camelCase (Never Break This)
-
-The DB uses `snake_case` columns. TypeScript uses `camelCase`. The `DbRow<T>` utility in `src/types/db.ts` converts between them at the type level automatically.
-
-**Rules:**
-
-1. **DB columns always use `snake_case`** — `first_name`, `date_of_birth`, `grade_level`
-2. **Never alias SQL columns to produce camelCase** — `first_name AS "firstName"` is wrong. `DbRow` handles it.
-3. **`src/types/database.ts` mirrors the DB** — use `snake_case` keys matching column names exactly
-4. **Controllers use camelCase** — once typed through `DbRow<T>`, fields are `row.firstName`, `row.dateOfBirth`
-
-```sql
--- Correct — no alias
-SELECT yp.grade_level FROM youth_profiles yp;
-
--- Wrong — never do this
-SELECT yp.grade_level AS "gradeLevel" FROM youth_profiles yp;
-```
-
-```typescript
-// database.ts — snake_case mirrors DB exactly
-export interface YouthProfiles {
-  grade_level: number | null;
-}
-
-// controller — DbRow<T> does the conversion
-type YouthRow = DbRow<Pick<YouthProfiles, 'grade_level'>>;
-// → { gradeLevel: number | null }
-```
-
-### Migrations Are Forward-Only
-
-Never modify an applied migration file. If you need to change something, create a new migration. The `schema_migrations` table stores a SHA-256 checksum for every applied file and will warn if a file is modified after apply.
-
-### All Protected Routes Require Both Middleware
-
-```typescript
-router.get('/', authenticateToken, requirePermission('admin', 'staff'), handler);
-```
-
-Never skip either. Never check permissions manually inside a controller.
-
----
-
-## 6. Domain Model
-
-```mermaid
-erDiagram
-    users {
-        uuid id PK
-        string email
-        string first_name
-        string last_name
-        permission_level permission
-    }
-    user_credentials {
-        uuid user_id FK
-        string password_hash
-        int failed_attempts
-        timestamptz locked_until
-    }
-    user_groups {
-        uuid id PK
-        string name
-    }
-    youth_profiles {
-        uuid id PK
-        string first_name
-        string last_name
-        date date_of_birth
-        uuid school_id FK
-        uuid group_id FK
-    }
-    addresses {
-        uuid id PK
-        string street
-        string city
-        string province
-        string postal_code
-    }
-    contacts {
-        uuid id PK
-        string first_name
-        string last_name
-        string phone
-        string relationship
-    }
-    schools {
-        uuid id PK
-        string name
-    }
-    users ||--|| user_credentials : "1-to-1"
-    users }o--o{ user_groups : "user_group_members"
-    youth_profiles }o--o{ user_groups : "user_group_members"
-    youth_profiles }|--o{ addresses : "user_has_addresses"
-    youth_profiles }|--o{ contacts : "user_has_contacts"
-    youth_profiles }o--|| schools : "school_id"
-```
-
-Youth profiles carry: name, DOB, gender, school, group, grade level, addresses, and emergency contacts. All address and contact changes go through the youth upsert (`POST /api/youth`) which syncs junction tables atomically.
-
----
-
-## 7. API Reference
+## 4. API Reference
 
 ### Authentication — `/api/auth`
 
@@ -355,111 +184,28 @@ Requires `admin` or `staff` token.
 |--------|------|-------------|
 | `GET` | `/` | List all schools |
 
----
-
-## 8. Security
-
-### Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant API as Express API
-    participant DB as PostgreSQL
-
-    C->>API: POST /auth/login { email, password }
-    API->>DB: lookup user, bcrypt compare
-    DB-->>API: user row
-    API->>DB: insert auth_code, send 2FA email
-    API-->>C: 200 { requires2FA: true, userId }
-
-    C->>API: POST /auth/verify { userId, code }
-    API->>DB: UPDATE auth_codes SET used_at=NOW() WHERE ... RETURNING *
-    DB-->>API: consumed code row
-    API->>DB: insert refresh_tokens (hashed)
-    API-->>C: 200 { token } + Set-Cookie: refreshToken (httpOnly)
-
-    Note over C,API: Subsequent requests
-    C->>API: GET /api/youth  Authorization: Bearer &lt;accessToken&gt;
-    API->>DB: check JTI blacklist
-    API-->>C: 200 { data }
-
-    Note over C,API: Token refresh
-    C->>API: POST /auth/refresh  (cookie)
-    API->>DB: validate + revoke old refresh token
-    API->>DB: insert new refresh token
-    API-->>C: 200 { token } + new cookie
-
-    Note over C,API: Logout
-    C->>API: POST /auth/logout
-    API->>DB: revoke refresh token, blacklist access JTI
-    API-->>C: 200
-```
-
-Trusted devices skip the 2FA step for 30 days after first verify on that device.
-
-### Token Security
-
-| Feature | Detail |
-|---------|--------|
-| Access token TTL | 1 hour |
-| Refresh token TTL | 8 hours |
-| Refresh storage | httpOnly cookie (not accessible to JS) |
-| JTI tracking | Every token has a unique ID for blacklisting |
-| Refresh rotation | New token issued on every `/refresh` call |
-| Reuse detection | Using a rotated-out token revokes the entire token family |
-| Blacklist cache | In-memory, 60s TTL per entry |
-
-### Rate Limiting (4 Tiers)
-
-| Tier | Applied To | Strictness |
-|------|-----------|------------|
-| General | All protected routes (`/api/staff`, `/api/youth`, `/api/schools`) | Permissive |
-| Auth | `/login`, `/refresh` | Strict |
-| Strict | `/verify`, `/resend` | Very strict |
-| Password reset | `/forgot-password`, `/reset-password` | Most strict |
-
-Rate limiting is disabled when `NODE_ENV=test`.
-
-### Other
-
-- **Account lockout** — 5 failed login attempts = 15-minute lock
-- **Password hashing** — bcryptjs, 10 rounds
-- **Reset tokens** — SHA-256 hashed, 1-hour expiry
-- **Device fingerprinting** — SHA-256 hashed, used for trusted device logic
-- **Input validation** — Zod on every endpoint, 400 with field-level errors on failure
-
-For full JWT architecture, token payload types, signing helpers, and module design see [docs/auth.md](docs/auth.md).
+For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
 ---
 
-## 9. Database & Migrations
+## 5. Database & Migrations
 
 Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_description.sql`. They run in filename order, each inside a single transaction with full rollback on error. Applied files are tracked with SHA-256 checksums — never edit an applied migration, create a new one instead.
 
 ### Commands
 
 ```bash
-docker-compose exec backend npm run db:migrate:dry   # preview — no changes applied
-docker-compose exec backend npm run db:migrate       # apply pending migrations
-docker-compose exec backend npm run db:status        # show applied migrations + checksum status
+docker-compose exec backend npm run db:migrate:dry       # preview — no changes applied
+docker-compose exec backend npm run db:migrate           # apply pending migrations
+docker-compose exec backend npm run db:status            # applied migrations + checksum status
 docker-compose exec backend npm run db:generate-backup   # generate backup tables + triggers
 ```
 
-### Safety Features
-
-| Feature | Detail |
-|---------|--------|
-| Transaction safety | All statements in one transaction — error = full rollback |
-| Concurrency | Advisory lock prevents parallel runs |
-| Checksum validation | SHA-256 per file — warns if an applied file is modified |
-| Dry-run mode | `npm run db:migrate:dry` previews without applying |
-
-For full migration design, backup system architecture, and the base table pattern see [docs/db.md](docs/db.md).
+For the ERD, base table pattern, backup architecture, and safety guarantees see [docs/db.md](docs/db.md).
 
 ---
 
-## 10. Testing
+## 6. Testing
 
 Tests run **inside the Docker container**. Never run Jest locally against a remote DB. `DATABASE_URL` must be set (it is, via `docker-compose.yml`).
 
@@ -468,7 +214,7 @@ Tests run **inside the Docker container**. Never run Jest locally against a remo
 From the project root (`my-webapp/`):
 
 ```bash
-# All suites via helper script (recommended)
+# All suites
 bash scripts/test-apis.sh
 
 # Individual suites
@@ -476,20 +222,20 @@ bash scripts/run-auth-tests.sh    # 44 tests
 bash scripts/run-staff-tests.sh   # 15 tests
 bash scripts/run-youth-tests.sh   # 25 tests
 
-# Or directly via docker-compose
+# Or directly
 docker-compose exec backend npm run test:auth
 docker-compose exec backend npm run test:staff
 docker-compose exec backend npm run test:youth
 docker-compose exec backend npm run test:coverage
 ```
 
-The helper scripts detect if Docker containers are already running and **will not tear them down** after tests complete — your dev data is preserved.
+The helper scripts detect already-running containers and **will not tear them down** afterwards — your dev data is preserved.
 
 ### Test Structure
 
 | File | Purpose |
 |------|---------|
-| `tests/shared/app.ts` | Express app factory — used by all suites |
+| `tests/shared/app.ts` | Express app factory used by all suites |
 | `tests/shared/db.ts` | `seedTestUser`, `deleteTestUser` helpers |
 | `tests/auth/auth.test.ts` | Login → 2FA → refresh → logout → password reset |
 | `tests/auth/helpers.ts` | Trusted device tokens, 2FA codes, cookies |
@@ -500,9 +246,9 @@ The helper scripts detect if Docker containers are already running and **will no
 
 ### Jest + Node16 Module Resolution
 
-The backend uses `"moduleResolution": "node16"` in `tsconfig.json`. Under Node16, TypeScript requires explicit `.js` extensions on relative imports in source files (e.g. `import('../shared/db.js')`). However, `ts-jest` resolves tests against raw `.ts` source files — not compiled output — so those `.js` extensions don't resolve at runtime inside Jest.
+The backend uses `"moduleResolution": "node16"` in `tsconfig.json`. Under Node16, TypeScript requires explicit `.js` extensions on relative imports. `ts-jest` resolves tests against raw `.ts` source — so those `.js` extensions don't resolve at runtime inside Jest.
 
-The fix is a `moduleNameMapper` entry in `jest.config.js` that strips `.js` from any relative import path before Jest resolves it:
+Fix: a `moduleNameMapper` entry in `jest.config.js` strips `.js` from any relative import path before Jest resolves it:
 
 ```js
 moduleNameMapper: {
@@ -510,9 +256,7 @@ moduleNameMapper: {
 },
 ```
 
-This is a well-known pattern in the `ts-jest` community for Node16/NodeNext projects. See [ts-jest issue #4207](https://github.com/kulshekhar/ts-jest/issues/4207) for the original discussion.
-
-**Rule:** When writing test files, use `.js` extensions on dynamic `import()` calls if the TypeScript compiler requires it — the mapper will handle the rest at runtime.
+See [ts-jest issue #4207](https://github.com/kulshekhar/ts-jest/issues/4207) for the original discussion.
 
 ### Writing a Test
 
@@ -546,26 +290,16 @@ describe('Feature Tests', () => {
 
 ---
 
-## 11. Development Workflow
+## 7. Development Workflow
 
 ### Daily Loop
 
 ```bash
-# 1. Start containers
-docker-compose up -d
-
-# 2. Edit code in src/, tests/, db/migrations/
-
-# 3. Type-check
-docker-compose exec backend npm run typecheck
-
-# 4. Run tests
-bash scripts/test-apis.sh
-
-# 5. Apply any new migrations
-docker-compose exec backend npm run db:migrate
-
-# 6. Commit
+docker-compose up -d                              # 1. start containers
+# 2. edit code in src/, tests/, db/migrations/
+docker-compose exec backend npm run typecheck    # 3. type-check
+bash scripts/test-apis.sh                         # 4. run tests
+docker-compose exec backend npm run db:migrate   # 5. apply any new migrations
 git add . && git commit -m "Description" && git push
 ```
 
@@ -573,54 +307,42 @@ git add . && git commit -m "Description" && git push
 
 The backend container runs with the Node.js inspector on port 9229.
 
-1. Open the Run and Debug panel (`Cmd+Shift+D`)
-2. Select **"Docker: Debug Backend"** from the dropdown at the top of the panel
-3. Press `F5` to attach — if `F5` doesn't work, click the green ▶ play button in the panel directly
+1. Open Run and Debug panel (`Cmd+Shift+D`)
+2. Select **"Docker: Debug Backend"** from the dropdown
+3. Press `F5` to attach (or click the green ▶ play button)
 4. Set breakpoints in `src/` — they'll pause on the next matching request
 
-> **Note:** The panel must be open and focused with the correct config selected for `F5` to trigger the right debugger. If breakpoints aren't hitting, confirm the session is attached (you'll see the debug toolbar — step over/in/out buttons — appear at the top of the screen).
-
-> **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, TypeScript doesn't emit `.js.map` files and the debugger can't map compiled JS back to the original `.ts` source — breakpoints in service files will be silently skipped. If you ever lose breakpoints after a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
+> **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, breakpoints in service files will be silently skipped. After a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
 
 ---
 
-## 12. Deployment
+## 8. Deployment
 
 ### First-Time Deploy
 
-Run once when standing up the app on a new server.
-
 ```bash
-# Set admin credentials in the server's .env before running
-
+# Set admin credentials in the server's .env first
 docker-compose up -d
 docker-compose exec backend npm run db:migrate
 docker-compose exec backend npm run seed:admin
 ```
 
-Admin credentials come from `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, etc.). Never expose admin creation through an API endpoint.
+Admin credentials come from `.env`. Never expose admin creation through an API endpoint.
 
 ### Subsequent Deploys (with Schema Changes)
 
 ```bash
-# 1. Backup the database first
-pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
-
-# 2. Preview what will be applied
-docker-compose exec backend npm run db:migrate:dry
-
-# 3. Apply
-docker-compose exec backend npm run db:migrate
-
-# 4. Verify
-docker-compose exec backend npm run db:status
+pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql       # 1. backup first
+docker-compose exec backend npm run db:migrate:dry        # 2. preview
+docker-compose exec backend npm run db:migrate            # 3. apply
+docker-compose exec backend npm run db:status             # 4. verify
 ```
 
 Do not re-run `seed:admin` on subsequent deploys.
 
 ---
 
-## 13. Troubleshooting
+## 9. Troubleshooting
 
 ### "Checksum mismatch"
 
@@ -650,7 +372,7 @@ bash scripts/reset-dev-stack.sh
 
 ---
 
-## 14. Commands Reference
+## 10. Commands Reference
 
 All `npm run` commands execute inside the Docker container via `docker-compose exec backend npm run <command>`.
 
@@ -675,13 +397,11 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 
 ---
 
-## 15. Architecture Docs
-
-Detailed design and architecture references live in `docs/`:
+## 11. Architecture Docs
 
 | File | Covers |
 |------|--------|
-| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, module boundaries |
-| [docs/db.md](docs/db.md) | Migration system design, backup architecture, base table pattern, safety guarantees |
-
-
+| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, RBAC, full sequence diagram |
+| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, backup architecture, safety guarantees |
+| [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
+| [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | File locations, route patterns, conventions, "adding a new domain" checklist |
