@@ -1,6 +1,6 @@
 # Auth System — Architecture & Design Notes
 
-This document covers the design decisions behind the JWT auth implementation. For API endpoint reference see [README.md § 7 API Reference](../README.md#7-api-reference) and [README.md § 8 Security](../README.md#8-security).
+This document covers the design decisions behind the JWT auth implementation. For the API endpoint reference see [backend/README.md § 4 API Reference](../README.md#4-api-reference).
 
 ---
 

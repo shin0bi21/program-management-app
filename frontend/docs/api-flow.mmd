@@ -1,131 +1,98 @@
 flowchart TD
-  A["UI action or data hook"] --> B{"Endpoint type"}
+  %% =================================================================
+  %% CLIENT — apiClient pipeline
+  %% =================================================================
+  subgraph CLIENT["Client — frontend/src/common/api"]
+    A([UI action / data hook]) --> B{"Endpoint type"}
 
-  %% ─── AUTH ENDPOINTS (no token needed) ───────────────────────────────────
-  B -->|"Auth endpoint\n{ auth: false }"| C["auth.api.ts\nsrc/pages/Auth/common/api/auth.api.ts"]
-  C --> CLIENT["apiClient.post(path, body, { auth: false })\nsrc/common/api/client.ts"]
+    B -->|"auth: false"| C["auth.api.ts"]
+    B -->|"auth: true (default)"| F["feature api module\nstaff.api.ts · youth.api.ts"]
+    C --> CLIENT_FN["apiClient.method(path, body, opts)"]
+    F --> CLIENT_FN
 
-  C -. "outgoing request body" .-> JR1["{ email, password, deviceFingerprint? }\nor { userId, code, trustDevice }\nor { token, newPassword } etc."]
+    CLIENT_FN --> G{"auth: true?"}
+    G -->|No| FETCH
+    G -->|Yes| H["getValidToken()"]
 
-  %% ─── PROTECTED ENDPOINTS (token required) ───────────────────────────────
-  B -->|"Protected endpoint\n{ auth: true (default) }"| F["feature api module\nsrc/pages/Staff/api/staff.api.ts\nsrc/pages/Youth/api/youth.api.ts"]
-  F --> CLIENT
+    H --> J{"Token in storage?"}
+    J -->|No| K["throw AuthError"]
+    J -->|Yes| L{"Expired?"}
 
-  %% ─── APICLIENT — TOKEN VALIDATION ───────────────────────────────────────
-  CLIENT --> G{"auth: true?"}
-  G -->|No| FETCH
-  G -->|Yes| H["getValidToken()\nsrc/common/api/client.ts"]
+    L -->|Yes| RELOGIN
+    L -->|No| T{"Near expiry +\nrefresh cooldown ok?"}
+    T -->|Yes| U["refreshToken()\nPOST /auth/refresh\n(httpOnly cookie)"]
+    T -->|No| TOK["Return current token"]
+    U --> W{"Refresh ok?"}
+    W -->|Yes| TOK
+    W -->|No| LOGOUT["clearAuthData()\n→ /login"]
 
-  H --> J{"Token in storage?"}
-  J -->|No| K["throw new AuthError()
-src/common/utils/errors.ts"]
-  J -->|Yes| L{"Access token expired?"}
+    TOK --> FETCH["rawFetch(url, init, 15s timeout)"]
 
-  L -->|Yes| M["awaitReLogin()\nsrc/common/api/sessionExpired.ts"]
-  M --> N["Dispatch auth:sessionExpired"]
-  N --> O["App opens ReLoginModal"]
-  O --> P["User re-authenticates via login / verify2FA"]
-  P --> Q["setAuthData(new token, user)\nsrc/common/utils/storage.ts"]
-  Q --> R["resolveReLogin()\nsrc/common/api/sessionExpired.ts"]
-  R --> S["Return fresh token string"]
+    FETCH --> NE{"fetch outcome"}
+    NE -->|"TypeError"| AF["throw NetworkError"]
+    NE -->|"AbortController timeout"| AG["throw RequestTimeoutError"]
+    NE -->|"Caller signal aborted"| AH["rethrow AbortError"]
+    NE -->|"HTTP response"| AK[/"Response object"/]
 
-  L -->|No| T{"Near expiry and\nrefresh cooldown passed?"}
-  T -->|Yes| U["refreshToken()\nsrc/common/api/tokenRefresh.ts"]
-  U --> V["fetch POST /auth/refresh\ncredentials: include — httpOnly cookie"]
-  V --> W{"Refresh ok?"}
-  W -->|Yes| X["Store new token — return token string"]
-  W -->|No or NetworkError| Y["clearAuthData() → window.location /login\nsrc/common/utils/storage.ts"]
-  T -->|No| Z["Return existing token string"]
+    AK --> AM{"auth: true\n+ status 401?"}
+    AM -->|Yes| RELOGIN["awaitReLogin()\n→ ReLoginModal\n→ user re-auths"]
+    RELOGIN --> FETCH
+    AM -->|No| AU{"response.ok?"}
 
-  S --> FETCH["rawFetch(url, init, timeout)\nsrc/common/api/client.ts"]
-  X --> FETCH
-  Z --> FETCH
+    AU -->|"2xx"| AV[/"typed data T"/]
+    AU -->|"4xx / 5xx"| AX["throw ApiError\n(status, message, details, requestId)"]
 
-  FETCH -. "outgoing request headers (auth)" .-> JR2["Authorization: Bearer eyJhbGci...\nContent-Type: application/json"]
+    AV --> BB([Update state /\nnavigate /\nrender data])
+    AF --> ERR
+    AG --> ERR
+    AH --> ERR
+    K --> ERR
+    AX --> ERR
+    ERR["catch block →\ngetErrorMessage(err, fallback)"] --> BA([Render error in UI])
+  end
 
-  %% ─── NETWORK TRANSPORT ──────────────────────────────────────────────────
-  FETCH --> NE{"fetch outcome"}
-  NE -->|"TypeError — no response"| AF["throw NetworkError\nsrc/common/utils/errors.ts"]
-  NE -->|"AbortController timeout"| AG["throw RequestTimeoutError\nsrc/common/utils/errors.ts"]
-  NE -->|"Caller AbortSignal fired"| AH["rethrow AbortError"]
-  NE -->|"HTTP response received"| AK["Response object"]
+  %% =================================================================
+  %% SERVER — Express pipeline
+  %% =================================================================
+  FETCH ===>|"HTTPS\nAuthorization: Bearer ..."| SRV_IN
 
-  %% ─── 401 RETRY ───────────────────────────────────────────────────────────
-  AK --> AM{"auth: true\nand status 401?"}
-  AM -->|Yes| AN["awaitReLogin()\nsrc/common/api/sessionExpired.ts"]
-  AN --> AO["User re-authenticates"]
-  AO --> AP["rawFetch retry with fresh token"]
-  AP --> AQ["Response object"]
-  AM -->|No| AQ
-
-  %% ─── RESPONSE HANDLING (inside apiClient.execute) ────────────────────────
-  AQ --> AU{"response.ok?"}
-  AU -->|"No — 4xx / 5xx"| AW["res.json() → error object"]
-  AW --> AX["throw new ApiError(status, message, details?, requestId?)
-src/common/utils/errors.ts"]
-  AU -->|"Yes — 2xx"| AV["res.json() → typed data T"]
-
-  AQ -. "raw HTTP response body" .-> JRS["2xx: { token, user } · { ...record } · [...records]\n4xx/5xx: { error: string, details?: [{ field, message }], requestId?: string }"]
-  AV -. "parsed success examples" .-> JRS2["Auth: { token, user: { id, email, firstName, lastName, role, permissions[] } }\nStaff: StaffProfile[]\nYouth: YouthProfile[]\nSchools: School[]"]
-
-  %% ─── ERROR CONVERGENCE ───────────────────────────────────────────────────
-  AF --> ERR["Hook or component catch block"]
-  AG --> ERR
-  AH --> ERR
-  K --> ERR
-  AX --> ERR
-  Y --> REDIR["Page navigates to /login\nhook catch never reached"]
-
-  ERR --> AZ["getErrorMessage(err, fallback)\nsrc/common/utils/errors.ts"]
-  AZ --> BA["Render error message in UI"]
-
-  %% ─── SERVER-SIDE PROCESSING ─────────────────────────────────────────────
-  JR2 -. "arrives at Express" .-> SRV_IN
-
-  subgraph SERVER["Express Server — src/index.ts"]
-    SRV_IN["Request arrives\nnginx → Express"]
+  subgraph SERVER["Server — backend/src"]
+    SRV_IN[/"Request arrives\n(nginx → Express)"/]
     SRV_IN --> SRV_GLOBAL["Global middleware\nrequestId · helmet · cors\nexpress.json · cookieParser"]
     SRV_GLOBAL --> SRV_ROUTE{"Route?"}
 
-    SRV_ROUTE -->|"/health"| SRV_HEALTH["200 OK — no auth"]
-    SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter\nasyncHandler(handler)"]
-    SRV_ROUTE -->|"/api/* protected"| SRV_AUTHTOK
+    SRV_ROUTE -->|"/health"| SRV_OK
+    SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter →\nasyncHandler(handler)"]
+    SRV_AUTH_ROUTE --> SRV_HANDLER
+    SRV_ROUTE -->|"/api/* (protected)"| SRV_AUTHTOK
 
-    SRV_AUTHTOK["authenticateToken\nsrc/middleware/authMiddleware.ts\nverify JWT signature → attach req.user\n{ userId, email, role, permissions[] }"]
-    SRV_AUTHTOK -->|"invalid / missing token"| SRV_401["→ 401 UnauthorizedError"]
-    SRV_AUTHTOK -->|"valid"| SRV_PERM
+    SRV_AUTHTOK["authenticateToken\nverify JWT → req.user"]
+    SRV_AUTHTOK -->|"invalid / missing"| SRV_ERR_HANDLER
+    SRV_AUTHTOK -->|"valid"| SRV_PERM["requirePermission(role)"]
+    SRV_PERM -->|"missing"| SRV_ERR_HANDLER
+    SRV_PERM -->|"ok"| SRV_RATE["rateLimiter"]
+    SRV_RATE -->|"exceeded"| SRV_ERR_HANDLER
+    SRV_RATE -->|"ok"| SRV_VALIDATE["validateRequest(zodSchema)"]
+    SRV_VALIDATE -->|"invalid body"| SRV_ERR_HANDLER
+    SRV_VALIDATE -->|"valid"| SRV_HANDLER["asyncHandler(controller)"]
 
-    SRV_PERM["requirePermission('read:x')\nsrc/middleware/authMiddleware.ts\nreq.user.permissions.includes(p)"]
-    SRV_PERM -->|"permission missing"| SRV_403["→ 403 ForbiddenError"]
-    SRV_PERM -->|"permitted"| SRV_RATE
+    SRV_HANDLER --> SRV_SERVICE["service layer"]
+    SRV_SERVICE --> SRV_DB[("PostgreSQL\nsql`` template")]
+    SRV_DB --> SRV_SERVICE
+    SRV_SERVICE -->|"throw AppError"| SRV_ERR_HANDLER
+    SRV_SERVICE -->|"return"| SRV_OK[/"2xx response\n{ ...data }"/]
 
-    SRV_RATE["rateLimiter\nsrc/middleware/rateLimiter.ts"]
-    SRV_RATE -->|"limit exceeded"| SRV_429["→ 429 TooManyRequestsError"]
-    SRV_RATE -->|"ok"| SRV_VALIDATE
-
-    SRV_VALIDATE["validateRequest(schema)\nsrc/middleware/validateRequest.ts\nZod parse req.body"]
-    SRV_VALIDATE -->|"invalid body"| SRV_400["→ 400 BadRequestError\n+ details[]"]
-    SRV_VALIDATE -->|"valid"| SRV_HANDLER
-
-    SRV_HANDLER["asyncHandler(controller)\nsrc/controllers/"]
-    SRV_HANDLER --> SRV_SERVICE["service.ts — business logic\nsrc/services/"]
-    SRV_SERVICE --> SRV_DB["sql`` tagged template\nsrc/db/client.ts — postgres.js"]
-    SRV_DB --> SRV_RESULT{"result?"}
-
-    SRV_RESULT -->|"ok"| SRV_OK["res.json(data) — 2xx"]
-    SRV_RESULT -->|"throw AppError subclass"| SRV_ERR_HANDLER
-
-    SRV_401 --> SRV_ERR_HANDLER
-    SRV_403 --> SRV_ERR_HANDLER
-    SRV_429 --> SRV_ERR_HANDLER
-    SRV_400 --> SRV_ERR_HANDLER
-    SRV_AUTH_ROUTE --> SRV_OK
-
-    SRV_ERR_HANDLER["errorHandler\nsrc/middleware/errorHandler.ts\nsendError(res, status, message, details?)"]
+    SRV_ERR_HANDLER["errorHandler\nsendError(res, status, msg, details?)"] --> SRV_ERR_OUT[/"4xx / 5xx response\n{ error, details?, requestId }"/]
   end
 
-  SRV_OK -. "HTTP response body" .-> JRS
-  SRV_ERR_HANDLER -. "HTTP error response body" .-> JRS
-  SRV_HEALTH -. "HTTP response" .-> JRS
+  SRV_OK ===> AK
+  SRV_ERR_OUT ===> AK
 
-  AV --> BB["Update component state / navigate / render data"]
+  %% =================================================================
+  %% Styling
+  %% =================================================================
+  classDef client fill:#e8f0ff,stroke:#3b6ea8
+  classDef server fill:#fff4e6,stroke:#cc7a00
+  class CLIENT client
+  class SERVER server
+

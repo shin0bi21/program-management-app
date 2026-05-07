@@ -18,23 +18,22 @@ Full-stack youth services management system — React + TypeScript frontend, Exp
 Every user action in the browser becomes an HTTP request to the backend API. The backend validates the JWT, runs business logic, queries the database, and returns JSON.
 
 ```mermaid
-flowchart LR
-    A([Browser\nUI action]) --> B[apiClient\ntoken validation + refresh]
-    B -->|"HTTP + Bearer token"| C[Express backend]
+flowchart TD
+    A([Browser UI action]) --> B[apiClient]
+    B -->|"HTTP + Bearer token"| MW{"Auth · rate limit\n· Zod validation"}
 
-    C --> MW{"Auth · rate limit\n· Zod validation"}
-    MW -->|Pass| SVC[Service layer\nbusiness logic]
+    MW -->|Pass| SVC[Service layer]
+    MW -->|"Reject"| ERR[errorHandler]
+
     SVC -->|SQL| DB[(PostgreSQL)]
     DB --> SVC
+    SVC -->|throw AppError| ERR
+    SVC -->|return data| OK[/"200 JSON"/]
 
-    SVC -->|"4xx / 5xx AppError"| ERR[errorHandler]
-    ERR -->|"{ error, requestId }"| RESP
-    MW -->|"400 / 401 / 403 / 429"| RESP["Error response"]
-    C -->|"200 JSON"| OK["Success response"]
-
-    RESP --> B
+    ERR -->|"4xx / 5xx\n{ error, requestId }"| B
     OK --> B
-    B -->|"Re-login if 401"| B
+
+    B -->|"401 → ReLoginModal"| B
     B --> UI([Update UI\nor render error])
 ```
 
