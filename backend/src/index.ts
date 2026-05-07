@@ -8,7 +8,7 @@ import staffRoutes from './routes/staffRoutes';
 import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 import { errorHandler, requestId } from './middleware/errorHandler';
-import { sendError } from './errors/AppError';
+import { NotFoundError } from './errors/AppError';
 import { checkConnection } from './db/client';
 
 const app = express();
@@ -57,9 +57,9 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/youth', youthRoutes);
 app.use('/api/schools', schoolRoutes);
 
-// 404 handler — catches all unmatched routes before the error handler
-app.use((req, res) => {
-  sendError(res, 404, 'Not found');
+// 404 handler — catches all unmatched routes; forwards to errorHandler
+app.use((_req, _res, next) => {
+  next(new NotFoundError('Not found'));
 });
 
 // Global error handler — must be registered after all routes

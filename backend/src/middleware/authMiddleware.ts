@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import type { PermissionLevel } from '../types/database';
+import type { Permission } from '../types/auth';
 import type { AccessTokenPayload } from '../types/auth';
 import { requireEnv } from '../utils/env';
 import { isBlacklisted } from '../services/tokenRevocationService';
-import { sendError } from '../errors/AppError';
+import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
+import { asyncHandler } from './errorHandler';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
@@ -13,85 +14,41 @@ export interface AuthRequest extends Request {
   user?: AccessTokenPayload;
 }
 
-export const authenticateToken = async (
-  req: Request, 
-  res: Response, 
-  next: NextFunction
-) => {
-  // Get token from Authorization header
+export const authenticateToken = asyncHandler(async (req, _res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    const rid = res.locals.requestId as string | undefined;
-    console.warn(`[${rid ?? '-'}] auth 401 No token`);
-    sendError(res, 401, 'Access denied. No token provided.');
-    return;
-  }
+  if (!token) throw new UnauthorizedError('Access denied. No token provided.');
 
+  let verified: AccessTokenPayload;
   try {
-    // Verify JWT signature and decode
-    const verified = jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
-
-    // Reject refresh tokens sent to protected routes
-    if (verified.tokenType !== 'access') {
-      const rid = res.locals.requestId as string | undefined;
-      console.warn(`[${rid ?? '-'}] auth 403 Invalid token type`);
-      sendError(res, 403, 'Invalid token type');
-      return;
-    }
-    
-    // Check if token is blacklisted
-    if (verified.jti && await isBlacklisted(verified.jti)) {
-      const rid = res.locals.requestId as string | undefined;
-      console.warn(`[${rid ?? '-'}] auth 401 Revoked token`);
-      sendError(res, 401, 'Token has been revoked');
-      return;
-    }
-    
-    // Attach user to request
-    (req as AuthRequest).user = verified;
-    next();
-    
+    verified = jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
   } catch (error) {
-    const rid = res.locals.requestId as string | undefined;
-    if (error instanceof jwt.TokenExpiredError) {
-      console.warn(`[${rid ?? '-'}] auth 401 Token expired`);
-      sendError(res, 401, 'Token expired');
-      return;
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      console.warn(`[${rid ?? '-'}] auth 403 Invalid token`);
-      sendError(res, 403, 'Invalid token');
-      return;
-    }
-    
-    console.error(`[${rid ?? '-'}] auth 403 Authentication error`, error);
-    sendError(res, 403, 'Authentication failed');
+    if (error instanceof jwt.TokenExpiredError) throw new UnauthorizedError('Token expired');
+    if (error instanceof jwt.JsonWebTokenError) throw new ForbiddenError('Invalid token');
+    throw error;
   }
-};
+
+  if (verified.tokenType !== 'access') throw new ForbiddenError('Invalid token type');
+
+  if (verified.jti && await isBlacklisted(verified.jti)) {
+    throw new UnauthorizedError('Token has been revoked');
+  }
+
+  (req as AuthRequest).user = verified;
+  next();
+});
 
 // Permission-based authorization — use after authenticateToken
-export const requirePermission = (...allowedPermissions: PermissionLevel[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const requirePermission = (...required: Permission[]) =>
+  asyncHandler(async (req, _res, next) => {
     const authReq = req as AuthRequest;
-    
-    if (!authReq.user) {
-      const rid = res.locals.requestId as string | undefined;
-      console.warn(`[${rid ?? '-'}] auth 401 Not authenticated`);
-      sendError(res, 401, 'Not authenticated');
-      return;
-    }
-    
-    if (!allowedPermissions.includes(authReq.user.permission)) {
-      const rid = res.locals.requestId as string | undefined;
-      console.warn(`[${rid ?? '-'}] auth 403 Insufficient permissions — user: ${authReq.user.permission}`);
-      sendError(res, 403, 'Insufficient permissions');
-      return;
-    }
-    
+    if (!authReq.user) throw new UnauthorizedError('Not authenticated');
+
+    const hasAll = required.every(p => authReq.user!.permissions.includes(p));
+    if (!hasAll) throw new ForbiddenError('Insufficient permissions');
+
     next();
-  };
-};
+  });
 
 

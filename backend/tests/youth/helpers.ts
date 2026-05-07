@@ -8,24 +8,31 @@ import { sql } from '../shared/db';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  admin: ['read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings'],
+  staff: ['read:youth', 'write:youth', 'read:schools'],
+  youth: [],
+};
+
 export function generateToken(
   userId: string,
-  permission: 'admin' | 'staff' | 'youth',
+  role: 'admin' | 'staff' | 'youth',
   email: string = 'test@test.local',
 ) {
   return jwt.sign(
-    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
+    { userId, email, role, permissions: ROLE_PERMISSIONS[role] ?? [], jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
     JWT_SECRET,
     { expiresIn: 900 },
   );
 }
 
-export function generateExpiredToken(userId: string, permission: 'admin' | 'staff' | 'youth' = 'admin') {
+export function generateExpiredToken(userId: string, role: 'admin' | 'staff' | 'youth' = 'admin') {
   return jwt.sign(
     {
       userId,
       email: 'test@test.local',
-      permission,
+      role,
+      permissions: ROLE_PERMISSIONS[role] ?? [],
       jti: crypto.randomBytes(16).toString('hex'),
       tokenType: 'access',
       iat: Math.floor(Date.now() / 1000) - 3600,

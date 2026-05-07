@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getYouth } from '../api/youth.api';
-import { getErrorMessage } from '../../../common/utils/errors';
+import { getErrorMessage } from '../../../common/utils/clientErrors';
 
 export interface YouthProfile {
   id: string;

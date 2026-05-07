@@ -2,6 +2,9 @@ type ResourceCardProps = {
   name: string
   role: string
   bio: string
+  badge?: string
+  education?: string
+  school?: string
   imageSrc?: string
   imageAlt?: string
 }
@@ -10,6 +13,9 @@ export default function ResourceCard({
   name,
   role,
   bio,
+  badge,
+  education,
+  school,
   imageSrc,
   imageAlt,
 }: ResourceCardProps) {
@@ -29,7 +35,14 @@ export default function ResourceCard({
 
       <div className="resource-content">
         <h3 className="resource-name">{name}</h3>
-        <p className="resource-role">{role}</p>
+        <p className="resource-role">
+          {badge ? `${badge}, ${role}` : role}
+        </p>
+        {(education || school) && (
+          <p className="resource-education">
+            {education}{education && school && ', '}{school}
+          </p>
+        )}
         <p className="resource-bio">{bio}</p>
       </div>
     </article>

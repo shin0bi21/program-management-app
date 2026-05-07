@@ -1,4 +1,12 @@
-import type { PermissionLevel } from './database';
+export type UserRole = 'admin' | 'staff' | 'youth';
+export type Permission =
+  | 'read:staff'
+  | 'write:staff'
+  | 'read:youth'
+  | 'write:youth'
+  | 'read:schools'
+  | 'read:settings'
+  | 'write:settings';
 
 export interface BaseTokenPayload {
   userId: string;
@@ -9,7 +17,8 @@ export interface BaseTokenPayload {
 }
 
 export interface AccessTokenPayload extends BaseTokenPayload {
-  permission: PermissionLevel;
+  role: UserRole;
+  permissions: Permission[];
   tokenType: 'access';
   iat: number;
   exp: number;
@@ -20,3 +29,5 @@ export interface RefreshTokenPayload extends BaseTokenPayload {
   iat: number;
   exp: number;
 }
+
+

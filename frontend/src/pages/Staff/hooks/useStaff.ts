@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getErrorMessage } from '../../../common/utils/errors';
+import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { getStaff } from '../api/staff.api';
 
 export interface StaffUser {

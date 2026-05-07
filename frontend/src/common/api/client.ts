@@ -3,7 +3,7 @@ import { getToken } from '../utils/storage';
 import { isTokenExpired, getTimeUntilExpiry } from '../utils/jwt';
 import { refreshToken } from './tokenRefresh';
 import { awaitReLogin } from './sessionExpired';
-import { NetworkError, RequestTimeoutError, ApiError, AuthError } from '../utils/errors';
+import { NetworkError, RequestTimeoutError, ApiError, AuthError } from '../utils/clientErrors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

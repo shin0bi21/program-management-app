@@ -7,7 +7,6 @@ import { sendEmail, send2FACode } from '../utils/emailService';
 import { hashDeviceFingerprint } from '../utils/deviceUtils';
 import { revokeAccessToken } from './tokenRevocationService';
 import type {
-  PermissionLevel,
   UserCredentials,
   Users,
   RefreshTokens,
@@ -16,7 +15,7 @@ import type {
 } from '../types/database';
 import type { DbRow } from '../types/db';
 import { requireEnv } from '../utils/env';
-import type { AccessTokenPayload, RefreshTokenPayload } from '../types/auth';
+import type { AccessTokenPayload, RefreshTokenPayload, UserRole, Permission } from '../types/auth';
 import {
   LockedError,
   UnauthorizedError,
@@ -46,7 +45,8 @@ const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection'
 
 type LoginCredentialsRow =
   DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until'>> &
-  DbRow<Pick<Users, 'first_name' | 'last_name' | 'permission'>>;
+  DbRow<Pick<Users, 'first_name' | 'last_name'>> &
+  { role: UserRole; permissions: Permission[] };
 
 export interface UserInfo {
   id: string;
@@ -92,13 +92,14 @@ function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'to
 async function generateAndStoreTokenPair(
   userId: string,
   email: string,
-  permission: PermissionLevel,
+  role: UserRole,
+  permissions: Permission[],
   tokenFamily: string,
 ): Promise<TokenPair> {
   const accessJTI = generateJTI();
   const refreshJTI = generateJTI();
 
-  const accessToken = signAccessToken({ userId, email, permission, jti: accessJTI });
+  const accessToken = signAccessToken({ userId, email, role, permissions, jti: accessJTI });
 
   const refreshToken = signRefreshToken({ userId, email, jti: refreshJTI });
 
@@ -138,10 +139,19 @@ export async function loginUser(
       uc.locked_until,
       u.first_name,
       u.last_name,
-      u.permission
+      ur.name AS role,
+      COALESCE(
+        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        '[]'
+      ) AS permissions
     FROM user_credentials uc
     JOIN users u ON u.id = uc.user_id
+    JOIN user_roles ur ON ur.id = u.role_id
+    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
+    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.email = ${email}
+    GROUP BY uc.user_id, uc.email, uc.password_hash, uc.email_verified,
+             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, ur.name
     LIMIT 1
   `;
 
@@ -220,7 +230,8 @@ export async function loginUser(
       const tokens = await generateAndStoreTokenPair(
         cred.userId,
         cred.email,
-        cred.permission,
+        cred.role,
+        cred.permissions,
         crypto.randomUUID(),
       );
 
@@ -293,10 +304,18 @@ export async function verify2FACode(
       uc.email,
       u.first_name,
       u.last_name,
-      u.permission
+      ur.name AS role,
+      COALESCE(
+        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        '[]'
+      ) AS permissions
     FROM user_credentials uc
     JOIN users u ON u.id = uc.user_id
+    JOIN user_roles ur ON ur.id = u.role_id
+    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
+    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.user_id = ${userId}
+    GROUP BY uc.user_id, uc.email, u.first_name, u.last_name, ur.name
     LIMIT 1
   `;
 
@@ -339,7 +358,8 @@ export async function verify2FACode(
   const tokens = await generateAndStoreTokenPair(
     cred.userId,
     cred.email,
-    cred.permission,
+    cred.role,
+    cred.permissions,
     crypto.randomUUID(),
   );
 
@@ -442,9 +462,21 @@ export async function rotateRefreshToken(
 
   const storedToken = storedTokens[0];
 
-  // 2. Get fresh user data (permission may have changed)
-  const users = await sql<DbRow<Pick<Users, 'permission'>>[]>`
-    SELECT permission FROM users WHERE id = ${decoded.userId} LIMIT 1
+  // 2. Get fresh user data (role/permissions may have changed)
+  const users = await sql<{ role: UserRole; permissions: Permission[] }[]>`
+    SELECT
+      ur.name AS role,
+      COALESCE(
+        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        '[]'
+      ) AS permissions
+    FROM users u
+    JOIN user_roles ur ON ur.id = u.role_id
+    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
+    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
+    WHERE u.id = ${decoded.userId}
+    GROUP BY u.id, ur.id, ur.name
+    LIMIT 1
   `;
 
   if (users.length === 0) {
@@ -458,7 +490,8 @@ export async function rotateRefreshToken(
   const newAccessToken = signAccessToken({
     userId: decoded.userId,
     email: decoded.email,
-    permission: users[0].permission,
+    role: users[0].role,
+    permissions: users[0].permissions,
     jti: newAccessJTI,
   });
 

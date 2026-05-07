@@ -1,8 +1,222 @@
 -- ============================================================================
 -- BACKUP SYSTEM FOR: 2026-01-31_1_init.sql
--- Generated: 2026-03-04T02:50:28.655Z
--- Tables: users, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
+-- Generated: 2026-05-07T00:15:56.833Z
+-- Tables: user_roles, user_role_has_permissions, users, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
 -- ============================================================================
+
+-- ============================================================================
+-- TABLE: user_roles
+-- ============================================================================
+
+-- Backup table for user_roles
+CREATE TABLE IF NOT EXISTS user_roles_backup (
+  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
+  _backup_action VARCHAR(10),
+  id UUID,
+  name VARCHAR(64),
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
+);
+
+-- BEFORE INSERT trigger for user_roles
+DROP FUNCTION IF EXISTS user_roles_before_insert() CASCADE;
+CREATE OR REPLACE FUNCTION user_roles_before_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Validate NOT NULL: name
+  IF NEW.name IS NULL THEN
+    RAISE EXCEPTION '[user_roles] name cannot be NULL';
+  END IF;
+  -- Validate VARCHAR length: name
+  IF NEW.name IS NOT NULL AND LENGTH(NEW.name) > 64 THEN
+    RAISE EXCEPTION '[user_roles] name exceeds maximum length of 64 characters';
+  END IF;
+  -- Validate not empty: name
+  IF LENGTH(TRIM(NEW.name)) = 0 THEN
+    RAISE EXCEPTION '[user_roles] name cannot be empty';
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Inserting into user_roles: %', NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_roles_before_insert ON user_roles;
+CREATE TRIGGER trigger_user_roles_before_insert
+BEFORE INSERT ON user_roles
+FOR EACH ROW
+EXECUTE FUNCTION user_roles_before_insert();
+
+-- BEFORE UPDATE trigger for user_roles
+DROP FUNCTION IF EXISTS user_roles_before_update() CASCADE;
+CREATE OR REPLACE FUNCTION user_roles_before_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot old state to backup table
+  INSERT INTO user_roles_backup (
+    _backup_action, id, name, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'UPDATE', OLD.id, OLD.name, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Auto-update updated_at if column exists
+  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
+    NEW.updated_at = NOW();
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Updating user_roles - OLD: % | NEW: %', OLD, NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_roles_before_update ON user_roles;
+CREATE TRIGGER trigger_user_roles_before_update
+BEFORE UPDATE ON user_roles
+FOR EACH ROW
+EXECUTE FUNCTION user_roles_before_update();
+
+-- BEFORE DELETE trigger for user_roles
+DROP FUNCTION IF EXISTS user_roles_before_delete() CASCADE;
+CREATE OR REPLACE FUNCTION user_roles_before_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot before deletion
+  INSERT INTO user_roles_backup (
+    _backup_action, id, name, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'DELETE', OLD.id, OLD.name, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Deleting from user_roles: %', OLD;
+
+  RETURN OLD;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_roles_before_delete ON user_roles;
+CREATE TRIGGER trigger_user_roles_before_delete
+BEFORE DELETE ON user_roles
+FOR EACH ROW
+EXECUTE FUNCTION user_roles_before_delete();
+
+-- ============================================================================
+-- TABLE: user_role_has_permissions
+-- ============================================================================
+
+-- Backup table for user_role_has_permissions
+CREATE TABLE IF NOT EXISTS user_role_has_permissions_backup (
+  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
+  _backup_action VARCHAR(10),
+  role_id UUID,
+  permission_id UUID,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
+);
+
+-- BEFORE INSERT trigger for user_role_has_permissions
+DROP FUNCTION IF EXISTS user_role_has_permissions_before_insert() CASCADE;
+CREATE OR REPLACE FUNCTION user_role_has_permissions_before_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Validate NOT NULL: role_id
+  IF NEW.role_id IS NULL THEN
+    RAISE EXCEPTION '[user_role_has_permissions] role_id cannot be NULL';
+  END IF;
+  -- Validate NOT NULL: permission_id
+  IF NEW.permission_id IS NULL THEN
+    RAISE EXCEPTION '[user_role_has_permissions] permission_id cannot be NULL';
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Inserting into user_role_has_permissions: %', NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_role_has_permissions_before_insert ON user_role_has_permissions;
+CREATE TRIGGER trigger_user_role_has_permissions_before_insert
+BEFORE INSERT ON user_role_has_permissions
+FOR EACH ROW
+EXECUTE FUNCTION user_role_has_permissions_before_insert();
+
+-- BEFORE UPDATE trigger for user_role_has_permissions
+DROP FUNCTION IF EXISTS user_role_has_permissions_before_update() CASCADE;
+CREATE OR REPLACE FUNCTION user_role_has_permissions_before_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot old state to backup table
+  INSERT INTO user_role_has_permissions_backup (
+    _backup_action, role_id, permission_id, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'UPDATE', OLD.role_id, OLD.permission_id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Auto-update updated_at if column exists
+  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
+    NEW.updated_at = NOW();
+  END IF;
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Updating user_role_has_permissions - OLD: % | NEW: %', OLD, NEW;
+
+  RETURN NEW;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_role_has_permissions_before_update ON user_role_has_permissions;
+CREATE TRIGGER trigger_user_role_has_permissions_before_update
+BEFORE UPDATE ON user_role_has_permissions
+FOR EACH ROW
+EXECUTE FUNCTION user_role_has_permissions_before_update();
+
+-- BEFORE DELETE trigger for user_role_has_permissions
+DROP FUNCTION IF EXISTS user_role_has_permissions_before_delete() CASCADE;
+CREATE OR REPLACE FUNCTION user_role_has_permissions_before_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  -- Snapshot before deletion
+  INSERT INTO user_role_has_permissions_backup (
+    _backup_action, role_id, permission_id, created_at, updated_at, created_by, updated_by
+  ) VALUES (
+    'DELETE', OLD.role_id, OLD.permission_id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+  );
+
+  -- Debug log (optional - comment out in production)
+  -- RAISE NOTICE '[DEBUG] Deleting from user_role_has_permissions: %', OLD;
+
+  RETURN OLD;
+END;
+$func$;
+
+DROP TRIGGER IF EXISTS trigger_user_role_has_permissions_before_delete ON user_role_has_permissions;
+CREATE TRIGGER trigger_user_role_has_permissions_before_delete
+BEFORE DELETE ON user_role_has_permissions
+FOR EACH ROW
+EXECUTE FUNCTION user_role_has_permissions_before_delete();
 
 -- ============================================================================
 -- TABLE: users
@@ -14,7 +228,7 @@ CREATE TABLE IF NOT EXISTS users_backup (
   _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
   _backup_action VARCHAR(10),
   id UUID,
-  permission permission_level,
+  role_id UUID,
   first_name VARCHAR(120),
   last_name VARCHAR(120),
   active BOOLEAN,
@@ -31,6 +245,10 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $func$
 BEGIN
+  -- Validate NOT NULL: role_id
+  IF NEW.role_id IS NULL THEN
+    RAISE EXCEPTION '[users] role_id cannot be NULL';
+  END IF;
   -- Validate NOT NULL: first_name
   IF NEW.first_name IS NULL THEN
     RAISE EXCEPTION '[users] first_name cannot be NULL';
@@ -78,9 +296,9 @@ AS $func$
 BEGIN
   -- Snapshot old state to backup table
   INSERT INTO users_backup (
-    _backup_action, id, permission, first_name, last_name, active, created_at, updated_at, created_by, updated_by
+    _backup_action, id, role_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'UPDATE', OLD.id, OLD.permission, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'UPDATE', OLD.id, OLD.role_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Auto-update updated_at if column exists
@@ -110,9 +328,9 @@ AS $func$
 BEGIN
   -- Snapshot before deletion
   INSERT INTO users_backup (
-    _backup_action, id, permission, first_name, last_name, active, created_at, updated_at, created_by, updated_by
+    _backup_action, id, role_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
   ) VALUES (
-    'DELETE', OLD.id, OLD.permission, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
+    'DELETE', OLD.id, OLD.role_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
   -- Debug log (optional - comment out in production)

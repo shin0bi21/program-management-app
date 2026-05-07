@@ -65,10 +65,22 @@ async function main() {
     // Generate UUID (idempotency handled by email check above)
     const adminId = crypto.randomUUID();
     
+    // Get admin role id
+    const roles = await sql`
+      SELECT id FROM user_roles WHERE name = 'admin' LIMIT 1
+    `;
+
+    if (roles.length === 0) {
+      console.error('ERROR: admin role not found. Has the init migration been applied?');
+      process.exit(1);
+    }
+
+    const adminRoleId = roles[0].id;
+
     // Insert admin user
     await sql`
-      INSERT INTO users (id, first_name, last_name, permission) 
-      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, 'admin'::permission_level)
+      INSERT INTO users (id, first_name, last_name, role_id) 
+      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid)
     `;
     
     // Insert admin credentials

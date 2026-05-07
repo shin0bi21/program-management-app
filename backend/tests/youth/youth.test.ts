@@ -17,7 +17,7 @@ describe('Youth API', () => {
   let adminToken: string;
 
   beforeAll(async () => {
-    const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, permission: 'admin' });
+    const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, role: 'admin' });
     adminUserId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
   });
@@ -46,7 +46,7 @@ describe('Youth API', () => {
     }, 30000);
 
     it('should allow staff access', async () => {
-      const staff = await seedTestUser({ email: `youth-staff-${Date.now()}@test.local`, permission: 'staff' });
+      const staff = await seedTestUser({ email: `youth-staff-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staff.userId, 'staff', staff.email);
 
       const res = await request(app)
@@ -59,7 +59,7 @@ describe('Youth API', () => {
     });
 
     it('should reject youth user access (403)', async () => {
-      const youth = await seedTestUser({ email: `youth-user-${Date.now()}@test.local`, permission: 'youth' });
+      const youth = await seedTestUser({ email: `youth-user-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youth.userId, 'youth', youth.email);
 
       const res = await request(app)
@@ -157,7 +157,7 @@ describe('Youth API', () => {
     });
 
     it('should allow staff to create youth (201)', async () => {
-      const staff = await seedTestUser({ email: `youth-create-staff-${Date.now()}@test.local`, permission: 'staff' });
+      const staff = await seedTestUser({ email: `youth-create-staff-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staff.userId, 'staff', staff.email);
 
       const res = await request(app)
@@ -219,7 +219,7 @@ describe('Youth API', () => {
     });
 
     it('should reject youth user from creating (403)', async () => {
-      const youth = await seedTestUser({ email: `youth-create-block-${Date.now()}@test.local`, permission: 'youth' });
+      const youth = await seedTestUser({ email: `youth-create-block-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youth.userId, 'youth', youth.email);
 
       const res = await request(app)

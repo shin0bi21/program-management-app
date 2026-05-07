@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { verify2FA, resend2FA } from '../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../common/utils/deviceFingerprint';
-import { getErrorMessage } from '../../../../common/utils/errors';
+import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { setAuthData } from '../../../../common/utils/storage';
 import { formatTime } from '../../../../common/utils/time';
 import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';

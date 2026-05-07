@@ -1,15 +1,16 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import type { Permission } from '../../context/AuthContext';
 
 const LAST_AUTH_PATH_KEY = 'lastAuthPath';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
-  requiredPermission?: 'admin' | 'staff';
+  requiredPermission?: Permission;
 }
 
 export default function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
-  const { isAuthenticated, permission, loading } = useAuth();
+  const { isAuthenticated, permissions, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -20,7 +21,7 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredPermission && permission !== requiredPermission) {
+  if (requiredPermission && !permissions.includes(requiredPermission)) {
     return <Navigate to="/youth" replace />;
   }
 
