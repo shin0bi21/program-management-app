@@ -43,8 +43,7 @@ CREATE TABLE IF NOT EXISTS schema_backup_tracking (
 -- POSTGRESQL ENUM TYPES
 -- ============================================================================
 
--- Permission levels (replaces lookup table pattern)
-CREATE TYPE permission_level AS ENUM ('youth', 'staff', 'admin');
+-- (permission_level enum removed — replaced by user_roles / user_permissions tables)
 
 -- Contact types (replaces lookup table pattern)
 CREATE TYPE contact_type AS ENUM ('parent', 'sibling', 'guardian', 'emergency');
@@ -83,21 +82,75 @@ CREATE TABLE IF NOT EXISTS base_table (
 -- USERS SCHEMA
 -- ============================================================================
 
--- 1. User Groups (kept as table since groups can be dynamic)
--- 1. Users Table (Profile Data Only)
+-- 1. Roles & Permissions
+CREATE TABLE IF NOT EXISTS user_roles (
+  id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(64) NOT NULL UNIQUE,
+  LIKE base_table INCLUDING ALL
+);
+
+CREATE TABLE IF NOT EXISTS user_permissions (
+  id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(128) NOT NULL UNIQUE,
+  LIKE base_table INCLUDING ALL
+);
+
+CREATE TABLE IF NOT EXISTS user_role_has_permissions (
+  role_id       UUID NOT NULL REFERENCES user_roles(id) ON DELETE CASCADE,
+  permission_id UUID NOT NULL REFERENCES user_permissions(id) ON DELETE CASCADE,
+  PRIMARY KEY (role_id, permission_id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID,
+  updated_by UUID
+);
+
+CREATE INDEX idx_user_role_has_permissions_role_id ON user_role_has_permissions(role_id);
+CREATE INDEX idx_user_role_has_permissions_permission_id ON user_role_has_permissions(permission_id);
+CREATE INDEX idx_user_roles_created_by ON user_roles(created_by);
+CREATE INDEX idx_user_permissions_created_by ON user_permissions(created_by);
+CREATE INDEX idx_urhp_created_by ON user_role_has_permissions(created_by);
+
+-- Seed roles
+INSERT INTO user_roles (name) VALUES ('admin'), ('staff'), ('youth') ON CONFLICT (name) DO NOTHING;
+
+-- Seed permissions
+INSERT INTO user_permissions (name) VALUES
+  ('read:staff'),
+  ('write:staff'),
+  ('read:youth'),
+  ('write:youth'),
+  ('read:schools'),
+  ('read:settings'),
+  ('write:settings')
+ON CONFLICT (name) DO NOTHING;
+
+-- Seed role → permission assignments
+INSERT INTO user_role_has_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM user_roles r, user_permissions p
+WHERE r.name = 'admin' AND p.name IN ('read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_role_has_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM user_roles r, user_permissions p
+WHERE r.name = 'staff' AND p.name IN ('read:youth', 'write:youth', 'read:schools')
+ON CONFLICT DO NOTHING;
+
+-- youth role has no permissions (intentional — empty set for now)
+
+-- 2. Users Table (Profile Data Only)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  permission permission_level NOT NULL DEFAULT 'youth',
+  role_id UUID NOT NULL REFERENCES user_roles(id),
   first_name VARCHAR(120) NOT NULL,
   last_name VARCHAR(120) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT true,
   LIKE base_table INCLUDING ALL,
-  -- Check constraints
   CHECK (LENGTH(TRIM(first_name)) > 0),
   CHECK (LENGTH(TRIM(last_name)) > 0)
 );
 
-CREATE INDEX idx_users_permission ON users(permission);
+CREATE INDEX idx_users_role_id ON users(role_id);
 CREATE INDEX idx_users_active ON users(active);
 
 COMMENT ON COLUMN users.active IS 'Active status: true for current cohort youth and enabled staff logins';
@@ -392,6 +445,26 @@ ADD CONSTRAINT fk_uhc_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) O
 ALTER TABLE youth_worksheets 
 ADD CONSTRAINT fk_worksheets_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
 ADD CONSTRAINT fk_worksheets_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE addresses
+ADD CONSTRAINT fk_addresses_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_addresses_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE user_has_addresses
+ADD CONSTRAINT fk_uha_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_uha_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE user_roles
+ADD CONSTRAINT fk_user_roles_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_user_roles_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE user_permissions
+ADD CONSTRAINT fk_user_permissions_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_user_permissions_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE user_role_has_permissions
+ADD CONSTRAINT fk_urhp_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_urhp_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
 
 -- ============================================================================
 -- SEED DATA

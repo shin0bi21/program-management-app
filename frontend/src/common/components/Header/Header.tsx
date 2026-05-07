@@ -8,8 +8,8 @@ import './Header.css';
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, permission, logout } = useAuth();
-  const isAdmin = permission === 'admin';
+  const { isAuthenticated, permissions, logout } = useAuth();
+  const isAdmin = permissions.includes('read:staff');
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith('/settings')
   );

@@ -5,7 +5,7 @@ import './Account.css';
 
 export default function Account() {
   const user = getUser();
-  const { permission } = useAuth();
+  const { role } = useAuth();
 
   return (
     <>
@@ -28,7 +28,7 @@ export default function Account() {
           </div>
           <div className="account-field">
             <span className="account-label">Role</span>
-            <span className="account-value account-role">{permission ?? '—'}</span>
+            <span className="account-value account-role">{role ?? '—'}</span>
           </div>
         </div>
       </div>

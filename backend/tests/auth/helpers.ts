@@ -53,9 +53,15 @@ export async function insertExpired2FACode(userId: string, code: string = '99999
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
-export function generateAccessToken(userId: string, email: string, permission: string = 'admin') {
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  admin: ['read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings'],
+  staff: ['read:youth', 'write:youth', 'read:schools'],
+  youth: [],
+};
+
+export function generateAccessToken(userId: string, email: string, role: string = 'admin') {
   return jwt.sign(
-    { userId, email, permission, jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
+    { userId, email, role, permissions: ROLE_PERMISSIONS[role] ?? [], jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
     JWT_SECRET,
     { expiresIn: 900 },
   );

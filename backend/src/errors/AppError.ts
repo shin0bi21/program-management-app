@@ -1,46 +1,95 @@
 /**
- * Stable contract for all error responses returned by this API.
- * Default shape: { error: string }
- * Validation errors extend with details: { error: string, details: ValidationDetail[] }
+ * ============================================================================
+ * AppError.ts — Error vocabulary + response formatter
+ * ============================================================================
+ *
+ * Pure vocabulary — no framework imports. Defines every error class the API
+ * can throw and the response shape they produce. No Express, no HTTP concerns.
+ * See `backend/docs/errors.md` for the full design rationale and request flow.
+ *
+ * File layout:
+ *   1. Response contract — ValidationDetail, ErrorResponse types
+ *   2. Base class        — AppError (abstract — never instantiate directly)
+ *   3. 4xx client errors — caller's fault (bad input, no auth, etc.)
+ *   4. 5xx server errors — our fault (DatabaseError, ServiceUnavailableError)
+ *
+ * Rule: throw an AppError subclass anywhere; the global errorHandler catches
+ * it, logs it, and formats the response. sendError lives in errorHandler.ts.
  */
-import { Response } from 'express';
 
+// ============================================================================
+// 1. RESPONSE CONTRACT
+// ============================================================================
+// Stable shape for every error response returned by this API.
+// Default:    { error: string, requestId?: string }
+// Validation: { error: string, details: ValidationDetail[], requestId?: string }
+
+/** A single field-level validation failure, returned in `ErrorResponse.details`. */
 export interface ValidationDetail {
+  /** The request body field that failed (dot-notation for nested, e.g. `address.city`). */
   field: string;
+  /** Human-readable description of why the field failed validation. */
   message: string;
 }
 
+/** Stable JSON shape of every error response returned by this API. */
 export interface ErrorResponse {
+  /** Top-level human-readable error string. */
   error: string;
+  /** Present only on 400 validation errors — one entry per failing field. */
   details?: ValidationDetail[];
+  /** Echoed from `X-Request-ID`; present on every response once `requestId` middleware is registered. */
   requestId?: string;
 }
 
-/**
- * Centralised response formatter for all error paths (errorHandler, validateRequest,
- * authMiddleware). Ensures consistent shape, headers, and requestId threading
- * regardless of which code path handles the error.
- */
-export function sendError(
-  res: Response,
-  status: number,
-  error: string,
-  options?: { details?: ValidationDetail[] },
-): void {
-  const body: ErrorResponse = { error };
-  if (options?.details) body.details = options.details;
-  const requestId = res.locals.requestId as string | undefined;
-  if (requestId) body.requestId = requestId;
-  res.status(status).json(body);
-}
+// ============================================================================
+// 2. BASE CLASS
+// ============================================================================
 
-export class AppError extends Error {
-  constructor(message: string, public statusCode = 500) {
+/**
+ * Abstract base for all API errors. Never instantiate directly — subclass it.
+ *
+ * Being abstract ensures `errorHandler` can always distinguish a deliberate
+ * typed error from an unexpected plain `Error` or third-party exception.
+ *
+ * To add a new error type: extend `AppError`, set `statusCode` and `this.name`.
+ *
+ * `errorHandler` reads these properties:
+ * - `statusCode`    — HTTP status (clamped to 400–599; anything else becomes 500)
+ * - `message`       — response body `{ error }` (redacted for 5xx in production)
+ * - `details`       — response body `{ details }` when present
+ * - `clientMessage` — overrides the generic 5xx fallback in production
+ */
+export abstract class AppError extends Error {
+  /** Field-level validation failures. Set only on {@link ValidationError}. */
+  public details?: ValidationDetail[];
+  /**
+   * Production-safe user-facing message for 5xx errors.
+   * When set, `errorHandler` uses this instead of the generic
+   * `'An unexpected error occurred'` fallback.
+   */
+  public clientMessage?: string;
+  /**
+   * @param message - Internal error description (logged; redacted for 5xx in production).
+   * @param statusCode - HTTP status code (only 400–599 honoured by `errorHandler`).
+   */
+  constructor(message: string, public readonly statusCode: number) {
     super(message);
     this.name = 'AppError';
   }
 }
 
+// ============================================================================
+// 3. 4xx CLIENT ERRORS — caller's fault, message returned as-is
+// ============================================================================
+// 4xx errors always return the actual message to the client (no redaction)
+// since the message describes what the caller did wrong. Logged at warn level.
+
+/**
+ * 400 — Invalid input that passed schema validation (semantic mismatch,
+ * business-rule violation, etc.).
+ * Throw from: services, controllers.
+ */
 export class BadRequestError extends AppError {
   constructor(message: string) {
     super(message, 400);
@@ -48,6 +97,26 @@ export class BadRequestError extends AppError {
   }
 }
 
+/**
+ * 400 — Zod schema validation failed. Carries field-level errors in `details`.
+ * Throw from: validateRequest middleware (only).
+ */
+export class ValidationError extends AppError {
+  /**
+   * @param message - Top-level error string (e.g. `'Validation failed'`).
+   * @param details - One entry per failing field, mapped from the Zod error.
+   */
+  constructor(message: string, details: ValidationDetail[]) {
+    super(message, 400);
+    this.name = 'ValidationError';
+    this.details = details;
+  }
+}
+
+/**
+ * 401 — Missing, malformed, expired, or revoked auth token.
+ * Throw from: authenticateToken middleware, authService (login failures).
+ */
 export class UnauthorizedError extends AppError {
   constructor(message: string) {
     super(message, 401);
@@ -55,6 +124,11 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+/**
+ * 403 — Authenticated but not allowed. Wrong token type, refresh-token
+ * reuse, or insufficient permissions.
+ * Throw from: authenticateToken, requirePermission, authService (refresh reuse).
+ */
 export class ForbiddenError extends AppError {
   constructor(message: string) {
     super(message, 403);
@@ -62,6 +136,11 @@ export class ForbiddenError extends AppError {
   }
 }
 
+/**
+ * 404 — Resource doesn't exist (or caller can't see it — services may
+ * return 404 instead of 403 to avoid leaking existence).
+ * Throw from: services, controllers.
+ */
 export class NotFoundError extends AppError {
   constructor(message: string) {
     super(message, 404);
@@ -69,6 +148,10 @@ export class NotFoundError extends AppError {
   }
 }
 
+/**
+ * 423 — Account locked out after too many failed login attempts.
+ * Throw from: authService.
+ */
 export class LockedError extends AppError {
   constructor(message: string) {
     super(message, 423);
@@ -76,9 +159,63 @@ export class LockedError extends AppError {
   }
 }
 
+/**
+ * 429 — Rate limit exceeded.
+ * Throw from: rateLimiter middleware (only — express-rate-limit forwards
+ * via next(err) when the limit is hit).
+ */
 export class TooManyRequestsError extends AppError {
   constructor(message: string) {
     super(message, 429);
     this.name = 'TooManyRequestsError';
+  }
+}
+
+// ============================================================================
+// 4. 5xx SERVER ERRORS — our fault, message redacted in production
+// ============================================================================
+// In production, errorHandler replaces the message with a generic string so
+// internal details never leak. Logged at error level with full stack.
+
+/**
+ * 500 — Unexpected application error with no more specific type.
+ * Throw from: anywhere an unrecoverable invariant is violated.
+ */
+export class InternalServerError extends AppError {
+  constructor(message: string) {
+    super(message, 500);
+    this.name = 'InternalServerError';
+  }
+}
+
+/**
+ * 503 — Database unreachable or refusing connections (ECONNREFUSED, 57P03,
+ * pool exhaustion, etc.). Thrown by the db/client.ts wrapper — errorHandler
+ * no longer needs to pattern-match raw postgres error strings.
+ * Throw from: db/client.ts (sql wrapper, withRetry).
+ */
+export class DatabaseError extends AppError {
+  /** Original low-level cause (postgres error, ECONNREFUSED, etc.) */
+  public readonly cause: unknown;
+  constructor(message: string, cause?: unknown) {
+    super(message, 503);
+    this.name = 'DatabaseError';
+    this.cause = cause;
+    this.clientMessage = 'The server is temporarily unavailable. Please try again shortly.';
+  }
+}
+
+/**
+ * 503 — An upstream service (cache, queue, third-party API) is unavailable.
+ * Throw from: service integrations, job queue adapters.
+ */
+export class ServiceUnavailableError extends AppError {
+  /** Original low-level cause (upstream HTTP error, timeout, etc.) */
+  public readonly cause: unknown;
+  constructor(message: string, cause?: unknown) {
+    super(message, 503);
+    this.name = 'ServiceUnavailableError';
+    this.cause = cause;
+    this.clientMessage = 'The server is temporarily unavailable. Please try again shortly.';
   }
 }

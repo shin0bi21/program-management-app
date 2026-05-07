@@ -66,7 +66,7 @@ src/common/utils/errors.ts"]
   AU -->|"Yes — 2xx"| AV["res.json() → typed data T"]
 
   AQ -. "raw HTTP response body" .-> JRS["2xx: { token, user } · { ...record } · [...records]\n4xx/5xx: { error: string, details?: [{ field, message }], requestId?: string }"]
-  AV -. "parsed success examples" .-> JRS2["Auth: { token, user: { id, email, firstName, lastName, permissionLevel } }\nStaff: StaffProfile[]\nYouth: YouthProfile[]\nSchools: School[]"]
+  AV -. "parsed success examples" .-> JRS2["Auth: { token, user: { id, email, firstName, lastName, role, permissions[] } }\nStaff: StaffProfile[]\nYouth: YouthProfile[]\nSchools: School[]"]
 
   %% ─── ERROR CONVERGENCE ───────────────────────────────────────────────────
   AF --> ERR["Hook or component catch block"]
@@ -78,5 +78,54 @@ src/common/utils/errors.ts"]
 
   ERR --> AZ["getErrorMessage(err, fallback)\nsrc/common/utils/errors.ts"]
   AZ --> BA["Render error message in UI"]
+
+  %% ─── SERVER-SIDE PROCESSING ─────────────────────────────────────────────
+  JR2 -. "arrives at Express" .-> SRV_IN
+
+  subgraph SERVER["Express Server — src/index.ts"]
+    SRV_IN["Request arrives\nnginx → Express"]
+    SRV_IN --> SRV_GLOBAL["Global middleware\nrequestId · helmet · cors\nexpress.json · cookieParser"]
+    SRV_GLOBAL --> SRV_ROUTE{"Route?"}
+
+    SRV_ROUTE -->|"/health"| SRV_HEALTH["200 OK — no auth"]
+    SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter\nasyncHandler(handler)"]
+    SRV_ROUTE -->|"/api/* protected"| SRV_AUTHTOK
+
+    SRV_AUTHTOK["authenticateToken\nsrc/middleware/authMiddleware.ts\nverify JWT signature → attach req.user\n{ userId, email, role, permissions[] }"]
+    SRV_AUTHTOK -->|"invalid / missing token"| SRV_401["→ 401 UnauthorizedError"]
+    SRV_AUTHTOK -->|"valid"| SRV_PERM
+
+    SRV_PERM["requirePermission('read:x')\nsrc/middleware/authMiddleware.ts\nreq.user.permissions.includes(p)"]
+    SRV_PERM -->|"permission missing"| SRV_403["→ 403 ForbiddenError"]
+    SRV_PERM -->|"permitted"| SRV_RATE
+
+    SRV_RATE["rateLimiter\nsrc/middleware/rateLimiter.ts"]
+    SRV_RATE -->|"limit exceeded"| SRV_429["→ 429 TooManyRequestsError"]
+    SRV_RATE -->|"ok"| SRV_VALIDATE
+
+    SRV_VALIDATE["validateRequest(schema)\nsrc/middleware/validateRequest.ts\nZod parse req.body"]
+    SRV_VALIDATE -->|"invalid body"| SRV_400["→ 400 BadRequestError\n+ details[]"]
+    SRV_VALIDATE -->|"valid"| SRV_HANDLER
+
+    SRV_HANDLER["asyncHandler(controller)\nsrc/controllers/"]
+    SRV_HANDLER --> SRV_SERVICE["service.ts — business logic\nsrc/services/"]
+    SRV_SERVICE --> SRV_DB["sql`` tagged template\nsrc/db/client.ts — postgres.js"]
+    SRV_DB --> SRV_RESULT{"result?"}
+
+    SRV_RESULT -->|"ok"| SRV_OK["res.json(data) — 2xx"]
+    SRV_RESULT -->|"throw AppError subclass"| SRV_ERR_HANDLER
+
+    SRV_401 --> SRV_ERR_HANDLER
+    SRV_403 --> SRV_ERR_HANDLER
+    SRV_429 --> SRV_ERR_HANDLER
+    SRV_400 --> SRV_ERR_HANDLER
+    SRV_AUTH_ROUTE --> SRV_OK
+
+    SRV_ERR_HANDLER["errorHandler\nsrc/middleware/errorHandler.ts\nsendError(res, status, message, details?)"]
+  end
+
+  SRV_OK -. "HTTP response body" .-> JRS
+  SRV_ERR_HANDLER -. "HTTP error response body" .-> JRS
+  SRV_HEALTH -. "HTTP response" .-> JRS
 
   AV --> BB["Update component state / navigate / render data"]

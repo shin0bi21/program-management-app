@@ -5,8 +5,9 @@ import type { DbRow } from '../types/db';
 import type { CreateStaffInput } from '../validation/staffSchemas';
 
 type StaffRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'permission' | 'created_at'>> & {
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'created_at'>> & {
     email: string;
+    role: string;
   };
 
 export async function getStaff() {
@@ -16,24 +17,29 @@ export async function getStaff() {
       u.first_name,
       u.last_name,
       u.active,
-      u.permission,
       u.created_at,
-      uc.email
+      uc.email,
+      ur.name AS role
     FROM users u
     INNER JOIN user_credentials uc ON uc.user_id = u.id
-    WHERE u.permission IN ('staff', 'admin')
+    INNER JOIN user_roles ur ON ur.id = u.role_id
+    WHERE ur.name IN ('staff', 'admin')
     ORDER BY u.first_name ASC, u.last_name ASC
   `;
 }
 
 export async function createStaff(data: CreateStaffInput) {
-  const { firstName, lastName, email, password, permission = 'staff', active } = data;
+  const { firstName, lastName, email, password, role = 'staff', active } = data;
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
+  if (!roles.length) throw new Error(`Role '${role}' not found`);
+  const roleId = roles[0].id;
+
   const newUsers = await sql<DbRow<Users>[]>`
-    INSERT INTO users (first_name, last_name, permission, active)
-    VALUES (${firstName}, ${lastName}, ${permission}::permission_level, ${active})
+    INSERT INTO users (first_name, last_name, role_id, active)
+    VALUES (${firstName}, ${lastName}, ${roleId}, ${active})
     RETURNING *
   `;
 
@@ -50,11 +56,12 @@ export async function createStaff(data: CreateStaffInput) {
       u.first_name,
       u.last_name,
       u.active,
-      u.permission,
       u.created_at,
-      uc.email
+      uc.email,
+      ur.name AS role
     FROM users u
     INNER JOIN user_credentials uc ON uc.user_id = u.id
+    INNER JOIN user_roles ur ON ur.id = u.role_id
     WHERE u.id = ${userId}
   `;
 

@@ -8,7 +8,7 @@ import { createStaffSchema } from '../validation/staffSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, asyncHandler(handleGetStaff));
-router.post('/', authenticateToken, requirePermission('admin'), generalLimiter, validateRequest(createStaffSchema), asyncHandler(handleCreateStaff));
+router.get('/', authenticateToken, requirePermission('read:staff'), generalLimiter, asyncHandler(handleGetStaff));
+router.post('/', authenticateToken, requirePermission('write:staff'), generalLimiter, validateRequest(createStaffSchema), asyncHandler(handleCreateStaff));
 
 export default router;

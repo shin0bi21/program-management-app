@@ -13,7 +13,7 @@ export interface SeededUser {
   password: string;        // plaintext — for login tests
   firstName: string;
   lastName: string;
-  permission: string;
+  role: string;
 }
 
 export interface SeedOverrides {
@@ -21,7 +21,7 @@ export interface SeedOverrides {
   password?: string;
   firstName?: string;
   lastName?: string;
-  permission?: 'admin' | 'staff' | 'youth';
+  role?: 'admin' | 'staff' | 'youth';
 }
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ const DEFAULTS = {
   password: 'TestPassword123!',
   firstName: 'Test',
   lastName: 'User',
-  permission: 'admin' as const,
+  role: 'admin' as const,
 };
 
 // ─── Seed a user into the DB ─────────────────────────────────────────────────
@@ -44,9 +44,12 @@ export async function seedTestUser(overrides: SeedOverrides = {}): Promise<Seede
 
   const passwordHash = await bcrypt.hash(data.password, 10);
 
+  const [roleRow] = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${data.role}`;
+  if (!roleRow) throw new Error(`Role '${data.role}' not found in user_roles`);
+
   const [user] = await sql<{ id: string }[]>`
-    INSERT INTO users (first_name, last_name, permission)
-    VALUES (${data.firstName}, ${data.lastName}, ${data.permission}::permission_level)
+    INSERT INTO users (first_name, last_name, role_id)
+    VALUES (${data.firstName}, ${data.lastName}, ${roleRow.id})
     RETURNING id
   `;
 
@@ -61,7 +64,7 @@ export async function seedTestUser(overrides: SeedOverrides = {}): Promise<Seede
     password: data.password,
     firstName: data.firstName,
     lastName: data.lastName,
-    permission: data.permission,
+    role: data.role,
   };
 }
 

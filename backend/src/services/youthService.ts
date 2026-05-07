@@ -57,8 +57,9 @@ export async function getYouth(id?: string) {
       ) as contacts
     FROM youth_profiles yp
     INNER JOIN users u ON u.id = yp.user_id
+    INNER JOIN user_roles ur ON ur.id = u.role_id
     LEFT JOIN schools s ON s.id = yp.school_id
-    WHERE u.permission = 'youth'
+    WHERE ur.name = 'youth'
       ${id ? sql`AND u.id = ${id}` : sql``}
     ORDER BY u.first_name ASC, u.last_name ASC
   `;
@@ -85,12 +86,12 @@ export async function setYouth(data: SetYouthInput) {
 
   if (id) {
     const users = await sql<DbRow<Users>[]>`
-      INSERT INTO users (id, first_name, last_name, permission, active, created_at, updated_at)
+      INSERT INTO users (id, first_name, last_name, role_id, active, created_at, updated_at)
       VALUES (
         ${id},
         ${firstName},
         ${lastName},
-        'youth'::permission_level,
+        (SELECT id FROM user_roles WHERE name = 'youth'),
         ${active},
         COALESCE((SELECT created_at FROM users WHERE id = ${id}), NOW()),
         NOW()
@@ -125,8 +126,8 @@ export async function setYouth(data: SetYouthInput) {
     `;
   } else {
     const newUsers = await sql<DbRow<Users>[]>`
-      INSERT INTO users (first_name, last_name, permission, active)
-      VALUES (${firstName}, ${lastName}, 'youth'::permission_level, ${active})
+      INSERT INTO users (first_name, last_name, role_id, active)
+      VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'), ${active})
       RETURNING *
     `;
 

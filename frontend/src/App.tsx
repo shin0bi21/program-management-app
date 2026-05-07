@@ -28,7 +28,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/youth" element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredPermission="read:youth">
               <Youth />
             </ProtectedRoute>
           } />
@@ -38,7 +38,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/settings/staff" element={
-            <ProtectedRoute requiredPermission="admin">
+            <ProtectedRoute requiredPermission="read:staff">
               <Staff />
             </ProtectedRoute>
           } />
