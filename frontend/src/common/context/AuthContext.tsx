@@ -2,13 +2,22 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 import { useNavigate } from 'react-router-dom';
 import { isTokenExpired, decodeToken } from '../utils/jwt';
 import { clearAuthData, getToken } from '../utils/storage';
-import { api } from '../api/config';
+import { logout as logoutRequest } from '../../pages/Auth/common/api/auth.api';
 
-type Permission = 'admin' | 'staff' | null;
+export type UserRole = 'admin' | 'staff' | 'youth';
+export type Permission =
+  | 'read:staff'
+  | 'write:staff'
+  | 'read:youth'
+  | 'write:youth'
+  | 'read:schools'
+  | 'read:settings'
+  | 'write:settings';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  permission: Permission;
+  role: UserRole | null;
+  permissions: Permission[];
   loading: boolean;
   login: () => void;
   logout: () => void;
@@ -18,7 +27,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [permission, setPermission] = useState<Permission>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -26,17 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token || isTokenExpired(token)) {
       clearAuthData();
       setIsAuthenticated(false);
-      setPermission(null);
+      setRole(null);
+      setPermissions([]);
       return;
     }
     try {
       const payload = decodeToken(token);
       setIsAuthenticated(true);
-      setPermission((payload?.permission as Permission) ?? null);
+      setRole((payload?.role as UserRole) ?? null);
+      setPermissions((payload?.permissions as Permission[]) ?? []);
     } catch {
       clearAuthData();
       setIsAuthenticated(false);
-      setPermission(null);
+      setRole(null);
+      setPermissions([]);
     }
   };
 
@@ -52,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'token' && !e.newValue) {
         setIsAuthenticated(false);
-        setPermission(null);
+        setRole(null);
+        setPermissions([]);
         navigate('/login');
       }
     };
@@ -65,22 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      await fetch(api('/auth/logout'), {
-        method: 'POST',
-        credentials: 'include',
-      }).catch(() => {});
-    } finally {
-      clearAuthData();
-      setIsAuthenticated(false);
-      setPermission(null);
-      navigate('/login');
-    }
+    await logoutRequest().catch(() => {});
+    clearAuthData();
+    setIsAuthenticated(false);
+    setRole(null);
+    setPermissions([]);
+    navigate('/login');
   };
 
   const value = useMemo(
-    () => ({ isAuthenticated, permission, loading, login, logout }),
-    [isAuthenticated, permission, loading]
+    () => ({ isAuthenticated, role, permissions, loading, login, logout }),
+    [isAuthenticated, role, permissions, loading]
   );
 
   return (

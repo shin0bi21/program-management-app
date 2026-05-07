@@ -6,6 +6,6 @@ import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, asyncHandler(handleGetSchools));
+router.get('/', authenticateToken, requirePermission('read:schools'), generalLimiter, asyncHandler(handleGetSchools));
 
 export default router;

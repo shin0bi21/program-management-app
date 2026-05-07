@@ -8,7 +8,7 @@ import { setYouthSchema } from '../validation/youthSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, asyncHandler(handleGetYouth));
-router.post('/', authenticateToken, requirePermission('admin', 'staff'), generalLimiter, validateRequest(setYouthSchema), asyncHandler(handleSetYouth));
+router.get('/', authenticateToken, requirePermission('read:youth'), generalLimiter, asyncHandler(handleGetYouth));
+router.post('/', authenticateToken, requirePermission('write:youth'), generalLimiter, validateRequest(setYouthSchema), asyncHandler(handleSetYouth));
 
 export default router;

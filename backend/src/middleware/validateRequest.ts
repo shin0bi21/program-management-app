@@ -1,13 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { sendError } from '../errors/AppError';
+import { ValidationError } from '../errors/AppError';
+import { asyncHandler } from './errorHandler';
 
 /**
- * Middleware wrapper that validates request data against a Zod schema
- * @param schema - The Zod schema to validate against
+ * Middleware wrapper that validates request data against a Zod schema.
+ * Throws ValidationError (400 with details[]) on failure — caught by errorHandler.
  */
-export const validateRequest = (schema: ZodSchema) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const validateRequest = (schema: ZodSchema) =>
+  asyncHandler(async (req, _res, next) => {
     try {
       await schema.parseAsync({
         body: req.body,
@@ -21,10 +21,8 @@ export const validateRequest = (schema: ZodSchema) => {
           field: issue.path.join('.'),
           message: issue.message,
         }));
-        sendError(res, 400, 'Validation failed', { details });
-        return;
+        throw new ValidationError('Validation failed', details);
       }
-      next(error);
+      throw error;
     }
-  };
-};
+  });

@@ -8,14 +8,15 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 
 1. [Overview](#1-overview)
 2. [Token Types](#2-token-types)
-3. [Payload Type Hierarchy](#3-payload-type-hierarchy)
-4. [Signing Helpers](#4-signing-helpers)
-5. [Token Verification & Guards](#5-token-verification--guards)
-6. [Refresh Token Rotation](#6-refresh-token-rotation)
-7. [Logout & Blacklisting](#7-logout--blacklisting)
-8. [Shared Utilities](#8-shared-utilities)
-9. [Module Boundaries](#9-module-boundaries)
-10. [What Is Out of Scope (and Why)](#10-what-is-out-of-scope-and-why)
+3. [RBAC Model](#3-rbac-model)
+4. [Payload Type Hierarchy](#4-payload-type-hierarchy)
+5. [Signing Helpers](#5-signing-helpers)
+6. [Token Verification & Guards](#6-token-verification--guards)
+7. [Refresh Token Rotation](#7-refresh-token-rotation)
+8. [Logout & Blacklisting](#8-logout--blacklisting)
+9. [Shared Utilities](#9-shared-utilities)
+10. [Module Boundaries](#10-module-boundaries)
+11. [What Is Out of Scope (and Why)](#11-what-is-out-of-scope-and-why)
 
 ---
 
@@ -78,13 +79,54 @@ Trusted devices skip the 2FA step for 30 days after first verify.
 | Secret | `JWT_SECRET` | `REFRESH_SECRET` |
 | TTL | 1 hour | 8 hours |
 | Sent as | `Authorization: Bearer` header | `httpOnly` cookie |
-| Contains `permission` | ✓ | ✗ |
+| Contains `role` + `permissions[]` | ✓ | ✗ |
 | `tokenType` claim | `'access'` | `'refresh'` |
 | Stored in DB | ✗ (blacklist only on logout) | ✓ (`refresh_tokens` table) |
 
 ---
 
-## 3. Payload Type Hierarchy
+## 3. RBAC Model
+
+Authorization is purely permission-based. **No role checks exist in route or UI logic** — only `permissions.includes('x')` checks. Roles are a DB-level grouping that determine which permissions are assigned at login time.
+
+### Roles and their permissions (seeded in `init.sql`)
+
+| Role | Permissions |
+|------|-------------|
+| `admin` | `read:staff`, `write:staff`, `read:youth`, `write:youth`, `read:schools`, `read:settings`, `write:settings` |
+| `staff` | `read:youth`, `write:youth`, `read:schools` |
+| `youth` | *(none)* |
+
+### Permission definitions
+
+| Permission | Grants |
+|------------|--------|
+| `read:staff` | `GET /api/staff` |
+| `write:staff` | `POST /api/staff` |
+| `read:youth` | `GET /api/youth` |
+| `write:youth` | `POST /api/youth` |
+| `read:schools` | `GET /api/schools` |
+| `read:settings` | `GET /api/settings/*` *(reserved)* |
+| `write:settings` | `POST /api/settings/*` *(reserved)* |
+
+### How permissions flow into a token
+
+1. On login/verify, `authService.ts` JOINs `user_roles → user_role_has_permissions → user_permissions` to aggregate the user's full permission set into a `json_agg` array.
+2. Both `role` (name string) and `permissions` (string array) are embedded in the **access token payload**.
+3. `requirePermission(...required)` middleware reads `req.user.permissions` — it never reads `req.user.role`.
+4. On refresh, a fresh permission set is re-fetched from DB so role changes take effect on the next rotation.
+
+### Where to add a new permission
+
+1. Add the string to the `Permission` union in `src/types/auth.ts`
+2. `INSERT INTO user_permissions (name)` in `init.sql` seed block
+3. `INSERT INTO user_role_has_permissions` for whichever roles should have it
+4. Add `requirePermission('new:permission')` to the relevant route in `src/routes/`
+5. Add the string to the `Permission` union in `frontend/src/common/context/AuthContext.tsx`
+
+---
+
+## 4. Payload Type Hierarchy
 
 Defined in `src/types/auth.ts`. This is the single source of truth for JWT payload shapes across both `authService.ts` and `authMiddleware.ts`.
 
@@ -98,15 +140,16 @@ interface BaseTokenPayload {
   exp?: number;    // expiry — stamped by jsonwebtoken on sign
 }
 
-// Access token — adds permission level and type discriminator
+// Access token — adds role, permissions array, and type discriminator
 interface AccessTokenPayload extends BaseTokenPayload {
-  permission: PermissionLevel;   // 'admin' | 'staff' | 'youth'
+  role: UserRole;            // 'admin' | 'staff' | 'youth' — for display only
+  permissions: Permission[]; // e.g. ['read:youth', 'write:youth'] — used for all authz checks
   tokenType: 'access';
-  iat: number;                   // required on decoded tokens (always present after verify)
-  exp: number;                   // required on decoded tokens
+  iat: number;               // required on decoded tokens (always present after verify)
+  exp: number;               // required on decoded tokens
 }
 
-// Refresh token — no permission, just identity + type discriminator
+// Refresh token — no permissions, just identity + type discriminator
 interface RefreshTokenPayload extends BaseTokenPayload {
   tokenType: 'refresh';
   iat: number;
@@ -122,7 +165,7 @@ interface RefreshTokenPayload extends BaseTokenPayload {
 
 ---
 
-## 4. Signing Helpers
+## 5. Signing Helpers
 
 `signAccessToken` and `signRefreshToken` in `authService.ts` are the only places in the codebase where tokens are signed. They own the secret, the expiry, and the `tokenType` stamp.
 
@@ -136,7 +179,7 @@ function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'to
 }
 ```
 
-The caller only passes the identity fields (`userId`, `email`, `permission`, `jti`). The helpers are responsible for:
+The caller only passes the identity fields (`userId`, `email`, `role`, `permissions`, `jti`). The helpers are responsible for:
 - Selecting the right secret
 - Setting the expiry constant
 - Stamping `tokenType`
@@ -147,7 +190,7 @@ The caller only passes the identity fields (`userId`, `email`, `permission`, `jt
 
 ---
 
-## 5. Token Verification & Guards
+## 6. Token Verification & Guards
 
 `authenticateToken` middleware in `src/middleware/authMiddleware.ts`:
 
@@ -162,13 +205,13 @@ jwt.verify(token, JWT_SECRET)
 
 The `tokenType` guard provides an explicit payload-level check on top of signature verification. A refresh token presented to a protected route will fail `jwt.verify()` due to the wrong secret, but the guard makes the rejection intentional and readable in code — the contract is visible, not implicit.
 
-`requirePermission(...allowedPermissions)` is a separate middleware that runs after `authenticateToken`. It reads `req.user.permission` and rejects the request if the user's role isn't in the allowed list.
+`requirePermission(...required: Permission[])` is a separate middleware that runs after `authenticateToken`. It checks that every required permission is present in `req.user.permissions[]` — it never reads `req.user.role`.
 
-**Error responses:** All auth and rate limiter rejections use `sendError()` and return a consistent `ErrorResponse` JSON shape with a `requestId` field. They respond inline (not via `errorHandler`). See [errors.md §5](./errors.md#5-middleware-order-and-where-auth-errors-slot-in) for the full middleware flow and bypass path tradeoffs.
+**Error responses:** Auth middleware throws `UnauthorizedError` or `ForbiddenError` from `AppError.ts`. The thrown errors flow through `asyncHandler` to the global `errorHandler`, which formats the response via `sendError()`. Same path as service-thrown errors \u2014 no inline response. See [errors.md \u00a75](./errors.md#5-how-a-request-flows-through-the-system) for the full middleware flow.
 
 ---
 
-## 6. Refresh Token Rotation
+## 7. Refresh Token Rotation
 
 `rotateRefreshToken()` in `authService.ts`:
 
@@ -176,7 +219,7 @@ The `tokenType` guard provides an explicit payload-level check on top of signatu
 2. Check `decoded.jti` — must be present
 3. Look up token in `refresh_tokens` by JTI + SHA-256 hash of raw token + `expires_at > NOW()` + `revoked_at IS NULL`
 4. **If not found:** look up the token family. If the family exists, revoke all tokens in it (reuse detection — the token was already rotated out). Throw 403.
-5. Fetch fresh `permission` from `users` table — permission changes take effect on the next refresh, not mid-session.
+5. Fetch fresh `role` + `permissions[]` via JOIN to `user_roles → user_role_has_permissions → user_permissions` — permission changes take effect on the next refresh, not mid-session.
 6. Generate new access JTI + refresh JTI, sign both tokens via `signAccessToken` / `signRefreshToken`
 7. **In a single DB transaction:** insert new refresh token row, then mark old row as `revoked_at = NOW()` with `replaced_by = <new row id>`. Both statements succeed or both roll back — no window where two tokens are simultaneously valid.
 8. Return `{ newAccessToken, newRefreshToken }`
@@ -196,7 +239,7 @@ This is the same design principle as refresh token rotation: the state transitio
 
 ---
 
-## 7. Logout & Blacklisting
+## 8. Logout & Blacklisting
 
 `logoutUser()` handles both tokens independently (either or both may be absent):
 
@@ -210,7 +253,7 @@ Errors during token decode (expired, already invalid) are silently swallowed —
 
 ---
 
-## 8. Shared Utilities
+## 9. Shared Utilities
 
 ### `src/utils/env.ts`
 
@@ -222,7 +265,7 @@ Throws at startup if a required env var is missing. Used by `authService.ts` and
 
 ### `src/types/auth.ts`
 
-Exports `BaseTokenPayload`, `AccessTokenPayload`, `RefreshTokenPayload`. Both `authService.ts` (signing) and `authMiddleware.ts` (verification) import from here. This is the single source of truth — if the token shape ever changes, update this file only.
+Exports `BaseTokenPayload`, `AccessTokenPayload`, `RefreshTokenPayload`, `UserRole`, `Permission`. Both `authService.ts` (signing) and `authMiddleware.ts` (verification) import from here. This is the single source of truth for token shapes and permission strings on the backend — if the token shape or permission list changes, update this file first.
 
 ### `src/services/tokenRevocationService.ts`
 
@@ -237,7 +280,7 @@ The in-memory `Set<string>` and 60s TTL polling are internal implementation deta
 
 ---
 
-## 9. Module Boundaries
+## 10. Module Boundaries
 
 The dependency graph is acyclic. Middleware depends on services/utils, services depend on utils, nothing depends on middleware:
 ```
@@ -252,7 +295,7 @@ Middleware depends on services/utils. Services depend on utils. Nothing depends 
 
 ---
 
-## 10. What Is Out of Scope (and Why)
+## 11. What Is Out of Scope (and Why)
 
 | Topic | Status | Reason |
 |-------|--------|--------|
@@ -260,4 +303,4 @@ Middleware depends on services/utils. Services depend on utils. Nothing depends 
 | `iss` / `aud` standard claims | Not implemented | Protect against token confusion across multiple services. Not needed for a single-service monolith. Revisit if the app splits into multiple services. |
 | RS256 / asymmetric keys | Not implemented | Only valuable when downstream services need to verify tokens without the signing secret. HS256 with a strong 64-byte secret is appropriate for a monolith. |
 | Token expiry changes | Out of scope | Security policy decision, separate from structural type changes. Current: access = 1h, refresh = 8h. |
-| Frontend `jwt.ts` utils | Not updated | Frontend only reads the `permission` claim from access tokens for UI routing. It never validates `tokenType` and has no need to. |
+| Frontend `jwt.ts` utils | Not updated | Frontend only reads `role` and `permissions[]` from the access token for UI routing. It never validates `tokenType` and has no need to. |

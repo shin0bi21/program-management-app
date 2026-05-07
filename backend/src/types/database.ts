@@ -25,8 +25,6 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
-export type PermissionLevel = "admin" | "staff" | "youth";
-
 export type SchoolBoard = "catholic" | "public";
 
 export type SchoolType = "grade_school" | "high_school" | "middle_school";
@@ -254,6 +252,57 @@ export interface UserHasContactsBackup {
   user_id: string | null;
 }
 
+export interface UserPermissions {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface UserRoleHasPermissions {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  permission_id: string;
+  role_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface UserRoleHasPermissionsBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  permission_id: string | null;
+  role_id: string | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+}
+
+export interface UserRoles {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface UserRolesBackup {
+  _backup_action: string | null;
+  _backup_timestamp: Generated<Timestamp | null>;
+  _uuid: Generated<string>;
+  created_at: Timestamp | null;
+  created_by: string | null;
+  id: string | null;
+  name: string | null;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+}
+
 export interface Users {
   /**
    * Active status: true for current cohort youth and enabled staff logins
@@ -264,7 +313,7 @@ export interface Users {
   first_name: string;
   id: Generated<string>;
   last_name: string;
-  permission: Generated<PermissionLevel>;
+  role_id: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -279,7 +328,7 @@ export interface UsersBackup {
   first_name: string | null;
   id: string | null;
   last_name: string | null;
-  permission: PermissionLevel | null;
+  role_id: string | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
 }
@@ -366,6 +415,11 @@ export interface DB {
   user_has_addresses_backup: UserHasAddressesBackup;
   user_has_contacts: UserHasContacts;
   user_has_contacts_backup: UserHasContactsBackup;
+  user_permissions: UserPermissions;
+  user_role_has_permissions: UserRoleHasPermissions;
+  user_role_has_permissions_backup: UserRoleHasPermissionsBackup;
+  user_roles: UserRoles;
+  user_roles_backup: UserRolesBackup;
   users: Users;
   users_backup: UsersBackup;
   youth_profiles: YouthProfiles;

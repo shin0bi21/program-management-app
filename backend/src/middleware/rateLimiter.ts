@@ -1,15 +1,14 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { sendError } from '../errors/AppError';
+import { TooManyRequestsError } from '../errors/AppError';
 
 // Skip rate limiting in test environment
 const skipRateLimiting = process.env.NODE_ENV === 'test';
 
+// Forward to errorHandler via next(err) — keeps response shape and logging consistent.
 const rateLimitHandler = (message: string) =>
-  (_req: Request, res: Response) => {
-    const rid = res.locals.requestId as string | undefined;
-    console.warn(`[${rid ?? '-'}] rateLimiter 429 ${message}`);
-    sendError(res, 429, message);
+  (_req: Request, _res: Response, next: NextFunction) => {
+    next(new TooManyRequestsError(message));
   };
 
 // General API rate limiter: 100 requests per 15 minutes

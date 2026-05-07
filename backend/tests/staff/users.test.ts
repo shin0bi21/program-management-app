@@ -38,21 +38,20 @@ describe('Staff API', () => {
       expect(Array.isArray(res.body)).toBe(true);
     }, 30000);
 
-    it('should allow staff access', async () => {
-      const staffUser = await seedTestUser({ email: `user-staff-${Date.now()}@test.local`, permission: 'staff' });
+    it('should reject staff access (403)', async () => {
+      const staffUser = await seedTestUser({ email: `user-staff-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
         .get('/api/staff')
         .set('Authorization', `Bearer ${staffToken}`);
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.status).toBe(403);
 
       await deleteTestUser(staffUser.userId);
     });
 
     it('should reject youth access (403)', async () => {
-      const youthUser = await seedTestUser({ email: `user-youth-${Date.now()}@test.local`, permission: 'youth' });
+      const youthUser = await seedTestUser({ email: `user-youth-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
@@ -105,7 +104,7 @@ describe('Staff API', () => {
           lastName: 'User',
           email: uniqueEmail,
           password: 'password123',
-          permission: 'staff',
+          role: 'staff',
           active: true,
         });
 
@@ -148,7 +147,7 @@ describe('Staff API', () => {
     });
 
     it('should reject staff from creating staff (403)', async () => {
-      const staffUser = await seedTestUser({ email: `create-staff-${Date.now()}@test.local`, permission: 'staff' });
+      const staffUser = await seedTestUser({ email: `create-staff-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
@@ -168,7 +167,7 @@ describe('Staff API', () => {
     });
 
     it('should reject youth from creating staff (403)', async () => {
-      const youthUser = await seedTestUser({ email: `create-youth-${Date.now()}@test.local`, permission: 'youth' });
+      const youthUser = await seedTestUser({ email: `create-youth-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
@@ -191,7 +190,7 @@ describe('Staff API', () => {
       const firstRes = await request(app)
         .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123', permission: 'staff', active: true });
+        .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123', role: 'staff', active: true });
       expect(firstRes.status).toBe(201);
       createdUserIds.push(firstRes.body.id);
 
