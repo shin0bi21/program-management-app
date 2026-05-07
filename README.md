@@ -19,47 +19,32 @@ Every user action in the browser becomes an HTTP request to the backend API. The
 
 ```mermaid
 flowchart TD
-    A([Browser\nUI action]) --> B[Frontend\napi module]
-    B -->|HTTP request| C[Express backend]
+    A([Browser\nUI action]) --> B[apiClient\ntoken validation + refresh]
+    B -->|"401 / AuthError"| B
+    B -->|HTTP request + Bearer token| C[Express backend]
 
-    C --> RL{Rate limiter\nrateLimiter.ts}
-    RL -->|"429 Too many requests"| B
-    RL -->|Pass| CORS{CORS check}
-    CORS -->|"Blocked — origin not allowed"| B
-    CORS -->|Pass| MATCH{Route match?}
-    MATCH -->|No| NF[sendError 404\nNot found]
-    NF --> B
+    C --> MW{Auth + rate limit\n+ Zod validation}
+    MW -->|"400 / 401 / 403 / 429"| B
+    MW -->|Pass| SVC[Service layer\nbusiness logic]
 
-    MATCH -->|Yes| VAL{validateRequest\nZod schema\nvalidateRequest.ts}
-    VAL -->|"400 Validation failed\n{ details: [{ field, message }] }"| B
-    VAL -->|Pass| AUTH{Auth required?}
+    SVC -->|SQL| DB[(PostgreSQL)]
+    DB --> SVC
+    SVC -->|"4xx / 5xx AppError"| ERR[errorHandler]
+    SVC -->|Result| C
+    C -->|"200 JSON"| B
 
-    AUTH -->|No| CTRL[Route controller]
-    AUTH -->|Yes| MW[authMiddleware\nverifies JWT · checks blacklist\nauthMiddleware.ts]
-    MW -->|"401 No token / invalid / expired"| B
-    MW -->|Valid| CTRL
-
-    CTRL --> SVC[Service layer]
-    SVC -->|SQL query| DB[(PostgreSQL)]
-    DB -->|Result rows| SVC
-    DB -->|Connection failure| ERR
-    SVC -->|throws AppError\ne.g. 404 · 409 · 403| ERR[errorHandler\nerrorHandler.ts]
-    SVC -->|Result| CTRL
-    CTRL -->|"200 JSON { data }"| B
-
-    ERR -->|"4xx JSON { error, requestId }"| B
-    ERR -->|"500 unexpected error"| B
-    ERR -->|"503 DB unavailable"| B
-
+    ERR -->|"{ error, requestId }"| B
     B --> UI([Update UI\nor render error])
 ```
 
-> For the **frontend** request lifecycle — `apiClient`, token validation, proactive refresh, re-login modal, network error handling — see [frontend/docs/api-flow.mmd](frontend/docs/api-flow.mmd).
->
-> For the **backend** in detail:
-> - Auth (login, 2FA, token types, refresh rotation, logout) — [backend/docs/auth.md](backend/docs/auth.md)
-> - Error handling (AppError, errorHandler, DB → 503) — [backend/docs/errors.md](backend/docs/errors.md)
-> - Database schema & migrations — [backend/docs/db.md](backend/docs/db.md)
+**Zoom in:**
+
+| Layer | Detail |
+|-------|--------|
+| Frontend HTTP pipeline | [frontend/docs/api-flow.mmd](frontend/docs/api-flow.mmd) — `apiClient` internals: token validation, proactive refresh, re-login modal, network errors |
+| Backend auth | [backend/docs/auth.md](backend/docs/auth.md) — login, 2FA, token types, refresh rotation, logout |
+| Backend errors | [backend/docs/errors.md](backend/docs/errors.md) — AppError hierarchy, errorHandler, response shape |
+| Database | [backend/docs/db.md](backend/docs/db.md) — schema, migrations, backup system |
 
 ---
 
@@ -67,11 +52,8 @@ flowchart TD
 
 | Area | Doc |
 |---|---|
-| Frontend request/response lifecycle | [frontend/docs/api-flow.mmd](frontend/docs/api-flow.mmd) |
 | Frontend page structure & conventions | [frontend/STRUCTURE.md](frontend/STRUCTURE.md) |
-| Backend auth architecture | [backend/docs/auth.md](backend/docs/auth.md) |
-| Backend database schema | [backend/docs/db.md](backend/docs/db.md) |
-| Backend error handling | [backend/docs/errors.md](backend/docs/errors.md) |
+| Backend setup & API reference | [backend/README.md](backend/README.md) |
 
 ---
 
