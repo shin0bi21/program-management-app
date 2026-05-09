@@ -47,17 +47,7 @@ else
   echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
 fi
 
-# Step 6: Generate backup migration from live schema
-echo ""
-echo "Generating backup migration..."
-docker-compose exec -T backend npm run db:generate-backup 2>&1 | grep -E "Generated:|Tables to process:|Error:|error|COMPLETE" || echo "  Backup migration generated"
-
-# Step 7: Apply backup migration
-echo ""
-echo "Applying backup migration..."
-docker-compose exec -T backend npm run db:migrate 2>&1 | grep -v "CREATE\|DROP\|INSERT\|NOTICE\|ALTER" | grep -E "Applying:|Applied:|Failed:|Error:|error" || echo "  Backup migration applied successfully"
-
-# Step 8: Regenerate TypeScript types from live DB (includes backup tables)
+# Step 6: Regenerate TypeScript types from live DB (includes backup tables)
 echo ""
 echo "Regenerating database types..."
 docker-compose exec -T backend npm run db:types 2>&1 && echo "  Types regenerated" || echo "  Warning: db:types failed - check kysely-codegen config"
