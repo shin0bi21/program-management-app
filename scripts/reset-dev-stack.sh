@@ -41,10 +41,10 @@ docker-compose exec -T backend npm run db:migrate:test 2>&1 | grep -v "CREATE\|D
 # Step 5: Seed admin user (if env vars are set)
 echo ""
 echo "Seeding admin user..."
-if docker-compose exec -T backend npm run seed:admin 2>&1 | grep -q "ERROR"; then
-  echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
-else
+if docker-compose exec -T backend npm run seed:admin 2>&1; then
   echo "  Admin user ready"
+else
+  echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
 fi
 
 # Step 6: Generate backup migration from live schema
