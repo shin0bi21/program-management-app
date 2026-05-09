@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { DatabaseError } from '../errors/AppError';
+import { handleDbError } from '../errors/AppError';
 
 /**
  * PostgreSQL connection using postgres.js
@@ -57,29 +57,6 @@ export async function checkConnection(): Promise<boolean> {
   }
 }
 
-// Postgres connection/availability codes — NOT constraint violations (23xxx)
-const POSTGRES_CONNECTION_CODES = new Set([
-  '57P03', '08000', '08001', '08003', '08004', '08006', '53300', '53400',
-]);
-
-/**
- * Wraps a caught postgres error: re-throws as DatabaseError (503) if it's
- * a connectivity failure, otherwise re-throws unchanged so constraint
- * violations (23xxx) and syntax errors stay as 500s.
- */
-export function rethrowDbError(err: unknown): never {
-  if (err instanceof DatabaseError) throw err;
-  if (err instanceof Error) {
-    const code = (err as { code?: unknown }).code;
-    const isConnError =
-      err.message.includes('ECONNREFUSED') ||
-      code === 'ECONNREFUSED' ||
-      (typeof code === 'string' && POSTGRES_CONNECTION_CODES.has(code));
-    if (isConnError) throw new DatabaseError('Database connection failed', err);
-  }
-  throw err;
-}
-
 /**
  * Retry wrapper for critical queries
  * Retries failed queries with exponential backoff
@@ -112,7 +89,7 @@ export async function withRetry<T>(
   }
 
   // All retries exhausted — surface as DatabaseError if it's a connectivity issue
-  rethrowDbError(lastError);
+  handleDbError(lastError);
 }
 
 // Graceful shutdown
