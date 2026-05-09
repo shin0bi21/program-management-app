@@ -25,30 +25,20 @@ const sql = postgres(DATABASE_URL);
 
 // Tables that should NOT get backup infrastructure
 const EXCLUDED_TABLES = [
-  'base_table',           // Template - never contains data
-  'user_permissions',      // Infrastructure - lookup table
-  'user_groups',          // Infrastructure - lookup table  
-  'contact_types_base',   // Infrastructure - lookup table
-  'user_credentials',     // Security - sensitive auth data
-  'password_reset_tokens', // Security - temporary tokens
-  'auth_codes',           // Security - temporary 2FA codes
-  'trusted_devices',      // Security - device tracking
-  'refresh_tokens',       // Security - token rotation
-  'token_blacklist',      // Security - invalidated tokens
-  'schema_migrations',     // Infrastructure - migration tracking
-  'schema_backup_tracking' // Infrastructure - backup tracking
+  'base_table',                    // Template - never contains data
+  'user_permissions',              // Infrastructure - lookup table
+  'users',                         // Soft-delete only - never hard-deleted, backup redundant
+  'user_credentials',              // Security - sensitive auth data
+  'user_password_reset_tokens',    // Security - temporary tokens
+  'user_auth_codes',               // Security - temporary 2FA codes
+  'user_trusted_devices',          // Security - device tracking
+  'user_refresh_tokens',           // Security - token rotation
+  'system_revoked_tokens',         // Security - invalidated tokens
+  'schema_migrations',             // Infrastructure - migration tracking
+  'schema_backup_tracking'         // Infrastructure - backup tracking
 ];
 
 // Types
-interface TrackingData {
-  last_run: string | null;
-  migrations_processed: string[];
-}
-
-interface TableRow {
-  table_name: string;
-}
-
 interface ColumnInfo {
   column_name: string;
   data_type: string;
@@ -62,8 +52,8 @@ const targetFile = process.argv[2]; // optional specific file
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 
-// Get processed migrations from database
-async function getProcessedMigrations(): Promise<string[]> {
+// Get tables that already have backup infrastructure generated
+async function getTablesWithBackups(): Promise<string[]> {
   try {
     const result = await sql<{ table_name: string }[]>`
       SELECT DISTINCT table_name FROM schema_backup_tracking
@@ -249,10 +239,8 @@ BEGIN
     'UPDATE', ${oldValues}
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  ${columns.some(c => c.column_name === 'updated_at') ? 'NEW.updated_at = NOW();' : '-- (no updated_at column on this table)'}
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating ${tableName} - OLD: % | NEW: %', OLD, NEW;
@@ -314,7 +302,7 @@ async function main() {
   
   try {
     // Get tables already processed
-    const processedTables = await getProcessedMigrations();
+    const processedTables = await getTablesWithBackups();
     console.log(`Previously processed tables: ${processedTables.length}`);
     
     // Get migration files

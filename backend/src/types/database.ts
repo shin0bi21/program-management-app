@@ -60,15 +60,6 @@ export interface AddressesBackup {
   updated_by: string | null;
 }
 
-export interface AuthCodes {
-  code: string;
-  created_at: Generated<Timestamp | null>;
-  expires_at: Timestamp;
-  id: Generated<string>;
-  used_at: Timestamp | null;
-  user_id: string;
-}
-
 export interface BaseTable {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -101,27 +92,6 @@ export interface ContactsBackup {
   type: ContactType | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
-}
-
-export interface PasswordResetTokens {
-  created_at: Generated<Timestamp | null>;
-  expires_at: Timestamp;
-  id: Generated<string>;
-  token: string;
-  used_at: Timestamp | null;
-  user_id: string;
-}
-
-export interface RefreshTokens {
-  created_at: Generated<Timestamp | null>;
-  expires_at: Timestamp;
-  id: Generated<string>;
-  jti: string;
-  replaced_by: string | null;
-  revoked_at: Timestamp | null;
-  token_family: string;
-  token_hash: string;
-  user_id: string;
 }
 
 export interface SchemaBackupTracking {
@@ -168,7 +138,7 @@ export interface SchoolsBackup {
   updated_by: string | null;
 }
 
-export interface TokenBlacklist {
+export interface SystemRevokedTokens {
   blacklisted_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
   id: Generated<string>;
@@ -178,12 +148,12 @@ export interface TokenBlacklist {
   user_id: string;
 }
 
-export interface TrustedDevices {
+export interface UserAuthCodes {
+  code: string;
   created_at: Generated<Timestamp | null>;
-  device_hash: string;
-  device_name: string | null;
   expires_at: Timestamp;
   id: Generated<string>;
+  used_at: Timestamp | null;
   user_id: string;
 }
 
@@ -252,6 +222,15 @@ export interface UserHasContactsBackup {
   user_id: string | null;
 }
 
+export interface UserPasswordResetTokens {
+  created_at: Generated<Timestamp | null>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  token: string;
+  used_at: Timestamp | null;
+  user_id: string;
+}
+
 export interface UserPermissions {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -259,6 +238,18 @@ export interface UserPermissions {
   name: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface UserRefreshTokens {
+  created_at: Generated<Timestamp | null>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  jti: string;
+  replaced_by: string | null;
+  revoked_at: Timestamp | null;
+  token_family: string;
+  token_hash: string;
+  user_id: string;
 }
 
 export interface UserRoleHasPermissions {
@@ -318,19 +309,13 @@ export interface Users {
   updated_by: string | null;
 }
 
-export interface UsersBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  active: boolean | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  first_name: string | null;
-  id: string | null;
-  last_name: string | null;
-  role_id: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
+export interface UserTrustedDevices {
+  created_at: Generated<Timestamp | null>;
+  device_hash: string;
+  device_name: string | null;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  user_id: string;
 }
 
 export interface YouthProfiles {
@@ -398,30 +383,29 @@ export interface YouthWorksheetsBackup {
 export interface DB {
   addresses: Addresses;
   addresses_backup: AddressesBackup;
-  auth_codes: AuthCodes;
   base_table: BaseTable;
   contacts: Contacts;
   contacts_backup: ContactsBackup;
-  password_reset_tokens: PasswordResetTokens;
-  refresh_tokens: RefreshTokens;
   schema_backup_tracking: SchemaBackupTracking;
   schema_migrations: SchemaMigrations;
   schools: Schools;
   schools_backup: SchoolsBackup;
-  token_blacklist: TokenBlacklist;
-  trusted_devices: TrustedDevices;
+  system_revoked_tokens: SystemRevokedTokens;
+  user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;
   user_has_addresses: UserHasAddresses;
   user_has_addresses_backup: UserHasAddressesBackup;
   user_has_contacts: UserHasContacts;
   user_has_contacts_backup: UserHasContactsBackup;
+  user_password_reset_tokens: UserPasswordResetTokens;
   user_permissions: UserPermissions;
+  user_refresh_tokens: UserRefreshTokens;
   user_role_has_permissions: UserRoleHasPermissions;
   user_role_has_permissions_backup: UserRoleHasPermissionsBackup;
   user_roles: UserRoles;
   user_roles_backup: UserRolesBackup;
+  user_trusted_devices: UserTrustedDevices;
   users: Users;
-  users_backup: UsersBackup;
   youth_profiles: YouthProfiles;
   youth_profiles_backup: YouthProfilesBackup;
   youth_worksheets: YouthWorksheets;

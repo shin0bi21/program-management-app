@@ -40,7 +40,7 @@ flowchart TD
     F --> G{Code valid and not expired?}
     G -->|No| G1([401 Invalid or expired code])
     G -->|Yes| E[Issue access token — 1h\nJWT_SECRET · tokenType: access]
-    E --> H[Issue refresh token — 8h\nREFRESH_SECRET · tokenType: refresh\nstored in refresh_tokens table]
+    E --> H[Issue refresh token — 8h\nREFRESH_SECRET · tokenType: refresh\nstored in user_refresh_tokens table]
     H --> I([200 — { token, user }\nrefresh token set as httpOnly cookie])
 
     I -.->|session active| A3
@@ -81,7 +81,7 @@ Trusted devices skip the 2FA step for 30 days after first verify.
 | Sent as | `Authorization: Bearer` header | `httpOnly` cookie |
 | Contains `role` + `permissions[]` | ✓ | ✗ |
 | `tokenType` claim | `'access'` | `'refresh'` |
-| Stored in DB | ✗ (blacklist only on logout) | ✓ (`refresh_tokens` table) |
+| Stored in DB | ✗ (blacklist only on logout) | ✓ (`user_refresh_tokens` table) |
 
 ---
 
@@ -186,7 +186,7 @@ The caller only passes the identity fields (`userId`, `email`, `role`, `permissi
 
 `Omit<..., 'tokenType'>` in the parameter type means callers cannot override the `tokenType` — it is always injected by the helper, never by the caller.
 
-`generateAndStoreTokenPair()` is the only caller of both helpers. It generates two JTIs, signs both tokens, inserts the refresh token into the `refresh_tokens` table (hashed with SHA-256), and returns both tokens as a `TokenPair`.
+`generateAndStoreTokenPair()` is the only caller of both helpers. It generates two JTIs, signs both tokens, inserts the refresh token into the `user_refresh_tokens` table (hashed with SHA-256), and returns both tokens as a `TokenPair`.
 
 ---
 
@@ -217,7 +217,7 @@ The `tokenType` guard provides an explicit payload-level check on top of signatu
 
 1. `jwt.verify(rawRefreshToken, REFRESH_SECRET)` — typed as `RefreshTokenPayload`
 2. Check `decoded.jti` — must be present
-3. Look up token in `refresh_tokens` by JTI + SHA-256 hash of raw token + `expires_at > NOW()` + `revoked_at IS NULL`
+3. Look up token in `user_refresh_tokens` by JTI + SHA-256 hash of raw token + `expires_at > NOW()` + `revoked_at IS NULL`
 4. **If not found:** look up the token family. If the family exists, revoke all tokens in it (reuse detection — the token was already rotated out). Throw 403.
 5. Fetch fresh `role` + `permissions[]` via JOIN to `user_roles → user_role_has_permissions → user_permissions` — permission changes take effect on the next refresh, not mid-session.
 6. Generate new access JTI + refresh JTI, sign both tokens via `signAccessToken` / `signRefreshToken`
@@ -232,8 +232,8 @@ Auth also uses an atomic check-and-consume pattern for one-time secrets. The goa
 
 There are two places this shows up in `authService.ts`:
 
-- `verify2FACode()` uses `UPDATE auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement.
-- `resetUserPassword()` uses `UPDATE password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse.
+- `verify2FACode()` uses `UPDATE user_auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement.
+- `resetUserPassword()` uses `UPDATE user_password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse.
 
 This is the same design principle as refresh token rotation: the state transition that makes the secret unusable happens atomically with the validation step, so a code or token cannot be successfully consumed twice.
 
@@ -243,9 +243,9 @@ This is the same design principle as refresh token rotation: the state transitio
 
 `logoutUser()` handles both tokens independently (either or both may be absent):
 
-**Refresh token:** `UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ?`
+**Refresh token:** `UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ?`
 
-**Access token:** Delegated to `revokeAccessToken()` in `tokenRevocationService.ts`, which inserts into `token_blacklist` with `expires_at` derived from `decoded.exp` and immediately adds the JTI to the in-memory cache.
+**Access token:** Delegated to `revokeAccessToken()` in `tokenRevocationService.ts`, which inserts into `system_revoked_tokens` with `expires_at` derived from `decoded.exp` and immediately adds the JTI to the in-memory cache.
 
 `isBlacklisted(jti)` in `tokenRevocationService.ts` is called by `authenticateToken` on every protected request. It transparently refreshes the cache from DB when stale (> 60s), so the middleware has no knowledge of the caching mechanics.
 
