@@ -22,7 +22,7 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
   }
 
   if (requiredPermission && !permissions.includes(requiredPermission)) {
-    return <Navigate to="/youth" replace />;
+    return <Navigate to="/" replace />
   }
 
   // Persist the current path so login can redirect back here

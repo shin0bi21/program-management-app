@@ -4,6 +4,7 @@ import Header from '../../common/components/Header/Header';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
+import { useAuth } from '../../common/context/AuthContext';
 import './Youth.css';
 
 function calculateAge(dateOfBirth: string | null): string {
@@ -22,6 +23,8 @@ export default function Youth() {
   const [showAddYouth, setShowAddYouth] = useState(false);
   const [youthToEdit, setYouthToEdit] = useState<YouthProfile | undefined>(undefined);
   const { youth, setYouth, loading, error } = useYouth();
+  const { permissions } = useAuth();
+  const canWrite = permissions.includes('write:youth_profiles');
 
   const youthColumns: TableColumn<YouthProfile>[] = [
     {
@@ -64,7 +67,7 @@ export default function Youth() {
     {
       key: 'actions',
       header: 'Actions',
-      render: (profile) => (
+      render: (profile) => canWrite ? (
         <Button
           variant="secondary"
           size="sm"
@@ -75,7 +78,7 @@ export default function Youth() {
         >
           Edit
         </Button>
-      ),
+      ) : null,
       width: '100px',
     },
   ];
@@ -87,9 +90,11 @@ export default function Youth() {
         <div className="page-header">
           <div className="page-title-row">
             <h1 className="page-title">Youth</h1>
-            <Button onClick={() => setShowAddYouth(true)}>
-              + Sign Up
-            </Button>
+            {canWrite && (
+              <Button onClick={() => setShowAddYouth(true)}>
+                + Sign Up
+              </Button>
+            )}
           </div>
         </div>
 
