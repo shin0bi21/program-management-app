@@ -198,7 +198,7 @@ describe('Staff API', () => {
         .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Second', lastName: 'User', email: dupeEmail, password: 'password123', active: true });
-      expect(dupeRes.status).toBe(500);
+      expect(dupeRes.status).toBe(409);
     });
 
     it('should reject expired access token', async () => {

@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { handleLogin, handleForgotPassword, handleResetPassword, handleRefreshToken, handleLogout, handleVerify2FA, handleResend2FA } from '../controllers/authController';
 import { authLimiter, strictLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
-import { validateRequest } from '../middleware/validateRequest';
-import { asyncHandler } from '../middleware/errorHandler';
+import { validateRequest, asyncHandler } from '../middleware/routeMiddleware';
 import { 
   loginSchema, 
   verify2FASchema, 

@@ -7,7 +7,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
 import staffRoutes from '../../src/routes/staffRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
-import { errorHandler, requestId } from '../../src/middleware/errorHandler';
+import { handleError } from '../../src/middleware/errorMiddleware';
+import { requestId } from '../../src/middleware/routeMiddleware';
 
 export function createApp() {
   const app = express();
@@ -17,6 +18,6 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/api/staff', staffRoutes);
   app.use('/api/youth', youthRoutes);
-  app.use(errorHandler);
+  app.use(handleError);
   return app;
 }
