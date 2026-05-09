@@ -1,14 +1,100 @@
+/* ============================================================
+   Global design tokens
+   Imported once in main.tsx — available to every component.
+   ============================================================ */
+
 :root {
-  /* Core palette */
-  --brand-ink: #12161f;         /* near-black — headings, labels, buttons */
-  --brand-muted: #4a5568;       /* slate grey — body copy, subtitles */
-  --brand-accent: #f3a524;      /* amber/orange — highlights, hover states */
-  --brand-dark-section: #1a1f2e; /* deep navy — dark section backgrounds */
+  /* ── Brand palette ──────────────────────────────────────── */
+  --color-ink:          #12161f;
+  --color-white:         #ffffff;
+  --color-accent:       #f3a524;
+  --color-muted:        #6b7280;
+  --color-surface:      #f7f6f2;
+  --color-surface-warm: #faf8f4;
+  --color-dark:         #1c1a17;
+  --color-dark-text:    #f0ece4;
+  --color-body:         #5a6272;
 
-  /* Surfaces */
-  --brand-panel-bg: #ffffff;
-  --brand-surface-alt: #f0f2f5; /* light grey panels */
+  /* ── Ink at standard opacities ─────────────────────────── */
+  --ink-12: rgba(18, 22, 31, 0.12);
+  --ink-08: rgba(18, 22, 31, 0.08);
+  --ink-06: rgba(18, 22, 31, 0.06);
+  --ink-04: rgba(18, 22, 31, 0.04);
+  --ink-42: rgba(18, 22, 31, 0.42);
+  --ink-45: rgba(18, 22, 31, 0.45);
 
-  /* Borders / lines */
-  --brand-line: rgba(18, 22, 31, 0.08);
+  /* ── Dark-surface text at standard opacities ───────────── */
+  --dark-text-70: rgba(240, 236, 228, 0.70);
+  --dark-text-55: rgba(240, 236, 228, 0.55);
+  --dark-text-45: rgba(240, 236, 228, 0.45);
+  --dark-text-35: rgba(240, 236, 228, 0.35);
+
+  /* ── Accent at standard opacities ──────────────────────── */
+  --accent-55: rgba(243, 165, 36, 0.55);
+  --accent-45: rgba(243, 165, 36, 0.45);
+  --accent-18: rgba(243, 165, 36, 0.18);
+  --accent-16: rgba(243, 165, 36, 0.16);
+  --accent-10: rgba(243, 165, 36, 0.10);
+  --accent-08: rgba(243, 165, 36, 0.08);
+  --accent-06: rgba(243, 165, 36, 0.06);
+
+  /* ── White at standard opacities (dark sections) ───────── */
+  --white-10: rgba(255, 255, 255, 0.10);
+  --white-04: rgba(255, 255, 255, 0.04);
+
+  /* ── Spacing scale (4px base) ──────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-9:  36px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-18: 72px;
+
+  /* ── Type scale ─────────────────────────────────────────── */
+  --text-xs:   0.625rem;  /* 10px  — kickers, labels */
+  --text-sm:   0.75rem;   /* 12px  — secondary labels */
+  --text-base: 1rem;      /* 16px  — body small */
+  --text-md:   1.125rem;  /* 18px  — body default */
+  --text-lg:   1.25rem;   /* 20px  — card titles */
+  --text-xl:   1.625rem;  /* 26px  — timeline years */
+  --text-2xl:  clamp(2.2rem, 4.4vw, 3.4rem); /* section titles */
+  --text-hero: clamp(2.6rem, 6vw, 5rem);      /* hero title */
+
+  /* ── Letter spacing ─────────────────────────────────────── */
+  --tracking-wide:   0.10em;
+  --tracking-wider:  0.14em;
+  --tracking-widest: 0.18em;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm:   10px;
+  --radius-md:   12px;
+  --radius-lg:   14px;
+  --radius-xl:   16px;
+  --radius-full: 999px;
+
+  /* ── Borders ────────────────────────────────────────────── */
+  --border-line:      1px solid var(--ink-12);
+  --border-line-soft: 1px solid var(--ink-06);
+  --border-dark:      1px solid var(--white-10);
+  --border-accent:    1px solid var(--accent-45);
+
+  /* ── Shadows ────────────────────────────────────────────── */
+  --shadow-card:  0 10px 30px rgba(18, 22, 31, 0.05);
+  --shadow-hover: 0 12px 32px rgba(18, 22, 31, 0.10);
+
+  /* ── Legacy aliases (backwards compat) ─────────────────── */
+  --brand-ink:            var(--color-ink);
+  --brand-accent:         var(--color-accent);
+  --brand-muted:          var(--color-muted);
+  --homepage-bg:          var(--color-surface);
+  --homepage-card-radius: var(--radius-xl);
+  --homepage-line:        var(--ink-12);
+  --homepage-line-soft:   var(--ink-06);
 }

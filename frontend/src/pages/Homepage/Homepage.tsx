@@ -17,11 +17,11 @@ const programs = [
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
     sessions: [
-      { date: new Date('2026-05-05'), label: 'May 5',  topic: 'Yoga' },
-      { date: new Date('2026-05-12'), label: 'May 12', topic: 'Healthy Relationships & Boundaries' },
-      { date: new Date('2026-05-19'), label: 'May 19', topic: 'Assertiveness & Emotional Control' },
-      { date: new Date('2026-05-26'), label: 'May 26', topic: 'Conflict Resolution' },
-      { date: new Date('2026-06-02'), label: 'Jun 2',  topic: 'Field Trip' },
+      { date: new Date(2026, 4,  5), label: 'May 5',  topic: 'Yoga' },
+      { date: new Date(2026, 4, 12), label: 'May 12', topic: 'Healthy Relationships & Boundaries' },
+      { date: new Date(2026, 4, 19), label: 'May 19', topic: 'Assertiveness & Emotional Control' },
+      { date: new Date(2026, 4, 26), label: 'May 26', topic: 'Conflict Resolution' },
+      { date: new Date(2026, 5,  2), label: 'Jun 2',  topic: 'Field Trip' },
     ],
   },
   {
@@ -29,10 +29,10 @@ const programs = [
     day: 'Every Wednesday',
     copy: 'Youth receive job-readiness education, interview practice, one-on-one support, volunteer placement experience, and one paid project to strengthen resumes. Program elements also support transitions into post-secondary education and the workforce.',
     sessions: [
-      { date: new Date('2026-05-06'), label: 'May 6',  topic: 'Communication' },
-      { date: new Date('2026-05-13'), label: 'May 13', topic: 'Interview Prep' },
-      { date: new Date('2026-05-20'), label: 'May 20', topic: 'Cover Letter Writing' },
-      { date: new Date('2026-05-27'), label: 'May 27', topic: 'Open Session' },
+      { date: new Date(2026, 4,  6), label: 'May 6',  topic: 'Communication' },
+      { date: new Date(2026, 4, 13), label: 'May 13', topic: 'Interview Prep' },
+      { date: new Date(2026, 4, 20), label: 'May 20', topic: 'Cover Letter Writing' },
+      { date: new Date(2026, 4, 27), label: 'May 27', topic: 'Open Session' },
     ],
   },
 ]
@@ -56,6 +56,8 @@ const partners = [
 const TODAY = new Date()
 TODAY.setHours(0, 0, 0, 0)
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
 function sessionStatus(date: Date): 'past' | 'today' | 'upcoming' {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
@@ -63,6 +65,15 @@ function sessionStatus(date: Date): 'past' | 'today' | 'upcoming' {
   if (d.getTime() === TODAY.getTime()) return 'today'
   return 'upcoming'
 }
+
+function daysUntil(date: Date): number {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return Math.round((d.getTime() - TODAY.getTime()) / MS_PER_DAY)
+}
+
+const WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
+const MONTH_FMT   = new Intl.DateTimeFormat('en-US', { month: 'short' })
 
 export default function Homepage() {
   return (
@@ -82,23 +93,63 @@ export default function Homepage() {
           <div className="section-inner">
             <h2 id="offerings-title" className="section-title">Programming</h2>
             <div className="program-grid">
-              {programs.map((program) => (
-                <div key={program.age} className="this-month-group">
-                  <div className="this-month-group-header">
-                    <span className="this-month-age">{program.age}</span>
-                    <span className="this-month-day">{program.day}</span>
-                  </div>
-                  <p className="program-copy">{program.copy}</p>
-                  <ul className="this-month-list">
-                    {program.sessions.map((session) => (
-                      <li key={session.label} className={`this-month-row this-month-row--${sessionStatus(session.date)}`}>
-                        <span className="this-month-pill">{session.label}</span>
-                        <span className="this-month-topic">{session.topic}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {programs.map((program) => {
+                const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
+                const upcoming = sessionsWithStatus.filter(s => s.status !== 'past')
+                const next = upcoming[0] ?? null
+                const following = upcoming.slice(1)
+                const nextDays = next ? daysUntil(next.date) : null
+
+                return (
+                  <article key={program.age} className="program-card">
+                    <header className="program-card-head">
+                      <p className="program-age">{program.age}</p>
+                    </header>
+
+                    <div className="program-copy-block">
+                      <span className="program-copy-label">About this program</span>
+                      <p className="program-copy">{program.copy}</p>
+                    </div>
+
+                    <div className="program-sessions">
+                      <p className="program-sessions-label">Upcoming</p>
+                      {upcoming.length === 0 ? (
+                        <p className="program-empty">All sessions complete for this cycle.</p>
+                      ) : (
+                        <>
+                          <div className="next-session" aria-label="Next session">
+                            <div className="next-session-date">
+                              <span className="next-session-day">{next!.date.getDate()}</span>
+                              <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
+                            </div>
+                            <div className="next-session-body">
+                              <span className="next-session-tag">
+                                {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
+                              </span>
+                              <p className="next-session-topic">{next!.topic}</p>
+                              <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
+                            </div>
+                          </div>
+                          {following.length > 0 && (
+                            <ul className="upcoming-rows">
+                              {following.map((session) => (
+                                <li key={session.label} className="upcoming-row">
+                                  <span className="upcoming-row-date">
+                                    <strong>{session.date.getDate()}</strong>
+                                    <span>{MONTH_FMT.format(session.date)}</span>
+                                  </span>
+                                  <span className="upcoming-row-topic">{session.topic}</span>
+                                  <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(session.date)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </section>

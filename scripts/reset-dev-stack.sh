@@ -11,10 +11,10 @@ echo ""
 echo "Stopping containers and clearing volumes..."
 docker-compose down -v
 
-# Step 2: Start containers
+# Step 2: Rebuild images and start containers
 echo ""
 echo "Starting containers..."
-docker-compose up -d
+docker-compose up -d --build
 
 # Step 3: Wait for database to be ready
 echo ""
@@ -41,11 +41,16 @@ docker-compose exec -T backend npm run db:migrate:test 2>&1 | grep -v "CREATE\|D
 # Step 5: Seed admin user (if env vars are set)
 echo ""
 echo "Seeding admin user..."
-if docker-compose exec -T backend npm run seed:admin 2>&1 | grep -q "ERROR"; then
-  echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
-else
+if docker-compose exec -T backend npm run seed:admin 2>&1; then
   echo "  Admin user ready"
+else
+  echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
 fi
+
+# Step 6: Regenerate TypeScript types from live DB (includes backup tables)
+echo ""
+echo "Regenerating database types..."
+docker-compose exec -T backend npm run db:types 2>&1 && echo "  Types regenerated" || echo "  Warning: db:types failed - check kysely-codegen config"
 
 echo ""
 echo "=========================================="

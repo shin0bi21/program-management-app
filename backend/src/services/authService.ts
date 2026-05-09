@@ -9,9 +9,9 @@ import { revokeAccessToken } from './tokenRevocationService';
 import type {
   UserCredentials,
   Users,
-  RefreshTokens,
-  PasswordResetTokens,
-  TrustedDevices,
+  UserRefreshTokens,
+  UserPasswordResetTokens,
+  UserTrustedDevices,
 } from '../types/database';
 import type { DbRow } from '../types/db';
 import { requireEnv } from '../utils/env';
@@ -23,7 +23,7 @@ import {
   NotFoundError,
   ForbiddenError,
   BadRequestError,
-} from '../errors/AppError';
+} from '../errors';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
@@ -45,7 +45,7 @@ const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection'
 
 type LoginCredentialsRow =
   DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until'>> &
-  DbRow<Pick<Users, 'first_name' | 'last_name'>> &
+  DbRow<Pick<Users, 'first_name' | 'last_name' | 'active'>> &
   { role: UserRole; permissions: Permission[] };
 
 export interface UserInfo {
@@ -106,7 +106,7 @@ async function generateAndStoreTokenPair(
   const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
 
   await sql`
-    INSERT INTO refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
+    INSERT INTO user_refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
     VALUES (
       ${userId},
       ${refreshJTI},
@@ -139,6 +139,7 @@ export async function loginUser(
       uc.locked_until,
       u.first_name,
       u.last_name,
+      u.active,
       ur.name AS role,
       COALESCE(
         json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
@@ -151,7 +152,7 @@ export async function loginUser(
     LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.email = ${email}
     GROUP BY uc.user_id, uc.email, uc.password_hash, uc.email_verified,
-             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, ur.name
+             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, u.active, ur.name
     LIMIT 1
   `;
 
@@ -210,12 +211,17 @@ export async function loginUser(
     WHERE user_id = ${cred.userId}
   `;
 
-  // 5. Check trusted device — skip 2FA if device is known
+  // 5. Check account is active
+  if (!cred.active) {
+    throw new ForbiddenError('Account is deactivated');
+  }
+
+  // 6. Check trusted device — skip 2FA if device is known
   if (deviceFingerprint) {
     const deviceHash = hashDeviceFingerprint(deviceFingerprint);
 
-    const trustedDevices = await sql<DbRow<TrustedDevices>[]>`
-      SELECT * FROM trusted_devices
+    const trustedDevices = await sql<DbRow<UserTrustedDevices>[]>`
+      SELECT * FROM user_trusted_devices
       WHERE user_id = ${cred.userId}
         AND device_hash = ${deviceHash}
         AND expires_at > NOW()
@@ -243,9 +249,9 @@ export async function loginUser(
     }
   }
 
-  // 6. Require 2FA — clean up stale codes, issue new one, send email
+  // 7. Require 2FA — clean up stale codes, issue new one, send email
   await sql`
-    DELETE FROM auth_codes
+    DELETE FROM user_auth_codes
     WHERE user_id = ${cred.userId}
       AND (expires_at < NOW() OR used_at IS NOT NULL)
   `;
@@ -254,7 +260,7 @@ export async function loginUser(
   const expiresAt = new Date(Date.now() + AUTH_CODE_EXPIRY_MS);
 
   await sql`
-    INSERT INTO auth_codes (user_id, code, expires_at)
+    INSERT INTO user_auth_codes (user_id, code, expires_at)
     VALUES (${cred.userId}, ${code}, ${expiresAt})
   `;
 
@@ -273,7 +279,7 @@ export async function verify2FACode(
   // 1. Rate limit verification attempts
   const recentAttempts = await sql<{ count: string }[]>`
     SELECT COUNT(*) as count
-    FROM auth_codes
+    FROM user_auth_codes
     WHERE user_id = ${userId}
       AND created_at > NOW() - INTERVAL '15 minutes'
   `;
@@ -284,7 +290,7 @@ export async function verify2FACode(
 
   // 2. Atomically mark code as used (prevents race conditions)
   const codes = await sql<DbRow<{ id: string }>[]>`
-    UPDATE auth_codes
+    UPDATE user_auth_codes
     SET used_at = NOW()
     WHERE user_id = ${userId}
       AND code = ${code}
@@ -331,7 +337,7 @@ export async function verify2FACode(
     const expiresAt = new Date(Date.now() + TRUSTED_DEVICE_EXPIRY_MS);
 
     const existingDevice = await sql<DbRow<{ id: string }>[]>`
-      SELECT id FROM trusted_devices
+      SELECT id FROM user_trusted_devices
       WHERE user_id = ${cred.userId}
         AND device_hash = ${deviceHash}
       LIMIT 1
@@ -339,11 +345,11 @@ export async function verify2FACode(
 
     if (existingDevice.length > 0) {
       await sql`
-        UPDATE trusted_devices SET expires_at = ${expiresAt} WHERE id = ${existingDevice[0].id}
+        UPDATE user_trusted_devices SET expires_at = ${expiresAt} WHERE id = ${existingDevice[0].id}
       `;
     } else {
       await sql`
-        INSERT INTO trusted_devices (user_id, device_hash, device_name, expires_at)
+        INSERT INTO user_trusted_devices (user_id, device_hash, device_name, expires_at)
         VALUES (${cred.userId}, ${deviceHash}, ${deviceName || 'Unknown Device'}, ${expiresAt})
       `;
     }
@@ -373,7 +379,7 @@ export async function resend2FACode(userId: string): Promise<void> {
   // 1. Rate limit — max 3 codes in 5 minutes
   const recentCodes = await sql<{ count: string }[]>`
     SELECT COUNT(*) as count
-    FROM auth_codes
+    FROM user_auth_codes
     WHERE user_id = ${userId}
       AND created_at > NOW() - INTERVAL '5 minutes'
   `;
@@ -402,7 +408,7 @@ export async function resend2FACode(userId: string): Promise<void> {
 
   // 3. Clean up stale codes, insert new one
   await sql`
-    DELETE FROM auth_codes
+    DELETE FROM user_auth_codes
     WHERE user_id = ${userId}
       AND (expires_at < NOW() OR used_at IS NOT NULL)
   `;
@@ -411,7 +417,7 @@ export async function resend2FACode(userId: string): Promise<void> {
   const expiresAt = new Date(Date.now() + AUTH_CODE_EXPIRY_MS);
 
   await sql`
-    INSERT INTO auth_codes (user_id, code, expires_at)
+    INSERT INTO user_auth_codes (user_id, code, expires_at)
     VALUES (${userId}, ${code}, ${expiresAt})
   `;
 
@@ -435,8 +441,8 @@ export async function rotateRefreshToken(
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
 
   // 1. Validate token exists, hasn't expired, and hasn't been revoked
-  const storedTokens = await sql<DbRow<RefreshTokens>[]>`
-    SELECT * FROM refresh_tokens
+  const storedTokens = await sql<DbRow<UserRefreshTokens>[]>`
+    SELECT * FROM user_refresh_tokens
     WHERE jti = ${decoded.jti}
       AND token_hash = ${tokenHash}
       AND expires_at > NOW()
@@ -446,13 +452,13 @@ export async function rotateRefreshToken(
 
   if (storedTokens.length === 0) {
     // Token reuse detected — revoke entire family
-    const familyTokens = await sql<DbRow<Pick<RefreshTokens, 'token_family'>>[]>`
-      SELECT token_family FROM refresh_tokens WHERE jti = ${decoded.jti} LIMIT 1
+    const familyTokens = await sql<DbRow<Pick<UserRefreshTokens, 'token_family'>>[]>`
+      SELECT token_family FROM user_refresh_tokens WHERE jti = ${decoded.jti} LIMIT 1
     `;
 
     if (familyTokens.length > 0) {
       await sql`
-        UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_family = ${familyTokens[0].tokenFamily}
+        UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE token_family = ${familyTokens[0].tokenFamily}
       `;
       throw new ForbiddenError('Token reuse detected - all sessions revoked');
     } else {
@@ -509,13 +515,13 @@ export async function rotateRefreshToken(
     const tx = asTransactionSql(rawTx);
 
     const newTokenRows = await tx<{ id: string }[]>`
-      INSERT INTO refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
+      INSERT INTO user_refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
       VALUES (${decoded.userId}, ${newRefreshJTI}, ${newTokenHash}, ${storedToken.tokenFamily}, ${newRefreshExpiresAt})
       RETURNING id
     `;
 
     await tx`
-      UPDATE refresh_tokens
+      UPDATE user_refresh_tokens
       SET revoked_at = NOW(), replaced_by = ${newTokenRows[0].id}
       WHERE jti = ${decoded.jti}
     `;
@@ -529,7 +535,7 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
     try {
       const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
       await sql`
-        UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
+        UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
       `;
     } catch {
       // Token already expired or invalid — still proceed with access token cleanup
@@ -570,7 +576,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
 
   await sql`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+    INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
     VALUES (${cred.userId}, ${tokenHash}, ${expiresAt})
   `;
 
@@ -591,12 +597,12 @@ export async function requestPasswordReset(email: string): Promise<void> {
 export async function resetUserPassword(token: string, newPassword: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const consumedTokens = await sql<DbRow<PasswordResetTokens>[]>`
-    UPDATE password_reset_tokens
+  const consumedTokens = await sql<DbRow<UserPasswordResetTokens>[]>`
+    UPDATE user_password_reset_tokens
     SET used_at = NOW()
     WHERE id = (
       SELECT id
-      FROM password_reset_tokens
+      FROM user_password_reset_tokens
       WHERE token = ${tokenHash}
         AND expires_at > NOW()
         AND used_at IS NULL
@@ -615,5 +621,5 @@ export async function resetUserPassword(token: string, newPassword: string): Pro
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
   await sql`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
-  await sql`UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
+  await sql`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
 }

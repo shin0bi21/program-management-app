@@ -7,8 +7,9 @@ import authRoutes from './routes/authRoutes';
 import staffRoutes from './routes/staffRoutes';
 import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
-import { errorHandler, requestId } from './middleware/errorHandler';
-import { NotFoundError } from './errors/AppError';
+import { requestId } from './middleware/routeMiddleware';
+import { handleError } from './middleware/errorMiddleware';
+import { NotFoundError } from './errors';
 import { checkConnection } from './db/client';
 
 const app = express();
@@ -63,7 +64,7 @@ app.use((_req, _res, next) => {
 });
 
 // Global error handler — must be registered after all routes
-app.use(errorHandler);
+app.use(handleError);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

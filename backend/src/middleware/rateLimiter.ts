@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { TooManyRequestsError } from '../errors/AppError';
+import { TooManyRequestsError } from '../errors';
 
 // Skip rate limiting in test environment
 const skipRateLimiting = process.env.NODE_ENV === 'test';

@@ -209,7 +209,7 @@ CREATE INDEX idx_youth_profiles_user_id ON youth_profiles(user_id);
 CREATE INDEX idx_youth_profiles_school_id ON youth_profiles(school_id);
 
 -- 6. Password Reset Tokens Table
-CREATE TABLE IF NOT EXISTS password_reset_tokens (
+CREATE TABLE IF NOT EXISTS user_password_reset_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   token VARCHAR(255) NOT NULL UNIQUE,
@@ -218,15 +218,15 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_password_reset_token ON password_reset_tokens(token);
-CREATE INDEX idx_password_reset_user ON password_reset_tokens(user_id);
+CREATE INDEX idx_user_password_reset_token ON user_password_reset_tokens(token);
+CREATE INDEX idx_user_password_reset_user ON user_password_reset_tokens(user_id);
 
 -- ============================================================================
 -- 2FA SYSTEM
 -- ============================================================================
 
 -- 2FA Verification Codes
-CREATE TABLE IF NOT EXISTS auth_codes (
+CREATE TABLE IF NOT EXISTS user_auth_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     code VARCHAR(6) NOT NULL,
@@ -236,11 +236,11 @@ CREATE TABLE IF NOT EXISTS auth_codes (
     CONSTRAINT valid_code CHECK (code ~ '^[0-9]{6}$')
 );
 
-CREATE INDEX idx_auth_codes_user_id ON auth_codes(user_id);
-CREATE INDEX idx_auth_codes_code ON auth_codes(code);
+CREATE INDEX idx_user_auth_codes_user_id ON user_auth_codes(user_id);
+CREATE INDEX idx_user_auth_codes_code ON user_auth_codes(code);
 
 -- Trusted Devices (Remember this device for 30 days)
-CREATE TABLE IF NOT EXISTS trusted_devices (
+CREATE TABLE IF NOT EXISTS user_trusted_devices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_hash VARCHAR(255) NOT NULL,
@@ -250,16 +250,16 @@ CREATE TABLE IF NOT EXISTS trusted_devices (
     UNIQUE(user_id, device_hash)
 );
 
-CREATE INDEX idx_trusted_devices_user_id ON trusted_devices(user_id);
-CREATE INDEX idx_trusted_devices_hash ON trusted_devices(device_hash);
-CREATE INDEX idx_trusted_devices_expires ON trusted_devices(expires_at);
+CREATE INDEX idx_user_trusted_devices_user_id ON user_trusted_devices(user_id);
+CREATE INDEX idx_user_trusted_devices_hash ON user_trusted_devices(device_hash);
+CREATE INDEX idx_user_trusted_devices_expires ON user_trusted_devices(expires_at);
 
 -- ============================================================================
 -- TOKEN SECURITY (Refresh Token Rotation & Blacklist)
 -- ============================================================================
 
 -- Refresh Tokens Table (for token rotation and family tracking)
-CREATE TABLE IF NOT EXISTS refresh_tokens (
+CREATE TABLE IF NOT EXISTS user_refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     jti VARCHAR(255) NOT NULL UNIQUE,  -- JWT ID for token identification
@@ -270,17 +270,17 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     replaced_by UUID,                  -- Points to new token's ID (not JTI)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (replaced_by) REFERENCES refresh_tokens(id) ON DELETE SET NULL
+    FOREIGN KEY (replaced_by) REFERENCES user_refresh_tokens(id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_jti ON refresh_tokens(jti);
-CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-CREATE INDEX idx_refresh_tokens_family ON refresh_tokens(token_family);
-CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+CREATE INDEX idx_user_refresh_tokens_user_id ON user_refresh_tokens(user_id);
+CREATE INDEX idx_user_refresh_tokens_jti ON user_refresh_tokens(jti);
+CREATE INDEX idx_user_refresh_tokens_token_hash ON user_refresh_tokens(token_hash);
+CREATE INDEX idx_user_refresh_tokens_family ON user_refresh_tokens(token_family);
+CREATE INDEX idx_user_refresh_tokens_expires ON user_refresh_tokens(expires_at);
 
--- Token Blacklist Table (for invalidated access tokens)
-CREATE TABLE IF NOT EXISTS token_blacklist (
+-- System Revoked Tokens Table (for invalidated access tokens)
+CREATE TABLE IF NOT EXISTS system_revoked_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     jti VARCHAR(255) NOT NULL UNIQUE,  -- JWT ID of the blacklisted token
     user_id UUID NOT NULL,
@@ -290,10 +290,10 @@ CREATE TABLE IF NOT EXISTS token_blacklist (
     reason VARCHAR(255)                -- 'logout', 'password_change', 'security', etc.
 );
 
-CREATE INDEX idx_token_blacklist_jti ON token_blacklist(jti);
-CREATE INDEX idx_token_blacklist_token_hash ON token_blacklist(token_hash);
-CREATE INDEX idx_token_blacklist_user_id ON token_blacklist(user_id);
-CREATE INDEX idx_token_blacklist_expires ON token_blacklist(expires_at);
+CREATE INDEX idx_system_revoked_tokens_jti ON system_revoked_tokens(jti);
+CREATE INDEX idx_system_revoked_tokens_token_hash ON system_revoked_tokens(token_hash);
+CREATE INDEX idx_system_revoked_tokens_user_id ON system_revoked_tokens(user_id);
+CREATE INDEX idx_system_revoked_tokens_expires ON system_revoked_tokens(expires_at);
 
 -- ============================================================================
 -- ADDRESSES SYSTEM
@@ -411,11 +411,11 @@ ADD CONSTRAINT fk_youth_profiles_user FOREIGN KEY (user_id) REFERENCES users(id)
 ALTER TABLE youth_profiles 
 ADD CONSTRAINT fk_youth_profiles_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE SET NULL;
 
-ALTER TABLE password_reset_tokens 
-ADD CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE user_password_reset_tokens 
+ADD CONSTRAINT fk_user_password_reset_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE token_blacklist 
-ADD CONSTRAINT fk_token_blacklist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE system_revoked_tokens 
+ADD CONSTRAINT fk_system_revoked_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Add audit FKs (created_by/updated_by) back to users
 ALTER TABLE users 

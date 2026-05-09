@@ -17,7 +17,7 @@ const CACHE_TTL = 60 * 1000; // 1 minute
 async function refreshBlacklistCache(): Promise<void> {
   try {
     const blacklisted = await sql<{ jti: string }[]>`
-      SELECT jti FROM token_blacklist
+      SELECT jti FROM system_revoked_tokens
       WHERE expires_at > NOW()
     `;
 
@@ -52,7 +52,7 @@ export async function revokeAccessToken(
   expiresAt: Date,
 ): Promise<void> {
   await sql`
-    INSERT INTO token_blacklist (jti, user_id, token_hash, expires_at, reason)
+    INSERT INTO system_revoked_tokens (jti, user_id, token_hash, expires_at, reason)
     VALUES (${jti}, ${userId}, ${tokenHash}, ${expiresAt}, 'logout')
     ON CONFLICT (jti) DO NOTHING
   `;

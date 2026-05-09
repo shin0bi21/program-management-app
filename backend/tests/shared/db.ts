@@ -71,11 +71,11 @@ export async function seedTestUser(overrides: SeedOverrides = {}): Promise<Seede
 // ─── Delete a seeded user (cascade-safe) ─────────────────────────────────────
 
 export async function deleteTestUser(userId: string): Promise<void> {
-  await sql`DELETE FROM auth_codes WHERE user_id = ${userId}`;
-  await sql`DELETE FROM refresh_tokens WHERE user_id = ${userId}`;
-  await sql`DELETE FROM password_reset_tokens WHERE user_id = ${userId}`;
-  await sql`DELETE FROM trusted_devices WHERE user_id = ${userId}`;
-  await sql`DELETE FROM token_blacklist WHERE user_id = ${userId}`;
+  await sql`DELETE FROM user_auth_codes WHERE user_id = ${userId}`;
+  await sql`DELETE FROM user_refresh_tokens WHERE user_id = ${userId}`;
+  await sql`DELETE FROM user_password_reset_tokens WHERE user_id = ${userId}`;
+  await sql`DELETE FROM user_trusted_devices WHERE user_id = ${userId}`;
+  await sql`DELETE FROM system_revoked_tokens WHERE user_id = ${userId}`;
   await sql`DELETE FROM user_credentials WHERE user_id = ${userId}`;
   await sql`DELETE FROM users WHERE id = ${userId}`;
 }

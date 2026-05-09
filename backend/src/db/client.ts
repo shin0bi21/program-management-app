@@ -1,5 +1,4 @@
 import postgres from 'postgres';
-import { DatabaseError } from '../errors/AppError';
 
 /**
  * PostgreSQL connection using postgres.js
@@ -55,64 +54,6 @@ export async function checkConnection(): Promise<boolean> {
     console.error('Database connection check failed:', error);
     return false;
   }
-}
-
-// Postgres connection/availability codes — NOT constraint violations (23xxx)
-const POSTGRES_CONNECTION_CODES = new Set([
-  '57P03', '08000', '08001', '08003', '08004', '08006', '53300', '53400',
-]);
-
-/**
- * Wraps a caught postgres error: re-throws as DatabaseError (503) if it's
- * a connectivity failure, otherwise re-throws unchanged so constraint
- * violations (23xxx) and syntax errors stay as 500s.
- */
-export function rethrowDbError(err: unknown): never {
-  if (err instanceof DatabaseError) throw err;
-  if (err instanceof Error) {
-    const code = (err as { code?: unknown }).code;
-    const isConnError =
-      err.message.includes('ECONNREFUSED') ||
-      code === 'ECONNREFUSED' ||
-      (typeof code === 'string' && POSTGRES_CONNECTION_CODES.has(code));
-    if (isConnError) throw new DatabaseError('Database connection failed', err);
-  }
-  throw err;
-}
-
-/**
- * Retry wrapper for critical queries
- * Retries failed queries with exponential backoff
- */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  delayMs = 1000
-): Promise<T> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      const msg = error instanceof Error ? error.message : '';
-
-      // Don't retry on syntax errors or constraint violations
-      if (msg.includes('syntax error') || msg.includes('violates')) {
-        throw error;
-      }
-
-      if (attempt < maxRetries - 1) {
-        const delay = delayMs * Math.pow(2, attempt);
-        console.warn(`Query failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  // All retries exhausted — surface as DatabaseError if it's a connectivity issue
-  rethrowDbError(lastError);
 }
 
 // Graceful shutdown

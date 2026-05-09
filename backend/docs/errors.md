@@ -10,34 +10,40 @@ When something goes wrong in the backend:
 
 You never need to `res.json()` an error yourself. Just throw the right class and the rest is handled.
 
+### File layout convention
+
+| File | What lives there |
+|---|---|
+| `src/errors.ts` | All error class definitions — runtime objects you `throw`, `catch`, and `instanceof`-check |
+| `src/db/client.ts` | DB connection, query helpers, and `handleDbError` (private — only called within this file) |
+| `src/types/` | **Strictly TypeScript shape declarations** — interfaces, type aliases, enums. No class definitions, no runtime logic, no `new`-able objects. |
+
 ---
 
 ## 1. Error classes — what to throw
 
-All errors live in `src/errors/AppError.ts`, organized into two groups:
+All errors live in `src/errors.ts`, organized into two groups:
 
 **Generic HTTP errors** — thrown from services and controllers:
 
 ```
 AppError (base, default 500)
 ├── BadRequestError        400  — invalid input that passed schema validation
+├── ValidationError        400  — thrown from validateRequest, carries details[] array
 ├── UnauthorizedError      401  — missing or invalid auth token
 ├── ForbiddenError         403  — authenticated but not allowed
 ├── NotFoundError          404  — resource doesn't exist
+├── ConflictError          409  — duplicate resource (mapped from Postgres 23505)
 ├── LockedError            423  — account locked out
 └── TooManyRequestsError   429  — rate limit hit (thrown from rateLimiter middleware)
 ```
 
 **Middleware-specific errors** — carry extra context the global handler surfaces:
 
-```
-└── ValidationError        400  — thrown from validateRequest, carries details[] array
-```
-
 **Usage in a service:**
 
 ```ts
-import { NotFoundError } from '../errors/AppError';
+import { NotFoundError } from '../errors';
 
 throw new NotFoundError('User not found');
 ```
@@ -48,7 +54,7 @@ That's it. No `try/catch` in the controller, no `res.status().json()` — the gl
 
 **Rule:** always `throw` — never call `sendError()` from outside `errorHandler`. Every layer (services, controllers, middleware) throws an `AppError` subclass. The global handler is the only place that calls `sendError()`. This makes the response shape, logging format, and request ID threading consistent for every error in the system.
 
-> `ConflictError` (409) is not yet defined — add it in `AppError.ts` when you need it (e.g. duplicate email on staff create).
+> `ConflictError` (409) is automatically thrown by `handleDbError` when Postgres raises a `23505` unique_violation. You can also throw it directly from a service for semantic conflicts.
 
 ---
 
@@ -84,7 +90,7 @@ Every error response from this API has the same shape:
 
 The `requestId` links this response to a specific log line on the server — useful for debugging. See §6 for more.
 
-All error responses are assembled by a single function: `sendError()` in `AppError.ts`, called only from `errorHandler`. Nothing else in the codebase calls `sendError` or `res.json()` for errors. Changing the shape means changing one place.
+All error responses are assembled by a single function: `sendError()` in `errorHandler.ts`, called only from `errorHandler`. Nothing else in the codebase calls `sendError` or `res.json()` for errors. Changing the shape means changing one place.
 
 ---
 
@@ -103,6 +109,9 @@ What it does when an error arrives:
 - **If the error is an `AppError` subclass** — uses its `statusCode` (only 400–599 are valid — anything else becomes 500)
 - **If the error is anything else** (e.g. a plain `throw new Error(...)`) — treats it as a 500
 - **Logging:** 5xx errors → `console.error` with full stack. 4xx errors → `console.warn` with message only (less noise).
+
+> **Logging is currently plain `console.error`/`console.warn`.** No structured logger (Pino, Winston, etc.) is configured yet. When one is added, the swap is a one-line change in `errorHandler.ts` — replace `console.error` with `logger.error`. `Error.cause` is already threaded through `AppError` so structured loggers will serialize the full cause chain automatically.
+
 - **Response message:** In production, 5xx errors return a generic `"An unexpected error occurred"` — no internal details leak to the client. 4xx errors always return the actual message. In development/test, all errors return the actual message.
 
 ```mermaid
@@ -125,13 +134,15 @@ flowchart TD
 
 ### DB connection errors → 503
 
-`errorHandler` has a special branch for postgres.js connection failures. If the error is not an `AppError` but matches known connection error patterns (`ECONNREFUSED`, `connect`, `57P03`, or `PostgresError` constructor name), it is treated as a 503 Service Unavailable rather than a 500:
+`handleDbError` in `src/db/client.ts` classifies postgres.js errors before they reach `errorHandler`:
 
-- **Log:** `[rid] DATABASE UNAVAILABLE — query failed with no DB connection`
-- **Response message:** `"The server is temporarily unavailable. Please try again shortly."` — generic, safe for clients
-- **Status:** 503 (not 500 — allows load balancers and clients to distinguish a DB outage from a code bug)
+- **Connection failures** (`ECONNREFUSED`, `57P03`, pool exhaustion, etc.) → `DatabaseError` (503)
+- **Unique constraint violations** (`23505`) → `ConflictError` (409)
+- **Everything else** (syntax errors, constraint violations, logic bugs) → re-thrown unchanged → surfaces as 500
 
-The `/health` endpoint also pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with a 200 or 503.
+`db/client.ts` calls `handleDbError` at query boundaries so `errorHandler` always receives a typed `AppError` for DB issues — no pattern-matching on raw postgres error strings in the handler itself.
+
+The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with a 200 or 503.
 
 ---
 

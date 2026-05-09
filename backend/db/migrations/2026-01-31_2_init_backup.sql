@@ -1,7 +1,7 @@
 -- ============================================================================
 -- BACKUP SYSTEM FOR: 2026-01-31_1_init.sql
--- Generated: 2026-05-07T00:15:56.833Z
--- Tables: user_roles, user_role_has_permissions, users, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
+-- Generated: 2026-05-09T18:21:37.023Z
+-- Tables: user_roles, user_role_has_permissions, schools, youth_profiles, addresses, user_has_addresses, contacts, user_has_contacts, youth_worksheets
 -- ============================================================================
 
 -- ============================================================================
@@ -68,10 +68,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.name, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating user_roles - OLD: % | NEW: %', OLD, NEW;
@@ -173,10 +171,8 @@ BEGIN
     'UPDATE', OLD.role_id, OLD.permission_id, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating user_role_has_permissions - OLD: % | NEW: %', OLD, NEW;
@@ -217,134 +213,6 @@ CREATE TRIGGER trigger_user_role_has_permissions_before_delete
 BEFORE DELETE ON user_role_has_permissions
 FOR EACH ROW
 EXECUTE FUNCTION user_role_has_permissions_before_delete();
-
--- ============================================================================
--- TABLE: users
--- ============================================================================
-
--- Backup table for users
-CREATE TABLE IF NOT EXISTS users_backup (
-  _uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  _backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
-  _backup_action VARCHAR(10),
-  id UUID,
-  role_id UUID,
-  first_name VARCHAR(120),
-  last_name VARCHAR(120),
-  active BOOLEAN,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ,
-  created_by UUID,
-  updated_by UUID
-);
-
--- BEFORE INSERT trigger for users
-DROP FUNCTION IF EXISTS users_before_insert() CASCADE;
-CREATE OR REPLACE FUNCTION users_before_insert()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $func$
-BEGIN
-  -- Validate NOT NULL: role_id
-  IF NEW.role_id IS NULL THEN
-    RAISE EXCEPTION '[users] role_id cannot be NULL';
-  END IF;
-  -- Validate NOT NULL: first_name
-  IF NEW.first_name IS NULL THEN
-    RAISE EXCEPTION '[users] first_name cannot be NULL';
-  END IF;
-  -- Validate VARCHAR length: first_name
-  IF NEW.first_name IS NOT NULL AND LENGTH(NEW.first_name) > 120 THEN
-    RAISE EXCEPTION '[users] first_name exceeds maximum length of 120 characters';
-  END IF;
-  -- Validate not empty: first_name
-  IF LENGTH(TRIM(NEW.first_name)) = 0 THEN
-    RAISE EXCEPTION '[users] first_name cannot be empty';
-  END IF;
-  -- Validate NOT NULL: last_name
-  IF NEW.last_name IS NULL THEN
-    RAISE EXCEPTION '[users] last_name cannot be NULL';
-  END IF;
-  -- Validate VARCHAR length: last_name
-  IF NEW.last_name IS NOT NULL AND LENGTH(NEW.last_name) > 120 THEN
-    RAISE EXCEPTION '[users] last_name exceeds maximum length of 120 characters';
-  END IF;
-  -- Validate not empty: last_name
-  IF LENGTH(TRIM(NEW.last_name)) = 0 THEN
-    RAISE EXCEPTION '[users] last_name cannot be empty';
-  END IF;
-
-  -- Debug log (optional - comment out in production)
-  -- RAISE NOTICE '[DEBUG] Inserting into users: %', NEW;
-
-  RETURN NEW;
-END;
-$func$;
-
-DROP TRIGGER IF EXISTS trigger_users_before_insert ON users;
-CREATE TRIGGER trigger_users_before_insert
-BEFORE INSERT ON users
-FOR EACH ROW
-EXECUTE FUNCTION users_before_insert();
-
--- BEFORE UPDATE trigger for users
-DROP FUNCTION IF EXISTS users_before_update() CASCADE;
-CREATE OR REPLACE FUNCTION users_before_update()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $func$
-BEGIN
-  -- Snapshot old state to backup table
-  INSERT INTO users_backup (
-    _backup_action, id, role_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
-  ) VALUES (
-    'UPDATE', OLD.id, OLD.role_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
-  );
-
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
-
-  -- Debug log (optional - comment out in production)
-  -- RAISE NOTICE '[DEBUG] Updating users - OLD: % | NEW: %', OLD, NEW;
-
-  RETURN NEW;
-END;
-$func$;
-
-DROP TRIGGER IF EXISTS trigger_users_before_update ON users;
-CREATE TRIGGER trigger_users_before_update
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION users_before_update();
-
--- BEFORE DELETE trigger for users
-DROP FUNCTION IF EXISTS users_before_delete() CASCADE;
-CREATE OR REPLACE FUNCTION users_before_delete()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $func$
-BEGIN
-  -- Snapshot before deletion
-  INSERT INTO users_backup (
-    _backup_action, id, role_id, first_name, last_name, active, created_at, updated_at, created_by, updated_by
-  ) VALUES (
-    'DELETE', OLD.id, OLD.role_id, OLD.first_name, OLD.last_name, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
-  );
-
-  -- Debug log (optional - comment out in production)
-  -- RAISE NOTICE '[DEBUG] Deleting from users: %', OLD;
-
-  RETURN OLD;
-END;
-$func$;
-
-DROP TRIGGER IF EXISTS trigger_users_before_delete ON users;
-CREATE TRIGGER trigger_users_before_delete
-BEFORE DELETE ON users
-FOR EACH ROW
-EXECUTE FUNCTION users_before_delete();
 
 -- ============================================================================
 -- TABLE: schools
@@ -434,10 +302,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.name, OLD.address, OLD.school_type, OLD.board, OLD.postal_code, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating schools - OLD: % | NEW: %', OLD, NEW;
@@ -539,10 +405,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.user_id, OLD.date_of_birth, OLD.school_id, OLD.grade_level, OLD.age_group, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating youth_profiles - OLD: % | NEW: %', OLD, NEW;
@@ -688,10 +552,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.address, OLD.city, OLD.province, OLD.postal_code, OLD.country, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating addresses - OLD: % | NEW: %', OLD, NEW;
@@ -795,10 +657,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.user_id, OLD.address_id, OLD.active, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating user_has_addresses - OLD: % | NEW: %', OLD, NEW;
@@ -923,10 +783,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.first_name, OLD.last_name, OLD.phone_number, OLD.type, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating contacts - OLD: % | NEW: %', OLD, NEW;
@@ -1030,10 +888,8 @@ BEGIN
     'UPDATE', OLD.user_id, OLD.contact_id, OLD.active, OLD.assigned_at, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating user_has_contacts - OLD: % | NEW: %', OLD, NEW;
@@ -1153,10 +1009,8 @@ BEGIN
     'UPDATE', OLD.id, OLD.youth_id, OLD.title, OLD.file_data, OLD.file_size, OLD.file_type, OLD.note, OLD.metadata, OLD.created_at, OLD.updated_at, OLD.created_by, OLD.updated_by
   );
 
-  -- Auto-update updated_at if column exists
-  IF TG_TABLE_NAME IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'updated_at' AND table_name = TG_TABLE_NAME) THEN
-    NEW.updated_at = NOW();
-  END IF;
+  -- Auto-update updated_at
+  NEW.updated_at = NOW();
 
   -- Debug log (optional - comment out in production)
   -- RAISE NOTICE '[DEBUG] Updating youth_worksheets - OLD: % | NEW: %', OLD, NEW;

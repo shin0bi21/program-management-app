@@ -14,10 +14,9 @@ jobs:
   enforce-merge-path:
     name: Enforce develop → main only
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     steps:
       - name: Block non-develop PRs targeting main
-        if: github.head_ref != 'develop'
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref != 'develop'
         run: |
           echo "PRs to main must come from develop, not '${{ github.head_ref }}'."
           exit 1

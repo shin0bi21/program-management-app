@@ -23,7 +23,7 @@ export async function seedTrustedDeviceUser(
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   await sql`
-    INSERT INTO trusted_devices (user_id, device_hash, device_name, expires_at)
+    INSERT INTO user_trusted_devices (user_id, device_hash, device_name, expires_at)
     VALUES (${user.userId}, ${deviceHash}, 'Test Device', ${expiresAt})
   `;
 
@@ -34,7 +34,7 @@ export async function seedTrustedDeviceUser(
 
 export async function get2FACode(userId: string): Promise<string | null> {
   const codes = await sql<{ code: string }[]>`
-    SELECT code FROM auth_codes
+    SELECT code FROM user_auth_codes
     WHERE user_id = ${userId}
       AND expires_at > NOW()
       AND used_at IS NULL
@@ -46,7 +46,7 @@ export async function get2FACode(userId: string): Promise<string | null> {
 
 export async function insertExpired2FACode(userId: string, code: string = '999999') {
   await sql`
-    INSERT INTO auth_codes (user_id, code, expires_at)
+    INSERT INTO user_auth_codes (user_id, code, expires_at)
     VALUES (${userId}, ${code}, NOW() - INTERVAL '1 minute')
   `;
 }
@@ -54,8 +54,8 @@ export async function insertExpired2FACode(userId: string, code: string = '99999
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  admin: ['read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings'],
-  staff: ['read:youth', 'write:youth', 'read:schools'],
+  admin: ['read:staff', 'write:staff', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:settings', 'write:settings'],
+  staff: ['read:youth_profiles', 'write:youth_profiles', 'read:schools'],
   youth: [],
 };
 
@@ -83,7 +83,7 @@ export async function storeRefreshToken(userId: string, jti: string, token: stri
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await sql`
-    INSERT INTO refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
+    INSERT INTO user_refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
     VALUES (${userId}, ${jti}, ${tokenHash}, ${tokenFamily}, ${expiresAt})
   `;
 
@@ -104,7 +104,7 @@ export async function insertResetToken(userId: string): Promise<string> {
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
   await sql`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+    INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
     VALUES (${userId}, ${tokenHash}, ${expiresAt})
   `;
 
@@ -116,7 +116,7 @@ export async function insertExpiredResetToken(userId: string): Promise<string> {
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
   await sql`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+    INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
     VALUES (${userId}, ${tokenHash}, NOW() - INTERVAL '1 minute')
   `;
 
@@ -129,7 +129,7 @@ export async function insertUsedResetToken(userId: string): Promise<string> {
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
   await sql`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at, used_at)
+    INSERT INTO user_password_reset_tokens (user_id, token, expires_at, used_at)
     VALUES (${userId}, ${tokenHash}, ${expiresAt}, NOW())
   `;
 

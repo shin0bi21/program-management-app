@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * AppError.ts — Error vocabulary + response formatter
+ * AppError.ts — Error vocabulary
  * ============================================================================
  *
  * Pure vocabulary — no framework imports. Defines every error class the API
@@ -13,8 +13,14 @@
  *   3. 4xx client errors — caller's fault (bad input, no auth, etc.)
  *   4. 5xx server errors — our fault (DatabaseError, ServiceUnavailableError)
  *
+ * DB error classification (handleDbError, POSTGRES_CONNECTION_CODES) lives in
+ * db/client.ts — a private helper called only within that file.
+ *
+ * requestId in ErrorResponse is populated by the requestId middleware registered
+ * in src/index.ts before all routes.
+ *
  * Rule: throw an AppError subclass anywhere; the global errorHandler catches
- * it, logs it, and formats the response. sendError lives in errorHandler.ts.
+ * it, logs it, and formats the response. sendError lives in middleware/errorHandler.ts.
  */
 
 // ============================================================================
@@ -70,11 +76,12 @@ export abstract class AppError extends Error {
    */
   public clientMessage?: string;
   /**
-   * @param message - Internal error description (logged; redacted for 5xx in production).
+   * @param message   - Internal error description (logged; redacted for 5xx in production).
    * @param statusCode - HTTP status code (only 400–599 honoured by `errorHandler`).
+   * @param cause     - Original low-level error forwarded as native `Error.cause`.
    */
-  constructor(message: string, public readonly statusCode: number) {
-    super(message);
+  constructor(message: string, public readonly statusCode: number, cause?: unknown) {
+    super(message, { cause });
     this.name = 'AppError';
   }
 }
@@ -149,6 +156,18 @@ export class NotFoundError extends AppError {
 }
 
 /**
+ * 409 — Resource already exists (unique constraint violation). Maps Postgres
+ * error 23505 (unique_violation) so it surfaces as a 409 instead of a raw 500.
+ * Throw from: db/dbErrors.ts (automatically), or services for semantic conflicts.
+ */
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409);
+    this.name = 'ConflictError';
+  }
+}
+
+/**
  * 423 — Account locked out after too many failed login attempts.
  * Throw from: authService.
  */
@@ -177,6 +196,9 @@ export class TooManyRequestsError extends AppError {
 // In production, errorHandler replaces the message with a generic string so
 // internal details never leak. Logged at error level with full stack.
 
+/** Shared client-facing copy for all 503 errors. Single source so copy changes touch one line. */
+const UNAVAILABLE_MESSAGE = 'The server is temporarily unavailable. Please try again shortly.';
+
 /**
  * 500 — Unexpected application error with no more specific type.
  * Throw from: anywhere an unrecoverable invariant is violated.
@@ -190,32 +212,28 @@ export class InternalServerError extends AppError {
 
 /**
  * 503 — Database unreachable or refusing connections (ECONNREFUSED, 57P03,
- * pool exhaustion, etc.). Thrown by the db/client.ts wrapper — errorHandler
- * no longer needs to pattern-match raw postgres error strings.
- * Throw from: db/client.ts (sql wrapper, withRetry).
+ * pool exhaustion, etc.). Thrown by db/dbErrors.ts — errorHandler no longer
+ * needs to pattern-match raw postgres error strings.
+ * Throw from: db/client.ts.
+ * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
 export class DatabaseError extends AppError {
-  /** Original low-level cause (postgres error, ECONNREFUSED, etc.) */
-  public readonly cause: unknown;
   constructor(message: string, cause?: unknown) {
-    super(message, 503);
+    super(message, 503, cause);
     this.name = 'DatabaseError';
-    this.cause = cause;
-    this.clientMessage = 'The server is temporarily unavailable. Please try again shortly.';
+    this.clientMessage = UNAVAILABLE_MESSAGE;
   }
 }
 
 /**
  * 503 — An upstream service (cache, queue, third-party API) is unavailable.
  * Throw from: service integrations, job queue adapters.
+ * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
 export class ServiceUnavailableError extends AppError {
-  /** Original low-level cause (upstream HTTP error, timeout, etc.) */
-  public readonly cause: unknown;
   constructor(message: string, cause?: unknown) {
-    super(message, 503);
+    super(message, 503, cause);
     this.name = 'ServiceUnavailableError';
-    this.cause = cause;
-    this.clientMessage = 'The server is temporarily unavailable. Please try again shortly.';
+    this.clientMessage = UNAVAILABLE_MESSAGE;
   }
 }

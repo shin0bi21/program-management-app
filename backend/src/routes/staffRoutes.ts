@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { handleGetStaff, handleCreateStaff } from '../controllers/staffController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
-import { validateRequest } from '../middleware/validateRequest';
-import { asyncHandler } from '../middleware/errorHandler';
+import { validateRequest, asyncHandler } from '../middleware/routeMiddleware';
 import { createStaffSchema } from '../validation/staffSchemas';
 
 const router = Router();
