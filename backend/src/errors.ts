@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * AppError.ts — Error vocabulary + response formatter
+ * AppError.ts — Error vocabulary
  * ============================================================================
  *
  * Pure vocabulary — no framework imports. Defines every error class the API
@@ -12,13 +12,15 @@
  *   2. Base class        — AppError (abstract — never instantiate directly)
  *   3. 4xx client errors — caller's fault (bad input, no auth, etc.)
  *   4. 5xx server errors — our fault (DatabaseError, ServiceUnavailableError)
- *   5. DB error helpers  — handleDbError, POSTGRES_CONNECTION_CODES
+ *
+ * DB error classification (handleDbError, POSTGRES_CONNECTION_CODES) lives in
+ * db/client.ts — a private helper called only within that file.
  *
  * requestId in ErrorResponse is populated by the requestId middleware registered
  * in src/index.ts before all routes.
  *
  * Rule: throw an AppError subclass anywhere; the global errorHandler catches
- * it, logs it, and formats the response. sendError lives in errorHandler.ts.
+ * it, logs it, and formats the response. sendError lives in middleware/errorHandler.ts.
  */
 
 // ============================================================================
@@ -154,6 +156,18 @@ export class NotFoundError extends AppError {
 }
 
 /**
+ * 409 — Resource already exists (unique constraint violation). Maps Postgres
+ * error 23505 (unique_violation) so it surfaces as a 409 instead of a raw 500.
+ * Throw from: db/dbErrors.ts (automatically), or services for semantic conflicts.
+ */
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409);
+    this.name = 'ConflictError';
+  }
+}
+
+/**
  * 423 — Account locked out after too many failed login attempts.
  * Throw from: authService.
  */
@@ -161,18 +175,6 @@ export class LockedError extends AppError {
   constructor(message: string) {
     super(message, 423);
     this.name = 'LockedError';
-  }
-}
-
-/**
- * 409 — Resource already exists (unique constraint violation). Maps Postgres
- * error 23505 (unique_violation) so it surfaces as a 409 instead of a raw 500.
- * Throw from: handleDbError (automatically), or services for semantic conflicts.
- */
-export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(message, 409);
-    this.name = 'ConflictError';
   }
 }
 
@@ -210,9 +212,9 @@ export class InternalServerError extends AppError {
 
 /**
  * 503 — Database unreachable or refusing connections (ECONNREFUSED, 57P03,
- * pool exhaustion, etc.). Thrown by the db/client.ts wrapper — errorHandler
- * no longer needs to pattern-match raw postgres error strings.
- * Throw from: db/client.ts (sql wrapper, withRetry).
+ * pool exhaustion, etc.). Thrown by db/dbErrors.ts — errorHandler no longer
+ * needs to pattern-match raw postgres error strings.
+ * Throw from: db/client.ts.
  * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
 export class DatabaseError extends AppError {
@@ -234,42 +236,4 @@ export class ServiceUnavailableError extends AppError {
     this.name = 'ServiceUnavailableError';
     this.clientMessage = UNAVAILABLE_MESSAGE;
   }
-}
-
-// ============================================================================
-// 5. DB ERROR HELPERS
-// ============================================================================
-// Postgres-specific connection/availability codes.
-// Distinct from constraint violations (23xxx) and syntax errors — those stay
-// as raw errors so errorHandler surfaces them as 500s.
-
-const POSTGRES_CONNECTION_CODES = new Set([
-  '57P03', '08000', '08001', '08003', '08004', '08006', '53300', '53400',
-]);
-
-/**
- * Wraps a caught postgres error: re-throws as DatabaseError (503) if it's
- * a connectivity failure, otherwise re-throws unchanged so constraint
- * violations (23xxx) and syntax errors stay as 500s.
- * Called by db/client.ts — lives here so error classification stays in the
- * errors layer, not scattered across DB infrastructure.
- */
-export function handleDbError(err: unknown): never {
-  if (err instanceof DatabaseError) throw err;
-  if (err instanceof Error) {
-    const code = (err as { code?: unknown }).code;
-
-    // Node wraps ECONNREFUSED as both a `.code` string and in `.message`.
-    // The message check handles cases where the error is re-wrapped by a
-    // middleware or library before it reaches here, stripping the `.code`.
-    const isConnError =
-      err.message.includes('ECONNREFUSED') ||
-      code === 'ECONNREFUSED' ||
-      (typeof code === 'string' && POSTGRES_CONNECTION_CODES.has(code));
-    if (isConnError) throw new DatabaseError('Database connection failed', err);
-
-    // Postgres 23505 unique_violation — map to 409 so it doesn't surface as 500.
-    if (code === '23505') throw new ConflictError('A record with that value already exists');
-  }
-  throw err;
 }

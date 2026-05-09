@@ -23,7 +23,7 @@ import {
   NotFoundError,
   ForbiddenError,
   BadRequestError,
-} from '../errors/AppError';
+} from '../errors';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 const REFRESH_SECRET = requireEnv('REFRESH_SECRET');

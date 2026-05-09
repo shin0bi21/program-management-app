@@ -10,11 +10,19 @@ When something goes wrong in the backend:
 
 You never need to `res.json()` an error yourself. Just throw the right class and the rest is handled.
 
+### File layout convention
+
+| File | What lives there |
+|---|---|
+| `src/errors.ts` | All error class definitions — runtime objects you `throw`, `catch`, and `instanceof`-check |
+| `src/db/client.ts` | DB connection, query helpers, and `handleDbError` (private — only called within this file) |
+| `src/types/` | **Strictly TypeScript shape declarations** — interfaces, type aliases, enums. No class definitions, no runtime logic, no `new`-able objects. |
+
 ---
 
 ## 1. Error classes — what to throw
 
-All errors live in `src/errors/AppError.ts`, organized into two groups:
+All errors live in `src/errors.ts`, organized into two groups:
 
 **Generic HTTP errors** — thrown from services and controllers:
 
@@ -35,7 +43,7 @@ AppError (base, default 500)
 **Usage in a service:**
 
 ```ts
-import { NotFoundError } from '../errors/AppError';
+import { NotFoundError } from '../errors';
 
 throw new NotFoundError('User not found');
 ```
@@ -82,7 +90,7 @@ Every error response from this API has the same shape:
 
 The `requestId` links this response to a specific log line on the server — useful for debugging. See §6 for more.
 
-All error responses are assembled by a single function: `sendError()` in `AppError.ts`, called only from `errorHandler`. Nothing else in the codebase calls `sendError` or `res.json()` for errors. Changing the shape means changing one place.
+All error responses are assembled by a single function: `sendError()` in `errorHandler.ts`, called only from `errorHandler`. Nothing else in the codebase calls `sendError` or `res.json()` for errors. Changing the shape means changing one place.
 
 ---
 
@@ -126,7 +134,7 @@ flowchart TD
 
 ### DB connection errors → 503
 
-`handleDbError` in `src/errors/AppError.ts` classifies postgres.js errors before they reach `errorHandler`:
+`handleDbError` in `src/db/client.ts` classifies postgres.js errors before they reach `errorHandler`:
 
 - **Connection failures** (`ECONNREFUSED`, `57P03`, pool exhaustion, etc.) → `DatabaseError` (503)
 - **Unique constraint violations** (`23505`) → `ConflictError` (409)

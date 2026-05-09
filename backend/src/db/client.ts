@@ -1,5 +1,4 @@
 import postgres from 'postgres';
-import { handleDbError } from '../errors/AppError';
 
 /**
  * PostgreSQL connection using postgres.js
@@ -55,41 +54,6 @@ export async function checkConnection(): Promise<boolean> {
     console.error('Database connection check failed:', error);
     return false;
   }
-}
-
-/**
- * Retry wrapper for critical queries
- * Retries failed queries with exponential backoff
- */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  delayMs = 1000
-): Promise<T> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      const msg = error instanceof Error ? error.message : '';
-
-      // Don't retry on syntax errors or constraint violations
-      if (msg.includes('syntax error') || msg.includes('violates')) {
-        throw error;
-      }
-
-      if (attempt < maxRetries - 1) {
-        const delay = delayMs * Math.pow(2, attempt);
-        console.warn(`Query failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  // All retries exhausted — surface as DatabaseError if it's a connectivity issue
-  handleDbError(lastError);
 }
 
 // Graceful shutdown

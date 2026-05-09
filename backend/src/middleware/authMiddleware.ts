@@ -4,8 +4,8 @@ import type { Permission } from '../types/auth';
 import type { AccessTokenPayload } from '../types/auth';
 import { requireEnv } from '../utils/env';
 import { isBlacklisted } from '../services/tokenRevocationService';
-import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
-import { asyncHandler } from './errorHandler';
+import { UnauthorizedError, ForbiddenError } from '../errors';
+import { asyncHandler } from './routeMiddleware';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 

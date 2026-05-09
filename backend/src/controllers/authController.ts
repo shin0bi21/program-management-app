@@ -8,7 +8,7 @@ import {
   requestPasswordReset,
   resetUserPassword,
 } from '../services/authService';
-import { UnauthorizedError } from '../errors/AppError';
+import { UnauthorizedError } from '../errors';
 
 const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
 
