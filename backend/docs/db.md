@@ -151,7 +151,7 @@ For each table it generates:
 |----------|--------|
 | Base/utility | `base_table` |
 | Lookup/infrastructure | `user_permissions`, `user_groups`, `contact_types_base` |
-| Security | `user_credentials`, `password_reset_tokens`, `auth_codes`, `trusted_devices`, `refresh_tokens`, `token_blacklist` |
+| Security | `user_credentials`, `user_password_reset_tokens`, `user_auth_codes`, `user_trusted_devices`, `user_refresh_tokens`, `system_revoked_tokens` |
 | System | `schema_migrations`, `schema_backup_tracking` |
 
 Security tables are excluded because backing up credential hashes or reset tokens creates unnecessary copies of sensitive data.
