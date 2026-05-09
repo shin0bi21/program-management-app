@@ -28,7 +28,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/youth" element={
-            <ProtectedRoute requiredPermission="read:youth">
+            <ProtectedRoute requiredPermission="read:youth_profiles">
               <Youth />
             </ProtectedRoute>
           } />

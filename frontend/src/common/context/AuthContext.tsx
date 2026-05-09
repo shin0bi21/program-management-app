@@ -4,12 +4,12 @@ import { isTokenExpired, decodeToken } from '../utils/jwt';
 import { clearAuthData, getToken } from '../utils/storage';
 import { logout as logoutRequest } from '../../pages/Auth/common/api/auth.api';
 
-export type UserRole = 'admin' | 'staff' | 'youth';
+export type UserRole = string;
 export type Permission =
   | 'read:staff'
   | 'write:staff'
-  | 'read:youth'
-  | 'write:youth'
+  | 'read:youth_profiles'
+  | 'write:youth_profiles'
   | 'read:schools'
   | 'read:settings'
   | 'write:settings';

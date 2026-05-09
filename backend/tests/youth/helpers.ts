@@ -9,14 +9,14 @@ import { sql } from '../shared/db';
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  admin: ['read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings'],
-  staff: ['read:youth', 'write:youth', 'read:schools'],
+  admin: ['read:staff', 'write:staff', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:settings', 'write:settings'],
+  staff: ['read:youth_profiles', 'write:youth_profiles', 'read:schools'],
   youth: [],
 };
 
 export function generateToken(
   userId: string,
-  role: 'admin' | 'staff' | 'youth',
+  role: string,
   email: string = 'test@test.local',
 ) {
   return jwt.sign(
@@ -26,7 +26,7 @@ export function generateToken(
   );
 }
 
-export function generateExpiredToken(userId: string, role: 'admin' | 'staff' | 'youth' = 'admin') {
+export function generateExpiredToken(userId: string, role: string = 'admin') {
   return jwt.sign(
     {
       userId,

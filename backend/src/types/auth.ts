@@ -1,9 +1,9 @@
-export type UserRole = 'admin' | 'staff' | 'youth';
+export type UserRole = string;
 export type Permission =
   | 'read:staff'
   | 'write:staff'
-  | 'read:youth'
-  | 'write:youth'
+  | 'read:youth_profiles'
+  | 'write:youth_profiles'
   | 'read:schools'
   | 'read:settings'
   | 'write:settings';
