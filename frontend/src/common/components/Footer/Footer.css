@@ -1,10 +1,10 @@
 .site-footer {
   width: 100%;
   align-self: stretch;
-  background: #1c1a17;
-  color: #f0ece4;
+  background: var(--color-dark);
+  color: var(--color-dark-text);
   padding: 2rem;
-  border-top: 2px solid rgba(245, 200, 66, 0.35);
+  border-top: 2px solid var(--accent-35);
 }
 
 .site-footer-grid {
@@ -54,7 +54,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #f3be4e;
+  color: var(--color-accent);
   border: 1px solid rgba(243, 190, 78, 0.45);
   background: rgba(243, 190, 78, 0.1);
 }
@@ -62,7 +62,7 @@
 .site-footer-block h3 {
   margin: 0 0 12px;
   font-size: clamp(1rem, 1.7vw, 1.2rem);
-  color: #ffffff;
+  color: var(--color-white);
 }
 
 .site-footer-block p {
@@ -105,7 +105,7 @@
 }
 
 .site-footer-block a:hover {
-  color: #ffffff;
+  color: var(--color-white);
   text-decoration: underline;
 }
 
@@ -121,8 +121,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.88);
-  line-height: 0;
+  color: var(--white-88);
   width: 24px;
   height: 24px;
   transition: transform 0.18s ease, color 0.18s ease;
@@ -138,12 +137,12 @@
 .site-footer-social-link:hover {
   text-decoration: none;
   transform: translateY(-2px);
-  color: #ffffff;
+  color: var(--color-white);
 }
 
 .site-footer-bottom {
   margin-top: 26px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--white-12);
   padding-top: 18px;
 }
 

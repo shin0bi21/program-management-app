@@ -14,7 +14,7 @@
 }
 
 .modal-container {
-  background: white;
+  background: var(--color-white);
   border-radius: 12px;
   width: 100%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
@@ -29,21 +29,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--ink-08);
   flex-shrink: 0;
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.4rem;
-  color: #333;
+  color: var(--color-ink);
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #666;
+  color: var(--color-muted);
   cursor: pointer;
   padding: 0.25rem;
   line-height: 1;
@@ -51,7 +51,7 @@
 }
 
 .modal-close:hover {
-  color: #333;
+  color: var(--color-ink);
 }
 
 .modal-body {
@@ -66,11 +66,7 @@
 }
 
 .modal-body::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
+  background: var(--color-surface);
   background: #888;
   border-radius: 4px;
 }
@@ -81,8 +77,8 @@
 
 .modal-footer {
   padding: 1.5rem 2rem;
-  border-top: 1px solid #e9ecef;
-  background-color: #f8f9fa;
+  border-top: 1px solid var(--ink-08);
+  background-color: var(--color-surface);
   border-radius: 0 0 0.75rem 0.75rem;
   flex-shrink: 0;
   display: flex;
@@ -93,7 +89,7 @@
 /* Status indicator */
 .modal-status {
   padding: 1rem 2rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--ink-08);
   flex-shrink: 0;
   animation: slideDown 0.2s ease-out;
 }
@@ -141,18 +137,18 @@
 }
 
 .modal-status-submitting {
-  background-color: #e3f2fd;
-  color: #1565c0;
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
 }
 
 .modal-status-success {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: var(--color-status-active-bg);
+  color: var(--color-status-active);
 }
 
 .modal-status-error {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-dark);
 }
 
 .modal-status-icon {
@@ -163,8 +159,8 @@
 .modal-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #e3f2fd;
-  border-top: 2px solid #1565c0;
+  border: 2px solid var(--color-info-bg);
+  border-top: 2px solid var(--color-info);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }

@@ -16,10 +16,15 @@
   --color-body:         #5a6272;
 
   /* ── Ink at standard opacities ─────────────────────────── */
-  --ink-12: rgba(18, 22, 31, 0.12);
+  --ink-05: rgba(18, 22, 31, 0.05);
   --ink-08: rgba(18, 22, 31, 0.08);
+  --ink-10: rgba(18, 22, 31, 0.10);
+  --ink-12: rgba(18, 22, 31, 0.12);
   --ink-06: rgba(18, 22, 31, 0.06);
   --ink-04: rgba(18, 22, 31, 0.04);
+  --ink-20: rgba(18, 22, 31, 0.20);
+  --ink-35: rgba(18, 22, 31, 0.35);
+  --ink-40: rgba(18, 22, 31, 0.40);
   --ink-42: rgba(18, 22, 31, 0.42);
   --ink-45: rgba(18, 22, 31, 0.45);
 
@@ -31,16 +36,27 @@
 
   /* ── Accent at standard opacities ──────────────────────── */
   --accent-55: rgba(243, 165, 36, 0.55);
+  --accent-50: rgba(243, 165, 36, 0.50);
   --accent-45: rgba(243, 165, 36, 0.45);
+  --accent-35: rgba(243, 165, 36, 0.35);
+  --accent-28: rgba(243, 165, 36, 0.28);
+  --accent-20: rgba(243, 165, 36, 0.20);
   --accent-18: rgba(243, 165, 36, 0.18);
   --accent-16: rgba(243, 165, 36, 0.16);
+  --accent-12: rgba(243, 165, 36, 0.12);
   --accent-10: rgba(243, 165, 36, 0.10);
   --accent-08: rgba(243, 165, 36, 0.08);
   --accent-06: rgba(243, 165, 36, 0.06);
 
   /* ── White at standard opacities (dark sections) ───────── */
+  --white-88: rgba(255, 255, 255, 0.88);
+  --white-12: rgba(255, 255, 255, 0.12);
   --white-10: rgba(255, 255, 255, 0.10);
   --white-04: rgba(255, 255, 255, 0.04);
+
+  /* ── Semantic danger/red (for Button, Table, badges) ─── */
+  --color-danger-dark:  #9b2c2c;
+  --color-danger-btn:   #c53030;
 
   /* ── Spacing scale (4px base) ──────────────────────────── */
   --space-1:  4px;
@@ -86,8 +102,26 @@
   --border-accent:    1px solid var(--accent-45);
 
   /* ── Shadows ────────────────────────────────────────────── */
-  --shadow-card:  0 10px 30px rgba(18, 22, 31, 0.05);
-  --shadow-hover: 0 12px 32px rgba(18, 22, 31, 0.10);
+  --shadow-card:  0 10px 30px var(--ink-05);
+  --shadow-hover: 0 12px 32px var(--ink-10);
+
+  /* ── Semantic UI colors ─────────────────────────────────── */
+  --color-danger:         #dc3545;
+  --color-danger-bg:      #fef2f2;
+  --color-danger-border:  #fecaca;
+  --color-danger-dark:    #9b2c2c;
+  --color-danger-btn:     #c53030;
+  --color-success:        #166534;
+  --color-success-bg:     #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-info:           #1565c0;
+  --color-info-bg:        #e3f2fd;
+  --color-status-active-bg:  #d1fae5;
+  --color-status-active:     #065f46;
+  --color-status-warn-bg:    #fef3c7;
+  --color-status-warn:       #92400e;
+  --color-border:         #d4d8e0;  /* input/form borders */
+  --color-input-bg:       #f9f9f9;  /* unfocused input background */
 
   /* ── Legacy aliases (backwards compat) ─────────────────── */
   --brand-ink:            var(--color-ink);
