@@ -118,8 +118,8 @@ INSERT INTO user_roles (name) VALUES ('admin'), ('staff'), ('youth') ON CONFLICT
 INSERT INTO user_permissions (name) VALUES
   ('read:staff'),
   ('write:staff'),
-  ('read:youth'),
-  ('write:youth'),
+  ('read:youth_profiles'),
+  ('write:youth_profiles'),
   ('read:schools'),
   ('read:settings'),
   ('write:settings')
@@ -128,12 +128,12 @@ ON CONFLICT (name) DO NOTHING;
 -- Seed role → permission assignments
 INSERT INTO user_role_has_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM user_roles r, user_permissions p
-WHERE r.name = 'admin' AND p.name IN ('read:staff', 'write:staff', 'read:youth', 'write:youth', 'read:schools', 'read:settings', 'write:settings')
+WHERE r.name = 'admin' AND p.name IN ('read:staff', 'write:staff', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:settings', 'write:settings')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO user_role_has_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM user_roles r, user_permissions p
-WHERE r.name = 'staff' AND p.name IN ('read:youth', 'write:youth', 'read:schools')
+WHERE r.name = 'staff' AND p.name IN ('read:youth_profiles', 'write:youth_profiles', 'read:schools')
 ON CONFLICT DO NOTHING;
 
 -- youth role has no permissions (intentional — empty set for now)

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faChevronDown, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faChevronDown, faRightFromBracket, faHouse } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
@@ -23,6 +23,16 @@ export default function Header() {
         <img src="/logo.jpg" alt="Be Original Youth Group" className="sidebar-logo" />
       </div>
       <nav className="sidebar-nav">
+        {isAuthenticated && (
+          <button
+            onClick={() => navigate('/')}
+            className={`sidebar-link${isActive('/') ? ' active' : ''}`}
+          >
+            <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
+            <span>Home</span>
+          </button>
+        )}
+
         {isAuthenticated && (
           <button
             onClick={() => navigate('/youth')}

@@ -11,10 +11,10 @@
  *   1. Response contract — ValidationDetail, ErrorResponse types
  *   2. Base class        — AppError (abstract — never instantiate directly)
  *   3. 4xx client errors — caller's fault (bad input, no auth, etc.)
- *   4. 5xx server errors — our fault (DatabaseError, ServiceUnavailableError)
+ *   4. 5xx server errors — our fault (DbConnectionError, ServiceUnavailableError)
  *
- * DB error classification (handleDbError, POSTGRES_CONNECTION_CODES) lives in
- * db/client.ts — a private helper called only within that file.
+ * DB error classification (classifyError, POSTGRES_CONNECTION_CODES) lives in
+ * middleware/errorMiddleware.ts — called as the first step of handleError.
  *
  * requestId in ErrorResponse is populated by the requestId middleware registered
  * in src/index.ts before all routes.
@@ -158,11 +158,12 @@ export class NotFoundError extends AppError {
 /**
  * 409 — Resource already exists (unique constraint violation). Maps Postgres
  * error 23505 (unique_violation) so it surfaces as a 409 instead of a raw 500.
- * Throw from: db/dbErrors.ts (automatically), or services for semantic conflicts.
+ * Throw from: classifyError (automatically from DB 23505), or services for semantic conflicts.
+ * Pass the original DB error as `cause` when classifying — the constraint name is visible in logs.
  */
 export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(message, 409);
+  constructor(message: string, cause?: unknown) {
+    super(message, 409, cause);
     this.name = 'ConflictError';
   }
 }
@@ -217,10 +218,10 @@ export class InternalServerError extends AppError {
  * Throw from: db/client.ts.
  * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
-export class DatabaseError extends AppError {
+export class DbConnectionError extends AppError {
   constructor(message: string, cause?: unknown) {
     super(message, 503, cause);
-    this.name = 'DatabaseError';
+    this.name = 'DbConnectionError';
     this.clientMessage = UNAVAILABLE_MESSAGE;
   }
 }
