@@ -26,6 +26,36 @@
   margin: 0;
 }
 
+/* ── Shared decorative background shapes ───────────────── */
+/* Used by .auth-container and .homepage-hero */
+
+.auth-container::before,
+.homepage-hero::before {
+  content: '';
+  position: absolute;
+  bottom: -110px;
+  right: -120px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-18);
+  pointer-events: none;
+}
+
+.auth-container::after,
+.homepage-hero::after {
+  content: '';
+  position: absolute;
+  top: -72px;
+  left: -68px;
+  width: 240px;
+  height: 240px;
+  border-radius: 18px;
+  border: 1.5px solid var(--ink-08);
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
 /* ── Status badges ──────────────────────────────────────── */
 
 .status-badge {

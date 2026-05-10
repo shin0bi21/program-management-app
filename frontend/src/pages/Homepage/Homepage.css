@@ -166,29 +166,7 @@
   mask-image: linear-gradient(180deg, black 70%, transparent 100%);
 }
 
-.homepage-hero::before {
-  content: '';
-  position: absolute;
-  bottom: -80px;
-  right: -80px;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  border: 2px solid var(--accent-18);
-  pointer-events: none;
-}
-
-.homepage-hero::after {
-  content: '';
-  position: absolute;
-  bottom: 60px;
-  left: -60px;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ink-06);
-  pointer-events: none;
-}
+/* Decorative shapes → common/styles/pages.css */
 
 .hero-kicker {
   margin: 0;
