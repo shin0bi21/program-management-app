@@ -1,0 +1,54 @@
+/* ── Shared data-page layout ────────────────────────────────
+   Used by Staff, Youth, Account (any sidebar-content page).
+   ──────────────────────────────────────────────────────── */
+
+.page-container {
+  margin-left: 200px;
+  padding: 40px 36px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+/* ── Status badges ──────────────────────────────────────── */
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-active {
+  background-color: var(--color-status-active-bg);
+  color: var(--color-status-active);
+}
+
+.status-inactive {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.status-invited {
+  background-color: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}

@@ -1,19 +1,19 @@
 .table-wrapper {
   overflow-y: auto;
   overflow-x: auto;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-white);
+  box-shadow: var(--shadow-card);
   border-radius: 8px;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
+  background-color: var(--color-white);
 }
 
 .table thead {
-  background-color: #f8f9fa;
+  background-color: var(--ink-06);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -23,19 +23,19 @@
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #495057;
-  border-bottom: 2px solid #dee2e6;
+  color: var(--color-muted);
+  border-bottom: 2px solid var(--ink-12);
   white-space: nowrap;
 }
 
 .table td {
   padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
-  color: #212529;
+  border-bottom: 1px solid var(--ink-12);
+  color: var(--color-ink);
 }
 
 .table tbody tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--color-surface);
 }
 
 .table tbody tr:last-child td {
@@ -48,14 +48,14 @@
 .table-empty {
   padding: 3rem 2rem;
   text-align: center;
-  color: #666;
+  color: var(--color-muted);
   font-size: 1rem;
 }
 
 .table-error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
+  color: var(--color-danger);
+  background-color: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
 }
 
@@ -66,7 +66,7 @@
 }
 
 .table-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--color-surface);
   border-radius: 4px;
 }
 

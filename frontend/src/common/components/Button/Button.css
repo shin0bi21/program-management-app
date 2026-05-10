@@ -14,7 +14,7 @@
 .btn {
   border: 1px solid var(--brand-ink);
   background-color: var(--brand-ink);
-  color: #ffffff;
+  color: var(--color-white);
 }
 
 .btn:hover {
@@ -24,24 +24,24 @@
 }
 
 .btn--secondary {
-  border: 1px solid var(--brand-line);
-  background: var(--brand-panel-bg);
+  border: 1px solid var(--ink-12);
+  background: var(--color-surface);
   color: var(--brand-ink);
 }
 
 .btn--secondary:hover {
-  background-color: rgba(243, 165, 36, 0.12);
-  border-color: rgba(243, 165, 36, 0.5);
+  background-color: var(--accent-12);
+  border-color: var(--accent-50);
 }
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(243, 165, 36, 0.28);
+  box-shadow: 0 0 0 3px var(--accent-28);
 }
 
 .btn:disabled {
-  background-color: rgba(18, 22, 31, 0.35);
-  border-color: rgba(18, 22, 31, 0.2);
+  background-color: var(--ink-35);
+  border-color: var(--ink-20);
   color: rgba(255, 255, 255, 0.78);
   box-shadow: none;
   cursor: not-allowed;
@@ -49,9 +49,9 @@
 
 .btn--secondary:disabled,
 .btn--ghost:disabled {
-  background-color: rgba(18, 22, 31, 0.04);
-  border-color: var(--brand-line);
-  color: rgba(18, 22, 31, 0.4);
+  background-color: var(--ink-04);
+  border-color: var(--ink-12);
+  color: var(--ink-40);
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -63,20 +63,20 @@
 }
 
 .btn--ghost:hover {
-  background: rgba(243, 165, 36, 0.12);
-  border-color: rgba(243, 165, 36, 0.2);
+  background: var(--accent-12);
+  border-color: var(--accent-20);
 }
 
 .btn--danger {
-  border: 1px solid #c53030;
-  background: #c53030;
-  color: #ffffff;
+  border: 1px solid var(--color-danger-btn);
+  background: var(--color-danger-btn);
+  color: var(--color-white);
 }
 
 .btn--danger:hover {
-  background: #9b2c2c;
-  color: #ffffff;
-  border-color: #9b2c2c;
+  background: var(--color-danger-dark);
+  color: var(--color-white);
+  border-color: var(--color-danger-dark);
 }
 
 .btn--full {
