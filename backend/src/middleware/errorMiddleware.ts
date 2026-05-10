@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   AppError,
-  DatabaseError,
+  DbConnectionError,
   ConflictError,
   InternalServerError,
   type ValidationDetail,
@@ -20,7 +20,7 @@ const POSTGRES_CONNECTION_CODES = new Set([
  * Classifies any thrown value into a typed `AppError`.
  *
  * - If `err` is already an `AppError`, it's returned as-is.
- * - Postgres connection failures → `DatabaseError` (503).
+ * - Postgres connection failures → `DbConnectionError` (503).
  * - Postgres unique-constraint violations (`23505`) → `ConflictError` (409).
  * - Everything else → `InternalServerError` (500) preserving the original message.
  *
@@ -35,8 +35,8 @@ export function classifyError(err: unknown): AppError {
       err.message.includes('ECONNREFUSED') ||
       code === 'ECONNREFUSED' ||
       (typeof code === 'string' && POSTGRES_CONNECTION_CODES.has(code));
-    if (isConnError) return new DatabaseError('Database connection failed', err);
-    if (code === '23505') return new ConflictError('A record with that value already exists');
+    if (isConnError) return new DbConnectionError('Database connection failed', err);
+    if (code === '23505') return new ConflictError('A record with that value already exists', err);
   }
 
   const message = err instanceof Error ? err.message : String(err);
@@ -84,7 +84,12 @@ export function handleError(
   if (isServerError) {
     console.error(`[${rid}] handleError ${status}`, err);
   } else {
-    console.warn(`[${rid}] handleError ${status}`, appErr.message);
+    console.warn(
+      `[${rid}] handleError ${status}`,
+      appErr.message,
+      appErr.details ? JSON.stringify(appErr.details) : '',
+      appErr.cause ? appErr.cause : '',
+    );
   }
 
   // 3. Send — redact 5xx messages in production

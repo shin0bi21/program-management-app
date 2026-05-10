@@ -1,6 +1,8 @@
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar'
+import Header from '../../common/components/Header/Header'
 import Footer from '../../common/components/Footer/Footer'
 import ResourceCard from './components/ResourceCard'
+import { useAuth } from '../../common/context/AuthContext'
 import './Homepage.css'
 
 const teamResources = [
@@ -76,10 +78,12 @@ const WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const MONTH_FMT   = new Intl.DateTimeFormat('en-US', { month: 'short' })
 
 export default function Homepage() {
-  return (
-    <>
-      <PublicTopBar />
-      <main className="homepage-container">
+  const { isAuthenticated, loading } = useAuth()
+
+  if (loading) return null
+
+  const content = (
+    <main className="homepage-container">
         <section className="homepage-hero" aria-label="Organization branding">
           <p className="hero-kicker">Be Original Youth Group</p>
           <h1 className="hero-title">Support that meets youth where they are.</h1>
@@ -211,7 +215,22 @@ export default function Homepage() {
         </section>
 
         <Footer />
-      </main>
+    </main>
+  )
+
+  if (isAuthenticated) {
+    return (
+      <>
+        <Header />
+        <div className="page-container">{content}</div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <PublicTopBar />
+      {content}
     </>
   )
 }
