@@ -41,3 +41,24 @@ export const send2FACode = async (to: string, code: string, firstName: string) =
   
   await sendEmail(to, subject, html);
 };
+
+export const sendStaffInvite = async (to: string, firstName: string, inviteUrl: string) => {
+  const subject = 'You\'ve been invited to Be Original';
+  const safeFirstName = escapeHtml(firstName);
+  const safeUrl = escapeHtml(inviteUrl);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hi ${safeFirstName},</h2>
+      <p>You've been invited to join Be Original as a staff member.</p>
+      <p>Click the button below to set your password and get started:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${safeUrl}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+          Set Your Password
+        </a>
+      </div>
+      <p style="color: #666; font-size: 14px;">This link will expire in 7 days. If you weren't expecting this invitation, you can ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail(to, subject, html);
+};

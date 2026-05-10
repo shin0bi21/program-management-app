@@ -11,9 +11,7 @@ export const createStaffSchema = z.object({
       .min(1, 'Last name is required')
       .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
     email: z.string().email('Invalid email format'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.enum(['staff', 'admin']).optional(),
-    active: z.boolean(),
   }),
 });
 

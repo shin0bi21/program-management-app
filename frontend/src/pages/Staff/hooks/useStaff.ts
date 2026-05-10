@@ -30,6 +30,7 @@ export const useStaff = () => {
 
   return {
     staff,
+    setStaff,
     loading,
     error,
     refetch: loadStaff,

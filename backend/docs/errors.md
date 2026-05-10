@@ -1,46 +1,39 @@
 # Backend Error Handling
 
-## Overview 
-
-When something goes wrong in the backend:
+## Overview
 
 1. A service (or middleware) **throws a typed error** — e.g. `throw new NotFoundError('User not found')`
-2. That error flows to the **global error handler**, which reads the status code, logs it, and sends a clean JSON response
-3. The client **always gets the same shape** — `{ error: "..." }` — regardless of what went wrong or where
+2. That error flows to the **global error handler**, which reads the status, logs it, and sends a JSON response
+3. The client always gets the same shape — `{ error: "..." }`
 
-You never need to `res.json()` an error yourself. Just throw the right class and the rest is handled.
+Never `res.json()` an error. Just throw and the rest is handled.
 
-### File layout convention
+### Files
 
 | File | What lives there |
 |---|---|
-| `src/errors.ts` | All error class definitions — runtime objects you `throw`, `catch`, and `instanceof`-check |
-| `src/db/client.ts` | DB connection, query helpers, and `handleDbError` (private — only called within this file) |
-| `src/types/` | **Strictly TypeScript shape declarations** — interfaces, type aliases, enums. No class definitions, no runtime logic, no `new`-able objects. |
+| `src/errors.ts` | All error classes, `ErrorResponse` type, `ValidationDetail` type |
+| `src/middleware/errorMiddleware.ts` | `classifyError`, `handleError`, `sendError`, `asyncHandler` |
+| `src/types/` | TypeScript shape declarations only — no runtime logic |
 
 ---
 
-## 1. Error classes — what to throw
-
-All errors live in `src/errors.ts`, organized into two groups:
-
-**Generic HTTP errors** — thrown from services and controllers:
+## 1. Error classes
 
 ```
-AppError (base, default 500)
-├── BadRequestError        400  — invalid input that passed schema validation
-├── ValidationError        400  — thrown from validateRequest, carries details[] array
-├── UnauthorizedError      401  — missing or invalid auth token
-├── ForbiddenError         403  — authenticated but not allowed
-├── NotFoundError          404  — resource doesn't exist
-├── ConflictError          409  — duplicate resource (mapped from Postgres 23505)
-├── LockedError            423  — account locked out
-└── TooManyRequestsError   429  — rate limit hit (thrown from rateLimiter middleware)
+AppError (base, 500)
+├── BadRequestError        400
+├── ValidationError        400  — carries details[] (Zod field errors)
+├── UnauthorizedError      401
+├── ForbiddenError         403
+├── NotFoundError          404
+├── ConflictError          409  — mapped from Postgres 23505
+├── LockedError            423
+├── TooManyRequestsError   429
+├── DbConnectionError      503  — DB unreachable
+├── ServiceUnavailableError 503 — upstream dependency down
+└── InternalServerError    500  — unexpected error
 ```
-
-**Middleware-specific errors** — carry extra context the global handler surfaces:
-
-**Usage in a service:**
 
 ```ts
 import { NotFoundError } from '../errors';
@@ -48,27 +41,23 @@ import { NotFoundError } from '../errors';
 throw new NotFoundError('User not found');
 ```
 
-That's it. No `try/catch` in the controller, no `res.status().json()` — the global handler takes it from here.
+**Adding a new type:** subclass `AppError`, set `statusCode` and `name` — the handler picks it up automatically.
 
-**Adding a new error type:** subclass `AppError`, set `statusCode` and `name`, export it. The global handler picks it up automatically with no other changes required.
+**Rule:** always `throw` — never call `sendError()` from outside `handleError`.
 
-**Rule:** always `throw` — never call `sendError()` from outside `errorHandler`. Every layer (services, controllers, middleware) throws an `AppError` subclass. The global handler is the only place that calls `sendError()`. This makes the response shape, logging format, and request ID threading consistent for every error in the system.
-
-> `ConflictError` (409) is automatically thrown by `handleDbError` when Postgres raises a `23505` unique_violation. You can also throw it directly from a service for semantic conflicts.
+> `ConflictError` (409) is automatically thrown by `classifyError()` in `errorMiddleware.ts` when Postgres raises a `23505` unique_violation. The original DB error is passed as `cause`, so the constraint name is visible in logs. You can also throw it directly from a service for semantic conflicts.
 
 ---
 
-## 2. What the client receives
-
-Every error response from this API has the same shape:
+## 2. Response shape
 
 ```ts
 {
-  error: string;           // always present — human-readable message
-  details?: [              // only on validation errors (400)
+  error: string;           // always present
+  details?: [              // validation errors only
     { field: string; message: string }
   ];
-  requestId?: string;      // always present — use this when reporting bugs
+  requestId?: string;      // always present
 }
 ```
 
@@ -81,259 +70,128 @@ Every error response from this API has the same shape:
 ```json
 {
   "error": "Validation failed",
-  "details": [
-    { "field": "email", "message": "Invalid email address" }
-  ],
+  "details": [{ "field": "email", "message": "Invalid email address" }],
   "requestId": "def-456"
 }
 ```
 
-The `requestId` links this response to a specific log line on the server — useful for debugging. See §6 for more.
-
-All error responses are assembled by a single function: `sendError()` in `errorHandler.ts`, called only from `errorHandler`. Nothing else in the codebase calls `sendError` or `res.json()` for errors. Changing the shape means changing one place.
-
 ---
 
-## 3. The global error handler
+## 3. Global error handler
 
-`src/middleware/errorHandler.ts` is registered in `src/index.ts` **after all routes**:
+`handleError` is registered last in `index.ts`. Flow: `classifyError` → status + log → `sendError`.
 
-```ts
-app.use((req, res) => sendError(res, 404, 'Not found')); // catch-all for unmatched routes
-app.use(errorHandler);                                    // handles all thrown errors
-```
-
-What it does when an error arrives:
-
-- **If the response has already started sending** — logs a warning and stops. Nothing else can be done safely at this point.
-- **If the error is an `AppError` subclass** — uses its `statusCode` (only 400–599 are valid — anything else becomes 500)
-- **If the error is anything else** (e.g. a plain `throw new Error(...)`) — treats it as a 500
-- **Logging:** 5xx errors → `console.error` with full stack. 4xx errors → `console.warn` with message only (less noise).
-
-> **Logging is currently plain `console.error`/`console.warn`.** No structured logger (Pino, Winston, etc.) is configured yet. When one is added, the swap is a one-line change in `errorHandler.ts` — replace `console.error` with `logger.error`. `Error.cause` is already threaded through `AppError` so structured loggers will serialize the full cause chain automatically.
-
-- **Response message:** In production, 5xx errors return a generic `"An unexpected error occurred"` — no internal details leak to the client. 4xx errors always return the actual message. In development/test, all errors return the actual message.
+- Headers already sent → log + bail
+- Status from `appErr.statusCode` (clamped 400–599, else 500)
+- 5xx → `console.error` + full stack; 4xx → `console.warn` + message + details + cause
+- Production 5xx → `appErr.clientMessage ?? 'An unexpected error occurred'`; 4xx always actual message
 
 ```mermaid
 flowchart TD
-    E([err reaches errorHandler]) --> HS{headers\nalready sent?}
-    HS -->|yes| FW[log + return\nno further action]
-    HS -->|no| AE{instanceof\nAppError?}
-    AE -->|yes| SC[use err.statusCode]
-    AE -->|no| S500[statusCode = 500]
-    SC --> SEV{status >= 500?}
-    S500 --> LOG[console.error + stack]
-    LOG --> PROD
-    SEV -->|yes| LOG
-    SEV -->|no| PROD{production\n+ 5xx?}
-    PROD -->|yes| GEN[generic message]
-    PROD -->|no| ACT[actual err.message]
-    GEN --> RES([sendError → ErrorResponse JSON])
+    E([err reaches handleError]) --> HS{headers sent?}
+    HS -->|yes| FW[log + return]
+    HS -->|no| CL[classifyError]
+    CL --> SEV{status >= 500?}
+    SEV -->|yes| LOG[console.error + stack]
+    SEV -->|no| WARN[console.warn + message + details]
+    LOG --> PROD{production?}
+    WARN --> PROD
+    PROD -->|yes + 5xx| GEN[generic message]
+    PROD -->|no| ACT[actual message]
+    GEN --> RES([sendError → JSON])
     ACT --> RES
 ```
 
-### DB connection errors → 503
+> Logging is `console.error`/`console.warn`. Swapping to a structured logger (Pino, Winston) is a one-line change — `Error.cause` is already threaded through `AppError` so the full cause chain serialises automatically.
 
-`handleDbError` in `src/db/client.ts` classifies postgres.js errors before they reach `errorHandler`:
+### DB error classification
 
-- **Connection failures** (`ECONNREFUSED`, `57P03`, pool exhaustion, etc.) → `DatabaseError` (503)
-- **Unique constraint violations** (`23505`) → `ConflictError` (409)
-- **Everything else** (syntax errors, constraint violations, logic bugs) → re-thrown unchanged → surfaces as 500
+`classifyError()` promotes raw throws into typed `AppError`s before logging:
 
-`db/client.ts` calls `handleDbError` at query boundaries so `errorHandler` always receives a typed `AppError` for DB issues — no pattern-matching on raw postgres error strings in the handler itself.
+- Already an `AppError` → returned as-is
+- Connection failures (`ECONNREFUSED`, `57P03`, pool exhaustion, etc.) → `DbConnectionError` (503)
+- `23505` unique violation → `ConflictError` (409), original postgres error passed as `cause`
+- Everything else → `InternalServerError` (500)
 
-The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with a 200 or 503.
+The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with 200 or 503.
 
 ---
 
-## 4. `asyncHandler` — why every route needs it
+## 4. `asyncHandler`
 
-Express 4 doesn't automatically catch errors from `async` route handlers. If an async function throws and there's no `asyncHandler` wrapper, Express never sees the error — it silently disappears.
-
-`asyncHandler` (exported from `errorHandler.ts`) fixes this by forwarding any rejection to `next(err)`:
+Express 4 silently drops async errors without it. Every route must use it — no exceptions.
 
 ```ts
-// correct — error is forwarded to the global handler
+// correct — error forwarded to the global handler
 router.get('/', authenticateToken, asyncHandler(handleGetYouth));
 
-// wrong — an error here silently disappears in Express 4
+// wrong — error silently disappears in Express 4
 router.get('/', authenticateToken, handleGetYouth);
 ```
 
-**Every route must use `asyncHandler`.** There are no exceptions. One missed route means a silent crash.
-
-You don't need `try/catch` in your controllers because of this — just throw and let the handler deal with it.
-
-> **Express 5 note:** Express 5 handles async errors natively. When we upgrade, `asyncHandler` can be removed from every route with no other changes.
+No `try/catch` needed in controllers — just throw.
 
 ---
 
-## 5. How a request flows through the system
-
-A request passes through middleware layers in order — rate limiter, auth, validation, then the controller. Any error at any step ends up in the global handler.
-
-Here's the full path:
+## 5. Request flow
 
 ```mermaid
 flowchart TD
-    REQ([Incoming request]) --> RID[requestId middleware\nassigns UUID to res.locals]
+    REQ([Request]) --> RID[requestId]
     RID --> RL{rate limiter}
-    RL -->|limit exceeded| T429[throw TooManyRequestsError]
+    RL -->|exceeded| T429[TooManyRequestsError]
     RL -->|ok| AT{authenticateToken}
-    AT -->|invalid/missing token| T401[throw UnauthorizedError\nor ForbiddenError]
+    AT -->|fail| T401[UnauthorizedError / ForbiddenError]
     AT -->|ok| RP{requirePermission}
-    RP -->|insufficient permissions| T403[throw ForbiddenError]
-    RP -->|ok| VR{validateRequest\nZod schema}
-    VR -->|validation fails| T400[throw ValidationError\nwith details array]
-    VR -->|ok| CTL{asyncHandler\ncontroller}
-    CTL -->|AppError thrown| EH
-    CTL -->|unexpected error| EH
-    CTL -->|success| RES200([2xx response])
+    RP -->|fail| T403[ForbiddenError]
+    RP -->|ok| VR{validateRequest}
+    VR -->|fail| T400[ValidationError + details]
+    VR -->|ok| CTL{asyncHandler controller}
+    CTL -->|error| EH
+    CTL -->|ok| RES200([2xx])
     T429 --> EH
     T401 --> EH
     T403 --> EH
     T400 --> EH
-    EH([errorHandler\nmaps status + logs])
-    EH --> RESERR([sendError → ErrorResponse JSON])
+    EH([handleError]) --> RESERR([sendError → JSON])
 ```
 
-**A few things worth noting:**
-
-- **Every layer throws.** Middleware (auth, rate limiter, validation, 404) is wrapped in `asyncHandler`, so thrown errors forward to `errorHandler` via `next(err)`. Services and controllers throw the same way. There is one error path — the global handler.
-- **Validation errors (400)** carry a `details: ValidationDetail[]` array on the `ValidationError` instance. `errorHandler` reads `err.details` and includes it in the response body.
-- **404s are not logged separately.** `app.use(...next(new NotFoundError('Not found')))` forwards to `errorHandler`, which logs at warn level.
 ---
 
-## 6. Request tracing with `requestId`
+## 6. Request tracing
 
-Every request gets a unique ID the moment it arrives. This is what `requestId` middleware does (registered as the very first middleware in `index.ts`).
+Every request gets a UUID on arrival (`requestId` middleware, first in `index.ts`). Stored on `res.locals.requestId`, returned as `X-Request-ID` header, included in every error response and log line.
 
-- The ID is stored on `res.locals.requestId`
-- It's returned to the client as the `X-Request-ID` response header
-- `sendError()` automatically includes it in every error response body as `requestId`
-- All server log lines include it
-
-**Why this matters:** If a user reports a bug and shares their `requestId`, you can find the exact log line that corresponds to their request — even across thousands of concurrent requests.
-
-If the client sends an `X-Request-ID` request header, that value is used instead of generating a new one. Useful for tracing a request across multiple services.
-
-**Log format:** Every layer logs in the same format so logs are easy to search:
-
-```
-[requestId] layer status message
-```
-
-Examples:
-```
-[abc-123] auth 401 Token expired
-[def-456] auth 403 Insufficient permissions — user: staff
-[ghi-789] errorHandler 500 Database connection refused
-```
-
-> **`sendError` is just a formatter** — it only assembles and sends the JSON. Logging, metrics, and branching logic belong in `errorHandler` or dedicated middleware, not in `sendError`.
+Pass `X-Request-ID` in the request to override (useful for cross-service tracing).
 
 ---
 
 ## 7. Crash protection
 
-Beyond request-level errors, `src/index.ts` also handles crashes that escape Express entirely — e.g. a rejected promise with no `.catch()` running outside a request:
-
-```ts
-process.on('uncaughtException', ...)
-process.on('unhandledRejection', ...)
-```
-
-Both log the error and call `process.exit(1)` so the container restarts cleanly (via Docker restart policy) rather than limping along in a broken state.
-
-> These handlers are disabled in `NODE_ENV=test`. Without that guard, an unhandled rejection in a test would call `process.exit(1)` and kill the Jest runner with no output.
+`src/index.ts` registers `uncaughtException` and `unhandledRejection` handlers — both log and call `process.exit(1)` so Docker restarts cleanly. Both are disabled in `NODE_ENV=test`.
 
 ---
 
-## 8. Frontend — ErrorBoundary
+## 8. Frontend
 
-`frontend/src/common/components/ErrorBoundary/ErrorBoundary.tsx` wraps the entire React app. It catches **render-phase errors** — errors thrown during React's render or component lifecycle.
+`ErrorBoundary` wraps the app and catches render-phase errors. Does **not** catch event handler or async errors.
 
-It does **not** catch:
-- Errors inside event handlers (use `try/catch` in the handler)
-- Errors in async code (`fetch`, `setTimeout`, etc.)
+Typed error hierarchy in `src/common/utils/clientErrors.ts`:
 
-On error it shows a clean fallback UI with a reload button rather than a blank screen.
+| Class | When |
+|---|---|
+| `ApiError(status, message, details?, requestId?)` | Server returned 4xx/5xx |
+| `AuthError` | No token when a protected call is made |
+| `NetworkError` | `fetch` threw — no connection |
+| `RequestTimeoutError` | AbortController timeout fired |
 
-### Frontend error handling
-
-The frontend now has a typed error hierarchy in `src/common/utils/clientErrors.ts` that mirrors what the backend sends:
-
-| Class | Thrown by | When |
-|---|---|---|
-| `ApiError(status, message, details?, requestId?)` | `apiClient` | Server returned 4xx/5xx — preserves status, Zod field errors, and requestId |
-| `AuthError` | `apiClient` | No token in storage when a protected call is made |
-| `NetworkError` | `apiClient`, `tokenRefresh` | `fetch` threw TypeError — no connection |
-| `RequestTimeoutError` | `apiClient` | AbortController timeout fired |
-
-`handleApiError` has been removed. All HTTP calls go through `apiClient` (`src/common/api/client.ts`) which throws typed errors. Hooks catch with `getErrorMessage(err, fallback)` for display; they can also do `err instanceof ApiError && err.details` to map field-level validation errors.
-
-Still outstanding: no global toast/notification system — errors from background fetches rely on component-level state.
+All HTTP calls go through `apiClient`. Hooks catch with `getErrorMessage(err, fallback)` for display; `err instanceof ApiError && err.details` for field-level validation errors.
 
 ---
 
-## 9. Design choices — why it's built this way
+## 9. Design notes
 
-These are deliberate decisions, not accidents. If you're tempted to "simplify" any of them, read this first.
-
-### 9.1 Two files: `AppError.ts` (vocabulary) + `errorHandler.ts` (policy)
-
-`AppError.ts` defines **what errors exist** — the classes, the response shape, the `sendError` formatter. It's pure data and is imported by ~30 service and middleware files.
-
-`errorHandler.ts` defines **what to do at runtime** — status mapping for unknown errors (DB outage → 503, anything else → 500), log levels (5xx → error+stack, 4xx → warn), production message redaction, and the `asyncHandler`/`requestId` helpers. It's imported only by `index.ts`.
-
-Merging them would force every service that throws an error to also pull in Express middleware code it doesn't need. The split keeps the dependency graph one-directional: services depend on vocabulary, vocabulary doesn't depend on Express middleware policy.
-
-### 9.2 One class per status code (vs. factory or single `AppError(status, msg)`)
-
-Three options were considered:
-
-| Approach | Pros | Cons |
-|---|---|---|
-| **Class per status** (current) | Self-documenting throw sites, real `instanceof` checks, precise stack traces, greppable (`class NotFoundError`) | ~6 lines per class |
-| Factory (`makeError('NotFoundError', 404)`) | ~30 fewer lines | All errors share one constructor frame in stack traces, "Go to definition" lands on a one-liner, can't extend a single class with extra fields later |
-| Single `AppError(status, message)` | Minimal | Magic numbers at every throw site, no named types for `catch` branches |
-
-Debuggability beats line count. Stack traces should point at the specific class, not a shared factory. Kept the explicit version.
-
-### 9.3 Middleware throws + still calls `next()` on success
-
-Express middleware advances the chain *only* when `next()` is called. Returning from an async function — even one that resolves — does **not** advance. This is the Express 4 middleware contract and applies regardless of whether the function is async.
-
-`asyncHandler` only handles the *error* path: it catches rejections and forwards them via `next(err)`. It can't auto-call `next()` on success because it doesn't know whether the wrapped function is middleware (needs `next()`) or a route handler (sends a response and stops).
-
-So every middleware looks like:
-
-```ts
-export const xMiddleware = asyncHandler(async (req, _res, next) => {
-  if (badCondition) throw new SomeAppError('message');
-  next();   // required — handing off to the next middleware
-});
-```
-
-The asymmetry (errors auto-forward, success is manual) is the cost of using a 2010-era callback API with modern async/await. Express 5 fixes the error half but not this — the `next()` call stays. Migrating to Fastify/Hono/Koa would remove it; not worth it for this app.
-
-### 9.4 `ValidationError` is the only middleware-specific error class
-
-All the generic HTTP errors (`BadRequestError`, `NotFoundError`, etc.) carry only a `message` and a `statusCode`. `ValidationError` is the only one that needs to ship structured payload (the `details: ValidationDetail[]` array of field-level errors from Zod) back to the client.
-
-Rather than overload `BadRequestError` with an optional `details` parameter that's only used in one place, `ValidationError` is its own class. The base `AppError` carries the `details` field so `errorHandler` can read it uniformly without an `instanceof ValidationError` check.
-
-If a future error type needs to carry structured payload (e.g. a `ConflictError` that includes the conflicting record's id), the same pattern applies: subclass `AppError`, add the field, populate it in the constructor.
-
----
-
-## 10. Future improvements
-
-Not needed yet, but worth considering later:
-
-- Add machine-readable error codes once the frontend has a typed `ApiError`.
-- Consider domain errors if services are reused outside HTTP routes.
-- Add structured logging or external error reporting when log volume grows.
-
-
-
+- **One class per status code** — self-documenting throw sites, real `instanceof` checks, precise stack traces. A factory saves lines but loses "Go to Definition" and per-class fields.
+- **`errors.ts` (vocabulary) vs `errorMiddleware.ts` (policy)** — error classes are imported by ~30 service files; keeping them separate from Express middleware keeps the import graph one-directional.
+- **`ValidationError` carries `details[]`** — other errors only need a message. `AppError.details` is on the base class so `handleError` reads it uniformly without an `instanceof` check.
+- **`sendError` is private** — the only function that writes `res.json()` for errors. Shape changes happen in one place.

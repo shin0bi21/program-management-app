@@ -621,5 +621,6 @@ export async function resetUserPassword(token: string, newPassword: string): Pro
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
   await sql`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
+  await sql`UPDATE users SET active = true WHERE id = ${resetToken.userId} AND active = false`;
   await sql`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
 }
