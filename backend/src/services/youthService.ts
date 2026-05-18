@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import { sql } from '../db/client';
 import type { Schools, Users, YouthProfiles } from '../types/database';
 import type { DbRow } from '../types/db';
+import { audit } from './auditService';
 import { setAddresses } from './addressService';
 import { setContacts } from './contactService';
 
@@ -78,9 +80,10 @@ export interface SetYouthInput {
   contacts?: Array<{ id?: string; firstName: string; lastName: string; phoneNumber?: string; type: string }>;
 }
 
-export async function setYouth(data: SetYouthInput) {
+export async function setYouth(data: SetYouthInput, actorId: string) {
   const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, active, addresses, contacts } = data;
   const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
+  const transactionId = crypto.randomUUID();
 
   let userId: string;
 
@@ -105,6 +108,7 @@ export async function setYouth(data: SetYouthInput) {
     `;
 
     userId = users[0].id;
+    await audit(sql, actorId, transactionId, 'users', userId, 'UPDATE', null, { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName, active: users[0].active });
 
     await sql`
       INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at)
@@ -124,6 +128,7 @@ export async function setYouth(data: SetYouthInput) {
         age_group = EXCLUDED.age_group,
         updated_at = EXCLUDED.updated_at
     `;
+    await audit(sql, actorId, transactionId, 'youth_profiles', userId, 'UPDATE', null, { userId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup });
   } else {
     const newUsers = await sql<DbRow<Users>[]>`
       INSERT INTO users (first_name, last_name, role_id, active)
@@ -132,19 +137,21 @@ export async function setYouth(data: SetYouthInput) {
     `;
 
     userId = newUsers[0].id;
+    await audit(sql, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, active: newUsers[0].active });
 
     await sql`
       INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)
       VALUES (${userId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup})
     `;
+    await audit(sql, actorId, transactionId, 'youth_profiles', userId, 'INSERT', null, { userId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup });
   }
 
   if (id) {
-    await setAddresses(userId, addresses || []);
-    await setContacts(userId, contacts || []);
+    await setAddresses(userId, addresses || [], actorId, transactionId);
+    await setContacts(userId, contacts || [], actorId, transactionId);
   } else {
-    if (addresses && addresses.length > 0) await setAddresses(userId, addresses);
-    if (contacts && contacts.length > 0) await setContacts(userId, contacts);
+    if (addresses && addresses.length > 0) await setAddresses(userId, addresses, actorId, transactionId);
+    if (contacts && contacts.length > 0) await setContacts(userId, contacts, actorId, transactionId);
   }
 
   return getYouth(userId);

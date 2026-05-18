@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import type { AuthRequest } from '../middleware/authMiddleware';
 import { getYouth, setYouth } from '../services/youthService';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
@@ -8,6 +9,7 @@ export const handleGetYouth = async (req: Request, res: Response) => {
 
 export const handleSetYouth = async (req: Request, res: Response) => {
   const { id } = req.body;
-  const saved = await setYouth(req.body);
+  const userId = (req as AuthRequest).user!.userId;
+  const saved = await setYouth(req.body, userId);
   res.status(id ? 200 : 201).json(saved);
 };

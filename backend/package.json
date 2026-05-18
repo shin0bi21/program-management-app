@@ -20,7 +20,6 @@
     "db:migrate": "npx tsx db/scripts/update_schemas.ts",
     "db:migrate:dry": "npx tsx db/scripts/update_schemas.ts --dry-run",
     "db:status": "npx tsx db/scripts/migration_status.ts",
-    "db:generate-backup": "npx tsx db/scripts/generate_bu_migration.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
     "typecheck": "tsc --noEmit"

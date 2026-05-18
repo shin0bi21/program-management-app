@@ -1,6 +1,7 @@
 import { asTransactionSql, sql } from '../db/client';
 import type { Contacts } from '../types/database';
 import type { DbRow } from '../types/db';
+import { audit } from './auditService';
 
 export type ContactInput = {
   id?: string;
@@ -10,7 +11,7 @@ export type ContactInput = {
   type: string;
 };
 
-export async function setContacts(userId: string, contactsData: ContactInput[]) {
+export async function setContacts(userId: string, contactsData: ContactInput[], auditUserId: string, transactionId: string) {
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
 
@@ -61,6 +62,10 @@ export async function setContacts(userId: string, contactsData: ContactInput[]) 
         SET active = false, updated_at = NOW()
         WHERE user_id = ${userId} AND contact_id IN ${trx(toDelete)}
       `;
+      for (const contactId of toDelete) {
+        const old = existingContactMap.get(contactId)!;
+        await audit(trx, auditUserId, transactionId, 'contacts', contactId, 'DELETE', { firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
+      }
     }
 
     if (toUpdate.length > 0) {
@@ -89,6 +94,10 @@ export async function setContacts(userId: string, contactsData: ContactInput[]) 
         ) AS updates
         WHERE c.id = updates.id
       `;
+      for (const item of toUpdate) {
+        const old = existingContactMap.get(item.id!)!;
+        await audit(trx, auditUserId, transactionId, 'contacts', item.id!, 'UPDATE', { firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, { firstName: item.firstName, lastName: item.lastName, phoneNumber: item.phoneNumber || null, type: item.type });
+      }
     }
 
     for (const contactData of toInsert) {
@@ -103,6 +112,7 @@ export async function setContacts(userId: string, contactsData: ContactInput[]) 
         VALUES (${userId}, ${newContacts[0].id}, true)
         ON CONFLICT (user_id, contact_id) DO UPDATE SET active = true, updated_at = NOW()
       `;
+      await audit(trx, auditUserId, transactionId, 'contacts', newContacts[0].id, 'INSERT', null, { firstName: newContacts[0].firstName, lastName: newContacts[0].lastName, phoneNumber: newContacts[0].phoneNumber || null, type: newContacts[0].type });
     }
   });
 }

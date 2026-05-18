@@ -1,6 +1,7 @@
 import { asTransactionSql, sql } from '../db/client';
 import type { Addresses } from '../types/database';
 import type { DbRow } from '../types/db';
+import { audit } from './auditService';
 
 export type AddressInput = {
   id?: string;
@@ -10,7 +11,7 @@ export type AddressInput = {
   postalCode: string;
 };
 
-export async function setAddresses(userId: string, addressesData: AddressInput[]) {
+export async function setAddresses(userId: string, addressesData: AddressInput[], auditUserId: string, transactionId: string) {
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
 
@@ -61,6 +62,10 @@ export async function setAddresses(userId: string, addressesData: AddressInput[]
         SET active = false, updated_at = NOW()
         WHERE user_id = ${userId} AND address_id IN ${trx(toDelete)}
       `;
+      for (const addressId of toDelete) {
+        const old = existingAddressMap.get(addressId)!;
+        await audit(trx, auditUserId, transactionId, 'addresses', addressId, 'DELETE', { address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, null);
+      }
     }
 
     if (toUpdate.length > 0) {
@@ -89,6 +94,10 @@ export async function setAddresses(userId: string, addressesData: AddressInput[]
         ) AS updates
         WHERE a.id = updates.id
       `;
+      for (const item of toUpdate) {
+        const old = existingAddressMap.get(item.id!)!;
+        await audit(trx, auditUserId, transactionId, 'addresses', item.id!, 'UPDATE', { address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, { address: item.address, city: item.city, province: item.province, postalCode: item.postalCode });
+      }
     }
 
     for (const addressData of toInsert) {
@@ -103,6 +112,7 @@ export async function setAddresses(userId: string, addressesData: AddressInput[]
         VALUES (${userId}, ${newAddresses[0].id}, true)
         ON CONFLICT (user_id, address_id) DO UPDATE SET active = true, updated_at = NOW()
       `;
+      await audit(trx, auditUserId, transactionId, 'addresses', newAddresses[0].id, 'INSERT', null, { address: newAddresses[0].address, city: newAddresses[0].city, province: newAddresses[0].province, postalCode: newAddresses[0].postalCode, country: newAddresses[0].country });
     }
   });
 }

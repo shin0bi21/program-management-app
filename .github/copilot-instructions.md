@@ -152,11 +152,11 @@ setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 ```
 backend/src/
   index.ts                    ← middleware stack order, route mounts, /health endpoint
-  errors/AppError.ts          ← ALL error classes + sendError() formatter + ErrorResponse type
+  errors.ts                   ← ALL error classes + sendError() formatter + ErrorResponse type
   middleware/
-    errorHandler.ts           ← asyncHandler wrapper + global errorHandler + requestId middleware
+    errorMiddleware.ts        ← handleError (global error handler) + classifyError
+    routeMiddleware.ts        ← asyncHandler + requestId + validateRequest (Zod → 400 with details)
     authMiddleware.ts         ← authenticateToken + requirePermission
-    validateRequest.ts        ← Zod body validation → 400 with details array
     rateLimiter.ts            ← generalLimiter, authLimiter, strictLimiter, passwordResetLimiter
   db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection(), withRetry()
   types/
@@ -217,14 +217,14 @@ router.post('/',
 Never call `res.json()` for errors — just throw:
 
 ```ts
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/AppError';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../errors';
 
 throw new NotFoundError('Youth profile not found');   // → 404
 throw new BadRequestError('Invalid reset token');     // → 400
 throw new ForbiddenError('Token reuse detected');     // → 403
 ```
 
-Available error classes (all in `src/errors/AppError.ts`):
+Available error classes (all in `src/errors.ts`):
 - `BadRequestError` 400
 - `UnauthorizedError` 401
 - `ForbiddenError` 403

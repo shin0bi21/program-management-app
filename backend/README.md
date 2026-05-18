@@ -32,6 +32,8 @@ A management system for organisations running youth programs.
 | `admin` | Full access — manage staff, create/edit all youth profiles |
 | `staff` | View and create/edit youth profiles; cannot manage other staff |
 
+See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for the full permissions breakdown, how permissions flow into tokens, and where to add a new permission.
+
 **Youth profiles are not login users.** They are data records (name, DOB, school, group, addresses, emergency contacts) that staff manage through the app.
 
 ### Tech Stack
@@ -126,12 +128,12 @@ backend/
 │   ├── middleware/     # authenticateToken, requirePermission, rateLimiter, validateRequest
 │   ├── validation/     # Zod schemas per domain
 │   ├── db/             # postgres.js client + asTransactionSql() helper
-│   ├── errors/         # AppError + subclasses + sendError()
+│   ├── errors.ts       # AppError + subclasses + sendError()
 │   ├── types/          # JWT payload types, generated DB schema, DbRow<T>
 │   └── utils/          # requireEnv, emailService, deviceUtils
 ├── db/
 │   ├── migrations/     # SQL files — YYYY-MM-DD_#_description.sql
-│   └── scripts/        # Migration runner, seed-admin, type generation
+│   └── scripts/        # Migration runner (update_schemas.ts), seed-admin, migration_status
 └── tests/
     ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
     ├── auth/           # 44 tests
@@ -159,30 +161,30 @@ For middleware order, route patterns, error throwing, and "adding a new domain" 
 
 ### Staff — `/api/staff`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all staff and admin users |
-| `POST` | `/` | Create a new staff user (admin only) |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all staff and admin users | `read:staff` |
+| `POST` | `/` | Create a new staff user | `write:staff` |
 
 ### Youth — `/api/youth`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all youth profiles |
-| `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts |
-| `POST` | `/` | Create or update a youth profile (upsert by `id`) |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all youth profiles | `read:youth_profiles` |
+| `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts | `read:youth_profiles` |
+| `POST` | `/` | Create or update a youth profile (upsert by `id`) | `write:youth_profiles` |
 
 ### Schools — `/api/schools`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all schools |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all schools | `read:schools` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
@@ -195,13 +197,12 @@ Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_descr
 ### Commands
 
 ```bash
-docker-compose exec backend npm run db:migrate:dry       # preview — no changes applied
-docker-compose exec backend npm run db:migrate           # apply pending migrations
-docker-compose exec backend npm run db:status            # applied migrations + checksum status
-docker-compose exec backend npm run db:generate-backup   # generate backup tables + triggers
+docker-compose exec backend npm run db:migrate:dry   # preview — no changes applied
+docker-compose exec backend npm run db:migrate       # apply pending migrations
+docker-compose exec backend npm run db:status        # applied migrations + checksum status
 ```
 
-For the ERD, base table pattern, backup architecture, and safety guarantees see [docs/db.md](docs/db.md).
+For the ERD, base table pattern, audit/auth log architecture, and safety guarantees see [docs/db.md](docs/db.md).
 
 ---
 
@@ -391,7 +392,6 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 | `db:migrate` | Apply pending migrations + regenerate types |
 | `db:migrate:dry` | Preview pending migrations without applying |
 | `db:status` | Show applied migrations + checksum status |
-| `db:generate-backup` | Generate backup tables + triggers |
 | `db:types` | Regenerate TypeScript types from DB schema |
 | `seed:admin` | Seed the admin user (idempotent) |
 
@@ -401,7 +401,7 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 
 | File | Covers |
 |------|--------|
-| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, RBAC, full sequence diagram |
-| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, backup architecture, safety guarantees |
+| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, **RBAC model, roles & permissions**, auth logging, full sequence diagram |
+| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, audit log, auth log, safety guarantees |
 | [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
 | [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | File locations, route patterns, conventions, "adding a new domain" checklist |

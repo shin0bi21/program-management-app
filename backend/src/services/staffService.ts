@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { audit } from './auditService';
 import { sql } from '../db/client';
 import type { Users, UserCredentials } from '../types/database';
 import type { DbRow } from '../types/db';
@@ -33,7 +34,7 @@ export async function getStaff() {
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export async function createStaff(data: CreateStaffInput) {
+export async function setStaff(data: CreateStaffInput, actorId: string) {
   const { firstName, lastName, email, role = 'staff' } = data;
 
   const existing = await sql<{ id: string }[]>`
@@ -42,6 +43,7 @@ export async function createStaff(data: CreateStaffInput) {
   if (existing.length) throw new ConflictError('A user with this email already exists');
 
   const unusableHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+  const transactionId = crypto.randomUUID();
 
   const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
   if (!roles.length) throw new ConflictError(`Role '${role}' not found`);
@@ -53,6 +55,7 @@ export async function createStaff(data: CreateStaffInput) {
     RETURNING *
   `;
   const userId = newUsers[0].id;
+  await audit(sql, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
 
   await sql<DbRow<UserCredentials>[]>`
     INSERT INTO user_credentials (user_id, email, password_hash)

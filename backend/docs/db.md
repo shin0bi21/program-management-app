@@ -10,8 +10,9 @@ For commands and quick reference see [README.md § 9 Database & Migrations](../R
 2. [Migration Files](#2-migration-files)
 3. [Creating a Migration](#3-creating-a-migration)
 4. [Safety Features](#4-safety-features)
-5. [Backup System](#5-backup-system)
-6. [Base Table Pattern](#6-base-table-pattern)
+5. [Audit Log](#5-audit-log)
+6. [Auth Log](#6-auth-log)
+7. [Base Table Pattern](#7-base-table-pattern)
 
 ---
 
@@ -23,19 +24,18 @@ Migrations are plain `.sql` files — no ORM migration DSL, no `up`/`down` pairs
 flowchart TD
     A([npm run db:migrate]) --> B["Read + sort migration files\ndb/migrations/ — lexicographic order"]
     B --> D[Acquire advisory lock\nID 123456789]
-    D --> E{File in\nschema_migrations?}
-    E -->|Yes — check checksum| F{Checksum\nmatch?}
-    F -->|No| WARN["⚠ Warn — file modified after apply\nContinue"]
-    F -->|Yes| SKIP[Skip]
-    WARN --> SKIP
+    D --> CV["Validate checksums of\nalready-applied migrations"]
+    CV --> STRICT{"Conflict found\n+ strict mode?"}
+    STRICT -->|"Yes — default"| ABORT["❌ Abort — exit 1\n--no-strict to bypass"]
+    STRICT -->|No| E{File in\nschema_migrations?}
+    E -->|Yes — skip| NEXT{More files?}
     E -->|No — new file| TX[BEGIN transaction]
     TX --> SQL[Execute SQL statements]
     SQL --> ERR{Error?}
     ERR -->|Yes| RB[ROLLBACK\nrelease lock, exit 1]
     ERR -->|No| INS["INSERT into schema_migrations\nwith SHA-256 checksum"]
     INS --> CMT[COMMIT]
-    CMT --> NEXT{More files?}
-    SKIP --> NEXT
+    CMT --> NEXT
     NEXT -->|Yes| E
     NEXT -->|No| REL[Release advisory lock]
     REL --> TYPES["npm run db:types\nRegenerate src/types/database.ts"]
@@ -46,12 +46,10 @@ flowchart TD
 db/
 ├── migrations/
 │   ├── 2026-01-31_1_init.sql
-│   ├── 2026-01-31_2_init_backup.sql
 │   └── YYYY-MM-DD_#_description.sql   ← all new files follow this naming
 └── scripts/
     ├── migration_status.ts            ← db:status
-    ├── update_schemas.ts              ← db:migrate + type regeneration
-    └── generate_bu_migration.ts       ← db:generate-backup
+    └── update_schemas.ts              ← db:migrate + type regeneration
 ```
 
 ---
@@ -98,14 +96,7 @@ docker-compose exec backend npm run db:status        # verify
 
 `db:migrate` automatically runs `kysely-codegen` after applying migrations to keep `src/types/database.ts` in sync with the schema. If type generation fails, it will say so — run `npm run db:types` manually to retry.
 
-**Step 3 — Generate backup infrastructure (if the table holds important data):**
-
-```bash
-docker-compose exec backend npm run db:generate-backup
-docker-compose exec backend npm run db:migrate
-```
-
-**Step 4 — Commit:**
+**Step 3 — Commit:**
 
 ```bash
 git add .
@@ -121,44 +112,122 @@ git push origin main
 |---------|--------|
 | Transaction safety | All statements in one transaction — error = full rollback |
 | Concurrency | Advisory lock ID 123456789 prevents parallel runs |
-| Checksum validation | SHA-256 per file — warns if an applied file is modified after apply |
+| Checksum validation | SHA-256 per file — all applied files validated upfront; aborts on mismatch in strict mode (default) |
+| Strict mode | Default on — pass `--no-strict` to demote conflicts to warnings and continue |
+| Missing file detection | Applied migration deleted from disk is treated as a conflict |
 | Dry-run mode | `npm run db:migrate:dry` previews without applying |
 
 **Transaction safety** means a partially-applied migration is impossible — if any statement fails, the entire file rolls back cleanly.
 
-**Checksum validation** guards against accidental edits. If you modify an already-applied file and re-run the migrator, it will emit a warning and continue. The migrator does not abort on checksum mismatch — the warning is informational. The fix is always to write a new migration, not edit the old one.
+**Checksum validation** guards against accidental edits. All previously-applied migration checksums are validated upfront before any new migration runs. In strict mode (default), a mismatch or missing file aborts immediately — pass `--no-strict` to demote conflicts to warnings and continue. The fix is always to write a new migration, not edit the old one.
 
 ---
 
-## 5. Backup System
+## 5. Audit Log
 
-`npm run db:generate-backup` inspects the current schema and auto-generates a new migration file that creates backup infrastructure for each data table.
+All INSERT, UPDATE, and DELETE operations made through the application are recorded in `audit_log` by `src/services/auditService.ts`.
 
-For each table it generates:
+### Table: `audit_log`
 
-- **`{table}_backup`** — shadow table with all original columns plus:
-  - `original_id` — references the source row
-  - `operation` — `'INSERT'` / `'UPDATE'` / `'DELETE'`
-  - `changed_at` — timestamp of the change
-  - `changed_by` — user who triggered the change (if available)
-- **`BEFORE INSERT` trigger** — captures new records
-- **`BEFORE UPDATE` trigger** — saves old column values before they are overwritten
-- **`BEFORE DELETE` trigger** — archives the row before deletion
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | UUID | Primary key |
+| `transaction_id` | UUID | Groups all changes from a single API request — supports undo/tracing |
+| `user_id` | UUID | The staff/admin actor who triggered the change (nullable for system ops) |
+| `table_name` | VARCHAR(100) | Target table name |
+| `record_id` | UUID | PK of the affected row |
+| `action` | VARCHAR(10) | `'INSERT'` / `'UPDATE'` / `'DELETE'` |
+| `old_data` | JSONB | Full row snapshot before change (null for INSERT) |
+| `new_data` | JSONB | Full row snapshot after change (null for DELETE) |
+| `created_at` | TIMESTAMPTZ | When the entry was written |
 
-**Tables excluded from backups:**
+### `auditService.ts` — `audit()`
 
-| Category | Tables |
-|----------|--------|
-| Base/utility | `base_table` |
-| Lookup/infrastructure | `user_permissions`, `user_groups`, `contact_types_base` |
-| Security | `user_credentials`, `user_password_reset_tokens`, `user_auth_codes`, `user_trusted_devices`, `user_refresh_tokens`, `system_revoked_tokens` |
-| System | `schema_migrations`, `schema_backup_tracking` |
+```ts
+import { audit } from '../services/auditService';
 
-Security tables are excluded because backing up credential hashes or reset tokens creates unnecessary copies of sensitive data.
+await audit(trx, userId, transactionId, 'youth_profiles', profileId, 'UPDATE', oldRow, newRow);
+```
+
+`audit()` must be called **inside an open transaction** (`trx` from `asTransactionSql()`). If the surrounding transaction rolls back, the audit entry rolls back with it — audit entries never exist without their corresponding data change.
+
+### Coverage
+
+| Service | Tables audited |
+|---------|---------------|
+| `youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
+| `staffService.ts` | `users` (INSERT) |
+| `addressService.ts` | `addresses`, `user_has_addresses` (DELETE + UPDATE + INSERT) |
+| `contactService.ts` | `contacts`, `user_has_contacts` (DELETE + UPDATE + INSERT) |
+
+### `transactionId`
+
+Each service generates a `crypto.randomUUID()` per API call and passes it to every `audit()` call within that request. This lets you group all audit rows from a single "save youth profile" call even if it touched `users`, `youth_profiles`, `addresses`, and `contacts`.
 
 ---
 
-## 6. Base Table Pattern
+## 6. Auth Log
+
+Security events are recorded in `auth_log` by `src/services/authLogService.ts`. The write is fire-and-forget — auth operations never fail because logging failed.
+
+### Table: `auth_log`
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | UUID | Primary key |
+| `event` | VARCHAR(50) | Named event type — constrained by CHECK to 12 values |
+| `user_id` | UUID | Nullable — absent for unknown-email login failures |
+| `email` | TEXT | Email address involved (nullable) |
+| `ip_hash` | TEXT | HMAC-SHA256 of the /24 subnet prefix — no raw IP stored |
+| `device_fingerprint_hash` | TEXT | Device fingerprint hash (nullable) |
+| `metadata` | JSONB | Event-specific data (failed attempt count, lock expiry, etc.) |
+| `created_at` | TIMESTAMPTZ | When the entry was written |
+
+### IP Privacy
+
+Raw IP addresses are never stored. `authLogService.ts` hashes the subnet prefix:
+
+- **IPv4** — first 3 octets: `192.168.1.x` → HMAC of `192.168.1`
+- **IPv6** — first 4 groups: `2001:db8:85a3:0:x:…` → HMAC of `2001:db8:85a3:0`
+
+HMAC key: `LOG_HMAC_SECRET` env var, falling back to `JWT_SECRET`. Hashes are usable for correlation within one deployment but not portable across deployments with different secrets.
+
+### Events
+
+| Event | Fired when |
+|-------|------------|
+| `login_success` | Trusted device bypass — full session issued without 2FA |
+| `login_failure` | Bad password — includes `failedAttempts` in metadata |
+| `account_locked` | 5th failed login — includes `lockedUntil` in metadata |
+| `2fa_sent` | 2FA code sent after valid password |
+| `2fa_resent` | Explicit resend request |
+| `2fa_verified` | 2FA code accepted — session issued |
+| `2fa_failed` | Invalid or expired 2FA code |
+| `trusted_device_added` | Device recorded as trusted after successful 2FA |
+| `logout` | User-initiated logout |
+| `password_reset_requested` | Reset email dispatched |
+| `password_reset_completed` | Password successfully changed via reset token |
+| `token_reuse_detected` | Rotated-out refresh token presented — entire token family revoked |
+
+### `authLog()` — fire-and-forget
+
+```ts
+import { authLog } from '../services/authLogService';
+
+await authLog({
+  event: 'login_failure',
+  userId: user?.id,
+  email,
+  ipAddress: req.ip,
+  metadata: { failedAttempts: attempts }
+});
+```
+
+`authLog()` wraps the INSERT in its own `try/catch` and logs to `console.error` on failure. Auth flows are never blocked by a logging failure.
+
+---
+
+## 7. Base Table Pattern
 
 All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns. `INCLUDING ALL` copies constraints, indexes, defaults, and triggers — not just column definitions, so the `updated_at` auto-update trigger is inherited automatically.
 
