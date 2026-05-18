@@ -10,7 +10,7 @@
 }
 
 .relogin-modal {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 12px;
   padding: 2rem;
   width: 100%;
@@ -26,13 +26,13 @@
   margin: 0 0 0.4rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111;
+  color: var(--color-ink);
 }
 
 .relogin-header p {
   margin: 0;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--color-muted);
 }
 
 .relogin-form {
@@ -50,12 +50,12 @@
 .relogin-field label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #444;
+  color: var(--color-body);
 }
 
 .relogin-input {
   padding: 0.6rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--ink-12);
   border-radius: 6px;
   font-size: 0.95rem;
   outline: none;
@@ -63,24 +63,24 @@
 }
 
 .relogin-input:focus {
-  border-color: var(--brand-accent);
-  box-shadow: 0 0 0 3px rgba(243, 165, 36, 0.18);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--accent-18);
 }
 
 .relogin-input--disabled {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-surface);
+  color: var(--color-muted);
   cursor: not-allowed;
 }
 
 .relogin-hint {
   margin: 0;
   font-size: 0.875rem;
-  color: #555;
+  color: var(--color-body);
 }
 
 .relogin-error {
   margin: 0;
   font-size: 0.85rem;
-  color: #dc2626;
+  color: var(--color-danger-btn);
 }

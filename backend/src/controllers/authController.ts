@@ -21,7 +21,7 @@ const cookieOptions = () => ({
 
 export const handleLogin = async (req: Request, res: Response) => {
   const { email, password, deviceFingerprint } = req.body;
-  const result = await loginUser(email, password, deviceFingerprint);
+  const result = await loginUser(email, password, deviceFingerprint, req.ip);
   if (result.type === 'success') {
     res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions());
     return res.json({ message: 'Login successful (trusted device)', token: result.tokens.accessToken, user: result.user });
@@ -34,7 +34,7 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
   if (!refreshToken) {
     throw new UnauthorizedError('Refresh token not found');
   }
-  const { newAccessToken, newRefreshToken } = await rotateRefreshToken(refreshToken);
+  const { newAccessToken, newRefreshToken } = await rotateRefreshToken(refreshToken, req.ip);
   res.cookie('refreshToken', newRefreshToken, cookieOptions());
   res.json({ token: newAccessToken });
 };
@@ -44,7 +44,7 @@ export const handleLogout = async (req: Request, res: Response) => {
   const authHeader = req.headers['authorization'];
   const accessToken = authHeader?.split(' ')[1];
   try {
-    await logoutUser(refreshToken, accessToken);
+    await logoutUser(refreshToken, accessToken, req.ip);
   } catch {
     // Swallow — clear cookie regardless
   }
@@ -54,25 +54,25 @@ export const handleLogout = async (req: Request, res: Response) => {
 
 export const handleVerify2FA = async (req: Request, res: Response) => {
   const { userId, code, trustDevice, deviceFingerprint, deviceName } = req.body;
-  const result = await verify2FACode(userId, code, trustDevice, deviceFingerprint, deviceName);
+  const result = await verify2FACode(userId, code, trustDevice, deviceFingerprint, deviceName, req.ip);
   res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions());
   res.json({ message: 'Login successful', token: result.tokens.accessToken, user: result.user });
 };
 
 export const handleResend2FA = async (req: Request, res: Response) => {
   const { userId } = req.body;
-  await resend2FACode(userId);
+  await resend2FACode(userId, req.ip);
   res.json({ message: 'New verification code sent to your email' });
 };
 
 export const handleForgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
-  await requestPasswordReset(email);
+  await requestPasswordReset(email, req.ip);
   res.json({ message: 'If that email exists, a reset link has been sent' });
 };
 
 export const handleResetPassword = async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
-  await resetUserPassword(token, newPassword);
+  await resetUserPassword(token, newPassword, req.ip);
   res.json({ message: 'Password reset successful - all sessions have been logged out' });
 };

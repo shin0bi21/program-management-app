@@ -15,12 +15,12 @@ css=$(count "*.css")
 sql=$(count "*.sql")
 md=$(count "*.md")
 
-ts_only=$((ts - tsx))  # ts includes tsx in some shells — keep separate
-total=$((tsx + ts_only + css + sql + md))
+# *.ts glob does not match *.tsx in bash — counts are already separate
+total=$((tsx + ts + css + sql + md))
 
 printf "\n%-20s %6s\n" "Type" "Lines"
 printf "%-20s %6s\n" "--------------------" "------"
-printf "%-20s %6s\n" "TypeScript (.ts)"    "$ts_only"
+printf "%-20s %6s\n" "TypeScript (.ts)"    "$ts"
 printf "%-20s %6s\n" "React (.tsx)"        "$tsx"
 printf "%-20s %6s\n" "CSS (.css)"          "$css"
 printf "%-20s %6s\n" "SQL (.sql)"          "$sql"

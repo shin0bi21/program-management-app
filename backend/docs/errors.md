@@ -57,7 +57,7 @@ throw new NotFoundError('User not found');
   details?: [              // validation errors only
     { field: string; message: string }
   ];
-  requestId?: string;      // always present
+  requestId?: string;      // present on every response (requestId middleware runs first in index.ts)
 }
 ```
 
@@ -113,7 +113,7 @@ flowchart TD
 - `23505` unique violation → `ConflictError` (409), original postgres error passed as `cause`
 - Everything else → `InternalServerError` (500)
 
-The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'ok'|'unavailable' }` with 200 or 503.
+> The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'connected'|'unavailable' }` with 200 or 503.
 
 ---
 

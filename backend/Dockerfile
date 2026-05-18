@@ -1,15 +1,29 @@
-FROM node:20-alpine
-
-# Install PostgreSQL client for psql migrations
-RUN apk add --no-cache postgresql-client
-
+# ── Shared base ──────────────────────────────────────────────────────────────
+FROM node:20-alpine AS base
+# postgresql18-client: psql used by update_schemas.ts migrations
+# Pinned to major version 18 to match postgres:18-alpine server image.
+# Bump this only when the server image is also bumped.
+# curl: healthcheck in docker-compose.yml
+RUN apk add --no-cache postgresql18-client curl
 WORKDIR /app
 
-# Note: Dependencies and code are mounted via volumes in docker-compose.yml
-# This keeps the image lightweight for development
-
-# Expose port for API
+# ── Development stage ─────────────────────────────────────────────────────────
+# Code and CMD are overridden by docker-compose.yml volume mounts + command.
+FROM base AS dev
 EXPOSE 5001
-
-# Keep container running for exec commands (migrations, npm scripts)
 CMD ["tail", "-f", "/dev/null"]
+
+# ── Build stage — compile TypeScript ─────────────────────────────────────────
+FROM base AS builder
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ── Production stage ──────────────────────────────────────────────────────────
+FROM base AS prod
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+EXPOSE 5001
+CMD ["npm", "start"]

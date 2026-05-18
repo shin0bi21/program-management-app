@@ -32,6 +32,8 @@ A management system for organisations running youth programs.
 | `admin` | Full access — manage staff, create/edit all youth profiles |
 | `staff` | View and create/edit youth profiles; cannot manage other staff |
 
+See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for the full permissions breakdown, how permissions flow into tokens, and where to add a new permission.
+
 **Youth profiles are not login users.** They are data records (name, DOB, school, group, addresses, emergency contacts) that staff manage through the app.
 
 ### Tech Stack
@@ -98,15 +100,15 @@ ADMIN_LAST_NAME=Name
 ### First-Time Setup
 
 ```bash
-docker-compose up -d
-docker-compose exec backend npm run db:migrate
-docker-compose exec backend npm run seed:admin   # idempotent
+docker compose up -d
+docker compose exec backend npm run db:migrate
+docker compose exec backend npm run seed:admin   # idempotent
 ```
 
 ### Daily Start
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 The dev server starts automatically inside the container.
@@ -126,12 +128,12 @@ backend/
 │   ├── middleware/     # authenticateToken, requirePermission, rateLimiter, validateRequest
 │   ├── validation/     # Zod schemas per domain
 │   ├── db/             # postgres.js client + asTransactionSql() helper
-│   ├── errors/         # AppError + subclasses + sendError()
+│   ├── errors.ts       # AppError + subclasses + sendError()
 │   ├── types/          # JWT payload types, generated DB schema, DbRow<T>
 │   └── utils/          # requireEnv, emailService, deviceUtils
 ├── db/
 │   ├── migrations/     # SQL files — YYYY-MM-DD_#_description.sql
-│   └── scripts/        # Migration runner, seed-admin, type generation
+│   └── scripts/        # Migration runner (update_schemas.ts), seed-admin, migration_status
 └── tests/
     ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
     ├── auth/           # 44 tests
@@ -159,30 +161,30 @@ For middleware order, route patterns, error throwing, and "adding a new domain" 
 
 ### Staff — `/api/staff`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all staff and admin users |
-| `POST` | `/` | Create a new staff user (admin only) |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all staff and admin users | `read:staff` |
+| `POST` | `/` | Create a new staff user | `write:staff` |
 
 ### Youth — `/api/youth`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all youth profiles |
-| `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts |
-| `POST` | `/` | Create or update a youth profile (upsert by `id`) |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all youth profiles | `read:youth_profiles` |
+| `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts | `read:youth_profiles` |
+| `POST` | `/` | Create or update a youth profile (upsert by `id`) | `write:youth_profiles` |
 
 ### Schools — `/api/schools`
 
-Requires `admin` or `staff` token.
+Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | List all schools |
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List all schools | `read:schools` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
@@ -195,13 +197,11 @@ Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_descr
 ### Commands
 
 ```bash
-docker-compose exec backend npm run db:migrate:dry       # preview — no changes applied
-docker-compose exec backend npm run db:migrate           # apply pending migrations
-docker-compose exec backend npm run db:status            # applied migrations + checksum status
-docker-compose exec backend npm run db:generate-backup   # generate backup tables + triggers
+docker compose exec backend npm run db:migrate   # apply pending migrations + regenerate types
+docker compose exec backend npm run db:status    # applied migrations + checksum status
 ```
 
-For the ERD, base table pattern, backup architecture, and safety guarantees see [docs/db.md](docs/db.md).
+For the ERD, base table pattern, audit/auth log architecture, and safety guarantees see [docs/db.md](docs/db.md).
 
 ---
 
@@ -215,18 +215,18 @@ From the project root (`my-webapp/`):
 
 ```bash
 # All suites
-bash scripts/test-apis.sh
+bash scripts/tests/test-apis.sh
 
 # Individual suites
-bash scripts/run-auth-tests.sh    # 44 tests
-bash scripts/run-staff-tests.sh   # 15 tests
-bash scripts/run-youth-tests.sh   # 25 tests
+bash scripts/tests/run-auth-tests.sh    # 44 tests
+bash scripts/tests/run-staff-tests.sh   # 15 tests
+bash scripts/tests/run-youth-tests.sh   # 25 tests
 
 # Or directly
-docker-compose exec backend npm run test:auth
-docker-compose exec backend npm run test:staff
-docker-compose exec backend npm run test:youth
-docker-compose exec backend npm run test:coverage
+docker compose exec backend npm run test:auth
+docker compose exec backend npm run test:staff
+docker compose exec backend npm run test:youth
+docker compose exec backend npm run test:coverage
 ```
 
 The helper scripts detect already-running containers and **will not tear them down** afterwards — your dev data is preserved.
@@ -295,11 +295,11 @@ describe('Feature Tests', () => {
 ### Daily Loop
 
 ```bash
-docker-compose up -d                              # 1. start containers
+docker compose up -d                              # 1. start containers
 # 2. edit code in src/, tests/, db/migrations/
-docker-compose exec backend npm run typecheck    # 3. type-check
-bash scripts/test-apis.sh                         # 4. run tests
-docker-compose exec backend npm run db:migrate   # 5. apply any new migrations
+docker compose exec backend npm run typecheck    # 3. type-check
+bash scripts/tests/test-apis.sh                   # 4. run tests
+docker compose exec backend npm run db:migrate   # 5. apply any new migrations
 git add . && git commit -m "Description" && git push
 ```
 
@@ -318,25 +318,67 @@ The backend container runs with the Node.js inspector on port 9229.
 
 ## 8. Deployment
 
-### First-Time Deploy
+Deployments run **automatically via CI** on every merge to `main`. No manual steps are needed after initial server setup.
 
-```bash
-# Set admin credentials in the server's .env first
-docker-compose up -d
-docker-compose exec backend npm run db:migrate
-docker-compose exec backend npm run seed:admin
+### Automated Flow
+
+```
+push to main → CI (typecheck + test + build) → deploy job → SSH → ./scripts/deploy.sh
 ```
 
-Admin credentials come from `.env`. Never expose admin creation through an API endpoint.
+`scripts/deploy.sh` (project root) handles the full deploy:
+1. `git reset --hard origin/main` — pull latest code
+2. Build frontend (`docker run node:20-alpine npm ci && npm run build`)
+3. Take a verified gzipped DB snapshot
+4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
+5. Run `db:migrate` from the new image
+6. `docker compose -f docker-compose.prod.yml up -d`
+7. Wait for backend healthcheck
+8. On any failure after step 3: automatically restore DB from snapshot
 
-### Subsequent Deploys (with Schema Changes)
+### First-Time Server Setup
+
+Run once on the Lightsail server before the first deploy:
 
 ```bash
-pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql       # 1. backup first
-docker-compose exec backend npm run db:migrate:dry        # 2. preview
-docker-compose exec backend npm run db:migrate            # 3. apply
-docker-compose exec backend npm run db:status             # 4. verify
+# Install Docker
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+
+# Clone repo and configure
+git clone <repo-url> /path/to/my-webapp && cd /path/to/my-webapp
+cp .env.example .env   # fill in all required vars
+
+# Issue SSL cert (port 80 must be free — Docker not started yet)
+sudo apt install -y certbot
+sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+
+# Replace domain placeholder in nginx.conf
+sed -i 's/your-domain.com/yourdomain.com/g' nginx.conf
+
+# Create webroot dir for cert renewals
+sudo mkdir -p /var/www/certbot
+
+# First start + run migrations + seed admin
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml exec backend npm run db:migrate
+docker compose -f docker-compose.prod.yml exec backend npm run seed:admin
+
+# Switch certbot renewal to webroot (nginx now running) and set up cron
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d yourdomain.com -d www.yourdomain.com --force-renewal
+echo "0 3 * * * root certbot renew --quiet && docker exec myapp_nginx nginx -s reload" \
+  | sudo tee /etc/cron.d/certbot-renew
 ```
+
+### GitHub Secrets Required
+
+| Secret | Value |
+|--------|-------|
+| `LIGHTSAIL_HOST` | Server IP |
+| `LIGHTSAIL_USER` | SSH user (e.g. `ubuntu`) |
+| `LIGHTSAIL_SSH_KEY` | Private key (`-----BEGIN...-----END...`) |
+| `LIGHTSAIL_APP_PATH` | Absolute path to repo on server |
 
 Do not re-run `seed:admin` on subsequent deploys.
 
@@ -374,7 +416,7 @@ bash scripts/reset-dev-stack.sh
 
 ## 10. Commands Reference
 
-All `npm run` commands execute inside the Docker container via `docker-compose exec backend npm run <command>`.
+All `npm run` commands execute inside the Docker container via `docker compose exec backend npm run <command>`.
 
 | Command | Description |
 |---------|-------------|
@@ -389,9 +431,7 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 | `test:watch` | Run tests in watch mode |
 | `test:coverage` | Run tests with coverage report |
 | `db:migrate` | Apply pending migrations + regenerate types |
-| `db:migrate:dry` | Preview pending migrations without applying |
 | `db:status` | Show applied migrations + checksum status |
-| `db:generate-backup` | Generate backup tables + triggers |
 | `db:types` | Regenerate TypeScript types from DB schema |
 | `seed:admin` | Seed the admin user (idempotent) |
 
@@ -401,7 +441,7 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 
 | File | Covers |
 |------|--------|
-| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, RBAC, full sequence diagram |
-| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, backup architecture, safety guarantees |
+| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, **RBAC model, roles & permissions**, auth logging, full sequence diagram |
+| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, audit log, auth log, safety guarantees |
 | [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
 | [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | File locations, route patterns, conventions, "adding a new domain" checklist |

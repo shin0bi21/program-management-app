@@ -17,23 +17,68 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Track applied migrations in the database itself
 CREATE TABLE IF NOT EXISTS schema_migrations (
-  id SERIAL PRIMARY KEY,
-  version VARCHAR(255) NOT NULL UNIQUE,  -- filename (e.g., '2026-01-30_init.sql')
-  name TEXT,                              -- description
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  checksum VARCHAR(64)                    -- optional SHA-256 for integrity
+    id SERIAL PRIMARY KEY,
+    version VARCHAR(255) NOT NULL UNIQUE, -- filename (e.g., '2026-01-30_init.sql')
+    name TEXT,                            -- description
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    checksum VARCHAR(64)                  -- optional SHA-256 for integrity
 );
 
 CREATE INDEX idx_schema_migrations_version ON schema_migrations(version);
 CREATE INDEX idx_schema_migrations_applied_at ON schema_migrations(applied_at DESC);
 
--- Track backup infrastructure generation
-CREATE TABLE IF NOT EXISTS schema_backup_tracking (
-  id SERIAL PRIMARY KEY,
-  table_name VARCHAR(255) NOT NULL UNIQUE,
-  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  migration_version VARCHAR(255)
+-- ============================================================================
+-- AUDIT LOG
+-- ============================================================================
+
+-- Records all INSERT / UPDATE / DELETE mutations through the application
+-- with actor identity and full before/after data.
+-- transaction_id groups all changes made in one API request (supports undo).
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL,
+    user_id UUID,
+    table_name VARCHAR(100) NOT NULL,
+    record_id UUID NOT NULL,
+    action VARCHAR(10) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+    old_data JSONB,
+    new_data JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_audit_log_transaction_id ON audit_log(transaction_id);
+CREATE INDEX idx_audit_log_user_id ON audit_log(user_id);
+CREATE INDEX idx_audit_log_record ON audit_log(table_name, record_id);
+CREATE INDEX idx_audit_log_created_at ON audit_log(created_at DESC);
+
+-- ============================================================================
+-- AUTH LOG
+-- ============================================================================
+
+-- Records all security-relevant auth events (login attempts, 2FA, token reuse, etc.)
+-- Append-only — never updated. Written fire-and-forget from authLogService.
+CREATE TABLE IF NOT EXISTS auth_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event VARCHAR(50) NOT NULL CHECK (event IN (
+        'login_success', 'login_failure', 'account_locked',
+        '2fa_sent', '2fa_resent', '2fa_verified', '2fa_failed',
+        'trusted_device_added',
+        'logout',
+        'password_reset_requested', 'password_reset_completed',
+        'token_reuse_detected'
+    )),
+    user_id UUID,
+    email TEXT,
+    ip_hash TEXT,
+    device_fingerprint_hash TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_auth_log_user_id ON auth_log(user_id);
+CREATE INDEX idx_auth_log_event ON auth_log(event);
+CREATE INDEX idx_auth_log_created_at ON auth_log(created_at DESC);
+CREATE INDEX idx_auth_log_ip_hash ON auth_log(ip_hash);
 
 -- Advisory lock for preventing concurrent migrations (PostgreSQL-specific)
 -- Lock ID 123456789 is arbitrary but consistent
@@ -64,18 +109,18 @@ CREATE TYPE age_group AS ENUM ('junior_youth', 'senior_youth');
 -- Base table with audit columns only (not for data storage, template only)
 -- ID should ALWAYS be defined first in each table, then custom columns, then LIKE base_table for audit columns
 CREATE TABLE IF NOT EXISTS base_table (
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by UUID,
-  updated_by UUID
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID,
+    updated_by UUID
 );
 
 -- Note: Always structure tables with ID FIRST, custom columns, then audit columns via LIKE
 -- Example:
 --   CREATE TABLE new_table (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     custom_column VARCHAR(255),
---     LIKE base_table INCLUDING ALL
+--       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--       custom_column VARCHAR(255),
+--       LIKE base_table INCLUDING ALL
 --   );
 
 -- ============================================================================
@@ -84,25 +129,25 @@ CREATE TABLE IF NOT EXISTS base_table (
 
 -- 1. Roles & Permissions
 CREATE TABLE IF NOT EXISTS user_roles (
-  id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(64) NOT NULL UNIQUE,
-  LIKE base_table INCLUDING ALL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(64) NOT NULL UNIQUE,
+    LIKE base_table INCLUDING ALL
 );
 
 CREATE TABLE IF NOT EXISTS user_permissions (
-  id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(128) NOT NULL UNIQUE,
-  LIKE base_table INCLUDING ALL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(128) NOT NULL UNIQUE,
+    LIKE base_table INCLUDING ALL
 );
 
 CREATE TABLE IF NOT EXISTS user_role_has_permissions (
-  role_id       UUID NOT NULL REFERENCES user_roles(id) ON DELETE CASCADE,
-  permission_id UUID NOT NULL REFERENCES user_permissions(id) ON DELETE CASCADE,
-  PRIMARY KEY (role_id, permission_id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by UUID,
-  updated_by UUID
+    role_id UUID NOT NULL REFERENCES user_roles(id) ON DELETE CASCADE,
+    permission_id UUID NOT NULL REFERENCES user_permissions(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID,
+    updated_by UUID
 );
 
 CREATE INDEX idx_user_role_has_permissions_role_id ON user_role_has_permissions(role_id);
@@ -140,14 +185,14 @@ ON CONFLICT DO NOTHING;
 
 -- 2. Users Table (Profile Data Only)
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  role_id UUID NOT NULL REFERENCES user_roles(id),
-  first_name VARCHAR(120) NOT NULL,
-  last_name VARCHAR(120) NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT true,
-  LIKE base_table INCLUDING ALL,
-  CHECK (LENGTH(TRIM(first_name)) > 0),
-  CHECK (LENGTH(TRIM(last_name)) > 0)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role_id UUID NOT NULL REFERENCES user_roles(id),
+    first_name VARCHAR(120) NOT NULL,
+    last_name VARCHAR(120) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT true,
+    LIKE base_table INCLUDING ALL,
+    CHECK (LENGTH(TRIM(first_name)) > 0),
+    CHECK (LENGTH(TRIM(last_name)) > 0)
 );
 
 CREATE INDEX idx_users_role_id ON users(role_id);
@@ -157,19 +202,19 @@ COMMENT ON COLUMN users.active IS 'Active status: true for current cohort youth 
 
 -- 3. User Credentials Table (Authentication Data)
 CREATE TABLE IF NOT EXISTS user_credentials (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  email_verified BOOLEAN DEFAULT FALSE,
-  last_login TIMESTAMPTZ,
-  failed_login_attempts SMALLINT DEFAULT 0,
-  locked_until TIMESTAMPTZ,
-  LIKE base_table INCLUDING ALL,
-  -- Email format validation (PostgreSQL regex)
-  CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-  -- Failed attempts must be non-negative
-  CHECK (failed_login_attempts >= 0)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
+    last_login TIMESTAMPTZ,
+    failed_login_attempts SMALLINT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    LIKE base_table INCLUDING ALL,
+    -- Email format validation (PostgreSQL regex)
+    CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    -- Failed attempts must be non-negative
+    CHECK (failed_login_attempts >= 0)
 );
 
 CREATE INDEX idx_user_credentials_email ON user_credentials(email);
@@ -177,13 +222,13 @@ CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 
 -- 4. Schools Table (Reference Data)
 CREATE TABLE IF NOT EXISTS schools (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL UNIQUE,
-  address VARCHAR(255) NOT NULL,
-  school_type school_type NOT NULL,
-  board school_board,
-  postal_code VARCHAR(20),
-  LIKE base_table INCLUDING ALL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    address VARCHAR(255) NOT NULL,
+    school_type school_type NOT NULL,
+    board school_board,
+    postal_code VARCHAR(20),
+    LIKE base_table INCLUDING ALL
 );
 
 CREATE INDEX idx_schools_name ON schools(name);
@@ -192,17 +237,17 @@ CREATE INDEX idx_schools_board ON schools(board);
 
 -- 5. Youth Profiles Table (Youth-Specific Data)
 CREATE TABLE IF NOT EXISTS youth_profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE,
-  date_of_birth DATE,
-  school_id UUID,
-  grade_level SMALLINT,
-  age_group age_group,
-  LIKE base_table INCLUDING ALL,
-  -- Date of birth must be in the past
-  CHECK (date_of_birth IS NULL OR date_of_birth < CURRENT_DATE),
-  -- Grade must be between 0 (Kindergarten) and 12
-  CHECK (grade_level IS NULL OR grade_level BETWEEN 0 AND 12)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE,
+    date_of_birth DATE,
+    school_id UUID,
+    grade_level SMALLINT,
+    age_group age_group,
+    LIKE base_table INCLUDING ALL,
+    -- Date of birth must be in the past
+    CHECK (date_of_birth IS NULL OR date_of_birth < CURRENT_DATE),
+    -- Grade must be between 0 (Kindergarten) and 12
+    CHECK (grade_level IS NULL OR grade_level BETWEEN 0 AND 12)
 );
 
 CREATE INDEX idx_youth_profiles_user_id ON youth_profiles(user_id);
@@ -210,12 +255,12 @@ CREATE INDEX idx_youth_profiles_school_id ON youth_profiles(school_id);
 
 -- 6. Password Reset Tokens Table
 CREATE TABLE IF NOT EXISTS user_password_reset_tokens (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  token VARCHAR(255) NOT NULL UNIQUE,
-  expires_at TIMESTAMPTZ NOT NULL,
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_user_password_reset_token ON user_password_reset_tokens(token);
@@ -301,18 +346,18 @@ CREATE INDEX idx_system_revoked_tokens_expires ON system_revoked_tokens(expires_
 
 -- Addresses Table (shared by users, contacts, etc.)
 CREATE TABLE IF NOT EXISTS addresses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  address VARCHAR(255) NOT NULL,
-  city VARCHAR(100) NOT NULL,
-  province VARCHAR(100) NOT NULL,
-  postal_code VARCHAR(20) NOT NULL,
-  country VARCHAR(100) NOT NULL DEFAULT 'Canada',
-  LIKE base_table INCLUDING ALL,
-  -- Validation
-  CHECK (LENGTH(TRIM(address)) > 0),
-  CHECK (LENGTH(TRIM(city)) > 0),
-  CHECK (LENGTH(TRIM(province)) > 0),
-  CHECK (LENGTH(TRIM(postal_code)) > 0)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    address VARCHAR(255) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) NOT NULL DEFAULT 'Canada',
+    LIKE base_table INCLUDING ALL,
+    -- Validation
+    CHECK (LENGTH(TRIM(address)) > 0),
+    CHECK (LENGTH(TRIM(city)) > 0),
+    CHECK (LENGTH(TRIM(province)) > 0),
+    CHECK (LENGTH(TRIM(postal_code)) > 0)
 );
 
 CREATE INDEX idx_addresses_postal_code ON addresses(postal_code);
@@ -320,14 +365,14 @@ CREATE INDEX idx_addresses_city ON addresses(city);
 
 -- User Has Addresses Junction
 CREATE TABLE IF NOT EXISTS user_has_addresses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  address_id UUID NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT true,
-  LIKE base_table INCLUDING ALL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE CASCADE,
-  UNIQUE(user_id, address_id)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    address_id UUID NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT true,
+    LIKE base_table INCLUDING ALL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE CASCADE,
+    UNIQUE(user_id, address_id)
 );
 
 CREATE INDEX idx_user_has_addresses_user_id ON user_has_addresses(user_id);
@@ -340,34 +385,34 @@ CREATE INDEX idx_user_has_addresses_active ON user_has_addresses(active);
 
 -- 6. Contacts (using contact_type enum)
 CREATE TABLE IF NOT EXISTS contacts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  first_name VARCHAR(120) NOT NULL,
-  last_name VARCHAR(120) NOT NULL,
-  phone_number VARCHAR(50),
-  type contact_type NOT NULL DEFAULT 'parent',
-  LIKE base_table INCLUDING ALL,
-  -- Name validation
-  CHECK (LENGTH(TRIM(first_name)) > 0),
-  CHECK (LENGTH(TRIM(last_name)) > 0),
-  -- Phone format validation (flexible: +1-234-567-8900, (234) 567-8900, 234-567-8900, etc.)
-  CHECK (phone_number IS NULL OR phone_number ~ '^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$')
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name VARCHAR(120) NOT NULL,
+    last_name VARCHAR(120) NOT NULL,
+    phone_number VARCHAR(50),
+    type contact_type NOT NULL DEFAULT 'parent',
+    LIKE base_table INCLUDING ALL,
+    -- Name validation
+    CHECK (LENGTH(TRIM(first_name)) > 0),
+    CHECK (LENGTH(TRIM(last_name)) > 0),
+    -- Phone format validation (flexible: +1-234-567-8900, (234) 567-8900, 234-567-8900, etc.)
+    CHECK (phone_number IS NULL OR phone_number ~ '^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$')
 );
 
 CREATE INDEX idx_contacts_type ON contacts(type);
 
 -- 7. User Has Contacts Junction
 CREATE TABLE IF NOT EXISTS user_has_contacts (
-  user_id UUID NOT NULL,
-  contact_id UUID NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT true,
-  assigned_at TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID,
-  updated_by UUID,
-  PRIMARY KEY (user_id, contact_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+    user_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT true,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID,
+    updated_by UUID,
+    PRIMARY KEY (user_id, contact_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_user_has_contacts_active ON user_has_contacts(active);
@@ -378,18 +423,18 @@ CREATE INDEX idx_user_has_contacts_active ON user_has_contacts(active);
 
 -- 8. Youth Worksheets (File uploads and assignments)
 CREATE TABLE IF NOT EXISTS youth_worksheets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  youth_id UUID NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  file_data BYTEA,
-  file_size INTEGER,
-  file_type VARCHAR(100),
-  note TEXT,
-  metadata JSONB DEFAULT '{}',  -- Flexible JSON for tags, categories, etc.
-  LIKE base_table INCLUDING ALL,
-  FOREIGN KEY (youth_id) REFERENCES users(id) ON DELETE CASCADE,
-  CHECK (LENGTH(TRIM(title)) > 0),
-  CHECK (file_size IS NULL OR file_size > 0)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    youth_id UUID NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    file_data BYTEA,
+    file_size INTEGER,
+    file_type VARCHAR(100),
+    note TEXT,
+    metadata JSONB DEFAULT '{}', -- Flexible JSON for tags, categories, etc.
+    LIKE base_table INCLUDING ALL,
+    FOREIGN KEY (youth_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (LENGTH(TRIM(title)) > 0),
+    CHECK (file_size IS NULL OR file_size > 0)
 );
 
 CREATE INDEX idx_youth_worksheets_youth_id ON youth_worksheets(youth_id);

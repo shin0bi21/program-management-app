@@ -5,13 +5,31 @@ Full-stack youth services management system.
 
 ---
 
+## Pinned Versions — DO NOT CHANGE
+
+These are production-stable. Do not suggest, bump, or modify any of these without explicit user instruction:
+
+| What | Pinned version |
+|---|---|
+| Node.js (Dockerfile + docker-compose.yml) | `node:20-alpine` |
+| PostgreSQL server (docker-compose.yml + prod) | `postgres:18-alpine` |
+| PostgreSQL client (Dockerfile `apk add`) | `postgresql18-client` |
+| Express | `4.18.2` |
+| TypeScript | `5.9.3` |
+| ts-node | `10.9.2` |
+
+The `postgresql18-client` version in the Dockerfile **must always match** the `postgres:X-alpine` server image version. Only bump both together, and only when explicitly asked.
+
+---
+
 ## Repo Layout
 
 ```
 my-webapp/
   backend/          Express API
   frontend/         React SPA
-  scripts/          Shell scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
+  scripts/          Shell scripts — deploy.sh, backup-db.sh, reset-dev-stack.sh
+  scripts/tests/    Test runner scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
   docker-compose.yml
   nginx.conf
 ```
@@ -152,11 +170,11 @@ setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 ```
 backend/src/
   index.ts                    ← middleware stack order, route mounts, /health endpoint
-  errors/AppError.ts          ← ALL error classes + sendError() formatter + ErrorResponse type
+  errors.ts                   ← ALL error classes + sendError() formatter + ErrorResponse type
   middleware/
-    errorHandler.ts           ← asyncHandler wrapper + global errorHandler + requestId middleware
+    errorMiddleware.ts        ← handleError (global error handler) + classifyError
+    routeMiddleware.ts        ← asyncHandler + requestId + validateRequest (Zod → 400 with details)
     authMiddleware.ts         ← authenticateToken + requirePermission
-    validateRequest.ts        ← Zod body validation → 400 with details array
     rateLimiter.ts            ← generalLimiter, authLimiter, strictLimiter, passwordResetLimiter
   db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection(), withRetry()
   types/
@@ -217,14 +235,14 @@ router.post('/',
 Never call `res.json()` for errors — just throw:
 
 ```ts
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/AppError';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../errors';
 
 throw new NotFoundError('Youth profile not found');   // → 404
 throw new BadRequestError('Invalid reset token');     // → 400
 throw new ForbiddenError('Token reuse detected');     // → 403
 ```
 
-Available error classes (all in `src/errors/AppError.ts`):
+Available error classes (all in `src/errors.ts`):
 - `BadRequestError` 400
 - `UnauthorizedError` 401
 - `ForbiddenError` 403
@@ -250,9 +268,20 @@ import { sql, asTransactionSql } from '../db/client';
 await sql.begin(async (tx) => {
   const trx = asTransactionSql(tx);
   await trx`UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${jti}`;
-  await trx`INSERT INTO token_blacklist ...`;
+  await trx`INSERT INTO system_revoked_tokens ...`;
 });
 // Never mix root sql and trx inside the same transaction
+
+// Nested write services should join the caller's transaction instead of
+// opening their own. Keep the inner reconciliation logic in a private helper
+// that accepts `trx`, and let the public method open `sql.begin(...)` only
+// when no transaction was provided.
+
+// Example shape:
+// export async function setAddresses(..., trx?: typeof sql) {
+//   if (trx) return setAddressesInTx(trx, ...);
+//   await sql.begin(async (tx) => setAddressesInTx(asTransactionSql(tx), ...));
+// }
 ```
 
 DB returns `snake_case` columns; postgres.js `transform: postgres.camel` converts to camelCase automatically.
@@ -275,7 +304,7 @@ Use `DbRow<T>` from `src/types/db.ts` for type-level conversion.
 ## Auth System Summary
 
 Two JWTs with different secrets:
-- **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `token_blacklist`)
+- **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `system_revoked_tokens`)
 - **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `refresh_tokens` table
 
 Login flow: `POST /auth/login` → credentials check → send 2FA email → `POST /auth/verify` → issue token pair.
@@ -312,17 +341,64 @@ new ApiError(res.status, err.error, err.details, err.requestId)
 
 ---
 
+## Dev Stack
+
+To rebuild the local dev stack from scratch (stops containers, wipes volumes, rebuilds images, runs migrations on both dev + test DBs, seeds admin):
+
+```bash
+./scripts/reset-dev-stack.sh
+```
+
+Run this after pulling changes that include new migrations, or any time the stack is in a bad state.
+
+---
+
 ## Running Tests
 
 Tests run inside Docker against a real test DB:
 
 ```bash
-./scripts/run-auth-tests.sh    # 44 auth tests
-./scripts/run-staff-tests.sh   # 15 staff tests
-./scripts/run-youth-tests.sh   # 25 youth tests
+./scripts/tests/run-auth-tests.sh    # 44 auth tests
+./scripts/tests/run-staff-tests.sh   # 15 staff tests
+./scripts/tests/run-youth-tests.sh   # 25 youth tests
 ```
 
 Frontend UI tests are not yet configured.
+
+## Linting Shell Scripts
+
+Before committing any `scripts/*.sh` file, run both checks:
+
+```bash
+bash -n scripts/deploy.sh      # syntax check — catches bad substitutions, mismatched braces
+shellcheck scripts/deploy.sh   # semantic check — catches unquoted vars, bad redirects, etc.
+```
+
+They complement each other: `bash -n` catches what shellcheck misses and vice versa.
+Install shellcheck with `brew install shellcheck`.
+
+---
+
+## Production Deployment
+
+**Prod compose file:** `docker-compose.prod.yml` (project root) — backend `prod` target, nginx with SSL, db only. No dev services, no exposed DB/backend ports.
+
+**Dockerfile:** Multi-stage — `dev` (tail -f, volumes from compose), `builder` (tsc compile), `prod` (production deps + compiled dist, `npm start`).
+
+**nginx.conf:** Port 80 redirects to HTTPS. Port 443 with TLS 1.2/1.3, HSTS, security headers. ACME challenge path for certbot renewals.
+
+**CI auto-deploy:** `.github/workflows/ci.yml` — on push to `main`, after backend + frontend jobs pass, SSHes into Lightsail and runs `./scripts/deploy.sh`. Requires 4 GitHub secrets: `LIGHTSAIL_HOST`, `LIGHTSAIL_USER`, `LIGHTSAIL_SSH_KEY`, `LIGHTSAIL_APP_PATH`.
+
+**deploy.sh flow:**
+1. `git reset --hard origin/main`
+2. Build frontend via `docker run node:20-alpine`
+3. DB snapshot (gzipped pg_dump, verified)
+4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
+5. Migrate from new image (`docker compose run --rm --no-deps backend`)
+6. `docker compose -f docker-compose.prod.yml up -d`
+7. Health check — on failure, auto-restores DB from snapshot
+
+**`COMPOSE_FILE=docker-compose.prod.yml`** is exported at the top of `deploy.sh` — all `docker compose` calls in the script use it automatically.
 
 ---
 

@@ -1,9 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useLogin } from './hooks/useLogin';
+import { useAuth } from '../../../common/context/AuthContext';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 import Button from '../../../common/components/Button/Button';
 
 export default function Login() {
+  const { isAuthenticated, loading } = useAuth();
+  if (!loading && isAuthenticated) return <Navigate to="/" replace />;
   const { form, error, onSubmit } = useLogin();
   const {
     register,

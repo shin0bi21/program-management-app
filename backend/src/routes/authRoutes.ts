@@ -16,7 +16,7 @@ router.post('/login', authLimiter, validateRequest(loginSchema), asyncHandler(ha
 router.post('/verify', strictLimiter, validateRequest(verify2FASchema), asyncHandler(handleVerify2FA));
 router.post('/resend', strictLimiter, validateRequest(resend2FASchema), asyncHandler(handleResend2FA));
 router.post('/refresh', authLimiter, asyncHandler(handleRefreshToken));
-router.post('/logout', asyncHandler(handleLogout));
+router.post('/logout', authLimiter, asyncHandler(handleLogout));
 router.post('/forgot-password', passwordResetLimiter, validateRequest(forgotPasswordSchema), asyncHandler(handleForgotPassword));
 router.post('/reset-password', passwordResetLimiter, validateRequest(resetPasswordSchema), asyncHandler(handleResetPassword));
 

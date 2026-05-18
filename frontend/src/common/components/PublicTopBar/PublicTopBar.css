@@ -17,8 +17,8 @@
 }
 
 .public-topbar--scrolled {
-  background: #ffffff;
-  box-shadow: 0 1px 0 rgba(18, 22, 31, 0.08);
+  background: var(--color-white);
+  box-shadow: 0 1px 0 var(--ink-08);
 }
 
 .topbar-logo-btn {
@@ -59,7 +59,7 @@
 
 .topbar-link:hover {
   color: var(--brand-ink);
-  background: rgba(18, 22, 31, 0.05);
+  background: var(--ink-05);
 }
 
 .topbar-login-btn {

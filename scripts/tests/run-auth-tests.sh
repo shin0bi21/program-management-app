@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")/.." || exit
+cd "$(dirname "$0")/../.." || exit
 
 source scripts/_docker-health.sh
 
@@ -8,7 +8,7 @@ echo ""
 echo "Running AUTH tests..."
 echo "------------------------------------------"
 
-if docker-compose exec -T backend npm run test:auth; then
+if docker compose exec -T backend npm run test:auth; then
   echo ""
   echo "Auth tests passed!"
 else
