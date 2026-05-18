@@ -63,7 +63,7 @@ async function syncAddresses(trx: SqlExecutor, userId: string, addressesData: Ad
     `;
     for (const addressId of toDelete) {
       const old = existingAddressMap.get(addressId)!;
-      await audit(trx, auditUserId, transactionId, 'addresses', addressId, 'DELETE', { userId, address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, null);
+      await audit(trx, auditUserId, transactionId, 'user_has_addresses', addressId, 'DELETE', { userId, address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, null);
     }
   }
 

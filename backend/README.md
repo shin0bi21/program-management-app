@@ -216,12 +216,12 @@ From the project root (`my-webapp/`):
 
 ```bash
 # All suites
-bash scripts/test-apis.sh
+bash scripts/tests/test-apis.sh
 
 # Individual suites
-bash scripts/run-auth-tests.sh    # 44 tests
-bash scripts/run-staff-tests.sh   # 15 tests
-bash scripts/run-youth-tests.sh   # 25 tests
+bash scripts/tests/run-auth-tests.sh    # 44 tests
+bash scripts/tests/run-staff-tests.sh   # 15 tests
+bash scripts/tests/run-youth-tests.sh   # 25 tests
 
 # Or directly
 docker-compose exec backend npm run test:auth
@@ -299,7 +299,7 @@ describe('Feature Tests', () => {
 docker-compose up -d                              # 1. start containers
 # 2. edit code in src/, tests/, db/migrations/
 docker-compose exec backend npm run typecheck    # 3. type-check
-bash scripts/test-apis.sh                         # 4. run tests
+bash scripts/tests/test-apis.sh                   # 4. run tests
 docker-compose exec backend npm run db:migrate   # 5. apply any new migrations
 git add . && git commit -m "Description" && git push
 ```

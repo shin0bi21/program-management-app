@@ -649,30 +649,42 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
 export async function resetUserPassword(token: string, newPassword: string, ipAddress?: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const consumedTokens = await sql<DbRow<UserPasswordResetTokens>[]>`
-    UPDATE user_password_reset_tokens
-    SET used_at = NOW()
-    WHERE id = (
-      SELECT id
-      FROM user_password_reset_tokens
-      WHERE token = ${tokenHash}
-        AND expires_at > NOW()
-        AND used_at IS NULL
-      ORDER BY created_at DESC
-      LIMIT 1
-      FOR UPDATE SKIP LOCKED
-    )
-    RETURNING *
-  `;
-
-  if (consumedTokens.length === 0) {
-    throw new BadRequestError('Invalid or expired reset token');
-  }
-
-  const resetToken = consumedTokens[0];
+  // Pre-compute hash outside the transaction — bcrypt is CPU-intensive and
+  // holding a DB transaction open during it unnecessarily blocks connections.
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await sql`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
-  await sql`UPDATE users SET active = true WHERE id = ${resetToken.userId} AND active = false`;
-  await sql`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
-  await logAuthEvent({ event: 'password_reset_completed', userId: resetToken.userId, ipAddress });
+
+  let resetUserId: string;
+
+  await sql.begin(async (rawTx) => {
+    const tx = asTransactionSql(rawTx);
+
+    const consumedTokens = await tx<DbRow<UserPasswordResetTokens>[]>`
+      UPDATE user_password_reset_tokens
+      SET used_at = NOW()
+      WHERE id = (
+        SELECT id
+        FROM user_password_reset_tokens
+        WHERE token = ${tokenHash}
+          AND expires_at > NOW()
+          AND used_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *
+    `;
+
+    if (consumedTokens.length === 0) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    const resetToken = consumedTokens[0];
+    resetUserId = resetToken.userId;
+
+    await tx`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
+    await tx`UPDATE users SET active = true WHERE id = ${resetToken.userId} AND active = false`;
+    await tx`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
+  });
+
+  await logAuthEvent({ event: 'password_reset_completed', userId: resetUserId!, ipAddress });
 }

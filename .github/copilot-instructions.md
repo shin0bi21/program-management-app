@@ -11,7 +11,8 @@ Full-stack youth services management system.
 my-webapp/
   backend/          Express API
   frontend/         React SPA
-  scripts/          Shell scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
+  scripts/          Shell scripts — deploy.sh, backup-db.sh, reset-dev-stack.sh
+  scripts/tests/    Test runner scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
   docker-compose.yml
   nginx.conf
 ```
@@ -328,12 +329,24 @@ new ApiError(res.status, err.error, err.details, err.requestId)
 Tests run inside Docker against a real test DB:
 
 ```bash
-./scripts/run-auth-tests.sh    # 44 auth tests
-./scripts/run-staff-tests.sh   # 15 staff tests
-./scripts/run-youth-tests.sh   # 25 youth tests
+./scripts/tests/run-auth-tests.sh    # 44 auth tests
+./scripts/tests/run-staff-tests.sh   # 15 staff tests
+./scripts/tests/run-youth-tests.sh   # 25 youth tests
 ```
 
 Frontend UI tests are not yet configured.
+
+## Linting Shell Scripts
+
+Before committing any `scripts/*.sh` file, run both checks:
+
+```bash
+bash -n scripts/deploy.sh      # syntax check — catches bad substitutions, mismatched braces
+shellcheck scripts/deploy.sh   # semantic check — catches unquoted vars, bad redirects, etc.
+```
+
+They complement each other: `bash -n` catches what shellcheck misses and vice versa.
+Install shellcheck with `brew install shellcheck`.
 
 ---
 

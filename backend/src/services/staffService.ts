@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { audit } from './auditService';
-import { sql } from '../db/client';
+import { sql, asTransactionSql } from '../db/client';
 import type { Users, UserCredentials } from '../types/database';
 import type { DbRow } from '../types/db';
 import type { CreateStaffInput } from '../validation/staffSchemas';
@@ -49,27 +49,32 @@ export async function setStaff(data: CreateStaffInput, actorId: string) {
   if (!roles.length) throw new ConflictError(`Role '${role}' not found`);
   const roleId = roles[0].id;
 
-  const newUsers = await sql<DbRow<Users>[]>`
-    INSERT INTO users (first_name, last_name, role_id, active)
-    VALUES (${firstName}, ${lastName}, ${roleId}, false)
-    RETURNING *
-  `;
-  const userId = newUsers[0].id;
-  await audit(sql, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
-
-  await sql<DbRow<UserCredentials>[]>`
-    INSERT INTO user_credentials (user_id, email, password_hash)
-    VALUES (${userId}, ${email}, ${unusableHash})
-  `;
-
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + INVITE_EXPIRY_MS);
 
-  await sql`
-    INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
-    VALUES (${userId}, ${tokenHash}, ${expiresAt})
-  `;
+  let userId!: string;
+  await sql.begin(async (tx) => {
+    const trx = asTransactionSql(tx);
+
+    const newUsers = await trx<DbRow<Users>[]>`
+      INSERT INTO users (first_name, last_name, role_id, active)
+      VALUES (${firstName}, ${lastName}, ${roleId}, false)
+      RETURNING *
+    `;
+    userId = newUsers[0].id;
+    await audit(trx, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
+
+    await trx<DbRow<UserCredentials>[]>`
+      INSERT INTO user_credentials (user_id, email, password_hash)
+      VALUES (${userId}, ${email}, ${unusableHash})
+    `;
+
+    await trx`
+      INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
+      VALUES (${userId}, ${tokenHash}, ${expiresAt})
+    `;
+  });
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const inviteUrl = `${frontendUrl}/reset-password?token=${rawToken}`;

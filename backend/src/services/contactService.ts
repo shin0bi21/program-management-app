@@ -63,7 +63,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
     `;
     for (const contactId of toDelete) {
       const old = existingContactMap.get(contactId)!;
-      await audit(trx, auditUserId, transactionId, 'contacts', contactId, 'DELETE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
+      await audit(trx, auditUserId, transactionId, 'user_has_contacts', contactId, 'DELETE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
     }
   }
 

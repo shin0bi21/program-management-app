@@ -17,9 +17,12 @@
  *
  * Usage:
  *   npx tsx db/scripts/update_schemas.ts              # apply pending migrations
- *   npx tsx db/scripts/update_schemas.ts --dry-run    # preview, no changes
  *   npx tsx db/scripts/update_schemas.ts --no-strict  # warn (not abort) on checksum drift
  */
+
+// ============================================================================
+// 1. Imports
+// ============================================================================
 
 import { execFileSync, execSync } from 'child_process';
 import postgres from 'postgres';
@@ -28,53 +31,43 @@ import path from 'path';
 import crypto from 'crypto';
 
 // ============================================================================
-// Configuration
+// 2. Config / constants
 // ============================================================================
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 const ADVISORY_LOCK_ID = 123456789; // arbitrary constant — same key across all runs
 
-// Require DATABASE_URL at startup. TS doesn't carry this narrowing into
-// functions defined below, so we re-bind to DB_URL: string for callsites.
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error('ERROR: DATABASE_URL environment variable not set');
-  process.exit(1);
+// ============================================================================
+// 3. CLI parsing
+// ============================================================================
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  return {
+    abortOnDrift: !args.includes('--no-strict'),
+  };
 }
-const DB_URL: string = DATABASE_URL;
-const sql = postgres(DB_URL);
 
-// CLI flags
-const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run') || args.includes('-d');
-const isStrict = !args.includes('--no-strict'); // strict by default — abort on checksum drift
+const { abortOnDrift } = parseArgs();
 
 // ============================================================================
-// Filesystem + DB queries
+// 4. DB setup
 // ============================================================================
 
-/**
- * Returns versions of all migrations recorded in schema_migrations.
- * Returns [] if the table doesn't exist yet (first run, before init migration).
- *
- * Ordered by applied_at (insertion order), which may differ from alphabetical
- * order if migrations were ever applied out of sequence. That's fine —
- * downstream callers only use this for set-membership checks (.includes()).
- */
-async function getAppliedMigrations(): Promise<string[]> {
-  try {
-    const result = await sql<{ version: string }[]>`
-      SELECT version FROM schema_migrations ORDER BY applied_at
-    `;
-    return result.map(r => r.version);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes('relation "schema_migrations" does not exist')) {
-      return []; // first run — init migration will create the table
-    }
-    throw error; // any other DB error is real and should surface
+function createDbClient() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error('ERROR: DATABASE_URL environment variable not set');
+    process.exit(1);
   }
+  return { sql: postgres(url), url: url as string };
 }
+
+const { sql, url: DB_URL } = createDbClient();
+
+// ============================================================================
+// 5. Migration file helpers
+// ============================================================================
 
 /** SHA-256 of a file's bytes — used to detect post-apply tampering. */
 function calculateChecksum(filepath: string): string {
@@ -82,11 +75,13 @@ function calculateChecksum(filepath: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-/** All *.sql files in MIGRATIONS_DIR, sorted alphabetically (apply order). */
-function getSQLFiles(): string[] {
-  if (!fs.existsSync(MIGRATIONS_DIR)) {
-    return [];
-  }
+/**
+ * All *.sql files in MIGRATIONS_DIR, sorted alphabetically (apply order).
+ * Validates that filenames are safe to pass as psql -v values.
+ */
+function getMigrationFiles(): string[] {
+  if (!fs.existsSync(MIGRATIONS_DIR)) return [];
+
   const files = fs.readdirSync(MIGRATIONS_DIR)
     .filter(f => f.endsWith('.sql'))
     .sort();
@@ -102,96 +97,37 @@ function getSQLFiles(): string[] {
 }
 
 // ============================================================================
-// Migration execution
+// 6. DB migration state helpers
 // ============================================================================
 
 /**
- * Applies one migration file atomically with its schema_migrations record.
- *
- * Both the migration SQL (-f) and the tracking INSERT (-c) run inside a single
- * psql --single-transaction. Either both commit or both roll back — there is
- * no window where a migration applies without being recorded.
- *
- * Returns false (does not throw) so the caller can stop the loop and surface
- * a clean error summary rather than a stack trace.
+ * Returns versions of all migrations recorded in schema_migrations.
+ * Returns [] if the table doesn't exist yet (first run, before init migration).
  */
-async function applySQLFile(filename: string): Promise<boolean> {
-  const filepath = path.join(MIGRATIONS_DIR, filename);
-  const checksum = calculateChecksum(filepath);
-
-  console.log(`  Applying: ${filename}`);
-  console.log(`  Checksum: ${checksum.slice(0, 12)}...`);
-
-  if (isDryRun) {
-    const content = fs.readFileSync(filepath, 'utf8');
-    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('--'));
-    console.log(`  [DRY RUN] Would execute migration (not applied)`);
-    console.log(`  Preview: ${lines.length} non-comment lines`);
-    return true;
-  }
-
+async function getAppliedMigrations(): Promise<string[]> {
   try {
-    // execFileSync (argv array, no shell) — DB_URL and filepath cannot be
-    // interpreted as shell metacharacters. psql flags:
-    //   -X                       ignore .psqlrc
-    //   -v ON_ERROR_STOP=1       abort on first SQL error
-    //   --single-transaction     wrap -f and -c in one BEGIN/COMMIT
-    //   -v mig_version=... etc.  passed into the -c INSERT as :'mig_version'
-    //                            (psql quotes these as SQL string literals)
-    //
-    // Bootstrap: schema_migrations must exist before the -c INSERT runs.
-    // The -f file executes first within the same tx — so the init migration
-    // (which creates the table) and its tracking record commit together.
-    execFileSync('psql', [
-      DB_URL,
-      '-X',
-      '-v', 'ON_ERROR_STOP=1',
-      '--single-transaction',
-      '-v', `mig_version=${filename}`,
-      '-v', `mig_checksum=${checksum}`,
-      '-f', filepath,
-      '-c', "INSERT INTO schema_migrations (version, name, checksum) VALUES (:'mig_version', :'mig_version', :'mig_checksum') ON CONFLICT (version) DO NOTHING"
-    ], { stdio: 'inherit' });
-
-    return true;
-  } catch (error) {
-    console.error(`  Failed to apply ${filename}`);
-    console.error(`  Changes were rolled back automatically (PostgreSQL transaction)`);
-    console.error(error);
-    return false;
+    const result = await sql<{ version: string }[]>`
+      SELECT version FROM schema_migrations ORDER BY applied_at
+    `;
+    return result.map(r => r.version);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('relation "schema_migrations" does not exist')) {
+      return []; // first run — init migration will create the table
+    }
+    throw error;
   }
 }
 
 /**
- * Regenerates src/types/database.ts from the live schema via kysely-codegen.
- * Only called after a successful full apply — see partial-apply guard in main().
- */
-function generateTypes(): boolean {
-  console.log('\n  Generating TypeScript types from database...');
-  try {
-    execSync('npx kysely-codegen --dialect postgres --out-file src/types/database.ts', {
-      stdio: 'inherit',
-      env: { ...process.env, DATABASE_URL: DB_URL }
-    });
-    return true;
-  } catch (error) {
-    console.error('  Failed to generate types');
-    console.error(error);
-    return false;
-  }
-}
-
-/**
- * Pre-flight integrity check: for every applied migration in the DB, verify
- * the file on disk still exists and its checksum still matches.
+ * For every applied migration in the DB, verifies the file on disk still
+ * exists and its checksum still matches.
  *
  * Returns true if any drift is detected. Caller decides whether that's fatal
- * (strict mode, default) or just a warning (--no-strict).
- *
- * Runs in dry-run mode too — a corrupt history is corrupt regardless of intent.
+ * (abortOnDrift, the default) or just a warning (--no-strict).
  */
-async function validateAppliedMigrations(): Promise<boolean> {
-  let hasConflict = false;
+async function detectChecksumDrift(): Promise<boolean> {
+  let driftFound = false;
   try {
     const applied = await sql<{ version: string; checksum: string | null }[]>`
       SELECT version, checksum FROM schema_migrations WHERE checksum IS NOT NULL
@@ -201,7 +137,7 @@ async function validateAppliedMigrations(): Promise<boolean> {
       const filepath = path.join(MIGRATIONS_DIR, row.version);
       if (!fs.existsSync(filepath)) {
         console.warn(`WARNING: ${row.version} was applied but file no longer exists on disk!`);
-        hasConflict = true;
+        driftFound = true;
         continue;
       }
       const currentChecksum = calculateChecksum(filepath);
@@ -209,7 +145,7 @@ async function validateAppliedMigrations(): Promise<boolean> {
         console.warn(`WARNING: ${row.version} was modified after being applied!`);
         console.warn(`   Expected: ${row.checksum?.slice(0, 12)}...`);
         console.warn(`   Current:  ${currentChecksum.slice(0, 12)}...`);
-        hasConflict = true;
+        driftFound = true;
       }
     }
   } catch (error: unknown) {
@@ -218,109 +154,192 @@ async function validateAppliedMigrations(): Promise<boolean> {
       throw error; // first-run case is fine; everything else propagates
     }
   }
-  return hasConflict;
+  return driftFound;
 }
 
 // ============================================================================
-// Main
+// 7. Migration execution internals
 // ============================================================================
 
-async function main() {
+interface MigrationContext {
+  filename: string;
+  filepath: string;
+  checksum: string;
+}
+
+function buildMigrationContext(filename: string): MigrationContext {
+  const filepath = path.join(MIGRATIONS_DIR, filename);
+  const checksum = calculateChecksum(filepath);
+  return { filename, filepath, checksum };
+}
+
+function executeMigration(ctx: MigrationContext): boolean {
+  try {
+    // execFileSync (argv array, no shell) — DB_URL and filepath are not
+    // interpreted as shell metacharacters. psql flags:
+    //   -X                       ignore .psqlrc
+    //   -v ON_ERROR_STOP=1       abort on first SQL error
+    //   --single-transaction     wraps -f and -c in one BEGIN/COMMIT so the
+    //                            migration SQL and its tracking INSERT are atomic
+    //   -v mig_version=...       passed into -c as :'mig_version'
+    //                            (psql quotes these as SQL string literals)
+    //
+    // The -f migration runs first in the transaction — so the init migration
+    // (which creates schema_migrations) and its tracking record commit together.
+    execFileSync('psql', [
+      DB_URL,
+      '-X',
+      '-v', 'ON_ERROR_STOP=1',
+      '--single-transaction',
+      '-v', `mig_version=${ctx.filename}`,
+      '-v', `mig_checksum=${ctx.checksum}`,
+      '-f', ctx.filepath,
+      '-c', "INSERT INTO schema_migrations (version, name, checksum) VALUES (:'mig_version', :'mig_version', :'mig_checksum') ON CONFLICT (version) DO NOTHING",
+    ], { stdio: 'inherit' });
+    return true;
+  } catch (error) {
+    console.error(`  Failed to apply ${ctx.filename}`);
+    console.error(`  Changes were rolled back automatically (PostgreSQL transaction)`);
+    console.error(error);
+    return false;
+  }
+}
+
+async function applyMigrationFile(filename: string): Promise<boolean> {
+  const ctx = buildMigrationContext(filename);
+  console.log(`  Applying: ${ctx.filename}`);
+  console.log(`  Checksum: ${ctx.checksum.slice(0, 12)}...`);
+  return executeMigration(ctx);
+}
+
+// ============================================================================
+// 8. Runtime lifecycle
+// ============================================================================
+
+/**
+ * Acquires a PostgreSQL session-level advisory lock.
+ * pg_try_advisory_lock returns false immediately rather than blocking — so a
+ * stale lock from a crashed run doesn't hang CI indefinitely.
+ */
+async function acquireMigrationLock(): Promise<void> {
+  console.log(`Acquiring migration lock...`);
+  const result = await sql<{ pg_try_advisory_lock: boolean }[]>`
+    SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})
+  `;
+  if (!result[0].pg_try_advisory_lock) {
+    throw new Error(
+      'Could not acquire migration lock — another migration process is already running. ' +
+      'If no other process is running, release the lock manually:\n' +
+      `  SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID});`,
+    );
+  }
+  console.log(`Lock acquired\n`);
+}
+
+/** Regenerates src/types/database.ts from the live schema via kysely-codegen. */
+function regenerateDatabaseTypes(): void {
+  console.log('  Generating TypeScript types from database...');
+  try {
+    execSync('npx kysely-codegen --dialect postgres --out-file src/types/database.ts', {
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL: DB_URL },
+    });
+  } catch (error) {
+    console.error('  Failed to generate types');
+    console.error(error);
+    throw new Error('Type generation failed — run `npm run db:types` manually to retry.');
+  }
+}
+
+/**
+ * Releases the advisory lock and closes the DB connection.
+ * Always called from the finally block — must not throw or mask prior errors.
+ * Session-scoped locks also auto-release on connection close (belt-and-suspenders).
+ */
+async function cleanup(): Promise<void> {
+  try {
+    await sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`;
+  } catch {}
+  await sql.end({ timeout: 5 });
+}
+
+// ============================================================================
+// 9. Main workflow
+// ============================================================================
+
+interface MigrationPlan {
+  allFiles: string[];
+  appliedMigrations: string[];
+  pendingFiles: string[];
+}
+
+interface ApplyResult {
+  appliedFiles: string[];
+  completed: boolean;
+}
+
+async function validateMigrationHistory(): Promise<void> {
+  const driftFound = await detectChecksumDrift();
+  if (driftFound && abortOnDrift) {
+    throw new Error('ABORTED: Migration file(s) were modified after being applied. To bypass (not recommended): add --no-strict flag');
+  }
+}
+
+async function getMigrationPlan(): Promise<MigrationPlan> {
+  const allFiles = getMigrationFiles();
+  const appliedMigrations = await getAppliedMigrations();
+  const pendingFiles = allFiles.filter(f => !appliedMigrations.includes(f));
+  return { allFiles, appliedMigrations, pendingFiles };
+}
+
+async function applyPendingMigrations(pendingFiles: string[]): Promise<ApplyResult> {
+  console.log(`\n------------------------------------------`);
+  console.log(`Applying migrations...`);
+  console.log(`------------------------------------------\n`);
+
+  const appliedFiles: string[] = [];
+  for (const file of pendingFiles) {
+    const success = await applyMigrationFile(file);
+    if (success) {
+      appliedFiles.push(file);
+      console.log(`  Applied: ${file}\n`);
+    } else {
+      console.log(`  Failed: ${file}`);
+      console.log('\nStopping - please fix errors before continuing.\n');
+      break;
+    }
+  }
+  return { appliedFiles, completed: appliedFiles.length === pendingFiles.length };
+}
+
+async function main(): Promise<void> {
   console.log(`\n========================================`);
-  console.log(`UPDATE SCHEMAS (PostgreSQL-Native)${isDryRun ? ' - DRY RUN' : ''}`);
+  console.log(`UPDATE SCHEMAS (PostgreSQL-Native)`);
   console.log(`========================================\n`);
 
-  if (isDryRun) {
-    console.log(`DRY RUN MODE: No changes will be applied\n`);
-  }
-
   try {
-    // ── Step 1: Acquire advisory lock ────────────────────────────────────
-    // Prevents two Node runner instances from racing. pg_try_advisory_lock
-    // returns false immediately rather than blocking forever — important so
-    // a stale lock from a crashed run doesn't hang CI indefinitely.
-    // Caveat: this only guards processes that use this script. A raw psql
-    // session running migrations directly bypasses it.
-    if (!isDryRun) {
-      console.log(`Acquiring migration lock...`);
-      const lockResult = await sql<{ pg_try_advisory_lock: boolean }[]>`
-        SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})
-      `;
-      if (!lockResult[0].pg_try_advisory_lock) {
-        throw new Error(
-          'Could not acquire migration lock — another migration process is already running. ' +
-          'If no other process is running, release the lock manually:\n' +
-          `  SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID});`
-        );
-      }
-      console.log(`Lock acquired\n`);
-    }
+    await acquireMigrationLock();
 
-    // ── Step 2: Validate integrity of already-applied migrations ─────────
-    const hasChecksumConflict = await validateAppliedMigrations();
-    if (hasChecksumConflict && isStrict) {
-      throw new Error('ABORTED: Migration file(s) were modified after being applied. To bypass (not recommended): add --no-strict flag');
-    }
+    await validateMigrationHistory();
 
-    // ── Step 3: Diff disk vs. DB to find pending migrations ──────────────
-    const appliedMigrations = await getAppliedMigrations();
-    const allFiles = getSQLFiles();
-    const pendingFiles = allFiles.filter(f => !appliedMigrations.includes(f));
+    const plan = await getMigrationPlan();
 
-    console.log(`Previously applied migrations: ${appliedMigrations.length}`);
-    console.log(`Total SQL files: ${allFiles.length}`);
-
-    if (pendingFiles.length === 0) {
+    if (plan.pendingFiles.length === 0) {
+      console.log(`Previously applied migrations: ${plan.appliedMigrations.length}`);
+      console.log(`Total SQL files: ${plan.allFiles.length}`);
       console.log(`\nNo pending migrations to apply.\n`);
       return;
     }
 
-    console.log(`\nPending migrations: ${pendingFiles.length}`);
-    pendingFiles.forEach(f => console.log(`  - ${f}`));
+    console.log(`Previously applied migrations: ${plan.appliedMigrations.length}`);
+    console.log(`Total SQL files: ${plan.allFiles.length}`);
+    console.log(`\nPending migrations: ${plan.pendingFiles.length}`);
+    plan.pendingFiles.forEach(f => console.log(`  - ${f}`));
 
-    // ── Step 4: Apply each pending migration in order ────────────────────
-    // Stop on first failure — applySQLFile already rolled back via psql's
-    // single-transaction, so the DB is consistent. Don't continue past a
-    // broken migration (would skip an ordered step).
-    console.log(`\n------------------------------------------`);
-    console.log(`Applying migrations...`);
-    console.log(`------------------------------------------\n`);
+    const result = await applyPendingMigrations(plan.pendingFiles);
 
-    const appliedFiles: string[] = [];
-    for (const file of pendingFiles) {
-      const success = await applySQLFile(file);
-      if (success) {
-        appliedFiles.push(file);
-        console.log(`  Applied: ${file}\n`);
-      } else {
-        console.log(`  Failed: ${file}`);
-        console.log(`\nStopping - please fix errors before continuing.\n`);
-        break;
-      }
-    }
-
-    if (appliedFiles.length === 0) {
-      console.log(`\nNo migrations were applied.\n`);
-      return;
-    }
-
-    // Dry-run exit point — placed before the partial-apply guard so the flow
-    // reads top-to-bottom without depending on dry-run always succeeding.
-    if (isDryRun) {
-      console.log(`\n========================================`);
-      console.log(`DRY RUN COMPLETE!`);
-      console.log(`========================================\n`);
-      console.log(`Would have applied ${appliedFiles.length} migration(s):`);
-      appliedFiles.forEach(f => console.log(`  [APPLIED] ${f}`));
-      console.log(`\nTo apply these migrations, run without --dry-run flag\n`);
-      return;
-    }
-
-    // ── Step 5: Regenerate types (only after a full clean apply) ─────────
-    // A partial apply leaves the schema mid-migration — generating types
-    // here would freeze that incomplete state into the codebase.
-    if (appliedFiles.length < pendingFiles.length) {
-      console.log(`\nPartial apply (${appliedFiles.length}/${pendingFiles.length}) — skipping type generation.`);
+    if (!result.completed) {
+      console.log(`\nPartial apply (${result.appliedFiles.length}/${plan.pendingFiles.length}) — skipping type generation.`);
       console.log(`Fix the failing migration, then run db:migrate again.\n`);
       return;
     }
@@ -328,37 +347,25 @@ async function main() {
     console.log(`\n------------------------------------------`);
     console.log(`Generating Types...`);
     console.log(`------------------------------------------\n`);
+    regenerateDatabaseTypes();
 
-    if (!generateTypes()) {
-      console.log(`\nType generation failed - you may need to run manually.\n`);
-      console.log(`  Run: npm run db:types\n`);
-      return;
-    }
-
-    // ── Done ─────────────────────────────────────────────────────────────
     console.log(`\n========================================`);
     console.log(`COMPLETE!`);
     console.log(`========================================\n`);
-    console.log(`Applied ${appliedFiles.length} migration(s):`);
-    appliedFiles.forEach(f => console.log(`  [APPLIED] ${f}`));
+    console.log(`Applied ${result.appliedFiles.length} migration(s):`);
+    result.appliedFiles.forEach(f => console.log(`  [APPLIED] ${f}`));
     console.log(``);
   } finally {
-    // ── Step 6: Always release lock + close connection ───────────────────
-    // Unlock is wrapped in its own try/catch — a failed unlock must NOT
-    // mask the original error from the try block above. (Session-scoped
-    // locks also auto-release when the connection closes, so this is
-    // belt-and-suspenders.)
-    if (!isDryRun) {
-      try {
-        await sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`;
-      } catch {}
-    }
-    await sql.end({ timeout: 5 });
+    await cleanup();
   }
 }
 
-// main()'s finally always closes sql — no .catch() handler needed for that.
+// ============================================================================
+// 10. Entrypoint
+// ============================================================================
+
 main().catch(error => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
+
