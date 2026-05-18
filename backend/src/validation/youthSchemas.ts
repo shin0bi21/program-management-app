@@ -42,7 +42,7 @@ export const setYouthSchema = z.object({
             .min(1, 'Contact last name is required')
             .regex(/^[a-zA-Z\s'-]+$/, 'Contact last name can only contain letters, spaces, hyphens, and apostrophes'),
           phoneNumber: z.string().optional(),
-          type: z.enum(['parent', 'sibling', 'guardian']).default('parent'),
+          type: z.enum(['parent', 'sibling', 'guardian', 'emergency']).default('parent'),
         }),
       )
       .optional(),

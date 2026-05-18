@@ -70,6 +70,8 @@ export interface VerifyResult {
   user: UserInfo;
 }
 
+type AuthLogInput = Parameters<typeof authLog>[0];
+
 // ============================================================================
 // PRIVATE HELPERS
 // ============================================================================
@@ -84,6 +86,31 @@ function signAccessToken(payload: Omit<AccessTokenPayload, 'iat' | 'exp' | 'toke
 
 function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'tokenType'>): string {
   return jwt.sign({ ...payload, tokenType: 'refresh' }, REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+}
+
+const AUTH_LOG_EVENTS_WITH_RESOLVED_EMAIL = new Set<AuthLogInput['event']>([
+  '2fa_failed',
+  'password_reset_completed',
+]);
+
+async function getAuthLogEmail(userId: string): Promise<string | undefined> {
+  const credentials = await sql<DbRow<Pick<UserCredentials, 'email'>>[]>`
+    SELECT email
+    FROM user_credentials
+    WHERE user_id = ${userId}
+    LIMIT 1
+  `;
+
+  return credentials[0]?.email;
+}
+
+async function logAuthEvent(params: AuthLogInput): Promise<void> {
+  if (!params.email && params.userId && AUTH_LOG_EVENTS_WITH_RESOLVED_EMAIL.has(params.event)) {
+    await authLog({ ...params, email: await getAuthLogEmail(params.userId) });
+    return;
+  }
+
+  await authLog(params);
 }
 
 /**
@@ -192,7 +219,7 @@ export async function loginUser(
           SET failed_login_attempts = ${newFailedAttempts}, locked_until = ${lockUntil}
           WHERE user_id = ${cred.userId}
         `;
-        await authLog({ event: 'account_locked', userId: cred.userId, email: cred.email, ipAddress, metadata: { lockedUntil: lockUntil.toISOString() } });
+        await logAuthEvent({ event: 'account_locked', userId: cred.userId, email: cred.email, ipAddress, metadata: { lockedUntil: lockUntil.toISOString() } });
         throw new LockedError('Account locked due to too many failed attempts. Try again in 15 minutes.');
       } else {
         await sql`
@@ -200,10 +227,10 @@ export async function loginUser(
           SET failed_login_attempts = ${newFailedAttempts}
           WHERE user_id = ${cred.userId}
         `;
-        await authLog({ event: 'login_failure', userId: cred.userId, email: cred.email, ipAddress, metadata: { failedAttempts: newFailedAttempts } });
+        await logAuthEvent({ event: 'login_failure', userId: cred.userId, email: cred.email, ipAddress, metadata: { failedAttempts: newFailedAttempts } });
       }
     } else {
-      await authLog({ event: 'login_failure', email, ipAddress });
+      await logAuthEvent({ event: 'login_failure', email, ipAddress });
     }
     throw new UnauthorizedError('Invalid email or password');
   }
@@ -247,7 +274,7 @@ export async function loginUser(
         crypto.randomUUID(),
       );
 
-      await authLog({ event: 'login_success', userId: cred.userId, email: cred.email, ipAddress, deviceFingerprintHash: deviceHash, metadata: { method: 'trusted_device' } });
+      await logAuthEvent({ event: 'login_success', userId: cred.userId, email: cred.email, ipAddress, deviceFingerprintHash: deviceHash, metadata: { method: 'trusted_device' } });
       return {
         type: 'success',
         tokens,
@@ -272,7 +299,7 @@ export async function loginUser(
   `;
 
   await send2FACode(cred.email, code, cred.firstName);
-  await authLog({ event: '2fa_sent', userId: cred.userId, email: cred.email, ipAddress });
+  await logAuthEvent({ event: '2fa_sent', userId: cred.userId, email: cred.email, ipAddress });
 
   return { type: 'requires2FA', userId: cred.userId };
 }
@@ -309,7 +336,7 @@ export async function verify2FACode(
   `;
 
   if (codes.length === 0) {
-    await authLog({ event: '2fa_failed', userId, ipAddress });
+    await logAuthEvent({ event: '2fa_failed', userId, ipAddress });
     throw new UnauthorizedError('Invalid or expired code');
   }
 
@@ -362,7 +389,7 @@ export async function verify2FACode(
         INSERT INTO user_trusted_devices (user_id, device_hash, device_name, expires_at)
         VALUES (${cred.userId}, ${deviceHash}, ${deviceName || 'Unknown Device'}, ${expiresAt})
       `;
-      await authLog({ event: 'trusted_device_added', userId: cred.userId, email: cred.email, ipAddress, metadata: { deviceName: deviceName || 'Unknown Device' } });
+      await logAuthEvent({ event: 'trusted_device_added', userId: cred.userId, email: cred.email, ipAddress, metadata: { deviceName: deviceName || 'Unknown Device' } });
     }
   }
 
@@ -380,7 +407,7 @@ export async function verify2FACode(
     crypto.randomUUID(),
   );
 
-  await authLog({ event: '2fa_verified', userId: cred.userId, email: cred.email, ipAddress });
+  await logAuthEvent({ event: '2fa_verified', userId: cred.userId, email: cred.email, ipAddress });
   return {
     tokens,
     user: { id: cred.userId, firstName: cred.firstName, lastName: cred.lastName, email: cred.email },
@@ -434,7 +461,7 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
   `;
 
   await send2FACode(cred.email, code, cred.firstName);
-  await authLog({ event: '2fa_resent', userId, email: cred.email, ipAddress });
+  await logAuthEvent({ event: '2fa_resent', userId, email: cred.email, ipAddress });
 }
 
 export async function rotateRefreshToken(
@@ -474,7 +501,7 @@ export async function rotateRefreshToken(
       await sql`
         UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE token_family = ${familyTokens[0].tokenFamily}
       `;
-      await authLog({ event: 'token_reuse_detected', userId: decoded.userId, email: decoded.email, ipAddress, metadata: { tokenFamily: familyTokens[0].tokenFamily } });
+      await logAuthEvent({ event: 'token_reuse_detected', userId: decoded.userId, email: decoded.email, ipAddress, metadata: { tokenFamily: familyTokens[0].tokenFamily } });
       throw new ForbiddenError('Token reuse detected - all sessions revoked');
     } else {
       throw new ForbiddenError('Invalid or expired refresh token');
@@ -575,7 +602,7 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
     }
   }
 
-  await authLog({ event: 'logout', userId: logUserId, email: logEmail, ipAddress });
+  await logAuthEvent({ event: 'logout', userId: logUserId, email: logEmail, ipAddress });
 }
 
 export async function requestPasswordReset(email: string, ipAddress?: string): Promise<void> {
@@ -616,7 +643,7 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
   `;
 
   await sendEmail(cred.email, 'Password Reset Request', emailHtml);
-  await authLog({ event: 'password_reset_requested', userId: cred.userId, email: cred.email, ipAddress });
+  await logAuthEvent({ event: 'password_reset_requested', userId: cred.userId, email: cred.email, ipAddress });
 }
 
 export async function resetUserPassword(token: string, newPassword: string, ipAddress?: string): Promise<void> {
@@ -644,9 +671,8 @@ export async function resetUserPassword(token: string, newPassword: string, ipAd
 
   const resetToken = consumedTokens[0];
   const passwordHash = await bcrypt.hash(newPassword, 10);
-
   await sql`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
   await sql`UPDATE users SET active = true WHERE id = ${resetToken.userId} AND active = false`;
   await sql`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
-  await authLog({ event: 'password_reset_completed', userId: resetToken.userId, ipAddress });
+  await logAuthEvent({ event: 'password_reset_completed', userId: resetToken.userId, ipAddress });
 }

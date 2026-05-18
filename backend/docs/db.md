@@ -151,6 +151,18 @@ await audit(trx, userId, transactionId, 'youth_profiles', profileId, 'UPDATE', o
 
 `audit()` must be called **inside an open transaction** (`trx` from `asTransactionSql()`). If the surrounding transaction rolls back, the audit entry rolls back with it — audit entries never exist without their corresponding data change.
 
+### Nested write services
+
+When one write service calls another inside a larger save flow, the parent service owns the transaction and passes `trx` downward. Child services should keep their reconciliation logic in a private helper that accepts `trx`, while the public entry point still supports standalone use by opening its own transaction when no `trx` is provided.
+
+Current example:
+
+- `youthService.ts` opens one transaction for `users`, `youth_profiles`, addresses, and contacts
+- `setAddresses()` / `setContacts()` join that outer transaction when a `trx` is passed
+- the same public methods still work standalone by calling `sql.begin(...)` when no `trx` is provided
+
+This prevents partial writes across nested service boundaries. If contact creation fails during a youth save, the `users` row, `youth_profiles` row, address changes, contact changes, and audit rows all roll back together.
+
 ### Coverage
 
 | Service | Tables audited |

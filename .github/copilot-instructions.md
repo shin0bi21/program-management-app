@@ -250,9 +250,20 @@ import { sql, asTransactionSql } from '../db/client';
 await sql.begin(async (tx) => {
   const trx = asTransactionSql(tx);
   await trx`UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${jti}`;
-  await trx`INSERT INTO token_blacklist ...`;
+  await trx`INSERT INTO system_revoked_tokens ...`;
 });
 // Never mix root sql and trx inside the same transaction
+
+// Nested write services should join the caller's transaction instead of
+// opening their own. Keep the inner reconciliation logic in a private helper
+// that accepts `trx`, and let the public method open `sql.begin(...)` only
+// when no transaction was provided.
+
+// Example shape:
+// export async function setAddresses(..., trx?: typeof sql) {
+//   if (trx) return setAddressesInTx(trx, ...);
+//   await sql.begin(async (tx) => setAddressesInTx(asTransactionSql(tx), ...));
+// }
 ```
 
 DB returns `snake_case` columns; postgres.js `transform: postgres.camel` converts to camelCase automatically.
@@ -275,7 +286,7 @@ Use `DbRow<T>` from `src/types/db.ts` for type-level conversion.
 ## Auth System Summary
 
 Two JWTs with different secrets:
-- **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `token_blacklist`)
+- **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `system_revoked_tokens`)
 - **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `refresh_tokens` table
 
 Login flow: `POST /auth/login` → credentials check → send 2FA email → `POST /auth/verify` → issue token pair.
