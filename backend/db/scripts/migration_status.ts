@@ -38,9 +38,12 @@ async function getAppliedMigrations(): Promise<MigrationRecord[]> {
       ORDER BY applied_at
     `;
     return result;
-  } catch (error) {
-    console.error('Error reading schema_migrations table. Has init migration been applied?');
-    return [];
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('relation "schema_migrations" does not exist')) {
+      return []; // first run — init migration hasn't been applied yet
+    }
+    throw error;
   }
 }
 

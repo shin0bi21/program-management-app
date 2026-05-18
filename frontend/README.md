@@ -22,7 +22,7 @@ See [`docs/api-flow.mmd`](docs/api-flow.mmd) for the full frontend request lifec
 For the full-stack overview (frontend → backend → DB), see the [root README](../README.md).
 
 ## Testing
-Frontend unit tests are not yet configured. Backend integration tests (auth, staff, youth) are run via the shell scripts in [`../scripts/`](../scripts/) — e.g. `../scripts/run-auth-tests.sh`.
+Frontend unit tests are not yet configured. Backend integration tests (auth, staff, youth) are run via the shell scripts in [`../scripts/tests/`](../scripts/tests/) — e.g. `../scripts/tests/run-auth-tests.sh`.
 
 ## Notes
 - When adding new pages, keep API, hooks, and UI co‑located under `src/pages/<PageName>`.

@@ -14,9 +14,10 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 6. [Token Verification & Guards](#6-token-verification--guards)
 7. [Refresh Token Rotation](#7-refresh-token-rotation)
 8. [Logout & Blacklisting](#8-logout--blacklisting)
-9. [Shared Utilities](#9-shared-utilities)
-10. [Module Boundaries](#10-module-boundaries)
-11. [What Is Out of Scope (and Why)](#11-what-is-out-of-scope-and-why)
+9. [Auth Logging](#9-auth-logging)
+10. [Shared Utilities](#10-shared-utilities)
+11. [Module Boundaries](#11-module-boundaries)
+12. [What Is Out of Scope (and Why)](#12-what-is-out-of-scope-and-why)
 
 ---
 
@@ -93,8 +94,8 @@ Authorization is purely permission-based. **No role checks exist in route or UI 
 
 | Role | Permissions |
 |------|-------------|
-| `admin` | `read:staff`, `write:staff`, `read:youth`, `write:youth`, `read:schools`, `read:settings`, `write:settings` |
-| `staff` | `read:youth`, `write:youth`, `read:schools` |
+| `admin` | `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `read:settings`, `write:settings` |
+| `staff` | `read:youth_profiles`, `write:youth_profiles`, `read:schools` |
 | `youth` | *(none)* |
 
 ### Permission definitions
@@ -103,8 +104,8 @@ Authorization is purely permission-based. **No role checks exist in route or UI 
 |------------|--------|
 | `read:staff` | `GET /api/staff` |
 | `write:staff` | `POST /api/staff` |
-| `read:youth` | `GET /api/youth` |
-| `write:youth` | `POST /api/youth` |
+| `read:youth_profiles` | `GET /api/youth` |
+| `write:youth_profiles` | `POST /api/youth` |
 | `read:schools` | `GET /api/schools` |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
@@ -143,7 +144,7 @@ interface BaseTokenPayload {
 // Access token — adds role, permissions array, and type discriminator
 interface AccessTokenPayload extends BaseTokenPayload {
   role: UserRole;            // 'admin' | 'staff' | 'youth' — for display only
-  permissions: Permission[]; // e.g. ['read:youth', 'write:youth'] — used for all authz checks
+  permissions: Permission[]; // e.g. ['read:youth_profiles', 'write:youth_profiles'] — used for all authz checks
   tokenType: 'access';
   iat: number;               // required on decoded tokens (always present after verify)
   exp: number;               // required on decoded tokens
@@ -253,7 +254,50 @@ Errors during token decode (expired, already invalid) are silently swallowed —
 
 ---
 
-## 9. Shared Utilities
+## 9. Auth Logging
+
+Every security-relevant auth event is written to `auth_log` by `src/services/authLogService.ts`. The call is fire-and-forget — a logging failure never blocks or fails the auth operation.
+
+### Events wired in `authService.ts`
+
+| Event | Location |
+|-------|----------|
+| `login_failure` | Bad password — `failedAttempts` in metadata |
+| `account_locked` | 5th failed attempt — `lockedUntil` in metadata |
+| `login_success` | Trusted device bypass — `method: 'trusted_device'` + `deviceFingerprintHash` in metadata |
+| `2fa_sent` | End of `loginUser()` after `send2FACode()` |
+| `2fa_resent` | `resend2FACode()` after re-sending the code |
+| `2fa_failed` | `verify2FACode()` — no valid code found |
+| `2fa_verified` | `verify2FACode()` — code accepted, session issued |
+| `trusted_device_added` | `verify2FACode()` — new device recorded as trusted |
+| `token_reuse_detected` | `rotateRefreshToken()` — entire token family revoked |
+| `logout` | `logoutUser()` — userId extracted by decoding either token |
+| `password_reset_requested` | `requestPasswordReset()` — after reset email dispatched |
+| `password_reset_completed` | `resetUserPassword()` — after password updated |
+
+### IP Privacy
+
+`req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [db.md § 6 Auth Log](./db.md#6-auth-log) for the full privacy design.
+
+The HMAC key defaults to `JWT_SECRET` but can be overridden by setting `LOG_HMAC_SECRET` to an independent secret. Using a separate secret means IP hash correlation cannot be broken even if `JWT_SECRET` is rotated — recommended for production.
+
+### Function signatures
+
+All six exported auth service functions accept an optional `ipAddress?` trailing parameter:
+
+```ts
+loginUser(email, password, deviceFingerprint?, ipAddress?)
+verify2FACode(userId, code, trustDevice, deviceFingerprint?, deviceName?, ipAddress?)
+resend2FACode(userId, ipAddress?)
+rotateRefreshToken(rawRefreshToken, ipAddress?)
+logoutUser(rawRefreshToken?, rawAccessToken?, ipAddress?)
+requestPasswordReset(email, ipAddress?)
+resetUserPassword(token, newPassword, ipAddress?)
+```
+
+---
+
+## 10. Shared Utilities
 
 ### `src/utils/env.ts`
 
@@ -280,22 +324,23 @@ The in-memory `Set<string>` and 60s TTL polling are internal implementation deta
 
 ---
 
-## 10. Module Boundaries
+## 11. Module Boundaries
 
-The dependency graph is acyclic. Middleware depends on services/utils, services depend on utils, nothing depends on middleware:
+The dependency graph is acyclic. Middleware depends on services/utils, services depend on utils and other services, nothing depends on middleware:
 ```
 authMiddleware.ts  ──▶  tokenRevocationService.ts  ◀──  authService.ts
 authMiddleware.ts  ──▶  src/types/auth.ts          ◀──  authService.ts
 authMiddleware.ts  ──▶  src/utils/env.ts           ◀──  authService.ts
+authService.ts     ──▶  authLogService.ts
 ```
 
-Middleware depends on services/utils. Services depend on utils. Nothing depends on middleware.
+Middleware depends on services/utils. Services depend on utils and may depend on peer services in the same layer (e.g. `authService.ts` calls `authLogService.ts`). Nothing depends on middleware.
 
 **Rule:** any logic needed by both `authService.ts` and `authMiddleware.ts` must live in `src/services/` or `src/utils/`, never in middleware.
 
 ---
 
-## 11. What Is Out of Scope (and Why)
+## 12. What Is Out of Scope (and Why)
 
 | Topic | Status | Reason |
 |-------|--------|--------|

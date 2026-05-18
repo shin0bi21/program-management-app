@@ -44,20 +44,27 @@ export interface Addresses {
   updated_by: string | null;
 }
 
-export interface AddressesBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  address: string | null;
-  city: string | null;
-  country: string | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  id: string | null;
-  postal_code: string | null;
-  province: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
+export interface AuditLog {
+  action: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  new_data: Json | null;
+  old_data: Json | null;
+  record_id: string;
+  table_name: string;
+  transaction_id: string;
+  user_id: string | null;
+}
+
+export interface AuthLog {
+  created_at: Generated<Timestamp | null>;
+  device_fingerprint_hash: string | null;
+  email: string | null;
+  event: string;
+  id: Generated<string>;
+  ip_hash: string | null;
+  metadata: Json | null;
+  user_id: string | null;
 }
 
 export interface BaseTable {
@@ -79,28 +86,6 @@ export interface Contacts {
   updated_by: string | null;
 }
 
-export interface ContactsBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  first_name: string | null;
-  id: string | null;
-  last_name: string | null;
-  phone_number: string | null;
-  type: ContactType | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-}
-
-export interface SchemaBackupTracking {
-  generated_at: Generated<Timestamp>;
-  id: Generated<number>;
-  migration_version: string | null;
-  table_name: string;
-}
-
 export interface SchemaMigrations {
   applied_at: Generated<Timestamp>;
   checksum: string | null;
@@ -119,22 +104,6 @@ export interface Schools {
   postal_code: string | null;
   school_type: SchoolType;
   updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
-export interface SchoolsBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  address: string | null;
-  board: SchoolBoard | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  id: string | null;
-  name: string | null;
-  postal_code: string | null;
-  school_type: SchoolType | null;
-  updated_at: Timestamp | null;
   updated_by: string | null;
 }
 
@@ -183,20 +152,6 @@ export interface UserHasAddresses {
   user_id: string;
 }
 
-export interface UserHasAddressesBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  active: boolean | null;
-  address_id: string | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  id: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-  user_id: string | null;
-}
-
 export interface UserHasContacts {
   active: Generated<boolean>;
   assigned_at: Generated<Timestamp | null>;
@@ -206,20 +161,6 @@ export interface UserHasContacts {
   updated_at: Generated<Timestamp | null>;
   updated_by: string | null;
   user_id: string;
-}
-
-export interface UserHasContactsBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  active: boolean | null;
-  assigned_at: Timestamp | null;
-  contact_id: string | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-  user_id: string | null;
 }
 
 export interface UserPasswordResetTokens {
@@ -261,36 +202,12 @@ export interface UserRoleHasPermissions {
   updated_by: string | null;
 }
 
-export interface UserRoleHasPermissionsBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  permission_id: string | null;
-  role_id: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-}
-
 export interface UserRoles {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   id: Generated<string>;
   name: string;
   updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
-export interface UserRolesBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  id: string | null;
-  name: string | null;
-  updated_at: Timestamp | null;
   updated_by: string | null;
 }
 
@@ -331,22 +248,6 @@ export interface YouthProfiles {
   user_id: string;
 }
 
-export interface YouthProfilesBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  age_group: AgeGroup | null;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  date_of_birth: Timestamp | null;
-  grade_level: number | null;
-  id: string | null;
-  school_id: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-  user_id: string | null;
-}
-
 export interface YouthWorksheets {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -362,52 +263,26 @@ export interface YouthWorksheets {
   youth_id: string;
 }
 
-export interface YouthWorksheetsBackup {
-  _backup_action: string | null;
-  _backup_timestamp: Generated<Timestamp | null>;
-  _uuid: Generated<string>;
-  created_at: Timestamp | null;
-  created_by: string | null;
-  file_data: Buffer | null;
-  file_size: number | null;
-  file_type: string | null;
-  id: string | null;
-  metadata: Json | null;
-  note: string | null;
-  title: string | null;
-  updated_at: Timestamp | null;
-  updated_by: string | null;
-  youth_id: string | null;
-}
-
 export interface DB {
   addresses: Addresses;
-  addresses_backup: AddressesBackup;
+  audit_log: AuditLog;
+  auth_log: AuthLog;
   base_table: BaseTable;
   contacts: Contacts;
-  contacts_backup: ContactsBackup;
-  schema_backup_tracking: SchemaBackupTracking;
   schema_migrations: SchemaMigrations;
   schools: Schools;
-  schools_backup: SchoolsBackup;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;
   user_has_addresses: UserHasAddresses;
-  user_has_addresses_backup: UserHasAddressesBackup;
   user_has_contacts: UserHasContacts;
-  user_has_contacts_backup: UserHasContactsBackup;
   user_password_reset_tokens: UserPasswordResetTokens;
   user_permissions: UserPermissions;
   user_refresh_tokens: UserRefreshTokens;
   user_role_has_permissions: UserRoleHasPermissions;
-  user_role_has_permissions_backup: UserRoleHasPermissionsBackup;
   user_roles: UserRoles;
-  user_roles_backup: UserRolesBackup;
   user_trusted_devices: UserTrustedDevices;
   users: Users;
   youth_profiles: YouthProfiles;
-  youth_profiles_backup: YouthProfilesBackup;
   youth_worksheets: YouthWorksheets;
-  youth_worksheets_backup: YouthWorksheetsBackup;
 }

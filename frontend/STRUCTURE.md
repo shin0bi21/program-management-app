@@ -68,6 +68,7 @@ src/
     styles/
       brand.css
       forms.css
+      pages.css
     types/
       school.ts           ← cross-page domain types
     utils/

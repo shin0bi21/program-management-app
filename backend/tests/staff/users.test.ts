@@ -138,11 +138,11 @@ describe('Staff API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should reject short password', async () => {
+    it('should reject invalid role', async () => {
       const res = await request(app)
         .post('/api/staff')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'short' });
+        .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', role: 'youth' });
       expect(res.status).toBe(400);
     });
 

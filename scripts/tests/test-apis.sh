@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")/.." || exit
+cd "$(dirname "$0")/../.." || exit
 
 source scripts/_docker-health.sh
 
@@ -9,7 +9,7 @@ echo "=========================================="
 echo "Running ALL test suites"
 echo "=========================================="
 
-docker-compose exec -T backend npm test
+docker compose exec -T backend npm test
 
 echo ""
 echo "=========================================="
