@@ -63,7 +63,7 @@ async function syncAddresses(trx: SqlExecutor, userId: string, addressesData: Ad
     `;
     for (const addressId of toDelete) {
       const old = existingAddressMap.get(addressId)!;
-      await audit(trx, auditUserId, transactionId, 'addresses', addressId, 'DELETE', { address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, null);
+      await audit(trx, auditUserId, transactionId, 'addresses', addressId, 'DELETE', { userId, address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, null);
     }
   }
 
@@ -95,7 +95,7 @@ async function syncAddresses(trx: SqlExecutor, userId: string, addressesData: Ad
     `;
     for (const item of toUpdate) {
       const old = existingAddressMap.get(item.id!)!;
-      await audit(trx, auditUserId, transactionId, 'addresses', item.id!, 'UPDATE', { address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, { address: item.address, city: item.city, province: item.province, postalCode: item.postalCode });
+      await audit(trx, auditUserId, transactionId, 'addresses', item.id!, 'UPDATE', { userId, address: old.address, city: old.city, province: old.province, postalCode: old.postalCode }, { userId, address: item.address, city: item.city, province: item.province, postalCode: item.postalCode });
     }
   }
 
@@ -111,7 +111,7 @@ async function syncAddresses(trx: SqlExecutor, userId: string, addressesData: Ad
       VALUES (${userId}, ${newAddresses[0].id}, true)
       ON CONFLICT (user_id, address_id) DO UPDATE SET active = true, updated_at = NOW()
     `;
-    await audit(trx, auditUserId, transactionId, 'addresses', newAddresses[0].id, 'INSERT', null, { address: newAddresses[0].address, city: newAddresses[0].city, province: newAddresses[0].province, postalCode: newAddresses[0].postalCode, country: newAddresses[0].country });
+    await audit(trx, auditUserId, transactionId, 'addresses', newAddresses[0].id, 'INSERT', null, { userId, address: newAddresses[0].address, city: newAddresses[0].city, province: newAddresses[0].province, postalCode: newAddresses[0].postalCode, country: newAddresses[0].country });
   }
 }
 

@@ -63,7 +63,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
     `;
     for (const contactId of toDelete) {
       const old = existingContactMap.get(contactId)!;
-      await audit(trx, auditUserId, transactionId, 'contacts', contactId, 'DELETE', { firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
+      await audit(trx, auditUserId, transactionId, 'contacts', contactId, 'DELETE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
     }
   }
 
@@ -95,7 +95,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
     `;
     for (const item of toUpdate) {
       const old = existingContactMap.get(item.id!)!;
-      await audit(trx, auditUserId, transactionId, 'contacts', item.id!, 'UPDATE', { firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, { firstName: item.firstName, lastName: item.lastName, phoneNumber: item.phoneNumber || null, type: item.type });
+      await audit(trx, auditUserId, transactionId, 'contacts', item.id!, 'UPDATE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, { userId, firstName: item.firstName, lastName: item.lastName, phoneNumber: item.phoneNumber || null, type: item.type });
     }
   }
 
@@ -111,7 +111,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
       VALUES (${userId}, ${newContacts[0].id}, true)
       ON CONFLICT (user_id, contact_id) DO UPDATE SET active = true, updated_at = NOW()
     `;
-    await audit(trx, auditUserId, transactionId, 'contacts', newContacts[0].id, 'INSERT', null, { firstName: newContacts[0].firstName, lastName: newContacts[0].lastName, phoneNumber: newContacts[0].phoneNumber || null, type: newContacts[0].type });
+    await audit(trx, auditUserId, transactionId, 'contacts', newContacts[0].id, 'INSERT', null, { userId, firstName: newContacts[0].firstName, lastName: newContacts[0].lastName, phoneNumber: newContacts[0].phoneNumber || null, type: newContacts[0].type });
   }
 }
 

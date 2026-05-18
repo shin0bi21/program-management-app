@@ -137,8 +137,8 @@ All INSERT, UPDATE, and DELETE operations made through the application are recor
 | `table_name` | VARCHAR(100) | Target table name |
 | `record_id` | UUID | PK of the affected row |
 | `action` | VARCHAR(10) | `'INSERT'` / `'UPDATE'` / `'DELETE'` |
-| `old_data` | JSONB | Full row snapshot before change (null for INSERT) |
-| `new_data` | JSONB | Full row snapshot after change (null for DELETE) |
+| `old_data` | JSONB | Row snapshot before change, plus related keys when needed for domain undo (null for INSERT) |
+| `new_data` | JSONB | Row snapshot after change, plus related keys when needed for domain undo (null for DELETE) |
 | `created_at` | TIMESTAMPTZ | When the entry was written |
 
 ### `auditService.ts` — `audit()`
@@ -162,6 +162,8 @@ Current example:
 - the same public methods still work standalone by calling `sql.begin(...)` when no `trx` is provided
 
 This prevents partial writes across nested service boundaries. If contact creation fails during a youth save, the `users` row, `youth_profiles` row, address changes, contact changes, and audit rows all roll back together.
+
+For junction-backed domain operations like youth addresses and contacts, audit payloads also include the owning `userId`. This keeps the audit log usable for future action-level undo handlers, because a revert needs to know not just which `address` or `contact` row changed, but which youth link should be restored or removed.
 
 ### Coverage
 
