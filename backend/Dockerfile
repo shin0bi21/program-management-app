@@ -1,8 +1,10 @@
 # ── Shared base ──────────────────────────────────────────────────────────────
 FROM node:20-alpine AS base
-# postgresql-client: psql used by update_schemas.ts migrations
-# curl: healthcheck in docker-compose.prod.yml
-RUN apk add --no-cache postgresql-client curl
+# postgresql18-client: psql used by update_schemas.ts migrations
+# Pinned to major version 18 to match postgres:18-alpine server image.
+# Bump this only when the server image is also bumped.
+# curl: healthcheck in docker-compose.yml
+RUN apk add --no-cache postgresql18-client curl
 WORKDIR /app
 
 # ── Development stage ─────────────────────────────────────────────────────────

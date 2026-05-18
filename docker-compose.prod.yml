@@ -33,7 +33,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
@@ -42,7 +43,7 @@ services:
       start_period: 30s
 
   db:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: myapp_db
     restart: always
     environment:
@@ -52,7 +53,13 @@ services:
     # No external port binding — backend reaches db via Docker network (db:5432)
     # Binding 5432 to the host would expose PostgreSQL to the internet
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   db_data:

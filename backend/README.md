@@ -100,15 +100,15 @@ ADMIN_LAST_NAME=Name
 ### First-Time Setup
 
 ```bash
-docker-compose up -d
-docker-compose exec backend npm run db:migrate
-docker-compose exec backend npm run seed:admin   # idempotent
+docker compose up -d
+docker compose exec backend npm run db:migrate
+docker compose exec backend npm run seed:admin   # idempotent
 ```
 
 ### Daily Start
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 The dev server starts automatically inside the container.
@@ -197,9 +197,8 @@ Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_descr
 ### Commands
 
 ```bash
-docker-compose exec backend npm run db:migrate:dry   # preview — no changes applied
-docker-compose exec backend npm run db:migrate       # apply pending migrations
-docker-compose exec backend npm run db:status        # applied migrations + checksum status
+docker compose exec backend npm run db:migrate   # apply pending migrations + regenerate types
+docker compose exec backend npm run db:status    # applied migrations + checksum status
 ```
 
 For the ERD, base table pattern, audit/auth log architecture, and safety guarantees see [docs/db.md](docs/db.md).
@@ -224,10 +223,10 @@ bash scripts/tests/run-staff-tests.sh   # 15 tests
 bash scripts/tests/run-youth-tests.sh   # 25 tests
 
 # Or directly
-docker-compose exec backend npm run test:auth
-docker-compose exec backend npm run test:staff
-docker-compose exec backend npm run test:youth
-docker-compose exec backend npm run test:coverage
+docker compose exec backend npm run test:auth
+docker compose exec backend npm run test:staff
+docker compose exec backend npm run test:youth
+docker compose exec backend npm run test:coverage
 ```
 
 The helper scripts detect already-running containers and **will not tear them down** afterwards — your dev data is preserved.
@@ -296,11 +295,11 @@ describe('Feature Tests', () => {
 ### Daily Loop
 
 ```bash
-docker-compose up -d                              # 1. start containers
+docker compose up -d                              # 1. start containers
 # 2. edit code in src/, tests/, db/migrations/
-docker-compose exec backend npm run typecheck    # 3. type-check
+docker compose exec backend npm run typecheck    # 3. type-check
 bash scripts/tests/test-apis.sh                   # 4. run tests
-docker-compose exec backend npm run db:migrate   # 5. apply any new migrations
+docker compose exec backend npm run db:migrate   # 5. apply any new migrations
 git add . && git commit -m "Description" && git push
 ```
 
@@ -319,25 +318,67 @@ The backend container runs with the Node.js inspector on port 9229.
 
 ## 8. Deployment
 
-### First-Time Deploy
+Deployments run **automatically via CI** on every merge to `main`. No manual steps are needed after initial server setup.
 
-```bash
-# Set admin credentials in the server's .env first
-docker-compose up -d
-docker-compose exec backend npm run db:migrate
-docker-compose exec backend npm run seed:admin
+### Automated Flow
+
+```
+push to main → CI (typecheck + test + build) → deploy job → SSH → ./scripts/deploy.sh
 ```
 
-Admin credentials come from `.env`. Never expose admin creation through an API endpoint.
+`scripts/deploy.sh` (project root) handles the full deploy:
+1. `git reset --hard origin/main` — pull latest code
+2. Build frontend (`docker run node:20-alpine npm ci && npm run build`)
+3. Take a verified gzipped DB snapshot
+4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
+5. Run `db:migrate` from the new image
+6. `docker compose -f docker-compose.prod.yml up -d`
+7. Wait for backend healthcheck
+8. On any failure after step 3: automatically restore DB from snapshot
 
-### Subsequent Deploys (with Schema Changes)
+### First-Time Server Setup
+
+Run once on the Lightsail server before the first deploy:
 
 ```bash
-pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql       # 1. backup first
-docker-compose exec backend npm run db:migrate:dry        # 2. preview
-docker-compose exec backend npm run db:migrate            # 3. apply
-docker-compose exec backend npm run db:status             # 4. verify
+# Install Docker
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+
+# Clone repo and configure
+git clone <repo-url> /path/to/my-webapp && cd /path/to/my-webapp
+cp .env.example .env   # fill in all required vars
+
+# Issue SSL cert (port 80 must be free — Docker not started yet)
+sudo apt install -y certbot
+sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+
+# Replace domain placeholder in nginx.conf
+sed -i 's/your-domain.com/yourdomain.com/g' nginx.conf
+
+# Create webroot dir for cert renewals
+sudo mkdir -p /var/www/certbot
+
+# First start + run migrations + seed admin
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml exec backend npm run db:migrate
+docker compose -f docker-compose.prod.yml exec backend npm run seed:admin
+
+# Switch certbot renewal to webroot (nginx now running) and set up cron
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d yourdomain.com -d www.yourdomain.com --force-renewal
+echo "0 3 * * * root certbot renew --quiet && docker exec myapp_nginx nginx -s reload" \
+  | sudo tee /etc/cron.d/certbot-renew
 ```
+
+### GitHub Secrets Required
+
+| Secret | Value |
+|--------|-------|
+| `LIGHTSAIL_HOST` | Server IP |
+| `LIGHTSAIL_USER` | SSH user (e.g. `ubuntu`) |
+| `LIGHTSAIL_SSH_KEY` | Private key (`-----BEGIN...-----END...`) |
+| `LIGHTSAIL_APP_PATH` | Absolute path to repo on server |
 
 Do not re-run `seed:admin` on subsequent deploys.
 
@@ -375,7 +416,7 @@ bash scripts/reset-dev-stack.sh
 
 ## 10. Commands Reference
 
-All `npm run` commands execute inside the Docker container via `docker-compose exec backend npm run <command>`.
+All `npm run` commands execute inside the Docker container via `docker compose exec backend npm run <command>`.
 
 | Command | Description |
 |---------|-------------|
@@ -390,7 +431,6 @@ All `npm run` commands execute inside the Docker container via `docker-compose e
 | `test:watch` | Run tests in watch mode |
 | `test:coverage` | Run tests with coverage report |
 | `db:migrate` | Apply pending migrations + regenerate types |
-| `db:migrate:dry` | Preview pending migrations without applying |
 | `db:status` | Show applied migrations + checksum status |
 | `db:types` | Regenerate TypeScript types from DB schema |
 | `seed:admin` | Seed the admin user (idempotent) |

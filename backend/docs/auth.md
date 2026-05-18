@@ -262,7 +262,7 @@ Every security-relevant auth event is written to `auth_log` by `src/services/aut
 
 | Event | Location |
 |-------|----------|
-| `login_failure` | Bad password — `failedAttempts` + optionally `lockedUntil` in metadata |
+| `login_failure` | Bad password — `failedAttempts` in metadata |
 | `account_locked` | 5th failed attempt — `lockedUntil` in metadata |
 | `login_success` | Trusted device bypass — `method: 'trusted_device'` + `deviceFingerprintHash` in metadata |
 | `2fa_sent` | End of `loginUser()` after `send2FACode()` |
@@ -278,6 +278,8 @@ Every security-relevant auth event is written to `auth_log` by `src/services/aut
 ### IP Privacy
 
 `req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [db.md § 6 Auth Log](./db.md#6-auth-log) for the full privacy design.
+
+The HMAC key defaults to `JWT_SECRET` but can be overridden by setting `LOG_HMAC_SECRET` to an independent secret. Using a separate secret means IP hash correlation cannot be broken even if `JWT_SECRET` is rotated — recommended for production.
 
 ### Function signatures
 
@@ -324,14 +326,15 @@ The in-memory `Set<string>` and 60s TTL polling are internal implementation deta
 
 ## 11. Module Boundaries
 
-The dependency graph is acyclic. Middleware depends on services/utils, services depend on utils, nothing depends on middleware:
+The dependency graph is acyclic. Middleware depends on services/utils, services depend on utils and other services, nothing depends on middleware:
 ```
 authMiddleware.ts  ──▶  tokenRevocationService.ts  ◀──  authService.ts
 authMiddleware.ts  ──▶  src/types/auth.ts          ◀──  authService.ts
 authMiddleware.ts  ──▶  src/utils/env.ts           ◀──  authService.ts
+authService.ts     ──▶  authLogService.ts
 ```
 
-Middleware depends on services/utils. Services depend on utils. Nothing depends on middleware.
+Middleware depends on services/utils. Services depend on utils and may depend on peer services in the same layer (e.g. `authService.ts` calls `authLogService.ts`). Nothing depends on middleware.
 
 **Rule:** any logic needed by both `authService.ts` and `authMiddleware.ts` must live in `src/services/` or `src/utils/`, never in middleware.
 

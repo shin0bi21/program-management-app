@@ -5,6 +5,23 @@ Full-stack youth services management system.
 
 ---
 
+## Pinned Versions — DO NOT CHANGE
+
+These are production-stable. Do not suggest, bump, or modify any of these without explicit user instruction:
+
+| What | Pinned version |
+|---|---|
+| Node.js (Dockerfile + docker-compose.yml) | `node:20-alpine` |
+| PostgreSQL server (docker-compose.yml + prod) | `postgres:18-alpine` |
+| PostgreSQL client (Dockerfile `apk add`) | `postgresql18-client` |
+| Express | `4.18.2` |
+| TypeScript | `5.9.3` |
+| ts-node | `10.9.2` |
+
+The `postgresql18-client` version in the Dockerfile **must always match** the `postgres:X-alpine` server image version. Only bump both together, and only when explicitly asked.
+
+---
+
 ## Repo Layout
 
 ```
@@ -324,6 +341,18 @@ new ApiError(res.status, err.error, err.details, err.requestId)
 
 ---
 
+## Dev Stack
+
+To rebuild the local dev stack from scratch (stops containers, wipes volumes, rebuilds images, runs migrations on both dev + test DBs, seeds admin):
+
+```bash
+./scripts/reset-dev-stack.sh
+```
+
+Run this after pulling changes that include new migrations, or any time the stack is in a bad state.
+
+---
+
 ## Running Tests
 
 Tests run inside Docker against a real test DB:
@@ -347,6 +376,29 @@ shellcheck scripts/deploy.sh   # semantic check — catches unquoted vars, bad r
 
 They complement each other: `bash -n` catches what shellcheck misses and vice versa.
 Install shellcheck with `brew install shellcheck`.
+
+---
+
+## Production Deployment
+
+**Prod compose file:** `docker-compose.prod.yml` (project root) — backend `prod` target, nginx with SSL, db only. No dev services, no exposed DB/backend ports.
+
+**Dockerfile:** Multi-stage — `dev` (tail -f, volumes from compose), `builder` (tsc compile), `prod` (production deps + compiled dist, `npm start`).
+
+**nginx.conf:** Port 80 redirects to HTTPS. Port 443 with TLS 1.2/1.3, HSTS, security headers. ACME challenge path for certbot renewals.
+
+**CI auto-deploy:** `.github/workflows/ci.yml` — on push to `main`, after backend + frontend jobs pass, SSHes into Lightsail and runs `./scripts/deploy.sh`. Requires 4 GitHub secrets: `LIGHTSAIL_HOST`, `LIGHTSAIL_USER`, `LIGHTSAIL_SSH_KEY`, `LIGHTSAIL_APP_PATH`.
+
+**deploy.sh flow:**
+1. `git reset --hard origin/main`
+2. Build frontend via `docker run node:20-alpine`
+3. DB snapshot (gzipped pg_dump, verified)
+4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
+5. Migrate from new image (`docker compose run --rm --no-deps backend`)
+6. `docker compose -f docker-compose.prod.yml up -d`
+7. Health check — on failure, auto-restores DB from snapshot
+
+**`COMPOSE_FILE=docker-compose.prod.yml`** is exported at the top of `deploy.sh` — all `docker compose` calls in the script use it automatically.
 
 ---
 

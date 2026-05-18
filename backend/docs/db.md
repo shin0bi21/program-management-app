@@ -89,9 +89,8 @@ CREATE INDEX idx_posts_user_id ON posts(user_id);
 **Step 2 — Test locally:**
 
 ```bash
-docker-compose exec backend npm run db:migrate:dry   # preview — no changes applied
-docker-compose exec backend npm run db:migrate       # apply + auto-regenerates src/types/database.ts
-docker-compose exec backend npm run db:status        # verify
+docker compose exec backend npm run db:migrate   # apply + auto-regenerates src/types/database.ts
+docker compose exec backend npm run db:status    # verify
 ```
 
 `db:migrate` automatically runs `kysely-codegen` after applying migrations to keep `src/types/database.ts` in sync with the schema. If type generation fails, it will say so — run `npm run db:types` manually to retry.
@@ -115,7 +114,6 @@ git push origin main
 | Checksum validation | SHA-256 per file — all applied files validated upfront; aborts on mismatch in strict mode (default) |
 | Strict mode | Default on — pass `--no-strict` to demote conflicts to warnings and continue |
 | Missing file detection | Applied migration deleted from disk is treated as a conflict |
-| Dry-run mode | `npm run db:migrate:dry` previews without applying |
 
 **Transaction safety** means a partially-applied migration is impossible — if any statement fails, the entire file rolls back cleanly.
 
@@ -171,8 +169,8 @@ For junction-backed domain operations like youth addresses and contacts, audit p
 |---------|---------------|
 | `youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
 | `staffService.ts` | `users` (INSERT) |
-| `addressService.ts` | `addresses`, `user_has_addresses` (DELETE + UPDATE + INSERT) |
-| `contactService.ts` | `contacts`, `user_has_contacts` (DELETE + UPDATE + INSERT) |
+| `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
+| `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 
 ### `transactionId`
 
@@ -248,7 +246,6 @@ All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set 
 ```mermaid
 erDiagram
     base_table {
-        uuid id PK
         timestamptz created_at
         timestamptz updated_at
         uuid created_by

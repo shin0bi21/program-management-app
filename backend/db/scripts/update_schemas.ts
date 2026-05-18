@@ -181,20 +181,22 @@ function executeMigration(ctx: MigrationContext): boolean {
     //   -v ON_ERROR_STOP=1       abort on first SQL error
     //   --single-transaction     wraps -f and -c in one BEGIN/COMMIT so the
     //                            migration SQL and its tracking INSERT are atomic
-    //   -v mig_version=...       passed into -c as :'mig_version'
-    //                            (psql quotes these as SQL string literals)
     //
-    // The -f migration runs first in the transaction — so the init migration
-    // (which creates schema_migrations) and its tracking record commit together.
+    // Tracking INSERT values (filename + SHA-256 hex) are interpolated directly
+    // into the SQL string — both are safe (filename validated, checksum is hex).
+    // psql variable interpolation (:'var') is not used: psql 18 changed
+    // how it handles -c mode and the interpolation no longer applies.
+    const trackingInsert =
+      `INSERT INTO schema_migrations (version, name, checksum) VALUES ` +
+      `('${ctx.filename}', '${ctx.filename}', '${ctx.checksum}') ` +
+      `ON CONFLICT (version) DO NOTHING`;
     execFileSync('psql', [
       DB_URL,
       '-X',
       '-v', 'ON_ERROR_STOP=1',
       '--single-transaction',
-      '-v', `mig_version=${ctx.filename}`,
-      '-v', `mig_checksum=${ctx.checksum}`,
       '-f', ctx.filepath,
-      '-c', "INSERT INTO schema_migrations (version, name, checksum) VALUES (:'mig_version', :'mig_version', :'mig_checksum') ON CONFLICT (version) DO NOTHING",
+      '-c', trackingInsert,
     ], { stdio: 'inherit' });
     return true;
   } catch (error) {
