@@ -68,9 +68,6 @@ export default function PublicTopBar() {
             <button className="topbar-link" onClick={() => scrollTo('impact')}>Impact</button>
             <button className="topbar-link" onClick={() => scrollTo('team')}>Staff</button>
             <button className="topbar-link" onClick={() => scrollTo('partners')}>Partners</button>
-            <Button className="topbar-login-btn topbar-login-btn--mobile" onClick={() => { setMenuOpen(false); navigate('/login'); }}>
-              Login
-            </Button>
           </div>
         )}
       </div>
