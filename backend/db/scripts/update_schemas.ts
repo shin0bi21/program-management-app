@@ -346,10 +346,14 @@ async function main(): Promise<void> {
       return;
     }
 
-    console.log(`\n------------------------------------------`);
-    console.log(`Generating Types...`);
-    console.log(`------------------------------------------\n`);
-    regenerateDatabaseTypes();
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`\nSkipping type generation (production — types already compiled into dist/).`);
+    } else {
+      console.log(`\n------------------------------------------`);
+      console.log(`Generating Types...`);
+      console.log(`------------------------------------------\n`);
+      regenerateDatabaseTypes();
+    }
 
     console.log(`\n========================================`);
     console.log(`COMPLETE!`);

@@ -25,5 +25,6 @@ FROM base AS prod
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/db/migrations ./dist/db/migrations
 EXPOSE 5001
 CMD ["npm", "start"]
