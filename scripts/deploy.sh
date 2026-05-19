@@ -72,6 +72,11 @@ echo "Deploying commit: $(git log -1 --oneline)"
 
 echo ""
 echo "Building frontend..."
+[ -f "frontend/.env.production" ] || {
+  echo "ERROR: frontend/.env.production not found — create it on the server before deploying."
+  echo "  echo 'VITE_API_URL=https://be-original.ca/api' > frontend/.env.production"
+  exit 1
+}
 docker run --rm \
   -v "$(pwd)/frontend:/app" \
   -w /app \
@@ -133,7 +138,7 @@ trap cleanup EXIT INT TERM
 
 echo ""
 echo "Taking pre-migration snapshot..."
-docker exec "$DB_CONTAINER" pg_dump --clean --if-exists --single-transaction -U "$DB_USER" "$DB_NAME" | gzip > "$SNAPSHOT_TMP"
+docker exec "$DB_CONTAINER" pg_dump --clean --if-exists -U "$DB_USER" "$DB_NAME" | gzip > "$SNAPSHOT_TMP"
 
 if ! gzip -t "$SNAPSHOT_TMP" 2>/dev/null || [ ! -s "$SNAPSHOT_TMP" ]; then
   echo "ERROR: Snapshot is empty or corrupt — aborting"
