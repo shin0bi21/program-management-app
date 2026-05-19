@@ -740,6 +740,7 @@
   .next-session     { gap: var(--space-4); padding: var(--space-4); }
   .next-session-day { font-size: 2.1rem; }
   .analytics-cards  { grid-template-columns: 1fr; }
+}
 
 @media (min-width: 1400px) {
   :root {
