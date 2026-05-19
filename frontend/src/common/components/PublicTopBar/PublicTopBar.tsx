@@ -45,10 +45,6 @@ export default function PublicTopBar() {
         <button className="topbar-link" onClick={() => scrollTo('partners')}>Partners</button>
       </nav>
 
-      <Button className="topbar-login-btn" onClick={() => navigate('/login')}>
-        Login
-      </Button>
-
       <div className="topbar-mobile-controls" ref={menuRef}>
         <button
           className="topbar-hamburger"
@@ -71,6 +67,10 @@ export default function PublicTopBar() {
           </div>
         )}
       </div>
+
+      <Button className="topbar-login-btn" onClick={() => navigate('/login')}>
+        Login
+      </Button>
     </header>
   );
 }

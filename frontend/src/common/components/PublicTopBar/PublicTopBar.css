@@ -153,6 +153,11 @@
   .topbar-mobile-controls {
     display: flex;
     align-items: center;
+    margin-left: auto;
+  }
+
+  .topbar-login-btn {
+    margin-left: 8px;
   }
 }
 
