@@ -153,15 +153,15 @@ docker compose build backend
 
 echo ""
 echo "Checking migration status before apply..."
-docker compose run --rm --no-deps backend npx tsx db/scripts/migration_status.ts
+docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/migration_status.js
 
 echo ""
 echo "Applying pending migrations..."
-docker compose run --rm --no-deps backend npx tsx db/scripts/update_schemas.ts
+docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js
 
 echo ""
 echo "Checking migration status after apply..."
-docker compose run --rm --no-deps backend npx tsx db/scripts/migration_status.ts
+docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/migration_status.js
 
 # Migrations succeeded — clear rollback flag before restarting containers.
 # cleanup() will still run on exit to remove temp files, but won't restore the DB.
