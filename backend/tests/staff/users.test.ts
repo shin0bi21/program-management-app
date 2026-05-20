@@ -211,4 +211,182 @@ describe('Staff API', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // POST /api/staff (UPDATE)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  describe('POST /api/staff (UPDATE)', () => {
+    let testStaffUser: SeededUser;
+    let testStaffId: string;
+
+    beforeAll(async () => {
+      // Create a staff user to update
+      const uniqueEmail = `update-staff-${Date.now()}@test.local`;
+      const res = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Original',
+          lastName: 'Name',
+          email: uniqueEmail,
+          role: 'staff',
+        });
+      testStaffId = res.body.id;
+    });
+
+    afterAll(async () => {
+      if (testStaffId) await deleteTestUser(testStaffId);
+    });
+
+    it('should update staff user with valid data', async () => {
+      const res = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: testStaffId,
+          firstName: 'Updated',
+          lastName: 'Name',
+          email: `updated-${Date.now()}@test.local`,
+          role: 'admin',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.id).toBe(testStaffId);
+      expect(res.body.firstName).toBe('Updated');
+      expect(res.body.role).toBe('admin');
+    });
+
+    it('should reject update with invalid staff id', async () => {
+      const res = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: '00000000-0000-0000-0000-000000000000',
+          firstName: 'Test',
+          lastName: 'User',
+          email: 'test@test.local',
+          role: 'staff',
+        });
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should reject email conflict on update', async () => {
+      // Create another staff user
+      const otherEmail = `other-${Date.now()}@test.local`;
+      const otherRes = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Other',
+          lastName: 'User',
+          email: otherEmail,
+          role: 'staff',
+        });
+
+      // Try to update first user with the other's email
+      const res = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: testStaffId,
+          firstName: 'Updated',
+          lastName: 'Name',
+          email: otherEmail,
+          role: 'staff',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/email already exists/i);
+
+      await deleteTestUser(otherRes.body.id);
+    });
+
+    it('should reject unauthorized staff from updating', async () => {
+      const staffUser = await seedTestUser({ email: `staff-update-${Date.now()}@test.local`, role: 'staff' });
+      const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
+
+      const res = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          id: testStaffId,
+          firstName: 'Updated',
+          lastName: 'Name',
+          email: `update-${Date.now()}@test.local`,
+          role: 'staff',
+        });
+
+      expect(res.status).toBe(403);
+
+      await deleteTestUser(staffUser.userId);
+    });
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // DELETE /api/staff/:id
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  describe('DELETE /api/staff/:id', () => {
+    it('should require authentication', async () => {
+      const res = await request(app).delete('/api/staff/00000000-0000-0000-0000-000000000000');
+      expect(res.status).toBe(401);
+    });
+
+    it('should soft delete staff user (rescind invite)', async () => {
+      // Create a staff user
+      const uniqueEmail = `delete-${Date.now()}@test.local`;
+      const createRes = await request(app)
+        .post('/api/staff')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Delete',
+          lastName: 'Me',
+          email: uniqueEmail,
+          role: 'staff',
+        });
+
+      const staffId = createRes.body.id;
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.active).toBe(false); // Invited user
+
+      // Delete the staff user
+      const deleteRes = await request(app)
+        .delete(`/api/staff/${staffId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(deleteRes.status).toBe(204);
+
+      // Verify user is marked inactive in database
+      const dbCheck = await sql`
+        SELECT active FROM users WHERE id = ${staffId}
+      `;
+      expect(dbCheck.length).toBe(1);
+      expect(dbCheck[0].active).toBe(false);
+
+      await deleteTestUser(staffId);
+    });
+
+    it('should reject delete with invalid id', async () => {
+      const res = await request(app)
+        .delete('/api/staff/00000000-0000-0000-0000-000000000000')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should reject unauthorized staff from deleting', async () => {
+      const staffUser = await seedTestUser({ email: `staff-delete-${Date.now()}@test.local`, role: 'staff' });
+      const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
+
+      const res = await request(app)
+        .delete(`/api/staff/${staffUser.userId}`)
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.status).toBe(403);
+
+      await deleteTestUser(staffUser.userId);
+    });
+  });
 });
