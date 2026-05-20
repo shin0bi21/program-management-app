@@ -125,7 +125,7 @@ export default function Homepage() {
                         <p className="program-age">{program.age}</p>
                       </header>
                       <div className="program-copy-block">
-                        <span className="program-copy-label">Drop-in Days — {program.day}</span>
+                        <span className="program-copy-label">Drop-in Days</span>
                         <p className="program-copy">{program.copy}</p>
                       </div>
                       <div className="program-sessions">
