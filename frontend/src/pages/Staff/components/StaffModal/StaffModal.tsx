@@ -7,9 +7,10 @@ interface StaffModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (staff: StaffUser) => void;
+  staffData?: StaffUser;
 }
 
-export default function StaffModal({ isOpen, onClose, onSuccess }: StaffModalProps) {
+export default function StaffModal({ isOpen, onClose, onSuccess, staffData }: StaffModalProps) {
   const {
     register,
     errors,
@@ -17,7 +18,9 @@ export default function StaffModal({ isOpen, onClose, onSuccess }: StaffModalPro
     submitStatus,
     error,
     handleClose,
-  } = useStaffModal({ isOpen, onClose, onSuccess });
+  } = useStaffModal({ isOpen, onClose, onSuccess, staffData });
+
+  const isEdit = !!staffData;
 
   const footer = (
     <>
@@ -34,7 +37,9 @@ export default function StaffModal({ isOpen, onClose, onSuccess }: StaffModalPro
         form="staff-invite-form"
         disabled={submitStatus === 'submitting' || submitStatus === 'success'}
       >
-        {submitStatus === 'submitting' ? 'Sending...' : 'Send Invite'}
+        {submitStatus === 'submitting'
+          ? (isEdit ? 'Updating...' : 'Sending...')
+          : (isEdit ? 'Update' : 'Send Invite')}
       </Button>
     </>
   );
@@ -43,12 +48,12 @@ export default function StaffModal({ isOpen, onClose, onSuccess }: StaffModalPro
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Invite Staff Member"
+      title={isEdit ? 'Edit Staff Member' : 'Invite Staff Member'}
       footer={footer}
       status={submitStatus}
       statusMessage={
-        submitStatus === 'submitting' ? 'Sending invite...' :
-        submitStatus === 'success' ? 'Invite sent successfully!' :
+        submitStatus === 'submitting' ? (isEdit ? 'Updating...' : 'Sending invite...') :
+        submitStatus === 'success' ? (isEdit ? 'Updated successfully!' : 'Invite sent successfully!') :
         submitStatus === 'error' ? error :
         undefined
       }

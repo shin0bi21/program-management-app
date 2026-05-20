@@ -46,7 +46,7 @@ const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection'
 
 type LoginCredentialsRow =
   DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until'>> &
-  DbRow<Pick<Users, 'first_name' | 'last_name' | 'active'>> &
+  DbRow<Pick<Users, 'first_name' | 'last_name' | 'status'>> &
   { role: UserRole; permissions: Permission[] };
 
 export interface UserInfo {
@@ -168,7 +168,7 @@ export async function loginUser(
       uc.locked_until,
       u.first_name,
       u.last_name,
-      u.active,
+      u.status,
       ur.name AS role,
       COALESCE(
         json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
@@ -181,7 +181,7 @@ export async function loginUser(
     LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.email = ${email}
     GROUP BY uc.user_id, uc.email, uc.password_hash, uc.email_verified,
-             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, u.active, ur.name
+             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, u.status, ur.name
     LIMIT 1
   `;
 
@@ -245,7 +245,7 @@ export async function loginUser(
   `;
 
   // 5. Check account is active
-  if (!cred.active) {
+  if (cred.status !== 'active') {
     throw new ForbiddenError('Account is deactivated');
   }
 
@@ -682,7 +682,7 @@ export async function resetUserPassword(token: string, newPassword: string, ipAd
     resetUserId = resetToken.userId;
 
     await tx`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
-    await tx`UPDATE users SET active = true WHERE id = ${resetToken.userId} AND active = false`;
+    await tx`UPDATE users SET status = 'active' WHERE id = ${resetToken.userId} AND status = 'invited'`;
     await tx`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
   });
 
