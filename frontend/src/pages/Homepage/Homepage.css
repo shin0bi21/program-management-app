@@ -590,7 +590,6 @@
 /* ── Analytics ──────────────────────────────────────────────  */
 .analytics-cards {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-5);
 }
@@ -721,7 +720,6 @@
 /* ── Partners ───────────────────────────────────────────────  */
 .partners-logo-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
@@ -772,5 +770,6 @@
   .program-grid,
   .resource-cards-grid { grid-template-columns: 1fr; }
   .analytics-card       { max-width: 100%; }
+  .partners-logo-row    { flex-direction: column; }
 }
 
