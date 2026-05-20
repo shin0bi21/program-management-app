@@ -7,11 +7,11 @@
 :root {
   /* ── Type scale ─────────────────────────────────────────── */
   --text-xs:   0.625rem;   /* 10px — kickers, labels */
-  --text-sm:   0.875rem;    /* 14px — secondary labels */
-  --text-base: 1.0rem;  /* 17px — body small (1rem at ≤1400px) */
-  --text-md:   1.1075rem;  /* 19px — body default (1.125rem at ≤1400px) */
-  --text-lg:   1.275rem;   /* 22px — card titles (1.25rem at ≤1400px) */
-  --text-xl:   1.525rem;   /* 26px — timeline years */
+  --text-sm:   0.875rem;   /* 14px — secondary labels */
+  --text-base: 0.925rem;       /* 16px — body small (1rem at ≤1400px) */
+  --text-md:   1.1075rem;  /* 17.7px — body default (1.125rem at ≤1400px) */
+  --text-lg:   1.275rem;   /* 20.4px — card titles (1.25rem at ≤1400px) */
+  --text-xl:   1.525rem;   /* 24.4px — timeline years */
   --text-2xl:  clamp(2.2rem, 4.4vw, 3.4rem); /* section titles */
 
   /* ── Section layout ─────────────────────────────────────── */
