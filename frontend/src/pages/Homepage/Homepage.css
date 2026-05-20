@@ -738,7 +738,6 @@
 
   .homepage-hero { padding: var(--space-9) 1.25rem; }
 
-  .hero-title       { font-size: clamp(1.44rem, 7vw, 2.05rem); }
   .hero-description { font-size: var(--text-base); }
 
   .section-title {
