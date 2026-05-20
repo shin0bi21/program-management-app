@@ -45,7 +45,6 @@ const programs = [
       { date: new Date(2026, 4,  6), label: 'May 6',  topic: 'Communication' },
       { date: new Date(2026, 4, 13), label: 'May 13', topic: 'Interview Prep' },
       { date: new Date(2026, 4, 20), label: 'May 20', topic: 'Cover Letter Writing' },
-      { date: new Date(2026, 4, 27), label: 'May 27', topic: 'Open Session' },
     ],
   },
 ]
@@ -64,6 +63,7 @@ const impactStats = [
 
 const partners = [
   { name: 'Ontario Trillium Foundation', logo: '/partners/otf.png' },
+  { name: 'STAG', logo: '/partners/stag.png' },
 ]
 
 const TODAY = new Date()
@@ -109,7 +109,11 @@ export default function Homepage() {
             <div className="program-grid">
               {programs.map((program) => {
                 const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
-                const upcoming = sessionsWithStatus.filter(s => s.status !== 'past')
+                const upcoming = sessionsWithStatus.filter(s =>
+                  s.status !== 'past' &&
+                  s.date.getMonth() === TODAY.getMonth() &&
+                  s.date.getFullYear() === TODAY.getFullYear()
+                )
                 const next = upcoming[0] ?? null
                 const following = upcoming.slice(1)
                 const nextDays = next ? daysUntil(next.date) : null
