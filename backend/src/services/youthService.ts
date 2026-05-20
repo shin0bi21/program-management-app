@@ -7,9 +7,11 @@ import { setAddresses } from './addressService';
 import { setContacts } from './contactService';
 
 type YouthRow =
-  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active' | 'created_at'>> &
+  DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
   DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
-  DbRow<Pick<Schools, 'name'>>;
+  DbRow<Pick<Schools, 'name'>> & {
+    active: boolean; // derived from status = 'active'
+  };
 
 // ============================================================================
 // QUERIES
@@ -21,7 +23,7 @@ export async function getYouth(id?: string) {
       u.id,
       u.first_name,
       u.last_name,
-      u.active,
+      (u.status = 'active') AS active,
       yp.date_of_birth,
       yp.school_id,
       s.name as school_name,
@@ -91,8 +93,8 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
     let persistedUserId: string;
 
     if (id) {
-      const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'active'>>[]>`
-        SELECT id, first_name, last_name, active
+      const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'status'>>[]>`
+        SELECT id, first_name, last_name, status
         FROM users
         WHERE id = ${id}
         LIMIT 1
@@ -105,20 +107,20 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       `;
 
       const users = await trx<DbRow<Users>[]>`
-        INSERT INTO users (id, first_name, last_name, role_id, active, created_at, updated_at)
+        INSERT INTO users (id, first_name, last_name, role_id, status, created_at, updated_at)
         VALUES (
           ${id},
           ${firstName},
           ${lastName},
           (SELECT id FROM user_roles WHERE name = 'youth'),
-          ${active},
+          ${active ? 'active' : 'inactive'},
           COALESCE((SELECT created_at FROM users WHERE id = ${id}), NOW()),
           NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,
-          active = EXCLUDED.active,
+          status = EXCLUDED.status,
           updated_at = EXCLUDED.updated_at
         RETURNING *
       `;
@@ -132,9 +134,9 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
         persistedUserId,
         existingUsers.length > 0 ? 'UPDATE' : 'INSERT',
         existingUsers[0]
-          ? { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName, active: existingUsers[0].active }
+          ? { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName, status: existingUsers[0].status }
           : null,
-        { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName, active: users[0].active },
+        { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName, status: users[0].status },
       );
 
       await trx`
@@ -175,13 +177,13 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       );
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
-        INSERT INTO users (first_name, last_name, role_id, active)
-        VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'), ${active})
+        INSERT INTO users (first_name, last_name, role_id, status)
+        VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'), ${active ? 'active' : 'inactive'})
         RETURNING *
       `;
 
       persistedUserId = newUsers[0].id;
-      await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, active: newUsers[0].active });
+      await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, status: newUsers[0].status });
 
       await trx`
         INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)

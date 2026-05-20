@@ -3,8 +3,8 @@ export interface StaffUser {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
-  active: boolean;
+  role: 'staff' | 'admin';
+  status: 'invited' | 'active' | 'inactive';
   createdAt: string;
 }
 
@@ -12,5 +12,13 @@ export interface InviteStaffInput {
   firstName: string;
   lastName: string;
   email: string;
-  role?: string;
+  role?: 'staff' | 'admin';
+}
+
+export interface UpdateStaffInput {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role?: 'staff' | 'admin';
 }

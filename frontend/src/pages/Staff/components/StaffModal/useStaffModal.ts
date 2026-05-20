@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { inviteStaff } from '../../api/staff.api';
+import { inviteStaff, updateStaff } from '../../api/staff.api';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { staffSchema, type StaffFormData } from './staffSchema';
@@ -18,9 +18,10 @@ interface UseStaffModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (staff: StaffUser) => void;
+  staffData?: StaffUser;
 }
 
-export function useStaffModal({ isOpen, onClose, onSuccess }: UseStaffModalProps) {
+export function useStaffModal({ isOpen, onClose, onSuccess, staffData }: UseStaffModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
 
   const {
@@ -35,9 +36,18 @@ export function useStaffModal({ isOpen, onClose, onSuccess }: UseStaffModalProps
 
   useEffect(() => {
     if (!isOpen) return;
-    reset(defaultValues);
+    if (staffData) {
+      reset({
+        firstName: staffData.firstName,
+        lastName: staffData.lastName,
+        email: staffData.email,
+        role: staffData.role,
+      });
+    } else {
+      reset(defaultValues);
+    }
     resetStatus();
-  }, [isOpen]);
+  }, [isOpen, staffData]);
 
   const handleClose = () => {
     reset(defaultValues);
@@ -50,20 +60,28 @@ export function useStaffModal({ isOpen, onClose, onSuccess }: UseStaffModalProps
     setError('');
 
     try {
-      const created = await inviteStaff({
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        email: data.email.trim(),
-        role: data.role,
-      });
+      const result = staffData
+        ? await updateStaff({
+            id: staffData.id,
+            firstName: data.firstName.trim(),
+            lastName: data.lastName.trim(),
+            email: data.email.trim(),
+            role: data.role,
+          })
+        : await inviteStaff({
+            firstName: data.firstName.trim(),
+            lastName: data.lastName.trim(),
+            email: data.email.trim(),
+            role: data.role,
+          });
 
       setSubmitStatus('success');
       setTimeout(() => {
-        onSuccess(created);
+        onSuccess(result);
         handleClose();
       }, 1000);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to send invite'));
+      setError(getErrorMessage(err, staffData ? 'Failed to update staff' : 'Failed to send invite'));
       setSubmitStatus('error');
     }
   };

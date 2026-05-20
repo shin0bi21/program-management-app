@@ -62,3 +62,56 @@ export const sendStaffInvite = async (to: string, firstName: string, inviteUrl: 
 
   await sendEmail(to, subject, html);
 };
+
+export const sendInviteEmailChanged = async (to: string, firstName: string, inviteUrl: string) => {
+  const subject = 'Your Be Original invite has been resent';
+  const safeFirstName = escapeHtml(firstName);
+  const safeUrl = escapeHtml(inviteUrl);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hi ${safeFirstName},</h2>
+      <p>Your Be Original staff invitation has been sent to this email address.</p>
+      <p>Click the button below to set your password and get started:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${safeUrl}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+          Set Your Password
+        </a>
+      </div>
+      <p style="color: #666; font-size: 14px;">This link will expire in 7 days. If you weren't expecting this, you can ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail(to, subject, html);
+};
+
+export const sendEmailChangedOldAddress = async (to: string, firstName: string, newEmail: string) => {
+  const subject = 'Your Be Original login email was changed';
+  const safeFirstName = escapeHtml(firstName);
+  const safeNewEmail = escapeHtml(newEmail);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hi ${safeFirstName},</h2>
+      <p>An administrator has updated the login email address on your Be Original account.</p>
+      <p>Your new login email is: <strong>${safeNewEmail}</strong></p>
+      <p>Your password has not changed. You can log in with your new email address immediately.</p>
+      <p style="color: #666; font-size: 14px;">If you did not expect this change, please contact your administrator.</p>
+    </div>
+  `;
+
+  await sendEmail(to, subject, html);
+};
+
+export const sendEmailChangedNewAddress = async (to: string, firstName: string) => {
+  const subject = 'Your Be Original login email has been updated';
+  const safeFirstName = escapeHtml(firstName);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hi ${safeFirstName},</h2>
+      <p>This email address is now your login for Be Original.</p>
+      <p>Your password has not changed — log in with this email address and your existing password.</p>
+      <p style="color: #666; font-size: 14px;">If you did not expect this change, please contact your administrator.</p>
+    </div>
+  `;
+
+  await sendEmail(to, subject, html);
+};

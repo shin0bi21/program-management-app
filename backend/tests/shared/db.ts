@@ -48,8 +48,8 @@ export async function seedTestUser(overrides: SeedOverrides = {}): Promise<Seede
   if (!roleRow) throw new Error(`Role '${data.role}' not found in user_roles`);
 
   const [user] = await sql<{ id: string }[]>`
-    INSERT INTO users (first_name, last_name, role_id)
-    VALUES (${data.firstName}, ${data.lastName}, ${roleRow.id})
+    INSERT INTO users (first_name, last_name, role_id, status)
+    VALUES (${data.firstName}, ${data.lastName}, ${roleRow.id}, 'active')
     RETURNING id
   `;
 
