@@ -15,6 +15,17 @@ const teamResources = [
 
 const programs = [
   {
+    age: 'All Ages',
+    day: 'Every other Friday',
+    copy: 'Welcome to hang out, play video games and board games. A relaxed, open space for youth to connect and unwind.',
+    sessions: [
+      { date: new Date(2026, 4, 29), label: 'May 29',  topic: 'Drop-in Day' },
+      { date: new Date(2026, 5, 12), label: 'Jun 12',  topic: 'Drop-in Day' },
+      { date: new Date(2026, 5, 26), label: 'Jun 26',  topic: 'Drop-in Day' },
+    ],
+    dropIn: true,
+  },
+  {
     age: 'Ages 12–15',
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
@@ -41,8 +52,8 @@ const programs = [
 
 const timelineItems = [
   { year: '2022', headline: 'Founded as a volunteer organization',       detail: 'Be Original Youth Group was founded in Sandwich Town, West Windsor by a small team of volunteers committed to supporting youth in their community through hands-on programming and direct outreach.' },
-  { year: '2024', headline: 'Became a fully funded organization',               detail: 'Secured our first institutional funding, enabling us to hire dedicated staff, deepen school partnerships, and reach 150 youth through mentorship, arts, and leadership programs.' },
-  { year: '2026', headline: '3-year program launched Spring 2026',        detail: 'With renewed funding, Be Original launched a new structured program this spring, expanding youth development and job-readiness streams to a broader network of participants and partner schools.' },
+  { year: '2024', headline: 'Became a fully funded organization',        detail: 'Secured our first grant through the Youth Opportunities Fund enabling us to hire dedicated staff, and reach 150 youth through a healthy habits based mentorship program.' },
+  { year: '2026', headline: '3-year program launched Spring 2026',        detail: 'With a 3 year grant from Youth Opportunities Fund, Be Original launched a new structured program this spring, expanding youth development and job-readiness streams to a broader network of participants and partner schools.' },
 ]
 
 const impactStats = [
@@ -88,8 +99,7 @@ export default function Homepage() {
           <p className="hero-kicker">Be Original Youth Group</p>
           <h1 className="hero-title">Support that meets youth where they are.</h1>
           <p className="hero-description">
-            We work alongside schools, caregivers, and partners to make youth services
-            easier to access, easier to trust, and easier to sustain.
+            Supporting youth across Sandwich and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
           </p>
         </section>
 
@@ -103,6 +113,56 @@ export default function Homepage() {
                 const next = upcoming[0] ?? null
                 const following = upcoming.slice(1)
                 const nextDays = next ? daysUntil(next.date) : null
+
+                if (program.dropIn) {
+                  return (
+                    <article key={program.age} className="program-card">
+                      <header className="program-card-head">
+                        <p className="program-age">{program.age}</p>
+                      </header>
+                      <div className="program-copy-block">
+                        <span className="program-copy-label">Drop-in Days — {program.day}</span>
+                        <p className="program-copy">{program.copy}</p>
+                      </div>
+                      <div className="program-sessions">
+                        <p className="program-sessions-label">Upcoming</p>
+                        {upcoming.length === 0 ? (
+                          <p className="program-empty">No upcoming drop-in days scheduled.</p>
+                        ) : (
+                          <>
+                            <div className="next-session" aria-label="Next drop-in day">
+                              <div className="next-session-date">
+                                <span className="next-session-day">{next!.date.getDate()}</span>
+                                <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
+                              </div>
+                              <div className="next-session-body">
+                                <span className="next-session-tag">
+                                  {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
+                                </span>
+                                <p className="next-session-topic">Drop-in Day</p>
+                                <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
+                              </div>
+                            </div>
+                            {following.length > 0 && (
+                              <ul className="upcoming-rows">
+                                {following.map((session) => (
+                                  <li key={session.label} className="upcoming-row">
+                                    <span className="upcoming-row-date">
+                                      <strong>{session.date.getDate()}</strong>
+                                      <span>{MONTH_FMT.format(session.date)}</span>
+                                    </span>
+                                    <span className="upcoming-row-topic">Drop-in Day</span>
+                                    <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(session.date)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  )
+                }
 
                 return (
                   <article key={program.age} className="program-card">
