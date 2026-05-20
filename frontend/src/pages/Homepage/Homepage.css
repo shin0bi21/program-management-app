@@ -5,6 +5,16 @@
 
 /* ── Section layout + context tokens ───────────────────────── */
 :root {
+  /* ── Type scale ─────────────────────────────────────────── */
+  --text-xs:   0.625rem;   /* 10px — kickers, labels */
+  --text-sm:   0.875rem;   /* 14px — secondary labels */
+  --text-base: 0.925rem;       /* 16px — body small (1rem at ≤1400px) */
+  --text-md:   1.1075rem;  /* 17.7px — body default (1.125rem at ≤1400px) */
+  --text-lg:   1.275rem;   /* 20.4px — card titles (1.25rem at ≤1400px) */
+  --text-xl:   1.525rem;   /* 24.4px — timeline years */
+  --text-2xl:  clamp(2.2rem, 4.4vw, 3.4rem); /* section titles */
+
+  /* ── Section layout ─────────────────────────────────────── */
   --section-pad-y:   5.5rem;
   --section-inner-x: 7.5rem;
   --text-hero:      clamp(3rem, 6vw, 5rem);
@@ -212,12 +222,24 @@
 }
 
 @media (max-width: 1400px) {
-  .program-grid {
-    grid-template-columns: 1fr;
+  :root {
+    --section-pad-y:   4.5rem;
+    --section-inner-x: 5rem;
+    --text-base: 0.875rem;
+    --text-md:   1.125rem;
+    --text-lg:   1.25rem;
   }
   .resource-cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 1200px) {
+  .program-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1000px) {
+  .analytics-cards { flex-direction: column; }
 }
 
 .program-card {
@@ -574,8 +596,7 @@
 }
 
 .analytics-card {
-  flex: 1 1 280px;
-  max-width: 400px;
+  flex: 1 1;
   background: var(--s-card-bg);
   border: 1px solid var(--s-card-border);
   border-radius: var(--radius-xl);
@@ -750,7 +771,6 @@
 
   .program-grid,
   .resource-cards-grid { grid-template-columns: 1fr; }
-  .analytics-cards      { flex-direction: column; }
   .analytics-card       { max-width: 100%; }
 }
 

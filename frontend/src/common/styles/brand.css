@@ -73,15 +73,6 @@
   --space-14: 56px;
   --space-18: 72px;
 
-  /* ── Type scale ─────────────────────────────────────────── */
-  --text-xs:   0.625rem;  /* 10px  — kickers, labels */
-  --text-sm:   0.75rem;   /* 12px  — secondary labels */
-  --text-base: 1rem;      /* 16px  — body small */
-  --text-md:   1.125rem;  /* 18px  — body default */
-  --text-lg:   1.25rem;   /* 20px  — card titles */
-  --text-xl:   1.625rem;  /* 26px  — timeline years */
-  --text-2xl:  clamp(2.2rem, 4.4vw, 3.4rem); /* section titles */
-
   /* ── Letter spacing ─────────────────────────────────────── */
   --tracking-wide:   0.10em;
   --tracking-wider:  0.14em;
