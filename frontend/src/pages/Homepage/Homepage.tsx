@@ -64,6 +64,7 @@ const impactStats = [
 const partners = [
   { name: 'Ontario Trillium Foundation', logo: '/partners/otf.png' },
   { name: 'STAG', logo: '/partners/stag.png' },
+  { name: 'Workforce WindsorEssex', logo: '/partners/workforce.jpg' },
 ]
 
 const TODAY = new Date()
