@@ -7,6 +7,8 @@
 :root {
   --section-pad-y:   5.5rem;
   --section-inner-x: 7.5rem;
+  --text-hero:      clamp(3rem, 6vw, 5rem);
+  --text-hero-desc: clamp(1rem, 1.4vw, 1.125rem);
 
   /* Section context defaults (light) — overridden by dark sections below */
   --s-card-bg:      var(--color-white);
@@ -194,10 +196,10 @@
 
 .hero-description {
   margin: var(--space-4) 0 0;
-  max-width: 52ch;
+  max-width: 62ch;
   color: var(--color-body);
   line-height: 1.75;
-  font-size: var(--text-md);
+  font-size: var(--text-hero-desc);
   text-align: center;
 }
 
@@ -737,8 +739,6 @@
   .partners-section { padding: 2.5rem 0; }
 
   .homepage-hero { padding: var(--space-9) 1.25rem; }
-
-  .hero-description { font-size: var(--text-base); }
 
   .section-title {
     font-size: 1.85rem;

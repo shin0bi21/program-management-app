@@ -81,7 +81,6 @@
   --text-lg:   1.25rem;   /* 20px  — card titles */
   --text-xl:   1.625rem;  /* 26px  — timeline years */
   --text-2xl:  clamp(2.2rem, 4.4vw, 3.4rem); /* section titles */
-  --text-hero: clamp(2.6rem, 6vw, 5rem);      /* hero title */
 
   /* ── Letter spacing ─────────────────────────────────────── */
   --tracking-wide:   0.10em;
