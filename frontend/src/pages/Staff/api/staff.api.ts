@@ -13,6 +13,10 @@ export function updateStaff(data: UpdateStaffInput) {
   return apiClient.post<StaffUser>('/staff', data);
 }
 
+export function toggleStaffActive(id: string) {
+  return apiClient.patch<StaffUser>(`/staff/${id}`);
+}
+
 export function deleteStaff(id: string) {
   return apiClient.delete(`/staff/${id}`);
 }

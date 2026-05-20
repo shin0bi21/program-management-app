@@ -4,7 +4,7 @@ export interface StaffUser {
   lastName: string;
   email: string;
   role: string;
-  active: boolean;
+  status: 'invited' | 'active' | 'inactive';
   createdAt: string;
 }
 

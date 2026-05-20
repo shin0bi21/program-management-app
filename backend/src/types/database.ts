@@ -31,6 +31,8 @@ export type SchoolType = "grade_school" | "high_school" | "middle_school";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export type UserStatus = "active" | "inactive" | "invited";
+
 export interface Addresses {
   address: string;
   city: string;
@@ -212,16 +214,13 @@ export interface UserRoles {
 }
 
 export interface Users {
-  /**
-   * Active status: true for current cohort youth and enabled staff logins
-   */
-  active: Generated<boolean>;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   first_name: string;
   id: Generated<string>;
   last_name: string;
   role_id: string;
+  status: Generated<UserStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
