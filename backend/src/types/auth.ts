@@ -5,6 +5,7 @@ export type Permission =
   | 'read:youth_profiles'
   | 'write:youth_profiles'
   | 'read:schools'
+  | 'write:schools'
   | 'read:settings'
   | 'write:settings';
 

@@ -8,7 +8,7 @@ import { useAuth } from '../../common/context/AuthContext';
 import './Youth.css';
 
 function calculateAge(dateOfBirth: string | null): string {
-  if (!dateOfBirth) return 'N/A';
+  if (!dateOfBirth) return '—';
   const today = new Date();
   const birthDate = new Date(dateOfBirth);
   let age = today.getFullYear() - birthDate.getFullYear();
@@ -46,12 +46,12 @@ export default function Youth() {
     {
       key: 'school',
       header: 'School',
-      render: (profile) => profile.schoolName ?? 'N/A',
+      render: (profile) => profile.schoolName ?? '—',
     },
     {
       key: 'grade',
       header: 'Grade',
-      render: (profile) => profile.gradeLevel ?? 'N/A',
+      render: (profile) => profile.gradeLevel ?? '—',
       width: '100px',
     },
     {
