@@ -7,6 +7,13 @@
   padding: 40px 36px;
 }
 
+@media (max-width: 768px) {
+  .page-container {
+    margin-left: 0;
+    padding: 72px 20px 32px;
+  }
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
