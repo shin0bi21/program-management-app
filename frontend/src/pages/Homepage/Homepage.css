@@ -8,7 +8,7 @@
   /* ── Type scale ─────────────────────────────────────────── */
   --text-xs:   0.625rem;   /* 10px — kickers, labels */
   --text-sm:   0.875rem;   /* 14px — secondary labels */
-  --text-base: 0.925rem;       /* 16px — body small (1rem at ≤1400px) */
+  --text-base: 0.925rem;   /* 16px — body small (1rem at ≤1400px) */
   --text-md:   1.1075rem;  /* 17.7px — body default (1.125rem at ≤1400px) */
   --text-lg:   1.275rem;   /* 20.4px — card titles (1.25rem at ≤1400px) */
   --text-xl:   1.525rem;   /* 24.4px — timeline years */
@@ -543,7 +543,7 @@
   content: '';
   position: absolute;
   left: -40px;
-  top: 32px;
+  top: 32px; /* aligns with year text midpoint in 2-col layout */
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -771,5 +771,19 @@
   .resource-cards-grid { grid-template-columns: 1fr; }
   .analytics-card       { max-width: 100%; }
   .partners-logo-row    { flex-direction: column; }
+
+  .timeline-year {
+    font-size: 1.25rem;
+  }
+
+  /* Timeline — stack year above body on mobile */
+  .timeline-item {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .timeline-item::before {
+    top: 30px; /* re-align dot with stacked year text */
+  }
 }
 
