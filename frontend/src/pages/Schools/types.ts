@@ -1,1 +1,1 @@
-export type { School } from '../../../common/types/school';
+export type { School } from '../../common/types/school';
