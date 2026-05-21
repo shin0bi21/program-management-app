@@ -97,7 +97,7 @@ export default function Staff() {
       { key: 'firstName', header: 'First Name', render: (user) => user.firstName },
       { key: 'lastName',  header: 'Last Name',  render: (user) => user.lastName },
       { key: 'email',     header: 'Email',       render: (user) => user.email },
-      { key: 'role',      header: 'Role',        render: (user) => user.role },
+      { key: 'role',      header: 'Role',        render: (user) => user.role.charAt(0).toUpperCase() + user.role.slice(1) },
       { key: 'status',    header: 'Status',      render: (user) => statusBadge(user.status) },
     ];
 
