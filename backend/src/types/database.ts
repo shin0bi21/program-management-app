@@ -27,8 +27,6 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type SchoolBoard = "catholic" | "public";
 
-export type SchoolType = "grade_school" | "high_school" | "middle_school";
-
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type UserStatus = "active" | "inactive" | "invited";
@@ -97,14 +95,13 @@ export interface SchemaMigrations {
 }
 
 export interface Schools {
-  address: string;
+  address: string | null;
   board: SchoolBoard | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   id: Generated<string>;
   name: string;
   postal_code: string | null;
-  school_type: SchoolType;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }

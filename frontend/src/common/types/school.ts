@@ -1,6 +1,7 @@
 export interface School {
   id: string;
   name: string;
-  schoolType: string;
   board: string | null;
+  address: string | null;
+  postalCode: string | null;
 }

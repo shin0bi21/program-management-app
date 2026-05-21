@@ -27,6 +27,7 @@ const programs = [
   },
   {
     age: 'Ages 12–15',
+    title: 'Soft Skills Program',
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
     sessions: [
@@ -39,6 +40,7 @@ const programs = [
   },
   {
     age: 'Ages 16–19',
+    title: 'Job Readiness Program',
     day: 'Every Wednesday',
     copy: 'Youth receive job-readiness education, interview practice, one-on-one support, volunteer placement experience, and one paid project to strengthen resumes. Program elements also support transitions into post-secondary education and the workforce.',
     sessions: [
@@ -176,7 +178,7 @@ export default function Homepage() {
                     </header>
 
                     <div className="program-copy-block">
-                      <span className="program-copy-label">About this program</span>
+                      <span className="program-copy-label">{program.title}</span>
                       <p className="program-copy">{program.copy}</p>
                     </div>
 

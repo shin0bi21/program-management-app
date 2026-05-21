@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faChevronDown, faRightFromBracket, faHouse, faBars, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faChevronDown, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
@@ -64,6 +64,14 @@ export default function Header() {
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                 <span>Youth</span>
+              </button>
+
+              <button
+                onClick={() => go('/schools')}
+                className={`sidebar-link${isActive('/schools') ? ' active' : ''}`}
+              >
+                <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
+                <span>Schools</span>
               </button>
 
               <button

@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   width: 100%;
-  height: 80px;
+  height: 52px;
   background: transparent;
   border-bottom: none;
   display: flex;
@@ -32,7 +32,7 @@
 }
 
 .topbar-logo {
-  height: 72px;
+  height: 44px;
   width: auto;
   object-fit: contain;
   display: block;

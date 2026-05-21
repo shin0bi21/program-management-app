@@ -6,6 +6,7 @@ import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
 import Staff from './pages/Staff/Staff'
+import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
@@ -30,6 +31,11 @@ function App() {
           <Route path="/youth" element={
             <ProtectedRoute requiredPermission="read:youth_profiles">
               <Youth />
+            </ProtectedRoute>
+          } />
+          <Route path="/schools" element={
+            <ProtectedRoute requiredPermission="read:schools">
+              <Schools />
             </ProtectedRoute>
           } />
           <Route path="/settings/account" element={

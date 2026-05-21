@@ -79,8 +79,8 @@ async function main() {
 
     // Insert admin user
     await sql`
-      INSERT INTO users (id, first_name, last_name, role_id) 
-      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid)
+      INSERT INTO users (id, first_name, last_name, role_id, status) 
+      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid, 'active')
     `;
     
     // Insert admin credentials
