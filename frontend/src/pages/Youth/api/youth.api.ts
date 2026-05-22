@@ -13,3 +13,7 @@ export function setYouth(data: SetYouthInput) {
 export function getSchools() {
   return apiClient.get<School[]>('/schools');
 }
+
+export function toggleYouthActive(id: string) {
+  return apiClient.patch<YouthProfile>(`/youth/${id}`);
+}

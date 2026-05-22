@@ -16,13 +16,16 @@
   margin-bottom: 1rem;
 }
 
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
 .form-row .form-field {
   flex: 1;
   margin-bottom: 0;
-}
-
-.form-field {
-  margin-bottom: 1rem;
 }
 
 .form-field label {
@@ -51,6 +54,14 @@
   outline: none;
   border-color: var(--brand-accent);
   box-shadow: 0 0 0 3px var(--accent-18);
+}
+
+/* Field Validation Error */
+.field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--color-danger);
 }
 
 /* Checkbox */

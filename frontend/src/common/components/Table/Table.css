@@ -78,3 +78,8 @@
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+.col-actions {
+  width: 62px;
+  max-width: 62px;
+}
