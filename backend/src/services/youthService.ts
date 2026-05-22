@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../db/client';
+import { NotFoundError } from '../errors';
 import type { Schools, Users, YouthProfiles } from '../types/database';
 import type { DbRow } from '../types/db';
 import { audit } from './auditService';
@@ -204,4 +205,37 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
   });
 
   return getYouth(userId);
+}
+
+export async function toggleYouthActive(youthId: string, actorId: string) {
+  const transactionId = crypto.randomUUID();
+
+  await sql.begin(async (tx) => {
+    const trx = asTransactionSql(tx);
+
+    const existing = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'status'>>[]>`
+      SELECT u.id, u.first_name, u.last_name, u.status
+      FROM users u
+      INNER JOIN user_roles ur ON ur.id = u.role_id
+      WHERE u.id = ${youthId} AND ur.name = 'youth'
+      LIMIT 1
+    `;
+    if (!existing.length) throw new NotFoundError('Youth profile not found');
+
+    const prev = existing[0];
+    const newStatus = prev.status === 'active' ? 'inactive' : 'active';
+
+    await trx`
+      UPDATE users SET status = ${newStatus}, updated_at = NOW()
+      WHERE id = ${youthId}
+    `;
+
+    await audit(
+      trx, actorId, transactionId, 'users', youthId, 'UPDATE',
+      { id: prev.id, firstName: prev.firstName, lastName: prev.lastName, status: prev.status },
+      { id: prev.id, firstName: prev.firstName, lastName: prev.lastName, status: newStatus }
+    );
+  });
+
+  return getYouth(youthId);
 }
