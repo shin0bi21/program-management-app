@@ -1,12 +1,5 @@
 /* YouthModal-specific styles */
 
-.field-error {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.8rem;
-  color: var(--color-danger);
-}
-
 .section-divider {
   margin-top: 24px;
   padding-top: 20px;
