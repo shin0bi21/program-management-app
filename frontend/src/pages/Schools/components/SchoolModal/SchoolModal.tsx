@@ -1,5 +1,6 @@
-import Button from '../../../../common/components/Button/Button';
+import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { School } from '../../types';
 import { useSchoolModal } from './useSchoolModal';
 import './SchoolModal.css';
@@ -15,14 +16,12 @@ export default function SchoolModal({ isOpen, onClose, onSuccess, schoolData }: 
   const { register, errors, rhfHandleSubmit, onValid, submitStatus, error, handleClose } = useSchoolModal({ isOpen, schoolData, onClose, onSuccess });
 
   const footer = (
-    <>
-      <Button type="button" variant="secondary" onClick={handleClose} disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
-        Cancel
-      </Button>
-      <Button type="submit" form="school-form" disabled={submitStatus === 'submitting' || submitStatus === 'success'}>
-        {schoolData ? 'Save Changes' : 'Add School'}
-      </Button>
-    </>
+    <ModalFormFooter
+      formId="school-form"
+      submitLabel={schoolData ? 'Save Changes' : 'Add School'}
+      submitStatus={submitStatus}
+      onClose={handleClose}
+    />
   );
 
   return (
@@ -40,33 +39,25 @@ export default function SchoolModal({ isOpen, onClose, onSuccess, schoolData }: 
       }
     >
       <form id="school-form" onSubmit={rhfHandleSubmit(onValid)} className="school-form" noValidate>
-        <div className="form-group">
-          <label htmlFor="school-name">School Name *</label>
+        <FormField id="school-name" label="School Name *" error={errors.name?.message}>
           <input id="school-name" type="text" {...register('name')} />
-          {errors.name && <span className="field-error">{errors.name.message}</span>}
-        </div>
+        </FormField>
 
-        <div className="form-group">
-          <label htmlFor="school-board">Board</label>
+        <FormField id="school-board" label="Board" error={errors.board?.message}>
           <select id="school-board" {...register('board')}>
             <option value="">— Select board —</option>
             <option value="public">Public</option>
             <option value="catholic">Catholic</option>
           </select>
-          {errors.board && <span className="field-error">{errors.board.message}</span>}
-        </div>
+        </FormField>
 
-        <div className="form-group">
-          <label htmlFor="school-address">Address</label>
+        <FormField id="school-address" label="Address" error={errors.address?.message}>
           <input id="school-address" type="text" {...register('address')} />
-          {errors.address && <span className="field-error">{errors.address.message}</span>}
-        </div>
+        </FormField>
 
-        <div className="form-group">
-          <label htmlFor="school-postal">Postal Code</label>
+        <FormField id="school-postal" label="Postal Code" error={errors.postalCode?.message}>
           <input id="school-postal" type="text" {...register('postalCode')} />
-          {errors.postalCode && <span className="field-error">{errors.postalCode.message}</span>}
-        </div>
+        </FormField>
       </form>
     </Modal>
   );

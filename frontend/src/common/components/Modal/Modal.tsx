@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import './Modal.css';
 
 interface ModalProps {
@@ -6,36 +6,56 @@ interface ModalProps {
   onClose: () => void;
   title: ReactNode;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
   maxWidth?: string;
   status?: 'idle' | 'submitting' | 'success' | 'error';
   statusMessage?: string;
+  // Auto-close after successDelay ms when status becomes 'success'. 0 = disabled.
+  successDelay?: number;
+  // Disable the X close button (e.g. while a request is in-flight)
+  disableClose?: boolean;
 }
 
-export default function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  footer, 
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
   maxWidth = '500px',
   status = 'idle',
-  statusMessage
+  statusMessage,
+  successDelay = 0,
+  disableClose = false,
 }: ModalProps) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  // Keep a ref to onClose so the timer always calls the latest version
+  // without needing it as an effect dependency
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (status === 'success' && successDelay > 0) {
+      timerRef.current = setTimeout(() => onCloseRef.current(), successDelay);
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [status, successDelay]);
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
-      <div 
-        className="modal-container" 
+      <div
+        className="modal-container"
         style={{ maxWidth }}
       >
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose}>&times;</button>
+          <button className="modal-close" onClick={onClose} disabled={disableClose}>&times;</button>
         </div>
-        
-        {/* Status indicator */}
+
         {status !== 'idle' && (
           <div className={`modal-status modal-status-${status}`}>
             {status === 'submitting' && (
@@ -58,13 +78,15 @@ export default function Modal({
             )}
           </div>
         )}
-        
+
         <div className="modal-body">
           {children}
         </div>
-        <div className="modal-footer">
-          {footer}
-        </div>
+        {footer && (
+          <div className="modal-footer">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

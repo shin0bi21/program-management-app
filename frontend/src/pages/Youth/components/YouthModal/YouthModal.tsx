@@ -1,5 +1,6 @@
-import Button from '../../../../common/components/Button/Button';
+import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { YouthProfile } from '../../hooks/useYouth';
 import { useYouthModal } from './useYouthModal';
 import './YouthModal.css';
@@ -28,23 +29,12 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
   } = useYouthModal({ isOpen, youthData, onClose, onSuccess });
 
   const footer = (
-    <>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={handleClose}
-        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
-      >
-        Cancel
-      </Button>
-      <Button
-        type="submit"
-        form="youth-form"
-        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
-      >
-        {youthData ? 'Update Form' : 'Sign Up'}
-      </Button>
-    </>
+    <ModalFormFooter
+      formId="youth-form"
+      submitLabel={youthData ? 'Update Form' : 'Sign Up'}
+      submitStatus={submitStatus}
+      onClose={handleClose}
+    />
   );
 
   return (
@@ -67,55 +57,25 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <h3>General Information</h3>
         </div>
         <div className="form-row">
-          <div className="form-field">
-            <label htmlFor="firstName">First Name *</label>
-            <input
-              id="firstName"
-              type="text"
-              {...register('firstName')}
-            />
-            {errors.firstName && <span className="field-error">{errors.firstName.message}</span>}
-          </div>
-          <div className="form-field">
-            <label htmlFor="lastName">Last Name *</label>
-            <input
-              id="lastName"
-              type="text"
-              {...register('lastName')}
-            />
-            {errors.lastName && <span className="field-error">{errors.lastName.message}</span>}
-          </div>
+          <FormField id="firstName" label="First Name *" error={errors.firstName?.message}>
+            <input id="firstName" type="text" {...register('firstName')} />
+          </FormField>
+          <FormField id="lastName" label="Last Name *" error={errors.lastName?.message}>
+            <input id="lastName" type="text" {...register('lastName')} />
+          </FormField>
         </div>
 
         <div className="form-row">
-          <div className="form-field">
-            <label htmlFor="dateOfBirth">Date of Birth</label>
-            <input
-              id="dateOfBirth"
-              type="date"
-              {...register('dateOfBirth')}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="gradeLevel">Grade</label>
-            <input
-              id="gradeLevel"
-              type="number"
-              min="0"
-              max="12"
-              placeholder="0–12"
-              {...register('gradeLevel', { valueAsNumber: true })}
-            />
-            {errors.gradeLevel && <span className="field-error">{errors.gradeLevel.message}</span>}
-          </div>
+          <FormField id="dateOfBirth" label="Date of Birth">
+            <input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+          </FormField>
+          <FormField id="gradeLevel" label="Grade" error={errors.gradeLevel?.message}>
+            <input id="gradeLevel" type="number" min="0" max="12" placeholder="0–12" {...register('gradeLevel', { valueAsNumber: true })} />
+          </FormField>
         </div>
 
-        <div className="form-field">
-          <label htmlFor="school">School</label>
-          <select
-            id="school"
-            {...register('schoolId')}
-          >
+        <FormField id="school" label="School">
+          <select id="school" {...register('schoolId')}>
             <option value="">Select a school</option>
             {schools.map((school) => (
               <option key={school.id} value={school.id}>
@@ -123,7 +83,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
 
         <div className="form-field">
           <label className="checkbox-label">
@@ -144,8 +104,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           <div className="section-content">
             {addresses.map((addr, index) => (
                 <div key={index} className="address-form-item">
-                  <div className="form-field">
-                    <label htmlFor={`address-${index}`}>Street Address</label>
+                  <FormField id={`address-${index}`} label="Street Address">
                     <input
                       id={`address-${index}`}
                       type="text"
@@ -153,10 +112,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                       onChange={(e) => handleAddressChange(index, 'address', e.target.value)}
                       placeholder="123 Main Street"
                     />
-                  </div>
+                  </FormField>
                   <div className="form-row">
-                    <div className="form-field">
-                      <label htmlFor={`city-${index}`}>City</label>
+                    <FormField id={`city-${index}`} label="City">
                       <input
                         id={`city-${index}`}
                         type="text"
@@ -164,9 +122,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         onChange={(e) => handleAddressChange(index, 'city', e.target.value)}
                         placeholder="Toronto"
                       />
-                    </div>
-                    <div className="form-field">
-                      <label htmlFor={`province-${index}`}>Province</label>
+                    </FormField>
+                    <FormField id={`province-${index}`} label="Province">
                       <input
                         id={`province-${index}`}
                         type="text"
@@ -174,10 +131,9 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         onChange={(e) => handleAddressChange(index, 'province', e.target.value)}
                         placeholder="ON"
                       />
-                    </div>
+                    </FormField>
                   </div>
-                  <div className="form-field">
-                    <label htmlFor={`postalCode-${index}`}>Postal Code</label>
+                  <FormField id={`postalCode-${index}`} label="Postal Code">
                     <input
                       id={`postalCode-${index}`}
                       type="text"
@@ -185,7 +141,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                       onChange={(e) => handleAddressChange(index, 'postalCode', e.target.value)}
                       placeholder="A1A 1A1"
                     />
-                  </div>
+                  </FormField>
                 </div>
               ))}
           </div>
@@ -201,8 +157,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
             {contacts.map((cont, index) => (
                 <div key={index} className="contact-form-item">
                   <div className="form-row">
-                    <div className="form-field">
-                      <label htmlFor={`contact-firstName-${index}`}>First Name</label>
+                    <FormField id={`contact-firstName-${index}`} label="First Name">
                       <input
                         id={`contact-firstName-${index}`}
                         type="text"
@@ -210,9 +165,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         onChange={(e) => handleContactChange(index, 'firstName', e.target.value)}
                         placeholder="John"
                       />
-                    </div>
-                    <div className="form-field">
-                      <label htmlFor={`contact-lastName-${index}`}>Last Name</label>
+                    </FormField>
+                    <FormField id={`contact-lastName-${index}`} label="Last Name">
                       <input
                         id={`contact-lastName-${index}`}
                         type="text"
@@ -220,11 +174,10 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         onChange={(e) => handleContactChange(index, 'lastName', e.target.value)}
                         placeholder="Doe"
                       />
-                    </div>
+                    </FormField>
                   </div>
                   <div className="form-row">
-                    <div className="form-field">
-                      <label htmlFor={`phoneNumber-${index}`}>Phone Number</label>
+                    <FormField id={`phoneNumber-${index}`} label="Phone Number">
                       <input
                         id={`phoneNumber-${index}`}
                         type="tel"
@@ -232,9 +185,8 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         onChange={(e) => handleContactChange(index, 'phoneNumber', e.target.value)}
                         placeholder="(416) 555-1234"
                       />
-                    </div>
-                    <div className="form-field">
-                      <label htmlFor={`type-${index}`}>Relationship</label>
+                    </FormField>
+                    <FormField id={`type-${index}`} label="Relationship">
                       <select
                         id={`type-${index}`}
                         value={cont.type}
@@ -244,7 +196,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
                         <option value="guardian">Guardian</option>
                         <option value="sibling">Sibling</option>
                       </select>
-                    </div>
+                    </FormField>
                   </div>
                 </div>
               ))}

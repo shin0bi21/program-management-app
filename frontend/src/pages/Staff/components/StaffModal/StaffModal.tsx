@@ -1,5 +1,6 @@
-import Button from '../../../../common/components/Button/Button';
+import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { useStaffModal } from './useStaffModal';
 import type { StaffUser } from '../../types';
 
@@ -23,25 +24,12 @@ export default function StaffModal({ isOpen, onClose, onSuccess, staffData }: St
   const isEdit = !!staffData;
 
   const footer = (
-    <>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={handleClose}
-        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
-      >
-        Cancel
-      </Button>
-      <Button
-        type="submit"
-        form="staff-invite-form"
-        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
-      >
-        {submitStatus === 'submitting'
-          ? (isEdit ? 'Updating...' : 'Sending...')
-          : (isEdit ? 'Update' : 'Send Invite')}
-      </Button>
-    </>
+    <ModalFormFooter
+      formId="staff-invite-form"
+      submitLabel={isEdit ? 'Update' : 'Send Invite'}
+      submitStatus={submitStatus}
+      onClose={handleClose}
+    />
   );
 
   return (
@@ -60,44 +48,24 @@ export default function StaffModal({ isOpen, onClose, onSuccess, staffData }: St
     >
       <form id="staff-invite-form" onSubmit={onSubmit}>
         <div className="form-row">
-          <div className="form-field">
-            <label htmlFor="firstName">First Name *</label>
-            <input
-              id="firstName"
-              type="text"
-              {...register('firstName')}
-            />
-            {errors.firstName && <span className="field-error">{errors.firstName.message}</span>}
-          </div>
-          <div className="form-field">
-            <label htmlFor="lastName">Last Name *</label>
-            <input
-              id="lastName"
-              type="text"
-              {...register('lastName')}
-            />
-            {errors.lastName && <span className="field-error">{errors.lastName.message}</span>}
-          </div>
+          <FormField id="firstName" label="First Name *" error={errors.firstName?.message}>
+            <input id="firstName" type="text" {...register('firstName')} />
+          </FormField>
+          <FormField id="lastName" label="Last Name *" error={errors.lastName?.message}>
+            <input id="lastName" type="text" {...register('lastName')} />
+          </FormField>
         </div>
 
         <div className="form-row">
-          <div className="form-field">
-            <label htmlFor="email">Email *</label>
-            <input
-              id="email"
-              type="email"
-              {...register('email')}
-            />
-            {errors.email && <span className="field-error">{errors.email.message}</span>}
-          </div>
-          <div className="form-field">
-            <label htmlFor="role">Role</label>
+          <FormField id="email" label="Email *" error={errors.email?.message}>
+            <input id="email" type="email" {...register('email')} />
+          </FormField>
+          <FormField id="role" label="Role" error={errors.role?.message}>
             <select id="role" {...register('role')}>
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
-            {errors.role && <span className="field-error">{errors.role.message}</span>}
-          </div>
+          </FormField>
         </div>
       </form>
     </Modal>

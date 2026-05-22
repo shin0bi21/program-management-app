@@ -4,11 +4,11 @@ import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
+import { useConfirmModal } from '../../common/hooks/useConfirmModal';
 import { useStaff, StaffUser } from './hooks/useStaff';
 import { useAuth } from '../../common/context/AuthContext';
 import StaffModal from './components/StaffModal/StaffModal';
 import { deleteStaff, toggleStaffActive } from './api/staff.api';
-import { getErrorMessage } from '../../common/utils/clientErrors';
 import './Staff.css';
 
 type ConfirmAction =
@@ -45,18 +45,8 @@ export default function Staff() {
   const { staff, setStaff, loading, error } = useStaff();
   const { permissions } = useAuth();
   const canInvite = permissions.includes('write:staff');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [staffToEdit, setStaffToEdit] = useState<StaffUser | undefined>(undefined);
+  const [modalTarget, setModalTarget] = useState<StaffUser | 'new' | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [confirmError, setConfirmError] = useState('');
-  const [confirmSuccess, setConfirmSuccess] = useState('');
-  const [confirming, setConfirming] = useState(false);
-
-  const closeConfirm = () => {
-    setConfirmAction(null);
-    setConfirmError('');
-    setConfirmSuccess('');
-  };
 
   const handleModalSuccess = (user: StaffUser) => {
     setStaff((prev) => {
@@ -65,32 +55,28 @@ export default function Staff() {
     });
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setStaffToEdit(undefined);
+  const handleModalClose = () => setModalTarget(null);
+
+  const handleRevoke = async () => {
+    if (!confirmAction || confirmAction.type !== 'revoke') return;
+    await deleteStaff(confirmAction.user.id);
+    setStaff((prev) => prev.filter((s) => s.id !== confirmAction.user.id));
   };
 
-  const handleConfirm = async () => {
-    if (!confirmAction) return;
-    setConfirming(true);
-    setConfirmError('');
-    try {
-      if (confirmAction.type === 'revoke') {
-        await deleteStaff(confirmAction.user.id);
-        setStaff((prev) => prev.filter((s) => s.id !== confirmAction.user.id));
-        setConfirmSuccess('User successfully deleted');
-        setTimeout(closeConfirm, 1500);
-      } else {
-        const updated = await toggleStaffActive(confirmAction.user.id);
-        setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-        setConfirmAction(null);
-      }
-    } catch (err) {
-      setConfirmError(getErrorMessage(err, 'Action failed'));
-    } finally {
-      setConfirming(false);
-    }
+  const handleToggle = async () => {
+    if (!confirmAction || confirmAction.type === 'revoke') return;
+    const updated = await toggleStaffActive(confirmAction.user.id);
+    setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   };
+
+  const confirmModal = useConfirmModal({
+    isOpen: !!confirmAction,
+    onConfirm: confirmAction?.type === 'revoke' ? handleRevoke : handleToggle,
+    onClose: () => setConfirmAction(null),
+    confirmLabel: confirmAction ? confirmButtonLabel(confirmAction) : 'Confirm',
+    confirmVariant: confirmAction?.type === 'reactivate' ? 'primary' : 'danger',
+    successMessage: confirmAction?.type === 'revoke' ? 'User successfully deleted' : undefined,
+  });
 
   const staffColumns = useMemo<TableColumn<StaffUser>[]>(() => {
     const baseColumns: TableColumn<StaffUser>[] = [
@@ -105,12 +91,12 @@ export default function Staff() {
     const actionColumn: TableColumn<StaffUser> = {
       key: 'actions' as const,
       header: '',
-      width: '140px',
+      className: 'col-actions',
+      width: '32px',
       render: (user) => (
         <ActionsMenu
-          disabled={confirming}
           items={[
-            { label: 'Edit', onClick: () => { setStaffToEdit(user); setModalOpen(true); } },
+            { label: 'Edit', onClick: () => setModalTarget(user) },
             ...(user.status === 'invited'  ? [{ label: 'Revoke Invite', onClick: () => setConfirmAction({ type: 'revoke',     user }), variant: 'danger' as const }] : []),
             ...(user.status === 'active'   ? [{ label: 'Deactivate',    onClick: () => setConfirmAction({ type: 'deactivate', user }), variant: 'danger' as const }] : []),
             ...(user.status === 'inactive' ? [{ label: 'Reactivate',    onClick: () => setConfirmAction({ type: 'reactivate', user }) }] : []),
@@ -120,7 +106,7 @@ export default function Staff() {
     };
 
     return canInvite ? [...baseColumns, actionColumn] : baseColumns;
-  }, [canInvite, confirming]);
+  }, [canInvite]);
 
   return (
     <>
@@ -130,7 +116,7 @@ export default function Staff() {
           <div className="page-title-row">
             <h1 className="page-title">Manage Staff</h1>
             {canInvite && (
-              <Button onClick={() => { setStaffToEdit(undefined); setModalOpen(true); }}>+ Invite Staff</Button>
+              <Button onClick={() => setModalTarget('new')}>+ Invite Staff</Button>
             )}
           </div>
         </div>
@@ -148,34 +134,23 @@ export default function Staff() {
 
       {canInvite && (
         <StaffModal
-          isOpen={modalOpen}
+          isOpen={modalTarget !== null}
           onClose={handleModalClose}
           onSuccess={handleModalSuccess}
-          staffData={staffToEdit}
+          staffData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         />
       )}
 
       {confirmAction && (
         <Modal
           isOpen
-          onClose={closeConfirm}
+          onClose={() => setConfirmAction(null)}
           title={confirmTitle(confirmAction)}
-          status={confirmSuccess ? 'success' : confirmError ? 'error' : undefined}
-          statusMessage={confirmSuccess || confirmError || undefined}
-          footer={
-            <>
-              <Button variant="secondary" onClick={closeConfirm} disabled={confirming}>
-                Cancel
-              </Button>
-              <Button
-                variant={confirmAction.type === 'reactivate' ? 'primary' : 'danger'}
-                onClick={handleConfirm}
-                disabled={confirming}
-              >
-                {confirming ? 'Please wait...' : confirmButtonLabel(confirmAction)}
-              </Button>
-            </>
-          }
+          status={confirmModal.status}
+          statusMessage={confirmModal.statusMessage}
+          footer={confirmModal.footer}
+          disableClose={confirmModal.disableClose}
+          successDelay={confirmModal.successDelay}
         >
           <p>{confirmLabel(confirmAction)}</p>
         </Modal>
