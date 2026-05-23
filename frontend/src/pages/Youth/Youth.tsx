@@ -7,7 +7,7 @@ import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import { useAuth } from '../../common/context/AuthContext';
-import { useConfirmModal } from '../../common/hooks/useConfirmModal';
+import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
 import { toggleYouthActive } from './api/youth.api';
 import './Youth.css';
 
@@ -23,16 +23,6 @@ function calculateAge(dateOfBirth: string | null): string {
   return age.toString();
 }
 
-type ConfirmAction =
-  | { type: 'deactivate'; profile: YouthProfile }
-  | { type: 'reactivate'; profile: YouthProfile };
-
-function confirmLabel(action: ConfirmAction): string {
-  const name = `${action.profile.firstName} ${action.profile.lastName}`;
-  if (action.type === 'deactivate') return `Deactivate ${name}? They will lose access to the system immediately.`;
-  return `Reactivate ${name}? They will regain access to the system.`;
-}
-
 export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const { youth, setYouth, loading, error } = useYouth();
@@ -41,20 +31,44 @@ export default function Youth() {
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
-  const handleToggle = async () => {
-    if (!confirmAction) return;
-    const updated = await toggleYouthActive(confirmAction.profile.id);
-    setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
-  };
-
   const confirmModal = useConfirmModal({
-    isOpen: !!confirmAction,
-    onConfirm: handleToggle,
+    action: confirmAction,
     onClose: () => setConfirmAction(null),
-    confirmLabel: confirmAction?.type === 'deactivate' ? 'Deactivate' : 'Reactivate',
-    confirmVariant: confirmAction?.type === 'deactivate' ? 'danger' : 'primary',
-    successMessage: confirmAction?.type === 'deactivate' ? 'Profile deactivated' : 'Profile reactivated',
   });
+
+  const handleEditProfile = (profile: YouthProfile) => setModalTarget(profile);
+
+  const handleDeactivateProfile = (profile: YouthProfile) => setConfirmAction({
+    title: 'Deactivate Profile',
+    message: `Deactivate ${profile.firstName} ${profile.lastName}? They will lose access to the system immediately.`,
+    confirmLabel: 'Deactivate',
+    confirmVariant: 'danger',
+    successMessage: 'Profile deactivated',
+    onConfirm: async () => {
+      const updated = await toggleYouthActive(profile.id);
+      setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
+    },
+  });
+
+  const handleReactivateProfile = (profile: YouthProfile) => setConfirmAction({
+    title: 'Reactivate Profile',
+    message: `Reactivate ${profile.firstName} ${profile.lastName}? They will regain access to the system.`,
+    confirmLabel: 'Reactivate',
+    confirmVariant: 'primary',
+    successMessage: 'Profile reactivated',
+    onConfirm: async () => {
+      const updated = await toggleYouthActive(profile.id);
+      setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
+    },
+  });
+
+  const handleSaveYouth = (savedYouth: YouthProfile) => {
+    setModalTarget(null);
+    setYouth(prev => {
+      const exists = prev.some(y => y.id === savedYouth.id);
+      return exists ? prev.map(y => y.id === savedYouth.id ? savedYouth : y) : [...prev, savedYouth];
+    });
+  };
 
   const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
     {
@@ -102,9 +116,9 @@ export default function Youth() {
       render: (profile) => canWrite ? (
         <ActionsMenu
           items={[
-            { label: 'Edit', onClick: () => setModalTarget(profile) },
-            ...(profile.active ? [{ label: 'Deactivate', onClick: () => setConfirmAction({ type: 'deactivate', profile }), variant: 'danger' as const }] : []),
-            ...(!profile.active ? [{ label: 'Reactivate', onClick: () => setConfirmAction({ type: 'reactivate', profile }) }] : []),
+            { label: 'Edit',       onClick: () => handleEditProfile(profile) },
+            ...(profile.active  ? [{ label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
+            ...(!profile.active ? [{ label: 'Reactivate',                              onClick: () => handleReactivateProfile(profile) }] : []),
           ]}
         />
       ) : null,
@@ -141,28 +155,20 @@ export default function Youth() {
         isOpen={modalTarget !== null}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={() => setModalTarget(null)}
-        onSuccess={(savedYouth) => {
-          const isEdit = modalTarget !== 'new' && modalTarget !== null;
-          setModalTarget(null);
-          setYouth(prev =>
-            isEdit
-              ? prev.map(y => y.id === savedYouth.id ? savedYouth : y)
-              : [...prev, savedYouth]
-          );
-        }}
+        onSuccess={handleSaveYouth}
       />
 
       <Modal
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.type === 'deactivate' ? 'Deactivate Profile' : 'Reactivate Profile'}
+        title={confirmAction?.title ?? ''}
         status={confirmModal.status}
         statusMessage={confirmModal.statusMessage}
         footer={confirmModal.footer}
         disableClose={confirmModal.disableClose}
         successDelay={confirmModal.successDelay}
       >
-        {confirmAction && <p>{confirmLabel(confirmAction)}</p>}
+        {confirmAction && <p>{confirmAction.message}</p>}
       </Modal>
     </>
   );

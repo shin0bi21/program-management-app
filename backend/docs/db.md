@@ -168,7 +168,7 @@ For junction-backed domain operations like youth addresses and contacts, audit p
 | Service | Tables audited |
 |---------|---------------|
 | `youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
-| `staffService.ts` | `users` (INSERT) |
+| `staffService.ts` | `users` (INSERT + UPDATE + DELETE) |
 | `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
 | `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 
@@ -241,7 +241,7 @@ await authLog({
 
 ## 7. Base Table Pattern
 
-All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns. `INCLUDING ALL` copies constraints, indexes, defaults, and triggers — not just column definitions, so the `updated_at` auto-update trigger is inherited automatically.
+All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns. `INCLUDING ALL` copies constraints, indexes, defaults, and storage parameters — not just column definitions. There is no `updated_at` auto-update trigger; services manually set `updated_at = NOW()` in every UPDATE query.
 
 ```mermaid
 erDiagram
@@ -252,10 +252,10 @@ erDiagram
         uuid updated_by
     }
     users {
-        string email
         string first_name
         string last_name
-        permission_level permission
+        uuid role_id FK
+        enum status
     }
     youth_profiles {
         string first_name
@@ -264,16 +264,17 @@ erDiagram
         uuid school_id FK
     }
     addresses {
-        string street
+        string address
         string city
         string province
         string postal_code
+        string country
     }
     contacts {
         string first_name
         string last_name
-        string phone
-        string relationship
+        string phone_number
+        enum type
     }
     base_table ||--o{ users : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ youth_profiles : "LIKE base_table INCLUDING ALL"
@@ -281,4 +282,4 @@ erDiagram
     base_table ||--o{ contacts : "LIKE base_table INCLUDING ALL"
 ```
 
-**Rule:** every new data table must use `LIKE base_table INCLUDING ALL`. Never define `id`, `created_at`, `updated_at` manually.
+**Rule:** every new data table must use `LIKE base_table INCLUDING ALL`. Always define `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` first in the table — `id` is not in `base_table`. Never define `created_at`, `updated_at`, `created_by`, `updated_by` manually.

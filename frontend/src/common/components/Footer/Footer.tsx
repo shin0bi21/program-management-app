@@ -34,7 +34,7 @@ export default function Footer() {
             <span className="site-footer-contact-icon" aria-hidden="true">
               <FontAwesomeIcon icon={faPhone} />
             </span>
-            <a href="tel:+15551234567">(555) 123-4567</a>
+            <a href="tel:+15198179076">(519) 817-9076</a>
           </div>
           <div className="site-footer-contact-item">
             <span className="site-footer-contact-icon" aria-hidden="true">

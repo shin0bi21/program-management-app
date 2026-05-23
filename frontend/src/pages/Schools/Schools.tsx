@@ -1,47 +1,70 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Header from '../../common/components/Header/Header';
 import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
+import type { School } from './types';
 import { useSchools } from './hooks/useSchools';
 import { useAuth } from '../../common/context/AuthContext';
 import SchoolModal from './components/SchoolModal/SchoolModal';
-import { useConfirmModal } from '../../common/hooks/useConfirmModal';
+import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
 import { deleteSchool } from './api/schools.api';
-import type { School } from './types';
 import './Schools.css';
 
+const BOARD_LABELS: Record<string, string> = {
+  catholic: 'Catholic',
+  public:   'Public',
+};
+
+function boardLabel(board: string | null): string {
+  return board ? (BOARD_LABELS[board] ?? '—') : '—';
+}
+
 export default function Schools() {
+  // 1. Hooks / derived state
   const { schools, setSchools, loading, error } = useSchools();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:schools');
 
   const [modalTarget, setModalTarget] = useState<School | 'new' | null>(null);
-  const [confirmSchool, setConfirmSchool] = useState<School | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
-  const handleDelete = async () => {
-    if (!confirmSchool) return;
-    await deleteSchool(confirmSchool.id);
-    setSchools(prev => prev.filter(s => s.id !== confirmSchool.id));
-  };
-
+  // 2. Modal / controller helpers
   const confirmModal = useConfirmModal({
-    isOpen: !!confirmSchool,
-    onConfirm: handleDelete,
-    onClose: () => setConfirmSchool(null),
-    confirmLabel: 'Delete',
-    confirmVariant: 'danger',
-    successMessage: 'School deleted',
+    action: confirmAction,
+    onClose: () => setConfirmAction(null),
   });
 
-  const boardLabel = (board: string | null) => {
-    if (board === 'catholic') return 'Catholic';
-    if (board === 'public') return 'Public';
-    return '—';
+  // 3. Event handlers
+  const handleEditSchool = (school: School) => {
+    setModalTarget(school);
   };
 
-  const columns = useMemo<TableColumn<School>[]>(() => [
+  const handleDeleteSchool = (school: School) => {
+    setConfirmAction({
+      title: 'Delete School',
+      message: <>Delete <strong>{school.name}</strong>? Any youth linked to this school will have their school cleared.</>,
+      confirmLabel: 'Delete',
+      confirmVariant: 'danger',
+      successMessage: 'School deleted',
+      onConfirm: async () => {
+        await deleteSchool(school.id);
+        setSchools(prev => prev.filter(s => s.id !== school.id));
+      },
+    });
+  };
+
+  const handleSaveSchool = (school: School) => {
+    setModalTarget(null);
+    setSchools(prev => {
+      const exists = prev.some(s => s.id === school.id);
+      return exists ? prev.map(s => s.id === school.id ? school : s) : [...prev, school];
+    });
+  };
+
+  // 4. Render helpers / table config
+  const columns: TableColumn<School>[] = [
     { key: 'name', header: 'School Name', render: s => s.name },
     { key: 'board', header: 'Board', render: s => boardLabel(s.board), width: '120px' },
     { key: 'address', header: 'Address', render: s => s.address ?? '—' },
@@ -54,14 +77,15 @@ export default function Schools() {
       render: (s: School) => (
         <ActionsMenu
           items={[
-            { label: 'Edit', onClick: () => setModalTarget(s) },
-            { label: 'Delete', onClick: () => setConfirmSchool(s), variant: 'danger' as const },
+            { label: 'Edit', onClick: () => handleEditSchool(s) },
+            { label: 'Delete', variant: 'danger' as const, onClick: () => handleDeleteSchool(s) },
           ]}
         />
       ),
     }] : []),
-  ], [canWrite]);
+  ];
 
+  // 5. JSX
   return (
     <>
       <Header />
@@ -90,27 +114,21 @@ export default function Schools() {
         <SchoolModal
           isOpen={modalTarget !== null}
           onClose={() => setModalTarget(null)}
-          onSuccess={(school) => {
-            setModalTarget(null);
-            setSchools(prev => {
-              const exists = prev.some(s => s.id === school.id);
-              return exists ? prev.map(s => s.id === school.id ? school : s) : [...prev, school];
-            });
-          }}
+          onSuccess={handleSaveSchool}
           schoolData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         />
 
         <Modal
-          isOpen={!!confirmSchool}
-          onClose={() => setConfirmSchool(null)}
-          title="Delete School"
+          isOpen={!!confirmAction}
+          onClose={() => setConfirmAction(null)}
+          title={confirmAction?.title ?? ''}
           status={confirmModal.status}
           statusMessage={confirmModal.statusMessage}
           footer={confirmModal.footer}
           disableClose={confirmModal.disableClose}
           successDelay={confirmModal.successDelay}
         >
-          <p>Delete <strong>{confirmSchool?.name}</strong>? Any youth linked to this school will have their school cleared.</p>
+          {confirmAction && <p>{confirmAction.message}</p>}
         </Modal>
       </div>
     </>

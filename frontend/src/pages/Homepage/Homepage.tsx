@@ -58,9 +58,9 @@ const timelineItems = [
 ]
 
 const impactStats = [
-  { label: 'Years running',   number: '4',     desc: 'years of community programming since founding in 2022' },
-  { label: 'Grants received', number: '$400K', desc: 'in funding from the Ontario Trillium Foundation' },
-  { label: 'Youth served',    number: '140+',  desc: 'youth directly served and registered through Be Original programming' },
+  { label: 'Years running',   number: '4',     desc: 'since founding in 2022' },
+  { label: 'Grants received', number: '$400K', desc: 'from the Ontario Trillium Foundation' },
+  { label: 'Youth served',    number: '140+',  desc: 'through Be Original programming' },
 ]
 
 const partners = [

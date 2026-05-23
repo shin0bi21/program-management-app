@@ -2,13 +2,13 @@ import { useState, useEffect, ReactNode } from 'react';
 import Button from '../components/Button/Button';
 import { getErrorMessage } from '../utils/clientErrors';
 
-interface UseConfirmModalOptions {
-  isOpen: boolean;
-  onConfirm: () => Promise<void>;
-  onClose: () => void;
+export interface ConfirmAction {
+  title: string;
+  message: ReactNode;
   confirmLabel?: string;
   confirmVariant?: 'primary' | 'danger';
   successMessage?: string;
+  onConfirm: () => Promise<void>;
 }
 
 export interface UseConfirmModalResult {
@@ -20,13 +20,13 @@ export interface UseConfirmModalResult {
 }
 
 export function useConfirmModal({
-  isOpen,
-  onConfirm,
+  action,
   onClose,
-  confirmLabel = 'Confirm',
-  confirmVariant = 'primary',
-  successMessage,
-}: UseConfirmModalOptions): UseConfirmModalResult {
+}: {
+  action: ConfirmAction | null;
+  onClose: () => void;
+}): UseConfirmModalResult {
+  const isOpen = !!action;
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState('');
   const [confirmSuccess, setConfirmSuccess] = useState(false);
@@ -40,13 +40,13 @@ export function useConfirmModal({
   }, [isOpen]);
 
   const handleConfirm = async () => {
+    if (!action) return;
     setConfirming(true);
     setConfirmError('');
     try {
-      await onConfirm();
-      if (successMessage) {
+      await action.onConfirm();
+      if (action.successMessage) {
         setConfirmSuccess(true);
-        // Modal's successDelay timer will call onClose after the success banner
       } else {
         onClose();
       }
@@ -61,6 +61,10 @@ export function useConfirmModal({
   if (confirmSuccess) status = 'success';
   else if (confirming) status = 'submitting';
   else if (confirmError) status = 'error';
+
+  const confirmLabel = action?.confirmLabel ?? 'Confirm';
+  const confirmVariant = action?.confirmVariant ?? 'primary';
+  const successMessage = action?.successMessage;
 
   const statusMessage = confirmSuccess
     ? successMessage

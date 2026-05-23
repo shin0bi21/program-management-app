@@ -4,36 +4,12 @@ import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
-import { useConfirmModal } from '../../common/hooks/useConfirmModal';
+import { ConfirmAction, useConfirmModal } from '../../common/hooks/useConfirmModal';
 import { useStaff, StaffUser } from './hooks/useStaff';
 import { useAuth } from '../../common/context/AuthContext';
 import StaffModal from './components/StaffModal/StaffModal';
 import { deleteStaff, toggleStaffActive } from './api/staff.api';
 import './Staff.css';
-
-type ConfirmAction =
-  | { type: 'revoke'; user: StaffUser }
-  | { type: 'deactivate'; user: StaffUser }
-  | { type: 'reactivate'; user: StaffUser };
-
-function confirmLabel(action: ConfirmAction): string {
-  const name = `${action.user.firstName} ${action.user.lastName}`;
-  if (action.type === 'revoke') return `Revoke the invite for ${name}? They will be removed and will need to be re-invited.`;
-  if (action.type === 'deactivate') return `Deactivate ${name}? They will lose access to the system immediately.`;
-  return `Reactivate ${name}? They will regain access to the system.`;
-}
-
-function confirmButtonLabel(action: ConfirmAction): string {
-  if (action.type === 'revoke') return 'Revoke';
-  if (action.type === 'deactivate') return 'Deactivate';
-  return 'Reactivate';
-}
-
-function confirmTitle(action: ConfirmAction): string {
-  if (action.type === 'revoke') return 'Revoke Invite';
-  if (action.type === 'deactivate') return 'Deactivate User';
-  return 'Reactivate User';
-}
 
 function statusBadge(status: StaffUser['status']) {
   if (status === 'invited')  return <span className="status-badge status-invited">Invited</span>;
@@ -49,33 +25,53 @@ export default function Staff() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const handleModalSuccess = (user: StaffUser) => {
-    setStaff((prev) => {
-      const exists = prev.some((s) => s.id === user.id);
-      return exists ? prev.map((s) => (s.id === user.id ? user : s)) : [...prev, user];
+    setStaff(prev => {
+      const exists = prev.some(s => s.id === user.id);
+      return exists ? prev.map(s => s.id === user.id ? user : s) : [...prev, user];
     });
   };
 
   const handleModalClose = () => setModalTarget(null);
 
-  const handleRevoke = async () => {
-    if (!confirmAction || confirmAction.type !== 'revoke') return;
-    await deleteStaff(confirmAction.user.id);
-    setStaff((prev) => prev.filter((s) => s.id !== confirmAction.user.id));
-  };
+  const handleEditStaff = (user: StaffUser) => setModalTarget(user);
 
-  const handleToggle = async () => {
-    if (!confirmAction || confirmAction.type === 'revoke') return;
-    const updated = await toggleStaffActive(confirmAction.user.id);
-    setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-  };
+  const handleRevokeInvite = (user: StaffUser) => setConfirmAction({
+    title: 'Revoke Invite',
+    message: `Revoke the invite for ${user.firstName} ${user.lastName}? They will be removed and will need to be re-invited.`,
+    confirmLabel: 'Revoke',
+    confirmVariant: 'danger',
+    successMessage: 'User successfully deleted',
+    onConfirm: async () => {
+      await deleteStaff(user.id);
+      setStaff(prev => prev.filter(s => s.id !== user.id));
+    },
+  });
+
+  const handleDeactivateStaff = (user: StaffUser) => setConfirmAction({
+    title: 'Deactivate User',
+    message: `Deactivate ${user.firstName} ${user.lastName}? They will lose access to the system immediately.`,
+    confirmLabel: 'Deactivate',
+    confirmVariant: 'danger',
+    onConfirm: async () => {
+      const updated = await toggleStaffActive(user.id);
+      setStaff(prev => prev.map(s => s.id === updated.id ? updated : s));
+    },
+  });
+
+  const handleReactivateStaff = (user: StaffUser) => setConfirmAction({
+    title: 'Reactivate User',
+    message: `Reactivate ${user.firstName} ${user.lastName}? They will regain access to the system.`,
+    confirmLabel: 'Reactivate',
+    confirmVariant: 'primary',
+    onConfirm: async () => {
+      const updated = await toggleStaffActive(user.id);
+      setStaff(prev => prev.map(s => s.id === updated.id ? updated : s));
+    },
+  });
 
   const confirmModal = useConfirmModal({
-    isOpen: !!confirmAction,
-    onConfirm: confirmAction?.type === 'revoke' ? handleRevoke : handleToggle,
+    action: confirmAction,
     onClose: () => setConfirmAction(null),
-    confirmLabel: confirmAction ? confirmButtonLabel(confirmAction) : 'Confirm',
-    confirmVariant: confirmAction?.type === 'reactivate' ? 'primary' : 'danger',
-    successMessage: confirmAction?.type === 'revoke' ? 'User successfully deleted' : undefined,
   });
 
   const staffColumns = useMemo<TableColumn<StaffUser>[]>(() => {
@@ -96,10 +92,10 @@ export default function Staff() {
       render: (user) => (
         <ActionsMenu
           items={[
-            { label: 'Edit', onClick: () => setModalTarget(user) },
-            ...(user.status === 'invited'  ? [{ label: 'Revoke Invite', onClick: () => setConfirmAction({ type: 'revoke',     user }), variant: 'danger' as const }] : []),
-            ...(user.status === 'active'   ? [{ label: 'Deactivate',    onClick: () => setConfirmAction({ type: 'deactivate', user }), variant: 'danger' as const }] : []),
-            ...(user.status === 'inactive' ? [{ label: 'Reactivate',    onClick: () => setConfirmAction({ type: 'reactivate', user }) }] : []),
+            { label: 'Edit', onClick: () => handleEditStaff(user) },
+            ...(user.status === 'invited'  ? [{ label: 'Revoke Invite',  variant: 'danger' as const, onClick: () => handleRevokeInvite(user) }]    : []),
+            ...(user.status === 'active'   ? [{ label: 'Deactivate',     variant: 'danger' as const, onClick: () => handleDeactivateStaff(user) }] : []),
+            ...(user.status === 'inactive' ? [{ label: 'Reactivate',                                 onClick: () => handleReactivateStaff(user) }] : []),
           ]}
         />
       ),
@@ -145,14 +141,14 @@ export default function Staff() {
         <Modal
           isOpen
           onClose={() => setConfirmAction(null)}
-          title={confirmTitle(confirmAction)}
+          title={confirmAction.title}
           status={confirmModal.status}
           statusMessage={confirmModal.statusMessage}
           footer={confirmModal.footer}
           disableClose={confirmModal.disableClose}
           successDelay={confirmModal.successDelay}
         >
-          <p>{confirmLabel(confirmAction)}</p>
+          <p>{confirmAction.message}</p>
         </Modal>
       )}
     </>
