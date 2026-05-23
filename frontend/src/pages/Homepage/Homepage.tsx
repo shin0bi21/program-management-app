@@ -5,13 +5,7 @@ import ResourceCard from './components/ResourceCard'
 import { useAuth } from '../../common/context/AuthContext'
 import './Homepage.css'
 
-const teamResources = [
-  { name: 'Amanat',   role: 'Program Facilitator', badge: 'Co-founder', education: 'Master of Social Work', school: 'University of Windsor',          bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.' },
-  { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
-  { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
-  { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Human Kinetics',       school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
-  { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },
-]
+// ── Page data (in page-section order) ─────────────────────────────────────────────
 
 const programs = [
   {
@@ -69,6 +63,16 @@ const partners = [
   { name: 'Workforce WindsorEssex', logo: '/partners/workforce.jpg' },
 ]
 
+const teamResources = [
+  { name: 'Amanat',   role: 'Program Facilitator', badge: 'Co-founder', education: 'Master of Social Work', school: 'University of Windsor',          bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.' },
+  { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
+  { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
+  { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Human Kinetics',       school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
+  { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },
+]
+
+// ── Session utilities ─────────────────────────────────────────────────────
+
 const TODAY = new Date()
 TODAY.setHours(0, 0, 0, 0)
 
@@ -91,6 +95,92 @@ function daysUntil(date: Date): number {
 const WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const MONTH_FMT   = new Intl.DateTimeFormat('en-US', { month: 'short' })
 
+// ── Render helpers ───────────────────────────────────────────────────────────────────────────────
+
+type SessionWithStatus = { date: Date; label: string; topic: string; status: string }
+
+function UpcomingSessions({
+  upcoming,
+  nextDays,
+  dropIn,
+}: {
+  upcoming: SessionWithStatus[]
+  nextDays: number | null
+  dropIn?: boolean
+}) {
+  const next = upcoming[0] ?? null
+  const following = upcoming.slice(1)
+
+  if (upcoming.length === 0) {
+    return (
+      <p className="program-empty">
+        {dropIn ? 'No upcoming drop-in days scheduled.' : 'All sessions complete for this cycle.'}
+      </p>
+    )
+  }
+
+  return (
+    <>
+      <div className="next-session" aria-label={dropIn ? 'Next drop-in day' : 'Next session'}>
+        <div className="next-session-date">
+          <span className="next-session-day">{next!.date.getDate()}</span>
+          <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
+        </div>
+        <div className="next-session-body">
+          <span className="next-session-tag">
+            {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
+          </span>
+          <p className="next-session-topic">{dropIn ? 'Drop-in Day' : next!.topic}</p>
+          <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
+        </div>
+      </div>
+      {following.length > 0 && (
+        <ul className="upcoming-rows">
+          {following.map((s) => (
+            <li key={s.label} className="upcoming-row">
+              <span className="upcoming-row-date">
+                <strong>{s.date.getDate()}</strong>
+                <span>{MONTH_FMT.format(s.date)}</span>
+              </span>
+              <span className="upcoming-row-topic">{dropIn ? 'Drop-in Day' : s.topic}</span>
+              <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(s.date)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+function ProgramCard({ program }: { program: (typeof programs)[number] }) {
+  const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
+  const upcoming = sessionsWithStatus.filter(
+    s => s.status !== 'past' &&
+    s.date.getMonth() === TODAY.getMonth() &&
+    s.date.getFullYear() === TODAY.getFullYear()
+  )
+  const next    = upcoming[0] ?? null
+  const nextDays = next ? daysUntil(next.date) : null
+
+  return (
+    <article className="program-card">
+      <header className="program-card-head">
+        <p className="program-age">{program.age}</p>
+      </header>
+      <div className="program-copy-block">
+        <span className="program-copy-label">{program.dropIn ? 'Drop-in Days' : program.title}</span>
+        <p className="program-copy">{program.copy}</p>
+      </div>
+      <div className="program-sessions">
+        <p className="program-sessions-label">Upcoming</p>
+        <UpcomingSessions upcoming={upcoming} nextDays={nextDays} dropIn={program.dropIn} />
+      </div>
+    </article>
+  )
+}
+
+// ── Component ───────────────────────────────────────────────────────────────────────────────
+
 export default function Homepage() {
   const { isAuthenticated, loading } = useAuth()
 
@@ -110,117 +200,9 @@ export default function Homepage() {
           <div className="section-inner">
             <h2 id="offerings-title" className="section-title">Programming</h2>
             <div className="program-grid">
-              {programs.map((program) => {
-                const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
-                const upcoming = sessionsWithStatus.filter(s =>
-                  s.status !== 'past' &&
-                  s.date.getMonth() === TODAY.getMonth() &&
-                  s.date.getFullYear() === TODAY.getFullYear()
-                )
-                const next = upcoming[0] ?? null
-                const following = upcoming.slice(1)
-                const nextDays = next ? daysUntil(next.date) : null
-
-                if (program.dropIn) {
-                  return (
-                    <article key={program.age} className="program-card">
-                      <header className="program-card-head">
-                        <p className="program-age">{program.age}</p>
-                      </header>
-                      <div className="program-copy-block">
-                        <span className="program-copy-label">Drop-in Days</span>
-                        <p className="program-copy">{program.copy}</p>
-                      </div>
-                      <div className="program-sessions">
-                        <p className="program-sessions-label">Upcoming</p>
-                        {upcoming.length === 0 ? (
-                          <p className="program-empty">No upcoming drop-in days scheduled.</p>
-                        ) : (
-                          <>
-                            <div className="next-session" aria-label="Next drop-in day">
-                              <div className="next-session-date">
-                                <span className="next-session-day">{next!.date.getDate()}</span>
-                                <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
-                              </div>
-                              <div className="next-session-body">
-                                <span className="next-session-tag">
-                                  {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
-                                </span>
-                                <p className="next-session-topic">Drop-in Day</p>
-                                <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
-                              </div>
-                            </div>
-                            {following.length > 0 && (
-                              <ul className="upcoming-rows">
-                                {following.map((session) => (
-                                  <li key={session.label} className="upcoming-row">
-                                    <span className="upcoming-row-date">
-                                      <strong>{session.date.getDate()}</strong>
-                                      <span>{MONTH_FMT.format(session.date)}</span>
-                                    </span>
-                                    <span className="upcoming-row-topic">Drop-in Day</span>
-                                    <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(session.date)}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </article>
-                  )
-                }
-
-                return (
-                  <article key={program.age} className="program-card">
-                    <header className="program-card-head">
-                      <p className="program-age">{program.age}</p>
-                    </header>
-
-                    <div className="program-copy-block">
-                      <span className="program-copy-label">{program.title}</span>
-                      <p className="program-copy">{program.copy}</p>
-                    </div>
-
-                    <div className="program-sessions">
-                      <p className="program-sessions-label">Upcoming</p>
-                      {upcoming.length === 0 ? (
-                        <p className="program-empty">All sessions complete for this cycle.</p>
-                      ) : (
-                        <>
-                          <div className="next-session" aria-label="Next session">
-                            <div className="next-session-date">
-                              <span className="next-session-day">{next!.date.getDate()}</span>
-                              <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
-                            </div>
-                            <div className="next-session-body">
-                              <span className="next-session-tag">
-                                {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
-                              </span>
-                              <p className="next-session-topic">{next!.topic}</p>
-                              <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
-                            </div>
-                          </div>
-                          {following.length > 0 && (
-                            <ul className="upcoming-rows">
-                              {following.map((session) => (
-                                <li key={session.label} className="upcoming-row">
-                                  <span className="upcoming-row-date">
-                                    <strong>{session.date.getDate()}</strong>
-                                    <span>{MONTH_FMT.format(session.date)}</span>
-                                  </span>
-                                  <span className="upcoming-row-topic">{session.topic}</span>
-                                  <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(session.date)}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </article>
-                )
-              })}
+              {programs.map((program) => (
+                <ProgramCard key={program.age} program={program} />
+              ))}
             </div>
           </div>
         </section>
