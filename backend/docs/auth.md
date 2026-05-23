@@ -58,7 +58,7 @@ flowchart TD
 
 ```
 Login flow
-  POST /login   →  validates credentials, sends 2FA email, returns { type: 'requires2FA' }
+  POST /login   →  validates credentials, sends 2FA email, returns { type: 'requires2FA', userId: string }
   POST /verify  →  validates 2FA code, issues access token (1h) + refresh token (8h httpOnly cookie)
 
 Session flow
@@ -94,8 +94,8 @@ Authorization is purely permission-based. **No role checks exist in route or UI 
 
 | Role | Permissions |
 |------|-------------|
-| `admin` | `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `read:settings`, `write:settings` |
-| `staff` | `read:youth_profiles`, `write:youth_profiles`, `read:schools` |
+| `admin` | `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:settings`, `write:settings` |
+| `staff` | `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools` |
 | `youth` | *(none)* |
 
 ### Permission definitions
@@ -103,10 +103,11 @@ Authorization is purely permission-based. **No role checks exist in route or UI 
 | Permission | Grants |
 |------------|--------|
 | `read:staff` | `GET /api/staff` |
-| `write:staff` | `POST /api/staff` |
+| `write:staff` | `POST /api/staff`, `PATCH /api/staff/:id`, `DELETE /api/staff/:id` |
 | `read:youth_profiles` | `GET /api/youth` |
-| `write:youth_profiles` | `POST /api/youth` |
+| `write:youth_profiles` | `POST /api/youth`, `PATCH /api/youth/:id` |
 | `read:schools` | `GET /api/schools` |
+| `write:schools` | `POST /api/schools`, `PATCH /api/schools/:id`, `DELETE /api/schools/:id` |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
 
@@ -180,7 +181,7 @@ function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'to
 }
 ```
 
-The caller only passes the identity fields (`userId`, `email`, `role`, `permissions`, `jti`). The helpers are responsible for:
+For access tokens, the caller passes (`userId`, `email`, `role`, `permissions`, `jti`). For refresh tokens, only (`userId`, `email`, `jti`) — no role or permissions. The helpers are responsible for:
 - Selecting the right secret
 - Setting the expiry constant
 - Stamping `tokenType`
@@ -208,7 +209,7 @@ The `tokenType` guard provides an explicit payload-level check on top of signatu
 
 `requirePermission(...required: Permission[])` is a separate middleware that runs after `authenticateToken`. It checks that every required permission is present in `req.user.permissions[]` — it never reads `req.user.role`.
 
-**Error responses:** Auth middleware throws `UnauthorizedError` or `ForbiddenError` from `AppError.ts`. The thrown errors flow through `asyncHandler` to the global `errorHandler`, which formats the response via `sendError()`. Same path as service-thrown errors \u2014 no inline response. See [errors.md \u00a75](./errors.md#5-how-a-request-flows-through-the-system) for the full middleware flow.
+**Error responses:** Auth middleware throws `UnauthorizedError` or `ForbiddenError` from `errors.ts`. The thrown errors flow through `asyncHandler` to the global `errorHandler`, which formats the response via `sendError()`. Same path as service-thrown errors \u2014 no inline response. See [errors.md \u00a75](./errors.md#5-how-a-request-flows-through-the-system) for the full middleware flow.
 
 ---
 
@@ -283,7 +284,7 @@ The HMAC key defaults to `JWT_SECRET` but can be overridden by setting `LOG_HMAC
 
 ### Function signatures
 
-All six exported auth service functions accept an optional `ipAddress?` trailing parameter:
+All seven exported auth service functions accept an optional `ipAddress?` trailing parameter:
 
 ```ts
 loginUser(email, password, deviceFingerprint?, ipAddress?)

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSchools } from '../api/schools.api';
+import { getErrorMessage } from '../../../common/utils/clientErrors';
 import type { School } from '../types';
 
 export function useSchools() {
@@ -7,13 +8,22 @@ export function useSchools() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadSchools = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getSchools();
+      setSchools(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load schools'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const controller = new AbortController();
-    getSchools()
-      .then(data => { setSchools(data); setLoading(false); })
-      .catch(err => { if (!controller.signal.aborted) { setError(err.message); setLoading(false); } });
-    return () => controller.abort();
+    loadSchools();
   }, []);
 
-  return { schools, setSchools, loading, error };
+  return { schools, loading, error, refetch: loadSchools, setSchools };
 }

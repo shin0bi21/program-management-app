@@ -135,16 +135,18 @@ No `try/catch` needed in controllers — just throw.
 
 ## 5. Request flow
 
+This shows the flow for a **protected route** (`/api/staff`, `/api/youth`, `/api/schools`). Auth routes (`/api/auth/*`) skip `authenticateToken` and `requirePermission` entirely and use a separate `authLimiter`.
+
 ```mermaid
 flowchart TD
     REQ([Request]) --> RID[requestId]
-    RID --> RL{rate limiter}
-    RL -->|exceeded| T429[TooManyRequestsError]
-    RL -->|ok| AT{authenticateToken}
+    RID --> AT{authenticateToken}
     AT -->|fail| T401[UnauthorizedError / ForbiddenError]
     AT -->|ok| RP{requirePermission}
     RP -->|fail| T403[ForbiddenError]
-    RP -->|ok| VR{validateRequest}
+    RP -->|ok| RL{rate limiter}
+    RL -->|exceeded| T429[TooManyRequestsError]
+    RL -->|ok| VR{validateRequest}
     VR -->|fail| T400[ValidationError + details]
     VR -->|ok| CTL{asyncHandler controller}
     CTL -->|error| EH
