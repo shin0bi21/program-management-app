@@ -7,14 +7,14 @@ import { NetworkError, RequestTimeoutError, ApiError, AuthError } from '../utils
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type RequestOptions = {
+export interface RequestOptions {
   /** Whether to attach a Bearer token. Default: true */
   auth?: boolean;
   /** Abort after this many ms. Default: 15 000 */
   timeout?: number;
   /** Pass your own AbortSignal (e.g. from useEffect cleanup) */
   signal?: AbortSignal;
-};
+}
 
 // ─── Token management ────────────────────────────────────────────────────────
 

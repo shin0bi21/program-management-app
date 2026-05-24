@@ -5,6 +5,33 @@ import ResourceCard from './components/ResourceCard'
 import { useAuth } from '../../common/context/AuthContext'
 import './Homepage.css'
 
+// ── Types ─────────────────────────────────────────────────────────────────────────
+
+type SessionWithStatus = {
+  date: Date
+  topic: string
+  status: string
+}
+
+type UpcomingSessionsProps = {
+  upcoming: SessionWithStatus[]
+  nextDays: number | null
+  dropIn?: boolean
+}
+
+type Program = {
+  age: string
+  day: string
+  copy: string
+  sessions: { date: Date; topic: string }[]
+  title?: string
+  dropIn?: boolean
+}
+
+type ProgramCardProps = {
+  program: Program
+}
+
 // ── Page data (in page-section order) ─────────────────────────────────────────────
 
 const programs = [
@@ -13,9 +40,9 @@ const programs = [
     day: 'Every other Friday',
     copy: 'Welcome to hang out, play video games and board games. A relaxed, open space for youth to connect and unwind.',
     sessions: [
-      { date: new Date(2026, 4, 29), label: 'May 29',  topic: 'Drop-in Day' },
-      { date: new Date(2026, 5, 12), label: 'Jun 12',  topic: 'Drop-in Day' },
-      { date: new Date(2026, 5, 26), label: 'Jun 26',  topic: 'Drop-in Day' },
+      { date: new Date(2026, 4, 29), topic: 'Drop-in Day' },
+      { date: new Date(2026, 5, 12), topic: 'Drop-in Day' },
+      { date: new Date(2026, 5, 26), topic: 'Drop-in Day' },
     ],
     dropIn: true,
   },
@@ -25,11 +52,11 @@ const programs = [
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
     sessions: [
-      { date: new Date(2026, 4,  5), label: 'May 5',  topic: 'Yoga' },
-      { date: new Date(2026, 4, 12), label: 'May 12', topic: 'Healthy Relationships & Boundaries' },
-      { date: new Date(2026, 4, 19), label: 'May 19', topic: 'Assertiveness & Emotional Control' },
-      { date: new Date(2026, 4, 26), label: 'May 26', topic: 'Conflict Resolution' },
-      { date: new Date(2026, 5,  2), label: 'Jun 2',  topic: 'Field Trip' },
+      { date: new Date(2026, 4,  5), topic: 'Yoga' },
+      { date: new Date(2026, 4, 12), topic: 'Healthy Relationships & Boundaries' },
+      { date: new Date(2026, 4, 19), topic: 'Assertiveness & Emotional Control' },
+      { date: new Date(2026, 4, 26), topic: 'Conflict Resolution' },
+      { date: new Date(2026, 5,  2), topic: 'Field Trip' },
     ],
   },
   {
@@ -38,9 +65,9 @@ const programs = [
     day: 'Every Wednesday',
     copy: 'Youth receive job-readiness education, interview practice, one-on-one support, volunteer placement experience, and one paid project to strengthen resumes. Program elements also support transitions into post-secondary education and the workforce.',
     sessions: [
-      { date: new Date(2026, 4,  6), label: 'May 6',  topic: 'Communication' },
-      { date: new Date(2026, 4, 13), label: 'May 13', topic: 'Interview Prep' },
-      { date: new Date(2026, 4, 20), label: 'May 20', topic: 'Cover Letter Writing' },
+      { date: new Date(2026, 4,  6), topic: 'Communication' },
+      { date: new Date(2026, 4, 13), topic: 'Interview Prep' },
+      { date: new Date(2026, 4, 20), topic: 'Cover Letter Writing' },
     ],
   },
 ]
@@ -97,17 +124,7 @@ const MONTH_FMT   = new Intl.DateTimeFormat('en-US', { month: 'short' })
 
 // ── Render helpers ───────────────────────────────────────────────────────────────────────────────
 
-type SessionWithStatus = { date: Date; label: string; topic: string; status: string }
-
-function UpcomingSessions({
-  upcoming,
-  nextDays,
-  dropIn,
-}: {
-  upcoming: SessionWithStatus[]
-  nextDays: number | null
-  dropIn?: boolean
-}) {
+function UpcomingSessions({ upcoming, nextDays, dropIn }: UpcomingSessionsProps) {
   const next = upcoming[0] ?? null
   const following = upcoming.slice(1)
 
@@ -137,7 +154,7 @@ function UpcomingSessions({
       {following.length > 0 && (
         <ul className="upcoming-rows">
           {following.map((s) => (
-            <li key={s.label} className="upcoming-row">
+            <li key={s.date.toISOString()} className="upcoming-row">
               <span className="upcoming-row-date">
                 <strong>{s.date.getDate()}</strong>
                 <span>{MONTH_FMT.format(s.date)}</span>
@@ -152,15 +169,14 @@ function UpcomingSessions({
   )
 }
 
-function ProgramCard({ program }: { program: (typeof programs)[number] }) {
+function ProgramCard({ program }: ProgramCardProps) {
   const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
   const upcoming = sessionsWithStatus.filter(
     s => s.status !== 'past' &&
     s.date.getMonth() === TODAY.getMonth() &&
     s.date.getFullYear() === TODAY.getFullYear()
   )
-  const next    = upcoming[0] ?? null
-  const nextDays = next ? daysUntil(next.date) : null
+  const nextDays = upcoming[0] ? daysUntil(upcoming[0].date) : null
 
   return (
     <article className="program-card">
