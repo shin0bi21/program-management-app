@@ -3,12 +3,14 @@
 # Assumes prod containers are already running.
 #
 # Flow:
-#   1. git fetch + reset --hard to origin/main
-#   2. Snapshot prod DB
-#   3. Apply pending migrations
-#   4. Validate checksums (db:status)
-#   5. Rebuild and restart containers with new code
-#   6. On any failure before step 5: restore DB from snapshot, abort deploy
+#   1. Pull        — dirty-tree check, git fetch + reset --hard to origin/main
+#   2. Frontend    — npm ci + npm run build inside node:20-alpine container
+#   3. Pre-flight  — verify DB and backend containers are running
+#   4. Snapshot    — pg_dump to temp file, verify gzip integrity, arm rollback trap
+#   5. Build       — docker compose build backend (uses freshly pulled code)
+#   6. Migrate     — status check → apply → status check; clear rollback flag on success
+#   7. Deploy      — docker compose up -d, wait for new container, health check
+#   On any failure after step 4: restore DB from snapshot and abort
 #
 # Usage:
 #   ./scripts/deploy.sh
@@ -16,9 +18,10 @@
 # Env vars (loaded from .env at project root):
 #   DB_USER       — postgres user
 #   DB_NAME       — prod database name
-#   SLACK_WEBHOOK — (optional) incoming webhook URL for failure alerts
 
-set -eo pipefail
+# ── Configuration ───────────────────────────────────────────────────────────────
+
+set -euo pipefail
 
 cd "$(dirname "$0")/.." || exit
 
@@ -34,6 +37,8 @@ BACKEND_CONTAINER="myapp_backend"
 # All docker compose commands in this script target the prod compose file.
 export COMPOSE_FILE="docker-compose.prod.yml"
 
+# ── Concurrency lock ────────────────────────────────────────────────────────────
+
 # Prevent concurrent deploys — two simultaneous runs would race on migrations.
 LOCKFILE="/tmp/myapp-deploy.lock"
 exec 9>"$LOCKFILE"
@@ -41,6 +46,8 @@ if ! flock -n 9; then
   echo "ERROR: Another deploy is already running (lock: $LOCKFILE)"
   exit 1
 fi
+
+# ── Logging ─────────────────────────────────────────────────────────────────────
 
 # Tee all output to a log file so build/migration errors are captured on remote runs.
 LOGFILE="${DEPLOY_LOG:-./logs/deploy.log}"
@@ -52,6 +59,8 @@ echo ""
 echo "=========================================="
 echo "DEPLOY"
 echo "=========================================="
+
+# ── Pull ────────────────────────────────────────────────────────────────────────
 
 echo ""
 echo "Pulling latest code..."
@@ -70,6 +79,8 @@ git fetch origin main
 git reset --hard origin/main
 echo "Deploying commit: $(git log -1 --oneline)"
 
+# ── Frontend build ──────────────────────────────────────────────────────────────
+
 echo ""
 echo "Building frontend..."
 [ -f "frontend/.env.production" ] || {
@@ -83,8 +94,7 @@ docker run --rm \
   node:20-alpine \
   sh -c "npm ci && npm run build"
 
-# Set up snapshot + rollback trap only after pull succeeds.
-# A pull failure has nothing to do with the database and must not trigger a restore.
+# ── Pre-flight checks ───────────────────────────────────────────────────────────
 
 # Verify required containers are running before touching the database.
 [[ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null)" == "true" ]] || {
@@ -95,6 +105,8 @@ docker run --rm \
   echo "ERROR: Backend container '$BACKEND_CONTAINER' is not running"
   exit 1
 }
+
+# ── Snapshot + rollback ─────────────────────────────────────────────────────────
 
 SNAPSHOT=$(mktemp /tmp/migration-snapshot.XXXXXX.sql.gz)
 # SNAPSHOT_TMP declared here so cleanup() can always remove it — the declaration
@@ -126,12 +138,6 @@ cleanup() {
     fi
   fi
   rm -f "$SNAPSHOT" "$SNAPSHOT_TMP" "$LOCKFILE"
-  if [ "$exit_code" -ne 0 ] && [ -n "${SLACK_WEBHOOK:-}" ]; then
-    curl -s -X POST "$SLACK_WEBHOOK" \
-      -H 'Content-Type: application/json' \
-      -d "{\"text\":\"Deploy failed on $(hostname) at $(date -u +%Y-%m-%dT%H:%M:%SZ). Check $LOGFILE\"}" \
-      > /dev/null || true
-  fi
   exit $exit_code
 }
 trap cleanup EXIT INT TERM
@@ -149,12 +155,16 @@ mv "$SNAPSHOT_TMP" "$SNAPSHOT"
 ROLLBACK_NEEDED=true
 echo "Snapshot saved and verified."
 
+# ── Backend image build ─────────────────────────────────────────────────────────
+
 # Build the new backend image from the freshly pulled code before running migrations.
 # Running migrations inside the old (currently-running) container would use stale
 # migration files and silently skip any newly added migrations.
 echo ""
 echo "Building new backend image..."
 docker compose build backend
+
+# ── Migrations ───────────────────────────────────────────────────────────────────
 
 echo ""
 echo "Checking migration status before apply..."
@@ -172,18 +182,32 @@ docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/sc
 # cleanup() will still run on exit to remove temp files, but won't restore the DB.
 ROLLBACK_NEEDED=false
 
+# ── Deploy ───────────────────────────────────────────────────────────────────────
+
 echo ""
 echo "Starting updated containers..."
+# Capture old container ID before replacement so we can detect when the new one is live.
+OLD_BACKEND_ID=$(docker compose ps -q backend 2>/dev/null || true)
 docker compose up -d
-# Brief pause so compose registers the replacement container before we inspect it.
-# Without this the health check may still see the old container's status.
-sleep 2
 
 echo ""
 echo "Waiting for backend to become healthy..."
-# Inspect by container ID (not name) — the old container may still be briefly
-# visible by name after replacement, causing a false-healthy reading.
-BACKEND_ID=$(docker compose ps -q backend)
+# Poll until docker compose ps returns a container ID that is different from the
+# pre-deploy one. This is reliable regardless of how long Docker takes to register
+# the replacement — the old sleep 2 was a race condition.
+BACKEND_ID=""
+for _ in $(seq 1 15); do
+  CID=$(docker compose ps -q backend 2>/dev/null || true)
+  if [ -n "$CID" ] && [ "$CID" != "$OLD_BACKEND_ID" ]; then
+    BACKEND_ID="$CID"
+    break
+  fi
+  sleep 2
+done
+if [ -z "$BACKEND_ID" ]; then
+  echo "ERROR: New backend container did not appear within 30s"
+  exit 1
+fi
 HEALTH=$(docker inspect --format="{{.State.Health.Status}}" "$BACKEND_ID" 2>/dev/null || true)
 if [ -z "$HEALTH" ] || [[ "$HEALTH" == *"no value"* ]]; then
   echo "Note: No HEALTHCHECK in Dockerfile — skipping health wait."
