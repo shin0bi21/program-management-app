@@ -1,6 +1,6 @@
-import { clearAuthData, getUser, setAuthData, STORAGE_KEYS } from '../utils/storage';
+import { clearAuthData, getUser, setAuthData, STORAGE_KEYS } from '../../utils/storage';
 import { api } from './config';
-import { NetworkError } from '../utils/clientErrors';
+import { NetworkError } from '../../utils/clientErrors';
 
 let refreshPromise: Promise<string> | null = null;
 

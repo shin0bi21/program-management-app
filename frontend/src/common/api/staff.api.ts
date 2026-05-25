@@ -1,5 +1,5 @@
-import { apiClient } from '../../../common/api/client';
-import type { StaffUser, InviteStaffInput, UpdateStaffInput } from '../types';
+import { apiClient } from './http/client';
+import type { StaffUser, InviteStaffInput, UpdateStaffInput } from '../types/staff';
 
 export function getStaff() {
   return apiClient.get<StaffUser[]>('/staff');

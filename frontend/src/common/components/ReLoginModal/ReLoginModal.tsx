@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { getUser, setAuthData } from '../../utils/storage';
 import { getDeviceFingerprint, getDeviceName } from '../../utils/deviceFingerprint';
 import { login, verify2FA, resend2FA } from '../../api/auth.api';
-import { resolveReLogin } from '../../api/sessionExpired';
+import { resolveReLogin } from '../../api/http/sessionExpired';
 import { getErrorMessage } from '../../utils/clientErrors';
 import Button from '../Button/Button';
 import './ReLoginModal.css';

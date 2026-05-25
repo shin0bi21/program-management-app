@@ -10,12 +10,15 @@ applyTo: "frontend/**"
 frontend/src/
   common/
     api/
+      http/               ← HTTP infrastructure — rarely touched
+        client.ts         ← THE entry point for all HTTP calls — apiClient.get/post/put/patch/delete
+        config.ts         ← api(path) — builds full URL from base
+        sessionExpired.ts ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
+        tokenRefresh.ts   ← refreshToken() — proactive refresh, deduplication, redirect on failure
       auth.api.ts         ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
-      client.ts           ← THE entry point for all HTTP calls — apiClient.get/post/put/patch/delete
-      config.ts           ← api(path) — builds full URL from base
-      schools.api.ts      ← getSchools() — shared read, used by Youth modal + Schools page
-      sessionExpired.ts   ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
-      tokenRefresh.ts     ← refreshToken() — proactive refresh, deduplication, redirect on failure
+      schools.api.ts      ← getSchools() — shared read used by Youth modal + Schools page
+      staff.api.ts        ← getStaff, inviteStaff, updateStaff, toggleStaffActive, deleteStaff
+      youth.api.ts        ← getYouth, setYouth, toggleYouthActive
     components/
       ReLoginModal/       ← shown when access token expires mid-session
       ErrorBoundary/      ← wraps entire app, catches render errors
@@ -80,7 +83,7 @@ Use `interface` for exported shared domain shapes. Use `type` for unions, `z.inf
 All calls go through `apiClient` — never use raw `fetch`:
 
 ```ts
-import { apiClient } from '../../../common/api/client';
+import { apiClient } from '../../../common/api/http/client';
 
 // Protected (default — attaches Bearer token):
 const data = await apiClient.get<StaffUser[]>('/staff');

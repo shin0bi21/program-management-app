@@ -8,7 +8,7 @@ import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
-import { toggleYouthActive } from './api/youth.api';
+import { toggleYouthActive } from '../../common/api/youth.api';
 import { calculateAge } from '../../common/utils/time';
 import './Youth.css';
 

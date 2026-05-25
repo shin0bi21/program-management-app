@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import type { Permission } from '../../context/AuthContext';
@@ -12,6 +13,12 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
   const { isAuthenticated, permissions, loading } = useAuth();
   const location = useLocation();
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem(STORAGE_KEYS.LAST_AUTH_PATH, location.pathname);
+    }
+  }, [isAuthenticated, location.pathname]);
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -21,11 +28,8 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
   }
 
   if (requiredPermission && !permissions.includes(requiredPermission)) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
-
-  // Persist the current path so login can redirect back here
-  localStorage.setItem(STORAGE_KEYS.LAST_AUTH_PATH, location.pathname);
 
   return children;
 }

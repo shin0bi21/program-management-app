@@ -8,7 +8,7 @@ import { ConfirmAction, useConfirmModal } from '../../common/hooks/useConfirmMod
 import { useStaff, StaffUser } from './hooks/useStaff';
 import { useAuth } from '../../common/context/AuthContext';
 import StaffModal from './components/StaffModal/StaffModal';
-import { deleteStaff, toggleStaffActive } from './api/staff.api';
+import { deleteStaff, toggleStaffActive } from '../../common/api/staff.api';
 import './Staff.css';
 
 function statusBadge(status: StaffUser['status']) {

@@ -1,4 +1,4 @@
-import { apiClient } from '../../../common/api/client';
+import { apiClient } from '../../../common/api/http/client';
 import type { School } from '../types';
 
 export function setSchool(data: {

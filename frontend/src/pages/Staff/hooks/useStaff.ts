@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
-import { getStaff } from '../api/staff.api';
+import { getStaff } from '../../../common/api/staff.api';
 import type { StaffUser } from '../types';
 
 export type { StaffUser };

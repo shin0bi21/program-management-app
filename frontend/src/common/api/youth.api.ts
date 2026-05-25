@@ -1,5 +1,5 @@
-import { apiClient } from '../../../common/api/client';
-import type { YouthProfile, SetYouthInput } from '../types';
+import { apiClient } from './http/client';
+import type { YouthProfile, SetYouthInput } from '../types/youth';
 
 export function getYouth(id?: string) {
   return apiClient.get<YouthProfile[]>(`/youth${id ? `?id=${id}` : ''}`);
