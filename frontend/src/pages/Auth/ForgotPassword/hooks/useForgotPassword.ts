@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { forgotPassword } from '../../common/api/auth.api';
+import { forgotPassword } from '../../../../common/api/auth.api';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '../../common/validation/authSchemas';
 

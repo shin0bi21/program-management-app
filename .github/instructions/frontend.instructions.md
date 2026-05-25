@@ -10,8 +10,10 @@ applyTo: "frontend/**"
 frontend/src/
   common/
     api/
+      auth.api.ts         ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
       client.ts           ← THE entry point for all HTTP calls — apiClient.get/post/put/patch/delete
       config.ts           ← api(path) — builds full URL from base
+      schools.api.ts      ← getSchools() — shared read, used by Youth modal + Schools page
       sessionExpired.ts   ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
       tokenRefresh.ts     ← refreshToken() — proactive refresh, deduplication, redirect on failure
     components/
@@ -33,13 +35,12 @@ frontend/src/
       useConfirmModal.tsx ← shared confirm dialog state
     utils/
       clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
-      storage.ts          ← getToken, setAuthData, clearAuthData, getUser, hasAuthToken, STORAGE_KEYS
+      storage.ts          ← getToken, setAuthData, clearAuthData, getUser, STORAGE_KEYS
       jwt.ts              ← isTokenExpired, getTimeUntilExpiry, decodeToken, getTokenExpiry
       time.ts             ← formatTime(seconds → mm:ss), calculateAge(dob → age string)
       deviceFingerprint.ts
   pages/
     Auth/
-      common/api/auth.api.ts        ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
       common/validation/authSchemas.ts
     Staff/
       types.ts                      ← StaffUser, InviteStaffInput, UpdateStaffInput
@@ -50,13 +51,13 @@ frontend/src/
       components/StaffModal/staffSchema.ts
     Youth/
       types.ts                      ← YouthProfile, SetYouthInput
-      api/youth.api.ts              ← getYouth, setYouth (all typed)
+      api/youth.api.ts              ← getYouth, setYouth, toggleYouthActive (all typed)
       hooks/useYouth.ts
       components/YouthModal/useYouthModal.ts
       components/YouthModal/youthSchema.ts
     Schools/
       types.ts                      ← School, SetSchoolInput
-      api/schools.api.ts            ← getSchools, setSchool, deleteSchool (all typed)
+      api/schools.api.ts            ← setSchool, deleteSchool (all typed) — getSchools lives in common/api/schools.api.ts
       hooks/useSchools.ts
       components/SchoolModal/useSchoolModal.ts
       components/SchoolModal/schoolSchema.ts
@@ -69,6 +70,8 @@ frontend/src/
 Each page owns a `types.ts` declaring its domain interfaces. API modules type their `apiClient` calls with these — never leave them as `unknown`. Hooks/components must NOT cast (`data as Foo`) — if a cast is needed, the API function is missing a type parameter.
 
 Dependency direction within a page: `types.ts` ← `api/` ← `hooks/` ← `components/`. A page never imports another page's `types.ts` — promote shared types to `common/types/`.
+
+**`common/` must never import from `pages/`.** If a `common/` component or hook needs a function from a page-level api file, promote that function to `common/api/`. This is the rule that governs where domain api files live — `auth.api.ts` and `schools.api.ts` are in `common/api/` precisely because `common/` components (ReLoginModal, useSchools) need them.
 
 Use `interface` for exported shared domain shapes. Use `type` for unions, `z.infer<>`, and file-local helpers.
 
@@ -133,6 +136,20 @@ setItems(prev => [...prev, saved]);                                // create
 setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 ```
 
+## Permissions pattern — 3 layers, always in sync
+
+Every protected resource uses the same 3-layer check. All 3 must match:
+
+| Layer | Where | Example |
+|---|---|---|
+| Backend route | `requirePermission('read:x')` on GET, `requirePermission('write:x')` on POST/PATCH/DELETE | `schoolRoutes.ts` |
+| Route guard | `<ProtectedRoute requiredPermission="read:x">` in `App.tsx` | blocks entire page for users without read |
+| In-page write check | `const canWrite = permissions.includes('write:x')` | hides Add/Edit/Delete buttons |
+
+`read:x` gates the whole page. `write:x` gates mutations within the page. `permissions` comes from `useAuth()`.
+
+Current permission strings: `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:settings`, `write:settings`.
+
 ## Adding a new page
 
 1. Create `src/pages/NewPage/` with `NewPage.tsx`, `NewPage.css`, `types.ts`, `api/newPage.api.ts`, `hooks/useNewPage.ts`
@@ -140,4 +157,5 @@ setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 3. API module: one-liners calling `apiClient.get<T>/post<T>` with types from `../types` — no logic in api files
 4. Hook: fetch on mount, expose state + splice setter
 5. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
-6. Wire route in `App.tsx` under `<ProtectedRoute requiredPermission="read:x">`
+6. Wire route in `App.tsx` under `<ProtectedRoute requiredPermission="read:x">` and add `read:x`/`write:x` to the `Permission` union in `AuthContext.tsx`
+7. Add `requirePermission('read:x')` on GET routes and `requirePermission('write:x')` on mutation routes in the backend

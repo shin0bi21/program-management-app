@@ -89,7 +89,13 @@ Run this after pulling changes that include new migrations, or any time the stac
 
 ## Running Tests
 
-Tests run inside Docker against a real test DB:
+**Full suite (default — always use this unless a specific suite is requested):**
+
+```bash
+./scripts/tests/test-apis.sh    # runs all suites via docker compose exec backend npm test
+```
+
+Individual suites (only when explicitly asked):
 
 ```bash
 ./scripts/tests/run-auth-tests.sh    # 44 auth tests

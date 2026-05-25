@@ -1,10 +1,6 @@
 import { apiClient } from '../../../common/api/client';
 import type { School } from '../types';
 
-export function getSchools(): Promise<School[]> {
-  return apiClient.get<School[]>('/schools');
-}
-
 export function setSchool(data: {
   id?: string;
   name: string;
