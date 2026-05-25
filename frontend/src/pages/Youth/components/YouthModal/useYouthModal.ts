@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { setYouth } from '../../api/youth.api';
+import { setYouth } from '../../../../common/api/youth.api';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { useSchools } from '../../../../common/hooks/useSchools';
 import { useContacts } from '../../../../common/hooks/useContacts';

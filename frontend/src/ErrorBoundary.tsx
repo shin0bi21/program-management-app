@@ -1,6 +1,6 @@
 import { Component, ReactNode } from 'react';
-import Button from '../Button/Button';
-import Modal from '../Modal/Modal';
+import Button from './common/components/Button/Button';
+import Modal from './common/components/Modal/Modal';
 
 interface Props {
   children: ReactNode;

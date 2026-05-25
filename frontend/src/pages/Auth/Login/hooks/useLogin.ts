@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { login } from '../../common/api/auth.api';
+import { login } from '../../../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint } from '../../../../common/utils/deviceFingerprint';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import { setAuthData } from '../../../../common/utils/storage';
+import { setAuthData, STORAGE_KEYS } from '../../../../common/utils/storage';
 import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
 
 export const useLogin = () => {
@@ -34,7 +34,7 @@ export const useLogin = () => {
         updateAuthState();
 
         // Navigate to last visited authenticated page, or settings as default
-        const lastPath = localStorage.getItem('lastAuthPath') || '/settings/account';
+        const lastPath = localStorage.getItem(STORAGE_KEYS.LAST_AUTH_PATH) || '/settings/account';
         navigate(lastPath);
       } else if (response.requiresVerification) {
         // Redirect to verification page

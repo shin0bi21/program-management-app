@@ -2,7 +2,7 @@
 export const STORAGE_KEYS = {
   TOKEN: 'token',
   USER: 'user',
-  DEVICE_ID: 'deviceId',
+  LAST_AUTH_PATH: 'lastAuthPath',
 } as const;
 
 /**
@@ -42,9 +42,4 @@ export const getUser = (): any | null => {
   }
 };
 
-/**
- * Check if user is authenticated (has token)
- */
-export const hasAuthToken = (): boolean => {
-  return !!getToken();
-};
+

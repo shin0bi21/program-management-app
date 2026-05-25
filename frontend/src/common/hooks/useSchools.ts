@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSchools } from '../../pages/Youth/api/youth.api';
+import { getSchools } from '../api/schools.api';
 import type { School } from '../types/school';
 
 export type { School };

@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isTokenExpired, decodeToken } from '../utils/jwt';
-import { clearAuthData, getToken } from '../utils/storage';
-import { logout as logoutRequest } from '../../pages/Auth/common/api/auth.api';
+import { clearAuthData, getToken, STORAGE_KEYS } from '../utils/storage';
+import { logout as logoutRequest } from '../api/auth.api';
 
 export type UserRole = string;
 export type Permission =
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Sync logout across tabs
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'token' && !e.newValue) {
+      if (e.key === STORAGE_KEYS.TOKEN && !e.newValue) {
         setIsAuthenticated(false);
         setRole(null);
         setPermissions([]);

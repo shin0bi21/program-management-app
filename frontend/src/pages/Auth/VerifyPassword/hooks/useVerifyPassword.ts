@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { verify2FA, resend2FA } from '../../common/api/auth.api';
+import { verify2FA, resend2FA } from '../../../../common/api/auth.api';
 import { useAuth } from '../../../../common/context/AuthContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../common/utils/deviceFingerprint';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import { setAuthData } from '../../../../common/utils/storage';
+import { setAuthData, STORAGE_KEYS } from '../../../../common/utils/storage';
 import { formatTime } from '../../../../common/utils/time';
 import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';
 
@@ -86,7 +86,7 @@ export const useVerifyPassword = () => {
 
       // Navigate to last visited authenticated page, or settings as default
       // (matches the trusted-device branch in useLogin)
-      const lastPath = localStorage.getItem('lastAuthPath') || '/settings/account';
+      const lastPath = localStorage.getItem(STORAGE_KEYS.LAST_AUTH_PATH) || '/settings/account';
       navigate(lastPath);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Verification failed'));

@@ -1,6 +1,6 @@
 # Youth Services Application
 
-Full-stack youth services management system — React + TypeScript frontend, Express + TypeScript backend, PostgreSQL.
+Full-stack youth services management system — React + TypeScript frontend, Express + TypeScript backend, PostgreSQL. Manages Staff, Youth, and Schools.
 
 ## Stack
 

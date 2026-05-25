@@ -8,20 +8,9 @@ import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
-import { toggleYouthActive } from './api/youth.api';
+import { toggleYouthActive } from '../../common/api/youth.api';
+import { calculateAge } from '../../common/utils/time';
 import './Youth.css';
-
-function calculateAge(dateOfBirth: string | null): string {
-  if (!dateOfBirth) return '—';
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age.toString();
-}
 
 export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);

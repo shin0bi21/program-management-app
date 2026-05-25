@@ -1,6 +1,6 @@
-import { clearAuthData, getUser, setAuthData } from '../utils/storage';
+import { clearAuthData, getUser, setAuthData, STORAGE_KEYS } from '../../utils/storage';
 import { api } from './config';
-import { NetworkError } from '../utils/clientErrors';
+import { NetworkError } from '../../utils/clientErrors';
 
 let refreshPromise: Promise<string> | null = null;
 
@@ -31,7 +31,7 @@ export async function refreshToken(): Promise<string> {
       if (existingUser) {
         setAuthData(data.token, existingUser);
       } else {
-        localStorage.setItem('token', data.token);
+        localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
       }
       return data.token;
     } catch (error) {

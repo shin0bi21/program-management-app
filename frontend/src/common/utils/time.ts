@@ -1,5 +1,6 @@
 /**
- * Format seconds into mm:ss format
+ * Format seconds into mm:ss format.
+ * Used for countdown displays (e.g. 2FA timer).
  */
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -8,24 +9,17 @@ export const formatTime = (seconds: number): string => {
 };
 
 /**
- * Format seconds into human-readable duration
- * Example: 150 seconds -> "2m 30s"
+ * Calculate age from a date-of-birth string.
+ * Returns '\u2014' if dateOfBirth is null/undefined.
  */
-export const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  
-  if (mins === 0) return `${secs}s`;
-  if (secs === 0) return `${mins}m`;
-  return `${mins}m ${secs}s`;
-};
-
-/**
- * Convert milliseconds to seconds
- */
-export const msToSeconds = (ms: number): number => Math.floor(ms / 1000);
-
-/**
- * Convert seconds to milliseconds
- */
-export const secondsToMs = (seconds: number): number => seconds * 1000;
+export function calculateAge(dateOfBirth: string | null | undefined): string {
+  if (!dateOfBirth) return '\u2014';
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age.toString();
+}

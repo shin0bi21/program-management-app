@@ -1,4 +1,4 @@
-import { apiClient } from '../../../../common/api/client';
+import { apiClient } from './http/client';
 
 const NO_AUTH = { auth: false } as const;
 

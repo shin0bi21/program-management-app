@@ -43,7 +43,7 @@ See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for the full permis
 | Runtime | Node.js 20+ |
 | Framework | Express 4.18.2 |
 | Language | TypeScript 5.9.3 |
-| Database | PostgreSQL 15+ via postgres.js 3.4.8 |
+| Database | PostgreSQL 18 via postgres.js 3.4.8 |
 | Auth | JWT (jsonwebtoken 9.0.3) + 2FA via email |
 | Validation | Zod 4.3.6 |
 | Testing | Jest 30.2.0 + Supertest 7.2.2 |
@@ -138,7 +138,8 @@ backend/
     ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
     ├── auth/           # 44 tests
     ├── staff/          # 15 tests
-    └── youth/          # 25 tests
+    ├── youth/          # 25 tests
+    └── schools/        # schools tests
 ```
 
 For middleware order, route patterns, error throwing, and "adding a new domain" see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
@@ -167,6 +168,8 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 |--------|------|-------------|------------|
 | `GET` | `/` | List all staff and admin users | `read:staff` |
 | `POST` | `/` | Create a new staff user | `write:staff` |
+| `PATCH` | `/:id` | Toggle staff status | `write:staff` |
+| `DELETE` | `/:id` | Delete staff member | `write:staff` |
 
 ### Youth — `/api/youth`
 
@@ -177,6 +180,7 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 | `GET` | `/` | List all youth profiles | `read:youth_profiles` |
 | `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts | `read:youth_profiles` |
 | `POST` | `/` | Create or update a youth profile (upsert by `id`) | `write:youth_profiles` |
+| `PATCH` | `/:id` | Toggle youth active status | `write:youth_profiles` |
 
 ### Schools — `/api/schools`
 
@@ -185,6 +189,8 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 | Method | Path | Description | Permission |
 |--------|------|-------------|------------|
 | `GET` | `/` | List all schools | `read:schools` |
+| `POST` | `/` | Create/update school | `write:schools` |
+| `DELETE` | `/:id` | Delete school | `write:schools` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
@@ -221,11 +227,13 @@ bash scripts/tests/test-apis.sh
 bash scripts/tests/run-auth-tests.sh    # 44 tests
 bash scripts/tests/run-staff-tests.sh   # 15 tests
 bash scripts/tests/run-youth-tests.sh   # 25 tests
+bash scripts/tests/run-schools-tests.sh
 
 # Or directly
 docker compose exec backend npm run test:auth
 docker compose exec backend npm run test:staff
 docker compose exec backend npm run test:youth
+docker compose exec backend npm run test:schools
 docker compose exec backend npm run test:coverage
 ```
 
@@ -243,6 +251,8 @@ The helper scripts detect already-running containers and **will not tear them do
 | `tests/staff/helpers.ts` | Token generation with permission levels |
 | `tests/youth/youth.test.ts` | Youth CRUD, upsert, address/contact sync |
 | `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
+| `tests/schools/schools.test.ts` | Schools CRUD, permission checks, validation |
+| `tests/schools/helpers.ts` | Token generation, `deleteTestSchool` cleanup |
 
 ### Jest + Node16 Module Resolution
 
@@ -428,6 +438,7 @@ All `npm run` commands execute inside the Docker container via `docker compose e
 | `test:auth` | Auth test suite only |
 | `test:staff` | Staff test suite only |
 | `test:youth` | Youth test suite only |
+| `test:schools` | Schools test suite only |
 | `test:watch` | Run tests in watch mode |
 | `test:coverage` | Run tests with coverage report |
 | `db:migrate` | Apply pending migrations + regenerate types |

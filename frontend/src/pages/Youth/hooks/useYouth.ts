@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getYouth } from '../api/youth.api';
+import { getYouth } from '../../../common/api/youth.api';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import type { YouthProfile } from '../types';
 

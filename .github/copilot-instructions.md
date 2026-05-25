@@ -3,6 +3,11 @@
 Full-stack youth services management system.
 **Stack:** React 18 + TypeScript + Vite (frontend) · Express 4 + TypeScript + postgres.js (backend) · PostgreSQL · Docker Compose.
 
+> **Instruction stack — scoped coding rules (auto-loaded by Copilot)**
+> - Backend: `.github/instructions/backend.instructions.md`
+> - Frontend: `.github/instructions/frontend.instructions.md`
+> - Scripts: `.github/instructions/scripts.instructions.md`
+
 ---
 
 ## Pinned Versions — DO NOT CHANGE
@@ -36,276 +41,11 @@ my-webapp/
 
 ---
 
-## Frontend
-
-### File Locations — where to look first
-
-```
-frontend/src/
-  common/
-    api/
-      client.ts           ← THE entry point for all HTTP calls — apiClient.get/post/put/patch/delete
-      config.ts           ← api(path) — builds full URL from base
-      sessionExpired.ts   ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
-      tokenRefresh.ts     ← refreshToken() — proactive refresh, deduplication, redirect on failure
-    components/
-      ReLoginModal/       ← shown when access token expires mid-session
-      ErrorBoundary/      ← wraps entire app, catches render errors
-      ProtectedRoute/     ← redirects unauthenticated users
-      AuthLayout/         ← shared wrapper for login/verify/forgot/reset pages
-      Table/              ← shared data table component
-    context/
-      AuthContext.tsx     ← isAuthenticated, user, setAuthData, clearAuthData
-    hooks/
-      useSubmitStatus.ts  ← SubmitStatus type + state pair used by every modal hook
-      useAddresses.ts     ← entity-agnostic address array state for modal forms
-      useContacts.ts      ← entity-agnostic contact array state for modal forms
-      useSchools.ts       ← read-only school lookup data
-    utils/
-      clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
-      storage.ts          ← getToken, setAuthData, clearAuthData, getUser
-      jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
-      deviceFingerprint.ts
-  pages/
-    Auth/
-      common/api/auth.api.ts        ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
-      common/validation/authSchemas.ts
-      Login/hooks/useLogin.ts
-      VerifyPassword/hooks/useVerifyPassword.ts
-      ForgotPassword/hooks/useForgotPassword.ts
-      ResetPassword/hooks/useResetPassword.ts
-    Staff/
-      types.ts                      ← StaffUser interface
-      api/staff.api.ts              ← getStaff (typed via apiClient.get<StaffUser[]>)
-      hooks/useStaff.ts
-    Youth/
-      types.ts                      ← YouthProfile, SetYouthInput interfaces
-      api/youth.api.ts              ← getYouth, setYouth, getSchools (all typed)
-      hooks/useYouth.ts
-      components/YouthModal/useYouthModal.ts   ← all form + submit logic
-      components/YouthModal/youthSchema.ts     ← Zod schema for RHF
-    Settings/Account/
-    Homepage/
-```
-
-### Type ownership (per-page)
-
-Each page owns a `types.ts` declaring its domain interfaces. API modules type their `apiClient` calls with these — never leave them as `unknown`. Hooks/components must NOT cast (`data as Foo`) — if a cast is needed, the API function is missing a type parameter.
-
-Dependency direction within a page: `types.ts` ← `api/` ← `hooks/` ← `components/`. A page never imports another page's `types.ts` — promote shared types to `common/types/`.
-
-### How to make an API call
-
-All calls go through `apiClient` — never use raw `fetch`:
-
-```ts
-import { apiClient } from '../../../common/api/client';
-
-// Protected (default — attaches Bearer token):
-const data = await apiClient.get<StaffProfile[]>('/staff');
-
-// Auth endpoints (no token):
-const result = await apiClient.post('/auth/login', { email, password }, { auth: false });
-
-// With caller AbortSignal (useEffect cleanup):
-const data = await apiClient.get('/youth', { signal: controller.signal });
-```
-
-`apiClient` handles: token validation → proactive refresh → rawFetch with timeout → 401 retry via re-login modal → typed error throws.
-
-### Error types — what `catch (err)` will receive
-
-All from `frontend/src/common/utils/clientErrors.ts`:
-
-| Class | When |
-|---|---|
-| `ApiError(status, message, details?, requestId?)` | Server returned 4xx/5xx |
-| `AuthError` | No token in storage when `auth: true` call is made |
-| `NetworkError` | `fetch` threw TypeError — server unreachable |
-| `RequestTimeoutError extends NetworkError` | Our 15s AbortController fired |
-
-```ts
-} catch (err) {
-  if (err instanceof ApiError && err.status === 422 && err.details) {
-    // err.details: Array<{ field: string; message: string }> — Zod field errors
-  }
-  setError(getErrorMessage(err, 'Fallback message'));
-}
-```
-
-### Page + Modal pattern (every data page)
-
-```
-pages/X/
-  X.tsx                      ← renders <Table> + <XModal>, passes setItems splice callbacks
-  hooks/useX.ts              ← fetches list on mount via apiClient, exposes setX for splice
-  components/XModal/
-    XModal.tsx               ← pure UI, zero logic
-    useXModal.ts             ← useForm (RHF+Zod) + useSubmitStatus + useAddresses + useContacts
-    xSchema.ts               ← Zod schema matching backend validation schema
-```
-
-After modal save, page splices by UUID — no refetch:
-```ts
-setItems(prev => prev.map(x => x.id === saved.id ? saved : x));  // update
-setItems(prev => [...prev, saved]);                                // create
-setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
-```
-
-### Adding a new page
-
-1. Create `src/pages/NewPage/` with `NewPage.tsx`, `NewPage.css`, `types.ts`, `api/newPage.api.ts`, `hooks/useNewPage.ts`
-2. Define domain interfaces in `types.ts` first
-3. API module: one-liners calling `apiClient.get<T>/post<T>` with types from `../types` — no logic in api files
-4. Hook: fetch on mount, expose state + `refetch`
-5. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
-6. Wire route in `App.tsx` under `<ProtectedRoute>`
-
----
-
-## Backend
-
-### File Locations — where to look first
-
-```
-backend/src/
-  index.ts                    ← middleware stack order, route mounts, /health endpoint
-  errors.ts                   ← ALL error classes + sendError() formatter + ErrorResponse type
-  middleware/
-    errorMiddleware.ts        ← handleError (global error handler) + classifyError
-    routeMiddleware.ts        ← asyncHandler + requestId + validateRequest (Zod → 400 with details)
-    authMiddleware.ts         ← authenticateToken + requirePermission
-    rateLimiter.ts            ← generalLimiter, authLimiter, strictLimiter, passwordResetLimiter
-  db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection(), withRetry()
-  types/
-    auth.ts                   ← AccessTokenPayload, RefreshTokenPayload, BaseTokenPayload
-    database.ts               ← kysely-codegen generated types (DO NOT edit manually)
-    db.ts                     ← DbRow<T> camelCase utility type
-  services/
-    authService.ts            ← all auth logic — login, 2FA, token signing, refresh rotation, logout
-    tokenRevocationService.ts ← isBlacklisted(), revokeAccessToken() — in-memory cache + DB
-    youthService.ts
-    staffService.ts
-    schoolService.ts
-    addressService.ts
-    contactService.ts
-  controllers/                ← thin — extract params, call service, res.json()
-  routes/                     ← middleware chain per route, asyncHandler on every handler
-  validation/                 ← Zod schemas per domain
-  utils/
-    emailService.ts           ← sendEmail, 2FA email, password reset email (escapeHtml applied)
-    env.ts                    ← requireEnv() — throws at startup on missing vars
-    deviceUtils.ts
-```
-
-### Middleware order in index.ts (important — do not reorder)
-
-```
-requestId → helmet → cors → express.json → cookieParser
-  → /health (no auth)
-  → /api/auth routes (auth limiter, no requirePermission)
-  → /api/staff routes (authenticateToken → requirePermission → rateLimiter → validateRequest → asyncHandler)
-  → /api/youth routes (same)
-  → /api/schools routes (same)
-  → 404 catch-all → errorHandler
-```
-
-### Route pattern — copy this exactly
-
-```ts
-router.get('/',
-  authenticateToken,
-  requirePermission('admin', 'staff'),
-  generalLimiter,
-  asyncHandler(handleGetX)
-);
-router.post('/',
-  authenticateToken,
-  requirePermission('admin', 'staff'),
-  generalLimiter,
-  validateRequest(setXSchema),
-  asyncHandler(handleSetX)
-);
-```
-
-**`asyncHandler` is required on every route.** Express 4 silently drops async errors without it.
-
-### Throwing errors in services
-
-Never call `res.json()` for errors — just throw:
-
-```ts
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors';
-
-throw new NotFoundError('Youth profile not found');   // → 404
-throw new BadRequestError('Invalid reset token');     // → 400
-throw new ForbiddenError('Token reuse detected');     // → 403
-```
-
-Available error classes (all in `src/errors.ts`):
-- `BadRequestError` 400
-- `UnauthorizedError` 401
-- `ForbiddenError` 403
-- `NotFoundError` 404
-- `LockedError` 423
-- `TooManyRequestsError` 429
-
-Adding a new one: subclass `AppError`, set `statusCode` and `this.name` — errorHandler picks it up automatically.
-
-### Database queries
-
-Always use the `sql` tagged template — never string concatenation:
-
-```ts
-import { sql } from '../db/client';
-
-// Simple query
-const rows = await sql<UserRow[]>`SELECT * FROM users WHERE id = ${userId}`;
-
-// Transaction — must use asTransactionSql()
-import { sql, asTransactionSql } from '../db/client';
-
-await sql.begin(async (tx) => {
-  const trx = asTransactionSql(tx);
-  await trx`UPDATE refresh_tokens SET revoked_at = NOW() WHERE jti = ${jti}`;
-  await trx`INSERT INTO system_revoked_tokens ...`;
-});
-// Never mix root sql and trx inside the same transaction
-
-// Nested write services should join the caller's transaction instead of
-// opening their own. Keep the inner reconciliation logic in a private helper
-// that accepts `trx`, and let the public method open `sql.begin(...)` only
-// when no transaction was provided.
-
-// Example shape:
-// export async function setAddresses(..., trx?: typeof sql) {
-//   if (trx) return setAddressesInTx(trx, ...);
-//   await sql.begin(async (tx) => setAddressesInTx(asTransactionSql(tx), ...));
-// }
-```
-
-DB returns `snake_case` columns; postgres.js `transform: postgres.camel` converts to camelCase automatically.
-Use `DbRow<T>` from `src/types/db.ts` for type-level conversion.
-`database.ts` is auto-generated by `npm run db:types` — do not edit manually.
-
-### Adding a new domain (e.g. /api/events)
-
-1. `src/validation/eventSchemas.ts` — Zod schemas
-2. `src/services/eventService.ts` — all SQL + business logic
-3. `src/controllers/eventController.ts` — thin handlers calling service
-4. `src/routes/eventRoutes.ts` — middleware chain + `asyncHandler`
-5. Mount in `src/index.ts`: `app.use('/api/events', eventRoutes)`
-6. Mount same in `tests/shared/app.ts`
-7. Create `tests/events/events.test.ts` + `tests/events/helpers.ts`
-8. Add `"test:events": "jest --testPathPatterns=tests/events"` to `package.json`
-
----
-
 ## Auth System Summary
 
 Two JWTs with different secrets:
 - **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `system_revoked_tokens`)
-- **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `refresh_tokens` table
+- **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `user_refresh_tokens` table
 
 Login flow: `POST /auth/login` → credentials check → send 2FA email → `POST /auth/verify` → issue token pair.
 Trusted devices skip 2FA for 30 days.
@@ -330,13 +70,7 @@ new ApiError(res.status, err.error, err.details, err.requestId)
 ## Key Conventions
 
 - **snake_case** in SQL, **camelCase** in TypeScript — postgres.js handles the conversion
-- **`DbRow<T>`** for type-safe camelCase DB result types
 - **`requireEnv(name)`** for all env var access — throws at startup, never mid-request
-- **`asyncHandler`** on every route handler — no exceptions
-- **`sendError(res, status, message, { details? })`** — only function allowed to send error responses
-- **No `res.json()` for errors** — throw the right AppError subclass
-- **No raw `fetch()`** on frontend — always `apiClient`
-- **`{ auth: false }`** on all auth endpoint calls in `auth.api.ts`
 - **`escapeHtml()`** on any user-supplied data interpolated into email HTML
 
 ---
@@ -355,12 +89,19 @@ Run this after pulling changes that include new migrations, or any time the stac
 
 ## Running Tests
 
-Tests run inside Docker against a real test DB:
+**Full suite (default — always use this unless a specific suite is requested):**
+
+```bash
+./scripts/tests/test-apis.sh    # runs all suites via docker compose exec backend npm test
+```
+
+Individual suites (only when explicitly asked):
 
 ```bash
 ./scripts/tests/run-auth-tests.sh    # 44 auth tests
 ./scripts/tests/run-staff-tests.sh   # 15 staff tests
 ./scripts/tests/run-youth-tests.sh   # 25 youth tests
+./scripts/tests/run-schools-tests.sh  # schools tests
 ```
 
 Frontend UI tests are not yet configured.
@@ -406,11 +147,14 @@ Install shellcheck with `brew install shellcheck`.
 
 | What | File |
 |---|---|
-| Full-stack overview + Mermaid diagram | `README.md` |
+| Full-stack overview | `README.md` |
 | Frontend structure, patterns, state architecture | `frontend/STRUCTURE.md` |
-| Frontend HTTP pipeline diagram | `frontend/docs/request-response-flow.mmd` |
+| Frontend HTTP pipeline diagram | `frontend/docs/api-flow.mmd` |
 | Backend auth architecture | `backend/docs/auth.md` |
 | Backend error handling | `backend/docs/errors.md` |
 | Database schema + migrations | `backend/docs/db.md` |
 | Backend setup + API reference + commands | `backend/README.md` |
 | Security audit | `vulnerabilities.md` |
+| Backend coding rules (file locations, patterns) | `.github/instructions/backend.instructions.md` |
+| Frontend coding rules (file locations, patterns) | `.github/instructions/frontend.instructions.md` |
+| Shell script rules | `.github/instructions/scripts.instructions.md` |

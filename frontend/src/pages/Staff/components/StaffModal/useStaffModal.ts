@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { inviteStaff, updateStaff } from '../../api/staff.api';
+import { inviteStaff, updateStaff } from '../../../../common/api/staff.api';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { staffSchema, type StaffFormData } from './staffSchema';

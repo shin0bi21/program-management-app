@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSchools } from '../api/schools.api';
+import { getSchools } from '../../../common/api/schools.api';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import type { School } from '../types';
 
