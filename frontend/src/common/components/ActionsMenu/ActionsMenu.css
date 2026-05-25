@@ -1,14 +1,12 @@
 .actions-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   background: var(--color-white);
   border: 1px solid var(--ink-08);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   padding: 4px;
   min-width: 160px;
-  z-index: 100;
+  z-index: 9999;
 }
 
 .actions-menu-item {

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faChevronDown, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
@@ -10,10 +10,10 @@ export default function Header() {
   const location = useLocation();
   const { isAuthenticated, permissions, logout } = useAuth();
   const isAdmin = permissions.includes('read:staff');
-  const [settingsOpen, setSettingsOpen] = useState(
-    location.pathname.startsWith('/settings')
-  );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [settingsFlyoutTop, setSettingsFlyoutTop] = useState<number | null>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
+  const settingsFlyoutRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
   const isSettingsActive = location.pathname.startsWith('/settings');
@@ -21,7 +21,34 @@ export default function Header() {
   const go = (path: string) => {
     navigate(path);
     setMobileOpen(false);
+    setSettingsFlyoutTop(null);
   };
+
+  const toggleSettingsFlyout = () => {
+    if (settingsFlyoutTop !== null) {
+      setSettingsFlyoutTop(null);
+    } else {
+      const rect = settingsBtnRef.current?.getBoundingClientRect();
+      if (rect) setSettingsFlyoutTop(rect.top);
+    }
+  };
+
+  // Close flyout on route change
+  useEffect(() => { setSettingsFlyoutTop(null); }, [location.pathname]);
+
+  // Close flyout on click outside
+  useEffect(() => {
+    if (settingsFlyoutTop === null) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (
+        settingsBtnRef.current?.contains(e.target as Node) ||
+        settingsFlyoutRef.current?.contains(e.target as Node)
+      ) return;
+      setSettingsFlyoutTop(null);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [settingsFlyoutTop]);
 
   return (
     <>
@@ -52,7 +79,7 @@ export default function Header() {
             <>
               <button
                 onClick={() => go('/')}
-                className={`sidebar-link${isActive('/') ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/') && settingsFlyoutTop === null ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
                 <span>Home</span>
@@ -60,7 +87,7 @@ export default function Header() {
 
               <button
                 onClick={() => go('/youth')}
-                className={`sidebar-link${isActive('/youth') ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/youth') && settingsFlyoutTop === null ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                 <span>Youth</span>
@@ -68,39 +95,20 @@ export default function Header() {
 
               <button
                 onClick={() => go('/schools')}
-                className={`sidebar-link${isActive('/schools') ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/schools') && settingsFlyoutTop === null ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
                 <span>Schools</span>
               </button>
 
               <button
-                onClick={() => setSettingsOpen(o => !o)}
-                className={`sidebar-link${isSettingsActive ? ' active' : ''}`}
+                ref={settingsBtnRef}
+                onClick={toggleSettingsFlyout}
+                className={`sidebar-link${isSettingsActive || settingsFlyoutTop !== null ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faGear} /></span>
                 <span className="sidebar-link-label">Settings</span>
-                <FontAwesomeIcon icon={faChevronDown} style={{ transition: 'transform 0.2s', transform: settingsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
               </button>
-
-              {settingsOpen && (
-                <div className="sidebar-subnav">
-                  <button
-                    onClick={() => go('/settings/account')}
-                    className={`sidebar-sublink${isActive('/settings/account') ? ' active' : ''}`}
-                  >
-                    My Account
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => go('/settings/staff')}
-                      className={`sidebar-sublink${isActive('/settings/staff') ? ' active' : ''}`}
-                    >
-                      Manage Staff
-                    </button>
-                  )}
-                </div>
-              )}
             </>
           )}
         </nav>
@@ -118,6 +126,30 @@ export default function Header() {
           )}
         </div>
       </aside>
+
+      {/* Settings flyout — rendered outside the sidebar */}
+      {settingsFlyoutTop !== null && (
+        <div
+          ref={settingsFlyoutRef}
+          className="settings-flyout"
+          style={{ top: settingsFlyoutTop }}
+        >
+          <button
+            onClick={() => go('/settings/account')}
+            className={`settings-flyout-item${isActive('/settings/account') ? ' active' : ''}`}
+          >
+            My Account
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => go('/settings/staff')}
+              className={`settings-flyout-item${isActive('/settings/staff') ? ' active' : ''}`}
+            >
+              Manage Staff
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 }
