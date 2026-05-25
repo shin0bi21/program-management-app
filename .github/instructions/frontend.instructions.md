@@ -21,7 +21,6 @@ frontend/src/
       youth.api.ts        ← getYouth, setYouth, toggleYouthActive
     components/
       ReLoginModal/       ← shown when access token expires mid-session
-      ErrorBoundary/      ← wraps entire app, catches render errors
       ProtectedRoute/     ← redirects unauthenticated users
       AuthLayout/         ← shared wrapper for login/verify/forgot/reset pages
       Table/              ← shared data table component
@@ -46,15 +45,13 @@ frontend/src/
     Auth/
       common/validation/authSchemas.ts
     Staff/
-      types.ts                      ← StaffUser, InviteStaffInput, UpdateStaffInput
-      api/staff.api.ts              ← getStaff, inviteStaff, updateStaff, deleteStaff (all typed)
+      types.ts                      ← re-exports from common/types/staff.ts
       hooks/useStaff.ts
       components/StaffModal/StaffModal.tsx
       components/StaffModal/useStaffModal.ts
       components/StaffModal/staffSchema.ts
     Youth/
-      types.ts                      ← YouthProfile, SetYouthInput
-      api/youth.api.ts              ← getYouth, setYouth, toggleYouthActive (all typed)
+      types.ts                      ← re-exports from common/types/youth.ts
       hooks/useYouth.ts
       components/YouthModal/useYouthModal.ts
       components/YouthModal/youthSchema.ts

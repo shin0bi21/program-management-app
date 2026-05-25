@@ -3,7 +3,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 200px;
+  width: 160px;
   height: 100dvh;
   background: var(--color-surface);
   display: flex;
@@ -83,38 +83,44 @@
   flex: 1;
 }
 
-/* Subnav */
-.sidebar-subnav {
+/* Subnav — removed (replaced by settings flyout) */
+
+/* Settings flyout */
+.settings-flyout {
+  position: fixed;
+  left: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--ink-12);
+  border-radius: 8px;
+  box-shadow: 4px 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  z-index: 1001;
+  min-width: 156px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding-left: 40px;
-  padding-right: 10px;
-  margin-top: 2px;
+  gap: 2px;
 }
 
-.sidebar-sublink {
+.settings-flyout-item {
   background: none;
   border: none;
-  color: var(--brand-muted);
+  color: var(--brand-ink);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-radius: 6px;
   width: 100%;
   text-align: left;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: background 0.15s;
 }
 
-.sidebar-sublink:hover {
+.settings-flyout-item:hover {
   background: var(--accent-10);
-  color: var(--brand-ink);
 }
 
-.sidebar-sublink.active {
-  background: var(--accent-12);
-  color: var(--brand-ink);
+.settings-flyout-item.active {
+  background: var(--accent-16);
   font-weight: 600;
 }
 
