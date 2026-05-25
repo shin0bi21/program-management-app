@@ -58,7 +58,7 @@ flowchart TD
 
 ```
 Login flow
-  POST /login   →  validates credentials, sends 2FA email, returns { type: 'requires2FA', userId: string }
+  POST /login   →  validates credentials, sends 2FA email, returns { message: '2FA code sent to your email', requires2FA: true, userId: string }
   POST /verify  →  validates 2FA code, issues access token (1h) + refresh token (8h httpOnly cookie)
 
 Session flow
@@ -69,7 +69,11 @@ Logout
   POST /logout  →  blacklists access token JTI, revokes refresh token in DB
 ```
 
-Trusted devices skip the 2FA step for 30 days after first verify.
+Trusted devices skip the 2FA step for 30 days after first verify. The expiry is **rolling** — each re-use extends trust to 30 days from the current time.
+
+2FA codes expire after **5 minutes**. Accounts are locked for **15 minutes** after 5 consecutive failed password attempts.
+
+After password validation, `loginUser` checks `cred.status !== 'active'` and throws a `ForbiddenError` (403) — only `active` accounts proceed to 2FA or a trusted-device bypass.
 
 ---
 
@@ -79,7 +83,7 @@ Trusted devices skip the 2FA step for 30 days after first verify.
 |---|---|---|
 | Secret | `JWT_SECRET` | `REFRESH_SECRET` |
 | TTL | 1 hour | 8 hours |
-| Sent as | `Authorization: Bearer` header | `httpOnly` cookie |
+| Sent as | `Authorization: Bearer` header | `httpOnly` cookie (`sameSite: 'strict'`, `secure` in production only) |
 | Contains `role` + `permissions[]` | ✓ | ✗ |
 | `tokenType` claim | `'access'` | `'refresh'` |
 | Stored in DB | ✗ (blacklist only on logout) | ✓ (`user_refresh_tokens` table) |
@@ -144,7 +148,7 @@ interface BaseTokenPayload {
 
 // Access token — adds role, permissions array, and type discriminator
 interface AccessTokenPayload extends BaseTokenPayload {
-  role: UserRole;            // 'admin' | 'staff' | 'youth' — for display only
+  role: UserRole;            // string — for display only, not used for authz
   permissions: Permission[]; // e.g. ['read:youth_profiles', 'write:youth_profiles'] — used for all authz checks
   tokenType: 'access';
   iat: number;               // required on decoded tokens (always present after verify)
@@ -234,8 +238,8 @@ Auth also uses an atomic check-and-consume pattern for one-time secrets. The goa
 
 There are two places this shows up in `authService.ts`:
 
-- `verify2FACode()` uses `UPDATE user_auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement.
-- `resetUserPassword()` uses `UPDATE user_password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse.
+- `verify2FACode()` uses `UPDATE user_auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement. Codes expire after **5 minutes**.
+- `resetUserPassword()` uses `UPDATE user_password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse. It also revokes all active refresh tokens for the user and promotes `status = 'invited'` accounts to `status = 'active'`.
 
 This is the same design principle as refresh token rotation: the state transition that makes the secret unusable happens atomically with the validation step, so a code or token cannot be successfully consumed twice.
 
@@ -247,7 +251,7 @@ This is the same design principle as refresh token rotation: the state transitio
 
 **Refresh token:** `UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ?`
 
-**Access token:** Delegated to `revokeAccessToken()` in `tokenRevocationService.ts`, which inserts into `system_revoked_tokens` with `expires_at` derived from `decoded.exp` and immediately adds the JTI to the in-memory cache.
+**Access token:** `jwt.verify(rawAccessToken, JWT_SECRET)` is called first to decode the payload; the result is then delegated to `revokeAccessToken()` in `tokenRevocationService.ts`, which inserts into `system_revoked_tokens` with `expires_at` derived from `decoded.exp` and immediately adds the JTI to the in-memory cache.
 
 `isBlacklisted(jti)` in `tokenRevocationService.ts` is called by `authenticateToken` on every protected request. It transparently refreshes the cache from DB when stale (> 60s), so the middleware has no knowledge of the caching mechanics.
 

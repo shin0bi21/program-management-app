@@ -18,7 +18,7 @@ For commands and quick reference see [README.md § 9 Database & Migrations](../R
 
 ## 1. Overview
 
-Migrations are plain `.sql` files — no ORM migration DSL, no `up`/`down` pairs. Every file runs once, in filename order, inside a single DB transaction. Applied files are tracked in `schema_migrations` with a SHA-256 checksum per file.
+Migrations are plain `.sql` files — no ORM migration DSL, no `up`/`down` pairs. Every file runs once, in filename order. Each file runs atomically in its own transaction — the migration SQL and its tracking INSERT are wrapped in a single BEGIN/COMMIT. If a file fails, only that file rolls back; previously applied files in the same run are not affected. Applied files are tracked in `schema_migrations` with a SHA-256 checksum per file.
 
 ```mermaid
 flowchart TD
@@ -37,9 +37,9 @@ flowchart TD
     INS --> CMT[COMMIT]
     CMT --> NEXT
     NEXT -->|Yes| E
-    NEXT -->|No| REL[Release advisory lock]
-    REL --> TYPES["npm run db:types\nRegenerate src/types/database.ts"]
-    TYPES --> DONE([Done])
+    NEXT -->|No| TYPES["npm run db:types\nRegenerate src/types/database.ts"]
+    TYPES --> REL["Release advisory lock\n(finally)"]
+    REL --> DONE([Done])
 ```
 
 ```
@@ -109,7 +109,7 @@ git push origin main
 
 | Feature | Detail |
 |---------|--------|
-| Transaction safety | All statements in one transaction — error = full rollback |
+| Transaction safety | Each file's statements run in their own transaction — error = that file rolls back only |
 | Concurrency | Advisory lock ID 123456789 prevents parallel runs |
 | Checksum validation | SHA-256 per file — all applied files validated upfront; aborts on mismatch in strict mode (default) |
 | Strict mode | Default on — pass `--no-strict` to demote conflicts to warnings and continue |
@@ -258,10 +258,11 @@ erDiagram
         enum status
     }
     youth_profiles {
-        string first_name
-        string last_name
+        uuid user_id FK
         date date_of_birth
         uuid school_id FK
+        int grade_level
+        enum age_group
     }
     addresses {
         string address
@@ -281,5 +282,7 @@ erDiagram
     base_table ||--o{ addresses : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ contacts : "LIKE base_table INCLUDING ALL"
 ```
+
+> Auth security tables (`user_refresh_tokens`, `system_revoked_tokens`, `user_auth_codes`, `user_trusted_devices`, `user_credentials`) and RBAC tables (`user_roles`, `user_permissions`, `user_role_has_permissions`) are also defined in the init migration but are omitted from the diagram for brevity.
 
 **Rule:** every new data table must use `LIKE base_table INCLUDING ALL`. Always define `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` first in the table — `id` is not in `base_table`. Never define `created_at`, `updated_at`, `created_by`, `updated_by` manually.

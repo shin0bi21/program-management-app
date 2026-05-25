@@ -21,8 +21,14 @@ See [`docs/api-flow.mmd`](docs/api-flow.mmd) for the full frontend request lifec
 
 For the full-stack overview (frontend → backend → DB), see the [root README](../README.md).
 
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_URL` | Yes | API base URL — set in `frontend/.env.production` on the server as `VITE_API_URL=https://be-original.ca/api` |
+
 ## Testing
-Frontend unit tests are not yet configured. Backend integration tests (auth, staff, youth) are run via the shell scripts in [`../scripts/tests/`](../scripts/tests/) — e.g. `../scripts/tests/run-auth-tests.sh`.
+Frontend unit tests are not yet configured. Backend integration tests (auth, staff, youth, schools) are run via the shell scripts in [`../scripts/tests/`](../scripts/tests/) — e.g. `../scripts/tests/run-auth-tests.sh`, `run-schools-tests.sh`.
 
 ## Notes
 - When adding new pages, keep API, hooks, and UI co‑located under `src/pages/<PageName>`.

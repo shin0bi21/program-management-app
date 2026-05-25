@@ -13,7 +13,8 @@ Never `res.json()` an error. Just throw and the rest is handled.
 | File | What lives there |
 |---|---|
 | `src/errors.ts` | All error classes, `ErrorResponse` type, `ValidationDetail` type |
-| `src/middleware/errorMiddleware.ts` | `classifyError`, `handleError`, `sendError`, `asyncHandler` |
+| `src/middleware/errorMiddleware.ts` | `classifyError`, `handleError`, `sendError` |
+| `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → `ValidationError`) |
 | `src/types/` | TypeScript shape declarations only — no runtime logic |
 
 ---
@@ -84,7 +85,7 @@ throw new NotFoundError('User not found');
 - Headers already sent → log + bail
 - Status from `appErr.statusCode` (clamped 400–599, else 500)
 - 5xx → `console.error` + full stack; 4xx → `console.warn` + message + details + cause
-- Production 5xx → `appErr.clientMessage ?? 'An unexpected error occurred'`; 4xx always actual message
+- `isDev` = `NODE_ENV === 'development' || NODE_ENV === 'test'`; non-`isDev` 5xx → `appErr.clientMessage ?? 'An unexpected error occurred'`; 4xx and `isDev` always show the actual message
 
 ```mermaid
 flowchart TD
@@ -94,10 +95,10 @@ flowchart TD
     CL --> SEV{status >= 500?}
     SEV -->|yes| LOG[console.error + stack]
     SEV -->|no| WARN[console.warn + message + details]
-    LOG --> PROD{production?}
+    LOG --> PROD{NODE_ENV not dev/test?}
     WARN --> PROD
     PROD -->|yes + 5xx| GEN[generic message]
-    PROD -->|no| ACT[actual message]
+    PROD -->|no, dev or test| ACT[actual message]
     GEN --> RES([sendError → JSON])
     ACT --> RES
 ```

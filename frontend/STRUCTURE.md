@@ -16,7 +16,7 @@ flowchart LR
     A["Component (.tsx)\nUI only"] --> B["Hook (useX.ts)\nform state + submit logic"]
     B --> C["API (.api.ts)\napiClient call"]
     C --> D["Backend Route\nmiddleware chain"]
-    D --> E["Controller\nbusiness logic"]
+    D --> E["Controller\nthin handler — calls service"]
     E --> F[("DB\nSQL")]
     F -->|result| E
     E -->|JSON| C
@@ -30,7 +30,7 @@ flowchart LR
 2. **useLogin.ts** — React Hook Form + Zod validates fields, calls `login()` from auth.api.ts on submit
 3. **auth.api.ts** — `apiClient.post('/auth/login', { email, password }, { auth: false })` sends JSON to backend via the centralized API client
 4. **authRoutes.ts** — `POST /api/auth/login` → rate limiter → Zod body validation → controller
-5. **authController.ts** — queries DB for user, bcrypt compares password, generates 2FA code or JWT
+5. **authController.ts** — thin handler: extracts params, calls `authService`, returns JSON
 6. **client.ts** — `sql` tagged template executes parameterized queries against PostgreSQL
 
 Response flows back: DB → controller JSON response → fetch resolves → hook stores token → component re-renders.
@@ -48,20 +48,24 @@ src/
       sessionExpired.ts   ← awaitReLogin / resolveReLogin
       tokenRefresh.ts     ← proactive refresh with deduplication
     components/
+      ActionsMenu/        ← shared row actions dropdown
       AuthLayout/         ← shared wrapper for auth pages
       Button/
       ErrorBoundary/      ← wraps entire app, catches render errors
       Footer/
+      FormField/          ← shared labelled form field wrapper
       Header/
       Modal/
+      ModalFormFooter/    ← shared save/cancel footer for modal forms
       ProtectedRoute/     ← redirects unauthenticated users
       PublicTopBar/
       ReLoginModal/       ← shown when access token expires mid-session
       Table/              ← shared data table
     context/
-      AuthContext.tsx     ← isAuthenticated, user, setAuthData, clearAuthData
+      AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
     hooks/
       useAddresses.ts     ← entity-agnostic address array state
+      useConfirmModal.tsx ← reusable confirm/delete modal state
       useContacts.ts      ← entity-agnostic contact array state
       useSchools.ts       ← read-only school lookup
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
@@ -73,13 +77,14 @@ src/
       school.ts           ← cross-page domain types
     utils/
       clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
-      jwt.ts              ← isTokenExpired, getTimeUntilExpiry (client-side decode only)
-      storage.ts          ← getToken, setAuthData, clearAuthData, getUser
+      jwt.ts              ← decodeToken, isTokenExpired, getTokenExpiry, getTimeUntilExpiry (client-side decode only)
+      storage.ts          ← STORAGE_KEYS, setAuthData, clearAuthData, getToken, getUser, hasAuthToken
       deviceFingerprint.ts
       time.ts
   pages/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/
+    Schools/              ← Schools.tsx + types.ts + api/ + hooks/ + components/
     Settings/
     Staff/                ← Staff.tsx + types.ts + api/ + hooks/
     Youth/                ← Youth.tsx + types.ts + api/ + hooks/ + components/YouthModal/

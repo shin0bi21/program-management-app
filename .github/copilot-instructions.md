@@ -55,7 +55,7 @@ frontend/src/
       AuthLayout/         ← shared wrapper for login/verify/forgot/reset pages
       Table/              ← shared data table component
     context/
-      AuthContext.tsx     ← isAuthenticated, user, setAuthData, clearAuthData
+      AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
     hooks/
       useSubmitStatus.ts  ← SubmitStatus type + state pair used by every modal hook
       useAddresses.ts     ← entity-agnostic address array state for modal forms
@@ -84,6 +84,12 @@ frontend/src/
       hooks/useYouth.ts
       components/YouthModal/useYouthModal.ts   ← all form + submit logic
       components/YouthModal/youthSchema.ts     ← Zod schema for RHF
+    Schools/
+      types.ts                      ← School interface
+      api/schools.api.ts            ← getSchools, setSchool, deleteSchool (all typed)
+      hooks/useSchools.ts
+      components/SchoolModal/useSchoolModal.ts   ← all form + submit logic
+      components/SchoolModal/schoolSchema.ts     ← Zod schema for RHF
     Settings/Account/
     Homepage/
 ```
@@ -170,13 +176,13 @@ setItems(prev => prev.filter(x => x.id !== deletedId));           // delete
 ```
 backend/src/
   index.ts                    ← middleware stack order, route mounts, /health endpoint
-  errors.ts                   ← ALL error classes + sendError() formatter + ErrorResponse type
+  errors.ts                   ← ALL error classes + ErrorResponse type (sendError is private in errorMiddleware.ts)
   middleware/
     errorMiddleware.ts        ← handleError (global error handler) + classifyError
     routeMiddleware.ts        ← asyncHandler + requestId + validateRequest (Zod → 400 with details)
     authMiddleware.ts         ← authenticateToken + requirePermission
     rateLimiter.ts            ← generalLimiter, authLimiter, strictLimiter, passwordResetLimiter
-  db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection(), withRetry()
+  db/client.ts                ← sql (postgres.js), asTransactionSql(), checkConnection()
   types/
     auth.ts                   ← AccessTokenPayload, RefreshTokenPayload, BaseTokenPayload
     database.ts               ← kysely-codegen generated types (DO NOT edit manually)
@@ -215,18 +221,20 @@ requestId → helmet → cors → express.json → cookieParser
 ```ts
 router.get('/',
   authenticateToken,
-  requirePermission('admin', 'staff'),
+  requirePermission('read:x'),
   generalLimiter,
   asyncHandler(handleGetX)
 );
 router.post('/',
   authenticateToken,
-  requirePermission('admin', 'staff'),
+  requirePermission('write:x'),
   generalLimiter,
   validateRequest(setXSchema),
   asyncHandler(handleSetX)
 );
 ```
+
+Permission strings are resource-based: `'read:staff'`, `'write:staff'`, `'read:youth_profiles'`, `'write:youth_profiles'`, `'read:schools'`, `'write:schools'`. Never pass role names (`'admin'`, `'staff'`) — those are not valid `Permission` values.
 
 **`asyncHandler` is required on every route.** Express 4 silently drops async errors without it.
 
@@ -247,8 +255,13 @@ Available error classes (all in `src/errors.ts`):
 - `UnauthorizedError` 401
 - `ForbiddenError` 403
 - `NotFoundError` 404
+- `ConflictError` 409
 - `LockedError` 423
 - `TooManyRequestsError` 429
+- `ValidationError` 400
+- `InternalServerError` 500
+- `DbConnectionError` 503
+- `ServiceUnavailableError` 503
 
 Adding a new one: subclass `AppError`, set `statusCode` and `this.name` — errorHandler picks it up automatically.
 
@@ -305,7 +318,7 @@ Use `DbRow<T>` from `src/types/db.ts` for type-level conversion.
 
 Two JWTs with different secrets:
 - **Access token** (`JWT_SECRET`, 1h) — sent as `Authorization: Bearer` header, not stored in DB (blacklisted on logout via `system_revoked_tokens`)
-- **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `refresh_tokens` table
+- **Refresh token** (`REFRESH_SECRET`, 8h) — sent as `httpOnly` cookie, stored hashed in `user_refresh_tokens` table
 
 Login flow: `POST /auth/login` → credentials check → send 2FA email → `POST /auth/verify` → issue token pair.
 Trusted devices skip 2FA for 30 days.
@@ -333,7 +346,7 @@ new ApiError(res.status, err.error, err.details, err.requestId)
 - **`DbRow<T>`** for type-safe camelCase DB result types
 - **`requireEnv(name)`** for all env var access — throws at startup, never mid-request
 - **`asyncHandler`** on every route handler — no exceptions
-- **`sendError(res, status, message, { details? })`** — only function allowed to send error responses
+- **`sendError`** — private to `errorMiddleware.ts`, not importable. Do not call it directly — throw an `AppError` subclass and `handleError` will call it
 - **No `res.json()` for errors** — throw the right AppError subclass
 - **No raw `fetch()`** on frontend — always `apiClient`
 - **`{ auth: false }`** on all auth endpoint calls in `auth.api.ts`
@@ -361,6 +374,7 @@ Tests run inside Docker against a real test DB:
 ./scripts/tests/run-auth-tests.sh    # 44 auth tests
 ./scripts/tests/run-staff-tests.sh   # 15 staff tests
 ./scripts/tests/run-youth-tests.sh   # 25 youth tests
+./scripts/tests/run-schools-tests.sh  # schools tests
 ```
 
 Frontend UI tests are not yet configured.
@@ -406,9 +420,9 @@ Install shellcheck with `brew install shellcheck`.
 
 | What | File |
 |---|---|
-| Full-stack overview + Mermaid diagram | `README.md` |
+| Full-stack overview | `README.md` |
 | Frontend structure, patterns, state architecture | `frontend/STRUCTURE.md` |
-| Frontend HTTP pipeline diagram | `frontend/docs/request-response-flow.mmd` |
+| Frontend HTTP pipeline diagram | `frontend/docs/api-flow.mmd` |
 | Backend auth architecture | `backend/docs/auth.md` |
 | Backend error handling | `backend/docs/errors.md` |
 | Database schema + migrations | `backend/docs/db.md` |
