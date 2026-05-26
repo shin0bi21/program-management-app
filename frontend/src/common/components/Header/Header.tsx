@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
+import { useFloatingMenu } from '../../hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
 import './Header.css';
 
 export default function Header() {
@@ -11,9 +13,19 @@ export default function Header() {
   const { isAuthenticated, permissions, logout } = useAuth();
   const isAdmin = permissions.includes('read:staff');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsFlyoutTop, setSettingsFlyoutTop] = useState<number | null>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
-  const settingsFlyoutRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isOpen: isFlyoutOpen,
+    toggle: toggleFlyout,
+    close: closeFlyout,
+    position: flyoutPosition,
+    menuRef: flyoutRef,
+  } = useFloatingMenu(
+    settingsBtnRef,
+    { side: 'right', align: 'start' },
+    { widthEstimate: 160, heightEstimate: 120 },
+  );
 
   const isActive = (path: string) => location.pathname === path;
   const isSettingsActive = location.pathname.startsWith('/settings');
@@ -21,34 +33,11 @@ export default function Header() {
   const go = (path: string) => {
     navigate(path);
     setMobileOpen(false);
-    setSettingsFlyoutTop(null);
-  };
-
-  const toggleSettingsFlyout = () => {
-    if (settingsFlyoutTop !== null) {
-      setSettingsFlyoutTop(null);
-    } else {
-      const rect = settingsBtnRef.current?.getBoundingClientRect();
-      if (rect) setSettingsFlyoutTop(rect.top);
-    }
+    closeFlyout();
   };
 
   // Close flyout on route change
-  useEffect(() => { setSettingsFlyoutTop(null); }, [location.pathname]);
-
-  // Close flyout on click outside
-  useEffect(() => {
-    if (settingsFlyoutTop === null) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (
-        settingsBtnRef.current?.contains(e.target as Node) ||
-        settingsFlyoutRef.current?.contains(e.target as Node)
-      ) return;
-      setSettingsFlyoutTop(null);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [settingsFlyoutTop]);
+  useEffect(() => { closeFlyout(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -79,7 +68,7 @@ export default function Header() {
             <>
               <button
                 onClick={() => go('/')}
-                className={`sidebar-link${isActive('/') && settingsFlyoutTop === null ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/') && !isFlyoutOpen ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
                 <span>Home</span>
@@ -87,7 +76,7 @@ export default function Header() {
 
               <button
                 onClick={() => go('/youth')}
-                className={`sidebar-link${isActive('/youth') && settingsFlyoutTop === null ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/youth') && !isFlyoutOpen ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                 <span>Youth</span>
@@ -95,7 +84,7 @@ export default function Header() {
 
               <button
                 onClick={() => go('/schools')}
-                className={`sidebar-link${isActive('/schools') && settingsFlyoutTop === null ? ' active' : ''}`}
+                className={`sidebar-link${isActive('/schools') && !isFlyoutOpen ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
                 <span>Schools</span>
@@ -103,8 +92,10 @@ export default function Header() {
 
               <button
                 ref={settingsBtnRef}
-                onClick={toggleSettingsFlyout}
-                className={`sidebar-link${isSettingsActive || settingsFlyoutTop !== null ? ' active' : ''}`}
+                onClick={toggleFlyout}
+                aria-haspopup="menu"
+                aria-expanded={isFlyoutOpen}
+                className={`sidebar-link${isSettingsActive || isFlyoutOpen ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faGear} /></span>
                 <span className="sidebar-link-label">Settings</span>
@@ -127,14 +118,16 @@ export default function Header() {
         </div>
       </aside>
 
-      {/* Settings flyout — rendered outside the sidebar */}
-      {settingsFlyoutTop !== null && (
-        <div
-          ref={settingsFlyoutRef}
+      {/* Settings flyout — portalled via FloatingMenuPanel */}
+      {flyoutPosition && (
+        <FloatingMenuPanel
+          menuRef={flyoutRef}
+          position={flyoutPosition}
+          onClose={closeFlyout}
           className="settings-flyout"
-          style={{ top: settingsFlyoutTop }}
         >
           <button
+            role="menuitem"
             onClick={() => go('/settings/account')}
             className={`settings-flyout-item${isActive('/settings/account') ? ' active' : ''}`}
           >
@@ -142,13 +135,14 @@ export default function Header() {
           </button>
           {isAdmin && (
             <button
+              role="menuitem"
               onClick={() => go('/settings/staff')}
               className={`settings-flyout-item${isActive('/settings/staff') ? ' active' : ''}`}
             >
               Manage Staff
             </button>
           )}
-        </div>
+        </FloatingMenuPanel>
       )}
     </>
   );

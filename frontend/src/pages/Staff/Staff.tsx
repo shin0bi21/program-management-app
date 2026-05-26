@@ -92,10 +92,10 @@ export default function Staff() {
       render: (user) => (
         <ActionsMenu
           items={[
-            { label: 'Edit', onClick: () => handleEditStaff(user) },
-            ...(user.status === 'invited'  ? [{ label: 'Revoke Invite',  variant: 'danger' as const, onClick: () => handleRevokeInvite(user) }]    : []),
-            ...(user.status === 'active'   ? [{ label: 'Deactivate',     variant: 'danger' as const, onClick: () => handleDeactivateStaff(user) }] : []),
-            ...(user.status === 'inactive' ? [{ label: 'Reactivate',                                 onClick: () => handleReactivateStaff(user) }] : []),
+            { id: 'edit',           label: 'Edit',         onClick: () => handleEditStaff(user) },
+            ...(user.status === 'invited'  ? [{ id: 'revoke',      label: 'Revoke Invite', variant: 'danger' as const, onClick: () => handleRevokeInvite(user) }]    : []),
+            ...(user.status === 'active'   ? [{ id: 'deactivate',  label: 'Deactivate',    variant: 'danger' as const, onClick: () => handleDeactivateStaff(user) }] : []),
+            ...(user.status === 'inactive' ? [{ id: 'reactivate',  label: 'Reactivate',                               onClick: () => handleReactivateStaff(user) }] : []),
           ]}
         />
       ),

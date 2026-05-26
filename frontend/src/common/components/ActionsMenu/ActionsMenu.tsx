@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
+import { useFloatingMenu } from '../../hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
 import Button from '../Button/Button';
 import './ActionsMenu.css';
 
 export interface ActionItem {
+  id: string;
   label: string;
   onClick: () => void;
   variant?: 'default' | 'danger';
@@ -17,73 +19,58 @@ interface ActionsMenuProps {
 }
 
 export default function ActionsMenu({ items, disabled = false }: ActionsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const btnRef = useRef<HTMLSpanElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
-  const openMenu = () => {
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setPos({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    setOpen(true);
-  };
+  const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+    triggerRef,
+    { side: 'bottom', align: 'end' },
+    { heightEstimate: 200, returnFocusSelector: 'button' },
+  );
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        btnRef.current?.contains(e.target as Node) ||
-        menuRef.current?.contains(e.target as Node)
-      ) return;
-      setOpen(false);
-    };
-    const close = () => setOpen(false);
-    document.addEventListener('mousedown', handler);
-    window.addEventListener('scroll', close, { capture: true, passive: true });
-    window.addEventListener('resize', close, { passive: true });
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      window.removeEventListener('scroll', close, { capture: true });
-      window.removeEventListener('resize', close);
-    };
-  }, [open]);
+  const handleActionClick = useCallback(
+    (item: ActionItem) => {
+      close();
+      item.onClick();
+    },
+    [close],
+  );
 
   return (
     <>
-      <span ref={btnRef} style={{ display: 'inline-block' }}>
+      <span ref={triggerRef} className="actions-menu-anchor">
         <Button
           variant="secondary"
           size="sm"
-          onClick={open ? () => setOpen(false) : openMenu}
+          onClick={toggle}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
           disabled={disabled}
-          style={{ width: '32px', height: '32px', padding: 0 }}
+          className="actions-menu-trigger"
         >
           <FontAwesomeIcon icon={faEllipsisVertical} />
         </Button>
       </span>
 
-      {open && pos && createPortal(
-        <div
-          ref={menuRef}
+      {position && (
+        <FloatingMenuPanel
+          menuRef={menuRef}
+          position={position}
+          onClose={close}
           className="actions-menu"
-          style={{ top: pos.top, right: pos.right }}
         >
           {items.map((item) => (
             <button
-              key={item.label}
-              className={`actions-menu-item${item.variant === 'danger' ? ' actions-menu-item--danger' : ''}`}
-              onClick={() => { setOpen(false); item.onClick(); }}
+              key={item.id}
+              role="menuitem"
+              className={`actions-menu-item${
+                item.variant === 'danger' ? ' actions-menu-item--danger' : ''
+              }`}
+              onClick={() => handleActionClick(item)}
             >
               {item.label}
             </button>
           ))}
-        </div>,
-        document.body
+        </FloatingMenuPanel>
       )}
     </>
   );

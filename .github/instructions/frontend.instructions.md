@@ -24,12 +24,14 @@ frontend/src/
       ProtectedRoute/     ← redirects unauthenticated users
       AuthLayout/         ← shared wrapper for login/verify/forgot/reset pages
       Table/              ← shared data table component
-      ActionsMenu/        ← shared row actions dropdown
+      ActionsMenu/        ← shared row actions dropdown (uses shared floating menu system)
+      FloatingMenuPanel/  ← shared floating menu portal + keyboard nav
       FormField/          ← shared form field wrapper
       ModalFormFooter/    ← shared modal submit/cancel footer
     context/
       AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
     hooks/
+      useFloatingMenu.ts  ← shared floating menu hook — open/close/position/dismiss/focus
       useSubmitStatus.ts  ← SubmitStatus type + state pair used by every modal hook
       useAddresses.ts     ← entity-agnostic address array state for modal forms
       useContacts.ts      ← entity-agnostic contact array state for modal forms
@@ -37,6 +39,8 @@ frontend/src/
       useConfirmModal.tsx ← shared confirm dialog state
     utils/
       clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      floatingPosition.ts ← pure position calculator for floating menus — calculateFloatingPosition()
+      floatingMenuUtils.ts← getMenuItems(el) — shared helper for FloatingMenuPanel + useFloatingMenu
       storage.ts          ← getToken, setAuthData, clearAuthData, getUser, STORAGE_KEYS
       jwt.ts              ← isTokenExpired, getTimeUntilExpiry, decodeToken, getTokenExpiry
       time.ts             ← formatTime(seconds → mm:ss), calculateAge(dob → age string)
@@ -159,3 +163,67 @@ Current permission strings: `read:staff`, `write:staff`, `read:youth_profiles`, 
 5. Add modal if needed: `components/NewPageModal/` with `useNewPageModal.ts` + `newPageSchema.ts`
 6. Wire route in `App.tsx` under `<ProtectedRoute requiredPermission="read:x">` and add `read:x`/`write:x` to the `Permission` union in `AuthContext.tsx`
 7. Add `requirePermission('read:x')` on GET routes and `requirePermission('write:x')` on mutation routes in the backend
+
+## Shared Floating Menu System
+
+All dropdown/flyout menus use a shared 3-piece system. **Never build bespoke position/dismiss/keyboard logic in a component — wire up these three pieces instead.**
+
+| Piece | File | Role |
+|---|---|---|
+| Position util | `common/utils/floatingPosition.ts` | Pure function. `calculateFloatingPosition(anchor, placement, options)` → `{ top, left }` in viewport coords for `position: fixed`. Handles collision detection and side/alignment flipping. |
+| Hook | `common/hooks/useFloatingMenu.ts` | All behavior. Returns `{ isOpen, toggle, close, position, menuRef }`. Manages open/close state, position calc, `pointerdown` outside-dismiss, scroll/resize close, focus-first-item on open, return-focus-to-trigger on close. |
+| Component | `common/components/FloatingMenuPanel/` | Portal renderer. Renders a `role="menu"` div via `createPortal`. Handles `Escape`/`Tab`/Arrow keyboard nav. |
+
+### Placement
+
+```ts
+// Second arg to useFloatingMenu — { side, align? }
+{ side: 'bottom', align: 'end' }   // ActionsMenu, PublicTopBar mobile
+{ side: 'right',  align: 'start' } // Header settings flyout
+```
+
+### Wiring pattern
+
+```tsx
+const triggerRef = useRef<HTMLButtonElement>(null);
+const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+  triggerRef,
+  { side: 'bottom', align: 'end' },
+  { widthEstimate: 180, heightEstimate: 120 },
+);
+
+return (
+  <>
+    <button ref={triggerRef} onClick={toggle}>Open</button>
+    {position && (
+      <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close}>
+        <button role="menuitem">Action</button>
+      </FloatingMenuPanel>
+    )}
+  </>
+);
+```
+
+`position` is `null` when closed and non-null when open — the `{position && ...}` guard controls render.
+
+### Shared item styles
+
+`FloatingMenuPanel.css` owns the base `[role="menuitem"]` styles. Consumer CSS overrides must use the `.floating-menu-panel` prefix to win on specificity (0-3-0):
+
+```css
+.floating-menu-panel .my-item:hover { background: var(--accent-10); }
+```
+
+## Testing
+
+**Stack:** Vitest + jsdom + `@testing-library/react` + `@testing-library/jest-dom`.
+
+**Commands:** `npm test` (single run, CI) · `npm run test:watch` (dev).
+
+**Setup:** `src/tests/setup.ts` imports `@testing-library/jest-dom`.
+
+**Key testing patterns:**
+
+- `FloatingMenuPanel` renders via `createPortal` — `screen` queries full `document`, so portal children are always found without extra setup
+- Keyboard events on `document`: `fireEvent.keyDown(document, { key: 'Escape' })` reaches `FloatingMenuPanel`'s listener
+- Mock `getBoundingClientRect` for position tests: `vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({...} as DOMRect)`

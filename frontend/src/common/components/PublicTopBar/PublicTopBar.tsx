@@ -1,13 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../Button/Button';
+import { useFloatingMenu } from '../../hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
 import './PublicTopBar.css';
+
+const NAV_ITEMS = [
+  { id: 'programming', label: 'Programming' },
+  { id: 'about', label: 'Organizational History' },
+  { id: 'impact', label: 'Impact' },
+  { id: 'team', label: 'Staff' },
+  { id: 'partners', label: 'Partners' },
+];
 
 export default function PublicTopBar() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+
+  const {
+    isOpen: menuOpen,
+    toggle,
+    close,
+    position: menuPosition,
+    menuRef,
+  } = useFloatingMenu(
+    hamburgerRef,
+    { side: 'bottom', align: 'end' },
+    { widthEstimate: 220, heightEstimate: 240 },
+  );
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -15,18 +36,8 @@ export default function PublicTopBar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    const onClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    if (menuOpen) document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [menuOpen]);
-
   const scrollTo = (id: string) => {
-    setMenuOpen(false);
+    close();
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
@@ -38,33 +49,40 @@ export default function PublicTopBar() {
       </button>
 
       <nav className="topbar-nav" aria-label="Page sections">
-        <button className="topbar-link" onClick={() => scrollTo('programming')}>Programming</button>
-        <button className="topbar-link" onClick={() => scrollTo('about')}>Organizational History</button>
-        <button className="topbar-link" onClick={() => scrollTo('impact')}>Impact</button>
-        <button className="topbar-link" onClick={() => scrollTo('team')}>Staff</button>
-        <button className="topbar-link" onClick={() => scrollTo('partners')}>Partners</button>
+        {NAV_ITEMS.map(({ id, label }) => (
+          <button key={id} className="topbar-link" onClick={() => scrollTo(id)}>
+            {label}
+          </button>
+        ))}
       </nav>
 
-      <div className="topbar-mobile-controls" ref={menuRef}>
+      <div className="topbar-mobile-controls">
         <button
+          ref={hamburgerRef}
           className="topbar-hamburger"
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(prev => !prev)}
+          aria-haspopup="menu"
+          onClick={toggle}
         >
           <span className={`hamburger-icon${menuOpen ? ' hamburger-icon--open' : ''}`}>
             <span /><span /><span />
           </span>
         </button>
 
-        {menuOpen && (
-          <div className="topbar-mobile-menu">
-            <button className="topbar-link" onClick={() => scrollTo('programming')}>Programming</button>
-            <button className="topbar-link" onClick={() => scrollTo('about')}>Organizational History</button>
-            <button className="topbar-link" onClick={() => scrollTo('impact')}>Impact</button>
-            <button className="topbar-link" onClick={() => scrollTo('team')}>Staff</button>
-            <button className="topbar-link" onClick={() => scrollTo('partners')}>Partners</button>
-          </div>
+        {menuPosition && (
+          <FloatingMenuPanel
+            menuRef={menuRef}
+            position={menuPosition}
+            onClose={close}
+            className="topbar-mobile-menu"
+          >
+            {NAV_ITEMS.map(({ id, label }) => (
+              <button key={id} role="menuitem" onClick={() => scrollTo(id)}>
+                {label}
+              </button>
+            ))}
+          </FloatingMenuPanel>
         )}
       </div>
 
@@ -74,3 +92,4 @@ export default function PublicTopBar() {
     </header>
   );
 }
+
