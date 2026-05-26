@@ -77,8 +77,8 @@ export default function Schools() {
       render: (s: School) => (
         <ActionsMenu
           items={[
-            { label: 'Edit', onClick: () => handleEditSchool(s) },
-            { label: 'Delete', variant: 'danger' as const, onClick: () => handleDeleteSchool(s) },
+            { id: 'edit',   label: 'Edit',   onClick: () => handleEditSchool(s) },
+            { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => handleDeleteSchool(s) },
           ]}
         />
       ),

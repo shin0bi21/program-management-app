@@ -105,9 +105,9 @@ export default function Youth() {
       render: (profile) => canWrite ? (
         <ActionsMenu
           items={[
-            { label: 'Edit',       onClick: () => handleEditProfile(profile) },
-            ...(profile.active  ? [{ label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
-            ...(!profile.active ? [{ label: 'Reactivate',                              onClick: () => handleReactivateProfile(profile) }] : []),
+            { id: 'edit',        label: 'Edit',       onClick: () => handleEditProfile(profile) },
+            ...(profile.active  ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
+            ...(!profile.active ? [{ id: 'reactivate', label: 'Reactivate',                              onClick: () => handleReactivateProfile(profile) }] : []),
           ]}
         />
       ) : null,

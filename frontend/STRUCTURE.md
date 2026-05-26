@@ -48,17 +48,18 @@ src/
       sessionExpired.ts   ← awaitReLogin / resolveReLogin
       tokenRefresh.ts     ← proactive refresh with deduplication
     components/
-      ActionsMenu/        ← shared row actions dropdown
+      ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
       Button/
       ErrorBoundary/      ← wraps entire app, catches render errors
+      FloatingMenuPanel/  ← shared floating menu portal + keyboard nav
       Footer/
       FormField/          ← shared labelled form field wrapper
-      Header/
+      Header/             ← sidebar + settings flyout (uses FloatingMenuPanel)
       Modal/
       ModalFormFooter/    ← shared save/cancel footer for modal forms
       ProtectedRoute/     ← redirects unauthenticated users
-      PublicTopBar/
+      PublicTopBar/       ← public top bar + mobile menu (uses FloatingMenuPanel)
       ReLoginModal/       ← shown when access token expires mid-session
       Table/              ← shared data table
     context/
@@ -75,8 +76,12 @@ src/
       pages.css
     types/
       school.ts           ← cross-page domain types
+    hooks/
+      useFloatingMenu.ts  ← shared hook: open/close/position state, dismiss, keyboard, focus management
     utils/
       clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
+      floatingPosition.ts ← pure position calculator: calculateFloatingPosition(anchor, placement, options)
+      floatingMenuUtils.ts← getMenuItems(el) — shared helper used by FloatingMenuPanel + useFloatingMenu
       jwt.ts              ← decodeToken, isTokenExpired, getTokenExpiry, getTimeUntilExpiry (client-side decode only)
       storage.ts          ← STORAGE_KEYS, setAuthData, clearAuthData, getToken, getUser, hasAuthToken
       deviceFingerprint.ts
@@ -97,6 +102,93 @@ src/
 - Shared app state lives in `common/context`.
 - API config lives in `common/api`.
 - `common/` never imports from `pages/`. Dependencies flow one way: `pages/ → common/`.
+
+---
+
+## Floating Menu System
+
+All dropdown/flyout menus use a shared 3-piece system instead of bespoke per-component implementations.
+
+### Pieces
+
+| File | Role |
+|---|---|
+| `common/utils/floatingPosition.ts` | Pure position calculator — no React, independently testable. Takes anchor `HTMLElement` + `placement` + `options`, returns `{ top, left }` in viewport coords for `position: fixed`. Handles collision detection and axis flipping. |
+| `common/hooks/useFloatingMenu.ts` | All behavior — open/close state, position calculation, `pointerdown` dismiss, `scroll`/`resize` close, focus-first-item on open, return-focus-to-trigger on close. |
+| `common/components/FloatingMenuPanel/` | Portal renderer. Renders a `role="menu"` div via `createPortal` at the calculated position. Handles `Escape`/`Tab`/Arrow keyboard navigation. |
+
+### Placement model
+
+```ts
+// { side, align? } — passed as second arg to useFloatingMenu
+{ side: 'bottom', align: 'end' }   // ActionsMenu — opens below, right-aligned
+{ side: 'right',  align: 'start' } // Header settings flyout — opens to the right
+{ side: 'bottom', align: 'end' }   // PublicTopBar mobile menu — opens below, right-aligned
+```
+
+Collision detection flips side/alignment automatically if the preferred position would overflow the viewport.
+
+### Usage pattern
+
+```tsx
+import { useRef } from 'react';
+import { useFloatingMenu } from '../../hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+
+export default function MyMenu() {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+    triggerRef,
+    { side: 'bottom', align: 'end' },
+    { widthEstimate: 180, heightEstimate: 120 },
+  );
+
+  return (
+    <>
+      <button ref={triggerRef} onClick={toggle}>Open</button>
+      {position && (
+        <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close}>
+          <button role="menuitem">Action</button>
+        </FloatingMenuPanel>
+      )}
+    </>
+  );
+}
+```
+
+### Shared item styles
+
+`FloatingMenuPanel.css` owns the base `[role="menuitem"]` styles (block layout, padding, font, border-radius, hover). Consumers override only what differs:
+
+```css
+/* Consumer override — must use .floating-menu-panel prefix for specificity (0-3-0) */
+.floating-menu-panel .my-item:hover { background: var(--accent-10); }
+```
+
+---
+
+## Test Infrastructure
+
+**Framework:** Vitest + jsdom + `@testing-library/react` + `@testing-library/jest-dom`.
+
+**Run:** `npm test` (single run, used in CI) · `npm run test:watch` (dev watch mode).
+
+**Setup file:** `src/tests/setup.ts` — imports `@testing-library/jest-dom` to extend `expect`.
+
+**Config:** `vite.config.ts` uses `vitest/config` import with `test: { environment: 'jsdom', globals: true, setupFiles: ['./src/tests/setup.ts'] }`.
+
+### Existing test files
+
+| File | What it tests |
+|---|---|
+| `src/common/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
+| `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
+
+### Key patterns
+
+- **Mock `getBoundingClientRect`** when testing `floatingPosition.ts`: `vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({...} as DOMRect)`
+- **Portal menus**: `FloatingMenuPanel` renders via `createPortal` to `document.body` — `screen` queries the full document so portal children are always found
+- **Keyboard events on `document`**: `fireEvent.keyDown(document, { key: 'Escape' })` reaches `FloatingMenuPanel`'s listener correctly
 
 ### Type Ownership
 
