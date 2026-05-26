@@ -104,7 +104,28 @@ Individual suites (only when explicitly asked):
 ./scripts/tests/run-schools-tests.sh  # schools tests
 ```
 
-Frontend UI tests are not yet configured.
+**Frontend tests (Vitest + jsdom + Testing Library):**
+
+```bash
+cd frontend && npm test          # single run (same as CI)
+cd frontend && npm run test:watch # watch mode for dev
+```
+
+## Shared Floating Menu System
+
+All frontend dropdowns/flyouts use a shared 3-piece system. **Never build bespoke position, dismiss, or keyboard logic inside a component.**
+
+| Piece | File | Role |
+|---|---|---|
+| Position util | `frontend/src/common/utils/floatingPosition.ts` | Pure function — `calculateFloatingPosition(anchor, placement, options)` → `{ top, left }`. Collision detection flips side/alignment automatically. |
+| Hook | `frontend/src/common/hooks/useFloatingMenu.ts` | All behavior — state, position calc, outside-dismiss, scroll/resize close, focus management. Returns `{ isOpen, toggle, close, position, menuRef }`. |
+| Component | `frontend/src/common/components/FloatingMenuPanel/` | Portal renderer (`createPortal` to `document.body`). Handles `Escape`/`Tab`/Arrow keyboard nav. |
+
+Current consumers: `ActionsMenu` (bottom/end), `Header` settings flyout (right/start), `PublicTopBar` mobile menu (bottom/end).
+
+`FloatingMenuPanel.css` owns the base `[role="menuitem"]` styles. Consumer overrides need `.floating-menu-panel` prefix for specificity.
+
+---
 
 ## Linting Shell Scripts
 
@@ -148,7 +169,7 @@ Install shellcheck with `brew install shellcheck`.
 | What | File |
 |---|---|
 | Full-stack overview | `README.md` |
-| Frontend structure, patterns, state architecture | `frontend/STRUCTURE.md` |
+| Frontend structure, patterns, floating menu system, tests | `frontend/STRUCTURE.md` |
 | Frontend HTTP pipeline diagram | `frontend/docs/api-flow.mmd` |
 | Backend auth architecture | `backend/docs/auth.md` |
 | Backend error handling | `backend/docs/errors.md` |
@@ -156,5 +177,5 @@ Install shellcheck with `brew install shellcheck`.
 | Backend setup + API reference + commands | `backend/README.md` |
 | Security audit | `vulnerabilities.md` |
 | Backend coding rules (file locations, patterns) | `.github/instructions/backend.instructions.md` |
-| Frontend coding rules (file locations, patterns) | `.github/instructions/frontend.instructions.md` |
+| Frontend coding rules (file locations, patterns, floating menu, tests) | `.github/instructions/frontend.instructions.md` |
 | Shell script rules | `.github/instructions/scripts.instructions.md` |
