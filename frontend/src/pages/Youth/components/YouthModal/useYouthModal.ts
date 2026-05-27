@@ -16,7 +16,6 @@ const defaultValues: YouthFormData = {
   dateOfBirth: '',
   schoolId: '',
   gradeLevel: undefined,
-  active: true,
 };
 
 interface UseYouthModalProps {
@@ -73,7 +72,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
-      active: youthData.active ?? true,
     });
 
     initAddresses(youthData.addresses);
@@ -115,7 +113,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         ...(youthData && { id: youthData.id }),
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
-        active: data.active,
+        active: youthData ? youthData.active : true,
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
