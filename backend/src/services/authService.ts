@@ -31,7 +31,7 @@ const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
 
 // Security constants
 const TRUSTED_DEVICE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
+export const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
 const REFRESH_TOKEN_EXPIRY = '8h';
 const ACCESS_TOKEN_EXPIRY = '1h';
 const AUTH_CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
