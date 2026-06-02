@@ -1,14 +1,5 @@
 # Copilot Instructions — Youth Services App
 
-Full-stack youth services management system.
-**Stack:** React 18 + TypeScript + Vite (frontend) · Express 4 + TypeScript + postgres.js (backend) · PostgreSQL · Docker Compose.
-
-> **Instruction stack — scoped coding rules (auto-loaded by Copilot)**
-> - Backend: `.github/instructions/backend.instructions.md`
-> - Frontend: `.github/instructions/frontend.instructions.md`
-> - Scripts: `.github/instructions/scripts.instructions.md`
-
----
 
 ## Pinned Versions — DO NOT CHANGE
 
@@ -24,20 +15,6 @@ These are production-stable. Do not suggest, bump, or modify any of these withou
 | ts-node | `10.9.2` |
 
 The `postgresql18-client` version in the Dockerfile **must always match** the `postgres:X-alpine` server image version. Only bump both together, and only when explicitly asked.
-
----
-
-## Repo Layout
-
-```
-my-webapp/
-  backend/          Express API
-  frontend/         React SPA
-  scripts/          Shell scripts — deploy.sh, backup-db.sh, reset-dev-stack.sh
-  scripts/tests/    Test runner scripts — run-auth-tests.sh, run-staff-tests.sh, run-youth-tests.sh
-  docker-compose.yml
-  nginx.conf
-```
 
 ---
 
@@ -83,8 +60,6 @@ To rebuild the local dev stack from scratch (stops containers, wipes volumes, re
 ./scripts/reset-dev-stack.sh
 ```
 
-Run this after pulling changes that include new migrations, or any time the stack is in a bad state.
-
 ---
 
 ## Running Tests
@@ -92,7 +67,7 @@ Run this after pulling changes that include new migrations, or any time the stac
 **Full suite (default — always use this unless a specific suite is requested):**
 
 ```bash
-./scripts/tests/test-apis.sh    # runs all suites via docker compose exec backend npm test
+./scripts/tests/test-apis.sh
 ```
 
 Individual suites (only when explicitly asked):
@@ -121,46 +96,21 @@ All frontend dropdowns/flyouts use a shared 3-piece system. **Never build bespok
 | Hook | `frontend/src/common/hooks/useFloatingMenu.ts` | All behavior — state, position calc, outside-dismiss, scroll/resize close, focus management. Returns `{ isOpen, toggle, close, position, menuRef }`. |
 | Component | `frontend/src/common/components/FloatingMenuPanel/` | Portal renderer (`createPortal` to `document.body`). Handles `Escape`/`Tab`/Arrow keyboard nav. |
 
-Current consumers: `ActionsMenu` (bottom/end), `Header` settings flyout (right/start), `PublicTopBar` mobile menu (bottom/end).
-
-`FloatingMenuPanel.css` owns the base `[role="menuitem"]` styles. Consumer overrides need `.floating-menu-panel` prefix for specificity.
-
----
-
-## Linting Shell Scripts
-
-Before committing any `scripts/*.sh` file, run both checks:
-
-```bash
-bash -n scripts/deploy.sh      # syntax check — catches bad substitutions, mismatched braces
-shellcheck scripts/deploy.sh   # semantic check — catches unquoted vars, bad redirects, etc.
-```
-
-They complement each other: `bash -n` catches what shellcheck misses and vice versa.
-Install shellcheck with `brew install shellcheck`.
-
 ---
 
 ## Production Deployment
 
-**Prod compose file:** `docker-compose.prod.yml` (project root) — backend `prod` target, nginx with SSL, db only. No dev services, no exposed DB/backend ports.
+**CI auto-deploys on push to `main`** via `.github/workflows/ci.yml` → `./scripts/deploy.sh` on Lightsail. `deploy.sh` snapshots the DB before migrating and auto-restores from that snapshot if the post-deploy health check fails.
 
-**Dockerfile:** Multi-stage — `dev` (tail -f, volumes from compose), `builder` (tsc compile), `prod` (production deps + compiled dist, `npm start`).
+---
 
-**nginx.conf:** Port 80 redirects to HTTPS. Port 443 with TLS 1.2/1.3, HSTS, security headers. ACME challenge path for certbot renewals.
+## Context & File Rules
 
-**CI auto-deploy:** `.github/workflows/ci.yml` — on push to `main`, after backend + frontend jobs pass, SSHes into Lightsail and runs `./scripts/deploy.sh`. Requires 4 GitHub secrets: `LIGHTSAIL_HOST`, `LIGHTSAIL_USER`, `LIGHTSAIL_SSH_KEY`, `LIGHTSAIL_APP_PATH`.
-
-**deploy.sh flow:**
-1. `git reset --hard origin/main`
-2. Build frontend via `docker run node:20-alpine`
-3. DB snapshot (gzipped pg_dump, verified)
-4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
-5. Migrate from new image (`docker compose run --rm --no-deps backend`)
-6. `docker compose -f docker-compose.prod.yml up -d`
-7. Health check — on failure, auto-restores DB from snapshot
-
-**`COMPOSE_FILE=docker-compose.prod.yml`** is exported at the top of `deploy.sh` — all `docker compose` calls in the script use it automatically.
+- **After a conversation summary or compaction, read the relevant files before editing** — never trust the summary alone for exact current content.
+- **`src/types/auth.ts` is the single source of truth for token shapes and permission strings** — check it first for any auth-related change. Both `authService.ts` and `authMiddleware.ts` import from here.
+- **Never edit an applied migration** — write a new file instead. Applied files are checksum-tracked; editing one aborts the next migrate run.
+- **`escapeHtml()` is required on any user-supplied value interpolated into email HTML** — applies in `emailService.ts` and any new email helper.
+- **Do not write change summaries after completing edits** — confirm done in one sentence. Only produce a summary when explicitly asked.
 
 ---
 
@@ -174,6 +124,7 @@ Install shellcheck with `brew install shellcheck`.
 | Backend auth architecture | `backend/docs/auth.md` |
 | Backend error handling | `backend/docs/errors.md` |
 | Database schema + migrations | `backend/docs/db.md` |
+| Google Sheets integration | `backend/docs/google-sheets.md` |
 | Backend setup + API reference + commands | `backend/README.md` |
 | Security audit | `vulnerabilities.md` |
 | Backend coding rules (file locations, patterns) | `.github/instructions/backend.instructions.md` |

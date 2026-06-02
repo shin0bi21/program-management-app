@@ -23,8 +23,6 @@ const POSTGRES_CONNECTION_CODES = new Set([
  * - Postgres connection failures → `DbConnectionError` (503).
  * - Postgres unique-constraint violations (`23505`) → `ConflictError` (409).
  * - Everything else → `InternalServerError` (500) preserving the original message.
- *
- * Named export so it can be unit-tested independently of Express.
  */
 export function classifyError(err: unknown): AppError {
   if (err instanceof AppError) return err;

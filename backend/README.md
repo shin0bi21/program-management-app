@@ -95,6 +95,12 @@ ADMIN_EMAIL=you@yourdomain.com
 ADMIN_PASSWORD=StrongPasswordHere!
 ADMIN_FIRST_NAME=Your
 ADMIN_LAST_NAME=Name
+
+# Security (optional — defaults to JWT_SECRET if not set)
+LOG_HMAC_SECRET=your-independent-hmac-secret
+
+# Google Sheets integration (optional — only needed for import/export scripts)
+GOOGLE_SERVICE_ACCOUNT_JSON=<base64-encoded-service-account-json>
 ```
 
 ### First-Time Setup
@@ -227,7 +233,7 @@ bash scripts/tests/test-apis.sh
 bash scripts/tests/run-auth-tests.sh    # 44 tests
 bash scripts/tests/run-staff-tests.sh   # 15 tests
 bash scripts/tests/run-youth-tests.sh   # 25 tests
-bash scripts/tests/run-schools-tests.sh
+bash scripts/tests/run-schools-tests.sh  # 28 tests
 
 # Or directly
 docker compose exec backend npm run test:auth
@@ -452,7 +458,8 @@ All `npm run` commands execute inside the Docker container via `docker compose e
 
 | File | Covers |
 |------|--------|
-| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, **RBAC model, roles & permissions**, auth logging, full sequence diagram |
+| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, **RBAC model, roles & permissions**, auth logging, staff invite flow, full sequence diagram |
 | [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, audit log, auth log, safety guarantees |
 | [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
+| [docs/google-sheets.md](docs/google-sheets.md) | Service account setup, `readSheet` / `writeSheet` / `appendToSheet` API, smoke test, script pattern |
 | [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | File locations, route patterns, conventions, "adding a new domain" checklist |

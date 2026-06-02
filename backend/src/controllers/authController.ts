@@ -9,10 +9,9 @@ import {
   resetUserPassword,
 } from '../services/authService';
 import { UnauthorizedError } from '../errors';
+import { REFRESH_TOKEN_EXPIRY_MS } from '../services/authService';
 
-const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
-
-const cookieOptions = () => ({
+const getRefreshTokenCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict' as const,
@@ -23,7 +22,7 @@ export const handleLogin = async (req: Request, res: Response) => {
   const { email, password, deviceFingerprint } = req.body;
   const result = await loginUser(email, password, deviceFingerprint, req.ip);
   if (result.type === 'success') {
-    res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions());
+    res.cookie('refreshToken', result.tokens.refreshToken, getRefreshTokenCookieOptions());
     return res.json({ message: 'Login successful (trusted device)', token: result.tokens.accessToken, user: result.user });
   }
   res.json({ message: '2FA code sent to your email', requires2FA: true, userId: result.userId });
@@ -35,7 +34,7 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
     throw new UnauthorizedError('Refresh token not found');
   }
   const { newAccessToken, newRefreshToken } = await rotateRefreshToken(refreshToken, req.ip);
-  res.cookie('refreshToken', newRefreshToken, cookieOptions());
+  res.cookie('refreshToken', newRefreshToken, getRefreshTokenCookieOptions());
   res.json({ token: newAccessToken });
 };
 
@@ -55,7 +54,7 @@ export const handleLogout = async (req: Request, res: Response) => {
 export const handleVerify2FA = async (req: Request, res: Response) => {
   const { userId, code, trustDevice, deviceFingerprint, deviceName } = req.body;
   const result = await verify2FACode(userId, code, trustDevice, deviceFingerprint, deviceName, req.ip);
-  res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions());
+  res.cookie('refreshToken', result.tokens.refreshToken, getRefreshTokenCookieOptions());
   res.json({ message: 'Login successful', token: result.tokens.accessToken, user: result.user });
 };
 

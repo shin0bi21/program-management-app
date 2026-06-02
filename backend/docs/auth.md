@@ -1,6 +1,6 @@
-# Auth System — Architecture & Design Notes
+# Auth System
 
-This document covers the design decisions behind the JWT auth implementation. For the API endpoint reference see [backend/README.md § 4 API Reference](../README.md#4-api-reference).
+For the API endpoint reference see [backend/README.md § 4 API Reference](../README.md#4-api-reference).
 
 ---
 
@@ -17,7 +17,7 @@ This document covers the design decisions behind the JWT auth implementation. Fo
 9. [Auth Logging](#9-auth-logging)
 10. [Shared Utilities](#10-shared-utilities)
 11. [Module Boundaries](#11-module-boundaries)
-12. [What Is Out of Scope (and Why)](#12-what-is-out-of-scope-and-why)
+12. [Staff Invite Flow](#12-staff-invite-flow)
 
 ---
 
@@ -111,7 +111,7 @@ Authorization is purely permission-based. **No role checks exist in route or UI 
 | `read:youth_profiles` | `GET /api/youth` |
 | `write:youth_profiles` | `POST /api/youth`, `PATCH /api/youth/:id` |
 | `read:schools` | `GET /api/schools` |
-| `write:schools` | `POST /api/schools`, `PATCH /api/schools/:id`, `DELETE /api/schools/:id` |
+| `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
 
@@ -163,11 +163,7 @@ interface RefreshTokenPayload extends BaseTokenPayload {
 }
 ```
 
-**Why a separate `BaseTokenPayload`?** To avoid repeating `userId`, `email`, `jti` in both subtypes. Any field that must appear in both token kinds lives in the base.
-
-**Why `iat?/exp?` in base but `iat/exp` required in the subtypes?** When signing, you never pass `iat` or `exp` — `jsonwebtoken` stamps them. So the base marks them optional (prevents passing stale timestamps to the signer). Once a token is decoded after `jwt.verify()`, both fields are always present, so the subtypes mark them required. This way `decoded.exp * 1000` is safe without a non-null assertion.
-
-`iat` ("Issued At") and `exp` ("Expiration Time") are registered JWT claim names defined in [RFC 7519 §4.1](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1). Both are NumericDate values (seconds since Unix epoch). The `jsonwebtoken` library handles stamping `iat` automatically and converts the `expiresIn` string option into an absolute `exp` value.
+`iat?/exp?` are optional on the base because you never pass them when signing — `jsonwebtoken` stamps them. The subtypes mark them required because after `jwt.verify()` they are always present, making `decoded.exp * 1000` safe without a non-null assertion.
 
 ---
 
@@ -190,8 +186,6 @@ For access tokens, the caller passes (`userId`, `email`, `role`, `permissions`, 
 - Setting the expiry constant
 - Stamping `tokenType`
 
-`Omit<..., 'tokenType'>` in the parameter type means callers cannot override the `tokenType` — it is always injected by the helper, never by the caller.
-
 `generateAndStoreTokenPair()` is the only caller of both helpers. It generates two JTIs, signs both tokens, inserts the refresh token into the `user_refresh_tokens` table (hashed with SHA-256), and returns both tokens as a `TokenPair`.
 
 ---
@@ -208,8 +202,6 @@ jwt.verify(token, JWT_SECRET)
   → attach decoded payload to req.user
   → next()
 ```
-
-The `tokenType` guard provides an explicit payload-level check on top of signature verification. A refresh token presented to a protected route will fail `jwt.verify()` due to the wrong secret, but the guard makes the rejection intentional and readable in code — the contract is visible, not implicit.
 
 `requirePermission(...required: Permission[])` is a separate middleware that runs after `authenticateToken`. It checks that every required permission is present in `req.user.permissions[]` — it never reads `req.user.role`.
 
@@ -240,8 +232,6 @@ There are two places this shows up in `authService.ts`:
 
 - `verify2FACode()` uses `UPDATE user_auth_codes SET used_at = NOW() ... AND used_at IS NULL RETURNING *` to validate and consume a 2FA code in one statement. Codes expire after **5 minutes**.
 - `resetUserPassword()` uses `UPDATE user_password_reset_tokens SET used_at = NOW() ... RETURNING *` with `FOR UPDATE SKIP LOCKED` in the subquery to claim a single valid reset token and prevent concurrent reuse. It also revokes all active refresh tokens for the user and promotes `status = 'invited'` accounts to `status = 'active'`.
-
-This is the same design principle as refresh token rotation: the state transition that makes the secret unusable happens atomically with the validation step, so a code or token cannot be successfully consumed twice.
 
 ---
 
@@ -325,8 +315,6 @@ Owns all access token blacklist logic:
 | `isBlacklisted(jti)` | `authMiddleware.ts` | Check if a JTI is revoked; refreshes DB cache when stale |
 | `revokeAccessToken(jti, userId, tokenHash, expiresAt)` | `authService.ts` | Persist revocation to DB + update local cache immediately |
 
-The in-memory `Set<string>` and 60s TTL polling are internal implementation details. If you swap to Redis later, only this file changes — the middleware and service interfaces stay identical.
-
 ---
 
 ## 11. Module Boundaries
@@ -339,18 +327,22 @@ authMiddleware.ts  ──▶  src/utils/env.ts           ◀──  authService.
 authService.ts     ──▶  authLogService.ts
 ```
 
-Middleware depends on services/utils. Services depend on utils and may depend on peer services in the same layer (e.g. `authService.ts` calls `authLogService.ts`). Nothing depends on middleware.
-
 **Rule:** any logic needed by both `authService.ts` and `authMiddleware.ts` must live in `src/services/` or `src/utils/`, never in middleware.
 
 ---
 
-## 12. What Is Out of Scope (and Why)
+## 12. Staff Invite Flow
 
-| Topic | Status | Reason |
-|-------|--------|--------|
-| Redis blacklist cache | Not implemented | `tokenRevocationService.ts` is the only file to change. Swap the `Set<string>` + DB polling for a Redis `GET`/`SET`. Required if running multiple server instances, otherwise in-memory is fine. |
-| `iss` / `aud` standard claims | Not implemented | Protect against token confusion across multiple services. Not needed for a single-service monolith. Revisit if the app splits into multiple services. |
-| RS256 / asymmetric keys | Not implemented | Only valuable when downstream services need to verify tokens without the signing secret. HS256 with a strong 64-byte secret is appropriate for a monolith. |
-| Token expiry changes | Out of scope | Security policy decision, separate from structural type changes. Current: access = 1h, refresh = 8h. |
-| Frontend `jwt.ts` utils | Not updated | Frontend only reads `role` and `permissions[]` from the access token for UI routing. It never validates `tokenType` and has no need to. |
+New staff accounts are created via `staffService.ts` (`setStaff()`), not through the self-registration path. The flow reuses the password reset token mechanism:
+
+1. Admin calls `POST /api/staff` with `{ email, firstName, lastName, role }`.
+2. `staffService.ts` creates the `users` + `user_credentials` row with a random unusable password hash (`status: 'invited'`).
+3. A 7-day token is inserted into `user_password_reset_tokens`.
+4. `sendStaffInvite()` in `emailService.ts` sends an email with a link to `/reset-password?token=<rawToken>`.
+5. The invitee clicks the link and sets their password via `POST /api/auth/reset-password`.
+6. `resetUserPassword()` in `authService.ts` updates the password hash and promotes `status = 'invited'` → `status = 'active'`.
+
+**Key points:**
+- Invite links expire after **7 days** (`INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000`).
+- The same `/reset-password` endpoint handles both password resets and first-time invite activation — `resetUserPassword()` promotes `invited` accounts automatically.
+- If a staff account already exists (matched by email), `setStaff()` updates the record and re-sends the invite email if the account is still in `invited` status.

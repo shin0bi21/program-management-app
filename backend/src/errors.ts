@@ -1,34 +1,6 @@
-/**
- * ============================================================================
- * AppError.ts — Error vocabulary
- * ============================================================================
- *
- * Pure vocabulary — no framework imports. Defines every error class the API
- * can throw and the response shape they produce. No Express, no HTTP concerns.
- * See `backend/docs/errors.md` for the full design rationale and request flow.
- *
- * File layout:
- *   1. Response contract — ValidationDetail, ErrorResponse types
- *   2. Base class        — AppError (abstract — never instantiate directly)
- *   3. 4xx client errors — caller's fault (bad input, no auth, etc.)
- *   4. 5xx server errors — our fault (DbConnectionError, ServiceUnavailableError)
- *
- * DB error classification (classifyError, POSTGRES_CONNECTION_CODES) lives in
- * middleware/errorMiddleware.ts — called as the first step of handleError.
- *
- * requestId in ErrorResponse is populated by the requestId middleware registered
- * in src/index.ts before all routes.
- *
- * Rule: throw an AppError subclass anywhere; the global errorHandler catches
- * it, logs it, and formats the response. sendError lives in middleware/errorHandler.ts.
- */
-
 // ============================================================================
 // 1. RESPONSE CONTRACT
 // ============================================================================
-// Stable shape for every error response returned by this API.
-// Default:    { error: string, requestId?: string }
-// Validation: { error: string, details: ValidationDetail[], requestId?: string }
 
 /** A single field-level validation failure, returned in `ErrorResponse.details`. */
 export interface ValidationDetail {
@@ -52,20 +24,7 @@ export interface ErrorResponse {
 // 2. BASE CLASS
 // ============================================================================
 
-/**
- * Abstract base for all API errors. Never instantiate directly — subclass it.
- *
- * Being abstract ensures `errorHandler` can always distinguish a deliberate
- * typed error from an unexpected plain `Error` or third-party exception.
- *
- * To add a new error type: extend `AppError`, set `statusCode` and `this.name`.
- *
- * `errorHandler` reads these properties:
- * - `statusCode`    — HTTP status (clamped to 400–599; anything else becomes 500)
- * - `message`       — response body `{ error }` (redacted for 5xx in production)
- * - `details`       — response body `{ details }` when present
- * - `clientMessage` — overrides the generic 5xx fallback in production
- */
+/** Abstract base for all API errors. Never instantiate directly — subclass it. See `backend/docs/errors.md`. */
 export abstract class AppError extends Error {
   /** Field-level validation failures. Set only on {@link ValidationError}. */
   public details?: ValidationDetail[];
@@ -156,10 +115,8 @@ export class NotFoundError extends AppError {
 }
 
 /**
- * 409 — Resource already exists (unique constraint violation). Maps Postgres
- * error 23505 (unique_violation) so it surfaces as a 409 instead of a raw 500.
- * Throw from: classifyError (automatically from DB 23505), or services for semantic conflicts.
- * Pass the original DB error as `cause` when classifying — the constraint name is visible in logs.
+ * 409 — Unique constraint violation. Auto-thrown by classifyError from Postgres 23505,
+ * or throw directly from a service for semantic conflicts.
  */
 export class ConflictError extends AppError {
   constructor(message: string, cause?: unknown) {
@@ -197,7 +154,6 @@ export class TooManyRequestsError extends AppError {
 // In production, errorHandler replaces the message with a generic string so
 // internal details never leak. Logged at error level with full stack.
 
-/** Shared client-facing copy for all 503 errors. Single source so copy changes touch one line. */
 const UNAVAILABLE_MESSAGE = 'The server is temporarily unavailable. Please try again shortly.';
 
 /**
@@ -212,11 +168,8 @@ export class InternalServerError extends AppError {
 }
 
 /**
- * 503 — Database unreachable or refusing connections (ECONNREFUSED, 57P03,
- * pool exhaustion, etc.). Thrown by db/dbErrors.ts — errorHandler no longer
- * needs to pattern-match raw postgres error strings.
+ * 503 — Database unreachable (ECONNREFUSED, 57P03, pool exhaustion).
  * Throw from: db/client.ts.
- * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
 export class DbConnectionError extends AppError {
   constructor(message: string, cause?: unknown) {
@@ -229,7 +182,6 @@ export class DbConnectionError extends AppError {
 /**
  * 503 — An upstream service (cache, queue, third-party API) is unavailable.
  * Throw from: service integrations, job queue adapters.
- * `cause` is forwarded as native `Error.cause` for structured loggers.
  */
 export class ServiceUnavailableError extends AppError {
   constructor(message: string, cause?: unknown) {
