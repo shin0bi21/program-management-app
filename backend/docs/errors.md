@@ -103,8 +103,6 @@ flowchart TD
     ACT --> RES
 ```
 
-> Logging is `console.error`/`console.warn`. Swapping to a structured logger (Pino, Winston) is a one-line change — `Error.cause` is already threaded through `AppError` so the full cause chain serialises automatically.
-
 ### DB error classification
 
 `classifyError()` promotes raw throws into typed `AppError`s before logging:
@@ -189,12 +187,3 @@ Typed error hierarchy in `src/common/utils/clientErrors.ts`:
 | `RequestTimeoutError` | AbortController timeout fired |
 
 All HTTP calls go through `apiClient`. Hooks catch with `getErrorMessage(err, fallback)` for display; `err instanceof ApiError && err.details` for field-level validation errors.
-
----
-
-## 9. Design notes
-
-- **One class per status code** — self-documenting throw sites, real `instanceof` checks, precise stack traces. A factory saves lines but loses "Go to Definition" and per-class fields.
-- **`errors.ts` (vocabulary) vs `errorMiddleware.ts` (policy)** — error classes are imported by ~30 service files; keeping them separate from Express middleware keeps the import graph one-directional.
-- **`ValidationError` carries `details[]`** — other errors only need a message. `AppError.details` is on the base class so `handleError` reads it uniformly without an `instanceof` check.
-- **`sendError` is private** — the only function that writes `res.json()` for errors. Shape changes happen in one place.
