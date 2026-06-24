@@ -40,11 +40,11 @@ export default function Youth() {
   });
 
   const handleReactivateProfile = (profile: YouthProfile) => setConfirmAction({
-    title: 'Reactivate Profile',
-    message: `Reactivate ${profile.firstName} ${profile.lastName}? They will regain access to the system.`,
-    confirmLabel: 'Reactivate',
+    title: 'Activate Profile',
+    message: `Activate ${profile.firstName} ${profile.lastName}? They will regain access to the system.`,
+    confirmLabel: 'Activate',
     confirmVariant: 'primary',
-    successMessage: 'Profile reactivated',
+    successMessage: 'Profile activated',
     onConfirm: async () => {
       const updated = await toggleYouthActive(profile.id);
       setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
@@ -107,7 +107,7 @@ export default function Youth() {
           items={[
             { id: 'edit',        label: 'Edit',       onClick: () => handleEditProfile(profile) },
             ...(profile.active  ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
-            ...(!profile.active ? [{ id: 'reactivate', label: 'Reactivate',                              onClick: () => handleReactivateProfile(profile) }] : []),
+            ...(!profile.active ? [{ id: 'reactivate', label: 'Activate',                              onClick: () => handleReactivateProfile(profile) }] : []),
           ]}
         />
       ) : null,

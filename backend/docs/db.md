@@ -1,6 +1,6 @@
-# Database & Migrations — Architecture & Design Notes
+# Database & Migrations
 
-For commands and quick reference see [README.md § 9 Database & Migrations](../README.md#9-database--migrations) and [README.md § 14 Commands Reference](../README.md#14-commands-reference).
+For commands and quick reference see [README.md § 5 Database & Migrations](../README.md#5-database--migrations) and [README.md § 10 Commands Reference](../README.md#10-commands-reference).
 
 ---
 
@@ -95,14 +95,6 @@ docker compose exec backend npm run db:status    # verify
 
 `db:migrate` automatically runs `kysely-codegen` after applying migrations to keep `src/types/database.ts` in sync with the schema. If type generation fails, it will say so — run `npm run db:types` manually to retry.
 
-**Step 3 — Commit:**
-
-```bash
-git add .
-git commit -m "Add posts migration"
-git push origin main
-```
-
 ---
 
 ## 4. Safety Features
@@ -115,9 +107,7 @@ git push origin main
 | Strict mode | Default on — pass `--no-strict` to demote conflicts to warnings and continue |
 | Missing file detection | Applied migration deleted from disk is treated as a conflict |
 
-**Transaction safety** means a partially-applied migration is impossible — if any statement fails, the entire file rolls back cleanly.
-
-**Checksum validation** guards against accidental edits. All previously-applied migration checksums are validated upfront before any new migration runs. In strict mode (default), a mismatch or missing file aborts immediately — pass `--no-strict` to demote conflicts to warnings and continue. The fix is always to write a new migration, not edit the old one.
+**Rule:** never edit an applied migration. If you need to change something, write a new one.
 
 ---
 
@@ -158,10 +148,6 @@ Current example:
 - `youthService.ts` opens one transaction for `users`, `youth_profiles`, addresses, and contacts
 - `setAddresses()` / `setContacts()` join that outer transaction when a `trx` is passed
 - the same public methods still work standalone by calling `sql.begin(...)` when no `trx` is provided
-
-This prevents partial writes across nested service boundaries. If contact creation fails during a youth save, the `users` row, `youth_profiles` row, address changes, contact changes, and audit rows all roll back together.
-
-For junction-backed domain operations like youth addresses and contacts, audit payloads also include the owning `userId`. This keeps the audit log usable for future action-level undo handlers, because a revert needs to know not just which `address` or `contact` row changed, but which youth link should be restored or removed.
 
 ### Coverage
 

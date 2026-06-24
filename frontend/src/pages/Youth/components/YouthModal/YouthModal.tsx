@@ -85,16 +85,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           </select>
         </FormField>
 
-        <div className="form-field">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              {...register('active')}
-            />
-            <span>Active (currently participating in cohort)</span>
-          </label>
-        </div>
-
         {/* Addresses Section */}
         <div className="section-divider">
           <div className="section-header">

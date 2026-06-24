@@ -16,7 +16,6 @@ export const youthSchema = z.object({
   gradeLevel: z
     .union([z.number().int().min(0, 'Grade must be 0 or higher').max(12, 'Grade must be 12 or lower'), z.nan()])
     .optional(),
-  active: z.boolean(),
 });
 
 export type YouthFormData = z.infer<typeof youthSchema>;

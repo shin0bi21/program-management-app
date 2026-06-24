@@ -59,9 +59,9 @@ export default function Staff() {
   });
 
   const handleReactivateStaff = (user: StaffUser) => setConfirmAction({
-    title: 'Reactivate User',
-    message: `Reactivate ${user.firstName} ${user.lastName}? They will regain access to the system.`,
-    confirmLabel: 'Reactivate',
+    title: 'Activate User',
+    message: `Activate ${user.firstName} ${user.lastName}? They will regain access to the system.`,
+    confirmLabel: 'Activate',
     confirmVariant: 'primary',
     onConfirm: async () => {
       const updated = await toggleStaffActive(user.id);
@@ -95,7 +95,7 @@ export default function Staff() {
             { id: 'edit',           label: 'Edit',         onClick: () => handleEditStaff(user) },
             ...(user.status === 'invited'  ? [{ id: 'revoke',      label: 'Revoke Invite', variant: 'danger' as const, onClick: () => handleRevokeInvite(user) }]    : []),
             ...(user.status === 'active'   ? [{ id: 'deactivate',  label: 'Deactivate',    variant: 'danger' as const, onClick: () => handleDeactivateStaff(user) }] : []),
-            ...(user.status === 'inactive' ? [{ id: 'reactivate',  label: 'Reactivate',                               onClick: () => handleReactivateStaff(user) }] : []),
+            ...(user.status === 'inactive' ? [{ id: 'reactivate',  label: 'Activate',                               onClick: () => handleReactivateStaff(user) }] : []),
           ]}
         />
       ),

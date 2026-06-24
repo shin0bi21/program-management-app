@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+dist/
+build/
+frontend/dist/
+backend/dist/
+
+# Large generated dependency metadata
+package-lock.json
+
+# Environment files
+.env
+.env.*
+backend/.env*
+
+# Logs and local files
+logs/
+*.log
+.DS_Store
