@@ -9,6 +9,8 @@ export type AgeGroup = "junior_youth" | "senior_youth";
 
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
 
+export type DiscoverySource = "community_outreach" | "friend_family" | "online" | "other" | "school";
+
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
@@ -72,6 +74,23 @@ export interface BaseTable {
   created_by: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface CohortInterestSubmissions {
+  age: number;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  discovery_source: DiscoverySource | null;
+  email: string | null;
+  id: Generated<string>;
+  message: string | null;
+  parent_name: string | null;
+  phone_number: string | null;
+  school: string | null;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  youth_name: string;
 }
 
 export interface Contacts {
@@ -264,6 +283,7 @@ export interface DB {
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
+  cohort_interest_submissions: CohortInterestSubmissions;
   contacts: Contacts;
   schema_migrations: SchemaMigrations;
   schools: Schools;

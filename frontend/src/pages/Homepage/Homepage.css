@@ -213,6 +213,153 @@
   text-align: center;
 }
 
+.hero-actions {
+  margin-top: var(--space-8);
+}
+
+.hero-interest-label {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+.hero-interest-title {
+  margin: 0.65rem 0 0;
+  color: var(--color-ink);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.hero-interest-copy {
+  margin: 0.6rem 0 0;
+  color: var(--color-body);
+  line-height: 1.65;
+}
+
+.cohort-section {
+  padding: var(--section-pad-y) 0;
+  background:
+    linear-gradient(180deg, var(--color-white) 0%, var(--accent-06) 100%);
+}
+
+.cohort-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100% - var(--section-inner-x) * 2));
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--ink-12) 20%,
+    var(--ink-12) 80%,
+    transparent 100%
+  );
+}
+
+.cohort-section-copy {
+  max-width: 48rem;
+  margin-bottom: var(--space-6);
+}
+
+.cohort-section-copy .section-title {
+  margin-bottom: var(--space-4);
+}
+
+.cohort-section-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.cohort-section-description {
+  margin: 0.85rem 0 0;
+  color: var(--color-body);
+  line-height: 1.7;
+}
+
+.cohort-interest-copy {
+  margin: 0 0 1rem;
+  color: var(--color-body);
+  line-height: 1.6;
+}
+
+.cohort-inline-form {
+  width: 100%;
+  transition: opacity 0.2s ease;
+}
+
+.cohort-inline-form-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.cohort-inline-form--muted {
+  opacity: 0.28;
+}
+
+.cohort-form-shell {
+  position: relative;
+  width: 100%;
+}
+
+.cohort-inline-form-actions {
+  margin-top: 1rem;
+}
+
+.cohort-inline-form textarea {
+  width: 100%;
+  min-height: 7.5rem;
+  resize: vertical;
+}
+
+.cohort-success-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.cohort-success-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--accent-20);
+  border-radius: var(--radius-xl);
+  background: var(--color-white);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.cohort-success-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cohort-success-copy {
+  margin: 0;
+  color: var(--color-body);
+  line-height: 1.65;
+}
+
 
 /* ── Program cards ──────────────────────────────────────────  */
 .program-grid {
@@ -240,6 +387,28 @@
 
 @media (max-width: 1000px) {
   .analytics-cards { flex-direction: column; }
+}
+
+@media (max-width: 720px) {
+  .homepage-hero {
+    min-height: auto;
+    padding-top: 7rem;
+    padding-bottom: 5rem;
+  }
+
+  .hero-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .cohort-inline-form .btn {
+    width: min(100%, 22rem);
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
 }
 
 .program-card {
@@ -786,4 +955,3 @@
     top: 30px; /* re-align dot with stacked year text */
   }
 }
-

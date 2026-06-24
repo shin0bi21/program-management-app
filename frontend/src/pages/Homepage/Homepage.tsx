@@ -1,9 +1,16 @@
+import { FormEvent, useEffect, useState } from 'react'
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar'
 import Header from '../../common/components/Header/Header'
 import Footer from '../../common/components/Footer/Footer'
-import ResourceCard from './components/ResourceCard'
+import Button from '../../common/components/Button/Button'
+import FormField from '../../common/components/FormField/FormField'
 import { useAuth } from '../../common/context/AuthContext'
+import { useSubmitStatus } from '../../common/hooks/useSubmitStatus'
+import { ApiError, getErrorMessage } from '../../common/utils/clientErrors'
+import ResourceCard from './components/ResourceCard'
+import { submitCohortInterest } from './api/homepage.api'
 import './Homepage.css'
+import '../../common/styles/forms.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────────
 
@@ -32,6 +39,19 @@ type ProgramCardProps = {
   program: Program
 }
 
+type CohortInterestForm = {
+  youthName: string
+  parentName: string
+  age: string
+  school: string
+  email: string
+  phoneNumber: string
+  discoverySource: string
+  message: string
+}
+
+type CohortInterestErrors = Partial<Record<keyof CohortInterestForm, string>>
+
 // ── Page data (in page-section order) ─────────────────────────────────────────────
 
 const programs = [
@@ -40,9 +60,9 @@ const programs = [
     day: 'Every other Friday',
     copy: 'Welcome to hang out, play video games and board games. A relaxed, open space for youth to connect and unwind.',
     sessions: [
-      { date: new Date(2026, 4, 29), topic: 'Drop-in Day' },
-      { date: new Date(2026, 5, 12), topic: 'Drop-in Day' },
       { date: new Date(2026, 5, 26), topic: 'Drop-in Day' },
+      { date: new Date(2026, 6, 10), topic: 'Drop-in Day' },
+      { date: new Date(2026, 6, 24), topic: 'Drop-in Day' },
     ],
     dropIn: true,
   },
@@ -52,11 +72,7 @@ const programs = [
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
     sessions: [
-      { date: new Date(2026, 4,  5), topic: 'Yoga' },
-      { date: new Date(2026, 4, 12), topic: 'Healthy Relationships & Boundaries' },
-      { date: new Date(2026, 4, 19), topic: 'Assertiveness & Emotional Control' },
-      { date: new Date(2026, 4, 26), topic: 'Conflict Resolution' },
-      { date: new Date(2026, 5,  2), topic: 'Field Trip' },
+      { date: new Date(2026, 5, 30), topic: 'Healthy Habits Guest Speaker' },
     ],
   },
   {
@@ -96,6 +112,25 @@ const teamResources = [
   { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
   { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Human Kinetics',       school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
   { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },
+]
+
+const cohortInterestInitialState: CohortInterestForm = {
+  youthName: '',
+  parentName: '',
+  age: '',
+  school: '',
+  email: '',
+  phoneNumber: '',
+  discoverySource: '',
+  message: '',
+}
+
+const discoverySourceOptions = [
+  { value: 'online', label: 'Online' },
+  { value: 'friend_family', label: 'Friend / Family' },
+  { value: 'school', label: 'School' },
+  { value: 'community_outreach', label: 'Community Outreach' },
+  { value: 'other', label: 'Other' },
 ]
 
 // ── Session utilities ─────────────────────────────────────────────────────
@@ -199,8 +234,61 @@ function ProgramCard({ program }: ProgramCardProps) {
 
 export default function Homepage() {
   const { isAuthenticated, loading } = useAuth()
+  const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
+  const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
+  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus()
+  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success'
+
+  useEffect(() => {
+    if (submitStatus !== 'success') return
+
+    const timeoutId = window.setTimeout(() => {
+      resetStatus()
+    }, 2500)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [submitStatus, resetStatus])
 
   if (loading) return null
+
+  const handleFieldChange = (field: keyof CohortInterestForm, value: string) => {
+    setFormData((current) => ({ ...current, [field]: value }))
+    setFieldErrors((current) => ({ ...current, [field]: undefined }))
+  }
+
+  const handleInterestSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSubmitStatus('submitting')
+    setError('')
+    setFieldErrors({})
+
+    try {
+      await submitCohortInterest({
+        youthName: formData.youthName,
+        parentName: formData.parentName.trim() || undefined,
+        age: Number(formData.age),
+        school: formData.school.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        phoneNumber: formData.phoneNumber.trim() || undefined,
+        discoverySource: formData.discoverySource ? formData.discoverySource as 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other' : undefined,
+        message: formData.message.trim() || undefined,
+      })
+      setFormData(cohortInterestInitialState)
+      setFieldErrors({})
+      setSubmitStatus('success')
+    } catch (err) {
+      if (err instanceof ApiError && err.details?.length) {
+        const nextFieldErrors: CohortInterestErrors = {}
+        for (const detail of err.details) {
+          const field = detail.field.replace(/^body\./, '') as keyof CohortInterestForm
+          nextFieldErrors[field] = detail.message
+        }
+        setFieldErrors(nextFieldErrors)
+      }
+      setSubmitStatus('error')
+      setError(getErrorMessage(err, 'Unable to submit the form right now.'))
+    }
+  }
 
   const content = (
     <main className="homepage-container">
@@ -219,6 +307,122 @@ export default function Homepage() {
               {programs.map((program) => (
                 <ProgramCard key={program.age} program={program} />
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">
+          <div className="section-inner">
+            <div className="cohort-section-copy">
+              <h2 id="cohort-section-title" className="section-title">Interested?</h2>
+              <p className="cohort-section-title">Accepting signups for our August cohort.</p>
+              <p className="cohort-section-description">
+                We are now accepting youth into our August 2026 cohort. Leave your contact information below and we will follow up with next steps.
+              </p>
+            </div>
+            <div className="cohort-form-shell">
+              <form
+                className={`cohort-inline-form${submitStatus === 'success' ? ' cohort-inline-form--muted' : ''}`}
+                onSubmit={handleInterestSubmit}
+              >
+                <fieldset className="cohort-inline-form-fields" disabled={isFormLocked}>
+                  {submitStatus === 'error' && error && (
+                    <div className="form-error">{error}</div>
+                  )}
+                  <div className="form-row">
+                    <FormField id="cohort-youthName" label="Youth Name" error={fieldErrors.youthName}>
+                      <input
+                        id="cohort-youthName"
+                        value={formData.youthName}
+                        onChange={(event) => handleFieldChange('youthName', event.target.value)}
+                        autoComplete="name"
+                      />
+                    </FormField>
+                    <FormField id="cohort-parentName" label="Parent Name" error={fieldErrors.parentName}>
+                      <input
+                        id="cohort-parentName"
+                        value={formData.parentName}
+                        onChange={(event) => handleFieldChange('parentName', event.target.value)}
+                        autoComplete="name"
+                      />
+                    </FormField>
+                  </div>
+                  <div className="form-row">
+                    <FormField id="cohort-age" label="Age" error={fieldErrors.age}>
+                      <input
+                        id="cohort-age"
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={formData.age}
+                        onChange={(event) => handleFieldChange('age', event.target.value)}
+                        inputMode="numeric"
+                      />
+                    </FormField>
+                    <FormField id="cohort-school" label="School" error={fieldErrors.school}>
+                      <input
+                        id="cohort-school"
+                        value={formData.school}
+                        onChange={(event) => handleFieldChange('school', event.target.value)}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="form-row">
+                    <FormField id="cohort-email" label="Email" error={fieldErrors.email}>
+                      <input
+                        id="cohort-email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(event) => handleFieldChange('email', event.target.value)}
+                        autoComplete="email"
+                      />
+                    </FormField>
+                    <FormField id="cohort-phoneNumber" label="Phone Number" error={fieldErrors.phoneNumber}>
+                      <input
+                        id="cohort-phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
+                        autoComplete="tel"
+                      />
+                    </FormField>
+                  </div>
+                  <div className="form-row">
+                    <FormField id="cohort-discoverySource" label="How Did You Hear About Us?" error={fieldErrors.discoverySource}>
+                      <select
+                        id="cohort-discoverySource"
+                        value={formData.discoverySource}
+                        onChange={(event) => handleFieldChange('discoverySource', event.target.value)}
+                      >
+                        <option value="">Select one</option>
+                        {discoverySourceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                  </div>
+                  <FormField id="cohort-message" label="Anything else we should know?" error={fieldErrors.message}>
+                    <textarea
+                      id="cohort-message"
+                      rows={5}
+                      value={formData.message}
+                      onChange={(event) => handleFieldChange('message', event.target.value)}
+                    />
+                  </FormField>
+                  <div className="cohort-inline-form-actions">
+                    <Button type="submit" disabled={submitStatus === 'submitting'}>
+                      {submitStatus === 'submitting' ? 'Submitting...' : 'Submit'}
+                    </Button>
+                  </div>
+                </fieldset>
+              </form>
+              {submitStatus === 'success' && (
+                <div className="cohort-success-overlay" aria-live="polite">
+                  <div className="cohort-success-card">
+                    <p className="cohort-success-title">Thank you for your submission.</p>
+                    <p className="cohort-success-copy">We will be in touch with next steps soon.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
