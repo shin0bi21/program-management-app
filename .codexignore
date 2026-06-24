@@ -9,6 +9,9 @@ build/
 frontend/dist/
 backend/dist/
 
+# Large generated dependency metadata
+package-lock.json
+
 # Environment files
 .env
 .env.*
