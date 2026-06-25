@@ -5,6 +5,8 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
+import cohortInterestRoutes from '../../src/routes/cohortInterestRoutes';
+import publicRoutes from '../../src/routes/publicRoutes';
 import staffRoutes from '../../src/routes/staffRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
@@ -17,6 +19,8 @@ export function createApp() {
   app.use(express.json());
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
+  app.use('/api/cohort-interest', cohortInterestRoutes);
+  app.use('/api/public', publicRoutes);
   app.use('/api/staff', staffRoutes);
   app.use('/api/youth', youthRoutes);
   app.use('/api/schools', schoolRoutes);

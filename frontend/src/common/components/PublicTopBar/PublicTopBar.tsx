@@ -7,6 +7,7 @@ import './PublicTopBar.css';
 
 const NAV_ITEMS = [
   { id: 'programming', label: 'Programming' },
+  { id: 'signup', label: 'Sign Up' },
   { id: 'about', label: 'Organizational History' },
   { id: 'impact', label: 'Impact' },
   { id: 'team', label: 'Staff' },
@@ -92,4 +93,3 @@ export default function PublicTopBar() {
     </header>
   );
 }
-

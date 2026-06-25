@@ -8,6 +8,7 @@ import Youth from './pages/Youth/Youth'
 import Staff from './pages/Staff/Staff'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
+import CohortInterest from './pages/Settings/CohortInterest/CohortInterest'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -41,6 +42,11 @@ function App() {
           <Route path="/settings/account" element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/cohort-interest" element={
+            <ProtectedRoute requiredPermission="read:settings">
+              <CohortInterest />
             </ProtectedRoute>
           } />
           <Route path="/settings/staff" element={
