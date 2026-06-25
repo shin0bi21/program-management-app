@@ -198,6 +198,22 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 | `POST` | `/` | Create/update school | `write:schools` |
 | `DELETE` | `/:id` | Delete school | `write:schools` |
 
+### Public — `/api/public`
+
+Unauthenticated homepage intake endpoints.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/cohort-interest` | Store a cohort signup submission. Requires `youthName`, `age`, and at least one of `email` or `phoneNumber`. |
+
+### Cohort Interest — `/api/cohort-interest`
+
+Protected. Intended for internal review of homepage signup submissions.
+
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List cohort interest submissions newest first | `read:settings` |
+
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
 ---

@@ -136,6 +136,15 @@ export default function Header() {
           {isAdmin && (
             <button
               role="menuitem"
+              onClick={() => go('/settings/cohort-interest')}
+              className={`settings-flyout-item${isActive('/settings/cohort-interest') ? ' active' : ''}`}
+            >
+              Cohort Interest
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              role="menuitem"
               onClick={() => go('/settings/staff')}
               className={`settings-flyout-item${isActive('/settings/staff') ? ' active' : ''}`}
             >
@@ -147,4 +156,3 @@ export default function Header() {
     </>
   );
 }
-
