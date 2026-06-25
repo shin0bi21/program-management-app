@@ -1,7 +1,6 @@
 import { sql } from '../db/client';
 import type { CohortInterestSubmissions } from '../types/database';
 import type { DbRow } from '../types/db';
-import { sendCohortInterestEmail } from '../utils/emailService';
 
 type CohortInterestInput = {
   youthName: string;
@@ -45,12 +44,6 @@ export async function submitCohortInterest(data: CohortInterestInput) {
     )
     RETURNING id, created_at, status
   `;
-
-  try {
-    await sendCohortInterestEmail(data);
-  } catch (error) {
-    console.error('Failed to send cohort interest notification email', error);
-  }
 
   return rows[0];
 }

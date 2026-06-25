@@ -8,6 +8,7 @@ import staffRoutes from './routes/staffRoutes';
 import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 import publicRoutes from './routes/publicRoutes';
+import cohortInterestRoutes from './routes/cohortInterestRoutes';
 import { requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
 import { NotFoundError } from './errors';
@@ -56,6 +57,7 @@ app.get('/health', async (req, res) => {
 // --- Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/cohort-interest', cohortInterestRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/youth', youthRoutes);
 app.use('/api/schools', schoolRoutes);

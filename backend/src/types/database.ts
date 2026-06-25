@@ -88,6 +88,7 @@ export interface CohortInterestSubmissions {
   phone_number: string | null;
   school: string | null;
   status: Generated<string>;
+  status_updated_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   youth_name: string;

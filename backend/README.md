@@ -204,7 +204,15 @@ Unauthenticated homepage intake endpoints.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/cohort-interest` | Store a cohort signup submission and send a notification email. Requires `youthName`, `age`, and at least one of `email` or `phoneNumber`. |
+| `POST` | `/cohort-interest` | Store a cohort signup submission. Requires `youthName`, `age`, and at least one of `email` or `phoneNumber`. |
+
+### Cohort Interest — `/api/cohort-interest`
+
+Protected. Intended for internal review of homepage signup submissions.
+
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List cohort interest submissions newest first | `read:settings` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
