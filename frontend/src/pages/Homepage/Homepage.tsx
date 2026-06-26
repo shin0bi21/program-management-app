@@ -332,8 +332,8 @@ export default function Homepage() {
         </section>
 
         <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">
-          <div className="section-inner">
-            <div className="cohort-section-copy" data-scroll-target="true">
+          <div className="section-inner" data-scroll-target="true">
+            <div className="cohort-section-copy">
               <h2 id="cohort-section-title" className="section-title">Interested?</h2>
               <p className="cohort-section-title">We are now accepting signups for our August cohort.</p>
               <p className="cohort-section-description">
@@ -469,7 +469,7 @@ export default function Homepage() {
         <section id="team" className="resources-section" aria-labelledby="resources-section-title">
           <div className="section-inner">
             <div className="section-heading">
-              <h2 id="resources-section-title" className="resources-title section-title">Meet our team</h2>
+              <h2 id="resources-section-title" className="section-title">Meet our team</h2>
             </div>
             <div className="resource-cards-grid" aria-label="Employee and resource contacts">
               {teamResources.map((resource) => (
