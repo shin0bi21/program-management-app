@@ -296,7 +296,13 @@ export default function Homepage() {
         <section className="homepage-hero" aria-label="Organization branding">
           <div className="hero-main">
             <div className="hero-copy">
-              <h1 className="hero-title">Support that meets youth where they are.</h1>
+              <h1 className="hero-title">
+                Support that
+                <br />
+                meets youth
+                <br />
+                <span className="hero-title-accent">where they are.</span>
+              </h1>
               <p className="hero-description">
                 Since 2022, Be Original has supported youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
               </p>
@@ -468,8 +474,13 @@ export default function Homepage() {
 
         <section id="team" className="resources-section" aria-labelledby="resources-section-title">
           <div className="section-inner">
-            <div className="section-heading">
-              <h2 id="resources-section-title" className="section-title">Meet our team</h2>
+            <div className="section-heading section-heading--split">
+              <div className="section-heading-main">
+                <h2 id="resources-section-title" className="section-title">Meet our team</h2>
+              </div>
+              <p className="section-copy">
+                {teamResources.length} facilitators and organizers coordinating programming, outreach, and day-to-day support for youth and families across Windsor.
+              </p>
             </div>
             <div className="resource-cards-grid" aria-label="Employee and resource contacts">
               {teamResources.map((resource) => (
@@ -481,10 +492,12 @@ export default function Homepage() {
 
         <section id="partners" className="partners-section" aria-labelledby="partners-title">
           <div className="section-inner">
-            <div className="section-heading">
-              <h2 id="partners-title" className="section-title">Partners</h2>
+            <div className="section-heading section-heading--split">
+              <div className="section-heading-main">
+                <h2 id="partners-title" className="section-title">Partners</h2>
+              </div>
             </div>
-            <div className="partners-logo-row">
+            <div className="partners-logo-row" aria-label="Community partners">
               {partners.map((p) => (
                 <div key={p.name} className="partners-logo-item">
                   <img src={p.logo} alt={p.name} className="partners-logo" />
