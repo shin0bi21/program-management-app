@@ -129,18 +129,19 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
   margin-top: 44px;
-  border-top: 1px solid var(--home-line);
-  border-bottom: 1px solid var(--home-line);
+  border-top: 1px solid var(--accent-35);
+  border-bottom: 1px solid var(--home-line-strong);
+  background: linear-gradient(180deg, rgba(243, 165, 36, 0.055), transparent);
 }
 
 .hero-mini-stat {
   min-width: 0;
-  padding: 20px 22px 20px 0;
+  padding: 24px 24px 22px 0;
   border-right: 1px solid var(--home-line);
 }
 
 .hero-mini-stat + .hero-mini-stat {
-  padding-left: 22px;
+  padding-left: 24px;
 }
 
 .hero-mini-stat:last-child {
@@ -149,17 +150,17 @@
 
 .hero-mini-stat strong {
   display: block;
-  color: var(--color-ink);
-  font-size: 2.9rem;
+  color: var(--color-accent);
+  font-size: 3.15rem;
   line-height: 0.95;
   font-weight: 900;
 }
 
 .hero-mini-stat span {
   display: block;
-  margin-top: 10px;
+  margin-top: 11px;
   color: var(--color-ink);
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   font-weight: 850;
   line-height: 1.2;
 }
@@ -454,9 +455,12 @@
 }
 
 .next-session-date {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;  
   min-height: 70px;
+  padding: 0.5rem;
   border-radius: 8px;
   background: var(--color-accent);
   color: var(--color-ink);
@@ -921,26 +925,22 @@
   }
 
   .hero-mini-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 26px;
   }
 
   .hero-mini-stat {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
-    align-items: start;
-    padding: 14px 0;
-    border-right: 0;
-    border-bottom: 1px solid var(--home-line);
+    padding: 16px 14px 16px 0;
+    border-right: 1px solid var(--home-line);
+    border-bottom: 0;
   }
 
   .hero-mini-stat + .hero-mini-stat {
-    padding-left: 0;
+    padding-left: 14px;
   }
 
   .hero-mini-stat:last-child {
-    border-bottom: 0;
+    border-right: 0;
   }
 
   .hero-mini-stat small {
@@ -957,6 +957,10 @@
   .hero-mini-stat span {
     margin-top: 0;
     font-size: 0.9rem;
+  }
+
+  .hero-mini-stat small {
+    display: none;
   }
 
   .hero-visual-panel {
@@ -991,9 +995,12 @@
     width: 100%;
   }
 
-  .next-session,
   .upcoming-row {
     grid-template-columns: 1fr;
+  }
+
+  .next-session {
+    grid-template-columns: 70px minmax(0, 1fr);
   }
 
   .next-session-date {
