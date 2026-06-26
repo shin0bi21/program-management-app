@@ -89,15 +89,15 @@ const programs = [
 ]
 
 const timelineItems = [
-  { year: '2022', headline: 'Founded as a volunteer organization',       detail: 'Be Original Youth Group was founded in Sandwich Town, West Windsor by a small team of volunteers committed to supporting youth in their community through hands-on programming and direct outreach.' },
+  { year: '2022', headline: 'Founded as a volunteer organization',       detail: 'Be Original Youth Group was founded in Sandwich Towne, West Windsor by a small team of volunteers committed to supporting youth in their community through hands-on programming and direct outreach.' },
   { year: '2024', headline: 'Became a fully funded organization',        detail: 'Secured our first grant through the Youth Opportunities Fund enabling us to hire dedicated staff, and reach 150 youth through a healthy habits based mentorship program.' },
   { year: '2026', headline: '3-year program launched Spring 2026',        detail: 'With a 3 year grant from Youth Opportunities Fund, Be Original launched a new structured program this spring, expanding youth development and job-readiness streams to a broader network of participants and partner schools.' },
 ]
 
 const impactStats = [
-  { label: 'Years running',   number: '4',     desc: 'since founding in 2022' },
+  { label: 'Years running', number: '4' },
+  { label: 'Youth served', number: '140+' },
   { label: 'Grants received', number: '$400K', desc: 'from the Ontario Trillium Foundation' },
-  { label: 'Youth served',    number: '140+',  desc: 'through Be Original programming' },
 ]
 
 const partners = [
@@ -216,6 +216,7 @@ function ProgramCard({ program }: ProgramCardProps) {
   return (
     <article className="program-card">
       <header className="program-card-head">
+        <span className="program-schedule">{program.day}</span>
         <p className="program-age">{program.age}</p>
       </header>
       <div className="program-copy-block">
@@ -293,16 +294,35 @@ export default function Homepage() {
   const content = (
     <main className="homepage-container">
         <section className="homepage-hero" aria-label="Organization branding">
-          <p className="hero-kicker">Be Original Youth Group</p>
-          <h1 className="hero-title">Support that meets youth where they are.</h1>
-          <p className="hero-description">
-            Supporting youth across Sandwich and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
-          </p>
+          <div className="hero-main">
+            <div className="hero-copy">
+              <h1 className="hero-title">Support that meets youth where they are.</h1>
+              <p className="hero-description">
+                Since 2022, Be Original has supported youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
+              </p>
+            </div>
+            <div className="hero-mini-stats" aria-label="Organization impact">
+              {impactStats.map((stat) => (
+                <div key={stat.label} className="hero-mini-stat">
+                  <strong>{stat.number}</strong>
+                  <span>{stat.label}</span>
+                  {stat.desc && <small>{stat.desc}</small>}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hero-visual-panel" aria-hidden="true">
+            <div className="hero-visual-card">
+              <span className="hero-visual-year">Est. 2022</span>
+            </div>
+          </div>
         </section>
 
         <section id="programming" className="offerings-section" aria-labelledby="offerings-title">
           <div className="section-inner">
-            <h2 id="offerings-title" className="section-title">Programming</h2>
+            <div className="section-heading">
+              <h2 id="offerings-title" className="section-title">Programming</h2>
+            </div>
             <div className="program-grid">
               {programs.map((program) => (
                 <ProgramCard key={program.age} program={program} />
@@ -313,11 +333,11 @@ export default function Homepage() {
 
         <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">
           <div className="section-inner">
-            <div className="cohort-section-copy">
+            <div className="cohort-section-copy" data-scroll-target="true">
               <h2 id="cohort-section-title" className="section-title">Interested?</h2>
-              <p className="cohort-section-title">Accepting signups for our August cohort.</p>
+              <p className="cohort-section-title">We are now accepting signups for our August cohort.</p>
               <p className="cohort-section-description">
-                We are now accepting youth into our August 2026 cohort. Leave your contact information below and we will follow up with next steps.
+                 Leave your contact information below and we will follow up with next steps.
               </p>
             </div>
             <div className="cohort-form-shell">
@@ -429,7 +449,9 @@ export default function Homepage() {
 
         <section id="about" className="timeline-section" aria-labelledby="timeline-title">
           <div className="section-inner">
-            <h2 id="timeline-title" className="section-title">Organizational History</h2>
+            <div className="section-heading">
+              <h2 id="timeline-title" className="section-title">Organizational History</h2>
+            </div>
             <div className="timeline">
               {timelineItems.map((item) => (
                 <div key={item.year} className="timeline-item">
@@ -444,24 +466,11 @@ export default function Homepage() {
           </div>
         </section>
 
-        <section id="impact" className="analytics-section" aria-labelledby="analytics-title">
-          <div className="section-inner">
-            <h2 id="analytics-title" className="section-title">Impact</h2>
-            <div className="analytics-cards">
-              {impactStats.map((stat) => (
-                <div key={stat.label} className="analytics-card analytics-card--stat">
-                  <p className="analytics-stat-number">{stat.number}</p>
-                  <p className="analytics-card-label">{stat.label}</p>
-                  <p className="analytics-stat-desc">{stat.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section id="team" className="resources-section" aria-labelledby="resources-section-title">
           <div className="section-inner">
-            <h2 id="resources-section-title" className="resources-title section-title">Staff</h2>
+            <div className="section-heading">
+              <h2 id="resources-section-title" className="resources-title section-title">Meet our team</h2>
+            </div>
             <div className="resource-cards-grid" aria-label="Employee and resource contacts">
               {teamResources.map((resource) => (
                 <ResourceCard key={resource.name} {...resource} />
@@ -472,7 +481,9 @@ export default function Homepage() {
 
         <section id="partners" className="partners-section" aria-labelledby="partners-title">
           <div className="section-inner">
-            <h2 id="partners-title" className="section-title">Partners</h2>
+            <div className="section-heading">
+              <h2 id="partners-title" className="section-title">Partners</h2>
+            </div>
             <div className="partners-logo-row">
               {partners.map((p) => (
                 <div key={p.name} className="partners-logo-item">

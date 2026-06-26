@@ -9,10 +9,11 @@ const NAV_ITEMS = [
   { id: 'programming', label: 'Programming' },
   { id: 'signup', label: 'Sign Up' },
   { id: 'about', label: 'Organizational History' },
-  { id: 'impact', label: 'Impact' },
   { id: 'team', label: 'Staff' },
   { id: 'partners', label: 'Partners' },
 ];
+
+const SCROLL_OFFSET = 76;
 
 export default function PublicTopBar() {
   const navigate = useNavigate();
@@ -40,7 +41,13 @@ export default function PublicTopBar() {
   const scrollTo = (id: string) => {
     close();
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (!el) return;
+
+    const target = el.querySelector<HTMLElement>('[data-scroll-target="true"]')
+      ?? el.querySelector<HTMLElement>('.section-heading')
+      ?? el;
+    const top = target.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
 
   return (
