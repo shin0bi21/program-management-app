@@ -9,7 +9,6 @@ const NAV_ITEMS = [
   { id: 'programming', label: 'Programming' },
   { id: 'signup', label: 'Sign Up' },
   { id: 'about', label: 'Organizational History' },
-  { id: 'impact', label: 'Impact' },
   { id: 'team', label: 'Staff' },
   { id: 'partners', label: 'Partners' },
 ];
@@ -40,7 +39,11 @@ export default function PublicTopBar() {
   const scrollTo = (id: string) => {
     close();
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (!el) return;
+
+    const topBarHeight = document.querySelector<HTMLElement>('.public-topbar')?.offsetHeight ?? 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - topBarHeight;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
 
   return (
