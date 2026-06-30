@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "node --inspect=0.0.0.0:9229 -r ts-node/register src/index.ts",
-    "build": "tsc",
+    "build": "node --max-old-space-size=1536 ./node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "start": "node dist/src/index.js",
     "test": "jest",
     "test:auth": "jest --testPathPatterns=tests/auth",
