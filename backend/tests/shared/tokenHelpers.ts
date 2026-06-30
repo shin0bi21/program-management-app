@@ -9,7 +9,7 @@ const JWT_SECRET = requireEnv('JWT_SECRET');
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ['read:staff', 'write:staff', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:settings', 'write:settings'],
-  staff: ['read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools'],
+  staff: ['read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:settings', 'write:settings'],
   youth: [],
 };
 

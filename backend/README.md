@@ -350,12 +350,12 @@ The backend container runs with the Node.js inspector on port 9229.
 
 ## 8. Deployment
 
-Deployments run **automatically via CI** on every merge to `main`. No manual steps are needed after initial server setup.
+Deployments are triggered automatically via CI on pushes to `main`.
 
 ### Automated Flow
 
 ```
-push to main → CI (typecheck + test + build) → deploy job → SSH → ./scripts/deploy.sh
+push to main → CI (typecheck + test + build) → deploy job → SSH into server → ./scripts/deploy.sh
 ```
 
 `scripts/deploy.sh` (project root) handles the full deploy:
@@ -367,6 +367,50 @@ push to main → CI (typecheck + test + build) → deploy job → SSH → ./scri
 6. `docker compose -f docker-compose.prod.yml up -d`
 7. Wait for backend healthcheck
 8. On any failure after step 3: automatically restore DB from snapshot
+
+### Manual Deployment Flow
+
+If a push to `main` does not deploy cleanly:
+
+```bash
+ssh -i ~/.ssh/be-original-key.pem ubuntu@18.216.104.46
+cd ~/my-webapp
+./scripts/deploy.sh
+```
+
+### Updating Expired GitHub Token
+
+If `./scripts/deploy.sh` fails at `git fetch origin main` with:
+
+```text
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/...'
+```
+
+the server repo is using HTTPS auth with an expired GitHub token.
+
+Fix it on the Lightsail server:
+
+```bash
+cd /path/to/my-webapp
+
+# Keep the remote clean — no token in the URL
+git remote set-url origin https://github.com/shin0bi21/be-original.git
+
+# Store the new token for HTTPS git auth
+git config --global credential.helper store
+printf "https://YOUR_GITHUB_USERNAME:YOUR_NEW_FULL_TOKEN@github.com\n" > ~/.git-credentials
+chmod 600 ~/.git-credentials
+
+# Verify and test
+git remote -v
+git fetch origin main
+```
+
+Notes:
+- `git remote -v` should show `https://github.com/shin0bi21/be-original.git` with no token embedded.
+- If the old token was exposed in shell history, logs, or chat, revoke it in GitHub immediately.
+- Long-term, SSH deploy keys are cleaner than HTTPS + PAT on a server.
 
 ### First-Time Server Setup
 
@@ -435,6 +479,10 @@ SELECT * FROM pg_locks WHERE locktype = 'advisory';
 1. Check `DATABASE_URL` in `.env`
 2. Verify the container is up: `docker ps`
 3. Check container logs: `docker logs myapp_db`
+
+### Deploy fails with "Invalid username or token"
+
+The server's GitHub HTTPS credential is stale or invalid. Follow [Server GitHub Token Refresh](#server-github-token-refresh).
 
 ### Tests fail with "relation does not exist"
 
