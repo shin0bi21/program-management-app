@@ -5,7 +5,7 @@ import { generateExpiredToken, generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
-describe('Cohort interest admin API', () => {
+describe('Cohort interest API', () => {
   let adminUserId: string;
   let adminToken: string;
 
@@ -58,7 +58,7 @@ describe('Cohort interest admin API', () => {
     }));
   });
 
-  it('rejects staff without settings permission', async () => {
+  it('returns submissions for staff', async () => {
     const staff = await seedTestUser({ email: `cohort-staff-${Date.now()}@test.local`, role: 'staff' });
     const staffToken = generateToken(staff.userId, 'staff', staff.email);
 
@@ -66,7 +66,8 @@ describe('Cohort interest admin API', () => {
       .get('/api/cohort-interest')
       .set('Authorization', `Bearer ${staffToken}`);
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
 
     await deleteTestUser(staff.userId);
   });
@@ -104,5 +105,27 @@ describe('Cohort interest admin API', () => {
     expect(res.body.statusUpdatedAt).toBeTruthy();
     expect(updated.status).toBe('signed_up');
     expect(updated.statusUpdatedAt).toBeTruthy();
+  });
+
+  it('updates submission status for staff', async () => {
+    const staff = await seedTestUser({ email: `cohort-staff-write-${Date.now()}@test.local`, role: 'staff' });
+    const staffToken = generateToken(staff.userId, 'staff', staff.email);
+
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT id
+      FROM cohort_interest_submissions
+      WHERE email = 'viewer@test.local'
+      LIMIT 1
+    `;
+
+    const res = await request(app)
+      .patch(`/api/cohort-interest/${submission.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ status: 'contacted' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('contacted');
+
+    await deleteTestUser(staff.userId);
   });
 });

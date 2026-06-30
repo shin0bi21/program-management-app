@@ -13,8 +13,6 @@ const NAV_ITEMS = [
   { id: 'partners', label: 'Partners' },
 ];
 
-const SCROLL_OFFSET = 76;
-
 export default function PublicTopBar() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -43,10 +41,8 @@ export default function PublicTopBar() {
     const el = document.getElementById(id);
     if (!el) return;
 
-    const target = el.querySelector<HTMLElement>('[data-scroll-target="true"]')
-      ?? el.querySelector<HTMLElement>('.section-heading')
-      ?? el;
-    const top = target.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET;
+    const topBarHeight = document.querySelector<HTMLElement>('.public-topbar')?.offsetHeight ?? 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - topBarHeight;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
 

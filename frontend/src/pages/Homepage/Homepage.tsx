@@ -39,6 +39,12 @@ type ProgramCardProps = {
   program: Program
 }
 
+type HomepagePhoto = {
+  src: string
+  alt: string
+  caption: string
+}
+
 type CohortInterestForm = {
   youthName: string
   parentName: string
@@ -91,13 +97,7 @@ const programs = [
 const timelineItems = [
   { year: '2022', headline: 'Founded as a volunteer organization',       detail: 'Be Original Youth Group was founded in Sandwich Towne, West Windsor by a small team of volunteers committed to supporting youth in their community through hands-on programming and direct outreach.' },
   { year: '2024', headline: 'Became a fully funded organization',        detail: 'Secured our first grant through the Youth Opportunities Fund enabling us to hire dedicated staff, and reach 150 youth through a healthy habits based mentorship program.' },
-  { year: '2026', headline: '3-year program launched Spring 2026',        detail: 'With a 3 year grant from Youth Opportunities Fund, Be Original launched a new structured program this spring, expanding youth development and job-readiness streams to a broader network of participants and partner schools.' },
-]
-
-const impactStats = [
-  { label: 'Years running', number: '4' },
-  { label: 'Youth served', number: '140+' },
-  { label: 'Grants received', number: '$400K', desc: 'from the Ontario Trillium Foundation' },
+  { year: '2026', headline: '3-year program launched Spring 2026',        detail: 'With a 3 year grant from Youth Opportunities Fund, Be Original launched a new structured program this spring, expanding youth development and job-readiness streams to a broader network of participants.' },
 ]
 
 const partners = [
@@ -110,7 +110,7 @@ const teamResources = [
   { name: 'Amanat',   role: 'Program Facilitator', badge: 'Co-founder', education: 'Master of Social Work', school: 'University of Windsor',          bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.' },
   { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
   { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
-  { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Human Kinetics',       school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
+  { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Psychology',           school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
   { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },
 ]
 
@@ -131,6 +131,46 @@ const discoverySourceOptions = [
   { value: 'school', label: 'School' },
   { value: 'community_outreach', label: 'Community Outreach' },
   { value: 'other', label: 'Other' },
+]
+
+const HOMEPAGE_PHOTO_INTERVAL_MS = 10000
+
+const homepagePhotos: HomepagePhoto[] = [
+  {
+    src: '/programming/adventure_bay.png',
+    alt: 'Youth group trip to Adventure Bay water park',
+    caption: 'Our trip to Adventure Bay water park.',
+  },
+  {
+    src: '/programming/community_cleanup.png',
+    alt: 'Be Original community cleanup at Malden Park',
+    caption: 'Be Original community cleanup at Malden Park.',
+  },
+  {
+    src: '/programming/express_game.png',
+    alt: 'Youth attending a Windsor Express game',
+    caption: 'Our youth attend a Windsor Express game.',
+  },
+  {
+    src: '/programming/food_drive.png',
+    alt: 'Be Original food drive event in 2024',
+    caption: 'Be Original food drive 2024.',
+  },
+  {
+    src: '/programming/police_guest.png',
+    alt: 'Members of Windsor Police Service connecting with Be Original youth',
+    caption: 'Members of Windsor Police Service connect with Be Original youth.',
+  },
+  {
+    src: '/programming/police_guest2.png',
+    alt: 'Windsor Police Service guest session with Be Original youth',
+    caption: 'Members of Windsor Police Service connect with Be Original youth.',
+  },
+  {
+    src: '/programming/wonderland.png',
+    alt: 'Be Original youth end-of-year trip to Wonderland',
+    caption: 'Our end-of-year trip to Wonderland.',
+  },
 ]
 
 // ── Session utilities ─────────────────────────────────────────────────────
@@ -237,8 +277,11 @@ export default function Homepage() {
   const { isAuthenticated, loading } = useAuth()
   const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
   const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
+  const [photoIndex, setPhotoIndex] = useState(0)
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus()
   const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success'
+
+  const activePhoto = homepagePhotos[photoIndex] ?? homepagePhotos[0]
 
   useEffect(() => {
     if (submitStatus !== 'success') return
@@ -250,7 +293,25 @@ export default function Homepage() {
     return () => window.clearTimeout(timeoutId)
   }, [submitStatus, resetStatus])
 
+  useEffect(() => {
+    if (homepagePhotos.length <= 1) return
+
+    const intervalId = window.setInterval(() => {
+      setPhotoIndex((current) => (current + 1) % homepagePhotos.length)
+    }, HOMEPAGE_PHOTO_INTERVAL_MS)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
+
   if (loading) return null
+
+  const goToPreviousPhoto = () => {
+    setPhotoIndex((current) => (current - 1 + homepagePhotos.length) % homepagePhotos.length)
+  }
+
+  const goToNextPhoto = () => {
+    setPhotoIndex((current) => (current + 1) % homepagePhotos.length)
+  }
 
   const handleFieldChange = (field: keyof CohortInterestForm, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }))
@@ -304,22 +365,40 @@ export default function Homepage() {
                 <span className="hero-title-accent">where they are.</span>
               </h1>
               <p className="hero-description">
-                Since 2022, Be Original has supported youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
+                Since 2022, Be Original has supported over 140 youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
               </p>
             </div>
-            <div className="hero-mini-stats" aria-label="Organization impact">
-              {impactStats.map((stat) => (
-                <div key={stat.label} className="hero-mini-stat">
-                  <strong>{stat.number}</strong>
-                  <span>{stat.label}</span>
-                  {stat.desc && <small>{stat.desc}</small>}
-                </div>
-              ))}
-            </div>
           </div>
-          <div className="hero-visual-panel" aria-hidden="true">
+          <div className="hero-visual-panel">
             <div className="hero-visual-card">
-              <span className="hero-visual-year">Est. 2022</span>
+              <div className="hero-photo-frame">
+                <img
+                  src={activePhoto.src}
+                  alt={activePhoto.alt}
+                  className="hero-photo-image"
+                />
+                {homepagePhotos.length > 1 && (
+                  <div className="hero-photo-nav" aria-label="Photo navigation controls">
+                    <button
+                      type="button"
+                      className="hero-photo-nav-button"
+                      onClick={goToPreviousPhoto}
+                      aria-label="Show previous photo"
+                    >
+                      &lt;
+                    </button>
+                    <button
+                      type="button"
+                      className="hero-photo-nav-button"
+                      onClick={goToNextPhoto}
+                      aria-label="Show next photo"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="hero-photo-caption">{activePhoto.caption}</p>
             </div>
           </div>
         </section>
@@ -338,10 +417,10 @@ export default function Homepage() {
         </section>
 
         <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">
-          <div className="section-inner" data-scroll-target="true">
+          <div className="section-inner">
             <div className="cohort-section-copy">
               <h2 id="cohort-section-title" className="section-title">Interested?</h2>
-              <p className="cohort-section-title">We are now accepting signups for our August cohort.</p>
+              <p className="cohort-section-title">We are now accepting signups for our September cohort.</p>
               <p className="cohort-section-description">
                  Leave your contact information below and we will follow up with next steps.
               </p>
@@ -478,9 +557,6 @@ export default function Homepage() {
               <div className="section-heading-main">
                 <h2 id="resources-section-title" className="section-title">Meet our team</h2>
               </div>
-              <p className="section-copy">
-                {teamResources.length} facilitators and organizers coordinating programming, outreach, and day-to-day support for youth and families across Windsor.
-              </p>
             </div>
             <div className="resource-cards-grid" aria-label="Employee and resource contacts">
               {teamResources.map((resource) => (

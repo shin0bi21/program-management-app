@@ -11,7 +11,8 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, permissions, logout } = useAuth();
-  const isAdmin = permissions.includes('read:staff');
+  const canViewCohortInterest = permissions.includes('read:settings');
+  const canManageStaff = permissions.includes('read:staff');
   const [mobileOpen, setMobileOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -133,7 +134,7 @@ export default function Header() {
           >
             My Account
           </button>
-          {isAdmin && (
+          {canViewCohortInterest && (
             <button
               role="menuitem"
               onClick={() => go('/settings/cohort-interest')}
@@ -142,7 +143,7 @@ export default function Header() {
               Cohort Interest
             </button>
           )}
-          {isAdmin && (
+          {canManageStaff && (
             <button
               role="menuitem"
               onClick={() => go('/settings/staff')}
