@@ -9,6 +9,7 @@ import { useSubmitStatus } from '../../common/hooks/useSubmitStatus'
 import { ApiError, getErrorMessage } from '../../common/utils/clientErrors'
 import ResourceCard from './components/ResourceCard'
 import { submitCohortInterest } from './api/homepage.api'
+
 import './Homepage.css'
 import '../../common/styles/forms.css'
 
@@ -66,9 +67,9 @@ const programs = [
     day: 'Every other Friday',
     copy: 'Welcome to hang out, play video games and board games. A relaxed, open space for youth to connect and unwind.',
     sessions: [
-      { date: new Date(2026, 5, 26), topic: 'Drop-in Day' },
       { date: new Date(2026, 6, 10), topic: 'Drop-in Day' },
       { date: new Date(2026, 6, 24), topic: 'Drop-in Day' },
+      { date: new Date(2026, 7, 7), topic: 'Drop-in Day' },
     ],
     dropIn: true,
   },
@@ -78,7 +79,10 @@ const programs = [
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
     sessions: [
-      { date: new Date(2026, 5, 30), topic: 'Healthy Habits Guest Speaker' },
+      { date: new Date(2026, 6, 7), topic: 'Self-Esteem Workshop' },
+      { date: new Date(2026, 6, 14), topic: 'Healthy Habits Guest Speaker' },
+      { date: new Date(2026, 6, 21), topic: 'Confidence Building Workshop' },
+      { date: new Date(2026, 6, 28), topic: 'Self-Estem Trip to Pixel Room' },
     ],
   },
   {
@@ -87,9 +91,7 @@ const programs = [
     day: 'Every Wednesday',
     copy: 'Youth receive job-readiness education, interview practice, one-on-one support, volunteer placement experience, and one paid project to strengthen resumes. Program elements also support transitions into post-secondary education and the workforce.',
     sessions: [
-      { date: new Date(2026, 4,  6), topic: 'Communication' },
-      { date: new Date(2026, 4, 13), topic: 'Interview Prep' },
-      { date: new Date(2026, 4, 20), topic: 'Cover Letter Writing' },
+      { date: new Date(2026, 7, 5), topic: 'Guest Speaker - Tradesperson' },
     ],
   },
 ]
@@ -246,11 +248,7 @@ function UpcomingSessions({ upcoming, nextDays, dropIn }: UpcomingSessionsProps)
 
 function ProgramCard({ program }: ProgramCardProps) {
   const sessionsWithStatus = program.sessions.map(s => ({ ...s, status: sessionStatus(s.date) }))
-  const upcoming = sessionsWithStatus.filter(
-    s => s.status !== 'past' &&
-    s.date.getMonth() === TODAY.getMonth() &&
-    s.date.getFullYear() === TODAY.getFullYear()
-  )
+  const upcoming = sessionsWithStatus.filter(s => s.status !== 'past')
   const nextDays = upcoming[0] ? daysUntil(upcoming[0].date) : null
 
   return (
