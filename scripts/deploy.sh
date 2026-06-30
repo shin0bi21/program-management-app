@@ -6,11 +6,11 @@
 #   1. Pull        — dirty-tree check, git fetch + reset --hard to origin/main
 #   2. Frontend    — npm ci + npm run build inside node:20-alpine container
 #   3. Pre-flight  — verify DB and backend containers are running
-#   4. Snapshot    — pg_dump to temp file, verify gzip integrity, arm rollback trap
-#   5. Build       — docker compose build backend (uses freshly pulled code)
-#   6. Migrate     — status check → apply → status check; clear rollback flag on success
+#   4. Build       — docker compose build backend (uses freshly pulled code)
+#   5. Snapshot    — pg_dump to temp file, verify gzip integrity
+#   6. Migrate     — status check → arm rollback → apply → status check; clear rollback flag on success
 #   7. Deploy      — docker compose up -d, wait for new container, health check
-#   On any failure after step 4: restore DB from snapshot and abort
+#   On any failure while rollback is armed: restore DB from snapshot and abort
 #
 # Usage:
 #   ./scripts/deploy.sh
@@ -106,13 +106,11 @@ docker run --rm \
   exit 1
 }
 
-# ── Snapshot + rollback ─────────────────────────────────────────────────────────
+# ── Rollback setup ──────────────────────────────────────────────────────────────
 
-SNAPSHOT=$(mktemp /tmp/migration-snapshot.XXXXXX.sql.gz)
-# SNAPSHOT_TMP declared here so cleanup() can always remove it — the declaration
-# and the cleanup are separated by several lines, making the dependency non-obvious.
-SNAPSHOT_TMP="${SNAPSHOT}.tmp"
-# Flipped true only after snapshot is verified. Cleared after migrations succeed.
+SNAPSHOT=""
+SNAPSHOT_TMP=""
+# Flipped true only while migrations are running. Cleared after migrations succeed.
 # cleanup() always fires on exit so both temp files are removed regardless.
 ROLLBACK_NEEDED=false
 
@@ -142,19 +140,6 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo ""
-echo "Taking pre-migration snapshot..."
-docker exec "$DB_CONTAINER" pg_dump --clean --if-exists -U "$DB_USER" "$DB_NAME" | gzip > "$SNAPSHOT_TMP"
-
-if ! gzip -t "$SNAPSHOT_TMP" 2>/dev/null || [ ! -s "$SNAPSHOT_TMP" ]; then
-  echo "ERROR: Snapshot is empty or corrupt — aborting"
-  rm -f "$SNAPSHOT_TMP"
-  exit 1
-fi
-mv "$SNAPSHOT_TMP" "$SNAPSHOT"
-ROLLBACK_NEEDED=true
-echo "Snapshot saved and verified."
-
 # ── Backend image build ─────────────────────────────────────────────────────────
 
 # Build the new backend image from the freshly pulled code before running migrations.
@@ -164,6 +149,22 @@ echo ""
 echo "Building new backend image..."
 docker compose build backend
 
+# ── Snapshot ────────────────────────────────────────────────────────────────────
+
+echo ""
+echo "Taking pre-migration snapshot..."
+SNAPSHOT=$(mktemp /tmp/migration-snapshot.XXXXXX.sql.gz)
+SNAPSHOT_TMP="${SNAPSHOT}.tmp"
+docker exec "$DB_CONTAINER" pg_dump --clean --if-exists -U "$DB_USER" "$DB_NAME" | gzip > "$SNAPSHOT_TMP"
+
+if ! gzip -t "$SNAPSHOT_TMP" 2>/dev/null || [ ! -s "$SNAPSHOT_TMP" ]; then
+  echo "ERROR: Snapshot is empty or corrupt — aborting"
+  rm -f "$SNAPSHOT_TMP"
+  exit 1
+fi
+mv "$SNAPSHOT_TMP" "$SNAPSHOT"
+echo "Snapshot saved and verified."
+
 # ── Migrations ───────────────────────────────────────────────────────────────────
 
 echo ""
@@ -172,6 +173,7 @@ docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/sc
 
 echo ""
 echo "Applying pending migrations..."
+ROLLBACK_NEEDED=true
 docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js
 
 echo ""
