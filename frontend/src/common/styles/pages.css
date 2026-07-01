@@ -4,14 +4,15 @@
 
 .page-container {
   margin-left: 160px;
-  min-height: 100dvh;
+  min-height: 100vh;
   padding: 40px 36px;
+  overflow-x: clip;
 }
 
 @media (max-width: 768px) {
   .page-container {
     margin-left: 0;
-    min-height: calc(100dvh - 52px);
+    min-height: 100vh;
     padding: 72px 20px 32px;
   }
 }
