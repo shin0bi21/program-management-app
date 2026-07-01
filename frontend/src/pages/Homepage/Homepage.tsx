@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar'
 import Header from '../../common/components/Header/Header'
 import Footer from '../../common/components/Footer/Footer'
@@ -7,6 +8,11 @@ import FormField from '../../common/components/FormField/FormField'
 import { useAuth } from '../../common/context/AuthContext'
 import { useSubmitStatus } from '../../common/hooks/useSubmitStatus'
 import { ApiError, getErrorMessage } from '../../common/utils/clientErrors'
+import {
+  HOMEPAGE_SECTIONS,
+  getHomepagePathBySectionId,
+  getHomepageSectionByPath,
+} from '../../common/utils/homepageSections'
 import ResourceCard from './components/ResourceCard'
 import { submitCohortInterest } from './api/homepage.api'
 
@@ -156,22 +162,22 @@ const homepagePhotos: HomepagePhoto[] = [
   {
     src: '/programming/food_drive.png',
     alt: 'Be Original food drive event in 2024',
-    caption: 'Be Original food drive 2024.',
+    caption: 'Be Original\'s first annual food drive raised over $300 for community .',
   },
   {
     src: '/programming/police_guest.png',
-    alt: 'Members of Windsor Police Service connecting with Be Original youth',
-    caption: 'Members of Windsor Police Service connect with Be Original youth.',
+    alt: 'Eduardo Averalo of the Windsor Police Service connecting with Be Original youth',
+    caption: 'Eduardo Averalo of the Windsor Police Service connects with Be Original youth.',
   },
   {
     src: '/programming/police_guest2.png',
     alt: 'Windsor Police Service guest session with Be Original youth',
-    caption: 'Members of Windsor Police Service connect with Be Original youth.',
+    caption: 'Windsor Police Service guest session with Be Original youth.',
   },
   {
     src: '/programming/wonderland.png',
-    alt: 'Be Original youth end-of-year trip to Wonderland',
-    caption: 'Our end-of-year trip to Wonderland.',
+    alt: 'Be Original trip to Canada\'s Wonderland',
+    caption: 'Our trip to Canada\'s Wonderland.',
   },
 ]
 
@@ -198,6 +204,15 @@ function daysUntil(date: Date): number {
 
 const WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const MONTH_FMT   = new Intl.DateTimeFormat('en-US', { month: 'short' })
+
+function scrollToHomepageSection(sectionId: string, behavior: ScrollBehavior = 'smooth') {
+  const el = document.getElementById(sectionId)
+  if (!el) return
+
+  const topBarHeight = document.querySelector<HTMLElement>('.public-topbar')?.offsetHeight ?? 0
+  const top = el.getBoundingClientRect().top + window.scrollY - topBarHeight
+  window.scrollTo({ top: Math.max(0, top), behavior })
+}
 
 // ── Render helpers ───────────────────────────────────────────────────────────────────────────────
 
@@ -272,7 +287,10 @@ function ProgramCard({ program }: ProgramCardProps) {
 // ── Component ───────────────────────────────────────────────────────────────────────────────
 
 export default function Homepage() {
+  const location = useLocation()
   const { isAuthenticated, loading } = useAuth()
+  const routeScrollInProgress = useRef(false)
+  const routeScrollTargetId = useRef<string | null>(null)
   const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
   const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
   const [photoIndex, setPhotoIndex] = useState(0)
@@ -300,6 +318,72 @@ export default function Homepage() {
 
     return () => window.clearInterval(intervalId)
   }, [])
+
+  useEffect(() => {
+    if (loading) return
+
+    const section = getHomepageSectionByPath(location.pathname)
+    if (!section) return
+    if (section.id === 'home' && window.scrollY <= 0) return
+
+    routeScrollInProgress.current = true
+    routeScrollTargetId.current = section.id
+    const frameId = window.requestAnimationFrame(() => {
+      scrollToHomepageSection(section.id)
+    })
+    const timeoutId = window.setTimeout(() => {
+      routeScrollInProgress.current = false
+      routeScrollTargetId.current = null
+    }, 2000)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timeoutId)
+      routeScrollInProgress.current = false
+      routeScrollTargetId.current = null
+    }
+  }, [loading, location.pathname])
+
+  useEffect(() => {
+    if (loading || typeof IntersectionObserver === 'undefined') return
+
+    const sectionElements = HOMEPAGE_SECTIONS
+      .map((section) => document.getElementById(section.id))
+      .filter((el): el is HTMLElement => Boolean(el))
+
+    if (!sectionElements.length) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (routeScrollInProgress.current) {
+        const reachedRouteTarget = entries.some((entry) => (
+          entry.isIntersecting && entry.target.id === routeScrollTargetId.current
+        ))
+
+        if (!reachedRouteTarget) return
+
+        routeScrollInProgress.current = false
+        routeScrollTargetId.current = null
+      }
+
+      const visibleEntries = entries.filter((entry) => entry.isIntersecting)
+      if (!visibleEntries.length) return
+
+      const activeEntry = visibleEntries.reduce((best, entry) => (
+        entry.intersectionRatio > best.intersectionRatio ? entry : best
+      ))
+      const nextPath = getHomepagePathBySectionId(activeEntry.target.id)
+      if (!nextPath || window.location.pathname === nextPath) return
+
+      window.history.replaceState(window.history.state, '', `${nextPath}${window.location.search}`)
+    }, {
+      rootMargin: '-30% 0px -55% 0px',
+      threshold: [0, 0.2, 0.5, 0.8, 1],
+    })
+
+    sectionElements.forEach((el) => observer.observe(el))
+
+    return () => observer.disconnect()
+  }, [loading])
 
   if (loading) return null
 
@@ -352,7 +436,7 @@ export default function Homepage() {
 
   const content = (
     <main className="homepage-container">
-        <section className="homepage-hero" aria-label="Organization branding">
+        <section id="home" className="homepage-hero" aria-label="Organization branding">
           <div className="section-inner hero-inner">
             <div className="hero-main">
               <div className="hero-copy">

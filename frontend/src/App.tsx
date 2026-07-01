@@ -13,6 +13,7 @@ import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
 import ResetPassword from './pages/Auth/ResetPassword/ResetPassword'
+import { HOMEPAGE_ROUTE_PATHS } from './common/utils/homepageSections'
 
 function App() {
   const [reLoginOpen, setReLoginOpen] = useState(false);
@@ -28,7 +29,9 @@ function App() {
       <AuthProvider>
         <ReLoginModal isOpen={reLoginOpen} onClose={() => setReLoginOpen(false)} />
         <Routes>
-          <Route path="/" element={<Homepage />} />
+          {HOMEPAGE_ROUTE_PATHS.map((path) => (
+            <Route key={path} path={path} element={<Homepage />} />
+          ))}
           <Route path="/youth" element={
             <ProtectedRoute requiredPermission="read:youth_profiles">
               <Youth />

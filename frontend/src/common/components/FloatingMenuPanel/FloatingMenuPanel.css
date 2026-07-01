@@ -27,6 +27,7 @@
   font-weight: 500;
   padding: 9px 12px;
   border-radius: 6px;
+  text-decoration: none;
   transition: background 0.15s;
 }
 

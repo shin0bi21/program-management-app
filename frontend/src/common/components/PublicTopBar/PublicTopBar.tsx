@@ -1,17 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '../Button/Button';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import { HOMEPAGE_NAV_SECTIONS } from '../../utils/homepageSections';
 import './PublicTopBar.css';
-
-const NAV_ITEMS = [
-  { id: 'programming', label: 'Programming' },
-  { id: 'about', label: 'Organizational History' },
-  { id: 'signup', label: 'Sign Up' },
-  { id: 'team', label: 'Staff' },
-  { id: 'partners', label: 'Partners' },
-];
 
 export default function PublicTopBar() {
   const navigate = useNavigate();
@@ -36,27 +29,27 @@ export default function PublicTopBar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const scrollTo = (id: string) => {
+  const handleSectionClick = () => {
     close();
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const topBarHeight = document.querySelector<HTMLElement>('.public-topbar')?.offsetHeight ?? 0;
-    const top = el.getBoundingClientRect().top + window.scrollY - topBarHeight;
-    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
 
   return (
     <header className={`public-topbar${scrolled ? ' public-topbar--scrolled' : ''}`}>
-      <button className="topbar-logo-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+      <Link
+        to="/"
+        className="topbar-logo-btn"
+        onClick={() => {
+          close();
+        }}
+      >
         <img src="/logo.jpg" alt="Be Original Youth Group" className="topbar-logo" />
-      </button>
+      </Link>
 
       <nav className="topbar-nav" aria-label="Page sections">
-        {NAV_ITEMS.map(({ id, label }) => (
-          <button key={id} className="topbar-link" onClick={() => scrollTo(id)}>
+        {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
+          <Link key={id} to={path} className="topbar-link" onClick={handleSectionClick}>
             {label}
-          </button>
+          </Link>
         ))}
       </nav>
 
@@ -81,10 +74,10 @@ export default function PublicTopBar() {
             onClose={close}
             className="topbar-mobile-menu"
           >
-            {NAV_ITEMS.map(({ id, label }) => (
-              <button key={id} role="menuitem" onClick={() => scrollTo(id)}>
+            {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
+              <Link key={id} to={path} role="menuitem" onClick={handleSectionClick}>
                 {label}
-              </button>
+              </Link>
             ))}
           </FloatingMenuPanel>
         )}
