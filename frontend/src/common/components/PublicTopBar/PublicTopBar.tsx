@@ -7,8 +7,8 @@ import './PublicTopBar.css';
 
 const NAV_ITEMS = [
   { id: 'programming', label: 'Programming' },
-  { id: 'signup', label: 'Sign Up' },
   { id: 'about', label: 'Organizational History' },
+  { id: 'signup', label: 'Sign Up' },
   { id: 'team', label: 'Staff' },
   { id: 'partners', label: 'Partners' },
 ];

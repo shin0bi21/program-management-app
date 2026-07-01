@@ -7,7 +7,7 @@
  * spreadsheet is accessible. Reads sheet metadata and prints the title.
  *
  * Usage:
- *   SPREADSHEET_ID=<your-sheet-id> npx tsx db/scripts/test-sheets-connection.ts
+ *   SPREADSHEET_ID=<your-sheet-id> npx tsx scripts/googleSheets/test-connection.ts
  *
  * The spreadsheet ID is the long string in the Sheet URL:
  *   https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit
@@ -18,13 +18,13 @@
  */
 
 import 'dotenv/config';
-import { getSheetsClient } from '../../src/integrations/googleSheets/client';
+import { getSheetsClient } from './client';
 
 const spreadsheetId = process.argv[2] ?? process.env.SPREADSHEET_ID;
 
 if (!spreadsheetId) {
   console.error('ERROR: Provide a spreadsheet ID as an argument or set SPREADSHEET_ID');
-  console.error('Usage: SPREADSHEET_ID=xxx npx tsx db/scripts/test-sheets-connection.ts');
+  console.error('Usage: SPREADSHEET_ID=xxx npx tsx scripts/googleSheets/test-connection.ts');
   process.exit(1);
 }
 

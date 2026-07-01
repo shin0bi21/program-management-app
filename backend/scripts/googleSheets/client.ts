@@ -9,8 +9,7 @@ let sheetsClient: sheets_v4.Sheets | null = null;
  * Lazy-initialised — the client is created on first call and reused.
  * Throws if GOOGLE_SERVICE_ACCOUNT_JSON is not set in the environment.
  *
- * The Express server never calls this — it is only called by scripts in
- * db/scripts/ that interact with Google Sheets.
+ * Used by backend/scripts/googleSheets tooling; not part of the live API server.
  */
 export function getSheetsClient(): sheets_v4.Sheets {
   if (sheetsClient) return sheetsClient;
