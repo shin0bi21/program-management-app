@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Shared Docker health-check logic.
-# Source this from any test runner script:  source scripts/_docker-health.sh
+# Source this from any backend test runner script:  source scripts/backend/_docker-health.sh
 #
 # Expects: working directory is the project root.
 # Provides: running containers with DB + backend ready.
@@ -104,5 +104,4 @@ docker-compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
   exit 1
 }
 echo "Test database migrated"
-
 

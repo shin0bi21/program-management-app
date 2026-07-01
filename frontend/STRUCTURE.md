@@ -88,7 +88,7 @@ src/
       time.ts
   pages/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
-    Homepage/
+    Homepage/             ← Homepage.tsx + hooks/useSectionRouting.ts + section feature folders
     Schools/              ← Schools.tsx + types.ts + api/ + hooks/ + components/
     Settings/
     Staff/                ← Staff.tsx + types.ts + api/ + hooks/
@@ -102,6 +102,21 @@ src/
 - Shared app state lives in `common/context`.
 - API config lives in `common/api`.
 - `common/` never imports from `pages/`. Dependencies flow one way: `pages/ → common/`.
+
+### Feature-folder pattern
+
+When a page-specific unit grows beyond a thin presentational component, give it its own folder and colocate the moving pieces:
+
+```text
+components/
+  SignupSection/
+    SignupSection.tsx
+    useSignupSection.ts
+    signupSectionSchema.ts
+    SignupSection.test.tsx
+```
+
+The same pattern applies to modal features such as `YouthModal/` and to homepage sections such as `HeroSection/` and `ProgrammingSection/`.
 
 ---
 
@@ -171,7 +186,9 @@ export default function MyMenu() {
 
 **Framework:** Vitest + jsdom + `@testing-library/react` + `@testing-library/jest-dom`.
 
-**Run:** `npm test` (single run, used in CI) · `npm run test:watch` (dev watch mode).
+**Run:** `npm test` (single run, used by Vitest directly) · `npm run test:watch` (dev watch mode).
+
+**Repo-level runners:** use `../scripts/frontend/test-ui.sh` for the full frontend suite, or the page/path-based runners in `../scripts/frontend/` such as `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`.
 
 **Setup file:** `src/tests/setup.ts` — imports `@testing-library/jest-dom` to extend `expect`.
 
@@ -183,6 +200,12 @@ export default function MyMenu() {
 |---|---|
 | `src/common/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
 | `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
+| `src/pages/Homepage/Homepage.test.tsx` | Page-composition test for the public homepage sections |
+| `src/pages/Homepage/components/HeroSection/HeroSection.test.tsx` | Hero carousel rendering and photo navigation |
+| `src/pages/Homepage/components/ProgrammingSection/ProgrammingSection.test.tsx` | Programming section composition |
+| `src/pages/Homepage/components/ProgrammingSection/ProgramCard/ProgramCard.test.tsx` | Program card rendering |
+| `src/pages/Homepage/components/SignupSection/SignupSection.test.tsx` | Public cohort signup submission behavior |
+| `src/pages/Youth/components/YouthModal/YouthModal.test.tsx` | Youth modal rendering, validation, and submit payload behavior |
 
 ### Key patterns
 

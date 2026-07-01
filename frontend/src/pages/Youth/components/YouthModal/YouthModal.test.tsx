@@ -7,8 +7,13 @@ vi.mock('../../../../common/api/youth.api', () => ({
   setYouth: vi.fn(),
 }));
 
-vi.mock('../../../../common/api/schools.api', () => ({
-  getSchools: vi.fn().mockResolvedValue([]),
+vi.mock('../../../../common/hooks/useSchools', () => ({
+  useSchools: () => ({
+    schools: [],
+    loading: false,
+    error: '',
+    refetch: vi.fn(),
+  }),
 }));
 
 import { setYouth } from '../../../../common/api/youth.api';
