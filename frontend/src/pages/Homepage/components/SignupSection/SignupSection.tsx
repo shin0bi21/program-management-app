@@ -1,98 +1,18 @@
-import { FormEvent, useEffect, useState } from 'react'
-import Button from '../../../common/components/Button/Button'
-import FormField from '../../../common/components/FormField/FormField'
-import { useSubmitStatus } from '../../../common/hooks/useSubmitStatus'
-import { ApiError, getErrorMessage } from '../../../common/utils/clientErrors'
-import { submitCohortInterest, type CohortInterestPayload } from '../api/homepage.api'
-
-type DiscoverySource = NonNullable<CohortInterestPayload['discoverySource']>
-
-type CohortInterestForm = {
-  youthName: string
-  parentName: string
-  age: string
-  school: string
-  email: string
-  phoneNumber: string
-  discoverySource: DiscoverySource | ''
-  message: string
-}
-
-type CohortInterestErrors = Partial<Record<keyof CohortInterestForm, string>>
-
-const cohortInterestInitialState: CohortInterestForm = {
-  youthName: '',
-  parentName: '',
-  age: '',
-  school: '',
-  email: '',
-  phoneNumber: '',
-  discoverySource: '',
-  message: '',
-}
-
-const discoverySourceOptions: { value: DiscoverySource; label: string }[] = [
-  { value: 'online', label: 'Online' },
-  { value: 'friend_family', label: 'Friend / Family' },
-  { value: 'school', label: 'School' },
-  { value: 'community_outreach', label: 'Community Outreach' },
-  { value: 'other', label: 'Other' },
-]
+import Button from '../../../../common/components/Button/Button'
+import FormField from '../../../../common/components/FormField/FormField'
+import { useSignupSection } from './useSignupSection'
+import { discoverySourceOptions } from './signupSectionSchema'
 
 export default function SignupSection() {
-  const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
-  const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus()
-  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success'
-
-  useEffect(() => {
-    if (submitStatus !== 'success') return
-
-    const timeoutId = window.setTimeout(() => {
-      resetStatus()
-    }, 2500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [submitStatus, resetStatus])
-
-  const handleFieldChange = (field: keyof CohortInterestForm, value: string) => {
-    setFormData((current) => ({ ...current, [field]: value }))
-    setFieldErrors((current) => ({ ...current, [field]: undefined }))
-  }
-
-  const handleInterestSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setSubmitStatus('submitting')
-    setError('')
-    setFieldErrors({})
-
-    try {
-      await submitCohortInterest({
-        youthName: formData.youthName,
-        parentName: formData.parentName.trim() || undefined,
-        age: Number(formData.age),
-        school: formData.school.trim() || undefined,
-        email: formData.email.trim() || undefined,
-        phoneNumber: formData.phoneNumber.trim() || undefined,
-        discoverySource: formData.discoverySource || undefined,
-        message: formData.message.trim() || undefined,
-      })
-      setFormData(cohortInterestInitialState)
-      setFieldErrors({})
-      setSubmitStatus('success')
-    } catch (err) {
-      if (err instanceof ApiError && err.details?.length) {
-        const nextFieldErrors: CohortInterestErrors = {}
-        for (const detail of err.details) {
-          const field = detail.field.replace(/^body\./, '') as keyof CohortInterestForm
-          nextFieldErrors[field] = detail.message
-        }
-        setFieldErrors(nextFieldErrors)
-      }
-      setSubmitStatus('error')
-      setError(getErrorMessage(err, 'Unable to submit the form right now.'))
-    }
-  }
+  const {
+    formData,
+    fieldErrors,
+    submitStatus,
+    error,
+    isFormLocked,
+    handleFieldChange,
+    handleInterestSubmit,
+  } = useSignupSection()
 
   return (
     <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">

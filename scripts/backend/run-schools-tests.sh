@@ -2,7 +2,9 @@
 set -e
 cd "$(dirname "$0")/../.." || exit
 
-source scripts/_docker-health.sh
+if [ "${BACKEND_TEST_ENV_READY:-0}" != "1" ]; then
+  source scripts/backend/_docker-health.sh
+fi
 
 echo ""
 echo "Running SCHOOLS tests..."

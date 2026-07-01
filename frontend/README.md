@@ -16,6 +16,8 @@ npm run build
 ## Structure
 See `STRUCTURE.md` for the page‑scoped layout and conventions.
 
+The homepage now follows section-level feature folders under `src/pages/Homepage/components/`, with section-specific hooks and tests colocated next to each section.
+
 ## Request / Response Flow
 See [`docs/api-flow.mmd`](docs/api-flow.mmd) for the full frontend request lifecycle — `apiClient`, token validation, proactive refresh, re-login modal, network error handling, and response parsing.
 
@@ -28,7 +30,13 @@ For the full-stack overview (frontend → backend → DB), see the [root README]
 | `VITE_API_URL` | Yes | API base URL — set in `frontend/.env.production` on the server as `VITE_API_URL=https://be-original.ca/api` |
 
 ## Testing
-Frontend unit tests are not yet configured. Backend integration tests (auth, staff, youth, schools) are run via the shell scripts in [`../scripts/tests/`](../scripts/tests/) — e.g. `../scripts/tests/run-auth-tests.sh`, `run-schools-tests.sh`.
+Frontend tests are configured with Vitest.
+
+- Full frontend suite: [`../scripts/frontend/test-ui.sh`](../scripts/frontend/test-ui.sh)
+- Path-based frontend runners: [`../scripts/frontend/`](../scripts/frontend/) such as `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`
+- Direct Vitest run inside `frontend/`: `npm test`
+
+The frontend umbrella runner composes the path-based runners and will skip page folders that do not have tests yet. Backend integration tests (auth, staff, youth, schools) are run separately via [`../scripts/backend/`](../scripts/backend/) — for example `run-auth-tests.sh` and `test-apis.sh`.
 
 ## Notes
 - When adding new pages, keep API, hooks, and UI co‑located under `src/pages/<PageName>`.
