@@ -17,7 +17,7 @@ vi.mock('../../common/context/AuthContext', () => ({
 describe('Homepage', () => {
   it('renders the public homepage sections', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Homepage />
       </MemoryRouter>,
     );

@@ -143,9 +143,9 @@ backend/
 └── tests/
     ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
     ├── auth/           # 44 tests
-    ├── staff/          # 15 tests
+    ├── staff/          # 30 tests
     ├── youth/          # 25 tests
-    └── schools/        # schools tests
+    └── schools/        # 28 tests
 ```
 
 For middleware order, route patterns, error throwing, and "adding a new domain" see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
@@ -242,14 +242,20 @@ Tests run **inside the Docker container**. Never run Jest locally against a remo
 From the project root (`my-webapp/`):
 
 ```bash
-# All suites
-bash scripts/tests/test-apis.sh
+# All backend API suites
+bash scripts/backend/test-apis.sh
+
+# This boots the backend test environment once, then composes the
+# auth, staff, youth, and schools runners.
+
+# Full-stack suite (backend API + frontend UI)
+bash scripts/test-full-stack.sh
 
 # Individual suites
-bash scripts/tests/run-auth-tests.sh    # 44 tests
-bash scripts/tests/run-staff-tests.sh   # 15 tests
-bash scripts/tests/run-youth-tests.sh   # 25 tests
-bash scripts/tests/run-schools-tests.sh  # 28 tests
+bash scripts/backend/run-auth-tests.sh    # 44 tests
+bash scripts/backend/run-staff-tests.sh   # 30 tests
+bash scripts/backend/run-youth-tests.sh   # 25 tests
+bash scripts/backend/run-schools-tests.sh  # 28 tests
 
 # Or directly
 docker compose exec backend npm run test:auth
@@ -330,7 +336,7 @@ describe('Feature Tests', () => {
 docker compose up -d                              # 1. start containers
 # 2. edit code in src/, tests/, db/migrations/
 docker compose exec backend npm run typecheck    # 3. type-check
-bash scripts/tests/test-apis.sh                   # 4. run tests
+bash scripts/test-full-stack.sh                  # 4. run backend + frontend tests
 docker compose exec backend npm run db:migrate   # 5. apply any new migrations
 git add . && git commit -m "Description" && git push
 ```
