@@ -9,5 +9,10 @@
     "db/scripts/seed-admin.ts",
     "db/scripts/update_schemas.ts"
   ],
-  "exclude": ["node_modules", "dist", "tests"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "src/integrations/googleSheets/**/*"
+  ]
 }
