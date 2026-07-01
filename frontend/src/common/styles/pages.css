@@ -34,10 +34,9 @@
 }
 
 /* ── Shared decorative background shapes ───────────────── */
-/* Used by .auth-container and .homepage-hero */
+/* Used by .auth-container */
 
-.auth-container::before,
-.homepage-hero::before {
+.auth-container::before {
   content: '';
   position: absolute;
   bottom: -110px;
@@ -49,8 +48,7 @@
   pointer-events: none;
 }
 
-.auth-container::after,
-.homepage-hero::after {
+.auth-container::after {
   content: '';
   position: absolute;
   top: -72px;

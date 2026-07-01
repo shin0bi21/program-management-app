@@ -69,7 +69,7 @@ const programs = [
     sessions: [
       { date: new Date(2026, 6, 10), topic: 'Drop-in Day' },
       { date: new Date(2026, 6, 24), topic: 'Drop-in Day' },
-      { date: new Date(2026, 7, 7), topic: 'Drop-in Day' },
+      // { date: new Date(2026, 7, 7), topic: 'Drop-in Day' },
     ],
     dropIn: true,
   },
@@ -81,8 +81,8 @@ const programs = [
     sessions: [
       { date: new Date(2026, 6, 7), topic: 'Self-Esteem Workshop' },
       { date: new Date(2026, 6, 14), topic: 'Healthy Habits Guest Speaker' },
-      { date: new Date(2026, 6, 21), topic: 'Confidence Building Workshop' },
-      { date: new Date(2026, 6, 28), topic: 'Self-Estem Trip to Pixel Room' },
+      // { date: new Date(2026, 6, 21), topic: 'Confidence Building Workshop' },
+      // { date: new Date(2026, 6, 28), topic: 'Self-Estem Trip to Pixel Room' },
     ],
   },
   {
@@ -353,50 +353,52 @@ export default function Homepage() {
   const content = (
     <main className="homepage-container">
         <section className="homepage-hero" aria-label="Organization branding">
-          <div className="hero-main">
-            <div className="hero-copy">
-              <h1 className="hero-title">
-                Support that
-                <br />
-                meets youth
-                <br />
-                <span className="hero-title-accent">where they are.</span>
-              </h1>
-              <p className="hero-description">
-                Since 2022, Be Original has supported over 140 youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
-              </p>
-            </div>
-          </div>
-          <div className="hero-visual-panel">
-            <div className="hero-visual-card">
-              <div className="hero-photo-frame">
-                <img
-                  src={activePhoto.src}
-                  alt={activePhoto.alt}
-                  className="hero-photo-image"
-                />
-                {homepagePhotos.length > 1 && (
-                  <div className="hero-photo-nav" aria-label="Photo navigation controls">
-                    <button
-                      type="button"
-                      className="hero-photo-nav-button"
-                      onClick={goToPreviousPhoto}
-                      aria-label="Show previous photo"
-                    >
-                      &lt;
-                    </button>
-                    <button
-                      type="button"
-                      className="hero-photo-nav-button"
-                      onClick={goToNextPhoto}
-                      aria-label="Show next photo"
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                )}
+          <div className="section-inner hero-inner">
+            <div className="hero-main">
+              <div className="hero-copy">
+                <h1 className="hero-title">
+                  Support that
+                  <br />
+                  meets youth
+                  <br />
+                  <span className="hero-title-accent">where they are.</span>
+                </h1>
+                <p className="hero-description">
+                  Since 2022, Be Original has supported over 140 youth across Sandwich Towne and Windsor by providing a safe space, mentorship as well as programming focused on life skills and career readiness.
+                </p>
               </div>
-              <p className="hero-photo-caption">{activePhoto.caption}</p>
+            </div>
+            <div className="hero-visual-panel">
+              <div className="hero-visual-card">
+                <div className="hero-photo-frame">
+                  <img
+                    src={activePhoto.src}
+                    alt={activePhoto.alt}
+                    className="hero-photo-image"
+                  />
+                  {homepagePhotos.length > 1 && (
+                    <div className="hero-photo-nav" aria-label="Photo navigation controls">
+                      <button
+                        type="button"
+                        className="hero-photo-nav-button"
+                        onClick={goToPreviousPhoto}
+                        aria-label="Show previous photo"
+                      >
+                        &lt;
+                      </button>
+                      <button
+                        type="button"
+                        className="hero-photo-nav-button"
+                        onClick={goToNextPhoto}
+                        aria-label="Show next photo"
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <p className="hero-photo-caption">{activePhoto.caption}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -414,11 +416,32 @@ export default function Homepage() {
           </div>
         </section>
 
+        <section id="about" className="timeline-section" aria-labelledby="timeline-title">
+          <div className="section-inner">
+            <div className="section-heading">
+              <h2 id="timeline-title" className="section-title">Organizational History</h2>
+            </div>
+            <div className="timeline">
+              {timelineItems.map((item) => (
+                <div key={item.year} className="timeline-item">
+                  <p className="timeline-year">{item.year}</p>
+                  <div className="timeline-body">
+                    <p className="timeline-headline">{item.headline}</p>
+                    <p className="timeline-detail">{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="signup" className="cohort-section" aria-labelledby="cohort-section-title">
           <div className="section-inner">
             <div className="cohort-section-copy">
               <h2 id="cohort-section-title" className="section-title">Interested?</h2>
-              <p className="cohort-section-title">We are now accepting signups for our September cohort.</p>
+              <p className="cohort-section-title">
+                We are now accepting signups for our <span>September cohort</span>.
+              </p>
               <p className="cohort-section-description">
                  Leave your contact information below and we will follow up with next steps.
               </p>
@@ -526,25 +549,6 @@ export default function Homepage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        </section>
-
-        <section id="about" className="timeline-section" aria-labelledby="timeline-title">
-          <div className="section-inner">
-            <div className="section-heading">
-              <h2 id="timeline-title" className="section-title">Organizational History</h2>
-            </div>
-            <div className="timeline">
-              {timelineItems.map((item) => (
-                <div key={item.year} className="timeline-item">
-                  <p className="timeline-year">{item.year}</p>
-                  <div className="timeline-body">
-                    <p className="timeline-headline">{item.headline}</p>
-                    <p className="timeline-detail">{item.detail}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
