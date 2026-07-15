@@ -63,6 +63,26 @@ export const sendStaffInvite = async (to: string, firstName: string, inviteUrl: 
   await sendEmail(to, subject, html);
 };
 
+export const sendYouthInvite = async (to: string, firstName: string, inviteUrl: string) => {
+  const subject = 'Your Be Original account invitation';
+  const safeFirstName = escapeHtml(firstName);
+  const safeUrl = escapeHtml(inviteUrl);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hi ${safeFirstName},</h2>
+      <p>You've been invited to create your Be Original account.</p>
+      <p>Set your password to get started:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${safeUrl}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+          Set Your Password
+        </a>
+      </div>
+      <p style="color: #666; font-size: 14px;">This link will expire in 7 days. If you weren't expecting this invitation, you can ignore this email.</p>
+    </div>
+  `;
+  await sendEmail(to, subject, html);
+};
+
 export const sendInviteEmailChanged = async (to: string, firstName: string, inviteUrl: string) => {
   const subject = 'Your Be Original invite has been resent';
   const safeFirstName = escapeHtml(firstName);

@@ -113,7 +113,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         ...(youthData && { id: youthData.id }),
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
-        active: youthData ? youthData.active : true,
+        status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),

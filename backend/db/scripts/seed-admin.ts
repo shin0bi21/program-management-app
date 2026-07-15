@@ -79,14 +79,14 @@ async function main() {
 
     // Insert admin user
     await sql`
-      INSERT INTO users (id, first_name, last_name, role_id, status) 
-      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid, 'active')
+      INSERT INTO users (id, first_name, last_name, role_id)
+      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid)
     `;
     
     // Insert admin credentials
     await sql`
-      INSERT INTO user_credentials (user_id, email, password_hash, email_verified) 
-      VALUES (${adminId}::uuid, ${ADMIN_EMAIL}, ${passwordHash}, true)
+      INSERT INTO user_credentials (user_id, email, password_hash, email_verified, status)
+      VALUES (${adminId}::uuid, ${ADMIN_EMAIL}, ${passwordHash}, true, 'active')
     `;
     
     console.log(`\n========================================`);
