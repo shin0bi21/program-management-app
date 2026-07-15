@@ -17,7 +17,7 @@ export const setYouthSchema = z.object({
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
-    active: z.boolean(),
+    status: z.enum(['active', 'inactive']),
     addresses: z
       .array(
         z.object({
@@ -50,3 +50,8 @@ export const setYouthSchema = z.object({
 });
 
 export type SetYouthInput = z.infer<typeof setYouthSchema>;
+
+export const inviteYouthSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid youth ID') }),
+  body: z.object({ email: z.string().trim().email('Invalid email format') }),
+});

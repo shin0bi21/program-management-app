@@ -9,7 +9,7 @@ const app = createApp();
 const baseYouth = {
   firstName: 'Jamie',
   lastName: 'Test',
-  active: true,
+  status: 'active',
 };
 
 describe('Youth API', () => {
@@ -174,7 +174,7 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ lastName: 'Test', active: true });
+        .send({ lastName: 'Test', status: 'active' });
       expect(res.status).toBe(400);
     });
 
@@ -182,15 +182,23 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Test', active: true });
+        .send({ firstName: 'Test', status: 'active' });
       expect(res.status).toBe(400);
     });
 
-    it('should reject missing active field (400)', async () => {
+    it('should reject missing status field (400)', async () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User' });
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject invalid participation status (400)', async () => {
+      const res = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ firstName: 'Test', lastName: 'Youth', status: 'invited' });
       expect(res.status).toBe(400);
     });
 
@@ -279,6 +287,61 @@ describe('Youth API', () => {
     });
   });
 
+  describe('POST /api/youth/:id/invite', () => {
+    let youthId: string;
+
+    beforeEach(async () => {
+      const res = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, firstName: 'InviteTarget', status: 'inactive' });
+      youthId = res.body.id;
+    });
+
+    afterEach(async () => {
+      await deleteTestYouth(youthId);
+    });
+
+    it('should attach invited credentials without changing youth participation', async () => {
+      const email = `invited-youth-${Date.now()}@test.local`;
+      const inviteRes = await request(app)
+        .post(`/api/youth/${youthId}/invite`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ email });
+
+      expect(inviteRes.status).toBe(201);
+      expect(inviteRes.body).toEqual({ email, status: 'invited' });
+
+      const getRes = await request(app)
+        .get(`/api/youth?id=${youthId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(getRes.body.status).toBe('inactive');
+      expect(getRes.body.account).toEqual({ email, status: 'invited' });
+    });
+
+    it('should reject inviting a youth who already has an account', async () => {
+      const email = `duplicate-youth-${Date.now()}@test.local`;
+      await request(app)
+        .post(`/api/youth/${youthId}/invite`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ email });
+
+      const duplicateRes = await request(app)
+        .post(`/api/youth/${youthId}/invite`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ email: `other-${email}` });
+      expect(duplicateRes.status).toBe(409);
+    });
+
+    it('should reject an invalid email', async () => {
+      const res = await request(app)
+        .post(`/api/youth/${youthId}/invite`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ email: 'not-an-email' });
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // POST /api/youth (Update / Upsert)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -302,7 +365,7 @@ describe('Youth API', () => {
       const updateRes = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: youthId, firstName: 'Updated', lastName: 'Name', active: false });
+        .send({ id: youthId, firstName: 'Updated', lastName: 'Name', status: 'inactive' });
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.id).toBe(youthId);
 
@@ -311,7 +374,7 @@ describe('Youth API', () => {
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(getRes.body.firstName).toBe('Updated');
-      expect(getRes.body.active).toBe(false);
+      expect(getRes.body.status).toBe('inactive');
     });
 
     it('should add addresses on update (200)', async () => {

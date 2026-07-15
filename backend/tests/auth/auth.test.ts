@@ -15,10 +15,28 @@ import {
   insertExpiredResetToken,
   insertUsedResetToken,
   extractCookie,
+  sql,
 } from './helpers';
 import type { SeededUser } from '../shared/db';
 
 const app = createApp();
+
+async function seedYouthAccount(participationStatus: 'active' | 'inactive', accountStatus: 'invited' | 'active' | 'inactive') {
+  const user = await seedTestUser({
+    email: `youth-auth-${Date.now()}-${Math.random().toString(36).slice(2)}@test.local`,
+    role: 'youth',
+  });
+  await sql`
+    INSERT INTO youth_profiles (user_id, status)
+    VALUES (${user.userId}, ${participationStatus})
+  `;
+  await sql`
+    UPDATE user_credentials
+    SET status = ${accountStatus}
+    WHERE user_id = ${user.userId}
+  `;
+  return user;
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // LOGIN
@@ -692,6 +710,86 @@ describe('POST /api/auth/reset-password', () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/invalid|expired/i);
     });
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// YOUTH ACCOUNT LIFECYCLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+describe('Youth account lifecycle', () => {
+  it('should allow an active youth account to authenticate when participation is inactive', async () => {
+    const user = await seedYouthAccount('inactive', 'active');
+
+    try {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: user.email, password: user.password });
+
+      expect(res.status).toBe(200);
+      expect(res.body.requires2FA).toBe(true);
+
+      const [profile] = await sql<{ status: string }[]>`
+        SELECT status FROM youth_profiles WHERE user_id = ${user.userId}
+      `;
+      expect(profile.status).toBe('inactive');
+    } finally {
+      await deleteTestUser(user.userId);
+    }
+  });
+
+  it('should reject an inactive youth account when participation is active', async () => {
+    const user = await seedYouthAccount('active', 'inactive');
+
+    try {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: user.email, password: user.password });
+
+      expect(res.status).toBe(403);
+
+      const [profile] = await sql<{ status: string }[]>`
+        SELECT status FROM youth_profiles WHERE user_id = ${user.userId}
+      `;
+      expect(profile.status).toBe('active');
+    } finally {
+      await deleteTestUser(user.userId);
+    }
+  });
+
+  it('should activate invited youth credentials after password setup without changing participation', async () => {
+    const user = await seedYouthAccount('inactive', 'invited');
+
+    try {
+      const beforeLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: user.email, password: user.password });
+      expect(beforeLogin.status).toBe(403);
+
+      const rawToken = await insertResetToken(user.userId);
+      const newPassword = 'YouthNewPassword456!';
+      const resetRes = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: rawToken, newPassword });
+      expect(resetRes.status).toBe(200);
+
+      const [states] = await sql<{ accountStatus: string; participationStatus: string }[]>`
+        SELECT uc.status AS account_status, yp.status AS participation_status
+        FROM user_credentials uc
+        INNER JOIN youth_profiles yp ON yp.user_id = uc.user_id
+        WHERE uc.user_id = ${user.userId}
+      `;
+      expect(states.accountStatus).toBe('active');
+      expect(states.participationStatus).toBe('inactive');
+
+      const afterLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: user.email, password: newPassword });
+      expect(afterLogin.status).toBe(200);
+      expect(afterLogin.body.requires2FA).toBe(true);
+    } finally {
+      await deleteTestUser(user.userId);
+    }
   });
 });
 

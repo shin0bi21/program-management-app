@@ -88,7 +88,7 @@ describe('YouthModal', () => {
   });
 
   describe('api calls', () => {
-    it('calls setYouth with active: true when creating', async () => {
+    it('calls setYouth with active status when creating', async () => {
       renderModal();
       fillRequiredFields();
       submitForm();
@@ -96,7 +96,7 @@ describe('YouthModal', () => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
           firstName: 'Jamie',
           lastName: 'Test',
-          active: true,
+          status: 'active',
         }));
       });
     });
@@ -121,21 +121,21 @@ describe('YouthModal', () => {
       });
     });
 
-    it('preserves active: true when updating an active profile', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', active: true });
+    it('preserves active status when updating an active profile', async () => {
+      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', status: 'active' });
       renderModal({ youthData: profile });
       submitForm();
       await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ active: true }));
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
       });
     });
 
-    it('preserves active: false when updating an inactive profile', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', active: false });
+    it('preserves inactive status when updating an inactive profile', async () => {
+      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', status: 'inactive' });
       renderModal({ youthData: profile });
       submitForm();
       await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ active: false }));
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ status: 'inactive' }));
       });
     });
   });
