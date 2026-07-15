@@ -6,14 +6,16 @@ import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
+import YouthInviteModal from './components/YouthInviteModal/YouthInviteModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
-import { toggleYouthActive } from '../../common/api/youth.api';
+import { toggleYouthStatus } from '../../common/api/youth.api';
 import { calculateAge } from '../../common/utils/time';
 import './Youth.css';
 
 export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<YouthProfile | null>(null);
   const { youth, setYouth, loading, error } = useYouth();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
@@ -29,24 +31,24 @@ export default function Youth() {
 
   const handleDeactivateProfile = (profile: YouthProfile) => setConfirmAction({
     title: 'Deactivate Profile',
-    message: `Deactivate ${profile.firstName} ${profile.lastName}? They will lose access to the system immediately.`,
+    message: `Mark ${profile.firstName} ${profile.lastName} as inactive in the youth program? Their login account will not be affected.`,
     confirmLabel: 'Deactivate',
     confirmVariant: 'danger',
     successMessage: 'Profile deactivated',
     onConfirm: async () => {
-      const updated = await toggleYouthActive(profile.id);
+      const updated = await toggleYouthStatus(profile.id);
       setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
     },
   });
 
   const handleReactivateProfile = (profile: YouthProfile) => setConfirmAction({
     title: 'Activate Profile',
-    message: `Activate ${profile.firstName} ${profile.lastName}? They will regain access to the system.`,
+    message: `Mark ${profile.firstName} ${profile.lastName} as active in the youth program? Their login account will not be affected.`,
     confirmLabel: 'Activate',
     confirmVariant: 'primary',
     successMessage: 'Profile activated',
     onConfirm: async () => {
-      const updated = await toggleYouthActive(profile.id);
+      const updated = await toggleYouthStatus(profile.id);
       setYouth(prev => prev.map(y => y.id === updated.id ? updated : y));
     },
   });
@@ -88,11 +90,11 @@ export default function Youth() {
       width: '100px',
     },
     {
-      key: 'active',
+      key: 'status',
       header: 'Status',
       render: (profile) => (
-        <span className={`status-badge ${profile.active ? 'status-active' : 'status-inactive'}`}>
-          {profile.active ? 'Active' : 'Inactive'}
+        <span className={`status-badge status-${profile.status}`}>
+          {profile.status === 'active' ? 'Active' : 'Inactive'}
         </span>
       ),
       width: '100px',
@@ -106,8 +108,9 @@ export default function Youth() {
         <ActionsMenu
           items={[
             { id: 'edit',        label: 'Edit',       onClick: () => handleEditProfile(profile) },
-            ...(profile.active  ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
-            ...(!profile.active ? [{ id: 'reactivate', label: 'Activate',                              onClick: () => handleReactivateProfile(profile) }] : []),
+            ...(!profile.account ? [{ id: 'invite', label: 'Invite', onClick: () => setInviteTarget(profile) }] : []),
+            ...(profile.status === 'active' ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
+            ...(profile.status === 'inactive' ? [{ id: 'reactivate', label: 'Activate', onClick: () => handleReactivateProfile(profile) }] : []),
           ]}
         />
       ) : null,
@@ -145,6 +148,17 @@ export default function Youth() {
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={() => setModalTarget(null)}
         onSuccess={handleSaveYouth}
+      />
+
+      <YouthInviteModal
+        youth={inviteTarget}
+        onClose={() => setInviteTarget(null)}
+        onSuccess={(account) => {
+          if (inviteTarget) {
+            setYouth(prev => prev.map(y => y.id === inviteTarget.id ? { ...y, account } : y));
+          }
+          setInviteTarget(null);
+        }}
       />
 
       <Modal

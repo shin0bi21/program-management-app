@@ -10,7 +10,10 @@ import './Header.css';
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, permissions, logout } = useAuth();
+  const { isAuthenticated, role, permissions, logout } = useAuth();
+  const canViewHome = role !== 'youth';
+  const canViewYouth = permissions.includes('read:youth_profiles');
+  const canViewSchools = permissions.includes('read:schools');
   const canViewCohortInterest = permissions.includes('read:settings');
   const canManageStaff = permissions.includes('read:staff');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,29 +70,35 @@ export default function Header() {
         <nav className="sidebar-nav">
           {isAuthenticated && (
             <>
-              <button
-                onClick={() => go('/')}
-                className={`sidebar-link${isActive('/') && !isFlyoutOpen ? ' active' : ''}`}
-              >
-                <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
-                <span>Home</span>
-              </button>
+              {canViewHome && (
+                <button
+                  onClick={() => go('/')}
+                  className={`sidebar-link${isActive('/') && !isFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
+                  <span>Home</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => go('/youth')}
-                className={`sidebar-link${isActive('/youth') && !isFlyoutOpen ? ' active' : ''}`}
-              >
-                <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
-                <span>Youth</span>
-              </button>
+              {canViewYouth && (
+                <button
+                  onClick={() => go('/youth')}
+                  className={`sidebar-link${isActive('/youth') && !isFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
+                  <span>Youth</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => go('/schools')}
-                className={`sidebar-link${isActive('/schools') && !isFlyoutOpen ? ' active' : ''}`}
-              >
-                <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
-                <span>Schools</span>
-              </button>
+              {canViewSchools && (
+                <button
+                  onClick={() => go('/schools')}
+                  className={`sidebar-link${isActive('/schools') && !isFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
+                  <span>Schools</span>
+                </button>
+              )}
 
               <button
                 ref={settingsBtnRef}

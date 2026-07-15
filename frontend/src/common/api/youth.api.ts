@@ -9,6 +9,10 @@ export function setYouth(data: SetYouthInput) {
   return apiClient.post<YouthProfile>('/youth', data);
 }
 
-export function toggleYouthActive(id: string) {
+export function toggleYouthStatus(id: string) {
   return apiClient.patch<YouthProfile>(`/youth/${id}`);
+}
+
+export function inviteYouth(id: string, email: string) {
+  return apiClient.post<YouthProfile['account']>(`/youth/${id}/invite`, { email });
 }

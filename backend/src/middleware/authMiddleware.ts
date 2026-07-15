@@ -6,6 +6,7 @@ import { requireEnv } from '../utils/env';
 import { isBlacklisted } from '../services/tokenRevocationService';
 import { UnauthorizedError, ForbiddenError } from '../errors';
 import { asyncHandler } from './routeMiddleware';
+import { sql } from '../db/client';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
@@ -35,6 +36,15 @@ export const authenticateToken = asyncHandler(async (req, _res, next) => {
     throw new UnauthorizedError('Token has been revoked');
   }
 
+  const accounts = await sql<{ status: string }[]>`
+    SELECT status FROM user_credentials
+    WHERE user_id = ${verified.userId}
+    LIMIT 1
+  `;
+  if (!accounts.length || accounts[0].status !== 'active') {
+    throw new ForbiddenError('Account is inactive');
+  }
+
   (req as AuthRequest).user = verified;
   next();
 });
@@ -50,5 +60,4 @@ export const requirePermission = (...required: Permission[]) =>
 
     next();
   });
-
 

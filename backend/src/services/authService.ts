@@ -45,8 +45,8 @@ const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection'
 // ============================================================================
 
 type LoginCredentialsRow =
-  DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until'>> &
-  DbRow<Pick<Users, 'first_name' | 'last_name' | 'status'>> &
+  DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until' | 'status'>> &
+  DbRow<Pick<Users, 'first_name' | 'last_name'>> &
   { role: UserRole; permissions: Permission[] };
 
 export interface UserInfo {
@@ -162,13 +162,13 @@ export async function loginUser(
     SELECT
       uc.user_id,
       uc.email,
+      uc.status,
       uc.password_hash,
       uc.email_verified,
       uc.failed_login_attempts,
       uc.locked_until,
       u.first_name,
       u.last_name,
-      u.status,
       ur.name AS role,
       COALESCE(
         json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
@@ -181,7 +181,7 @@ export async function loginUser(
     LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.email = ${email}
     GROUP BY uc.user_id, uc.email, uc.password_hash, uc.email_verified,
-             uc.failed_login_attempts, uc.locked_until, u.first_name, u.last_name, u.status, ur.name
+             uc.failed_login_attempts, uc.locked_until, uc.status, u.first_name, u.last_name, ur.name
     LIMIT 1
   `;
 
@@ -345,6 +345,7 @@ export async function verify2FACode(
     SELECT
       uc.user_id,
       uc.email,
+      uc.status,
       u.first_name,
       u.last_name,
       ur.name AS role,
@@ -358,7 +359,7 @@ export async function verify2FACode(
     LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
     LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE uc.user_id = ${userId}
-    GROUP BY uc.user_id, uc.email, u.first_name, u.last_name, ur.name
+    GROUP BY uc.user_id, uc.email, uc.status, u.first_name, u.last_name, ur.name
     LIMIT 1
   `;
 
@@ -367,6 +368,9 @@ export async function verify2FACode(
   }
 
   const cred = credentials[0];
+  if (cred.status !== 'active') {
+    throw new ForbiddenError('Account is inactive');
+  }
 
   // 4. Trust device if requested
   if (trustDevice && deviceFingerprint) {
@@ -429,10 +433,10 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
 
   // 2. Fetch user details
   const credentials = await sql<(
-    DbRow<Pick<UserCredentials, 'email'>> &
+    DbRow<Pick<UserCredentials, 'email' | 'status'>> &
     DbRow<Pick<Users, 'first_name'>>
   )[]>`
-    SELECT uc.email, u.first_name
+    SELECT uc.email, uc.status, u.first_name
     FROM user_credentials uc
     JOIN users u ON u.id = uc.user_id
     WHERE uc.user_id = ${userId}
@@ -444,6 +448,9 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
   }
 
   const cred = credentials[0];
+  if (cred.status !== 'active') {
+    throw new ForbiddenError('Account is inactive');
+  }
 
   // 3. Clean up stale codes, insert new one
   await sql`
@@ -511,24 +518,29 @@ export async function rotateRefreshToken(
   const storedToken = storedTokens[0];
 
   // 2. Get fresh user data (role/permissions may have changed)
-  const users = await sql<{ role: UserRole; permissions: Permission[] }[]>`
+  const users = await sql<{ role: UserRole; permissions: Permission[]; status: string }[]>`
     SELECT
       ur.name AS role,
+      uc.status,
       COALESCE(
         json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
         '[]'
       ) AS permissions
     FROM users u
+    JOIN user_credentials uc ON uc.user_id = u.id
     JOIN user_roles ur ON ur.id = u.role_id
     LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
     LEFT JOIN user_permissions up ON up.id = urhp.permission_id
     WHERE u.id = ${decoded.userId}
-    GROUP BY u.id, ur.id, ur.name
+    GROUP BY u.id, ur.id, ur.name, uc.status
     LIMIT 1
   `;
 
   if (users.length === 0) {
     throw new ForbiddenError('User not found');
+  }
+  if (users[0].status !== 'active') {
+    throw new ForbiddenError('Account is inactive');
   }
 
   // 3. Generate new token pair in the same family
@@ -682,7 +694,7 @@ export async function resetUserPassword(token: string, newPassword: string, ipAd
     resetUserId = resetToken.userId;
 
     await tx`UPDATE user_credentials SET password_hash = ${passwordHash} WHERE user_id = ${resetToken.userId}`;
-    await tx`UPDATE users SET status = 'active' WHERE id = ${resetToken.userId} AND status = 'invited'`;
+    await tx`UPDATE user_credentials SET status = 'active' WHERE user_id = ${resetToken.userId} AND status = 'invited'`;
     await tx`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${resetToken.userId} AND revoked_at IS NULL`;
   });
 

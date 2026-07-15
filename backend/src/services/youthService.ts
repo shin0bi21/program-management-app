@@ -9,9 +9,9 @@ import { setContacts } from './contactService';
 
 type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group' | 'status'>> &
   DbRow<Pick<Schools, 'name'>> & {
-    active: boolean; // derived from status = 'active'
+    account: { email: string; status: 'invited' | 'active' | 'inactive' } | null;
   };
 
 // ============================================================================
@@ -24,12 +24,16 @@ export async function getYouth(id?: string) {
       u.id,
       u.first_name,
       u.last_name,
-      (u.status = 'active') AS active,
+      yp.status,
       yp.date_of_birth,
       yp.school_id,
       s.name as school_name,
       yp.grade_level,
       yp.age_group,
+      CASE WHEN uc.user_id IS NULL THEN NULL ELSE json_build_object(
+        'email', uc.email,
+        'status', uc.status
+      ) END AS account,
       u.created_at,
       (
         SELECT json_agg(
@@ -64,6 +68,7 @@ export async function getYouth(id?: string) {
     INNER JOIN users u ON u.id = yp.user_id
     INNER JOIN user_roles ur ON ur.id = u.role_id
     LEFT JOIN schools s ON s.id = yp.school_id
+    LEFT JOIN user_credentials uc ON uc.user_id = u.id
     WHERE ur.name = 'youth'
       ${id ? sql`AND u.id = ${id}` : sql``}
     ORDER BY u.first_name ASC, u.last_name ASC
@@ -75,7 +80,7 @@ export interface SetYouthInput {
   id?: string;
   firstName: string;
   lastName: string;
-  active: boolean;
+  status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
   gradeLevel?: number;
@@ -84,7 +89,7 @@ export interface SetYouthInput {
 }
 
 export async function setYouth(data: SetYouthInput, actorId: string) {
-  const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, active, addresses, contacts } = data;
+  const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, status, addresses, contacts } = data;
   const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
   const transactionId = crypto.randomUUID();
 
@@ -94,34 +99,32 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
     let persistedUserId: string;
 
     if (id) {
-      const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'status'>>[]>`
-        SELECT id, first_name, last_name, status
+      const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>>[]>`
+        SELECT id, first_name, last_name
         FROM users
         WHERE id = ${id}
         LIMIT 1
       `;
-      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>>[]>`
-        SELECT user_id, date_of_birth, school_id, grade_level, age_group
+      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group' | 'status'>>[]>`
+        SELECT user_id, date_of_birth, school_id, grade_level, age_group, status
         FROM youth_profiles
         WHERE user_id = ${id}
         LIMIT 1
       `;
 
       const users = await trx<DbRow<Users>[]>`
-        INSERT INTO users (id, first_name, last_name, role_id, status, created_at, updated_at)
+        INSERT INTO users (id, first_name, last_name, role_id, created_at, updated_at)
         VALUES (
           ${id},
           ${firstName},
           ${lastName},
           (SELECT id FROM user_roles WHERE name = 'youth'),
-          ${active ? 'active' : 'inactive'},
           COALESCE((SELECT created_at FROM users WHERE id = ${id}), NOW()),
           NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,
-          status = EXCLUDED.status,
           updated_at = EXCLUDED.updated_at
         RETURNING *
       `;
@@ -135,19 +138,20 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
         persistedUserId,
         existingUsers.length > 0 ? 'UPDATE' : 'INSERT',
         existingUsers[0]
-          ? { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName, status: existingUsers[0].status }
+          ? { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName }
           : null,
-        { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName, status: users[0].status },
+        { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName },
       );
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at)
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, status, created_at, updated_at)
         VALUES (
           ${persistedUserId},
           ${dateOfBirth || null},
           ${schoolId || null},
           ${gradeLevel ?? null},
           ${ageGroup},
+          ${status},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${persistedUserId}), NOW()),
           NOW()
         )
@@ -156,6 +160,7 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
           school_id = EXCLUDED.school_id,
           grade_level = EXCLUDED.grade_level,
           age_group = EXCLUDED.age_group,
+          status = EXCLUDED.status,
           updated_at = EXCLUDED.updated_at
       `;
       await audit(
@@ -172,25 +177,26 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
               schoolId: existingProfiles[0].schoolId,
               gradeLevel: existingProfiles[0].gradeLevel,
               ageGroup: existingProfiles[0].ageGroup,
+              status: existingProfiles[0].status,
             }
           : null,
-        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup },
+        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup, status },
       );
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
-        INSERT INTO users (first_name, last_name, role_id, status)
-        VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'), ${active ? 'active' : 'inactive'})
+        INSERT INTO users (first_name, last_name, role_id)
+        VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'))
         RETURNING *
       `;
 
       persistedUserId = newUsers[0].id;
-      await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, status: newUsers[0].status });
+      await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)
-        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup})
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, status)
+        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup}, ${status})
       `;
-      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup });
+      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup, status });
     }
 
     if (id) {
@@ -207,15 +213,16 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
   return getYouth(userId);
 }
 
-export async function toggleYouthActive(youthId: string, actorId: string) {
+export async function toggleYouthStatus(youthId: string, actorId: string) {
   const transactionId = crypto.randomUUID();
 
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
 
-    const existing = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'status'>>[]>`
-      SELECT u.id, u.first_name, u.last_name, u.status
+    const existing = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { status: 'active' | 'inactive' })[]>`
+      SELECT u.id, u.first_name, u.last_name, yp.status
       FROM users u
+      INNER JOIN youth_profiles yp ON yp.user_id = u.id
       INNER JOIN user_roles ur ON ur.id = u.role_id
       WHERE u.id = ${youthId} AND ur.name = 'youth'
       LIMIT 1
@@ -226,14 +233,14 @@ export async function toggleYouthActive(youthId: string, actorId: string) {
     const newStatus = prev.status === 'active' ? 'inactive' : 'active';
 
     await trx`
-      UPDATE users SET status = ${newStatus}, updated_at = NOW()
-      WHERE id = ${youthId}
+      UPDATE youth_profiles SET status = ${newStatus}, updated_at = NOW()
+      WHERE user_id = ${youthId}
     `;
 
     await audit(
-      trx, actorId, transactionId, 'users', youthId, 'UPDATE',
-      { id: prev.id, firstName: prev.firstName, lastName: prev.lastName, status: prev.status },
-      { id: prev.id, firstName: prev.firstName, lastName: prev.lastName, status: newStatus }
+      trx, actorId, transactionId, 'youth_profiles', youthId, 'UPDATE',
+      { userId: prev.id, status: prev.status },
+      { userId: prev.id, status: newStatus }
     );
   });
 

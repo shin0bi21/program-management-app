@@ -2,7 +2,11 @@ export interface YouthProfile {
   id: string;
   firstName: string;
   lastName: string;
-  active: boolean;
+  status: 'active' | 'inactive';
+  account: {
+    email: string;
+    status: 'invited' | 'active' | 'inactive';
+  } | null;
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;
@@ -30,7 +34,7 @@ export interface SetYouthInput {
   id?: string;
   firstName: string;
   lastName: string;
-  active: boolean;
+  status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
   gradeLevel?: number;

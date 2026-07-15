@@ -5,6 +5,8 @@
 
 import type { ColumnType } from "kysely";
 
+export type AccountStatus = "active" | "inactive" | "invited";
+
 export type AgeGroup = "junior_youth" | "senior_youth";
 
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
@@ -31,7 +33,7 @@ export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export type UserStatus = "active" | "inactive" | "invited";
+export type YouthParticipationStatus = "active" | "inactive";
 
 export interface Addresses {
   address: string;
@@ -155,6 +157,7 @@ export interface UserCredentials {
   last_login: Timestamp | null;
   locked_until: Timestamp | null;
   password_hash: string;
+  status: Generated<AccountStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
@@ -237,7 +240,6 @@ export interface Users {
   id: Generated<string>;
   last_name: string;
   role_id: string;
-  status: Generated<UserStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -259,6 +261,7 @@ export interface YouthProfiles {
   grade_level: number | null;
   id: Generated<string>;
   school_id: string | null;
+  status: Generated<YouthParticipationStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
