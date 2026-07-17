@@ -65,12 +65,28 @@
   background: var(--ink-05);
 }
 
-.topbar-login-btn {
+.topbar-login-btn.btn {
   margin-left: 20px;
+  min-height: 36px;
+  border: 1px solid var(--brand-ink);
+  background: var(--brand-ink);
+  color: var(--color-white);
   font-size: 0.92rem;
+  font-weight: 700;
   padding: 9px 22px;
   border-radius: 8px;
   flex-shrink: 0;
+}
+
+.topbar-login-btn.btn:hover {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+  color: var(--brand-ink);
+}
+
+.topbar-login-btn.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-28);
 }
 
 /* Mobile controls — hidden on desktop */
@@ -119,6 +135,36 @@
   transform: translateY(-7px) rotate(-45deg);
 }
 
+@media (min-width: 1360px) {
+  .public-topbar {
+    height: 3.824vw;
+    padding-inline: 4vw;
+  }
+
+  .topbar-logo {
+    height: 3.235vw;
+  }
+
+  .topbar-nav {
+    gap: 0.294vw;
+  }
+
+  .topbar-link {
+    padding: 0.588vw 1.03vw;
+    border-radius: 0.441vw;
+    font-size: 1.082vw;
+  }
+
+  .topbar-login-btn.btn {
+    margin-left: 1.47vw;
+    min-height: 2.647vw;
+    border-width: 0.074vw;
+    padding: 0.662vw 1.618vw;
+    border-radius: 0.588vw;
+    font-size: 1.082vw;
+  }
+}
+
 /* Responsive breakpoints */
 @media (max-width: 980px) {
   .public-topbar {
@@ -135,7 +181,7 @@
     margin-left: auto;
   }
 
-  .topbar-login-btn {
+  .topbar-login-btn.btn {
     margin-left: 8px;
   }
 }

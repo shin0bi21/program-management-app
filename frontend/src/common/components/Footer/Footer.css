@@ -153,13 +153,74 @@
   text-align: center;
 }
 
+@media (min-width: 1360px) {
+  .site-footer {
+    padding: 2.353vw;
+    border-top-width: 0.147vw;
+  }
+
+  .site-footer-grid {
+    gap: 2.06vw;
+  }
+
+  .site-footer-brand-title {
+    gap: 0.882vw;
+    margin-bottom: 1.03vw;
+    font-size: 1.94vw;
+  }
+
+  .site-footer-brand-icon {
+    width: 2.206vw;
+    height: 2.206vw;
+  }
+
+  .site-footer-block h3 {
+    margin-bottom: 0.882vw;
+    font-size: 1.412vw;
+  }
+
+  .site-footer-brand p,
+  .site-footer-block a,
+  .site-footer-contact-item p {
+    font-size: 1.176vw;
+  }
+
+  .site-footer-brand p {
+    max-width: 25vw;
+  }
+
+  .site-footer-contact-item {
+    grid-template-columns: 1.324vw minmax(0, 1fr);
+    gap: 0.662vw;
+    margin-bottom: 0.662vw;
+  }
+
+  .site-footer-socials {
+    gap: 0.882vw;
+  }
+
+  .site-footer-social-link,
+  .site-footer-social-link svg {
+    width: 1.765vw;
+    height: 1.765vw;
+  }
+
+  .site-footer-bottom {
+    margin-top: 1.91vw;
+    padding-top: 1.324vw;
+  }
+
+  .site-footer-bottom p {
+    font-size: 1.153vw;
+  }
+}
+
 @media (max-width: 900px) {
   .site-footer-grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 
-  .site-footer-brand p,
   .site-footer-brand p {
     max-width: none;
   }
