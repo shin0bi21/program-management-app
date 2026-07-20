@@ -1,7 +1,7 @@
 export type UserRole = string;
 export type Permission =
-  | 'read:staff'
-  | 'write:staff'
+  | 'read:accounts'
+  | 'write:accounts'
   | 'read:youth_profiles'
   | 'write:youth_profiles'
   | 'read:schools'
@@ -30,5 +30,4 @@ export interface RefreshTokenPayload extends BaseTokenPayload {
   iat: number;
   exp: number;
 }
-
 

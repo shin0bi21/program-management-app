@@ -18,7 +18,9 @@ type YouthRow =
 // QUERIES
 // ============================================================================
 
-export async function getYouth(id?: string) {
+export function getYouth(id: string): Promise<YouthRow | null>;
+export function getYouth(id?: undefined): Promise<YouthRow[]>;
+export async function getYouth(id?: string): Promise<YouthRow[] | YouthRow | null> {
   const youth = await sql<YouthRow[]>`
     SELECT
       u.id,
@@ -80,6 +82,7 @@ export interface SetYouthInput {
   id?: string;
   firstName: string;
   lastName: string;
+  email?: string;
   status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
@@ -210,7 +213,9 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
     return persistedUserId;
   });
 
-  return getYouth(userId);
+  const savedYouth = await getYouth(userId);
+  if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
+  return savedYouth;
 }
 
 export async function toggleYouthStatus(youthId: string, actorId: string) {

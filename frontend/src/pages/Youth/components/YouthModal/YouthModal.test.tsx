@@ -62,6 +62,12 @@ describe('YouthModal', () => {
       expect(screen.getByDisplayValue('Smith')).toBeInTheDocument();
     });
 
+    it('shows an existing account email as read-only', () => {
+      renderModal({ youthData: makeYouthProfile({ account: { email: 'youth@example.com', status: 'active' } }) });
+      expect(screen.getByLabelText('Login Email')).toHaveValue('youth@example.com');
+      expect(screen.getByLabelText('Login Email')).toBeDisabled();
+    });
+
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
       expect(screen.queryByText('Sign Up Form')).not.toBeInTheDocument();
@@ -98,6 +104,16 @@ describe('YouthModal', () => {
           lastName: 'Test',
           status: 'active',
         }));
+      });
+    });
+
+    it('includes login email when inviting during youth creation', async () => {
+      renderModal();
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText('Login Email'), { target: { value: 'new-youth@example.com' } });
+      submitForm();
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ email: 'new-youth@example.com' }));
       });
     });
 

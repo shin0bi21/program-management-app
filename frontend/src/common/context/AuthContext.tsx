@@ -6,8 +6,8 @@ import { logout as logoutRequest } from '../api/auth.api';
 
 export type UserRole = string;
 export type Permission =
-  | 'read:staff'
-  | 'write:staff'
+  | 'read:accounts'
+  | 'write:accounts'
   | 'read:youth_profiles'
   | 'write:youth_profiles'
   | 'read:schools'

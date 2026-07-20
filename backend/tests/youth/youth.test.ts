@@ -124,6 +124,18 @@ describe('Youth API', () => {
       createdIds.push(res.body.id);
     });
 
+    it('should create and invite a youth account when email is provided', async () => {
+      const email = `new-youth-account-${Date.now()}@test.local`;
+      const res = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, firstName: 'Invited', email });
+
+      expect(res.status).toBe(201);
+      expect(res.body.account).toEqual({ email, status: 'invited' });
+      createdIds.push(res.body.id);
+    });
+
     it('should create youth with addresses (201)', async () => {
       const res = await request(app)
         .post('/api/youth')
@@ -207,6 +219,14 @@ describe('Youth API', () => {
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ ...baseYouth, dateOfBirth: '15-06-2012' });
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject an invalid login email (400)', async () => {
+      const res = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, email: 'not-an-email' });
       expect(res.status).toBe(400);
     });
 

@@ -15,7 +15,7 @@ export default function Header() {
   const canViewYouth = permissions.includes('read:youth_profiles');
   const canViewSchools = permissions.includes('read:schools');
   const canViewCohortInterest = permissions.includes('read:settings');
-  const canManageStaff = permissions.includes('read:staff');
+  const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -152,13 +152,13 @@ export default function Header() {
               Cohort Interest
             </button>
           )}
-          {canManageStaff && (
+          {canManageAccounts && (
             <button
               role="menuitem"
-              onClick={() => go('/settings/staff')}
-              className={`settings-flyout-item${isActive('/settings/staff') ? ' active' : ''}`}
+              onClick={() => go('/settings/accounts')}
+              className={`settings-flyout-item${isActive('/settings/accounts') ? ' active' : ''}`}
             >
-              Manage Staff
+              Manage Accounts
             </button>
           )}
         </FloatingMenuPanel>
