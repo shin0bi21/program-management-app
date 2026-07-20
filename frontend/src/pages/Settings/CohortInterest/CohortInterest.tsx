@@ -5,16 +5,11 @@ import Header from '../../../common/components/Header/Header';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
+import { formatShortDate } from '../../../common/utils/date';
 import { updateCohortInterestStatus } from './api/cohortInterest.api';
 import { useCohortInterest } from './hooks/useCohortInterest';
 import type { CohortInterestSubmission } from './types';
 import './CohortInterest.css';
-
-const submittedAtFormatter = new Intl.DateTimeFormat('en-CA', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-});
 
 export default function CohortInterest() {
   const { submissions, loading, error } = useCohortInterest();
@@ -60,7 +55,7 @@ export default function CohortInterest() {
   const columns: TableColumn<CohortInterestSubmission>[] = [
     { key: 'youthName', header: 'Youth Name', render: item => item.youthName },
     { key: 'age', header: 'Age', width: '70px', render: item => item.age },
-    { key: 'submittedAt', header: 'Date', width: '130px', render: item => submittedAtFormatter.format(new Date(item.createdAt)) },
+    { key: 'submittedAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
     {
       key: 'note',
       header: 'Note',

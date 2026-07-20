@@ -9,16 +9,11 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { revokeAccountInvite, toggleAccountStatus } from '../../../common/api/accounts.api';
 import type { Account, AccountRole, AccountStatus } from '../../../common/types/account';
+import { formatShortDate } from '../../../common/utils/date';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
 import AccountModal from './components/AccountModal/AccountModal';
 import { useAccounts } from './hooks/useAccounts';
 import './ManageAccounts.css';
-
-const createdDateFormatter = new Intl.DateTimeFormat('en-CA', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-});
 
 function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -108,7 +103,7 @@ export default function ManageAccounts() {
         key: 'createdAt',
         header: 'Created',
         width: '150px',
-        render: account => createdDateFormatter.format(new Date(account.createdAt)),
+        render: account => formatShortDate(account.createdAt),
       },
     ];
 
