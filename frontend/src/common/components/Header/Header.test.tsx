@@ -59,6 +59,8 @@ describe('Header youth navigation', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Outreach' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Public Interest' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Leads' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Cohort Interest' })).not.toBeInTheDocument();
   });
 });

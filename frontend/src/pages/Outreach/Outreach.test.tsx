@@ -8,7 +8,7 @@ vi.mock('../../common/components/Header/Header', () => ({
 }));
 
 describe('Outreach', () => {
-  it('provides route-backed tabs and renders the selected view', () => {
+  it('renders the selected route without duplicating sidebar navigation', () => {
     render(
       <MemoryRouter initialEntries={['/outreach/submissions']}>
         <Routes>
@@ -21,9 +21,7 @@ describe('Outreach', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Outreach' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Public Interest' })).toHaveAttribute('href', '/outreach/submissions');
-    expect(screen.getByRole('link', { name: 'Public Interest' })).toHaveClass('active');
-    expect(screen.getByRole('link', { name: 'Leads' })).toHaveAttribute('href', '/outreach/leads');
+    expect(screen.queryByRole('navigation', { name: 'Outreach views' })).not.toBeInTheDocument();
     expect(screen.getByText('Submission view')).toBeInTheDocument();
   });
 });

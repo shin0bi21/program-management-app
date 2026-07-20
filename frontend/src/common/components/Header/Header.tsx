@@ -17,16 +17,28 @@ export default function Header() {
   const canViewOutreach = permissions.includes('read:outreach');
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const outreachBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
   const {
-    isOpen: isFlyoutOpen,
-    toggle: toggleFlyout,
-    close: closeFlyout,
-    position: flyoutPosition,
-    menuRef: flyoutRef,
+    isOpen: isSettingsFlyoutOpen,
+    toggle: toggleSettingsFlyout,
+    close: closeSettingsFlyout,
+    position: settingsFlyoutPosition,
+    menuRef: settingsFlyoutRef,
   } = useFloatingMenu(
     settingsBtnRef,
+    { side: 'right', align: 'start' },
+    { widthEstimate: 160, heightEstimate: 120 },
+  );
+  const {
+    isOpen: isOutreachFlyoutOpen,
+    toggle: toggleOutreachFlyout,
+    close: closeOutreachFlyout,
+    position: outreachFlyoutPosition,
+    menuRef: outreachFlyoutRef,
+  } = useFloatingMenu(
+    outreachBtnRef,
     { side: 'right', align: 'start' },
     { widthEstimate: 160, heightEstimate: 120 },
   );
@@ -38,11 +50,25 @@ export default function Header() {
   const go = (path: string) => {
     navigate(path);
     setMobileOpen(false);
-    closeFlyout();
+    closeOutreachFlyout();
+    closeSettingsFlyout();
   };
 
-  // Close flyout on route change
-  useEffect(() => { closeFlyout(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handleOutreachToggle = () => {
+    closeSettingsFlyout();
+    toggleOutreachFlyout();
+  };
+
+  const handleSettingsToggle = () => {
+    closeOutreachFlyout();
+    toggleSettingsFlyout();
+  };
+
+  // Close flyouts on route change
+  useEffect(() => {
+    closeOutreachFlyout();
+    closeSettingsFlyout();
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -74,7 +100,7 @@ export default function Header() {
               {canViewHome && (
                 <button
                   onClick={() => go('/')}
-                  className={`sidebar-link${isActive('/') && !isFlyoutOpen ? ' active' : ''}`}
+                  className={`sidebar-link${isActive('/') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
                   <span>Home</span>
@@ -84,7 +110,7 @@ export default function Header() {
               {canViewYouth && (
                 <button
                   onClick={() => go('/youth')}
-                  className={`sidebar-link${isActive('/youth') && !isFlyoutOpen ? ' active' : ''}`}
+                  className={`sidebar-link${isActive('/youth') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                   <span>Youth</span>
@@ -94,7 +120,7 @@ export default function Header() {
               {canViewSchools && (
                 <button
                   onClick={() => go('/schools')}
-                  className={`sidebar-link${isActive('/schools') && !isFlyoutOpen ? ' active' : ''}`}
+                  className={`sidebar-link${isActive('/schools') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
                   <span>Schools</span>
@@ -103,8 +129,11 @@ export default function Header() {
 
               {canViewOutreach && (
                 <button
-                  onClick={() => go('/outreach/submissions')}
-                  className={`sidebar-link${isOutreachActive && !isFlyoutOpen ? ' active' : ''}`}
+                  ref={outreachBtnRef}
+                  onClick={handleOutreachToggle}
+                  aria-haspopup="menu"
+                  aria-expanded={isOutreachFlyoutOpen}
+                  className={`sidebar-link${isOutreachActive || isOutreachFlyoutOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBullhorn} /></span>
                   <span>Outreach</span>
@@ -113,10 +142,10 @@ export default function Header() {
 
               <button
                 ref={settingsBtnRef}
-                onClick={toggleFlyout}
+                onClick={handleSettingsToggle}
                 aria-haspopup="menu"
-                aria-expanded={isFlyoutOpen}
-                className={`sidebar-link${isSettingsActive || isFlyoutOpen ? ' active' : ''}`}
+                aria-expanded={isSettingsFlyoutOpen}
+                className={`sidebar-link${isSettingsActive || isSettingsFlyoutOpen ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon"><FontAwesomeIcon icon={faGear} /></span>
                 <span className="sidebar-link-label">Settings</span>
@@ -139,12 +168,36 @@ export default function Header() {
         </div>
       </aside>
 
-      {/* Settings flyout — portalled via FloatingMenuPanel */}
-      {flyoutPosition && (
+      {canViewOutreach && outreachFlyoutPosition && (
         <FloatingMenuPanel
-          menuRef={flyoutRef}
-          position={flyoutPosition}
-          onClose={closeFlyout}
+          menuRef={outreachFlyoutRef}
+          position={outreachFlyoutPosition}
+          onClose={closeOutreachFlyout}
+          className="settings-flyout"
+        >
+          <button
+            role="menuitem"
+            onClick={() => go('/outreach/submissions')}
+            className={`settings-flyout-item${isActive('/outreach/submissions') ? ' active' : ''}`}
+          >
+            Public Interest
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => go('/outreach/leads')}
+            className={`settings-flyout-item${isActive('/outreach/leads') ? ' active' : ''}`}
+          >
+            Leads
+          </button>
+        </FloatingMenuPanel>
+      )}
+
+      {/* Settings flyout — portalled via FloatingMenuPanel */}
+      {settingsFlyoutPosition && (
+        <FloatingMenuPanel
+          menuRef={settingsFlyoutRef}
+          position={settingsFlyoutPosition}
+          onClose={closeSettingsFlyout}
           className="settings-flyout"
         >
           <button
