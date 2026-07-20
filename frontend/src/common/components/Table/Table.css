@@ -44,8 +44,7 @@
 
 /* Loading, error, empty states */
 .table-loading,
-.table-error,
-.table-empty-cell {
+.table-error {
   padding: 3rem 2rem;
   text-align: center;
   color: var(--color-muted);
@@ -57,7 +56,10 @@
 }
 
 .table td.table-empty-cell {
-  padding: 3rem 2rem;
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 1rem;
 }
 
 .table-error {
