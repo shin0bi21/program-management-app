@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool, faBullhorn } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
@@ -14,7 +14,7 @@ export default function Header() {
   const canViewHome = role !== 'youth';
   const canViewYouth = permissions.includes('read:youth_profiles');
   const canViewSchools = permissions.includes('read:schools');
-  const canViewCohortInterest = permissions.includes('read:settings');
+  const canViewOutreach = permissions.includes('read:outreach');
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -33,6 +33,7 @@ export default function Header() {
 
   const isActive = (path: string) => location.pathname === path;
   const isSettingsActive = location.pathname.startsWith('/settings');
+  const isOutreachActive = location.pathname.startsWith('/outreach');
 
   const go = (path: string) => {
     navigate(path);
@@ -100,6 +101,16 @@ export default function Header() {
                 </button>
               )}
 
+              {canViewOutreach && (
+                <button
+                  onClick={() => go('/outreach/submissions')}
+                  className={`sidebar-link${isOutreachActive && !isFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBullhorn} /></span>
+                  <span>Outreach</span>
+                </button>
+              )}
+
               <button
                 ref={settingsBtnRef}
                 onClick={toggleFlyout}
@@ -143,15 +154,6 @@ export default function Header() {
           >
             My Account
           </button>
-          {canViewCohortInterest && (
-            <button
-              role="menuitem"
-              onClick={() => go('/settings/cohort-interest')}
-              className={`settings-flyout-item${isActive('/settings/cohort-interest') ? ' active' : ''}`}
-            >
-              Cohort Interest
-            </button>
-          )}
           {canManageAccounts && (
             <button
               role="menuitem"

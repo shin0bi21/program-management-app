@@ -1,25 +1,33 @@
 import { Router } from 'express';
-import { handleGetCohortInterestSubmissions, handleUpdateCohortInterestStatus } from '../controllers/cohortInterestController';
+import { handleConvertCohortInterestSubmission, handleGetCohortInterestSubmissions, handleUpdateCohortInterestStatus } from '../controllers/cohortInterestController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { updateCohortInterestStatusSchema } from '../validation/cohortInterestSchemas';
+import { cohortInterestIdSchema, updateCohortInterestStatusSchema } from '../validation/cohortInterestSchemas';
 
 const router = Router();
 
 router.get('/',
   authenticateToken,
-  requirePermission('read:settings'),
+  requirePermission('read:outreach'),
   generalLimiter,
   asyncHandler(handleGetCohortInterestSubmissions),
 );
 
 router.patch('/:id',
   authenticateToken,
-  requirePermission('write:settings'),
+  requirePermission('write:outreach'),
   generalLimiter,
   validateRequest(updateCohortInterestStatusSchema),
   asyncHandler(handleUpdateCohortInterestStatus),
+);
+
+router.post('/:id/convert',
+  authenticateToken,
+  requirePermission('write:outreach'),
+  generalLimiter,
+  validateRequest(cohortInterestIdSchema),
+  asyncHandler(handleConvertCohortInterestSubmission),
 );
 
 export default router;

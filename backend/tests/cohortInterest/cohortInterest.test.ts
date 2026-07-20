@@ -16,8 +16,12 @@ describe('Cohort interest API', () => {
 
     await sql`
       INSERT INTO cohort_interest_submissions (
-        youth_name,
-        parent_name,
+        youth_first_name,
+        youth_last_name,
+        contact_first_name,
+        contact_last_name,
+        contact_phone_number,
+        contact_relationship,
         age,
         school,
         email,
@@ -26,8 +30,12 @@ describe('Cohort interest API', () => {
         message
       )
       VALUES (
-        ${`Dashboard Youth ${Date.now()}`},
-        ${'Parent Viewer'},
+        ${'Dashboard'},
+        ${`Youth-${Date.now()}`},
+        ${'Parent'},
+        ${'Viewer'},
+        ${'416-555-0188'},
+        ${'parent'},
         ${15},
         ${'Test School'},
         ${'viewer@test.local'},
@@ -39,6 +47,12 @@ describe('Cohort interest API', () => {
   });
 
   afterAll(async () => {
+    await sql`
+      DELETE FROM leads
+      WHERE interest_submission_id IN (
+        SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local'
+      )
+    `;
     await sql`DELETE FROM cohort_interest_submissions WHERE email = 'viewer@test.local'`;
     await deleteTestUser(adminUserId);
   });
@@ -51,7 +65,9 @@ describe('Cohort interest API', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0]).toEqual(expect.objectContaining({
-      youthName: expect.any(String),
+      youthFirstName: expect.any(String),
+      youthLastName: expect.any(String),
+      contactFirstName: 'Parent',
       age: expect.any(Number),
       status: expect.any(String),
       statusUpdatedAt: expect.any(String),
@@ -107,6 +123,20 @@ describe('Cohort interest API', () => {
     expect(updated.statusUpdatedAt).toBeTruthy();
   });
 
+  it('supports the reviewed status', async () => {
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+    `;
+
+    const res = await request(app)
+      .patch(`/api/cohort-interest/${submission.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'reviewed' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('reviewed');
+  });
+
   it('updates submission status for staff', async () => {
     const staff = await seedTestUser({ email: `cohort-staff-write-${Date.now()}@test.local`, role: 'staff' });
     const staffToken = generateToken(staff.userId, 'staff', staff.email);
@@ -127,5 +157,46 @@ describe('Cohort interest API', () => {
     expect(res.body.status).toBe('contacted');
 
     await deleteTestUser(staff.userId);
+  });
+
+  it('atomically converts a submission into a lead with normalized data', async () => {
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+    `;
+
+    const res = await request(app)
+      .post(`/api/cohort-interest/${submission.id}/convert`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(expect.objectContaining({
+      origin: 'interest_submission',
+      interestSubmissionId: submission.id,
+      youthFirstName: 'Dashboard',
+      contactFirstName: 'Parent',
+      responseEmail: 'viewer@test.local',
+      discoverySource: 'online',
+      notes: 'Needs follow-up',
+      status: 'new',
+      createdBy: adminUserId,
+    }));
+
+    const [updatedSubmission] = await sql<{ status: string }[]>`
+      SELECT status FROM cohort_interest_submissions WHERE id = ${submission.id}
+    `;
+    expect(updatedSubmission.status).toBe('converted');
+  });
+
+  it('rejects converting the same submission twice', async () => {
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+    `;
+
+    const res = await request(app)
+      .post(`/api/cohort-interest/${submission.id}/convert`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('This interest submission has already been converted');
   });
 });

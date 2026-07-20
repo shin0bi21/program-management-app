@@ -12,6 +12,8 @@ export type Permission =
   | 'write:youth_profiles'
   | 'read:schools'
   | 'write:schools'
+  | 'read:outreach'
+  | 'write:outreach'
   | 'read:settings'
   | 'write:settings';
 

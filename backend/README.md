@@ -145,7 +145,10 @@ backend/
     ├── auth/           # 44 tests
     ├── accounts/       # Account API and RBAC tests
     ├── youth/          # 25 tests
-    └── schools/        # 28 tests
+    ├── schools/        # 28 tests
+    ├── cohortInterest/ # Outreach submission tests
+    ├── leads/          # Lead workflow tests
+    └── public/         # Public intake tests
 ```
 
 For middleware order, route patterns, error throwing, and "adding a new domain" see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
@@ -204,7 +207,7 @@ Unauthenticated homepage intake endpoints.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/cohort-interest` | Store a cohort signup submission. Requires `youthName`, `age`, and at least one of `email` or `phoneNumber`. |
+| `POST` | `/cohort-interest` | Store a normalized public interest submission with youth, school/source, contact, and response details. |
 
 ### Cohort Interest — `/api/cohort-interest`
 
@@ -212,7 +215,19 @@ Protected. Intended for internal review of homepage signup submissions.
 
 | Method | Path | Description | Permission |
 |--------|------|-------------|------------|
-| `GET` | `/` | List cohort interest submissions newest first | `read:settings` |
+| `GET` | `/` | List interest submissions newest first | `read:outreach` |
+| `PATCH` | `/:id` | Update submission review status | `write:outreach` |
+| `POST` | `/:id/convert` | Convert one submission into one lead | `write:outreach` |
+
+### Leads — `/api/leads`
+
+Protected Outreach endpoints for staff-originated and converted leads.
+
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List leads newest first | `read:outreach` |
+| `POST` | `/` | Create a staff-originated lead | `write:outreach` |
+| `PATCH` | `/:id/status` | Update lead follow-up status | `write:outreach` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 
@@ -246,7 +261,7 @@ From the project root (`my-webapp/`):
 bash scripts/backend/test-apis.sh
 
 # This boots the backend test environment once, then composes the
-# auth, accounts, youth, and schools runners.
+# auth, accounts, youth, schools, and outreach runners.
 
 # Full-stack suite (backend API + frontend UI)
 bash scripts/test-full-stack.sh
@@ -256,6 +271,7 @@ bash scripts/backend/run-auth-tests.sh    # 44 tests
 bash scripts/backend/run-accounts-tests.sh
 bash scripts/backend/run-youth-tests.sh   # 25 tests
 bash scripts/backend/run-schools-tests.sh  # 28 tests
+bash scripts/backend/run-outreach-tests.sh
 
 # Or directly
 docker compose exec backend npm run test:auth
@@ -281,6 +297,9 @@ The helper scripts detect already-running containers and **will not tear them do
 | `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
 | `tests/schools/schools.test.ts` | Schools CRUD, permission checks, validation |
 | `tests/schools/helpers.ts` | Token generation, `deleteTestSchool` cleanup |
+| `tests/public/public.test.ts` | Public interest intake and validation |
+| `tests/cohortInterest/cohortInterest.test.ts` | Submission review and conversion |
+| `tests/leads/leads.test.ts` | Lead creation, lifecycle, and permissions |
 
 ### Jest + Node16 Module Resolution
 

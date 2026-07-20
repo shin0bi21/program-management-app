@@ -29,6 +29,10 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export type LeadOrigin = "interest_submission" | "staff_created";
+
+export type LeadStatus = "contacted" | "ineligible" | "lost" | "new" | "qualified" | "signed_up";
+
 export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -80,20 +84,24 @@ export interface BaseTable {
 
 export interface CohortInterestSubmissions {
   age: number;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  contact_phone_number: string | null;
+  contact_relationship: ContactType | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  discovery_source: DiscoverySource | null;
+  discovery_source: DiscoverySource;
   email: string | null;
   id: Generated<string>;
   message: string | null;
-  parent_name: string | null;
   phone_number: string | null;
-  school: string | null;
+  school: string;
   status: Generated<string>;
   status_updated_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
-  youth_name: string;
+  youth_first_name: string;
+  youth_last_name: string;
 }
 
 export interface Contacts {
@@ -106,6 +114,30 @@ export interface Contacts {
   type: Generated<ContactType>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface Leads {
+  age: number;
+  contact_first_name: string;
+  contact_last_name: string;
+  contact_phone_number: string;
+  contact_relationship: ContactType;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  discovery_source: DiscoverySource;
+  id: Generated<string>;
+  interest_submission_id: string | null;
+  notes: string | null;
+  origin: LeadOrigin;
+  response_email: string | null;
+  response_phone_number: string | null;
+  school: string;
+  status: Generated<LeadStatus>;
+  status_updated_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  youth_first_name: string;
+  youth_last_name: string;
 }
 
 export interface SchemaMigrations {
@@ -289,6 +321,7 @@ export interface DB {
   base_table: BaseTable;
   cohort_interest_submissions: CohortInterestSubmissions;
   contacts: Contacts;
+  leads: Leads;
   schema_migrations: SchemaMigrations;
   schools: Schools;
   system_revoked_tokens: SystemRevokedTokens;

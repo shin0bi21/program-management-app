@@ -5,13 +5,21 @@ const optionalTrimmedString = (max: number, tooLongMessage: string) =>
 
 export const cohortInterestSchema = z.object({
   body: z.object({
-    youthName: z.string().trim().min(1, 'Youth name is required').max(160, 'Youth name is too long'),
-    parentName: optionalTrimmedString(160, 'Parent name is too long'),
+    youthFirstName: z.string().trim().min(1, 'Youth first name is required').max(80, 'Youth first name is too long'),
+    youthLastName: z.string().trim().min(1, 'Youth last name is required').max(80, 'Youth last name is too long'),
     age: z.coerce.number().int('Age must be a whole number').min(1, 'Age is required').max(120, 'Age must be realistic'),
-    school: optionalTrimmedString(160, 'School is too long'),
+    school: z.string().trim().min(1, 'School is required').max(160, 'School is too long'),
     email: z.string().trim().email('Invalid email address').optional().or(z.literal('')),
     phoneNumber: optionalTrimmedString(30, 'Phone number is too long'),
-    discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other']).optional().or(z.literal('')),
+    discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], {
+      error: 'Discovery source is required',
+    }),
+    contactFirstName: z.string().trim().min(1, 'Contact first name is required').max(80, 'Contact first name is too long'),
+    contactLastName: z.string().trim().min(1, 'Contact last name is required').max(80, 'Contact last name is too long'),
+    contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(30, 'Contact phone number is too long'),
+    contactRelationship: z.enum(['parent', 'sibling', 'guardian', 'emergency'], {
+      error: 'Contact relationship is required',
+    }),
     message: optionalTrimmedString(1000, 'Message must be 1000 characters or fewer'),
   }).superRefine((data, ctx) => {
     const hasEmail = Boolean(data.email?.trim());
