@@ -38,6 +38,6 @@ describe('Header youth navigation', () => {
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Cohort Interest' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Staff' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
   });
 });

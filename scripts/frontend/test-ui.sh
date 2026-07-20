@@ -12,7 +12,6 @@ bash scripts/frontend/run-common-tests.sh
 bash scripts/frontend/run-homepage-tests.sh
 bash scripts/frontend/run-schools-tests.sh
 bash scripts/frontend/run-settings-tests.sh
-bash scripts/frontend/run-staff-tests.sh
 bash scripts/frontend/run-youth-tests.sh
 
 echo ""

@@ -74,6 +74,16 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
           </FormField>
         </div>
 
+        <FormField id="email" label="Login Email" error={errors.email?.message}>
+          <input
+            id="email"
+            type="email"
+            placeholder="youth@example.com (optional)"
+            disabled={!!youthData?.account}
+            {...register('email')}
+          />
+        </FormField>
+
         <FormField id="school" label="School">
           <select id="school" {...register('schoolId')}>
             <option value="">Select a school</option>

@@ -5,7 +5,7 @@ import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
-import Staff from './pages/Staff/Staff'
+import ManageAccounts from './pages/Settings/ManageAccounts/ManageAccounts'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
 import CohortInterest from './pages/Settings/CohortInterest/CohortInterest'
@@ -52,9 +52,9 @@ function App() {
               <CohortInterest />
             </ProtectedRoute>
           } />
-          <Route path="/settings/staff" element={
-            <ProtectedRoute requiredPermission="read:staff">
-              <Staff />
+          <Route path="/settings/accounts" element={
+            <ProtectedRoute requiredPermission="read:accounts">
+              <ManageAccounts />
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />

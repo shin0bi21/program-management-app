@@ -6,7 +6,7 @@ import type { SeededUser } from '../shared/db';
 
 const app = createApp();
 
-describe('Staff API', () => {
+describe('Accounts API', () => {
   let adminUser: SeededUser;
   let adminToken: string;
 
@@ -20,32 +20,141 @@ describe('Staff API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // GET /api/staff
+  // GET /api/accounts
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('GET /api/staff', () => {
+  describe('GET /api/accounts', () => {
     it('should require authentication', async () => {
-      const res = await request(app).get('/api/staff');
+      const res = await request(app).get('/api/accounts');
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/token/i);
     });
 
-    it('should return staff list with valid admin token', async () => {
+    it('should return all accounts with a valid admin token', async () => {
       const res = await request(app)
-        .get('/api/staff')
+        .get('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     }, 30000);
 
-    it('should reject staff access (403)', async () => {
+    it('should filter accounts by search, role, and status', async () => {
+      const filteredUser = await seedTestUser({
+        email: `account-filter-${Date.now()}@test.local`,
+        role: 'staff',
+      });
+
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ search: filteredUser.email, roles: 'staff', statuses: 'active' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({ id: filteredUser.userId, role: 'staff', status: 'active' });
+
+      await deleteTestUser(filteredUser.userId);
+    });
+
+    it('should support multiple role selections', async () => {
+      const staffUser = await seedTestUser({ email: `multi-role-${Date.now()}@test.local`, role: 'staff' });
+
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ roles: 'admin,staff' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.some((account: { id: string }) => account.id === adminUser.userId)).toBe(true);
+      expect(res.body.some((account: { id: string }) => account.id === staffUser.userId)).toBe(true);
+      expect(res.body.every((account: { role: string }) => ['admin', 'staff'].includes(account.role))).toBe(true);
+
+      await deleteTestUser(staffUser.userId);
+    });
+
+    it('should filter by status independently', async () => {
+      const inactiveUser = await seedTestUser({ email: `inactive-filter-${Date.now()}@test.local`, role: 'staff' });
+      await sql`UPDATE user_credentials SET status = 'inactive' WHERE user_id = ${inactiveUser.userId}`;
+
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ statuses: 'inactive' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.some((account: { id: string }) => account.id === inactiveUser.userId)).toBe(true);
+      expect(res.body.every((account: { status: string }) => account.status === 'inactive')).toBe(true);
+
+      await deleteTestUser(inactiveUser.userId);
+    });
+
+    it('should search partial names case-insensitively', async () => {
+      const suffix = Date.now().toString().slice(-6);
+      const namedUser = await seedTestUser({
+        email: `partial-name-${suffix}@test.local`,
+        firstName: `Quartz${suffix}`,
+        lastName: 'Searchable',
+        role: 'staff',
+      });
+
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ search: `quartz${suffix.slice(0, 3)}` })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.map((account: { id: string }) => account.id)).toContain(namedUser.userId);
+
+      await deleteTestUser(namedUser.userId);
+    });
+
+    it('should reject invalid account filter values', async () => {
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ statuses: 'deleted' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/validation/i);
+    });
+
+    it('should reject invalid role filters', async () => {
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ roles: 'owner' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/validation/i);
+    });
+
+    it('should return only youth accounts to staff', async () => {
       const staffUser = await seedTestUser({ email: `user-staff-${Date.now()}@test.local`, role: 'staff' });
+      const youthUser = await seedTestUser({ email: `scoped-youth-${Date.now()}@test.local`, role: 'youth' });
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .get('/api/staff')
+        .get('/api/accounts')
         .set('Authorization', `Bearer ${staffToken}`);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      expect(res.body.some((account: { id: string }) => account.id === youthUser.userId)).toBe(true);
+      expect(res.body.every((account: { role: string }) => account.role === 'youth')).toBe(true);
+
+      await deleteTestUser(staffUser.userId);
+      await deleteTestUser(youthUser.userId);
+    });
+
+    it('should never let a requested role broaden the staff account scope', async () => {
+      const staffUser = await seedTestUser({ email: `scoped-staff-${Date.now()}@test.local`, role: 'staff' });
+      const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
+
+      const res = await request(app)
+        .get('/api/accounts')
+        .query({ roles: 'admin,staff' })
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
 
       await deleteTestUser(staffUser.userId);
     });
@@ -55,7 +164,7 @@ describe('Staff API', () => {
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
-        .get('/api/staff')
+        .get('/api/accounts')
         .set('Authorization', `Bearer ${youthToken}`);
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/permission/i);
@@ -67,7 +176,7 @@ describe('Staff API', () => {
       const expiredToken = generateExpiredToken(adminUser.userId);
 
       const res = await request(app)
-        .get('/api/staff')
+        .get('/api/accounts')
         .set('Authorization', `Bearer ${expiredToken}`);
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/expired/i);
@@ -75,10 +184,10 @@ describe('Staff API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // POST /api/staff
+  // POST /api/accounts
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('POST /api/staff', () => {
+  describe('POST /api/accounts', () => {
     const createdUserIds: string[] = [];
 
     afterAll(async () => {
@@ -89,7 +198,7 @@ describe('Staff API', () => {
 
     it('should require authentication', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .send({ firstName: 'A', lastName: 'B', email: 'a@b.com', password: 'password123' });
       expect(res.status).toBe(401);
     });
@@ -97,7 +206,7 @@ describe('Staff API', () => {
     it('should create staff user with valid data (admin)', async () => {
       const uniqueEmail = `create-${Date.now()}@test.local`;
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           firstName: 'Created',
@@ -116,7 +225,7 @@ describe('Staff API', () => {
 
     it('should reject missing firstName', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ lastName: 'User', email: 'x@x.com', password: 'password123' });
       expect(res.status).toBe(400);
@@ -124,7 +233,7 @@ describe('Staff API', () => {
 
     it('should reject missing lastName', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', email: 'x@x.com', password: 'password123' });
       expect(res.status).toBe(400);
@@ -132,7 +241,7 @@ describe('Staff API', () => {
 
     it('should reject invalid email', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User', email: 'not-email', password: 'password123' });
       expect(res.status).toBe(400);
@@ -140,7 +249,7 @@ describe('Staff API', () => {
 
     it('should reject invalid role', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', role: 'youth' });
       expect(res.status).toBe(400);
@@ -151,7 +260,7 @@ describe('Staff API', () => {
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${staffToken}`)
         .send({
           firstName: 'Blocked',
@@ -171,7 +280,7 @@ describe('Staff API', () => {
       const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
 
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${youthToken}`)
         .send({
           firstName: 'Blocked',
@@ -188,14 +297,14 @@ describe('Staff API', () => {
     it('should reject duplicate email', async () => {
       const dupeEmail = `dupe-${Date.now()}@test.local`;
       const firstRes = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123', role: 'staff', active: true });
       expect(firstRes.status).toBe(201);
       createdUserIds.push(firstRes.body.id);
 
       const dupeRes = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Second', lastName: 'User', email: dupeEmail, password: 'password123', active: true });
       expect(dupeRes.status).toBe(409);
@@ -205,7 +314,7 @@ describe('Staff API', () => {
       const expiredToken = generateExpiredToken(adminUser.userId);
 
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${expiredToken}`)
         .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'password123', active: true });
       expect(res.status).toBe(401);
@@ -213,10 +322,10 @@ describe('Staff API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // POST /api/staff (UPDATE)
+  // POST /api/accounts (UPDATE)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('POST /api/staff (UPDATE)', () => {
+  describe('POST /api/accounts (UPDATE)', () => {
     let testStaffUser: SeededUser;
     let testStaffId: string;
 
@@ -224,7 +333,7 @@ describe('Staff API', () => {
       // Create a staff user to update
       const uniqueEmail = `update-staff-${Date.now()}@test.local`;
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           firstName: 'Original',
@@ -241,7 +350,7 @@ describe('Staff API', () => {
 
     it('should update staff user with valid data', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           id: testStaffId,
@@ -259,7 +368,7 @@ describe('Staff API', () => {
 
     it('should reject update with invalid staff id', async () => {
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           id: '00000000-0000-0000-0000-000000000000',
@@ -276,7 +385,7 @@ describe('Staff API', () => {
       // Create another staff user
       const otherEmail = `other-${Date.now()}@test.local`;
       const otherRes = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           firstName: 'Other',
@@ -287,7 +396,7 @@ describe('Staff API', () => {
 
       // Try to update first user with the other's email
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           id: testStaffId,
@@ -308,7 +417,7 @@ describe('Staff API', () => {
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${staffToken}`)
         .send({
           id: testStaffId,
@@ -325,19 +434,19 @@ describe('Staff API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // DELETE /api/staff/:id  (revoke pending invite — hard delete)
+  // DELETE /api/accounts/:id  (revoke pending invite — hard delete)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('DELETE /api/staff/:id', () => {
+  describe('DELETE /api/accounts/:id', () => {
     it('should require authentication', async () => {
-      const res = await request(app).delete('/api/staff/00000000-0000-0000-0000-000000000000');
+      const res = await request(app).delete('/api/accounts/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(401);
     });
 
     it('should hard-delete a pending-invite staff user', async () => {
       const uniqueEmail = `delete-${Date.now()}@test.local`;
       const createRes = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Delete', lastName: 'Me', email: uniqueEmail, role: 'staff' });
 
@@ -345,7 +454,7 @@ describe('Staff API', () => {
       const staffId = createRes.body.id;
 
       const deleteRes = await request(app)
-        .delete(`/api/staff/${staffId}`)
+        .delete(`/api/accounts/${staffId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(deleteRes.status).toBe(200);
@@ -360,7 +469,7 @@ describe('Staff API', () => {
       const activeUser = await seedTestUser({ email: `active-delete-${Date.now()}@test.local`, role: 'staff' });
 
       const res = await request(app)
-        .delete(`/api/staff/${activeUser.userId}`)
+        .delete(`/api/accounts/${activeUser.userId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(400);
@@ -371,7 +480,7 @@ describe('Staff API', () => {
 
     it('should reject delete with invalid id', async () => {
       const res = await request(app)
-        .delete('/api/staff/00000000-0000-0000-0000-000000000000')
+        .delete('/api/accounts/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(404);
@@ -382,7 +491,7 @@ describe('Staff API', () => {
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .delete(`/api/staff/${staffUser.userId}`)
+        .delete(`/api/accounts/${staffUser.userId}`)
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(res.status).toBe(403);
@@ -392,12 +501,12 @@ describe('Staff API', () => {
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PATCH /api/staff/:id  (toggle active for real accounts)
+  // PATCH /api/accounts/:id  (toggle active for real accounts)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  describe('PATCH /api/staff/:id', () => {
+  describe('PATCH /api/accounts/:id', () => {
     it('should require authentication', async () => {
-      const res = await request(app).patch('/api/staff/00000000-0000-0000-0000-000000000000');
+      const res = await request(app).patch('/api/accounts/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(401);
     });
 
@@ -405,7 +514,7 @@ describe('Staff API', () => {
       const activeUser = await seedTestUser({ email: `toggle-${Date.now()}@test.local`, role: 'staff' });
 
       const res = await request(app)
-        .patch(`/api/staff/${activeUser.userId}`)
+        .patch(`/api/accounts/${activeUser.userId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
@@ -420,12 +529,12 @@ describe('Staff API', () => {
 
       // First deactivate
       await request(app)
-        .patch(`/api/staff/${activeUser.userId}`)
+        .patch(`/api/accounts/${activeUser.userId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // Then reactivate
       const res = await request(app)
-        .patch(`/api/staff/${activeUser.userId}`)
+        .patch(`/api/accounts/${activeUser.userId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
@@ -437,14 +546,14 @@ describe('Staff API', () => {
     it('should reject PATCH on a pending-invite user', async () => {
       const uniqueEmail = `patch-invite-${Date.now()}@test.local`;
       const createRes = await request(app)
-        .post('/api/staff')
+        .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Pending', lastName: 'User', email: uniqueEmail, role: 'staff' });
 
       const staffId = createRes.body.id;
 
       const res = await request(app)
-        .patch(`/api/staff/${staffId}`)
+        .patch(`/api/accounts/${staffId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(400);
@@ -452,13 +561,13 @@ describe('Staff API', () => {
 
       // Clean up
       await request(app)
-        .delete(`/api/staff/${staffId}`)
+        .delete(`/api/accounts/${staffId}`)
         .set('Authorization', `Bearer ${adminToken}`);
     });
 
     it('should reject invalid id', async () => {
       const res = await request(app)
-        .patch('/api/staff/00000000-0000-0000-0000-000000000000')
+        .patch('/api/accounts/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(404);
@@ -470,7 +579,7 @@ describe('Staff API', () => {
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)
-        .patch(`/api/staff/${targetUser.userId}`)
+        .patch(`/api/accounts/${targetUser.userId}`)
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(res.status).toBe(403);

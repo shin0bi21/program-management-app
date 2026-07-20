@@ -7,14 +7,14 @@ if [ "${BACKEND_TEST_ENV_READY:-0}" != "1" ]; then
 fi
 
 echo ""
-echo "Running STAFF tests..."
+echo "Running ACCOUNT tests..."
 echo "------------------------------------------"
 
-if docker compose exec -T backend npm run test:staff; then
+if docker compose exec -T backend npm run test:accounts; then
   echo ""
-  echo "Staff tests passed!"
+  echo "Account tests passed!"
 else
   echo ""
-  echo "Staff tests failed! See output above."
+  echo "Account tests failed! See output above."
   exit 1
 fi

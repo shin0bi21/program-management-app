@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
 import cohortInterestRoutes from '../../src/routes/cohortInterestRoutes';
 import publicRoutes from '../../src/routes/publicRoutes';
-import staffRoutes from '../../src/routes/staffRoutes';
+import accountRoutes from '../../src/routes/accountRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
@@ -21,7 +21,7 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/api/cohort-interest', cohortInterestRoutes);
   app.use('/api/public', publicRoutes);
-  app.use('/api/staff', staffRoutes);
+  app.use('/api/accounts', accountRoutes);
   app.use('/api/youth', youthRoutes);
   app.use('/api/schools', schoolRoutes);
   app.use(handleError);

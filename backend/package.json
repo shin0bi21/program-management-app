@@ -9,7 +9,7 @@
     "start": "node dist/src/index.js",
     "test": "jest",
     "test:auth": "jest --testPathPatterns=tests/auth",
-    "test:staff": "jest --testPathPatterns=tests/staff",
+    "test:accounts": "jest --testPathPatterns=tests/accounts",
     "test:youth": "jest --testPathPatterns=tests/youth",
     "test:schools": "jest --testPathPatterns=tests/schools",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",

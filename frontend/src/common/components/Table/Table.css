@@ -45,11 +45,19 @@
 /* Loading, error, empty states */
 .table-loading,
 .table-error,
-.table-empty {
+.table-empty-cell {
   padding: 3rem 2rem;
   text-align: center;
   color: var(--color-muted);
   font-size: 1rem;
+}
+
+.table tbody .table-empty-row:hover {
+  background-color: transparent;
+}
+
+.table td.table-empty-cell {
+  padding: 3rem 2rem;
 }
 
 .table-error {

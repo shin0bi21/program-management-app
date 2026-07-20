@@ -34,6 +34,7 @@ export interface SetYouthInput {
   id?: string;
   firstName: string;
   lastName: string;
+  email?: string;
   status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;

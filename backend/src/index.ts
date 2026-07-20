@@ -4,7 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import authRoutes from './routes/authRoutes';
-import staffRoutes from './routes/staffRoutes';
+import accountRoutes from './routes/accountRoutes';
 import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 import publicRoutes from './routes/publicRoutes';
@@ -58,7 +58,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/cohort-interest', cohortInterestRoutes);
-app.use('/api/staff', staffRoutes);
+app.use('/api/accounts', accountRoutes);
 app.use('/api/youth', youthRoutes);
 app.use('/api/schools', schoolRoutes);
 

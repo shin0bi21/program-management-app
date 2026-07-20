@@ -42,7 +42,7 @@ export default function Table<T>({
   data,
   loading = false,
   error,
-  emptyMessage = 'No data found',
+  emptyMessage = 'No rows found',
   keyExtractor,
   maxHeight = '600px',
 }: TableProps<T>) {
@@ -52,10 +52,6 @@ export default function Table<T>({
 
   if (error) {
     return <div className="table-error">{error}</div>;
-  }
-
-  if (data.length === 0) {
-    return <div className="table-empty">{emptyMessage}</div>;
   }
 
   return (
@@ -75,9 +71,15 @@ export default function Table<T>({
           </tr>
         </thead>
         <tbody>
-          {data.map((item) => (
-            <TableRow key={keyExtractor(item)} item={item} columns={columns} />
-          ))}
+          {data.length === 0 ? (
+            <tr className="table-empty-row">
+              <td colSpan={columns.length} className="table-empty-cell">{emptyMessage}</td>
+            </tr>
+          ) : (
+            data.map((item) => (
+              <TableRow key={keyExtractor(item)} item={item} columns={columns} />
+            ))
+          )}
         </tbody>
       </table>
     </div>

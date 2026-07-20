@@ -13,6 +13,7 @@ import type { YouthProfile } from '../../hooks/useYouth';
 const defaultValues: YouthFormData = {
   firstName: '',
   lastName: '',
+  email: '',
   dateOfBirth: '',
   schoolId: '',
   gradeLevel: undefined,
@@ -69,6 +70,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
     reset({
       firstName: youthData.firstName || '',
       lastName: youthData.lastName || '',
+      email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
@@ -113,6 +115,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         ...(youthData && { id: youthData.id }),
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
+        ...(data.email && { email: data.email.trim() }),
         status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),

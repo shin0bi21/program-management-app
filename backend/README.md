@@ -29,12 +29,12 @@ A management system for organisations running youth programs.
 
 | Role | Access |
 |------|--------|
-| `admin` | Full access — manage staff, create/edit all youth profiles |
-| `staff` | View and create/edit youth profiles; cannot manage other staff |
+| `admin` | Full access — manage staff, youth accounts, and youth profiles |
+| `staff` | Manage youth accounts and profiles; cannot manage staff accounts |
 
 See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for the full permissions breakdown, how permissions flow into tokens, and where to add a new permission.
 
-**Youth profiles are not login users.** They are data records (name, DOB, school, group, addresses, emergency contacts) that staff manage through the app.
+Youth profiles are program records managed by staff. A youth profile may optionally have login credentials and account access.
 
 ### Tech Stack
 
@@ -143,7 +143,7 @@ backend/
 └── tests/
     ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
     ├── auth/           # 44 tests
-    ├── staff/          # 30 tests
+    ├── accounts/       # Account API and RBAC tests
     ├── youth/          # 25 tests
     └── schools/        # 28 tests
 ```
@@ -166,16 +166,16 @@ For middleware order, route patterns, error throwing, and "adding a new domain" 
 | `POST` | `/forgot-password` | Send password reset email |
 | `POST` | `/reset-password` | Reset password via token |
 
-### Staff — `/api/staff`
+### Accounts — `/api/accounts`
 
 Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
 
 | Method | Path | Description | Permission |
 |--------|------|-------------|------------|
-| `GET` | `/` | List all staff and admin users | `read:staff` |
-| `POST` | `/` | Create a new staff user | `write:staff` |
-| `PATCH` | `/:id` | Toggle staff status | `write:staff` |
-| `DELETE` | `/:id` | Delete staff member | `write:staff` |
+| `GET` | `/` | List role-scoped accounts with search, role, and status filters | `read:accounts` |
+| `POST` | `/` | Invite or update a staff/admin account | `write:accounts` |
+| `PATCH` | `/:id` | Toggle account status | `write:accounts` |
+| `DELETE` | `/:id` | Revoke a pending account invitation | `write:accounts` |
 
 ### Youth — `/api/youth`
 
@@ -246,20 +246,20 @@ From the project root (`my-webapp/`):
 bash scripts/backend/test-apis.sh
 
 # This boots the backend test environment once, then composes the
-# auth, staff, youth, and schools runners.
+# auth, accounts, youth, and schools runners.
 
 # Full-stack suite (backend API + frontend UI)
 bash scripts/test-full-stack.sh
 
 # Individual suites
 bash scripts/backend/run-auth-tests.sh    # 44 tests
-bash scripts/backend/run-staff-tests.sh   # 30 tests
+bash scripts/backend/run-accounts-tests.sh
 bash scripts/backend/run-youth-tests.sh   # 25 tests
 bash scripts/backend/run-schools-tests.sh  # 28 tests
 
 # Or directly
 docker compose exec backend npm run test:auth
-docker compose exec backend npm run test:staff
+docker compose exec backend npm run test:accounts
 docker compose exec backend npm run test:youth
 docker compose exec backend npm run test:schools
 docker compose exec backend npm run test:coverage
@@ -275,8 +275,8 @@ The helper scripts detect already-running containers and **will not tear them do
 | `tests/shared/db.ts` | `seedTestUser`, `deleteTestUser` helpers |
 | `tests/auth/auth.test.ts` | Login → 2FA → refresh → logout → password reset |
 | `tests/auth/helpers.ts` | Trusted device tokens, 2FA codes, cookies |
-| `tests/staff/users.test.ts` | Staff CRUD, permission checks, validation |
-| `tests/staff/helpers.ts` | Token generation with permission levels |
+| `tests/accounts/users.test.ts` | Account CRUD, filtering, and permission checks |
+| `tests/accounts/helpers.ts` | Account token generation helpers |
 | `tests/youth/youth.test.ts` | Youth CRUD, upsert, address/contact sync |
 | `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
 | `tests/schools/schools.test.ts` | Schools CRUD, permission checks, validation |
@@ -512,7 +512,7 @@ All `npm run` commands execute inside the Docker container via `docker compose e
 | `typecheck` | Validate TypeScript without emitting |
 | `test` | Run all test suites |
 | `test:auth` | Auth test suite only |
-| `test:staff` | Staff test suite only |
+| `test:accounts` | Account test suite only |
 | `test:youth` | Youth test suite only |
 | `test:schools` | Schools test suite only |
 | `test:watch` | Run tests in watch mode |
