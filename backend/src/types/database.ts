@@ -127,6 +127,7 @@ export interface Leads {
   id: Generated<string>;
   notes: string | null;
   origin: LeadOrigin;
+  program_id: string | null;
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;
@@ -134,6 +135,11 @@ export interface Leads {
   updated_by: string | null;
   youth_first_name: string;
   youth_last_name: string;
+}
+
+export interface Programs {
+  id: Generated<string>;
+  name: string;
 }
 
 export interface SchemaMigrations {
@@ -288,6 +294,7 @@ export interface YouthProfiles {
   date_of_birth: Timestamp | null;
   grade_level: number | null;
   id: Generated<string>;
+  program_id: string | null;
   school_id: string | null;
   status: Generated<YouthParticipationStatus>;
   updated_at: Generated<Timestamp>;
@@ -318,6 +325,7 @@ export interface DB {
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   leads: Leads;
+  programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
   system_revoked_tokens: SystemRevokedTokens;

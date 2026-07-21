@@ -63,4 +63,32 @@ describe('Header youth navigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Leads' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Expressions of Interest' })).not.toBeInTheDocument();
   });
+
+  it('shows Profiles and Attendance in the Youth navigation card', () => {
+    authState.permissions = ['read:youth_profiles'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter initialEntries={['/youth/profiles']}>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Youth' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Profiles' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Attendance' })).toBeInTheDocument();
+  });
+
+  it('does not expose a standalone Schools destination', () => {
+    authState.permissions = ['read:schools', 'write:schools'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
+  });
 });

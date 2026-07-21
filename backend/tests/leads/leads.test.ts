@@ -10,6 +10,7 @@ describe('Leads API', () => {
   let staffToken: string;
   let youthUserId: string;
   let youthToken: string;
+  let softSkillsProgramId: string;
 
   const payload = {
     youthFirstName: 'Event',
@@ -32,6 +33,8 @@ describe('Leads API', () => {
     const youth = await seedTestUser({ email: `lead-youth-${Date.now()}@test.local`, role: 'youth' });
     youthUserId = youth.userId;
     youthToken = generateToken(youth.userId, 'youth', youth.email);
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    softSkillsProgramId = program.id;
   });
 
   afterAll(async () => {
@@ -44,7 +47,7 @@ describe('Leads API', () => {
     const res = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send(payload);
+      .send({ ...payload, programId: softSkillsProgramId });
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
@@ -53,6 +56,8 @@ describe('Leads API', () => {
       youthFirstName: 'Event',
       youthLastName: 'Prospect',
       status: 'new',
+      programId: softSkillsProgramId,
+      programName: 'Soft Skills',
       createdBy: staffUserId,
     }));
   });
@@ -91,6 +96,18 @@ describe('Leads API', () => {
     ]);
   });
 
+  it('filters leads by program UUID', async () => {
+    const res = await request(app)
+      .get(`/api/leads?programIds=${softSkillsProgramId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ youthFirstName: 'Event', programId: softSkillsProgramId }),
+    ]));
+    expect(res.body.every((lead: { programId: string }) => lead.programId === softSkillsProgramId)).toBe(true);
+  });
+
   it('rejects unsupported lead filters', async () => {
     const res = await request(app)
       .get('/api/leads?statuses=reviewed')
@@ -125,12 +142,13 @@ describe('Leads API', () => {
     const res = await request(app)
       .put(`/api/leads/${lead.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, school: 'Updated Community School' });
+      .send({ ...payload, school: 'Updated Community School', programId: softSkillsProgramId });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.objectContaining({
       id: lead.id,
       school: 'Updated Community School',
+      programId: softSkillsProgramId,
       origin: lead.origin,
       status: lead.status,
       updatedBy: staffUserId,

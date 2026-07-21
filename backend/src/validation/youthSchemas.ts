@@ -1,5 +1,22 @@
 import { z } from 'zod';
 
+const commaSeparated = (schema: z.ZodType<string>) => z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(schema).max(20));
+
+export const youthQuerySchema = z.object({
+  query: z.object({
+    id: z.string().uuid('Invalid youth ID').optional(),
+    search: z.string().trim().max(120).optional().default(''),
+    statuses: commaSeparated(z.enum(['active', 'inactive'])),
+    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+  }),
+});
+
+export type YouthQuery = z.infer<typeof youthQuerySchema.shape.query>;
+
 export const setYouthSchema = z.object({
   body: z.object({
     id: z.string().uuid('Invalid youth ID').optional(),
@@ -17,6 +34,7 @@ export const setYouthSchema = z.object({
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
+    programId: z.string().uuid('Invalid program ID').nullable().optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
     status: z.enum(['active', 'inactive']),
     addresses: z

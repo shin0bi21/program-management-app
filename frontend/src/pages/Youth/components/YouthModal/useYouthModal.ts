@@ -16,6 +16,7 @@ const defaultValues: YouthFormData = {
   email: '',
   dateOfBirth: '',
   schoolId: '',
+  programId: '',
   gradeLevel: undefined,
 };
 
@@ -34,13 +35,17 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     register,
     handleSubmit: rhfHandleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<YouthFormData>({
     resolver: zodResolver(youthSchema),
     defaultValues,
   });
 
-  const { schools } = useSchools();
+  const { schools, setSchools, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const schoolId = watch('schoolId');
+  const programId = watch('programId');
 
   const {
     addresses,
@@ -70,6 +75,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
+      programId: youthData.programId || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
     });
 
@@ -116,6 +122,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
         status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
+        programId: data.programId || null,
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
         addresses: getAddressPayload(),
         contacts: getContactPayload(),
@@ -143,6 +150,13 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     onValid,
     // Sub-entity state
     schools,
+    setSchools,
+    schoolsLoading,
+    schoolsError,
+    schoolId,
+    setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
+    programId,
+    setProgramId: (id: string) => setValue('programId', id, { shouldDirty: true }),
     addresses,
     handleAddressChange,
     contacts,

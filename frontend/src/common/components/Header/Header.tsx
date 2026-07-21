@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool, faBullhorn } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faBullhorn } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
@@ -13,12 +13,20 @@ export default function Header() {
   const { isAuthenticated, role, permissions, logout } = useAuth();
   const canViewHome = role !== 'youth';
   const canViewYouth = permissions.includes('read:youth_profiles');
-  const canViewSchools = permissions.includes('read:schools');
   const canViewOutreach = permissions.includes('read:outreach');
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
   const outreachBtnRef = useRef<HTMLButtonElement>(null);
+  const youthBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
+
+  const {
+    isOpen: isYouthFlyoutOpen,
+    toggle: toggleYouthFlyout,
+    close: closeYouthFlyout,
+    position: youthFlyoutPosition,
+    menuRef: youthFlyoutRef,
+  } = useFloatingMenu(youthBtnRef, { side: 'right', align: 'start' }, { widthEstimate: 160, heightEstimate: 120 });
 
   const {
     isOpen: isSettingsFlyoutOpen,
@@ -46,27 +54,38 @@ export default function Header() {
   const isActive = (path: string) => location.pathname === path;
   const isSettingsActive = location.pathname.startsWith('/settings');
   const isOutreachActive = location.pathname.startsWith('/outreach');
+  const isYouthActive = location.pathname.startsWith('/youth');
 
   const go = (path: string) => {
     navigate(path);
     setMobileOpen(false);
     closeOutreachFlyout();
+    closeYouthFlyout();
     closeSettingsFlyout();
   };
 
   const handleOutreachToggle = () => {
+    closeYouthFlyout();
     closeSettingsFlyout();
     toggleOutreachFlyout();
   };
 
   const handleSettingsToggle = () => {
+    closeYouthFlyout();
     closeOutreachFlyout();
     toggleSettingsFlyout();
+  };
+
+  const handleYouthToggle = () => {
+    closeOutreachFlyout();
+    closeSettingsFlyout();
+    toggleYouthFlyout();
   };
 
   // Close flyouts on route change
   useEffect(() => {
     closeOutreachFlyout();
+    closeYouthFlyout();
     closeSettingsFlyout();
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -109,21 +128,14 @@ export default function Header() {
 
               {canViewYouth && (
                 <button
-                  onClick={() => go('/youth')}
-                  className={`sidebar-link${isActive('/youth') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
+                  ref={youthBtnRef}
+                  onClick={handleYouthToggle}
+                  aria-haspopup="menu"
+                  aria-expanded={isYouthFlyoutOpen}
+                  className={`sidebar-link${isYouthActive || isYouthFlyoutOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                   <span>Youth</span>
-                </button>
-              )}
-
-              {canViewSchools && (
-                <button
-                  onClick={() => go('/schools')}
-                  className={`sidebar-link${isActive('/schools') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
-                  <span>Schools</span>
                 </button>
               )}
 
@@ -167,6 +179,17 @@ export default function Header() {
           )}
         </div>
       </aside>
+
+      {canViewYouth && youthFlyoutPosition && (
+        <FloatingMenuPanel menuRef={youthFlyoutRef} position={youthFlyoutPosition} onClose={closeYouthFlyout} className="settings-flyout">
+          <button role="menuitem" onClick={() => go('/youth/profiles')} className={`settings-flyout-item${isActive('/youth/profiles') ? ' active' : ''}`}>
+            Profiles
+          </button>
+          <button role="menuitem" onClick={() => go('/youth/attendance')} className={`settings-flyout-item${isActive('/youth/attendance') ? ' active' : ''}`}>
+            Attendance
+          </button>
+        </FloatingMenuPanel>
+      )}
 
       {canViewOutreach && outreachFlyoutPosition && (
         <FloatingMenuPanel

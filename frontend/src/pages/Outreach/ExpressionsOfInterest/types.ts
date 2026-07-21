@@ -13,4 +13,12 @@ export interface ExpressionOfInterest {
   status: 'new' | 'reviewed' | 'converted' | 'spam' | 'contacted' | 'signed_up' | 'lost';
   createdAt: string;
   statusUpdatedAt: string;
+  suggestedProgramId: string | null;
+  suggestedProgramName: string | null;
+}
+
+export interface ExpressionOfInterestFilters {
+  search?: string;
+  statuses?: ExpressionOfInterest['status'][];
+  programIds?: string[];
 }

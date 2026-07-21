@@ -31,11 +31,11 @@ interface FilterCardProps {
 const normalized = (values: string[] = []) => [...values].sort().join('\u0000');
 
 export default function FilterCard({ categories, values, onApply, onClearAll, label = 'Filters' }: FilterCardProps) {
-  const triggerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'end' },
-    { widthEstimate: 264, heightEstimate: 320, returnFocusSelector: 'button' },
+    { widthEstimate: 264, heightEstimate: 320 },
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<FilterCardValues>({});
@@ -88,13 +88,11 @@ export default function FilterCard({ categories, values, onApply, onClearAll, la
 
   return (
     <>
-      <span ref={triggerRef} className="filter-card-trigger-anchor">
-        <Button variant="secondary" onClick={toggle} aria-haspopup="menu" aria-expanded={isOpen} className="filter-card-trigger">
-          <FontAwesomeIcon icon={faFilter} />
-          <span>{label}</span>
-          {appliedCount > 0 && <span className="filter-card-count" aria-label={`${appliedCount} active filters`}>{appliedCount}</span>}
-        </Button>
-      </span>
+      <Button ref={triggerRef} variant="secondary" onClick={toggle} aria-haspopup="menu" aria-expanded={isOpen} className="filter-card-trigger">
+        <FontAwesomeIcon icon={faFilter} />
+        <span>{label}</span>
+        {appliedCount > 0 && <span className="filter-card-count" aria-label={`${appliedCount} active filters`}>{appliedCount}</span>}
+      </Button>
 
       {position && (
         <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close} className="filter-card">

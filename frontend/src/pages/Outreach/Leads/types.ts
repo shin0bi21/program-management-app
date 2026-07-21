@@ -11,6 +11,8 @@ export interface Lead {
   youthLastName: string;
   age: number;
   school: string;
+  programId: string | null;
+  programName: string | null;
   contactFirstName: string;
   contactLastName: string;
   contactPhoneNumber: string;
@@ -27,6 +29,7 @@ export interface CreateLeadInput {
   youthLastName: string;
   age: number;
   school: string;
+  programId?: string | null;
   contactFirstName: string;
   contactLastName: string;
   contactPhoneNumber: string;
@@ -40,4 +43,5 @@ export type UpdateLeadInput = CreateLeadInput;
 export interface LeadFilters {
   search?: string;
   statuses?: LeadStatus[];
+  programIds?: string[];
 }

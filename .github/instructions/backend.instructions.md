@@ -97,7 +97,7 @@ router.post('/',
 );
 ```
 
-Permission strings are resource-based: `'read:accounts'`, `'write:accounts'`, `'read:youth_profiles'`, `'write:youth_profiles'`, `'read:schools'`, `'write:schools'`, `'read:outreach'`, and `'write:outreach'`. Never pass role names (`'admin'`, `'staff'`) — those are not valid `Permission` values.
+Permission strings are resource-based: `'read:accounts'`, `'write:accounts'`, `'read:youth_profiles'`, `'write:youth_profiles'`, `'read:schools'`, `'write:schools'`, `'read:programs'`, `'write:programs'`, `'read:outreach'`, and `'write:outreach'`. Never pass role names (`'admin'`, `'staff'`) — those are not valid `Permission` values.
 
 **`asyncHandler` is required on every route handler — no exceptions.** Express 4 silently drops async errors without it.
 

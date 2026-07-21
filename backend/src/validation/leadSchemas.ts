@@ -15,10 +15,17 @@ const commaSeparatedStatuses = z.preprocess(value => {
   return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
 }, z.array(leadStatusSchema).max(10));
 
+const commaSeparatedProgramIds = z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(z.string().uuid('Invalid program ID')).max(20));
+
 export const leadQuerySchema = z.object({
   query: z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparatedStatuses,
+    programIds: commaSeparatedProgramIds,
   }),
 });
 
@@ -27,6 +34,7 @@ const leadDataSchema = z.object({
     youthLastName: z.string().trim().min(1, 'Youth last name is required').max(120),
     age: z.number().int().min(5).max(24),
     school: z.string().trim().min(1, 'School is required').max(255),
+    programId: z.string().uuid('Invalid program ID').nullable().optional(),
     contactFirstName: z.string().trim().min(1, 'Contact first name is required').max(120),
     contactLastName: z.string().trim().min(1, 'Contact last name is required').max(120),
     contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(40),

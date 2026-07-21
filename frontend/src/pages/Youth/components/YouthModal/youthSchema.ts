@@ -14,6 +14,7 @@ export const youthSchema = z.object({
   email: z.union([z.literal(''), z.string().email('Invalid email address')]),
   dateOfBirth: z.string().optional(),
   schoolId: z.string().optional(),
+  programId: z.string().optional(),
   gradeLevel: z
     .union([z.number().int().min(0, 'Grade must be 0 or higher').max(12, 'Grade must be 12 or lower'), z.nan()])
     .optional(),

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -8,9 +8,12 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import { usePrograms } from '../../../common/hooks/usePrograms';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
-import type { ExpressionOfInterest } from './types';
+import type { ExpressionOfInterest, ExpressionOfInterestFilters } from './types';
 import './ExpressionsOfInterest.css';
 
 const submissionYouthName = (submission: ExpressionOfInterest) =>
@@ -26,26 +29,38 @@ const relationshipLabels: Record<NonNullable<ExpressionOfInterest['contactRelati
 };
 
 export default function ExpressionsOfInterest() {
-  const { submissions, loading, error } = useExpressionsOfInterest();
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilters, setStatusFilters] = useState<ExpressionOfInterest['status'][]>([]);
+  const [programFilters, setProgramFilters] = useState<string[]>([]);
+  const queryFilters = useMemo<ExpressionOfInterestFilters>(() => ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters }), [debouncedSearch, statusFilters, programFilters]);
+  const { submissions, setSubmissions, loading, error } = useExpressionsOfInterest(queryFilters);
+  const { programs } = usePrograms();
   const navigate = useNavigate();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const [rows, setRows] = useState<ExpressionOfInterest[]>([]);
   const [selectedContactSubmission, setSelectedContactSubmission] = useState<ExpressionOfInterest | null>(null);
   const [selectedNoteSubmission, setSelectedNoteSubmission] = useState<ExpressionOfInterest | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
-  const data = rows.length ? rows : submissions;
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
+  const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
+  const filterCategories = useMemo<FilterCardCategory[]>(() => [
+    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
+    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
+  ], [programs]);
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
     const updated = await updateExpressionOfInterestStatus(item.id, status);
     setSelectedContactSubmission((current) => (current?.id === updated.id ? updated : current));
     setSelectedNoteSubmission((current) => (current?.id === updated.id ? updated : current));
-    setRows((current) => {
-      const source = current.length ? current : submissions;
-      return source.map((entry) => (entry.id === updated.id ? updated : entry));
-    });
+    setSubmissions(current => current.map(entry => entry.id === updated.id ? { ...entry, ...updated } : entry));
   };
 
   const handleConvert = async (item: ExpressionOfInterest) => {
@@ -96,6 +111,7 @@ export default function ExpressionsOfInterest() {
   const columns: TableColumn<ExpressionOfInterest>[] = [
     { key: 'youthName', header: 'Youth Name', render: submissionYouthName },
     { key: 'age', header: 'Age', width: '70px', render: item => item.age },
+    { key: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },
     { key: 'submittedAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
     {
       key: 'note',
@@ -138,15 +154,27 @@ export default function ExpressionsOfInterest() {
 
   return (
     <>
-      <PageHeader title="Outreach" />
+      <PageHeader
+        title="Outreach"
+        search={<SearchInput label="Search expressions of interest" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
+        filters={<FilterCard
+          categories={filterCategories}
+          values={{ status: statusFilters, program: programFilters }}
+          onApply={(category, selected) => {
+            if (category === 'status') setStatusFilters(selected as ExpressionOfInterest['status'][]);
+            if (category === 'program') setProgramFilters(selected);
+          }}
+          onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
+        />}
+      />
       <div className="outreach-tab-content">
         {(error || actionError) && <p className="page-error">{error || actionError}</p>}
 
         <Table
           columns={columns}
-          data={data}
+          data={submissions}
           loading={loading}
-          emptyMessage="No expressions of interest yet."
+          emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet.'}
           keyExtractor={(item) => item.id}
           maxHeight="calc(100vh - 220px)"
         />

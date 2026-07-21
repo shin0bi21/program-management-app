@@ -10,6 +10,7 @@ interface FloatingMenuPanelProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  width?: number;
 }
 
 export default function FloatingMenuPanel({
@@ -18,6 +19,7 @@ export default function FloatingMenuPanel({
   onClose,
   children,
   className,
+  width,
 }: FloatingMenuPanelProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -52,7 +54,7 @@ export default function FloatingMenuPanel({
       ref={menuRef as unknown as RefObject<HTMLDivElement>}
       role="menu"
       className={`floating-menu-panel${className ? ` ${className}` : ''}`}
-      style={{ top: position.top, left: position.left }}
+      style={{ top: position.top, left: position.left, width }}
     >
       {children}
     </div>,

@@ -11,6 +11,7 @@ import accountRoutes from '../../src/routes/accountRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
 import leadRoutes from '../../src/routes/leadRoutes';
+import programRoutes from '../../src/routes/programRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
@@ -26,6 +27,7 @@ export function createApp() {
   app.use('/api/youth', youthRoutes);
   app.use('/api/schools', schoolRoutes);
   app.use('/api/leads', leadRoutes);
+  app.use('/api/programs', programRoutes);
   app.use(handleError);
   return app;
 }

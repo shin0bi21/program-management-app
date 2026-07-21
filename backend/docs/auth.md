@@ -112,6 +112,8 @@ Route access and mutations are permission-based. Roles group permissions in the 
 | `write:youth_profiles` | `POST /api/youth`, `PATCH /api/youth/:id` |
 | `read:schools` | `GET /api/schools` |
 | `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
+| `read:programs` | `GET /api/programs` |
+| `write:programs` | `POST /api/programs` (admin only) |
 | `read:outreach` | Read expressions of interest and leads |
 | `write:outreach` | Review/convert expressions of interest and create/update leads |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |

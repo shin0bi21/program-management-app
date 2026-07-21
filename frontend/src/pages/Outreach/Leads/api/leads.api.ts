@@ -5,6 +5,7 @@ export const getLeads = (filters: LeadFilters = {}) => {
   const params = new URLSearchParams();
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
+  if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
   const query = params.toString();
   return apiClient.get<Lead[]>(`/leads${query ? `?${query}` : ''}`);
 };

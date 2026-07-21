@@ -27,5 +27,5 @@ export function useSchools() {
     loadSchools();
   }, []);
 
-  return { schools, loading, error, refetch: loadSchools };
+  return { schools, setSchools, loading, error, refetch: loadSchools };
 }

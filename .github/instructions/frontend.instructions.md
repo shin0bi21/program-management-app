@@ -16,7 +16,7 @@ frontend/src/
         sessionExpired.ts ← awaitReLogin() / resolveReLogin() — suspends requests during re-login modal
         tokenRefresh.ts   ← refreshToken() — proactive refresh, deduplication, redirect on failure
       auth.api.ts         ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
-      schools.api.ts      ← getSchools() — shared read used by Youth modal + Schools page
+      schools.api.ts      ← school lookup + inline creation used by Youth modal
       accounts.api.ts     ← list, invite, update, toggle, and revoke account access
       youth.api.ts        ← getYouth, setYouth, toggleYouthActive
     components/
@@ -60,12 +60,6 @@ frontend/src/
       hooks/useYouth.ts
       components/YouthModal/useYouthModal.ts
       components/YouthModal/youthSchema.ts
-    Schools/
-      types.ts                      ← School, SetSchoolInput
-      api/schools.api.ts            ← setSchool, deleteSchool (all typed) — getSchools lives in common/api/schools.api.ts
-      hooks/useSchools.ts
-      components/SchoolModal/useSchoolModal.ts
-      components/SchoolModal/schoolSchema.ts
     Settings/Account/
     Homepage/
 ```
@@ -151,9 +145,9 @@ Every protected resource uses the same 3-layer check. All 3 must match:
 | Route guard | `<ProtectedRoute requiredPermission="read:x">` in `App.tsx` | blocks entire page for users without read |
 | In-page write check | `const canWrite = permissions.includes('write:x')` | hides Add/Edit/Delete buttons |
 
-`read:x` gates the whole page. `write:x` gates mutations within the page. `permissions` comes from `useAuth()`.
+`read:x` gates the whole page. `write:x` gates mutations within the page or inline resource actions. `permissions` comes from `useAuth()`.
 
-Current permission strings: `read:accounts`, `write:accounts`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:outreach`, `write:outreach`, `read:settings`, `write:settings`.
+Current permission strings: `read:accounts`, `write:accounts`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:programs`, `write:programs`, `read:outreach`, `write:outreach`, `read:settings`, `write:settings`.
 
 ## Adding a new page
 

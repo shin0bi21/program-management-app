@@ -16,7 +16,8 @@
 
 /* Shared item base — all [role="menuitem"] children across every consumer */
 .floating-menu-panel [role="menuitem"]:not(.btn),
-.floating-menu-panel [role="menuitemcheckbox"] {
+.floating-menu-panel [role="menuitemcheckbox"],
+.floating-menu-panel [role="menuitemradio"] {
   display: block;
   width: 100%;
   text-align: left;
@@ -33,12 +34,14 @@
 }
 
 .floating-menu-panel [role="menuitem"]:not(.btn):hover,
-.floating-menu-panel [role="menuitemcheckbox"]:hover {
+.floating-menu-panel [role="menuitemcheckbox"]:hover,
+.floating-menu-panel [role="menuitemradio"]:hover {
   background: var(--ink-05);
 }
 
 .floating-menu-panel [role="menuitem"]:not(.btn):focus-visible,
-.floating-menu-panel [role="menuitemcheckbox"]:focus-visible {
+.floating-menu-panel [role="menuitemcheckbox"]:focus-visible,
+.floating-menu-panel [role="menuitemradio"]:focus-visible {
   outline: 2px solid var(--brand-primary, currentColor);
   outline-offset: -2px;
 }
