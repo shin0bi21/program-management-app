@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { handleCohortInterest } from '../controllers/publicController';
+import { handleExpressionOfInterest } from '../controllers/publicController';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { strictLimiter } from '../middleware/rateLimiter';
-import { cohortInterestSchema } from '../validation/publicSchemas';
+import { expressionOfInterestSchema } from '../validation/publicSchemas';
 
 const router = Router();
 
-router.post('/cohort-interest', strictLimiter, validateRequest(cohortInterestSchema), asyncHandler(handleCohortInterest));
+router.post('/expressions-of-interest', strictLimiter, validateRequest(expressionOfInterestSchema), asyncHandler(handleExpressionOfInterest));
 
 export default router;

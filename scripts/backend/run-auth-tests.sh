@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 cd "$(dirname "$0")/../.." || exit
 
 if [ "${BACKEND_TEST_ENV_READY:-0}" != "1" ]; then

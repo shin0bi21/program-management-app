@@ -1,0 +1,3 @@
+.leads-panel { display: grid; gap: 14px; }
+.status-qualified { background: var(--color-status-active-bg); color: var(--color-status-active); }
+.status-ineligible { background: var(--color-status-warn-bg); color: var(--color-status-warn); }

@@ -5,13 +5,17 @@ import { inviteYouthAccount } from '../services/accountService';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
   const id = req.query.id as string | undefined;
-  res.json(await getYouth(id));
+  res.json(id ? await getYouth(id) : await getYouth());
 };
 
 export const handleSetYouth = async (req: Request, res: Response) => {
-  const { id } = req.body;
+  const { id, email } = req.body;
   const userId = (req as AuthRequest).user!.userId;
-  const saved = await setYouth(req.body, userId);
+  let saved = await setYouth(req.body, userId);
+  if (email && !saved.account) {
+    const account = await inviteYouthAccount(saved.id, email, userId);
+    saved = { ...saved, account };
+  }
   res.status(id ? 200 : 201).json(saved);
 };
 

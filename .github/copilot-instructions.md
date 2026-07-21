@@ -67,16 +67,17 @@ To rebuild the local dev stack from scratch (stops containers, wipes volumes, re
 **Full suite (default — always use this unless a specific suite is requested):**
 
 ```bash
-./scripts/tests/test-apis.sh
+./scripts/test-full-stack.sh
 ```
 
 Individual suites (only when explicitly asked):
 
 ```bash
-./scripts/tests/run-auth-tests.sh    # 44 auth tests
-./scripts/tests/run-staff-tests.sh   # 15 staff tests
-./scripts/tests/run-youth-tests.sh   # 25 youth tests
-./scripts/tests/run-schools-tests.sh  # schools tests
+./scripts/backend/run-auth-tests.sh
+./scripts/backend/run-accounts-tests.sh
+./scripts/backend/run-youth-tests.sh
+./scripts/backend/run-schools-tests.sh
+./scripts/backend/run-outreach-tests.sh
 ```
 
 **Frontend tests (Vitest + jsdom + Testing Library):**

@@ -1,17 +1,16 @@
 import Button from '../../../../common/components/Button/Button'
-import FormField from '../../../../common/components/FormField/FormField'
+import OutreachFormFields from '../../../../common/components/OutreachForm/OutreachFormFields'
 import { useSignupSection } from './useSignupSection'
-import { discoverySourceOptions } from './signupSectionSchema'
 
 export default function SignupSection() {
   const {
-    formData,
-    fieldErrors,
+    register,
+    errors,
+    handleSubmit,
+    onValid,
     submitStatus,
     error,
     isFormLocked,
-    handleFieldChange,
-    handleInterestSubmit,
   } = useSignupSection()
 
   return (
@@ -29,91 +28,13 @@ export default function SignupSection() {
         <div className="cohort-form-shell">
           <form
             className={`cohort-inline-form${submitStatus === 'success' ? ' cohort-inline-form--muted' : ''}`}
-            onSubmit={handleInterestSubmit}
+            onSubmit={handleSubmit(onValid)}
           >
             <fieldset className="cohort-inline-form-fields" disabled={isFormLocked}>
               {submitStatus === 'error' && error && (
                 <div className="form-error">{error}</div>
               )}
-              <div className="form-row">
-                <FormField id="cohort-youthName" label="Youth Name" error={fieldErrors.youthName}>
-                  <input
-                    id="cohort-youthName"
-                    value={formData.youthName}
-                    onChange={(event) => handleFieldChange('youthName', event.target.value)}
-                    autoComplete="name"
-                  />
-                </FormField>
-                <FormField id="cohort-parentName" label="Parent Name" error={fieldErrors.parentName}>
-                  <input
-                    id="cohort-parentName"
-                    value={formData.parentName}
-                    onChange={(event) => handleFieldChange('parentName', event.target.value)}
-                    autoComplete="name"
-                  />
-                </FormField>
-              </div>
-              <div className="form-row">
-                <FormField id="cohort-age" label="Age" error={fieldErrors.age}>
-                  <input
-                    id="cohort-age"
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={formData.age}
-                    onChange={(event) => handleFieldChange('age', event.target.value)}
-                    inputMode="numeric"
-                  />
-                </FormField>
-                <FormField id="cohort-school" label="School" error={fieldErrors.school}>
-                  <input
-                    id="cohort-school"
-                    value={formData.school}
-                    onChange={(event) => handleFieldChange('school', event.target.value)}
-                  />
-                </FormField>
-              </div>
-              <div className="form-row">
-                <FormField id="cohort-email" label="Email" error={fieldErrors.email}>
-                  <input
-                    id="cohort-email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(event) => handleFieldChange('email', event.target.value)}
-                    autoComplete="email"
-                  />
-                </FormField>
-                <FormField id="cohort-phoneNumber" label="Phone Number" error={fieldErrors.phoneNumber}>
-                  <input
-                    id="cohort-phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
-                    autoComplete="tel"
-                  />
-                </FormField>
-              </div>
-              <div className="form-row">
-                <FormField id="cohort-discoverySource" label="How Did You Hear About Us?" error={fieldErrors.discoverySource}>
-                  <select
-                    id="cohort-discoverySource"
-                    value={formData.discoverySource}
-                    onChange={(event) => handleFieldChange('discoverySource', event.target.value)}
-                  >
-                    <option value="">Select one</option>
-                    {discoverySourceOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-              </div>
-              <FormField id="cohort-message" label="Anything else we should know?" error={fieldErrors.message}>
-                <textarea
-                  id="cohort-message"
-                  rows={5}
-                  value={formData.message}
-                  onChange={(event) => handleFieldChange('message', event.target.value)}
-                />
-              </FormField>
+              <OutreachFormFields idPrefix="cohort" register={register} errors={errors} />
               <div className="cohort-inline-form-actions">
                 <Button type="submit" disabled={submitStatus === 'submitting'}>
                   {submitStatus === 'submitting' ? 'Submitting...' : 'Submit'}

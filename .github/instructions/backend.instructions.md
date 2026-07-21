@@ -26,7 +26,9 @@ backend/src/
     auditService.ts           ← audit(action, table, recordId, changes, actorId) — writes to audit_log
     authLogService.ts         ← authLog({ event, userId, ... }) — HMAC-signed auth event log
     youthService.ts
-    staffService.ts
+    accountService.ts
+    expressionOfInterestService.ts
+    leadService.ts
     schoolService.ts
     addressService.ts
     contactService.ts
@@ -45,7 +47,7 @@ backend/src/
 requestId → app.set('trust proxy', 1) → helmet → cors → express.json → cookieParser
   → /health (no auth)
   → /api/auth routes (auth limiter, no requirePermission)
-  → /api/staff routes (authenticateToken → requirePermission → rateLimiter → validateRequest → asyncHandler)
+  → protected API routes (authenticateToken → requirePermission → rateLimiter → validateRequest → asyncHandler)
   → /api/youth routes (same)
   → /api/schools routes (same)
   → 404 catch-all → errorHandler
@@ -95,7 +97,7 @@ router.post('/',
 );
 ```
 
-Permission strings are resource-based: `'read:staff'`, `'write:staff'`, `'read:youth_profiles'`, `'write:youth_profiles'`, `'read:schools'`, `'write:schools'`. Never pass role names (`'admin'`, `'staff'`) — those are not valid `Permission` values.
+Permission strings are resource-based: `'read:accounts'`, `'write:accounts'`, `'read:youth_profiles'`, `'write:youth_profiles'`, `'read:schools'`, `'write:schools'`, `'read:outreach'`, and `'write:outreach'`. Never pass role names (`'admin'`, `'staff'`) — those are not valid `Permission` values.
 
 **`asyncHandler` is required on every route handler — no exceptions.** Express 4 silently drops async errors without it.
 

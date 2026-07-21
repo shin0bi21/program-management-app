@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 cd "$(dirname "$0")/../.." || exit
 
 echo ""
@@ -10,9 +10,9 @@ echo "=========================================="
 bash scripts/frontend/run-auth-tests.sh
 bash scripts/frontend/run-common-tests.sh
 bash scripts/frontend/run-homepage-tests.sh
+bash scripts/frontend/run-outreach-tests.sh
 bash scripts/frontend/run-schools-tests.sh
 bash scripts/frontend/run-settings-tests.sh
-bash scripts/frontend/run-staff-tests.sh
 bash scripts/frontend/run-youth-tests.sh
 
 echo ""

@@ -10,9 +10,10 @@ interface YouthModalProps {
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
   youthData?: YouthProfile;
+  showLoginEmail?: boolean;
 }
 
-export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: YouthModalProps) {
+export default function YouthModal({ isOpen, onClose, onSuccess, youthData, showLoginEmail = false }: YouthModalProps) {
   const {
     register,
     errors,
@@ -26,12 +27,15 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     submitStatus,
     error,
     handleClose,
-  } = useYouthModal({ isOpen, youthData, onClose, onSuccess });
+  } = useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail: showLoginEmail });
+
+  const title = youthData ? 'Update Youth Profile' : showLoginEmail ? 'Invite Youth' : 'Add Youth Profile';
+  const submitLabel = youthData ? 'Update Profile' : showLoginEmail ? 'Invite Youth' : 'Add Profile';
 
   const footer = (
     <ModalFormFooter
       formId="youth-form"
-      submitLabel={youthData ? 'Update Form' : 'Sign Up'}
+      submitLabel={submitLabel}
       submitStatus={submitStatus}
       onClose={handleClose}
     />
@@ -41,7 +45,7 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
     <Modal 
       isOpen={isOpen} 
       onClose={handleClose} 
-      title={youthData ? 'Update Form' : 'Sign Up Form'} 
+      title={title}
       footer={footer}
       status={submitStatus}
       statusMessage={
@@ -73,6 +77,18 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData }: Yo
             <input id="gradeLevel" type="number" min="0" max="12" placeholder="0–12" {...register('gradeLevel', { valueAsNumber: true })} />
           </FormField>
         </div>
+
+        {showLoginEmail && (
+          <FormField id="email" label="Login Email" error={errors.email?.message}>
+            <input
+              id="email"
+              type="email"
+              placeholder="youth@example.com"
+              disabled={!!youthData?.account}
+              {...register('email')}
+            />
+          </FormField>
+        )}
 
         <FormField id="school" label="School">
           <select id="school" {...register('schoolId')}>

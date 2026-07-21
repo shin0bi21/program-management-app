@@ -17,7 +17,7 @@ For the API endpoint reference see [backend/README.md § 4 API Reference](../REA
 9. [Auth Logging](#9-auth-logging)
 10. [Shared Utilities](#10-shared-utilities)
 11. [Module Boundaries](#11-module-boundaries)
-12. [Staff Invite Flow](#12-staff-invite-flow)
+12. [Account Invite Flow](#12-account-invite-flow)
 
 ---
 
@@ -92,26 +92,28 @@ After password validation, `loginUser` checks `cred.status !== 'active'` and thr
 
 ## 3. RBAC Model
 
-Authorization is purely permission-based. **No role checks exist in route or UI logic** — only `permissions.includes('x')` checks. Roles are a DB-level grouping that determine which permissions are assigned at login time.
+Route access and mutations are permission-based. Roles group permissions in the database and may also shape authorized results or presentation—for example, administrators can manage staff and youth accounts while staff can manage youth accounts only. A role check must never replace the route permission check.
 
 ### Roles and their permissions (seeded in `init.sql`)
 
 | Role | Permissions |
 |------|-------------|
-| `admin` | `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:settings`, `write:settings` |
-| `staff` | `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools` |
+| `admin` | Account, youth profile, school, outreach, and settings read/write permissions |
+| `staff` | Account, youth profile, school, and outreach read/write permissions; account results are youth-scoped |
 | `youth` | *(none)* |
 
 ### Permission definitions
 
 | Permission | Grants |
 |------------|--------|
-| `read:staff` | `GET /api/staff` |
-| `write:staff` | `POST /api/staff`, `PATCH /api/staff/:id`, `DELETE /api/staff/:id` |
+| `read:accounts` | `GET /api/accounts` with policy-scoped results |
+| `write:accounts` | Staff/admin account invitations and account status/invitation mutations |
 | `read:youth_profiles` | `GET /api/youth` |
 | `write:youth_profiles` | `POST /api/youth`, `PATCH /api/youth/:id` |
 | `read:schools` | `GET /api/schools` |
 | `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
+| `read:outreach` | Read expressions of interest and leads |
+| `write:outreach` | Review/convert expressions of interest and create/update leads |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
 
@@ -331,12 +333,12 @@ authService.ts     ──▶  authLogService.ts
 
 ---
 
-## 12. Staff Invite Flow
+## 12. Account Invite Flow
 
-New staff accounts are created via `staffService.ts` (`setStaff()`), not through the self-registration path. The flow reuses the password reset token mechanism:
+Staff/admin accounts are invited through `accountService.ts`; youth credentials can be created with a youth profile from the Users page. Both flows reuse the password reset token mechanism:
 
-1. Admin calls `POST /api/staff` with `{ email, firstName, lastName, role }`.
-2. `staffService.ts` creates the `users` + `user_credentials` row with a random unusable password hash (`status: 'invited'`).
+1. An authorized user submits account/profile information through the Users page.
+2. `accountService.ts` creates credentials with a random unusable password hash (`status: 'invited'`).
 3. A 7-day token is inserted into `user_password_reset_tokens`.
 4. `sendStaffInvite()` in `emailService.ts` sends an email with a link to `/reset-password?token=<rawToken>`.
 5. The invitee clicks the link and sets their password via `POST /api/auth/reset-password`.
@@ -345,4 +347,4 @@ New staff accounts are created via `staffService.ts` (`setStaff()`), not through
 **Key points:**
 - Invite links expire after **7 days** (`INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000`).
 - The same `/reset-password` endpoint handles both password resets and first-time invite activation — `resetUserPassword()` promotes `invited` accounts automatically.
-- If a staff account already exists (matched by email), `setStaff()` updates the record and re-sends the invite email if the account is still in `invited` status.
+- Account policy checks keep staff limited to youth accounts while administrators can manage staff/admin accounts.

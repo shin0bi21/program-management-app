@@ -1,4 +1,10 @@
-// Storage keys
+export interface AuthUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export const STORAGE_KEYS = {
   TOKEN: 'token',
   USER: 'user',
@@ -8,7 +14,7 @@ export const STORAGE_KEYS = {
 /**
  * Store authentication data
  */
-export const setAuthData = (token: string, user: any): void => {
+export const setAuthData = (token: string, user: AuthUser): void => {
   localStorage.setItem(STORAGE_KEYS.TOKEN, token);
   localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
 };
@@ -31,15 +37,14 @@ export const getToken = (): string | null => {
 /**
  * Get stored user data
  */
-export const getUser = (): any | null => {
+export const getUser = (): AuthUser | null => {
   const user = localStorage.getItem(STORAGE_KEYS.USER);
   if (!user) return null;
   
   try {
-    return JSON.parse(user);
+    return JSON.parse(user) as AuthUser;
   } catch {
     return null;
   }
 };
-
 

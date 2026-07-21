@@ -4,5 +4,5 @@
  */
 export function getMenuItems(menuEl: HTMLElement | null): HTMLElement[] {
   if (!menuEl) return [];
-  return Array.from(menuEl.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  return Array.from(menuEl.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'));
 }

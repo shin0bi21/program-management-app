@@ -46,14 +46,14 @@ describe('YouthModal', () => {
   });
 
   describe('rendering', () => {
-    it('shows Sign Up Form title when creating', () => {
+    it('shows Add Youth Profile title when creating from Youth', () => {
       renderModal();
-      expect(screen.getByText('Sign Up Form')).toBeInTheDocument();
+      expect(screen.getByText('Add Youth Profile')).toBeInTheDocument();
     });
 
-    it('shows Update Form title when editing', () => {
+    it('shows Update Youth Profile title when editing', () => {
       renderModal({ youthData: makeYouthProfile() });
-      expect(screen.getByRole('heading', { name: 'Update Form' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Update Youth Profile' })).toBeInTheDocument();
     });
 
     it('pre-fills first and last name when editing', () => {
@@ -62,9 +62,25 @@ describe('YouthModal', () => {
       expect(screen.getByDisplayValue('Smith')).toBeInTheDocument();
     });
 
+    it('does not show login email when opened from Youth', () => {
+      renderModal();
+      expect(screen.queryByLabelText('Login Email')).not.toBeInTheDocument();
+    });
+
+    it('shows login email when opened from Users', () => {
+      renderModal({ showLoginEmail: true });
+      expect(screen.getByLabelText('Login Email')).toBeInTheDocument();
+    });
+
+    it('shows an existing account email as read-only in account mode', () => {
+      renderModal({ showLoginEmail: true, youthData: makeYouthProfile({ account: { email: 'youth@example.com', status: 'active' } }) });
+      expect(screen.getByLabelText('Login Email')).toHaveValue('youth@example.com');
+      expect(screen.getByLabelText('Login Email')).toBeDisabled();
+    });
+
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
-      expect(screen.queryByText('Sign Up Form')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();
     });
   });
 
@@ -98,6 +114,16 @@ describe('YouthModal', () => {
           lastName: 'Test',
           status: 'active',
         }));
+      });
+    });
+
+    it('includes login email when inviting during youth creation', async () => {
+      renderModal({ showLoginEmail: true });
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText('Login Email'), { target: { value: 'new-youth@example.com' } });
+      submitForm();
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ email: 'new-youth@example.com' }));
       });
     });
 

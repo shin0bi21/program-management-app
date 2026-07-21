@@ -53,23 +53,29 @@ const DEFAULT_TIMEOUT = 15_000;
 
 async function rawFetch(url: string, init: RequestInit, timeout: number, callerSignal?: AbortSignal): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeout);
+  const abortFromCaller = () => controller.abort(callerSignal?.reason);
+  callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
     return await fetch(url, {
       ...init,
-      signal: callerSignal ?? controller.signal,
+      signal: controller.signal,
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      // Only treat as timeout if our own controller fired, not the caller's.
-      if (!callerSignal) throw new RequestTimeoutError(timeout);
+      if (timedOut) throw new RequestTimeoutError(timeout);
       throw err;
     }
     if (err instanceof TypeError) throw new NetworkError();
     throw err;
   } finally {
     clearTimeout(timeoutId);
+    callerSignal?.removeEventListener('abort', abortFromCaller);
   }
 }
 

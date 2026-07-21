@@ -4,6 +4,7 @@ import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
+import PageHeader from '../../common/components/PageHeader/PageHeader';
 import type { School } from './types';
 import { useSchools } from './hooks/useSchools';
 import { useAuth } from '../../common/context/AuthContext';
@@ -90,16 +91,10 @@ export default function Schools() {
     <>
       <Header />
       <div className="page-container">
-        <div className="page-header">
-          <div className="page-title-row">
-            <h1 className="page-title">Schools</h1>
-            {canWrite && (
-              <Button onClick={() => setModalTarget('new')}>
-                + Add School
-              </Button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          title="Schools"
+          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add School</Button> : undefined}
+        />
 
         {error && <p className="page-error">{error}</p>}
 

@@ -9,7 +9,7 @@
     "start": "node dist/src/index.js",
     "test": "jest",
     "test:auth": "jest --testPathPatterns=tests/auth",
-    "test:staff": "jest --testPathPatterns=tests/staff",
+    "test:accounts": "jest --testPathPatterns=tests/accounts",
     "test:youth": "jest --testPathPatterns=tests/youth",
     "test:schools": "jest --testPathPatterns=tests/schools",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
@@ -22,6 +22,7 @@
     "db:status": "npx tsx db/scripts/migration_status.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
+    "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

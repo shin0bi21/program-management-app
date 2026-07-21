@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Production deploy script — run on the Lightsail server to deploy new code.
 # Assumes prod containers are already running.
 #

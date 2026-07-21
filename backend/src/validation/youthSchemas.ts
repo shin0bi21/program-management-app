@@ -11,6 +11,7 @@ export const setYouthSchema = z.object({
       .string()
       .min(1, 'Last name is required')
       .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+    email: z.string().trim().email('Invalid email format').optional(),
     dateOfBirth: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')

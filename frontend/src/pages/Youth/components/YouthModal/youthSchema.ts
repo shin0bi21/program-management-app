@@ -11,6 +11,7 @@ export const youthSchema = z.object({
     .string()
     .min(1, 'Last name is required')
     .regex(namePattern, "Last name can only contain letters, spaces, hyphens, and apostrophes"),
+  email: z.union([z.literal(''), z.string().email('Invalid email address')]),
   dateOfBirth: z.string().optional(),
   schoolId: z.string().optional(),
   gradeLevel: z

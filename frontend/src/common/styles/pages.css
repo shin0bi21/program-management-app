@@ -1,5 +1,5 @@
 /* ── Shared data-page layout ────────────────────────────────
-   Used by Staff, Youth, Account (any sidebar-content page).
+   Used by Youth, Schools, Outreach, and Settings pages.
    ──────────────────────────────────────────────────────── */
 
 .page-container {
@@ -15,19 +15,6 @@
     min-height: 100vh;
     padding: 72px 20px 32px;
   }
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
 }
 
 .page-title {

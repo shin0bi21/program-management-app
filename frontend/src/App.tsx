@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './common/context/AuthContext'
 import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
-import Staff from './pages/Staff/Staff'
+import Users from './pages/Settings/Users/Users'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
-import CohortInterest from './pages/Settings/CohortInterest/CohortInterest'
+import Outreach from './pages/Outreach/Outreach'
+import ExpressionsOfInterest from './pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'
+import Leads from './pages/Outreach/Leads/Leads'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -47,14 +49,18 @@ function App() {
               <Account />
             </ProtectedRoute>
           } />
-          <Route path="/settings/cohort-interest" element={
-            <ProtectedRoute requiredPermission="read:settings">
-              <CohortInterest />
+          <Route path="/outreach" element={
+            <ProtectedRoute requiredPermission="read:outreach">
+              <Outreach />
             </ProtectedRoute>
-          } />
-          <Route path="/settings/staff" element={
-            <ProtectedRoute requiredPermission="read:staff">
-              <Staff />
+          }>
+            <Route index element={<Navigate to="expressions-of-interest" replace />} />
+            <Route path="expressions-of-interest" element={<ExpressionsOfInterest />} />
+            <Route path="leads" element={<Leads />} />
+          </Route>
+          <Route path="/settings/users" element={
+            <ProtectedRoute requiredPermission="read:accounts">
+              <Users />
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />

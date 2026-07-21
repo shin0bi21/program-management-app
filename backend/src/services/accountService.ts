@@ -4,9 +4,12 @@ import { audit } from './auditService';
 import { sql, asTransactionSql } from '../db/client';
 import type { Users, UserCredentials } from '../types/database';
 import type { DbRow } from '../types/db';
-import type { SetStaffInput } from '../validation/staffSchemas';
+import type { AccessTokenPayload, UserRole } from '../types/auth';
+import type { AccountQuery, SetAccountInput } from '../validation/accountSchemas';
 import { sendStaffInvite, sendYouthInvite, sendInviteEmailChanged, sendEmailChangedOldAddress, sendEmailChangedNewAddress } from '../utils/emailService';
 import { ConflictError, NotFoundError, BadRequestError } from '../errors';
+import { assertCanCreateAccount, assertCanManageAccount } from '../policies/accountPolicy';
+import { applyAccountFilters } from './queryFilters/accountFilters';
 
 export type AccountRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
@@ -15,7 +18,8 @@ export type AccountRow =
     role: string;
   };
 
-export async function getStaffAccounts() {
+export async function getAccounts(actor: AccessTokenPayload, filters: AccountQuery) {
+  const where = applyAccountFilters(actor, filters);
   return sql<AccountRow[]>`
     SELECT
       u.id,
@@ -28,9 +32,22 @@ export async function getStaffAccounts() {
     FROM users u
     INNER JOIN user_credentials uc ON uc.user_id = u.id
     INNER JOIN user_roles ur ON ur.id = u.role_id
-    WHERE ur.name IN ('staff', 'admin')
+    WHERE ${where}
     ORDER BY u.first_name ASC, u.last_name ASC
   `;
+}
+
+async function getAccountRole(userId: string): Promise<UserRole> {
+  const accounts = await sql<{ role: UserRole }[]>`
+    SELECT ur.name AS role
+    FROM users u
+    INNER JOIN user_roles ur ON ur.id = u.role_id
+    INNER JOIN user_credentials uc ON uc.user_id = u.id
+    WHERE u.id = ${userId}
+    LIMIT 1
+  `;
+  if (!accounts.length) throw new NotFoundError('Account not found');
+  return accounts[0].role;
 }
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -82,9 +99,14 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
   return { email, status: 'invited' as const };
 }
 
-export async function setStaffAccount(data: SetStaffInput, actorId: string) {
+export async function setAccount(data: SetAccountInput, actor: AccessTokenPayload) {
   const { id, firstName, lastName, email, role = 'staff' } = data;
+  if (id) {
+    assertCanManageAccount(actor, await getAccountRole(id));
+  }
+  assertCanCreateAccount(actor, role);
   const transactionId = crypto.randomUUID();
+  const actorId = actor.userId;
 
   // Get role ID
   const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
@@ -239,8 +261,11 @@ export async function setStaffAccount(data: SetStaffInput, actorId: string) {
   return staff[0];
 }
 
-export async function revokeStaffAccountInvite(userId: string, actorId: string) {
+export async function revokeAccountInvite(userId: string, actor: AccessTokenPayload) {
+  const targetRole = await getAccountRole(userId);
+  assertCanManageAccount(actor, targetRole);
   const transactionId = crypto.randomUUID();
+  const actorId = actor.userId;
 
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
@@ -250,7 +275,7 @@ export async function revokeStaffAccountInvite(userId: string, actorId: string) 
       FROM users u
       INNER JOIN user_roles ur ON ur.id = u.role_id
       INNER JOIN user_credentials uc ON uc.user_id = u.id
-      WHERE u.id = ${userId} AND ur.name IN ('staff', 'admin')
+      WHERE u.id = ${userId}
       LIMIT 1
     `;
     if (!existingUsers.length) throw new NotFoundError('Staff user not found');
@@ -267,13 +292,19 @@ export async function revokeStaffAccountInvite(userId: string, actorId: string) 
       null
     );
 
-    // Hard delete — cascade removes credentials, tokens, etc.
-    await trx`DELETE FROM users WHERE id = ${userId}`;
+    if (targetRole === 'youth') {
+      await trx`DELETE FROM user_credentials WHERE user_id = ${userId}`;
+    } else {
+      // Staff/admin invitations create the user, so revocation removes it.
+      await trx`DELETE FROM users WHERE id = ${userId}`;
+    }
   });
 }
 
-export async function toggleStaffAccountStatus(userId: string, actorId: string) {
+export async function toggleAccountStatus(userId: string, actor: AccessTokenPayload) {
+  assertCanManageAccount(actor, await getAccountRole(userId));
   const transactionId = crypto.randomUUID();
+  const actorId = actor.userId;
 
   let result!: AccountRow;
 
@@ -285,7 +316,7 @@ export async function toggleStaffAccountStatus(userId: string, actorId: string) 
       FROM users u
       INNER JOIN user_roles ur ON ur.id = u.role_id
       INNER JOIN user_credentials uc ON uc.user_id = u.id
-      WHERE u.id = ${userId} AND ur.name IN ('staff', 'admin')
+      WHERE u.id = ${userId}
       LIMIT 1
     `;
     if (!existingUsers.length) throw new NotFoundError('Staff user not found');

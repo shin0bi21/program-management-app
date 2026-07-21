@@ -4,78 +4,111 @@ import { sql } from '../shared/db';
 
 const app = createApp();
 
-describe('Public cohort interest API', () => {
-  const youthName = `Cohort Test ${Date.now()}`;
+describe('Public expression of interest API', () => {
+  const youthFirstName = 'Cohort';
+  const youthLastName = `Test-${Date.now()}`;
 
   afterAll(async () => {
-    await sql`DELETE FROM cohort_interest_submissions WHERE youth_name LIKE 'Cohort Test %'`;
+    await sql`DELETE FROM expressions_of_interest WHERE youth_last_name = ${youthLastName}`;
   });
 
-  it('creates a cohort interest submission with email only', async () => {
+  it('creates an expression of interest using the primary contact', async () => {
     const res = await request(app)
-      .post('/api/public/cohort-interest')
+      .post('/api/public/expressions-of-interest')
       .send({
-        youthName,
-        parentName: 'Parent Test',
+        youthFirstName,
+        youthLastName,
         age: 14,
         school: 'Test Secondary',
-        email: 'cohort@test.local',
         discoverySource: 'school',
-        message: 'Interested in learning more.',
+        contactFirstName: 'Parent',
+        contactLastName: 'Test',
+        contactPhoneNumber: '416-555-0199',
+        contactRelationship: 'parent',
+        notes: 'Interested in learning more.',
       });
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/submitted successfully/i);
 
     const rows = await sql<{
-      youthName: string;
-      parentName: string | null;
+      youthFirstName: string;
+      youthLastName: string;
+      contactFirstName: string | null;
+      contactLastName: string | null;
+      contactPhoneNumber: string | null;
+      contactRelationship: string | null;
       age: number;
       school: string | null;
-      email: string | null;
-      phoneNumber: string | null;
       discoverySource: string | null;
     }[]>`
       SELECT
-        youth_name as "youthName",
-        parent_name as "parentName",
+        youth_first_name as "youthFirstName",
+        youth_last_name as "youthLastName",
+        contact_first_name as "contactFirstName",
+        contact_last_name as "contactLastName",
+        contact_phone_number as "contactPhoneNumber",
+        contact_relationship as "contactRelationship",
         age,
         school,
-        email,
-        phone_number as "phoneNumber",
         discovery_source as "discoverySource"
-      FROM cohort_interest_submissions
-      WHERE youth_name = ${youthName}
+      FROM expressions_of_interest
+      WHERE youth_last_name = ${youthLastName}
       LIMIT 1
     `;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      youthName,
-      parentName: 'Parent Test',
+      youthFirstName,
+      youthLastName,
+      contactFirstName: 'Parent',
+      contactLastName: 'Test',
+      contactPhoneNumber: '416-555-0199',
+      contactRelationship: 'parent',
       age: 14,
       school: 'Test Secondary',
-      email: 'cohort@test.local',
-      phoneNumber: null,
       discoverySource: 'school',
     });
   });
 
-  it('rejects submissions without email or phone', async () => {
+  it('requires all primary contact fields', async () => {
     const res = await request(app)
-      .post('/api/public/cohort-interest')
+      .post('/api/public/expressions-of-interest')
       .send({
-        youthName: 'Missing Contact',
+        youthFirstName: 'Partial',
+        youthLastName: 'Contact',
         age: 15,
+        school: 'Test Secondary',
+        discoverySource: 'online',
+        contactFirstName: 'Parent',
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/validation/i);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: 'body.email', message: 'Provide an email or phone number' }),
-        expect.objectContaining({ field: 'body.phoneNumber', message: 'Provide an email or phone number' }),
-      ]),
-    );
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.contactLastName' }),
+      expect.objectContaining({ field: 'body.contactPhoneNumber' }),
+      expect.objectContaining({ field: 'body.contactRelationship' }),
+    ]));
+  });
+
+  it('rejects emergency as an Outreach relationship', async () => {
+    const res = await request(app)
+      .post('/api/public/expressions-of-interest')
+      .send({
+        youthFirstName: 'Relationship',
+        youthLastName: 'Test',
+        age: 14,
+        school: 'Test Secondary',
+        discoverySource: 'online',
+        contactFirstName: 'Primary',
+        contactLastName: 'Contact',
+        contactPhoneNumber: '416-555-0199',
+        contactRelationship: 'emergency',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.contactRelationship' }),
+    ]));
   });
 });

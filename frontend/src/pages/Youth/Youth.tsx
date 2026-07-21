@@ -4,9 +4,9 @@ import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
+import PageHeader from '../../common/components/PageHeader/PageHeader';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
-import YouthInviteModal from './components/YouthInviteModal/YouthInviteModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
 import { toggleYouthStatus } from '../../common/api/youth.api';
@@ -15,7 +15,6 @@ import './Youth.css';
 
 export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const [inviteTarget, setInviteTarget] = useState<YouthProfile | null>(null);
   const { youth, setYouth, loading, error } = useYouth();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
@@ -108,7 +107,6 @@ export default function Youth() {
         <ActionsMenu
           items={[
             { id: 'edit',        label: 'Edit',       onClick: () => handleEditProfile(profile) },
-            ...(!profile.account ? [{ id: 'invite', label: 'Invite', onClick: () => setInviteTarget(profile) }] : []),
             ...(profile.status === 'active' ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => handleDeactivateProfile(profile) }] : []),
             ...(profile.status === 'inactive' ? [{ id: 'reactivate', label: 'Activate', onClick: () => handleReactivateProfile(profile) }] : []),
           ]}
@@ -121,16 +119,10 @@ export default function Youth() {
     <>
       <Header />
       <div className="page-container">
-        <div className="page-header">
-          <div className="page-title-row">
-            <h1 className="page-title">Youth</h1>
-            {canWrite && (
-              <Button onClick={() => setModalTarget('new')}>
-                + Sign Up
-              </Button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          title="Youth"
+          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
+        />
 
         <Table
           columns={youthColumns}
@@ -148,17 +140,6 @@ export default function Youth() {
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={() => setModalTarget(null)}
         onSuccess={handleSaveYouth}
-      />
-
-      <YouthInviteModal
-        youth={inviteTarget}
-        onClose={() => setInviteTarget(null)}
-        onSuccess={(account) => {
-          if (inviteTarget) {
-            setYouth(prev => prev.map(y => y.id === inviteTarget.id ? { ...y, account } : y));
-          }
-          setInviteTarget(null);
-        }}
       />
 
       <Modal

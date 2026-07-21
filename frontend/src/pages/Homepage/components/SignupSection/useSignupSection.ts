@@ -1,75 +1,54 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus'
-import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors'
-import { submitCohortInterest } from '../../api/homepage.api'
-import {
-  cohortInterestInitialState,
-  type CohortInterestErrors,
-  type CohortInterestForm,
-} from './signupSectionSchema'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { outreachFormDefaultValues, outreachFormSchema, type OutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
+import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
+import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors';
+import { submitExpressionOfInterest } from '../../api/homepage.api';
 
 export function useSignupSection() {
-  const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
-  const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus()
-  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success'
+  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { register, handleSubmit, reset, setError: setFieldError, formState: { errors } } = useForm<OutreachFormValues>({
+    resolver: zodResolver(outreachFormSchema),
+    defaultValues: outreachFormDefaultValues,
+  });
+  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success';
 
   useEffect(() => {
-    if (submitStatus !== 'success') return
+    if (submitStatus !== 'success') return;
+    const timeoutId = window.setTimeout(resetStatus, 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [submitStatus, resetStatus]);
 
-    const timeoutId = window.setTimeout(() => {
-      resetStatus()
-    }, 2500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [submitStatus, resetStatus])
-
-  const handleFieldChange = (field: keyof CohortInterestForm, value: string) => {
-    setFormData((current) => ({ ...current, [field]: value }))
-    setFieldErrors((current) => ({ ...current, [field]: undefined }))
-  }
-
-  const handleInterestSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setSubmitStatus('submitting')
-    setError('')
-    setFieldErrors({})
-
+  const onValid = async (data: OutreachFormValues) => {
+    setError('');
+    setSubmitStatus('submitting');
     try {
-      await submitCohortInterest({
-        youthName: formData.youthName,
-        parentName: formData.parentName.trim() || undefined,
-        age: Number(formData.age),
-        school: formData.school.trim() || undefined,
-        email: formData.email.trim() || undefined,
-        phoneNumber: formData.phoneNumber.trim() || undefined,
-        discoverySource: formData.discoverySource || undefined,
-        message: formData.message.trim() || undefined,
-      })
-      setFormData(cohortInterestInitialState)
-      setFieldErrors({})
-      setSubmitStatus('success')
+      await submitExpressionOfInterest({
+        youthFirstName: data.youthFirstName.trim(),
+        youthLastName: data.youthLastName.trim(),
+        age: data.age,
+        school: data.school.trim(),
+        contactFirstName: data.contactFirstName.trim(),
+        contactLastName: data.contactLastName.trim(),
+        contactPhoneNumber: data.contactPhoneNumber.trim(),
+        contactRelationship: data.contactRelationship,
+        discoverySource: data.discoverySource,
+        notes: data.notes.trim() || undefined,
+      });
+      reset(outreachFormDefaultValues);
+      setSubmitStatus('success');
     } catch (err) {
-      if (err instanceof ApiError && err.details?.length) {
-        const nextFieldErrors: CohortInterestErrors = {}
-        for (const detail of err.details) {
-          const field = detail.field.replace(/^body\./, '') as keyof CohortInterestForm
-          nextFieldErrors[field] = detail.message
+      if (err instanceof ApiError) {
+        for (const detail of err.details ?? []) {
+          const field = detail.field.replace(/^body\./, '') as keyof OutreachFormValues;
+          setFieldError(field, { message: detail.message });
         }
-        setFieldErrors(nextFieldErrors)
       }
-      setSubmitStatus('error')
-      setError(getErrorMessage(err, 'Unable to submit the form right now.'))
+      setSubmitStatus('error');
+      setError(getErrorMessage(err, 'Unable to submit the form right now.'));
     }
-  }
+  };
 
-  return {
-    formData,
-    fieldErrors,
-    submitStatus,
-    error,
-    isFormLocked,
-    handleFieldChange,
-    handleInterestSubmit,
-  }
+  return { register, errors, handleSubmit, onValid, submitStatus, error, isFormLocked };
 }

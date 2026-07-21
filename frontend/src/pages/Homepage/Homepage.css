@@ -318,6 +318,15 @@
   font-weight: 800;
 }
 
+.cohort-form-group-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cohort-form-group-title span {
+  font-weight: 400;
+}
+
 .cohort-inline-form input,
 .cohort-inline-form select,
 .cohort-inline-form textarea {

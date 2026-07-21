@@ -3,10 +3,16 @@
  * Note: This does NOT verify the signature - only use for client-side checks
  * Backend must always verify tokens properly
  */
-export const decodeToken = (token: string): any => {
+export interface JwtPayload {
+  exp?: number;
+  role?: string;
+  permissions?: string[];
+  [claim: string]: unknown;
+}
+
+export const decodeToken = (token: string): JwtPayload | null => {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload;
+    return JSON.parse(atob(token.split('.')[1])) as JwtPayload;
   } catch {
     return null;
   }

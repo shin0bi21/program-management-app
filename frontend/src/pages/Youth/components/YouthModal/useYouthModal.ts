@@ -13,6 +13,7 @@ import type { YouthProfile } from '../../hooks/useYouth';
 const defaultValues: YouthFormData = {
   firstName: '',
   lastName: '',
+  email: '',
   dateOfBirth: '',
   schoolId: '',
   gradeLevel: undefined,
@@ -23,9 +24,10 @@ interface UseYouthModalProps {
   youthData?: YouthProfile;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
+  includeLoginEmail?: boolean;
 }
 
-export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYouthModalProps) {
+export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false }: UseYouthModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
 
   const {
@@ -44,8 +46,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
     addresses,
     initialize: initAddresses,
     reset: resetAddresses,
-    // handleAdd: handleAddAddress,
-    // handleDelete: handleDeleteAddress,
     handleChange: handleAddressChange,
     validate: validateAddresses,
     getPayload: getAddressPayload,
@@ -55,8 +55,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
     contacts,
     initialize: initContacts,
     reset: resetContacts,
-    // handleAdd: handleAddContact,
-    // handleDelete: handleDeleteContact,
     handleChange: handleContactChange,
     validate: validateContacts,
     getPayload: getContactPayload,
@@ -69,6 +67,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
     reset({
       firstName: youthData.firstName || '',
       lastName: youthData.lastName || '',
+      email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
@@ -76,7 +75,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
 
     initAddresses(youthData.addresses);
     initContacts(youthData.contacts);
-  }, [isOpen, youthData]);
+  }, [isOpen, youthData, reset, initAddresses, initContacts]);
 
   const resetForm = () => {
     reset(defaultValues);
@@ -113,6 +112,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         ...(youthData && { id: youthData.id }),
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
+        ...(includeLoginEmail && data.email && { email: data.email.trim() }),
         status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),

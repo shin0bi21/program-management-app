@@ -1,0 +1,19 @@
+.outreach-form-section + .outreach-form-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid var(--ink-12);
+}
+
+.outreach-form-section + .outreach-form-section--continuation {
+  margin-top: 16px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.outreach-form-section-title {
+  margin: 0;
+  padding: 4px 0 12px;
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
