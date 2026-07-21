@@ -1,13 +1,17 @@
 import { apiClient } from '../../../common/api/http/client';
 
 export type CohortInterestPayload = {
-  youthName: string;
-  parentName?: string;
+  youthFirstName: string;
+  youthLastName: string;
   age: number;
-  school?: string;
+  school: string;
   email?: string;
   phoneNumber?: string;
-  discoverySource?: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
+  contactFirstName: string;
+  contactLastName: string;
+  contactPhoneNumber: string;
+  contactRelationship: 'parent' | 'sibling' | 'guardian';
+  discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
   message?: string;
 };
 

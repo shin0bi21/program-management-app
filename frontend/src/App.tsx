@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './common/context/AuthContext'
 import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
@@ -8,7 +8,9 @@ import Youth from './pages/Youth/Youth'
 import ManageAccounts from './pages/Settings/ManageAccounts/ManageAccounts'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
-import CohortInterest from './pages/Settings/CohortInterest/CohortInterest'
+import Outreach from './pages/Outreach/Outreach'
+import InterestSubmissions from './pages/Outreach/Submissions/InterestSubmissions'
+import Leads from './pages/Outreach/Leads/Leads'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -47,11 +49,15 @@ function App() {
               <Account />
             </ProtectedRoute>
           } />
-          <Route path="/settings/cohort-interest" element={
-            <ProtectedRoute requiredPermission="read:settings">
-              <CohortInterest />
+          <Route path="/outreach" element={
+            <ProtectedRoute requiredPermission="read:outreach">
+              <Outreach />
             </ProtectedRoute>
-          } />
+          }>
+            <Route index element={<Navigate to="submissions" replace />} />
+            <Route path="submissions" element={<InterestSubmissions />} />
+            <Route path="leads" element={<Leads />} />
+          </Route>
           <Route path="/settings/accounts" element={
             <ProtectedRoute requiredPermission="read:accounts">
               <ManageAccounts />

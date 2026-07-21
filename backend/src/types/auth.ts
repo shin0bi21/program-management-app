@@ -6,6 +6,8 @@ export type Permission =
   | 'write:youth_profiles'
   | 'read:schools'
   | 'write:schools'
+  | 'read:outreach'
+  | 'write:outreach'
   | 'read:settings'
   | 'write:settings';
 
@@ -30,4 +32,3 @@ export interface RefreshTokenPayload extends BaseTokenPayload {
   iat: number;
   exp: number;
 }
-

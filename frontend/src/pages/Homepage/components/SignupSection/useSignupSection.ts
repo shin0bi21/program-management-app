@@ -6,6 +6,8 @@ import {
   cohortInterestInitialState,
   type CohortInterestErrors,
   type CohortInterestForm,
+  type ContactRelationship,
+  type DiscoverySource,
 } from './signupSectionSchema'
 
 export function useSignupSection() {
@@ -31,19 +33,46 @@ export function useSignupSection() {
 
   const handleInterestSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmitStatus('submitting')
     setError('')
     setFieldErrors({})
 
+    const nextFieldErrors: CohortInterestErrors = {}
+    if (!formData.youthFirstName.trim()) nextFieldErrors.youthFirstName = 'First name is required'
+    if (!formData.youthLastName.trim()) nextFieldErrors.youthLastName = 'Last name is required'
+    if (!formData.age) nextFieldErrors.age = 'Age is required'
+    if (!formData.school.trim()) nextFieldErrors.school = 'School is required'
+    if (!formData.discoverySource) nextFieldErrors.discoverySource = 'Please select a source'
+    if (!formData.email.trim() && !formData.phoneNumber.trim()) {
+      const responseError = 'Provide an email or phone number'
+      nextFieldErrors.email = responseError
+      nextFieldErrors.phoneNumber = responseError
+    }
+
+    if (!formData.contactFirstName.trim()) nextFieldErrors.contactFirstName = 'Contact first name is required'
+    if (!formData.contactLastName.trim()) nextFieldErrors.contactLastName = 'Contact last name is required'
+    if (!formData.contactPhoneNumber.trim()) nextFieldErrors.contactPhoneNumber = 'Contact phone number is required'
+    if (!formData.contactRelationship) nextFieldErrors.contactRelationship = 'Relationship is required'
+
+    if (Object.keys(nextFieldErrors).length) {
+      setFieldErrors(nextFieldErrors)
+      return
+    }
+
+    setSubmitStatus('submitting')
+
     try {
       await submitCohortInterest({
-        youthName: formData.youthName,
-        parentName: formData.parentName.trim() || undefined,
+        youthFirstName: formData.youthFirstName.trim(),
+        youthLastName: formData.youthLastName.trim(),
         age: Number(formData.age),
-        school: formData.school.trim() || undefined,
+        school: formData.school.trim(),
         email: formData.email.trim() || undefined,
         phoneNumber: formData.phoneNumber.trim() || undefined,
-        discoverySource: formData.discoverySource || undefined,
+        contactFirstName: formData.contactFirstName.trim(),
+        contactLastName: formData.contactLastName.trim(),
+        contactPhoneNumber: formData.contactPhoneNumber.trim(),
+        contactRelationship: formData.contactRelationship as ContactRelationship,
+        discoverySource: formData.discoverySource as DiscoverySource,
         message: formData.message.trim() || undefined,
       })
       setFormData(cohortInterestInitialState)

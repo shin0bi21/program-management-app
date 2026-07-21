@@ -1,7 +1,7 @@
 import Button from '../../../../common/components/Button/Button'
 import FormField from '../../../../common/components/FormField/FormField'
 import { useSignupSection } from './useSignupSection'
-import { discoverySourceOptions } from './signupSectionSchema'
+import { contactRelationshipOptions, discoverySourceOptions } from './signupSectionSchema'
 
 export default function SignupSection() {
   const {
@@ -36,20 +36,22 @@ export default function SignupSection() {
                 <div className="form-error">{error}</div>
               )}
               <div className="form-row">
-                <FormField id="cohort-youthName" label="Youth Name" error={fieldErrors.youthName}>
+                <FormField id="cohort-youthFirstName" label="Youth First Name" error={fieldErrors.youthFirstName}>
                   <input
-                    id="cohort-youthName"
-                    value={formData.youthName}
-                    onChange={(event) => handleFieldChange('youthName', event.target.value)}
-                    autoComplete="name"
+                    id="cohort-youthFirstName"
+                    value={formData.youthFirstName}
+                    onChange={(event) => handleFieldChange('youthFirstName', event.target.value)}
+                    autoComplete="given-name"
+                    required
                   />
                 </FormField>
-                <FormField id="cohort-parentName" label="Parent Name" error={fieldErrors.parentName}>
+                <FormField id="cohort-youthLastName" label="Youth Last Name" error={fieldErrors.youthLastName}>
                   <input
-                    id="cohort-parentName"
-                    value={formData.parentName}
-                    onChange={(event) => handleFieldChange('parentName', event.target.value)}
-                    autoComplete="name"
+                    id="cohort-youthLastName"
+                    value={formData.youthLastName}
+                    onChange={(event) => handleFieldChange('youthLastName', event.target.value)}
+                    autoComplete="family-name"
+                    required
                   />
                 </FormField>
               </div>
@@ -63,6 +65,7 @@ export default function SignupSection() {
                     value={formData.age}
                     onChange={(event) => handleFieldChange('age', event.target.value)}
                     inputMode="numeric"
+                    required
                   />
                 </FormField>
                 <FormField id="cohort-school" label="School" error={fieldErrors.school}>
@@ -70,9 +73,57 @@ export default function SignupSection() {
                     id="cohort-school"
                     value={formData.school}
                     onChange={(event) => handleFieldChange('school', event.target.value)}
+                    required
                   />
                 </FormField>
               </div>
+              <p className="cohort-form-group-title">Primary Contact</p>
+              <div className="form-row">
+                <FormField id="cohort-contactFirstName" label="First Name" error={fieldErrors.contactFirstName}>
+                  <input
+                    id="cohort-contactFirstName"
+                    value={formData.contactFirstName}
+                    onChange={(event) => handleFieldChange('contactFirstName', event.target.value)}
+                    autoComplete="off"
+                    required
+                  />
+                </FormField>
+                <FormField id="cohort-contactLastName" label="Last Name" error={fieldErrors.contactLastName}>
+                  <input
+                    id="cohort-contactLastName"
+                    value={formData.contactLastName}
+                    onChange={(event) => handleFieldChange('contactLastName', event.target.value)}
+                    autoComplete="off"
+                    required
+                  />
+                </FormField>
+              </div>
+              <div className="form-row">
+                <FormField id="cohort-contactPhoneNumber" label="Phone Number" error={fieldErrors.contactPhoneNumber}>
+                  <input
+                    id="cohort-contactPhoneNumber"
+                    value={formData.contactPhoneNumber}
+                    onChange={(event) => handleFieldChange('contactPhoneNumber', event.target.value)}
+                    inputMode="tel"
+                    autoComplete="off"
+                    required
+                  />
+                </FormField>
+                <FormField id="cohort-contactRelationship" label="Relationship" error={fieldErrors.contactRelationship}>
+                  <select
+                    id="cohort-contactRelationship"
+                    value={formData.contactRelationship}
+                    onChange={(event) => handleFieldChange('contactRelationship', event.target.value)}
+                    required
+                  >
+                    <option value="">Select one</option>
+                    {contactRelationshipOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+              <p className="cohort-form-group-title">How We Can Reach You <span>(email or phone required)</span></p>
               <div className="form-row">
                 <FormField id="cohort-email" label="Email" error={fieldErrors.email}>
                   <input
@@ -98,6 +149,7 @@ export default function SignupSection() {
                     id="cohort-discoverySource"
                     value={formData.discoverySource}
                     onChange={(event) => handleFieldChange('discoverySource', event.target.value)}
+                    required
                   >
                     <option value="">Select one</option>
                     {discoverySourceOptions.map((option) => (
