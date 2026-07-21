@@ -34,13 +34,16 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     register,
     handleSubmit: rhfHandleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<YouthFormData>({
     resolver: zodResolver(youthSchema),
     defaultValues,
   });
 
-  const { schools } = useSchools();
+  const { schools, setSchools, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const schoolId = watch('schoolId');
 
   const {
     addresses,
@@ -143,6 +146,11 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     onValid,
     // Sub-entity state
     schools,
+    setSchools,
+    schoolsLoading,
+    schoolsError,
+    schoolId,
+    setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
     addresses,
     handleAddressChange,
     contacts,

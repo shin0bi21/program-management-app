@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faSchool, faBullhorn } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faBullhorn } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
@@ -13,7 +13,6 @@ export default function Header() {
   const { isAuthenticated, role, permissions, logout } = useAuth();
   const canViewHome = role !== 'youth';
   const canViewYouth = permissions.includes('read:youth_profiles');
-  const canViewSchools = permissions.includes('read:schools');
   const canViewOutreach = permissions.includes('read:outreach');
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -114,16 +113,6 @@ export default function Header() {
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                   <span>Youth</span>
-                </button>
-              )}
-
-              {canViewSchools && (
-                <button
-                  onClick={() => go('/schools')}
-                  className={`sidebar-link${isActive('/schools') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faSchool} /></span>
-                  <span>Schools</span>
                 </button>
               )}
 
