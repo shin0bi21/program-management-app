@@ -202,6 +202,7 @@ export default function Users() {
       {youthInviteOpen && (
         <YouthModal
           isOpen
+          showLoginEmail
           onClose={() => setYouthInviteOpen(false)}
           onSuccess={youth => {
             if (youth.account) {

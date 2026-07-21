@@ -24,9 +24,10 @@ interface UseYouthModalProps {
   youthData?: YouthProfile;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
+  includeLoginEmail?: boolean;
 }
 
-export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYouthModalProps) {
+export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false }: UseYouthModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
 
   const {
@@ -115,7 +116,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess }: UseYout
         ...(youthData && { id: youthData.id }),
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
-        ...(data.email && { email: data.email.trim() }),
+        ...(includeLoginEmail && data.email && { email: data.email.trim() }),
         status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
