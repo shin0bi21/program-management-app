@@ -7,11 +7,6 @@ export default function Outreach() {
     <>
       <Header />
       <main className="page-container outreach-page">
-        <div className="page-header">
-          <div className="page-title-row">
-            <h1 className="page-title">Outreach</h1>
-          </div>
-        </div>
         <Outlet />
       </main>
     </>

@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createLead, getLeads, updateLeadStatus } from '../services/leadService';
-import type { CreateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
+import { leadQuerySchema, type CreateLeadInput, type UpdateLeadStatusInput } from '../validation/leadSchemas';
 
-export const handleGetLeads = async (_req: Request, res: Response) => {
-  res.json(await getLeads());
+export const handleGetLeads = async (req: Request, res: Response) => {
+  const filters = leadQuerySchema.shape.query.parse(req.query);
+  res.json(await getLeads(filters));
 };
 
 export const handleCreateLead = async (req: Request, res: Response) => {

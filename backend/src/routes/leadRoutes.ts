@@ -3,11 +3,11 @@ import { handleCreateLead, handleGetLeads, handleUpdateLeadStatus } from '../con
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { createLeadSchema, updateLeadStatusSchema } from '../validation/leadSchemas';
+import { createLeadSchema, leadQuerySchema, updateLeadStatusSchema } from '../validation/leadSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('read:outreach'), generalLimiter, asyncHandler(handleGetLeads));
+router.get('/', authenticateToken, requirePermission('read:outreach'), generalLimiter, validateRequest(leadQuerySchema), asyncHandler(handleGetLeads));
 
 router.post('/', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(createLeadSchema), asyncHandler(handleCreateLead));
 

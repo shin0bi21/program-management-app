@@ -1,6 +1,7 @@
 import { sql } from '../db/client';
 import { NotFoundError } from '../errors';
-import type { CreateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, UpdateLeadStatusInput } from '../validation/leadSchemas';
+import { applyLeadFilters } from './queryFilters/leadFilters';
 
 const leadColumns = sql`
   id,
@@ -26,10 +27,12 @@ const leadColumns = sql`
   updated_by
 `;
 
-export async function getLeads() {
+export async function getLeads(filters: LeadQuery) {
+  const where = applyLeadFilters(filters);
   return sql`
     SELECT ${leadColumns}
     FROM leads
+    WHERE ${where}
     ORDER BY created_at DESC
   `;
 }

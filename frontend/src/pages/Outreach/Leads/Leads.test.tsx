@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Leads from './Leads';
 
@@ -32,5 +32,17 @@ describe('Leads', () => {
     expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
     expect(screen.getByText('Public Interest')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Create Lead' })).toBeInTheDocument();
+  });
+
+  it('requests filtered lead data from the API', async () => {
+    render(<Leads />);
+    await screen.findByText('Avery Outreach');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'New' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+
+    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith({ search: '', statuses: ['new'] }));
   });
 });

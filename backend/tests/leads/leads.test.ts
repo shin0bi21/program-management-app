@@ -69,6 +69,25 @@ describe('Leads API', () => {
     ]));
   });
 
+  it('filters leads by status and youth or school search', async () => {
+    const res = await request(app)
+      .get('/api/leads?statuses=new&search=Event%20Prospect')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      expect.objectContaining({ youthFirstName: 'Event', youthLastName: 'Prospect', status: 'new' }),
+    ]);
+  });
+
+  it('rejects unsupported lead filters', async () => {
+    const res = await request(app)
+      .get('/api/leads?statuses=reviewed')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(400);
+  });
+
   it('updates a lead status and audit metadata', async () => {
     const [lead] = await sql<{ id: string }[]>`
       SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
