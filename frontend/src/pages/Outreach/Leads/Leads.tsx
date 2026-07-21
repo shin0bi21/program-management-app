@@ -45,7 +45,7 @@ export default function Leads() {
   const columns: TableColumn<Lead>[] = [
     { key: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
     { key: 'school', header: 'School', render: lead => lead.school },
-    { key: 'origin', header: 'Origin', width: '150px', render: lead => lead.origin === 'interest_submission' ? 'Public Interest' : 'Staff Created' },
+    { key: 'origin', header: 'Origin', width: '150px', render: lead => lead.origin === 'expression_of_interest' ? 'Expression of Interest' : 'Staff Created' },
     { key: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
     { key: 'created', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{

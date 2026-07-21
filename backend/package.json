@@ -22,7 +22,7 @@
     "db:status": "npx tsx db/scripts/migration_status.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
-    "seed:cohort-interest": "npx tsx db/scripts/seed-cohort-interest.ts",
+    "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

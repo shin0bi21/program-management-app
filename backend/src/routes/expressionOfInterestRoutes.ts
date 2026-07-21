@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { handleConvertCohortInterestSubmission, handleGetCohortInterestSubmissions, handleUpdateCohortInterestStatus } from '../controllers/cohortInterestController';
+import { handleConvertExpressionOfInterest, handleGetExpressionsOfInterest, handleUpdateExpressionOfInterestStatus } from '../controllers/expressionOfInterestController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { cohortInterestIdSchema, updateCohortInterestStatusSchema } from '../validation/cohortInterestSchemas';
+import { expressionOfInterestIdSchema, updateExpressionOfInterestStatusSchema } from '../validation/expressionOfInterestSchemas';
 
 const router = Router();
 
@@ -11,23 +11,23 @@ router.get('/',
   authenticateToken,
   requirePermission('read:outreach'),
   generalLimiter,
-  asyncHandler(handleGetCohortInterestSubmissions),
+  asyncHandler(handleGetExpressionsOfInterest),
 );
 
 router.patch('/:id',
   authenticateToken,
   requirePermission('write:outreach'),
   generalLimiter,
-  validateRequest(updateCohortInterestStatusSchema),
-  asyncHandler(handleUpdateCohortInterestStatus),
+  validateRequest(updateExpressionOfInterestStatusSchema),
+  asyncHandler(handleUpdateExpressionOfInterestStatus),
 );
 
 router.post('/:id/convert',
   authenticateToken,
   requirePermission('write:outreach'),
   generalLimiter,
-  validateRequest(cohortInterestIdSchema),
-  asyncHandler(handleConvertCohortInterestSubmission),
+  validateRequest(expressionOfInterestIdSchema),
+  asyncHandler(handleConvertExpressionOfInterest),
 );
 
 export default router;

@@ -3,7 +3,7 @@ import { z } from 'zod';
 const optionalTrimmedString = (max: number, tooLongMessage: string) =>
   z.string().trim().max(max, tooLongMessage).optional().or(z.literal(''));
 
-export const cohortInterestSchema = z.object({
+export const expressionOfInterestSchema = z.object({
   body: z.object({
     youthFirstName: z.string().trim().min(1, 'Youth first name is required').max(120, 'Youth first name is too long'),
     youthLastName: z.string().trim().min(1, 'Youth last name is required').max(120, 'Youth last name is too long'),

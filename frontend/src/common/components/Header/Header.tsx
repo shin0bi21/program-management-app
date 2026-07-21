@@ -177,10 +177,10 @@ export default function Header() {
         >
           <button
             role="menuitem"
-            onClick={() => go('/outreach/submissions')}
-            className={`settings-flyout-item${isActive('/outreach/submissions') ? ' active' : ''}`}
+            onClick={() => go('/outreach/expressions-of-interest')}
+            className={`settings-flyout-item${isActive('/outreach/expressions-of-interest') ? ' active' : ''}`}
           >
-            Public Interest
+            Expression of Interest
           </button>
           <button
             role="menuitem"

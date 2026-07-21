@@ -3,34 +3,34 @@
   vertical-align: top;
 }
 
-.cohort-interest-details {
+.expressions-of-interest-details {
   display: grid;
   gap: 12px;
 }
 
-.cohort-interest-detail-row {
+.expressions-of-interest-detail-row {
   display: grid;
   gap: 4px;
 }
 
-.cohort-interest-detail-block {
+.expressions-of-interest-detail-block {
   display: grid;
   gap: 6px;
 }
 
-.cohort-interest-detail-block p {
+.expressions-of-interest-detail-block p {
   margin: 0;
   white-space: pre-wrap;
 }
 
-.cohort-interest-detail-label {
+.expressions-of-interest-detail-label {
   color: var(--color-muted);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 @media (min-width: 640px) {
-  .cohort-interest-detail-row {
+  .expressions-of-interest-detail-row {
     align-items: start;
     gap: 12px;
     grid-template-columns: 150px minmax(0, 1fr);

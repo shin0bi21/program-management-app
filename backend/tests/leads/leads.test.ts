@@ -49,7 +49,7 @@ describe('Leads API', () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
       origin: 'staff_created',
-      interestSubmissionId: null,
+      expressionOfInterestId: null,
       youthFirstName: 'Event',
       youthLastName: 'Prospect',
       status: 'new',

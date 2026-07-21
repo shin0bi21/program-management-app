@@ -16,10 +16,10 @@ async function main() {
     const tx = rawTx as unknown as typeof sql;
     // This command intentionally resets only its reserved fixture, including a
     // prior conversion, so the same conversion flow can be tested repeatedly.
-    await tx`DELETE FROM leads WHERE interest_submission_id = ${fixtureId}`;
+    await tx`DELETE FROM leads WHERE expression_of_interest_id = ${fixtureId}`;
 
     return tx`
-      INSERT INTO cohort_interest_submissions (
+      INSERT INTO expressions_of_interest (
       id,
       youth_first_name,
       youth_last_name,
@@ -62,12 +62,12 @@ async function main() {
     `;
   });
 
-  console.log(`Cohort-interest fixture ready: ${rows[0].id} (${rows[0].status})`);
+  console.log(`Expression-of-interest fixture ready: ${rows[0].id} (${rows[0].status})`);
 }
 
 main()
   .catch((error) => {
-    console.error('ERROR: Failed to seed cohort-interest fixture');
+    console.error('ERROR: Failed to seed expressions-of-interest fixture');
     console.error(error);
     process.exitCode = 1;
   })

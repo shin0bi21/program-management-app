@@ -4,17 +4,17 @@ import { sql } from '../shared/db';
 
 const app = createApp();
 
-describe('Public cohort interest API', () => {
+describe('Public expression of interest API', () => {
   const youthFirstName = 'Cohort';
   const youthLastName = `Test-${Date.now()}`;
 
   afterAll(async () => {
-    await sql`DELETE FROM cohort_interest_submissions WHERE youth_last_name = ${youthLastName}`;
+    await sql`DELETE FROM expressions_of_interest WHERE youth_last_name = ${youthLastName}`;
   });
 
-  it('creates a cohort interest submission using the primary contact', async () => {
+  it('creates an expression of interest using the primary contact', async () => {
     const res = await request(app)
-      .post('/api/public/cohort-interest')
+      .post('/api/public/expressions-of-interest')
       .send({
         youthFirstName,
         youthLastName,
@@ -52,7 +52,7 @@ describe('Public cohort interest API', () => {
         age,
         school,
         discovery_source as "discoverySource"
-      FROM cohort_interest_submissions
+      FROM expressions_of_interest
       WHERE youth_last_name = ${youthLastName}
       LIMIT 1
     `;
@@ -73,7 +73,7 @@ describe('Public cohort interest API', () => {
 
   it('requires all primary contact fields', async () => {
     const res = await request(app)
-      .post('/api/public/cohort-interest')
+      .post('/api/public/expressions-of-interest')
       .send({
         youthFirstName: 'Partial',
         youthLastName: 'Contact',

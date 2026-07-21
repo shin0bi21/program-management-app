@@ -1,8 +1,8 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import type { UpdateCohortInterestStatusInput } from '../validation/cohortInterestSchemas';
+import type { UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
 
-export async function getCohortInterestSubmissions() {
+export async function getExpressionsOfInterest() {
   return sql`
     SELECT
       id,
@@ -19,14 +19,14 @@ export async function getCohortInterestSubmissions() {
       status,
       created_at,
       status_updated_at
-    FROM cohort_interest_submissions
+    FROM expressions_of_interest
     ORDER BY created_at DESC
   `;
 }
 
-export async function updateCohortInterestStatus(id: string, data: UpdateCohortInterestStatusInput) {
+export async function updateExpressionOfInterestStatus(id: string, data: UpdateExpressionOfInterestStatusInput) {
   const rows = await sql`
-    UPDATE cohort_interest_submissions
+    UPDATE expressions_of_interest
     SET
       status = ${data.status},
       status_updated_at = NOW(),
@@ -50,16 +50,16 @@ export async function updateCohortInterestStatus(id: string, data: UpdateCohortI
   `;
 
   if (!rows.length) {
-    throw new NotFoundError('Cohort interest submission not found');
+    throw new NotFoundError('Expression of interest not found');
   }
 
   return rows[0];
 }
 
-export async function convertCohortInterestSubmission(id: string, actorId: string) {
+export async function convertExpressionOfInterest(id: string, actorId: string) {
   return sql.begin(async (rawTx) => {
     const tx = asTransactionSql(rawTx);
-    const submissions = await tx`
+    const expressions = await tx`
       SELECT
         id,
         youth_first_name,
@@ -73,30 +73,30 @@ export async function convertCohortInterestSubmission(id: string, actorId: strin
         discovery_source,
         notes,
         status
-      FROM cohort_interest_submissions
+      FROM expressions_of_interest
       WHERE id = ${id}
       FOR UPDATE
     `;
 
-    if (!submissions.length) {
-      throw new NotFoundError('Cohort interest submission not found');
+    if (!expressions.length) {
+      throw new NotFoundError('Expression of interest not found');
     }
 
-    const submission = submissions[0];
+    const expression = expressions[0];
     const existingLead = await tx`
       SELECT id
       FROM leads
-      WHERE interest_submission_id = ${id}
+      WHERE expression_of_interest_id = ${id}
       LIMIT 1
     `;
     if (existingLead.length) {
-      throw new ConflictError('This interest submission has already been converted');
+      throw new ConflictError('This expression of interest has already been converted');
     }
 
     const leads = await tx`
       INSERT INTO leads (
         origin,
-        interest_submission_id,
+        expression_of_interest_id,
         youth_first_name,
         youth_last_name,
         age,
@@ -110,25 +110,25 @@ export async function convertCohortInterestSubmission(id: string, actorId: strin
         created_by,
         updated_by
       ) VALUES (
-        'interest_submission',
-        ${submission.id},
-        ${submission.youthFirstName},
-        ${submission.youthLastName},
-        ${submission.age},
-        ${submission.school},
-        ${submission.contactFirstName},
-        ${submission.contactLastName},
-        ${submission.contactPhoneNumber},
-        ${submission.contactRelationship},
-        ${submission.discoverySource},
-        ${submission.notes},
+        'expression_of_interest',
+        ${expression.id},
+        ${expression.youthFirstName},
+        ${expression.youthLastName},
+        ${expression.age},
+        ${expression.school},
+        ${expression.contactFirstName},
+        ${expression.contactLastName},
+        ${expression.contactPhoneNumber},
+        ${expression.contactRelationship},
+        ${expression.discoverySource},
+        ${expression.notes},
         ${actorId},
         ${actorId}
       )
       RETURNING
         id,
         origin,
-        interest_submission_id,
+        expression_of_interest_id,
         youth_first_name,
         youth_last_name,
         age,
@@ -148,7 +148,7 @@ export async function convertCohortInterestSubmission(id: string, actorId: strin
     `;
 
     await tx`
-      UPDATE cohort_interest_submissions
+      UPDATE expressions_of_interest
       SET status = 'converted',
           status_updated_at = NOW(),
           updated_at = NOW(),

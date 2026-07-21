@@ -53,14 +53,14 @@ describe('Header youth navigation', () => {
     authState.role = 'staff';
 
     render(
-      <MemoryRouter initialEntries={['/outreach/submissions']}>
+      <MemoryRouter initialEntries={['/outreach/expressions-of-interest']}>
         <Header />
       </MemoryRouter>,
     );
 
     expect(screen.getByRole('button', { name: 'Outreach' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Public Interest' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Expression of Interest' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Leads' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Cohort Interest' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Expressions of Interest' })).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-export interface CohortInterestSubmission {
+export interface ExpressionOfInterest {
   id: string;
   youthFirstName: string;
   youthLastName: string;
