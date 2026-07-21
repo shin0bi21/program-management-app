@@ -56,7 +56,7 @@ export const getErrorMessage = (err: unknown, fallback = 'An error occurred'): s
   }
   
   if (err && typeof err === 'object' && 'message' in err) {
-    return String((err as any).message);
+    return String(err.message);
   }
   
   if (typeof err === 'string') {

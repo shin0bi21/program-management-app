@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 #
 # Shared Docker health-check logic.
 # Source this from any backend test runner script:  source scripts/backend/_docker-health.sh
@@ -104,4 +105,3 @@ docker-compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
   exit 1
 }
 echo "Test database migrated"
-

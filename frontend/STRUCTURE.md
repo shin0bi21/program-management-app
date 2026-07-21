@@ -90,8 +90,8 @@ src/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/             ← Homepage.tsx + hooks/useSectionRouting.ts + section feature folders
     Schools/              ← Schools.tsx + types.ts + api/ + hooks/ + components/
-    Settings/
-    Staff/                ← Staff.tsx + types.ts + api/ + hooks/
+    Outreach/             ← expression review + lead management feature folders
+    Settings/             ← account settings + Users account management
     Youth/                ← Youth.tsx + types.ts + api/ + hooks/ + components/YouthModal/
 ```
 
@@ -204,7 +204,11 @@ export default function MyMenu() {
 | `src/pages/Homepage/components/HeroSection/HeroSection.test.tsx` | Hero carousel rendering and photo navigation |
 | `src/pages/Homepage/components/ProgrammingSection/ProgrammingSection.test.tsx` | Programming section composition |
 | `src/pages/Homepage/components/ProgrammingSection/ProgramCard/ProgramCard.test.tsx` | Program card rendering |
-| `src/pages/Homepage/components/SignupSection/SignupSection.test.tsx` | Public cohort signup submission behavior |
+| `src/pages/Homepage/components/SignupSection/SignupSection.test.tsx` | Public expression-of-interest submission behavior |
+| `src/pages/Outreach/Outreach.test.tsx` | Outreach navigation and view selection |
+| `src/pages/Outreach/Leads/Leads.test.tsx` | Lead list, filtering, and actions |
+| `src/pages/Settings/Users/Users.test.tsx` | Role-scoped account management behavior |
+| `src/pages/Youth/Youth.test.tsx` | Youth profile page behavior |
 | `src/pages/Youth/components/YouthModal/YouthModal.test.tsx` | Youth modal rendering, validation, and submit payload behavior |
 
 ### Key patterns
@@ -215,7 +219,7 @@ export default function MyMenu() {
 
 ### Type Ownership
 
-Each page owns a `types.ts` that declares its domain interfaces (e.g. `YouthProfile`, `StaffUser`, `SetYouthInput`). Truly shared types live in `common/types/` (e.g. `School`).
+Each page owns a `types.ts` that declares its page-specific domain interfaces (e.g. `Lead`, `SetLeadInput`). Truly shared types live in `common/types/` (e.g. `Account`, `School`, and `YouthProfile`).
 
 Dependency direction within a page:
 
@@ -407,7 +411,7 @@ Only one status can be true at a time — no contradictory states possible.
 
 ### Save Flow — Upsert Returns Full Record
 
-The save flow does a single request. `setYouth` / `setStaff` return the full saved record directly — the upsert endpoint runs the same SELECT as the GET endpoint and returns it in one response:
+The save flow does a single request. Write APIs return the full saved record directly so the page can update local state without a follow-up fetch:
 
 ```ts
 const savedYouth = await setYouth(payload);  // returns full YouthProfile

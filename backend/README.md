@@ -227,6 +227,7 @@ Protected Outreach endpoints for staff-originated and converted leads.
 |--------|------|-------------|------------|
 | `GET` | `/` | List leads newest first | `read:outreach` |
 | `POST` | `/` | Create a staff-originated lead | `write:outreach` |
+| `PUT` | `/:id` | Update a lead's intake details | `write:outreach` |
 | `PATCH` | `/:id/status` | Update lead follow-up status | `write:outreach` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).

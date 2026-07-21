@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface Contact {
   id: string;
@@ -15,7 +15,7 @@ export function useContacts(initialContacts?: Contact[]) {
     initialContacts && initialContacts.length > 0 ? initialContacts : [{ ...EMPTY_CONTACT }]
   );
 
-  const initialize = (incoming: Array<{
+  const initialize = useCallback((incoming: Array<{
     id: string;
     firstName: string;
     lastName: string;
@@ -33,9 +33,9 @@ export function useContacts(initialContacts?: Contact[]) {
     } else {
       setContacts([{ ...EMPTY_CONTACT }]);
     }
-  };
+  }, []);
 
-  const reset = () => setContacts([{ ...EMPTY_CONTACT }]);
+  const reset = useCallback(() => setContacts([{ ...EMPTY_CONTACT }]), []);
 
   const handleAdd = () => {
     setContacts(prev => [...prev, { ...EMPTY_CONTACT }]);

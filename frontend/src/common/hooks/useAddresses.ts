@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface Address {
   id: string;
@@ -15,7 +15,7 @@ export function useAddresses(initialAddresses?: Address[]) {
     initialAddresses && initialAddresses.length > 0 ? initialAddresses : [{ ...EMPTY_ADDRESS }]
   );
 
-  const initialize = (incoming: Array<{
+  const initialize = useCallback((incoming: Array<{
     id: string;
     address: string;
     city: string;
@@ -34,9 +34,9 @@ export function useAddresses(initialAddresses?: Address[]) {
     } else {
       setAddresses([{ ...EMPTY_ADDRESS }]);
     }
-  };
+  }, []);
 
-  const reset = () => setAddresses([{ ...EMPTY_ADDRESS }]);
+  const reset = useCallback(() => setAddresses([{ ...EMPTY_ADDRESS }]), []);
 
   const handleAdd = () => {
     setAddresses(prev => [...prev, { ...EMPTY_ADDRESS }]);

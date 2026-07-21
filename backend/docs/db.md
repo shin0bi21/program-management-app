@@ -154,7 +154,7 @@ Current example:
 | Service | Tables audited |
 |---------|---------------|
 | `youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
-| `staffService.ts` | `users` (INSERT + UPDATE + DELETE) |
+| `accountService.ts` | account and invitation changes across users and credential records |
 | `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
 | `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 

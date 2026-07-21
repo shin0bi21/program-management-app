@@ -17,7 +17,7 @@ frontend/src/
         tokenRefresh.ts   ← refreshToken() — proactive refresh, deduplication, redirect on failure
       auth.api.ts         ← login, verify2FA, resend2FA, forgotPassword, resetPassword, logout
       schools.api.ts      ← getSchools() — shared read used by Youth modal + Schools page
-      staff.api.ts        ← getStaff, inviteStaff, updateStaff, toggleStaffActive, deleteStaff
+      accounts.api.ts     ← list, invite, update, toggle, and revoke account access
       youth.api.ts        ← getYouth, setYouth, toggleYouthActive
     components/
       ReLoginModal/       ← shown when access token expires mid-session
@@ -48,12 +48,13 @@ frontend/src/
   pages/
     Auth/
       common/validation/authSchemas.ts
-    Staff/
-      types.ts                      ← re-exports from common/types/staff.ts
-      hooks/useStaff.ts
-      components/StaffModal/StaffModal.tsx
-      components/StaffModal/useStaffModal.ts
-      components/StaffModal/staffSchema.ts
+    Settings/Users/
+      Users.tsx
+      hooks/useAccounts.ts
+      components/AccountModal/
+    Outreach/
+      ExpressionsOfInterest/
+      Leads/
     Youth/
       types.ts                      ← re-exports from common/types/youth.ts
       hooks/useYouth.ts
@@ -87,7 +88,7 @@ All calls go through `apiClient` — never use raw `fetch`:
 import { apiClient } from '../../../common/api/http/client';
 
 // Protected (default — attaches Bearer token):
-const data = await apiClient.get<StaffUser[]>('/staff');
+const data = await apiClient.get<Account[]>('/accounts');
 
 // Auth endpoints (no token):
 const result = await apiClient.post('/auth/login', { email, password }, { auth: false });
@@ -152,7 +153,7 @@ Every protected resource uses the same 3-layer check. All 3 must match:
 
 `read:x` gates the whole page. `write:x` gates mutations within the page. `permissions` comes from `useAuth()`.
 
-Current permission strings: `read:staff`, `write:staff`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:settings`, `write:settings`.
+Current permission strings: `read:accounts`, `write:accounts`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:outreach`, `write:outreach`, `read:settings`, `write:settings`.
 
 ## Adding a new page
 

@@ -46,8 +46,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     addresses,
     initialize: initAddresses,
     reset: resetAddresses,
-    // handleAdd: handleAddAddress,
-    // handleDelete: handleDeleteAddress,
     handleChange: handleAddressChange,
     validate: validateAddresses,
     getPayload: getAddressPayload,
@@ -57,8 +55,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     contacts,
     initialize: initContacts,
     reset: resetContacts,
-    // handleAdd: handleAddContact,
-    // handleDelete: handleDeleteContact,
     handleChange: handleContactChange,
     validate: validateContacts,
     getPayload: getContactPayload,
@@ -79,7 +75,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
 
     initAddresses(youthData.addresses);
     initContacts(youthData.contacts);
-  }, [isOpen, youthData]);
+  }, [isOpen, youthData, reset, initAddresses, initContacts]);
 
   const resetForm = () => {
     reset(defaultValues);

@@ -1,22 +1,51 @@
 import { apiClient } from './http/client';
+import type { AuthUser } from '../utils/storage';
 
 const NO_AUTH = { auth: false } as const;
+
+interface LoginSuccessResponse {
+  message: string;
+  token: string;
+  user: AuthUser;
+  requiresVerification?: never;
+  userId?: never;
+}
+
+interface LoginVerificationResponse {
+  message: string;
+  requiresVerification: true;
+  userId: string;
+  token?: never;
+  user?: never;
+}
+
+interface LoginApiVerificationResponse {
+  message: string;
+  requires2FA: true;
+  userId: string;
+}
+
+type LoginResponse = LoginSuccessResponse | LoginVerificationResponse;
 
 export async function login(
   email: string,
   password: string,
   deviceFingerprint?: string,
-) {
-  const data = await apiClient.post<any>('/auth/login', { email, password, deviceFingerprint }, NO_AUTH);
-  if (data && typeof data === 'object' && 'requires2FA' in data) {
-    return { ...data, requiresVerification: (data as any).requires2FA };
+) : Promise<LoginResponse> {
+  const data = await apiClient.post<LoginSuccessResponse | LoginApiVerificationResponse>(
+    '/auth/login',
+    { email, password, deviceFingerprint },
+    NO_AUTH,
+  );
+  if ('requires2FA' in data) {
+    return { message: data.message, requiresVerification: true, userId: data.userId };
   }
   return data;
 }
 
 interface AuthVerifyResponse {
   token: string;
-  user: unknown;
+  user: AuthUser;
 }
 
 export function verify2FA(
