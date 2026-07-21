@@ -27,4 +27,14 @@ describe('Table', () => {
     render(<Table columns={columns} data={[]} keyExtractor={row => row.id} />);
     expect(screen.getByRole('cell', { name: 'No rows found' })).toBeInTheDocument();
   });
+
+  it('keeps the header mounted while only the table body is loading', () => {
+    render(<Table columns={columns} data={[]} loading keyExtractor={row => row.id} />);
+
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+    const loadingCell = screen.getByRole('cell', { name: 'Loading...' });
+    expect(loadingCell).toHaveAttribute('colspan', '2');
+    expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
+  });
 });
