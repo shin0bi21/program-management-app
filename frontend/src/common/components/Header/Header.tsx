@@ -210,8 +210,8 @@ export default function Header() {
           {canManageAccounts && (
             <button
               role="menuitem"
-              onClick={() => go('/settings/accounts')}
-              className={`settings-flyout-item${isActive('/settings/accounts') ? ' active' : ''}`}
+              onClick={() => go('/settings/users')}
+              className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
               Manage Accounts
             </button>

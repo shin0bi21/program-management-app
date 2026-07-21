@@ -57,6 +57,18 @@ describe('Leads API', () => {
     }));
   });
 
+  it('rejects emergency as a Lead relationship', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, contactRelationship: 'emergency' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.contactRelationship' }),
+    ]));
+  });
+
   it('lists leads for staff', async () => {
     const res = await request(app)
       .get('/api/leads')

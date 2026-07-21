@@ -58,7 +58,7 @@ function App() {
             <Route path="expressions-of-interest" element={<ExpressionsOfInterest />} />
             <Route path="leads" element={<Leads />} />
           </Route>
-          <Route path="/settings/accounts" element={
+          <Route path="/settings/users" element={
             <ProtectedRoute requiredPermission="read:accounts">
               <Users />
             </ProtectedRoute>

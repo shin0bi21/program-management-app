@@ -7,7 +7,6 @@ const contactRelationshipOptions = [
   { value: 'parent', label: 'Parent' },
   { value: 'guardian', label: 'Guardian' },
   { value: 'sibling', label: 'Sibling' },
-  { value: 'emergency', label: 'Emergency Contact' },
 ] as const;
 
 const discoverySourceOptions = [
@@ -54,18 +53,16 @@ export default function OutreachFormFields({ idPrefix, register, errors }: {
       </div>
     </section>
 
-    <section className="outreach-form-section" aria-labelledby={`${idPrefix}-follow-up-title`}>
-      <h3 id={`${idPrefix}-follow-up-title`} className="outreach-form-section-title">Follow-up Information</h3>
+    <div className="outreach-form-section">
       <FormField id={id('discoverySource')} label="How Did You Hear About Us? *" error={errors.discoverySource?.message}>
         <select id={id('discoverySource')} {...register('discoverySource')}>
           {discoverySourceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </FormField>
-    </section>
+    </div>
 
-    <section className="outreach-form-section" aria-labelledby={`${idPrefix}-notes-title`}>
-      <h3 id={`${idPrefix}-notes-title`} className="outreach-form-section-title">Notes <span className="outreach-form-section-optional">(optional)</span></h3>
+    <div className="outreach-form-section outreach-form-section--continuation">
       <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message}><textarea id={id('notes')} rows={5} {...register('notes')} /></FormField>
-    </section>
+    </div>
   </>;
 }

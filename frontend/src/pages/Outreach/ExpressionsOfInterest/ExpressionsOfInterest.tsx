@@ -23,7 +23,6 @@ const relationshipLabels: Record<NonNullable<ExpressionOfInterest['contactRelati
   parent: 'Parent',
   sibling: 'Sibling',
   guardian: 'Guardian',
-  emergency: 'Emergency contact',
 };
 
 export default function ExpressionsOfInterest() {

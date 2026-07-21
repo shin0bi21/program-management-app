@@ -23,7 +23,9 @@ describe('LeadModal', () => {
     expect(screen.getByRole('heading', { name: 'Create Lead' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Youth Information' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Follow-up Information' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Follow-up Information' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 

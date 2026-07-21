@@ -90,4 +90,25 @@ describe('Public expression of interest API', () => {
       expect.objectContaining({ field: 'body.contactRelationship' }),
     ]));
   });
+
+  it('rejects emergency as an Outreach relationship', async () => {
+    const res = await request(app)
+      .post('/api/public/expressions-of-interest')
+      .send({
+        youthFirstName: 'Relationship',
+        youthLastName: 'Test',
+        age: 14,
+        school: 'Test Secondary',
+        discoverySource: 'online',
+        contactFirstName: 'Primary',
+        contactLastName: 'Contact',
+        contactPhoneNumber: '416-555-0199',
+        contactRelationship: 'emergency',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.contactRelationship' }),
+    ]));
+  });
 });

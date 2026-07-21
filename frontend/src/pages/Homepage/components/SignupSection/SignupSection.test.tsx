@@ -19,7 +19,9 @@ describe('SignupSection', () => {
 
     expect(screen.getByText('Youth Information')).toBeInTheDocument()
     expect(screen.getByText('Primary Contact')).toBeInTheDocument()
-    expect(screen.getByText('Follow-up Information')).toBeInTheDocument()
+    expect(screen.queryByText('Follow-up Information')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
     expect(document.getElementById('cohort-phoneNumber')).not.toBeInTheDocument()
   })
