@@ -175,14 +175,6 @@ export default function InterestSubmissions() {
               <span className="cohort-interest-detail-label">Contact phone</span>
               <span>{selectedContactSubmission.contactPhoneNumber ?? '—'}</span>
             </div>
-            <div className="cohort-interest-detail-row cohort-interest-response-start">
-              <span className="cohort-interest-detail-label">Response email</span>
-              <span>{selectedContactSubmission.email ?? '—'}</span>
-            </div>
-            <div className="cohort-interest-detail-row">
-              <span className="cohort-interest-detail-label">Response phone</span>
-              <span>{selectedContactSubmission.phoneNumber ?? '—'}</span>
-            </div>
           </div>
         )}
       </Modal>
@@ -197,7 +189,7 @@ export default function InterestSubmissions() {
           <div className="cohort-interest-details">
             <div className="cohort-interest-detail-block">
               <span className="cohort-interest-detail-label">Note</span>
-              <p>{selectedNoteSubmission.message?.trim() || 'No note'}</p>
+              <p>{selectedNoteSubmission.notes?.trim() || 'No note'}</p>
             </div>
           </div>
         )}

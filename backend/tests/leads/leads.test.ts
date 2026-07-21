@@ -16,7 +16,6 @@ describe('Leads API', () => {
     youthLastName: 'Prospect',
     age: 14,
     school: 'Community School',
-    responseEmail: 'prospect@test.local',
     contactFirstName: 'Primary',
     contactLastName: 'Contact',
     contactPhoneNumber: '416-555-0199',
@@ -65,7 +64,7 @@ describe('Leads API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ responseEmail: payload.responseEmail, origin: 'staff_created' }),
+      expect.objectContaining({ contactPhoneNumber: payload.contactPhoneNumber, origin: 'staff_created' }),
     ]));
   });
 
@@ -107,15 +106,23 @@ describe('Leads API', () => {
     }));
   });
 
-  it('uses the primary contact phone when no separate response method is provided', async () => {
-    const { responseEmail: _responseEmail, ...withoutResponseMethod } = payload;
+  it('updates a Lead without changing its workflow metadata', async () => {
+    const [lead] = await sql<{ id: string; origin: string; status: string }[]>`
+      SELECT id, origin, status FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
+    `;
     const res = await request(app)
-      .post('/api/leads')
+      .put(`/api/leads/${lead.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send(withoutResponseMethod);
+      .send({ ...payload, school: 'Updated Community School' });
 
-    expect(res.status).toBe(201);
-    expect(res.body.responsePhoneNumber).toBe(payload.contactPhoneNumber);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.objectContaining({
+      id: lead.id,
+      school: 'Updated Community School',
+      origin: lead.origin,
+      status: lead.status,
+      updatedBy: staffUserId,
+    }));
   });
 
   it('rejects youth accounts', async () => {
@@ -126,9 +133,14 @@ describe('Leads API', () => {
       .post('/api/leads')
       .set('Authorization', `Bearer ${youthToken}`)
       .send(payload);
+    const update = await request(app)
+      .put('/api/leads/00000000-0000-4000-8000-000000000000')
+      .set('Authorization', `Bearer ${youthToken}`)
+      .send(payload);
 
     expect(list.status).toBe(403);
     expect(create.status).toBe(403);
+    expect(update.status).toBe(403);
   });
 
   it('returns 404 when updating an unknown lead', async () => {

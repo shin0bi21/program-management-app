@@ -5,14 +5,12 @@ export type CohortInterestPayload = {
   youthLastName: string;
   age: number;
   school: string;
-  email?: string;
-  phoneNumber?: string;
   contactFirstName: string;
   contactLastName: string;
   contactPhoneNumber: string;
-  contactRelationship: 'parent' | 'sibling' | 'guardian';
+  contactRelationship: 'parent' | 'sibling' | 'guardian' | 'emergency';
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
-  message?: string;
+  notes?: string;
 };
 
 export function submitCohortInterest(payload: CohortInterestPayload) {

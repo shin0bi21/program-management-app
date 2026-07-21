@@ -1,6 +1,6 @@
 import { sql } from '../db/client';
 import { NotFoundError } from '../errors';
-import type { CreateLeadInput, LeadQuery, UpdateLeadStatusInput } from '../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
 import { applyLeadFilters } from './queryFilters/leadFilters';
 
 const leadColumns = sql`
@@ -11,8 +11,6 @@ const leadColumns = sql`
   youth_last_name,
   age,
   school,
-  response_email,
-  response_phone_number,
   contact_first_name,
   contact_last_name,
   contact_phone_number,
@@ -45,8 +43,6 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       youth_last_name,
       age,
       school,
-      response_email,
-      response_phone_number,
       contact_first_name,
       contact_last_name,
       contact_phone_number,
@@ -61,8 +57,6 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       ${data.youthLastName},
       ${data.age},
       ${data.school},
-      ${data.responseEmail ?? null},
-      ${data.responsePhoneNumber ?? data.contactPhoneNumber},
       ${data.contactFirstName},
       ${data.contactLastName},
       ${data.contactPhoneNumber},
@@ -74,6 +68,28 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
     )
     RETURNING ${leadColumns}
   `;
+  return rows[0];
+}
+
+export async function updateLead(id: string, data: UpdateLeadInput, actorId: string) {
+  const rows = await sql`
+    UPDATE leads
+    SET youth_first_name = ${data.youthFirstName},
+        youth_last_name = ${data.youthLastName},
+        age = ${data.age},
+        school = ${data.school},
+        contact_first_name = ${data.contactFirstName},
+        contact_last_name = ${data.contactLastName},
+        contact_phone_number = ${data.contactPhoneNumber},
+        contact_relationship = ${data.contactRelationship},
+        discovery_source = ${data.discoverySource},
+        notes = ${data.notes ?? null},
+        updated_at = NOW(),
+        updated_by = ${actorId}
+    WHERE id = ${id}
+    RETURNING ${leadColumns}
+  `;
+  if (!rows.length) throw new NotFoundError('Lead not found');
   return rows[0];
 }
 

@@ -8,6 +8,7 @@ const app = createApp();
 describe('Cohort interest API', () => {
   let adminUserId: string;
   let adminToken: string;
+  const fixtureYouthLastName = `Youth-${Date.now()}`;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ email: `cohort-admin-${Date.now()}@test.local`, role: 'admin' });
@@ -24,22 +25,18 @@ describe('Cohort interest API', () => {
         contact_relationship,
         age,
         school,
-        email,
-        phone_number,
         discovery_source,
-        message
+        notes
       )
       VALUES (
         ${'Dashboard'},
-        ${`Youth-${Date.now()}`},
+        ${fixtureYouthLastName},
         ${'Parent'},
         ${'Viewer'},
         ${'416-555-0188'},
         ${'parent'},
         ${15},
         ${'Test School'},
-        ${'viewer@test.local'},
-        ${null},
         ${'online'},
         ${'Needs follow-up'}
       )
@@ -50,10 +47,10 @@ describe('Cohort interest API', () => {
     await sql`
       DELETE FROM leads
       WHERE interest_submission_id IN (
-        SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local'
+        SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName}
       )
     `;
-    await sql`DELETE FROM cohort_interest_submissions WHERE email = 'viewer@test.local'`;
+    await sql`DELETE FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName}`;
     await deleteTestUser(adminUserId);
   });
 
@@ -100,7 +97,7 @@ describe('Cohort interest API', () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id
       FROM cohort_interest_submissions
-      WHERE email = 'viewer@test.local'
+      WHERE youth_last_name = ${fixtureYouthLastName}
       LIMIT 1
     `;
 
@@ -125,7 +122,7 @@ describe('Cohort interest API', () => {
 
   it('supports the reviewed status', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
@@ -144,7 +141,7 @@ describe('Cohort interest API', () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id
       FROM cohort_interest_submissions
-      WHERE email = 'viewer@test.local'
+      WHERE youth_last_name = ${fixtureYouthLastName}
       LIMIT 1
     `;
 
@@ -161,7 +158,7 @@ describe('Cohort interest API', () => {
 
   it('atomically converts a submission into a lead with normalized data', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
@@ -174,7 +171,6 @@ describe('Cohort interest API', () => {
       interestSubmissionId: submission.id,
       youthFirstName: 'Dashboard',
       contactFirstName: 'Parent',
-      responseEmail: 'viewer@test.local',
       discoverySource: 'online',
       notes: 'Needs follow-up',
       status: 'new',
@@ -189,7 +185,7 @@ describe('Cohort interest API', () => {
 
   it('rejects converting the same submission twice', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE email = 'viewer@test.local' LIMIT 1
+      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
