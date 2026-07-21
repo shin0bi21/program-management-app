@@ -7,13 +7,27 @@ vi.mock('../../../../common/api/youth.api', () => ({
   setYouth: vi.fn(),
 }));
 
+const schoolState = vi.hoisted(() => ({
+  schools: [] as Array<{ id: string; name: string; board: null; address: null; postalCode: null }>,
+  setSchools: vi.fn(),
+}));
+
+const authState = vi.hoisted(() => ({
+  permissions: ['write:schools'] as string[],
+}));
+
 vi.mock('../../../../common/hooks/useSchools', () => ({
   useSchools: () => ({
-    schools: [],
+    schools: schoolState.schools,
+    setSchools: schoolState.setSchools,
     loading: false,
     error: '',
     refetch: vi.fn(),
   }),
+}));
+
+vi.mock('../../../../common/context/AuthContext', () => ({
+  useAuth: () => authState,
 }));
 
 import { setYouth } from '../../../../common/api/youth.api';
@@ -43,6 +57,9 @@ function submitForm() {
 describe('YouthModal', () => {
   beforeEach(() => {
     mockSetYouth.mockResolvedValue(makeYouthProfile());
+    schoolState.schools = [];
+    schoolState.setSchools.mockReset();
+    authState.permissions = ['write:schools'];
   });
 
   describe('rendering', () => {
@@ -76,6 +93,18 @@ describe('YouthModal', () => {
       renderModal({ showLoginEmail: true, youthData: makeYouthProfile({ account: { email: 'youth@example.com', status: 'active' } }) });
       expect(screen.getByLabelText('Login Email')).toHaveValue('youth@example.com');
       expect(screen.getByLabelText('Login Email')).toBeDisabled();
+    });
+
+    it('offers inline school creation only with school write permission', () => {
+      const { unmount } = renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+      expect(screen.getByRole('menuitem', { name: '+ Add school' })).toBeInTheDocument();
+      unmount();
+
+      authState.permissions = [];
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+      expect(screen.queryByRole('menuitem', { name: '+ Add school' })).not.toBeInTheDocument();
     });
 
     it('does not render when closed', () => {
@@ -124,6 +153,19 @@ describe('YouthModal', () => {
       submitForm();
       await waitFor(() => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ email: 'new-youth@example.com' }));
+      });
+    });
+
+    it('submits the selected school id', async () => {
+      schoolState.schools = [{ id: 'school-1', name: 'Central High', board: null, address: null, postalCode: null }];
+      renderModal();
+      fillRequiredFields();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Central High' }));
+      submitForm();
+
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1' }));
       });
     });
 

@@ -68,7 +68,7 @@ src/
       useAddresses.ts     ← entity-agnostic address array state
       useConfirmModal.tsx ← reusable confirm/delete modal state
       useContacts.ts      ← entity-agnostic contact array state
-      useSchools.ts       ← read-only school lookup
+      useSchools.ts       ← school lookup state shared by Youth workflows
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
     styles/
       brand.css
@@ -89,7 +89,6 @@ src/
   pages/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/             ← Homepage.tsx + hooks/useSectionRouting.ts + section feature folders
-    Schools/              ← Schools.tsx + types.ts + api/ + hooks/ + components/
     Outreach/             ← expression review + lead management feature folders
     Settings/             ← account settings + Users account management
     Youth/                ← Youth.tsx + types.ts + api/ + hooks/ + components/YouthModal/
@@ -287,7 +286,7 @@ flowchart TD
     HK --> F["useForm (RHF + Zod) — scalar fields"]
     HK --> A["useAddresses() — address array state"]
     HK --> C["useContacts() — contact array state"]
-    HK --> SC["useSchools() — read-only lookup"]
+    HK --> SC["useSchools() — school lookup state"]
 ```
 
 ---

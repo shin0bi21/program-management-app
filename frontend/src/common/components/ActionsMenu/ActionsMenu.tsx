@@ -20,12 +20,12 @@ interface ActionsMenuProps {
 }
 
 export default function ActionsMenu({ items, disabled = false, triggerLabel }: ActionsMenuProps) {
-  const triggerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
     triggerRef,
-    { side: 'bottom', align: 'end' },
-    { heightEstimate: 200, returnFocusSelector: 'button' },
+    { side: 'bottom', align: triggerLabel ? 'start' : 'end' },
+    { heightEstimate: 200 },
   );
 
   const handleActionClick = useCallback(
@@ -38,19 +38,18 @@ export default function ActionsMenu({ items, disabled = false, triggerLabel }: A
 
   return (
     <>
-      <span ref={triggerRef} className="actions-menu-anchor">
-        <Button
-          variant={triggerLabel ? 'primary' : 'secondary'}
-          size={triggerLabel ? 'md' : 'sm'}
-          onClick={toggle}
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          disabled={disabled}
-          className={triggerLabel ? 'actions-menu-trigger--labeled' : 'actions-menu-trigger'}
-        >
-          {triggerLabel ?? <FontAwesomeIcon icon={faEllipsisVertical} />}
-        </Button>
-      </span>
+      <Button
+        ref={triggerRef}
+        variant={triggerLabel ? 'primary' : 'secondary'}
+        size={triggerLabel ? 'md' : 'sm'}
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        disabled={disabled}
+        className={triggerLabel ? 'actions-menu-trigger--labeled' : 'actions-menu-trigger'}
+      >
+        {triggerLabel ?? <FontAwesomeIcon icon={faEllipsisVertical} />}
+      </Button>
 
       {position && (
         <FloatingMenuPanel

@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import FormField from '../../../../common/components/FormField/FormField';
+import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
+import { useAuth } from '../../../../common/context/AuthContext';
 import type { YouthProfile } from '../../hooks/useYouth';
+import AddSchoolModal from './AddSchoolModal/AddSchoolModal';
 import { useYouthModal } from './useYouthModal';
 import './YouthModal.css';
 
@@ -14,12 +18,20 @@ interface YouthModalProps {
 }
 
 export default function YouthModal({ isOpen, onClose, onSuccess, youthData, showLoginEmail = false }: YouthModalProps) {
+  const { permissions } = useAuth();
+  const canAddSchool = permissions.includes('write:schools');
+  const [addSchoolOpen, setAddSchoolOpen] = useState(false);
   const {
     register,
     errors,
     rhfHandleSubmit,
     onValid,
     schools,
+    setSchools,
+    schoolsLoading,
+    schoolsError,
+    schoolId,
+    setSchoolId,
     addresses,
     handleAddressChange,
     contacts,
@@ -31,20 +43,25 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
 
   const title = youthData ? 'Update Youth Profile' : showLoginEmail ? 'Invite Youth' : 'Add Youth Profile';
   const submitLabel = youthData ? 'Update Profile' : showLoginEmail ? 'Invite Youth' : 'Add Profile';
+  const closeYouthModal = () => {
+    setAddSchoolOpen(false);
+    handleClose();
+  };
 
   const footer = (
     <ModalFormFooter
       formId="youth-form"
       submitLabel={submitLabel}
       submitStatus={submitStatus}
-      onClose={handleClose}
+      onClose={closeYouthModal}
     />
   );
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleClose} 
+    <>
+      <Modal
+      isOpen={isOpen}
+      onClose={closeYouthModal}
       title={title}
       footer={footer}
       status={submitStatus}
@@ -90,15 +107,16 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
           </FormField>
         )}
 
-        <FormField id="school" label="School">
-          <select id="school" {...register('schoolId')}>
-            <option value="">Select a school</option>
-            {schools.map((school) => (
-              <option key={school.id} value={school.id}>
-                {school.name}
-              </option>
-            ))}
-          </select>
+        <FormField id="school" label="School" error={schoolsError || undefined}>
+          <FloatingSelect
+            id="school"
+            value={schoolId ?? ''}
+            options={schools.map(school => ({ value: school.id, label: school.name }))}
+            onChange={setSchoolId}
+            placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
+            disabled={schoolsLoading}
+            action={canAddSchool ? { label: '+ Add school', onSelect: () => setAddSchoolOpen(true) } : undefined}
+          />
         </FormField>
 
         {/* Addresses Section */}
@@ -209,6 +227,16 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
           </div>
         </div>
       </form>
-    </Modal>
+      </Modal>
+      <AddSchoolModal
+        isOpen={addSchoolOpen}
+        onClose={() => setAddSchoolOpen(false)}
+        onSuccess={school => {
+          setSchools(previous => [...previous.filter(item => item.id !== school.id), school]);
+          setSchoolId(school.id);
+          setAddSchoolOpen(false);
+        }}
+      />
+    </>
   );
 }

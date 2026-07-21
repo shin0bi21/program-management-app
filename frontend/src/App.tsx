@@ -6,7 +6,6 @@ import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
 import Users from './pages/Settings/Users/Users'
-import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
 import Outreach from './pages/Outreach/Outreach'
 import ExpressionsOfInterest from './pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'
@@ -37,11 +36,6 @@ function App() {
           <Route path="/youth" element={
             <ProtectedRoute requiredPermission="read:youth_profiles">
               <Youth />
-            </ProtectedRoute>
-          } />
-          <Route path="/schools" element={
-            <ProtectedRoute requiredPermission="read:schools">
-              <Schools />
             </ProtectedRoute>
           } />
           <Route path="/settings/account" element={

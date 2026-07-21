@@ -1,0 +1,66 @@
+.floating-select-trigger {
+  align-items: center;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--color-ink);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.95rem;
+  justify-content: space-between;
+  min-height: 39px;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.floating-select-trigger:focus-visible {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px var(--accent-18);
+  outline: none;
+}
+
+.floating-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.floating-select-placeholder,
+.floating-select-empty {
+  color: var(--color-muted);
+}
+
+.floating-menu-panel.floating-select-menu {
+  box-sizing: border-box;
+  max-height: min(280px, calc(100vh - 16px));
+  min-width: 0;
+  overflow: hidden;
+}
+
+.floating-select-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.floating-select-empty {
+  font-size: 0.875rem;
+  padding: 9px 12px;
+}
+
+.floating-menu-panel .floating-select-option[aria-checked="true"] {
+  background: var(--accent-10);
+  color: var(--brand-primary);
+}
+
+.floating-menu-panel .floating-select-action {
+  border-bottom: 1px solid var(--ink-08);
+  border-radius: 6px 6px 0 0;
+  color: var(--brand-primary);
+  flex: 0 0 auto;
+  margin-bottom: 2px;
+  padding-bottom: 11px;
+}
