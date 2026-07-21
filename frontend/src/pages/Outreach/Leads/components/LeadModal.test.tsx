@@ -23,7 +23,9 @@ describe('LeadModal', () => {
     expect(screen.getByRole('heading', { name: 'Create Lead' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Youth Information' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Follow-up Information' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Follow-up Information' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -48,7 +50,7 @@ describe('LeadModal', () => {
 
   it('prefills and updates an existing Lead', async () => {
     const lead = {
-      id: 'lead-1', origin: 'staff_created' as const, interestSubmissionId: null,
+      id: 'lead-1', origin: 'staff_created' as const, expressionOfInterestId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian' as const, discoverySource: 'online' as const, notes: null,

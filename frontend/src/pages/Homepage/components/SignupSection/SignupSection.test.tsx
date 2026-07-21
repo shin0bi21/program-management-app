@@ -2,16 +2,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SignupSection from './SignupSection'
 
-const mockSubmitCohortInterest = vi.fn()
+const mockSubmitExpressionOfInterest = vi.fn()
 
 vi.mock('../../api/homepage.api', () => ({
-  submitCohortInterest: (...args: unknown[]) => mockSubmitCohortInterest(...args),
+  submitExpressionOfInterest: (...args: unknown[]) => mockSubmitExpressionOfInterest(...args),
 }))
 
 describe('SignupSection', () => {
   beforeEach(() => {
-    mockSubmitCohortInterest.mockReset()
-    mockSubmitCohortInterest.mockResolvedValue({ message: 'ok' })
+    mockSubmitExpressionOfInterest.mockReset()
+    mockSubmitExpressionOfInterest.mockResolvedValue({ message: 'ok' })
   })
 
   it('organizes the shared data shape into form sections without duplicate response fields', () => {
@@ -19,7 +19,9 @@ describe('SignupSection', () => {
 
     expect(screen.getByText('Youth Information')).toBeInTheDocument()
     expect(screen.getByText('Primary Contact')).toBeInTheDocument()
-    expect(screen.getByText('Follow-up Information')).toBeInTheDocument()
+    expect(screen.queryByText('Follow-up Information')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
     expect(document.getElementById('cohort-phoneNumber')).not.toBeInTheDocument()
   })
@@ -40,7 +42,7 @@ describe('SignupSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
     await waitFor(() => {
-      expect(mockSubmitCohortInterest).toHaveBeenCalledWith({
+      expect(mockSubmitExpressionOfInterest).toHaveBeenCalledWith({
         youthFirstName: 'Jordan',
         youthLastName: 'Test',
         age: 14,
@@ -70,14 +72,14 @@ describe('SignupSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
     await waitFor(() => {
-      expect(mockSubmitCohortInterest).toHaveBeenCalled()
+      expect(mockSubmitExpressionOfInterest).toHaveBeenCalled()
     })
 
     expect(screen.getByText(/thank you for your submission/i)).toBeInTheDocument()
     expect((document.getElementById('cohort-youthFirstName') as HTMLInputElement).value).toBe('')
   })
 
-  it('requires every primary contact field', async () => {
+  it('requires the primary contact text fields', async () => {
     render(<SignupSection />)
 
     fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: 'Jordan' } })
@@ -90,7 +92,6 @@ describe('SignupSection', () => {
     expect(await screen.findByText(/contact first name is required/i)).toBeInTheDocument()
     expect(screen.getByText(/contact last name is required/i)).toBeInTheDocument()
     expect(screen.getByText(/contact phone number is required/i)).toBeInTheDocument()
-    expect(screen.getByText(/relationship is required/i)).toBeInTheDocument()
-    expect(mockSubmitCohortInterest).not.toHaveBeenCalled()
+    expect(mockSubmitExpressionOfInterest).not.toHaveBeenCalled()
   })
 })

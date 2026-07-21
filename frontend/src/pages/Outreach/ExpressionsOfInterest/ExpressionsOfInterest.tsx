@@ -8,39 +8,38 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import { convertCohortInterestSubmission, updateCohortInterestStatus } from './api/cohortInterest.api';
-import { useCohortInterest } from './hooks/useCohortInterest';
-import type { CohortInterestSubmission } from './types';
-import './InterestSubmissions.css';
+import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
+import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
+import type { ExpressionOfInterest } from './types';
+import './ExpressionsOfInterest.css';
 
-const submissionYouthName = (submission: CohortInterestSubmission) =>
+const submissionYouthName = (submission: ExpressionOfInterest) =>
   [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
 
-const primaryContactName = (submission: CohortInterestSubmission) =>
+const primaryContactName = (submission: ExpressionOfInterest) =>
   [submission.contactFirstName, submission.contactLastName].filter(Boolean).join(' ') || '—';
 
-const relationshipLabels: Record<NonNullable<CohortInterestSubmission['contactRelationship']>, string> = {
+const relationshipLabels: Record<NonNullable<ExpressionOfInterest['contactRelationship']>, string> = {
   parent: 'Parent',
   sibling: 'Sibling',
   guardian: 'Guardian',
-  emergency: 'Emergency contact',
 };
 
-export default function InterestSubmissions() {
-  const { submissions, loading, error } = useCohortInterest();
+export default function ExpressionsOfInterest() {
+  const { submissions, loading, error } = useExpressionsOfInterest();
   const navigate = useNavigate();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const [rows, setRows] = useState<CohortInterestSubmission[]>([]);
-  const [selectedContactSubmission, setSelectedContactSubmission] = useState<CohortInterestSubmission | null>(null);
-  const [selectedNoteSubmission, setSelectedNoteSubmission] = useState<CohortInterestSubmission | null>(null);
+  const [rows, setRows] = useState<ExpressionOfInterest[]>([]);
+  const [selectedContactSubmission, setSelectedContactSubmission] = useState<ExpressionOfInterest | null>(null);
+  const [selectedNoteSubmission, setSelectedNoteSubmission] = useState<ExpressionOfInterest | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
   const data = rows.length ? rows : submissions;
 
-  const handleStatusUpdate = async (item: CohortInterestSubmission, status: CohortInterestSubmission['status']) => {
-    const updated = await updateCohortInterestStatus(item.id, status);
+  const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
+    const updated = await updateExpressionOfInterestStatus(item.id, status);
     setSelectedContactSubmission((current) => (current?.id === updated.id ? updated : current));
     setSelectedNoteSubmission((current) => (current?.id === updated.id ? updated : current));
     setRows((current) => {
@@ -49,11 +48,11 @@ export default function InterestSubmissions() {
     });
   };
 
-  const handleConvert = async (item: CohortInterestSubmission) => {
+  const handleConvert = async (item: ExpressionOfInterest) => {
     setActionError(null);
     setConvertingId(item.id);
     try {
-      await convertCohortInterestSubmission(item.id);
+      await convertExpressionOfInterest(item.id);
       navigate('/outreach/leads');
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
@@ -61,7 +60,7 @@ export default function InterestSubmissions() {
     }
   };
 
-  const statusBadge = (status: CohortInterestSubmission['status']) => {
+  const statusBadge = (status: ExpressionOfInterest['status']) => {
     const className =
       status === 'new'
         ? 'status-badge status-new'
@@ -94,7 +93,7 @@ export default function InterestSubmissions() {
     return <span className={className}>{label}</span>;
   };
 
-  const columns: TableColumn<CohortInterestSubmission>[] = [
+  const columns: TableColumn<ExpressionOfInterest>[] = [
     { key: 'youthName', header: 'Youth Name', render: submissionYouthName },
     { key: 'age', header: 'Age', width: '70px', render: item => item.age },
     { key: 'submittedAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
@@ -124,7 +123,7 @@ export default function InterestSubmissions() {
       header: '',
       className: 'col-actions',
       width: '32px',
-      render: (item: CohortInterestSubmission) => item.status === 'converted' ? null : (
+      render: (item: ExpressionOfInterest) => item.status === 'converted' ? null : (
         <ActionsMenu
           items={[
             { id: 'convert', label: 'Convert to Lead', onClick: () => void handleConvert(item) },
@@ -147,7 +146,7 @@ export default function InterestSubmissions() {
           columns={columns}
           data={data}
           loading={loading}
-          emptyMessage="No interest submissions yet."
+          emptyMessage="No expressions of interest yet."
           keyExtractor={(item) => item.id}
           maxHeight="calc(100vh - 220px)"
         />
@@ -160,19 +159,19 @@ export default function InterestSubmissions() {
         maxWidth="560px"
       >
         {selectedContactSubmission && (
-          <div className="cohort-interest-details">
-            <div className="cohort-interest-detail-row">
-              <span className="cohort-interest-detail-label">Contact name</span>
+          <div className="expressions-of-interest-details">
+            <div className="expressions-of-interest-detail-row">
+              <span className="expressions-of-interest-detail-label">Contact name</span>
               <span>{primaryContactName(selectedContactSubmission)}</span>
             </div>
-            <div className="cohort-interest-detail-row">
-              <span className="cohort-interest-detail-label">Relationship</span>
+            <div className="expressions-of-interest-detail-row">
+              <span className="expressions-of-interest-detail-label">Relationship</span>
               <span>{selectedContactSubmission.contactRelationship
                 ? relationshipLabels[selectedContactSubmission.contactRelationship]
                 : '—'}</span>
             </div>
-            <div className="cohort-interest-detail-row">
-              <span className="cohort-interest-detail-label">Contact phone</span>
+            <div className="expressions-of-interest-detail-row">
+              <span className="expressions-of-interest-detail-label">Contact phone</span>
               <span>{selectedContactSubmission.contactPhoneNumber ?? '—'}</span>
             </div>
           </div>
@@ -186,9 +185,9 @@ export default function InterestSubmissions() {
         maxWidth="560px"
       >
         {selectedNoteSubmission && (
-          <div className="cohort-interest-details">
-            <div className="cohort-interest-detail-block">
-              <span className="cohort-interest-detail-label">Note</span>
+          <div className="expressions-of-interest-details">
+            <div className="expressions-of-interest-detail-block">
+              <span className="expressions-of-interest-detail-label">Note</span>
               <p>{selectedNoteSubmission.notes?.trim() || 'No note'}</p>
             </div>
           </div>

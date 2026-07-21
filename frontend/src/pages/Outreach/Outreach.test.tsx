@@ -10,10 +10,10 @@ vi.mock('../../common/components/Header/Header', () => ({
 describe('Outreach', () => {
   it('renders the selected route without duplicating sidebar navigation', () => {
     render(
-      <MemoryRouter initialEntries={['/outreach/submissions']}>
+      <MemoryRouter initialEntries={['/outreach/expressions-of-interest']}>
         <Routes>
           <Route path="/outreach" element={<Outreach />}>
-            <Route path="submissions" element={<div>Submission view</div>} />
+            <Route path="expressions-of-interest" element={<div>Expression of Interest view</div>} />
             <Route path="leads" element={<div>Lead view</div>} />
           </Route>
         </Routes>
@@ -21,6 +21,6 @@ describe('Outreach', () => {
     );
 
     expect(screen.queryByRole('navigation', { name: 'Outreach views' })).not.toBeInTheDocument();
-    expect(screen.getByText('Submission view')).toBeInTheDocument();
+    expect(screen.getByText('Expression of Interest view')).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ import { generateExpiredToken, generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
-describe('Cohort interest API', () => {
+describe('Expression of interest API', () => {
   let adminUserId: string;
   let adminToken: string;
   const fixtureYouthLastName = `Youth-${Date.now()}`;
@@ -16,7 +16,7 @@ describe('Cohort interest API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
 
     await sql`
-      INSERT INTO cohort_interest_submissions (
+      INSERT INTO expressions_of_interest (
         youth_first_name,
         youth_last_name,
         contact_first_name,
@@ -46,17 +46,17 @@ describe('Cohort interest API', () => {
   afterAll(async () => {
     await sql`
       DELETE FROM leads
-      WHERE interest_submission_id IN (
-        SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName}
+      WHERE expression_of_interest_id IN (
+        SELECT id FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName}
       )
     `;
-    await sql`DELETE FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName}`;
+    await sql`DELETE FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName}`;
     await deleteTestUser(adminUserId);
   });
 
   it('returns submissions for admins', async () => {
     const res = await request(app)
-      .get('/api/cohort-interest')
+      .get('/api/expressions-of-interest')
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -76,7 +76,7 @@ describe('Cohort interest API', () => {
     const staffToken = generateToken(staff.userId, 'staff', staff.email);
 
     const res = await request(app)
-      .get('/api/cohort-interest')
+      .get('/api/expressions-of-interest')
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(200);
@@ -87,7 +87,7 @@ describe('Cohort interest API', () => {
 
   it('rejects expired tokens', async () => {
     const res = await request(app)
-      .get('/api/cohort-interest')
+      .get('/api/expressions-of-interest')
       .set('Authorization', `Bearer ${generateExpiredToken(adminUserId)}`);
 
     expect(res.status).toBe(401);
@@ -96,13 +96,13 @@ describe('Cohort interest API', () => {
   it('updates submission status for admins', async () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id
-      FROM cohort_interest_submissions
+      FROM expressions_of_interest
       WHERE youth_last_name = ${fixtureYouthLastName}
       LIMIT 1
     `;
 
     const res = await request(app)
-      .patch(`/api/cohort-interest/${submission.id}`)
+      .patch(`/api/expressions-of-interest/${submission.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ status: 'signed_up' });
 
@@ -111,7 +111,7 @@ describe('Cohort interest API', () => {
 
     const [updated] = await sql<{ status: string; statusUpdatedAt: string }[]>`
       SELECT status, status_updated_at::text AS "statusUpdatedAt"
-      FROM cohort_interest_submissions
+      FROM expressions_of_interest
       WHERE id = ${submission.id}
     `;
 
@@ -122,11 +122,11 @@ describe('Cohort interest API', () => {
 
   it('supports the reviewed status', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
+      SELECT id FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
-      .patch(`/api/cohort-interest/${submission.id}`)
+      .patch(`/api/expressions-of-interest/${submission.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ status: 'reviewed' });
 
@@ -140,13 +140,13 @@ describe('Cohort interest API', () => {
 
     const [submission] = await sql<{ id: string }[]>`
       SELECT id
-      FROM cohort_interest_submissions
+      FROM expressions_of_interest
       WHERE youth_last_name = ${fixtureYouthLastName}
       LIMIT 1
     `;
 
     const res = await request(app)
-      .patch(`/api/cohort-interest/${submission.id}`)
+      .patch(`/api/expressions-of-interest/${submission.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'contacted' });
 
@@ -158,17 +158,17 @@ describe('Cohort interest API', () => {
 
   it('atomically converts a submission into a lead with normalized data', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
+      SELECT id FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
-      .post(`/api/cohort-interest/${submission.id}/convert`)
+      .post(`/api/expressions-of-interest/${submission.id}/convert`)
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
-      origin: 'interest_submission',
-      interestSubmissionId: submission.id,
+      origin: 'expression_of_interest',
+      expressionOfInterestId: submission.id,
       youthFirstName: 'Dashboard',
       contactFirstName: 'Parent',
       discoverySource: 'online',
@@ -178,21 +178,21 @@ describe('Cohort interest API', () => {
     }));
 
     const [updatedSubmission] = await sql<{ status: string }[]>`
-      SELECT status FROM cohort_interest_submissions WHERE id = ${submission.id}
+      SELECT status FROM expressions_of_interest WHERE id = ${submission.id}
     `;
     expect(updatedSubmission.status).toBe('converted');
   });
 
   it('rejects converting the same submission twice', async () => {
     const [submission] = await sql<{ id: string }[]>`
-      SELECT id FROM cohort_interest_submissions WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
+      SELECT id FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName} LIMIT 1
     `;
 
     const res = await request(app)
-      .post(`/api/cohort-interest/${submission.id}/convert`)
+      .post(`/api/expressions-of-interest/${submission.id}/convert`)
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe('This interest submission has already been converted');
+    expect(res.body.error).toBe('This expression of interest has already been converted');
   });
 });

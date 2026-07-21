@@ -146,7 +146,7 @@ backend/
     ├── accounts/       # Account API and RBAC tests
     ├── youth/          # 25 tests
     ├── schools/        # 28 tests
-    ├── cohortInterest/ # Outreach submission tests
+    ├── expressionOfInterest/ # Outreach submission tests
     ├── leads/          # Lead workflow tests
     └── public/         # Public intake tests
 ```
@@ -207,15 +207,15 @@ Unauthenticated homepage intake endpoints.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/cohort-interest` | Store a normalized public interest submission with youth, school/source, contact, and response details. |
+| `POST` | `/expressions-of-interest` | Store a normalized public expression of interest with youth, school/source, primary contact, and notes. |
 
-### Cohort Interest — `/api/cohort-interest`
+### Expressions of Interest — `/api/expressions-of-interest`
 
 Protected. Intended for internal review of homepage signup submissions.
 
 | Method | Path | Description | Permission |
 |--------|------|-------------|------------|
-| `GET` | `/` | List interest submissions newest first | `read:outreach` |
+| `GET` | `/` | List expressions of interest newest first | `read:outreach` |
 | `PATCH` | `/:id` | Update submission review status | `write:outreach` |
 | `POST` | `/:id/convert` | Convert one submission into one lead | `write:outreach` |
 
@@ -297,8 +297,8 @@ The helper scripts detect already-running containers and **will not tear them do
 | `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
 | `tests/schools/schools.test.ts` | Schools CRUD, permission checks, validation |
 | `tests/schools/helpers.ts` | Token generation, `deleteTestSchool` cleanup |
-| `tests/public/public.test.ts` | Public interest intake and validation |
-| `tests/cohortInterest/cohortInterest.test.ts` | Submission review and conversion |
+| `tests/public/public.test.ts` | Public expression-of-interest intake and validation |
+| `tests/expressionOfInterest/expressionOfInterest.test.ts` | Submission review and conversion |
 | `tests/leads/leads.test.ts` | Lead creation, lifecycle, and permissions |
 
 ### Jest + Node16 Module Resolution

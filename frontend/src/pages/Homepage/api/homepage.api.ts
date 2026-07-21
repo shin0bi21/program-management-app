@@ -1,18 +1,8 @@
 import { apiClient } from '../../../common/api/http/client';
+import type { OutreachFormValues } from '../../../common/components/OutreachForm/outreachFormSchema';
 
-export type CohortInterestPayload = {
-  youthFirstName: string;
-  youthLastName: string;
-  age: number;
-  school: string;
-  contactFirstName: string;
-  contactLastName: string;
-  contactPhoneNumber: string;
-  contactRelationship: 'parent' | 'sibling' | 'guardian' | 'emergency';
-  discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
-  notes?: string;
-};
+export type ExpressionOfInterestPayload = Omit<OutreachFormValues, 'notes'> & { notes?: string };
 
-export function submitCohortInterest(payload: CohortInterestPayload) {
-  return apiClient.post<{ message: string }>('/public/cohort-interest', payload, { auth: false });
+export function submitExpressionOfInterest(payload: ExpressionOfInterestPayload) {
+  return apiClient.post<{ message: string }>('/public/expressions-of-interest', payload, { auth: false });
 }

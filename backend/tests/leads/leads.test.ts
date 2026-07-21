@@ -49,12 +49,24 @@ describe('Leads API', () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
       origin: 'staff_created',
-      interestSubmissionId: null,
+      expressionOfInterestId: null,
       youthFirstName: 'Event',
       youthLastName: 'Prospect',
       status: 'new',
       createdBy: staffUserId,
     }));
+  });
+
+  it('rejects emergency as a Lead relationship', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, contactRelationship: 'emergency' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.contactRelationship' }),
+    ]));
   });
 
   it('lists leads for staff', async () => {

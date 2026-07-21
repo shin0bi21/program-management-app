@@ -3,17 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { outreachFormDefaultValues, outreachFormSchema, type OutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
 import { createLead, updateLead } from '../api/leads.api';
 import type { Lead } from '../types';
-import { leadSchema, type LeadFormData } from './leadSchema';
 
-const defaultValues: LeadFormData = {
-  youthFirstName: '', youthLastName: '', age: Number.NaN, school: '',
-  contactFirstName: '', contactLastName: '', contactPhoneNumber: '', contactRelationship: 'parent',
-  discoverySource: 'online', notes: '',
-};
-
-const valuesForLead = (lead?: Lead): LeadFormData => lead ? {
+const valuesForLead = (lead?: Lead): OutreachFormValues => lead ? {
   youthFirstName: lead.youthFirstName,
   youthLastName: lead.youthLastName,
   age: lead.age,
@@ -24,7 +18,7 @@ const valuesForLead = (lead?: Lead): LeadFormData => lead ? {
   contactRelationship: lead.contactRelationship,
   discoverySource: lead.discoverySource,
   notes: lead.notes ?? '',
-} : defaultValues;
+} : outreachFormDefaultValues;
 
 export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   isOpen: boolean;
@@ -33,19 +27,19 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   lead?: Lead;
 }) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<LeadFormData>({
-    resolver: zodResolver(leadSchema),
-    defaultValues,
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<OutreachFormValues>({
+    resolver: zodResolver(outreachFormSchema),
+    defaultValues: outreachFormDefaultValues,
   });
 
   useEffect(() => {
     if (isOpen) reset(valuesForLead(lead));
   }, [isOpen, lead, reset]);
 
-  const resetForm = () => { reset(defaultValues); resetStatus(); };
+  const resetForm = () => { reset(outreachFormDefaultValues); resetStatus(); };
   const handleClose = () => { resetForm(); onClose(); };
 
-  const onValid = async (data: LeadFormData) => {
+  const onValid = async (data: OutreachFormValues) => {
     setSubmitStatus('submitting');
     setError('');
     try {

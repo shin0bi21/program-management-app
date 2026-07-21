@@ -29,7 +29,7 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
-export type LeadOrigin = "interest_submission" | "staff_created";
+export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "ineligible" | "lost" | "new" | "qualified" | "signed_up";
 
@@ -82,12 +82,24 @@ export interface BaseTable {
   updated_by: string | null;
 }
 
-export interface CohortInterestSubmissions {
+export interface Contacts {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  first_name: string;
+  id: Generated<string>;
+  last_name: string;
+  phone_number: string | null;
+  type: Generated<ContactType>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface ExpressionsOfInterest {
   age: number;
-  contact_first_name: string | null;
-  contact_last_name: string | null;
-  contact_phone_number: string | null;
-  contact_relationship: ContactType | null;
+  contact_first_name: string;
+  contact_last_name: string;
+  contact_phone_number: string;
+  contact_relationship: ContactType;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   discovery_source: DiscoverySource;
@@ -102,18 +114,6 @@ export interface CohortInterestSubmissions {
   youth_last_name: string;
 }
 
-export interface Contacts {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  first_name: string;
-  id: Generated<string>;
-  last_name: string;
-  phone_number: string | null;
-  type: Generated<ContactType>;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface Leads {
   age: number;
   contact_first_name: string;
@@ -123,8 +123,8 @@ export interface Leads {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   discovery_source: DiscoverySource;
+  expression_of_interest_id: string | null;
   id: Generated<string>;
-  interest_submission_id: string | null;
   notes: string | null;
   origin: LeadOrigin;
   school: string;
@@ -315,8 +315,8 @@ export interface DB {
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
-  cohort_interest_submissions: CohortInterestSubmissions;
   contacts: Contacts;
+  expressions_of_interest: ExpressionsOfInterest;
   leads: Leads;
   schema_migrations: SchemaMigrations;
   schools: Schools;

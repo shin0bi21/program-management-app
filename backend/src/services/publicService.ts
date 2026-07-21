@@ -1,8 +1,8 @@
 import { sql } from '../db/client';
-import type { CohortInterestSubmissions } from '../types/database';
+import type { ExpressionsOfInterest } from '../types/database';
 import type { DbRow } from '../types/db';
 
-type CohortInterestInput = {
+type ExpressionOfInterestInput = {
   youthFirstName: string;
   youthLastName: string;
   age: number;
@@ -15,7 +15,7 @@ type CohortInterestInput = {
   notes?: string;
 };
 
-export async function submitCohortInterest(data: CohortInterestInput) {
+export async function submitExpressionOfInterest(data: ExpressionOfInterestInput) {
   const school = data.school?.trim() || null;
   const discoverySource = data.discoverySource?.trim() || null;
   const contactFirstName = data.contactFirstName?.trim() || null;
@@ -24,8 +24,8 @@ export async function submitCohortInterest(data: CohortInterestInput) {
   const contactRelationship = data.contactRelationship?.trim() || null;
   const notes = data.notes?.trim() || null;
 
-  const rows = await sql<DbRow<CohortInterestSubmissions>[]>`
-    INSERT INTO cohort_interest_submissions (
+  const rows = await sql<DbRow<ExpressionsOfInterest>[]>`
+    INSERT INTO expressions_of_interest (
       youth_first_name,
       youth_last_name,
       age,

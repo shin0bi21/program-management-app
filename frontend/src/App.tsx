@@ -9,7 +9,7 @@ import Users from './pages/Settings/Users/Users'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
 import Outreach from './pages/Outreach/Outreach'
-import InterestSubmissions from './pages/Outreach/Submissions/InterestSubmissions'
+import ExpressionsOfInterest from './pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'
 import Leads from './pages/Outreach/Leads/Leads'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
@@ -54,11 +54,11 @@ function App() {
               <Outreach />
             </ProtectedRoute>
           }>
-            <Route index element={<Navigate to="submissions" replace />} />
-            <Route path="submissions" element={<InterestSubmissions />} />
+            <Route index element={<Navigate to="expressions-of-interest" replace />} />
+            <Route path="expressions-of-interest" element={<ExpressionsOfInterest />} />
             <Route path="leads" element={<Leads />} />
           </Route>
-          <Route path="/settings/accounts" element={
+          <Route path="/settings/users" element={
             <ProtectedRoute requiredPermission="read:accounts">
               <Users />
             </ProtectedRoute>

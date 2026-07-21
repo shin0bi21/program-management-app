@@ -6,7 +6,7 @@ import { applyLeadFilters } from './queryFilters/leadFilters';
 const leadColumns = sql`
   id,
   origin,
-  interest_submission_id,
+  expression_of_interest_id,
   youth_first_name,
   youth_last_name,
   age,

@@ -1,96 +1,54 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus'
-import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors'
-import { submitCohortInterest } from '../../api/homepage.api'
-import {
-  cohortInterestInitialState,
-  type CohortInterestErrors,
-  type CohortInterestForm,
-  type ContactRelationship,
-  type DiscoverySource,
-} from './signupSectionSchema'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { outreachFormDefaultValues, outreachFormSchema, type OutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
+import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
+import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors';
+import { submitExpressionOfInterest } from '../../api/homepage.api';
 
 export function useSignupSection() {
-  const [formData, setFormData] = useState<CohortInterestForm>(cohortInterestInitialState)
-  const [fieldErrors, setFieldErrors] = useState<CohortInterestErrors>({})
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus()
-  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success'
+  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { register, handleSubmit, reset, setError: setFieldError, formState: { errors } } = useForm<OutreachFormValues>({
+    resolver: zodResolver(outreachFormSchema),
+    defaultValues: outreachFormDefaultValues,
+  });
+  const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success';
 
   useEffect(() => {
-    if (submitStatus !== 'success') return
+    if (submitStatus !== 'success') return;
+    const timeoutId = window.setTimeout(resetStatus, 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [submitStatus, resetStatus]);
 
-    const timeoutId = window.setTimeout(() => {
-      resetStatus()
-    }, 2500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [submitStatus, resetStatus])
-
-  const handleFieldChange = (field: keyof CohortInterestForm, value: string) => {
-    setFormData((current) => ({ ...current, [field]: value }))
-    setFieldErrors((current) => ({ ...current, [field]: undefined }))
-  }
-
-  const handleInterestSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setError('')
-    setFieldErrors({})
-
-    const nextFieldErrors: CohortInterestErrors = {}
-    if (!formData.youthFirstName.trim()) nextFieldErrors.youthFirstName = 'First name is required'
-    if (!formData.youthLastName.trim()) nextFieldErrors.youthLastName = 'Last name is required'
-    if (!formData.age) nextFieldErrors.age = 'Age is required'
-    if (!formData.school.trim()) nextFieldErrors.school = 'School is required'
-    if (!formData.discoverySource) nextFieldErrors.discoverySource = 'Please select a source'
-    if (!formData.contactFirstName.trim()) nextFieldErrors.contactFirstName = 'Contact first name is required'
-    if (!formData.contactLastName.trim()) nextFieldErrors.contactLastName = 'Contact last name is required'
-    if (!formData.contactPhoneNumber.trim()) nextFieldErrors.contactPhoneNumber = 'Contact phone number is required'
-    if (!formData.contactRelationship) nextFieldErrors.contactRelationship = 'Relationship is required'
-
-    if (Object.keys(nextFieldErrors).length) {
-      setFieldErrors(nextFieldErrors)
-      return
-    }
-
-    setSubmitStatus('submitting')
-
+  const onValid = async (data: OutreachFormValues) => {
+    setError('');
+    setSubmitStatus('submitting');
     try {
-      await submitCohortInterest({
-        youthFirstName: formData.youthFirstName.trim(),
-        youthLastName: formData.youthLastName.trim(),
-        age: Number(formData.age),
-        school: formData.school.trim(),
-        contactFirstName: formData.contactFirstName.trim(),
-        contactLastName: formData.contactLastName.trim(),
-        contactPhoneNumber: formData.contactPhoneNumber.trim(),
-        contactRelationship: formData.contactRelationship as ContactRelationship,
-        discoverySource: formData.discoverySource as DiscoverySource,
-        notes: formData.notes.trim() || undefined,
-      })
-      setFormData(cohortInterestInitialState)
-      setFieldErrors({})
-      setSubmitStatus('success')
+      await submitExpressionOfInterest({
+        youthFirstName: data.youthFirstName.trim(),
+        youthLastName: data.youthLastName.trim(),
+        age: data.age,
+        school: data.school.trim(),
+        contactFirstName: data.contactFirstName.trim(),
+        contactLastName: data.contactLastName.trim(),
+        contactPhoneNumber: data.contactPhoneNumber.trim(),
+        contactRelationship: data.contactRelationship,
+        discoverySource: data.discoverySource,
+        notes: data.notes.trim() || undefined,
+      });
+      reset(outreachFormDefaultValues);
+      setSubmitStatus('success');
     } catch (err) {
-      if (err instanceof ApiError && err.details?.length) {
-        const nextFieldErrors: CohortInterestErrors = {}
-        for (const detail of err.details) {
-          const field = detail.field.replace(/^body\./, '') as keyof CohortInterestForm
-          nextFieldErrors[field] = detail.message
+      if (err instanceof ApiError) {
+        for (const detail of err.details ?? []) {
+          const field = detail.field.replace(/^body\./, '') as keyof OutreachFormValues;
+          setFieldError(field, { message: detail.message });
         }
-        setFieldErrors(nextFieldErrors)
       }
-      setSubmitStatus('error')
-      setError(getErrorMessage(err, 'Unable to submit the form right now.'))
+      setSubmitStatus('error');
+      setError(getErrorMessage(err, 'Unable to submit the form right now.'));
     }
-  }
+  };
 
-  return {
-    formData,
-    fieldErrors,
-    submitStatus,
-    error,
-    isFormLocked,
-    handleFieldChange,
-    handleInterestSubmit,
-  }
+  return { register, errors, handleSubmit, onValid, submitStatus, error, isFormLocked };
 }

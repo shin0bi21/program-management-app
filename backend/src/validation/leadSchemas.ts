@@ -30,7 +30,7 @@ const leadDataSchema = z.object({
     contactFirstName: z.string().trim().min(1, 'Contact first name is required').max(120),
     contactLastName: z.string().trim().min(1, 'Contact last name is required').max(120),
     contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(40),
-    contactRelationship: z.enum(['parent', 'sibling', 'guardian', 'emergency']),
+    contactRelationship: z.enum(['parent', 'sibling', 'guardian']),
     discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other']),
     notes: z.string().trim().max(5000, 'Notes are too long').nullable().optional(),
 });

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { submitCohortInterest } from '../services/publicService';
+import { submitExpressionOfInterest } from '../services/publicService';
 
-export const handleCohortInterest = async (req: Request, res: Response) => {
-  await submitCohortInterest(req.body);
-  res.status(201).json({ message: 'Interest form submitted successfully' });
+export const handleExpressionOfInterest = async (req: Request, res: Response) => {
+  await submitExpressionOfInterest(req.body);
+  res.status(201).json({ message: 'Expression of interest submitted successfully' });
 };
