@@ -3,7 +3,7 @@ import { handleConvertExpressionOfInterest, handleGetExpressionsOfInterest, hand
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { expressionOfInterestIdSchema, updateExpressionOfInterestStatusSchema } from '../validation/expressionOfInterestSchemas';
+import { expressionOfInterestIdSchema, expressionOfInterestQuerySchema, updateExpressionOfInterestStatusSchema } from '../validation/expressionOfInterestSchemas';
 
 const router = Router();
 
@@ -11,6 +11,7 @@ router.get('/',
   authenticateToken,
   requirePermission('read:outreach'),
   generalLimiter,
+  validateRequest(expressionOfInterestQuerySchema),
   asyncHandler(handleGetExpressionsOfInterest),
 );
 

@@ -1,26 +1,37 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import type { UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
+import type { ExpressionOfInterestQuery, UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
+import { suggestProgramNameForAge } from './programService';
+import { applyExpressionOfInterestFilters } from './queryFilters/expressionOfInterestFilters';
 
-export async function getExpressionsOfInterest() {
+export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuery) {
+  const where = applyExpressionOfInterestFilters(filters);
   return sql`
     SELECT
-      id,
-      youth_first_name,
-      youth_last_name,
-      contact_first_name,
-      contact_last_name,
-      contact_phone_number,
-      contact_relationship,
-      age,
-      school,
-      discovery_source,
-      notes,
-      status,
-      created_at,
-      status_updated_at
-    FROM expressions_of_interest
-    ORDER BY created_at DESC
+      e.id,
+      e.youth_first_name,
+      e.youth_last_name,
+      e.contact_first_name,
+      e.contact_last_name,
+      e.contact_phone_number,
+      e.contact_relationship,
+      e.age,
+      e.school,
+      e.discovery_source,
+      e.notes,
+      e.status,
+      e.created_at,
+      e.status_updated_at,
+      p.id AS suggested_program_id,
+      p.name AS suggested_program_name
+    FROM expressions_of_interest e
+    LEFT JOIN programs p ON p.name = CASE
+      WHEN e.age BETWEEN 12 AND 15 THEN 'Soft Skills'
+      WHEN e.age BETWEEN 16 AND 19 THEN 'Job Readiness'
+      ELSE NULL
+    END
+    WHERE ${where}
+    ORDER BY e.created_at DESC
   `;
 }
 
@@ -83,6 +94,11 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
     }
 
     const expression = expressions[0];
+    const suggestedProgramName = suggestProgramNameForAge(expression.age);
+    const programs = suggestedProgramName
+      ? await tx<{ id: string }[]>`SELECT id FROM programs WHERE name = ${suggestedProgramName} LIMIT 1`
+      : [];
+    const programId = programs[0]?.id ?? null;
     const existingLead = await tx`
       SELECT id
       FROM leads
@@ -101,6 +117,7 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         youth_last_name,
         age,
         school,
+        program_id,
         contact_first_name,
         contact_last_name,
         contact_phone_number,
@@ -116,6 +133,7 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         ${expression.youthLastName},
         ${expression.age},
         ${expression.school},
+        ${programId},
         ${expression.contactFirstName},
         ${expression.contactLastName},
         ${expression.contactPhoneNumber},
@@ -133,6 +151,8 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         youth_last_name,
         age,
         school,
+        program_id,
+        (SELECT name FROM programs WHERE id = program_id) AS program_name,
         contact_first_name,
         contact_last_name,
         contact_phone_number,

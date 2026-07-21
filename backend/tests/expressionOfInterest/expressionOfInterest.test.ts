@@ -9,6 +9,7 @@ describe('Expression of interest API', () => {
   let adminUserId: string;
   let adminToken: string;
   const fixtureYouthLastName = `Youth-${Date.now()}`;
+  const jobReadinessYouthLastName = `Older-Youth-${Date.now()}`;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ email: `cohort-admin-${Date.now()}@test.local`, role: 'admin' });
@@ -41,16 +42,29 @@ describe('Expression of interest API', () => {
         ${'Needs follow-up'}
       )
     `;
+    await sql`
+      INSERT INTO expressions_of_interest (
+        youth_first_name, youth_last_name, contact_first_name, contact_last_name,
+        contact_phone_number, contact_relationship, age, school, discovery_source
+      ) VALUES (
+        'Older', ${jobReadinessYouthLastName}, 'Parent', 'Viewer', '416-555-0189',
+        'parent', 17, 'Test School', 'online'
+      )
+    `;
   });
 
   afterAll(async () => {
     await sql`
       DELETE FROM leads
       WHERE expression_of_interest_id IN (
-        SELECT id FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName}
+        SELECT id FROM expressions_of_interest
+        WHERE youth_last_name IN (${fixtureYouthLastName}, ${jobReadinessYouthLastName})
       )
     `;
-    await sql`DELETE FROM expressions_of_interest WHERE youth_last_name = ${fixtureYouthLastName}`;
+    await sql`
+      DELETE FROM expressions_of_interest
+      WHERE youth_last_name IN (${fixtureYouthLastName}, ${jobReadinessYouthLastName})
+    `;
     await deleteTestUser(adminUserId);
   });
 
@@ -83,6 +97,19 @@ describe('Expression of interest API', () => {
     expect(Array.isArray(res.body)).toBe(true);
 
     await deleteTestUser(staff.userId);
+  });
+
+  it('filters submissions by their inferred program', async () => {
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const res = await request(app)
+      .get(`/api/expressions-of-interest?programIds=${program.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ youthLastName: fixtureYouthLastName, suggestedProgramName: 'Soft Skills' }),
+    ]));
+    expect(res.body.every((item: { suggestedProgramId: string }) => item.suggestedProgramId === program.id)).toBe(true);
   });
 
   it('rejects expired tokens', async () => {
@@ -174,6 +201,7 @@ describe('Expression of interest API', () => {
       discoverySource: 'online',
       notes: 'Needs follow-up',
       status: 'new',
+      programName: 'Soft Skills',
       createdBy: adminUserId,
     }));
 
@@ -194,5 +222,18 @@ describe('Expression of interest API', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('This expression of interest has already been converted');
+  });
+
+  it('defaults ages 16–19 to Job Readiness', async () => {
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT id FROM expressions_of_interest WHERE youth_last_name = ${jobReadinessYouthLastName} LIMIT 1
+    `;
+
+    const res = await request(app)
+      .post(`/api/expressions-of-interest/${submission.id}/convert`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.programName).toBe('Job Readiness');
   });
 });

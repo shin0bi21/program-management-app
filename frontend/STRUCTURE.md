@@ -47,6 +47,7 @@ src/
       config.ts           ← api() URL helper
       sessionExpired.ts   ← awaitReLogin / resolveReLogin
       tokenRefresh.ts     ← proactive refresh with deduplication
+      programs.api.ts     ← canonical program lookup API
     components/
       ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
@@ -68,6 +69,7 @@ src/
       useAddresses.ts     ← entity-agnostic address array state
       useConfirmModal.tsx ← reusable confirm/delete modal state
       useContacts.ts      ← entity-agnostic contact array state
+      usePrograms.ts      ← program lookup state shared by Lead and Youth workflows
       useSchools.ts       ← school lookup state shared by Youth workflows
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
     styles/

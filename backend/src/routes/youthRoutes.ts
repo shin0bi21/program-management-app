@@ -3,11 +3,11 @@ import { handleGetYouth, handleSetYouth, handleToggleYouthStatus, handleInviteYo
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { validateRequest, asyncHandler } from '../middleware/routeMiddleware';
-import { inviteYouthSchema, setYouthSchema } from '../validation/youthSchemas';
+import { inviteYouthSchema, setYouthSchema, youthQuerySchema } from '../validation/youthSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, asyncHandler(handleGetYouth));
+router.get('/', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthQuerySchema), asyncHandler(handleGetYouth));
 router.post('/', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(setYouthSchema), asyncHandler(handleSetYouth));
 router.patch('/:id', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, asyncHandler(handleToggleYouthStatus));
 router.post('/:id/invite', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(inviteYouthSchema), asyncHandler(handleInviteYouth));

@@ -147,7 +147,7 @@ Every protected resource uses the same 3-layer check. All 3 must match:
 
 `read:x` gates the whole page. `write:x` gates mutations within the page or inline resource actions. `permissions` comes from `useAuth()`.
 
-Current permission strings: `read:accounts`, `write:accounts`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:outreach`, `write:outreach`, `read:settings`, `write:settings`.
+Current permission strings: `read:accounts`, `write:accounts`, `read:youth_profiles`, `write:youth_profiles`, `read:schools`, `write:schools`, `read:programs`, `write:programs`, `read:outreach`, `write:outreach`, `read:settings`, `write:settings`.
 
 ## Adding a new page
 

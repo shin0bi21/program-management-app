@@ -1,4 +1,5 @@
 import type { FieldErrors, UseFormRegister } from 'react-hook-form';
+import type { ReactNode } from 'react';
 import FormField from '../FormField/FormField';
 import type { OutreachFormValues } from './outreachFormSchema';
 import './OutreachForm.css';
@@ -17,10 +18,11 @@ const discoverySourceOptions = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-export default function OutreachFormFields({ idPrefix, register, errors }: {
+export default function OutreachFormFields({ idPrefix, register, errors, programField }: {
   idPrefix: string;
   register: UseFormRegister<OutreachFormValues>;
   errors: FieldErrors<OutreachFormValues>;
+  programField?: ReactNode;
 }) {
   const id = (field: keyof OutreachFormValues) => `${idPrefix}-${field}`;
 
@@ -35,6 +37,7 @@ export default function OutreachFormFields({ idPrefix, register, errors }: {
         <FormField id={id('age')} label="Age *" error={errors.age?.message}><input id={id('age')} type="number" min="5" max="24" {...register('age', { valueAsNumber: true })} /></FormField>
         <FormField id={id('school')} label="School *" error={errors.school?.message}><input id={id('school')} {...register('school')} /></FormField>
       </div>
+      {programField && <div className="form-row">{programField}</div>}
     </section>
 
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-contact-title`}>

@@ -54,8 +54,8 @@ export async function insertExpired2FACode(userId: string, code: string = '99999
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  admin: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:settings', 'write:settings'],
-  staff: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:settings', 'write:settings'],
+  admin: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:programs', 'write:programs', 'read:settings', 'write:settings'],
+  staff: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'read:programs', 'read:settings', 'write:settings'],
   youth: [],
 };
 

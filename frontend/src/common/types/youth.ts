@@ -10,6 +10,8 @@ export interface YouthProfile {
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;
+  programId: string | null;
+  programName: string | null;
   gradeLevel: number | null;
   ageGroup: 'junior_youth' | 'senior_youth' | null;
   createdAt: string;
@@ -38,6 +40,7 @@ export interface SetYouthInput {
   status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
+  programId?: string | null;
   gradeLevel?: number;
   addresses?: Array<{
     address: string;
@@ -51,4 +54,10 @@ export interface SetYouthInput {
     phoneNumber: string;
     type: 'parent' | 'sibling' | 'guardian';
   }>;
+}
+
+export interface YouthFilters {
+  search?: string;
+  statuses?: Array<'active' | 'inactive'>;
+  programIds?: string[];
 }

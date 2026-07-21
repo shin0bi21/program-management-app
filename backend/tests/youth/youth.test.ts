@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { seedTestUser, deleteTestUser } from '../shared/db';
+import { seedTestUser, deleteTestUser, sql } from '../shared/db';
 import { generateToken, generateExpiredToken, deleteTestYouth } from './helpers';
 
 const app = createApp();
@@ -15,11 +15,14 @@ const baseYouth = {
 describe('Youth API', () => {
   let adminUserId: string;
   let adminToken: string;
+  let softSkillsProgramId: string;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, role: 'admin' });
     adminUserId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    softSkillsProgramId = program.id;
   });
 
   afterAll(async () => {
@@ -118,10 +121,25 @@ describe('Youth API', () => {
           firstName: 'Jordan',
           dateOfBirth: '2012-06-15',
           gradeLevel: 7,
+          programId: softSkillsProgramId,
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
+      expect(res.body.programId).toBe(softSkillsProgramId);
+      expect(res.body.programName).toBe('Soft Skills');
       createdIds.push(res.body.id);
+    });
+
+    it('should filter youth by program UUID', async () => {
+      const res = await request(app)
+        .get(`/api/youth?programIds=${softSkillsProgramId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({ firstName: 'Jordan', programId: softSkillsProgramId }),
+      ]));
+      expect(res.body.every((profile: { programId: string }) => profile.programId === softSkillsProgramId)).toBe(true);
     });
 
     it('should create and invite a youth account when email is provided', async () => {

@@ -1,9 +1,14 @@
 import { apiClient } from '../../../../common/api/http/client';
-import type { ExpressionOfInterest } from '../types';
+import type { ExpressionOfInterest, ExpressionOfInterestFilters } from '../types';
 import type { Lead } from '../../Leads/types';
 
-export function getExpressionsOfInterest() {
-  return apiClient.get<ExpressionOfInterest[]>('/expressions-of-interest');
+export function getExpressionsOfInterest(filters: ExpressionOfInterestFilters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search?.trim()) params.set('search', filters.search.trim());
+  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
+  if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  const query = params.toString();
+  return apiClient.get<ExpressionOfInterest[]>(`/expressions-of-interest${query ? `?${query}` : ''}`);
 }
 
 export function updateExpressionOfInterestStatus(id: string, status: ExpressionOfInterest['status']) {

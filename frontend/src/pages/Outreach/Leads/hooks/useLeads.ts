@@ -21,7 +21,7 @@ export function useLeads(filters: LeadFilters) {
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [filters.search, filters.statuses]);
+  }, [filters.search, filters.statuses, filters.programIds]);
 
   useEffect(() => { void load(); }, [load]);
   return { leads, setLeads, loading, error, reload: load };

@@ -10,6 +10,14 @@ vi.mock('../api/leads.api', () => ({
   updateLead: (...args: unknown[]) => updateLead(...args),
 }));
 
+vi.mock('../../../../common/hooks/usePrograms', () => ({
+  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], setPrograms: vi.fn(), loading: false, error: '' }),
+}));
+
+vi.mock('../../../../common/context/AuthContext', () => ({
+  useAuth: () => ({ permissions: ['write:programs'] }),
+}));
+
 describe('LeadModal', () => {
   beforeEach(() => {
     createLead.mockReset();
@@ -36,6 +44,8 @@ describe('LeadModal', () => {
     fireEvent.change(document.getElementById('lead-youthLastName')!, { target: { value: ' Outreach ' } });
     fireEvent.change(document.getElementById('lead-age')!, { target: { value: '14' } });
     fireEvent.change(document.getElementById('lead-school')!, { target: { value: ' Test School ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Program' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
     fireEvent.change(document.getElementById('lead-contactFirstName')!, { target: { value: ' Jordan ' } });
     fireEvent.change(document.getElementById('lead-contactLastName')!, { target: { value: ' Outreach ' } });
     fireEvent.change(document.getElementById('lead-contactPhoneNumber')!, { target: { value: ' 416-555-0142 ' } });
@@ -43,6 +53,7 @@ describe('LeadModal', () => {
 
     await waitFor(() => expect(createLead).toHaveBeenCalledWith(expect.objectContaining({
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
+      programId: 'program-1',
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
       contactRelationship: 'parent', discoverySource: 'online',
     })));
@@ -52,6 +63,7 @@ describe('LeadModal', () => {
     const lead = {
       id: 'lead-1', origin: 'staff_created' as const, expressionOfInterestId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
+      programId: null, programName: null,
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian' as const, discoverySource: 'online' as const, notes: null,
       status: 'new' as const, statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
