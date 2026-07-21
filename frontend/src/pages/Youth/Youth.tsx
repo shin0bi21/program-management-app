@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import Button from '../../common/components/Button/Button';
-import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
@@ -157,10 +156,9 @@ export default function Youth() {
 
   return (
     <>
-      <Header />
-      <div className="page-container">
+      <div>
         <PageHeader
-          title="Youth"
+          title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
           filters={<FilterCard
