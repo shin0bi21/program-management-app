@@ -5,6 +5,8 @@ export type Permission =
   | 'read:youth_profiles'
   | 'write:youth_profiles'
   | 'read:schools'
+  | 'read:programs'
+  | 'write:programs'
   | 'write:schools'
   | 'read:outreach'
   | 'write:outreach'

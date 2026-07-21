@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { getYouth, setYouth, toggleYouthStatus } from '../services/youthService';
 import { inviteYouthAccount } from '../services/accountService';
+import { youthQuerySchema } from '../validation/youthSchemas';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
-  const id = req.query.id as string | undefined;
-  res.json(id ? await getYouth(id) : await getYouth());
+  const filters = youthQuerySchema.shape.query.parse(req.query);
+  res.json(filters.id ? await getYouth(filters.id) : await getYouth(undefined, filters));
 };
 
 export const handleSetYouth = async (req: Request, res: Response) => {

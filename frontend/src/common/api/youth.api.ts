@@ -1,8 +1,14 @@
 import { apiClient } from './http/client';
-import type { YouthProfile, SetYouthInput } from '../types/youth';
+import type { YouthFilters, YouthProfile, SetYouthInput } from '../types/youth';
 
-export function getYouth(id?: string) {
-  return apiClient.get<YouthProfile[]>(`/youth${id ? `?id=${id}` : ''}`);
+export function getYouth(id?: string, filters: YouthFilters = {}) {
+  const params = new URLSearchParams();
+  if (id) params.set('id', id);
+  if (filters.search?.trim()) params.set('search', filters.search.trim());
+  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
+  if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  const query = params.toString();
+  return apiClient.get<YouthProfile[]>(`/youth${query ? `?${query}` : ''}`);
 }
 
 export function setYouth(data: SetYouthInput) {

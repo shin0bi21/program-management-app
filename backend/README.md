@@ -201,6 +201,15 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 | `POST` | `/` | Create/update school | `write:schools` |
 | `DELETE` | `/:id` | Delete school | `write:schools` |
 
+### Programs — `/api/programs`
+
+Protected read-only lookup used by lead and youth profile workflows.
+
+| Method | Path | Description | Permission |
+|--------|------|-------------|------------|
+| `GET` | `/` | List canonical programs | `read:programs` |
+| `POST` | `/` | Create a program | `write:programs` |
+
 ### Public — `/api/public`
 
 Unauthenticated homepage intake endpoints.

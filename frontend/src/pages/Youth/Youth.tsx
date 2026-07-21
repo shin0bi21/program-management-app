@@ -1,23 +1,58 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Button from '../../common/components/Button/Button';
 import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
+import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
+import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { useConfirmModal, ConfirmAction } from '../../common/hooks/useConfirmModal';
 import { toggleYouthStatus } from '../../common/api/youth.api';
 import { calculateAge } from '../../common/utils/time';
+import { usePrograms } from '../../common/hooks/usePrograms';
+import type { YouthFilters } from '../../common/types/youth';
 import './Youth.css';
 
 export default function Youth() {
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>([]);
+  const [programFilters, setProgramFilters] = useState<string[]>([]);
+  const queryFilters = useMemo<YouthFilters>(() => ({
+    search: debouncedSearch,
+    statuses: statusFilters,
+    programIds: programFilters,
+  }), [debouncedSearch, statusFilters, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const { youth, setYouth, loading, error } = useYouth();
+  const { youth, setYouth, loading, error } = useYouth(queryFilters);
+  const { programs } = usePrograms();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const filterCategories = useMemo<FilterCardCategory[]>(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+      ],
+    },
+    {
+      id: 'program',
+      label: 'Program',
+      options: programs.map(program => ({ value: program.id, label: program.name })),
+    },
+  ], [programs]);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
@@ -89,6 +124,11 @@ export default function Youth() {
       width: '100px',
     },
     {
+      key: 'program',
+      header: 'Program',
+      render: (profile) => profile.programName ?? '—',
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (profile) => (
@@ -122,6 +162,16 @@ export default function Youth() {
         <PageHeader
           title="Youth"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
+          search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
+          filters={<FilterCard
+            categories={filterCategories}
+            values={{ status: statusFilters, program: programFilters }}
+            onApply={(category, selected) => {
+              if (category === 'status') setStatusFilters(selected as Array<'active' | 'inactive'>);
+              if (category === 'program') setProgramFilters(selected);
+            }}
+            onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
+          />}
         />
 
         <Table
@@ -129,7 +179,7 @@ export default function Youth() {
           data={youth}
           loading={loading}
           error={error}
-          emptyMessage="No youth profiles found"
+          emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'}
           keyExtractor={(profile) => profile.id}
           maxHeight="calc(100vh - 200px)"
         />

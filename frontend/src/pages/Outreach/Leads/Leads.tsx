@@ -7,6 +7,7 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
 import { formatShortDate } from '../../../common/utils/date';
+import { usePrograms } from '../../../common/hooks/usePrograms';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import { useLeads } from './hooks/useLeads';
@@ -22,8 +23,10 @@ export default function Leads() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
-  const queryFilters = useMemo<LeadFilters>(() => ({ search: debouncedSearch, statuses: statusFilters }), [debouncedSearch, statusFilters]);
+  const [programFilters, setProgramFilters] = useState<string[]>([]);
+  const queryFilters = useMemo<LeadFilters>(() => ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters }), [debouncedSearch, statusFilters, programFilters]);
   const { leads, loading, error, reload } = useLeads(queryFilters);
+  const { programs } = usePrograms();
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
 
   useEffect(() => {
@@ -31,11 +34,18 @@ export default function Leads() {
     return () => window.clearTimeout(timeout);
   }, [search]);
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [{
-    id: 'status',
-    label: 'Status',
-    options: statuses.map(status => ({ value: status, label: title(status) })),
-  }], []);
+  const filterCategories = useMemo<FilterCardCategory[]>(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: statuses.map(status => ({ value: status, label: title(status) })),
+    },
+    {
+      id: 'program',
+      label: 'Program',
+      options: programs.map(program => ({ value: program.id, label: program.name })),
+    },
+  ], [programs]);
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
     await updateLeadStatus(lead.id, status);
@@ -45,6 +55,7 @@ export default function Leads() {
   const columns: TableColumn<Lead>[] = [
     { key: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
     { key: 'school', header: 'School', render: lead => lead.school },
+    { key: 'program', header: 'Program', render: lead => lead.programName ?? '—' },
     { key: 'origin', header: 'Origin', width: '150px', render: lead => lead.origin === 'expression_of_interest' ? 'Expression of Interest' : 'Staff Created' },
     { key: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
     { key: 'created', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
@@ -67,13 +78,16 @@ export default function Leads() {
       search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
       filters={<FilterCard
         categories={filterCategories}
-        values={{ status: statusFilters }}
-        onApply={(_, selected) => setStatusFilters(selected as LeadStatus[])}
-        onClearAll={() => setStatusFilters([])}
+        values={{ status: statusFilters, program: programFilters }}
+        onApply={(category, selected) => {
+          if (category === 'status') setStatusFilters(selected as LeadStatus[]);
+          if (category === 'program') setProgramFilters(selected);
+        }}
+        onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
       />}
     />
     <section className="outreach-tab-content leads-panel" aria-label="Leads">
-      <Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
+      <Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
     </section>
     <LeadModal
       isOpen={modalTarget !== null}

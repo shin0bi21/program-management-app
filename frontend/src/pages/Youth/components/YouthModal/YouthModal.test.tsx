@@ -26,6 +26,15 @@ vi.mock('../../../../common/hooks/useSchools', () => ({
   }),
 }));
 
+vi.mock('../../../../common/hooks/usePrograms', () => ({
+  usePrograms: () => ({
+    programs: [{ id: 'program-1', name: 'Soft Skills' }],
+    setPrograms: vi.fn(),
+    loading: false,
+    error: '',
+  }),
+}));
+
 vi.mock('../../../../common/context/AuthContext', () => ({
   useAuth: () => authState,
 }));
@@ -107,6 +116,19 @@ describe('YouthModal', () => {
       expect(screen.queryByRole('menuitem', { name: '+ Add school' })).not.toBeInTheDocument();
     });
 
+    it('offers inline program creation only with program write permission', () => {
+      authState.permissions = ['write:programs'];
+      const { unmount } = renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
+      expect(screen.getByRole('menuitem', { name: '+ Add program' })).toBeInTheDocument();
+      unmount();
+
+      authState.permissions = [];
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
+      expect(screen.queryByRole('menuitem', { name: '+ Add program' })).not.toBeInTheDocument();
+    });
+
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
       expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();
@@ -166,6 +188,18 @@ describe('YouthModal', () => {
 
       await waitFor(() => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1' }));
+      });
+    });
+
+    it('submits the selected program id', async () => {
+      renderModal();
+      fillRequiredFields();
+      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
+      submitForm();
+
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ programId: 'program-1' }));
       });
     });
 

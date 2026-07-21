@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { convertExpressionOfInterest, getExpressionsOfInterest, updateExpressionOfInterestStatus } from '../services/expressionOfInterestService';
-import type { UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
+import { expressionOfInterestQuerySchema, type UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
 
-export const handleGetExpressionsOfInterest = async (_req: Request, res: Response) => {
-  res.json(await getExpressionsOfInterest());
+export const handleGetExpressionsOfInterest = async (req: Request, res: Response) => {
+  const filters = expressionOfInterestQuerySchema.shape.query.parse(req.query);
+  res.json(await getExpressionsOfInterest(filters));
 };
 
 export const handleUpdateExpressionOfInterestStatus = async (req: Request, res: Response) => {
