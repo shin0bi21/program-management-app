@@ -24,7 +24,7 @@ export default function Leads() {
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
   const queryFilters = useMemo<LeadFilters>(() => ({ search: debouncedSearch, statuses: statusFilters }), [debouncedSearch, statusFilters]);
   const { leads, loading, error, reload } = useLeads(queryFilters);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -48,13 +48,22 @@ export default function Leads() {
     { key: 'origin', header: 'Origin', width: '150px', render: lead => lead.origin === 'interest_submission' ? 'Public Interest' : 'Staff Created' },
     { key: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
     { key: 'created', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
-    ...(canWrite ? [{ key: 'actions' as const, header: '', className: 'col-actions', width: '32px', render: (lead: Lead) => <ActionsMenu items={statuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) }))} /> }] : []),
+    ...(canWrite ? [{
+      key: 'actions' as const,
+      header: '',
+      className: 'col-actions',
+      width: '32px',
+      render: (lead: Lead) => <ActionsMenu items={[
+        { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
+        ...statuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
+      ]} />,
+    }] : []),
   ];
 
   return <>
     <PageHeader
       title="Outreach"
-      actions={canWrite ? <Button onClick={() => setCreateOpen(true)}>+ Create Lead</Button> : undefined}
+      actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Create Lead</Button> : undefined}
       search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
       filters={<FilterCard
         categories={filterCategories}
@@ -66,6 +75,11 @@ export default function Leads() {
     <section className="outreach-tab-content leads-panel" aria-label="Leads">
       <Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
     </section>
-    <LeadModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); void reload(); }} />
+    <LeadModal
+      isOpen={modalTarget !== null}
+      lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
+      onClose={() => setModalTarget(null)}
+      onSuccess={() => { setModalTarget(null); void reload(); }}
+    />
   </>;
 }

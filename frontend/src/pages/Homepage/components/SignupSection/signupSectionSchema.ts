@@ -8,14 +8,12 @@ export type CohortInterestForm = {
   youthLastName: string
   age: string
   school: string
-  email: string
-  phoneNumber: string
   contactFirstName: string
   contactLastName: string
   contactPhoneNumber: string
   contactRelationship: ContactRelationship | ''
   discoverySource: DiscoverySource | ''
-  message: string
+  notes: string
 }
 
 export type CohortInterestErrors = Partial<Record<keyof CohortInterestForm, string>>
@@ -25,14 +23,12 @@ export const cohortInterestInitialState: CohortInterestForm = {
   youthLastName: '',
   age: '',
   school: '',
-  email: '',
-  phoneNumber: '',
   contactFirstName: '',
   contactLastName: '',
   contactPhoneNumber: '',
   contactRelationship: '',
   discoverySource: '',
-  message: '',
+  notes: '',
 }
 
 export const discoverySourceOptions: { value: DiscoverySource; label: string }[] = [
@@ -47,4 +43,5 @@ export const contactRelationshipOptions: { value: ContactRelationship; label: st
   { value: 'parent', label: 'Parent' },
   { value: 'guardian', label: 'Guardian' },
   { value: 'sibling', label: 'Sibling' },
+  { value: 'emergency', label: 'Emergency Contact' },
 ]

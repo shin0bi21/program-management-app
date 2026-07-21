@@ -91,10 +91,8 @@ export interface CohortInterestSubmissions {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   discovery_source: DiscoverySource;
-  email: string | null;
   id: Generated<string>;
-  message: string | null;
-  phone_number: string | null;
+  notes: string | null;
   school: string;
   status: Generated<string>;
   status_updated_at: Generated<Timestamp>;
@@ -129,8 +127,6 @@ export interface Leads {
   interest_submission_id: string | null;
   notes: string | null;
   origin: LeadOrigin;
-  response_email: string | null;
-  response_phone_number: string | null;
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;

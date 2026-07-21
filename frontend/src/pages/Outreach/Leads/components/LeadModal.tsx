@@ -5,19 +5,21 @@ import type { Lead } from '../types';
 import { useLeadModal } from './useLeadModal';
 import './LeadModal.css';
 
-export default function LeadModal({ isOpen, onClose, onSuccess }: {
+export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (lead: Lead) => void;
+  lead?: Lead;
 }) {
-  const { register, errors, handleSubmit, onValid, submitStatus, error, handleClose } = useLeadModal({ isOpen, onClose, onSuccess });
-  const footer = <ModalFormFooter formId="lead-form" submitLabel="Create Lead" submitStatus={submitStatus} onClose={handleClose} />;
+  const isEdit = lead !== undefined;
+  const { register, errors, handleSubmit, onValid, submitStatus, error, handleClose } = useLeadModal({ isOpen, onClose, onSuccess, lead });
+  const footer = <ModalFormFooter formId="lead-form" submitLabel={isEdit ? 'Update Lead' : 'Create Lead'} submitStatus={submitStatus} onClose={handleClose} />;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create Lead" footer={footer} status={submitStatus}
-      statusMessage={submitStatus === 'submitting' ? 'Creating lead...' : submitStatus === 'success' ? 'Lead created successfully!' : submitStatus === 'error' ? error : undefined}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={isEdit ? 'Edit Lead' : 'Create Lead'} footer={footer} status={submitStatus}
+      statusMessage={submitStatus === 'submitting' ? (isEdit ? 'Updating lead...' : 'Creating lead...') : submitStatus === 'success' ? (isEdit ? 'Lead updated successfully!' : 'Lead created successfully!') : submitStatus === 'error' ? error : undefined}>
       <form id="lead-form" onSubmit={handleSubmit(onValid)}>
-        <div className="section-header"><h3>General Information</h3></div>
+        <div className="section-header"><h3>Youth Information</h3></div>
         <div className="form-row">
           <FormField id="lead-youthFirstName" label="First Name *" error={errors.youthFirstName?.message}><input id="lead-youthFirstName" {...register('youthFirstName')} /></FormField>
           <FormField id="lead-youthLastName" label="Last Name *" error={errors.youthLastName?.message}><input id="lead-youthLastName" {...register('youthLastName')} /></FormField>
@@ -44,10 +46,6 @@ export default function LeadModal({ isOpen, onClose, onSuccess }: {
         <div className="section-divider">
           <div className="section-header"><h3>Follow-up Information</h3></div>
           <div className="section-content">
-            <div className="form-row">
-              <FormField id="lead-responseEmail" label="Email" error={errors.responseEmail?.message}><input id="lead-responseEmail" type="email" placeholder="Optional" {...register('responseEmail')} /></FormField>
-              <FormField id="lead-responsePhoneNumber" label="Additional Phone"><input id="lead-responsePhoneNumber" type="tel" placeholder="Optional" {...register('responsePhoneNumber')} /></FormField>
-            </div>
             <FormField id="lead-discoverySource" label="How Did They Hear About Us? *" error={errors.discoverySource?.message}><select id="lead-discoverySource" {...register('discoverySource')}><option value="online">Online</option><option value="friend_family">Friend / Family</option><option value="school">School</option><option value="community_outreach">Community Outreach</option><option value="other">Other</option></select></FormField>
           </div>
         </div>

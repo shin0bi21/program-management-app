@@ -42,12 +42,6 @@ export function useSignupSection() {
     if (!formData.age) nextFieldErrors.age = 'Age is required'
     if (!formData.school.trim()) nextFieldErrors.school = 'School is required'
     if (!formData.discoverySource) nextFieldErrors.discoverySource = 'Please select a source'
-    if (!formData.email.trim() && !formData.phoneNumber.trim()) {
-      const responseError = 'Provide an email or phone number'
-      nextFieldErrors.email = responseError
-      nextFieldErrors.phoneNumber = responseError
-    }
-
     if (!formData.contactFirstName.trim()) nextFieldErrors.contactFirstName = 'Contact first name is required'
     if (!formData.contactLastName.trim()) nextFieldErrors.contactLastName = 'Contact last name is required'
     if (!formData.contactPhoneNumber.trim()) nextFieldErrors.contactPhoneNumber = 'Contact phone number is required'
@@ -66,14 +60,12 @@ export function useSignupSection() {
         youthLastName: formData.youthLastName.trim(),
         age: Number(formData.age),
         school: formData.school.trim(),
-        email: formData.email.trim() || undefined,
-        phoneNumber: formData.phoneNumber.trim() || undefined,
         contactFirstName: formData.contactFirstName.trim(),
         contactLastName: formData.contactLastName.trim(),
         contactPhoneNumber: formData.contactPhoneNumber.trim(),
         contactRelationship: formData.contactRelationship as ContactRelationship,
         discoverySource: formData.discoverySource as DiscoverySource,
-        message: formData.message.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
       })
       setFormData(cohortInterestInitialState)
       setFieldErrors({})

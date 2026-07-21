@@ -52,12 +52,6 @@
   color: var(--brand-ink);
 }
 
-.cohort-interest-response-start {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--ink-12);
-}
-
 .status-signed-up {
   background-color: var(--color-status-active-bg);
   color: var(--color-status-active);

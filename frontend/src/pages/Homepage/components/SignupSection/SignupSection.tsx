@@ -35,6 +35,7 @@ export default function SignupSection() {
               {submitStatus === 'error' && error && (
                 <div className="form-error">{error}</div>
               )}
+              <p className="cohort-form-group-title">Youth Information</p>
               <div className="form-row">
                 <FormField id="cohort-youthFirstName" label="Youth First Name" error={fieldErrors.youthFirstName}>
                   <input
@@ -60,8 +61,8 @@ export default function SignupSection() {
                   <input
                     id="cohort-age"
                     type="number"
-                    min="1"
-                    max="120"
+                    min="5"
+                    max="24"
                     value={formData.age}
                     onChange={(event) => handleFieldChange('age', event.target.value)}
                     inputMode="numeric"
@@ -123,26 +124,7 @@ export default function SignupSection() {
                   </select>
                 </FormField>
               </div>
-              <p className="cohort-form-group-title">How We Can Reach You <span>(email or phone required)</span></p>
-              <div className="form-row">
-                <FormField id="cohort-email" label="Email" error={fieldErrors.email}>
-                  <input
-                    id="cohort-email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(event) => handleFieldChange('email', event.target.value)}
-                    autoComplete="email"
-                  />
-                </FormField>
-                <FormField id="cohort-phoneNumber" label="Phone Number" error={fieldErrors.phoneNumber}>
-                  <input
-                    id="cohort-phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
-                    autoComplete="tel"
-                  />
-                </FormField>
-              </div>
+              <p className="cohort-form-group-title">Follow-up Information</p>
               <div className="form-row">
                 <FormField id="cohort-discoverySource" label="How Did You Hear About Us?" error={fieldErrors.discoverySource}>
                   <select
@@ -158,12 +140,13 @@ export default function SignupSection() {
                   </select>
                 </FormField>
               </div>
-              <FormField id="cohort-message" label="Anything else we should know?" error={fieldErrors.message}>
+              <p className="cohort-form-group-title">Notes <span>(optional)</span></p>
+              <FormField id="cohort-notes" label="Anything else we should know?" error={fieldErrors.notes}>
                 <textarea
-                  id="cohort-message"
+                  id="cohort-notes"
                   rows={5}
-                  value={formData.message}
-                  onChange={(event) => handleFieldChange('message', event.target.value)}
+                  value={formData.notes}
+                  onChange={(event) => handleFieldChange('notes', event.target.value)}
                 />
               </FormField>
               <div className="cohort-inline-form-actions">

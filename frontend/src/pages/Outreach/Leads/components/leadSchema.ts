@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
 const namePattern = /^[a-zA-Z\s'-]+$/;
-const optionalEmail = z.union([z.literal(''), z.string().email('Invalid email address')]);
-
 export const leadSchema = z.object({
   youthFirstName: z.string().trim().min(1, 'First name is required').regex(namePattern, 'Enter a valid first name'),
   youthLastName: z.string().trim().min(1, 'Last name is required').regex(namePattern, 'Enter a valid last name'),
@@ -12,8 +10,6 @@ export const leadSchema = z.object({
   contactLastName: z.string().trim().min(1, 'Contact last name is required').regex(namePattern, 'Enter a valid last name'),
   contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
   contactRelationship: z.enum(['parent', 'guardian', 'sibling', 'emergency'], { error: 'Relationship is required' }),
-  responseEmail: optionalEmail,
-  responsePhoneNumber: z.string(),
   discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], { error: 'Discovery source is required' }),
   notes: z.string().max(5000, 'Notes must be 5000 characters or fewer'),
 });
