@@ -46,14 +46,6 @@ export default function Table<T>({
   keyExtractor,
   maxHeight = '600px',
 }: TableProps<T>) {
-  if (loading) {
-    return <div className="table-loading">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="table-error">{error}</div>;
-  }
-
   return (
     <div className="table-wrapper" style={{ maxHeight }}>
       <table className="table">
@@ -71,7 +63,15 @@ export default function Table<T>({
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
+          {loading ? (
+            <tr className="table-loading-row">
+              <td colSpan={columns.length} className="table-state-cell">Loading...</td>
+            </tr>
+          ) : error ? (
+            <tr className="table-error-row">
+              <td colSpan={columns.length} className="table-state-cell table-error-cell">{error}</td>
+            </tr>
+          ) : data.length === 0 ? (
             <tr className="table-empty-row">
               <td colSpan={columns.length} className="table-empty-cell">{emptyMessage}</td>
             </tr>

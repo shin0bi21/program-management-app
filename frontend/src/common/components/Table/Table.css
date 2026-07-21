@@ -43,9 +43,8 @@
 }
 
 /* Loading, error, empty states */
-.table-loading,
-.table-error {
-  padding: 3rem 2rem;
+.table td.table-state-cell {
+  padding: 1rem;
   text-align: center;
   color: var(--color-muted);
   font-size: 1rem;
@@ -62,11 +61,9 @@
   font-size: 1rem;
 }
 
-.table-error {
+.table td.table-error-cell {
   color: var(--color-danger);
   background-color: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: 8px;
 }
 
 /* Scrollbar styling */
