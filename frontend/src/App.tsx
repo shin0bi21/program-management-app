@@ -5,7 +5,7 @@ import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
-import ManageAccounts from './pages/Settings/ManageAccounts/ManageAccounts'
+import Users from './pages/Settings/Users/Users'
 import Schools from './pages/Schools/Schools'
 import Account from './pages/Settings/Account/Account'
 import Outreach from './pages/Outreach/Outreach'
@@ -60,7 +60,7 @@ function App() {
           </Route>
           <Route path="/settings/accounts" element={
             <ProtectedRoute requiredPermission="read:accounts">
-              <ManageAccounts />
+              <Users />
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />

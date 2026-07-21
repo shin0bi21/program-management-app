@@ -5,6 +5,8 @@ import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { revokeAccountInvite, toggleAccountStatus } from '../../../common/api/accounts.api';
@@ -13,7 +15,7 @@ import { formatShortDate } from '../../../common/utils/date';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
 import AccountModal from './components/AccountModal/AccountModal';
 import { useAccounts } from './hooks/useAccounts';
-import './ManageAccounts.css';
+import './Users.css';
 
 function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -23,7 +25,7 @@ function statusBadge(status: AccountStatus) {
   return <span className={`status-badge status-${status}`}>{titleCase(status)}</span>;
 }
 
-export default function ManageAccounts() {
+export default function Users() {
   const { role, permissions } = useAuth();
   const isAdmin = role === 'admin';
   const canWrite = permissions.includes('write:accounts');
@@ -137,34 +139,41 @@ export default function ManageAccounts() {
     <>
       <Header />
       <main className="page-container manage-accounts-page">
-        <header className="manage-accounts-header">
-          <h1 className="page-title">Account Management</h1>
-          <div className="manage-accounts-actions">
-            {canInviteYouth && <Button variant="secondary" onClick={() => setYouthInviteOpen(true)}>+ Invite Youth</Button>}
-            {isAdmin && canWrite && <Button onClick={() => setModalTarget('new')}>+ Invite Staff</Button>}
-          </div>
-        </header>
+        <PageHeader
+          title="Users"
+          actions={(
+            <div className="users-actions">
+              {isAdmin && canWrite && canInviteYouth ? (
+                <ActionsMenu
+                  triggerLabel="+ Invite"
+                  items={[
+                    { id: 'invite-staff', label: 'Invite Staff', onClick: () => setModalTarget('new') },
+                    { id: 'invite-youth', label: 'Invite Youth', onClick: () => setYouthInviteOpen(true) },
+                  ]}
+                />
+              ) : canInviteYouth ? (
+                <Button onClick={() => setYouthInviteOpen(true)}>+ Invite Youth</Button>
+              ) : isAdmin && canWrite ? (
+                <Button onClick={() => setModalTarget('new')}>+ Invite Staff</Button>
+              ) : null}
+            </div>
+          )}
+          search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
+          filters={<FilterCard
+            categories={filterCategories}
+            values={{ status: statusFilters, role: roleFilters }}
+            onApply={(categoryId, selected) => {
+              if (categoryId === 'status') setStatusFilters(selected as AccountStatus[]);
+              if (categoryId === 'role') setRoleFilters(selected as AccountRole[]);
+            }}
+            onClearAll={() => {
+              setStatusFilters([]);
+              setRoleFilters([]);
+            }}
+          />}
+        />
 
         <section className="accounts-panel" aria-label="Accounts">
-          <div className="accounts-toolbar">
-            <label className="accounts-search">
-              <span className="sr-only">Search accounts</span>
-              <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />
-            </label>
-            <FilterCard
-              categories={filterCategories}
-              values={{ status: statusFilters, role: roleFilters }}
-              onApply={(categoryId, selected) => {
-                if (categoryId === 'status') setStatusFilters(selected as AccountStatus[]);
-                if (categoryId === 'role') setRoleFilters(selected as AccountRole[]);
-              }}
-              onClearAll={() => {
-                setStatusFilters([]);
-                setRoleFilters([]);
-              }}
-            />
-          </div>
-
           <Table
             columns={columns}
             data={accounts}

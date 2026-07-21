@@ -14,7 +14,7 @@ interface AccountModalProps {
 export default function AccountModal(props: AccountModalProps) {
   const { account } = props;
   const { register, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
-  const isEdit = !!account;
+  const isEdit = account !== undefined;
 
   return (
     <Modal

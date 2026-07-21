@@ -16,9 +16,10 @@ export interface ActionItem {
 interface ActionsMenuProps {
   items: ActionItem[];
   disabled?: boolean;
+  triggerLabel?: string;
 }
 
-export default function ActionsMenu({ items, disabled = false }: ActionsMenuProps) {
+export default function ActionsMenu({ items, disabled = false, triggerLabel }: ActionsMenuProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
 
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
@@ -39,15 +40,15 @@ export default function ActionsMenu({ items, disabled = false }: ActionsMenuProp
     <>
       <span ref={triggerRef} className="actions-menu-anchor">
         <Button
-          variant="secondary"
-          size="sm"
+          variant={triggerLabel ? 'primary' : 'secondary'}
+          size={triggerLabel ? 'md' : 'sm'}
           onClick={toggle}
           aria-haspopup="menu"
           aria-expanded={isOpen}
           disabled={disabled}
-          className="actions-menu-trigger"
+          className={triggerLabel ? 'actions-menu-trigger--labeled' : 'actions-menu-trigger'}
         >
-          <FontAwesomeIcon icon={faEllipsisVertical} />
+          {triggerLabel ?? <FontAwesomeIcon icon={faEllipsisVertical} />}
         </Button>
       </span>
 

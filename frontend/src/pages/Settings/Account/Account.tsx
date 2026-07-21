@@ -1,6 +1,7 @@
 import Header from '../../../common/components/Header/Header';
 import { getUser } from '../../../common/utils/storage';
 import { useAuth } from '../../../common/context/AuthContext';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import './Account.css';
 
 export default function Account() {
@@ -11,11 +12,7 @@ export default function Account() {
     <>
       <Header />
       <div className="page-container">
-        <div className="page-header">
-          <div className="page-title-row">
-            <h1 className="page-title">My Account</h1>
-          </div>
-        </div>
+        <PageHeader title="My Account" />
 
         <div className="account-card">
           <div className="account-field">

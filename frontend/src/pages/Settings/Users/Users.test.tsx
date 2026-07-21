@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ManageAccounts from './ManageAccounts';
+import Users from './Users';
 
 const mockUseAuth = vi.fn();
 const mockUseAccounts = vi.fn();
@@ -30,7 +30,7 @@ const accounts = [
   },
 ] as const;
 
-describe('ManageAccounts', () => {
+describe('Users', () => {
   beforeEach(() => {
     mockUseAccounts.mockReturnValue({
       accounts,
@@ -43,11 +43,13 @@ describe('ManageAccounts', () => {
   it('shows admin account controls and sends search state to the accounts query', async () => {
     vi.useFakeTimers();
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
-    render(<ManageAccounts />);
+    render(<Users />);
 
-    expect(screen.getByRole('heading', { name: 'Account Management' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Invite Staff' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Invite Youth' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Invite' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '+ Invite' }));
+    expect(screen.getByRole('menuitem', { name: 'Invite Staff' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Invite Youth' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
@@ -65,10 +67,10 @@ describe('ManageAccounts', () => {
       error: '',
     });
 
-    render(<ManageAccounts />);
+    render(<Users />);
 
-    expect(screen.getByRole('heading', { name: 'Account Management' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '+ Invite Staff' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Invite' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Invite Youth' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Role' })).not.toBeInTheDocument();
@@ -78,7 +80,7 @@ describe('ManageAccounts', () => {
 
   it('sends applied role and status filters and clears them by category or together', () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    render(<ManageAccounts />);
+    render(<Users />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
