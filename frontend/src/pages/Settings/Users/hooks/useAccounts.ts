@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAccounts } from '../../../../common/api/accounts.api';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import type { Account } from '../../../../common/types/account';
-import type { AccountFilters } from '../../../../common/types/account';
+import type { Account, AccountFilters } from '../../../../common/types/account';
 
 export function useAccounts(filters: AccountFilters) {
   const [accounts, setAccounts] = useState<Account[]>([]);

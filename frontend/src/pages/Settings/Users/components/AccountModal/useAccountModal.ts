@@ -14,14 +14,14 @@ const defaultValues: AccountFormData = {
   role: 'staff',
 };
 
-interface UseAccountModalProps {
+interface AccountModalControllerProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (account: Account) => void;
   account?: Account;
 }
 
-export function useAccountModal({ isOpen, onClose, onSuccess, account }: UseAccountModalProps) {
+export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const {
     register,

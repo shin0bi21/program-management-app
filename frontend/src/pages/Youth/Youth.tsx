@@ -4,6 +4,7 @@ import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
+import PageHeader from '../../common/components/PageHeader/PageHeader';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import YouthInviteModal from './components/YouthInviteModal/YouthInviteModal';
@@ -121,16 +122,10 @@ export default function Youth() {
     <>
       <Header />
       <div className="page-container">
-        <div className="page-header">
-          <div className="page-title-row">
-            <h1 className="page-title">Youth</h1>
-            {canWrite && (
-              <Button onClick={() => setModalTarget('new')}>
-                + Sign Up
-              </Button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          title="Youth"
+          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Sign Up</Button> : undefined}
+        />
 
         <Table
           columns={youthColumns}

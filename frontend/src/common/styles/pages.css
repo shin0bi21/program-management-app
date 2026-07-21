@@ -17,19 +17,6 @@
   }
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .page-title {
   font-size: 2rem;
   color: var(--color-ink);
