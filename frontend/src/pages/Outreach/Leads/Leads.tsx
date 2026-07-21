@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
+import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
 import { formatShortDate } from '../../../common/utils/date';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import { useLeads } from './hooks/useLeads';
-import type { Lead, LeadStatus } from './types';
+import type { Lead, LeadFilters, LeadStatus } from './types';
 import './Leads.css';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'qualified', 'signed_up', 'lost', 'ineligible'];
@@ -16,19 +19,27 @@ const title = (value: string) => value.split('_').map(part => part[0].toUpperCas
 export default function Leads() {
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const { leads, setLeads, loading, error } = useLeads();
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
+  const queryFilters = useMemo<LeadFilters>(() => ({ search: debouncedSearch, statuses: statusFilters }), [debouncedSearch, statusFilters]);
+  const { leads, loading, error, reload } = useLeads(queryFilters);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const filtered = useMemo(() => leads.filter(lead => {
-    const query = search.trim().toLowerCase();
-    return (statusFilter === 'all' || lead.status === statusFilter) && (!query || `${lead.youthFirstName} ${lead.youthLastName} ${lead.school}`.toLowerCase().includes(query));
-  }), [leads, search, statusFilter]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const filterCategories = useMemo<FilterCardCategory[]>(() => [{
+    id: 'status',
+    label: 'Status',
+    options: statuses.map(status => ({ value: status, label: title(status) })),
+  }], []);
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
-    const updated = await updateLeadStatus(lead.id, status);
-    setLeads(current => current.map(item => item.id === updated.id ? updated : item));
+    await updateLeadStatus(lead.id, status);
+    await reload();
   };
 
   const columns: TableColumn<Lead>[] = [
@@ -40,13 +51,21 @@ export default function Leads() {
     ...(canWrite ? [{ key: 'actions' as const, header: '', className: 'col-actions', width: '32px', render: (lead: Lead) => <ActionsMenu items={statuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) }))} /> }] : []),
   ];
 
-  return <section className="outreach-tab-content leads-panel" aria-label="Leads">
-    <div className="leads-toolbar">
-      <input aria-label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />
-      <select aria-label="Filter leads by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value as LeadStatus | 'all')}><option value="all">All statuses</option>{statuses.map(status => <option key={status} value={status}>{title(status)}</option>)}</select>
-      {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Create Lead</Button>}
-    </div>
-    <Table columns={columns} data={filtered} loading={loading} error={error ?? undefined} emptyMessage={leads.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
-    <LeadModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onSuccess={lead => { setLeads(current => [lead, ...current]); setCreateOpen(false); }} />
-  </section>;
+  return <>
+    <PageHeader
+      title="Outreach"
+      actions={canWrite ? <Button onClick={() => setCreateOpen(true)}>+ Create Lead</Button> : undefined}
+      search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
+      filters={<FilterCard
+        categories={filterCategories}
+        values={{ status: statusFilters }}
+        onApply={(_, selected) => setStatusFilters(selected as LeadStatus[])}
+        onClearAll={() => setStatusFilters([])}
+      />}
+    />
+    <section className="outreach-tab-content leads-panel" aria-label="Leads">
+      <Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
+    </section>
+    <LeadModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => { setCreateOpen(false); void reload(); }} />
+  </>;
 }

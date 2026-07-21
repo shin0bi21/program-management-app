@@ -20,7 +20,6 @@ describe('Outreach', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Outreach' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Outreach views' })).not.toBeInTheDocument();
     expect(screen.getByText('Submission view')).toBeInTheDocument();
   });

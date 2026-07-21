@@ -7,6 +7,7 @@ import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import { convertCohortInterestSubmission, updateCohortInterestStatus } from './api/cohortInterest.api';
 import { useCohortInterest } from './hooks/useCohortInterest';
 import type { CohortInterestSubmission } from './types';
@@ -138,6 +139,7 @@ export default function InterestSubmissions() {
 
   return (
     <>
+      <PageHeader title="Outreach" />
       <div className="outreach-tab-content">
         {(error || actionError) && <p className="page-error">{error || actionError}</p>}
 

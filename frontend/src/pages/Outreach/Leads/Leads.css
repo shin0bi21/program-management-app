@@ -1,7 +1,3 @@
 .leads-panel { display: grid; gap: 14px; }
-.leads-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.leads-toolbar input { flex: 1 1 240px; }
-.leads-toolbar select { min-width: 150px; }
 .status-qualified { background: var(--color-status-active-bg); color: var(--color-status-active); }
 .status-ineligible { background: var(--color-status-warn-bg); color: var(--color-status-warn); }
-@media (max-width: 640px) { .leads-toolbar > * { width: 100%; } }

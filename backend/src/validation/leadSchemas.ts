@@ -12,6 +12,19 @@ export const leadStatusSchema = z.enum([
   'ineligible',
 ]);
 
+const commaSeparatedStatuses = z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(leadStatusSchema).max(10));
+
+export const leadQuerySchema = z.object({
+  query: z.object({
+    search: z.string().trim().max(120).optional().default(''),
+    statuses: commaSeparatedStatuses,
+  }),
+});
+
 export const createLeadSchema = z.object({
   body: z.object({
     youthFirstName: z.string().trim().min(1, 'Youth first name is required').max(120),
@@ -36,3 +49,4 @@ export const updateLeadStatusSchema = z.object({
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema.shape.body>;
 export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema.shape.body>;
+export type LeadQuery = z.infer<typeof leadQuerySchema.shape.query>;

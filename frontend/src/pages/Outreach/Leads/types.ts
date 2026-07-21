@@ -38,3 +38,8 @@ export interface CreateLeadInput {
   discoverySource: DiscoverySource;
   notes?: string;
 }
+
+export interface LeadFilters {
+  search?: string;
+  statuses?: LeadStatus[];
+}
