@@ -15,6 +15,7 @@ export const youthSchema = z.object({
   dateOfBirth: z.string().optional(),
   schoolId: z.string().optional(),
   programId: z.string().optional(),
+  notes: z.string().max(5000, 'Notes must be 5000 characters or fewer'),
   gradeLevel: z
     .union([z.number().int().min(0, 'Grade must be 0 or higher').max(12, 'Grade must be 12 or lower'), z.nan()])
     .optional(),

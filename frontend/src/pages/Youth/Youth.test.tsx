@@ -57,4 +57,19 @@ describe('Youth', () => {
       programIds: ['program-1'],
     }));
   });
+
+  it('shows the selected profile contact and notes', () => {
+    mockUseYouth.mockReturnValue({
+      youth: [makeYouthProfile({
+        notes: 'Youth profile note',
+        contacts: [{ id: 'contact-1', firstName: 'Parent', lastName: 'One', phoneNumber: '416-555-0101', type: 'parent' }],
+      })],
+      setYouth: vi.fn(), loading: false, error: null,
+    });
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    expect(screen.getByText('Parent One')).toBeInTheDocument();
+    expect(screen.getByText('Youth profile note')).toBeInTheDocument();
+  });
 });

@@ -38,6 +38,23 @@
   background-color: var(--color-surface);
 }
 
+.table tbody tr[tabindex="0"] {
+  cursor: pointer;
+}
+
+.table tbody tr[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: -2px;
+}
+
+.table tbody tr.table-row--selected {
+  background: var(--accent-12);
+}
+
+.table tbody tr.table-row--selected:hover {
+  background: var(--accent-20);
+}
+
 .table tbody tr:last-child td {
   border-bottom: none;
 }

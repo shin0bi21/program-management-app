@@ -17,6 +17,7 @@ const defaultValues: YouthFormData = {
   dateOfBirth: '',
   schoolId: '',
   programId: '',
+  notes: '',
   gradeLevel: undefined,
 };
 
@@ -76,6 +77,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
       programId: youthData.programId || '',
+      notes: youthData.notes || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
     });
 
@@ -123,6 +125,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
         programId: data.programId || null,
+        notes: data.notes.trim() || null,
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
         addresses: getAddressPayload(),
         contacts: getContactPayload(),

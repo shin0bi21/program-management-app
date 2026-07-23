@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../common/components/Table/Table';
+import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
+import { NotesCard, PrimaryContactCard } from '../../common/components/DetailCards/DetailCards';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
@@ -27,6 +29,7 @@ export default function Youth() {
     programIds: programFilters,
   }), [debouncedSearch, statusFilters, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
   const { youth, setYouth, loading, error } = useYouth(queryFilters);
   const { programs } = usePrograms();
   const { permissions } = useAuth();
@@ -36,6 +39,10 @@ export default function Youth() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (selectedProfile && !youth.some(profile => profile.id === selectedProfile.id)) setSelectedProfile(null);
+  }, [selectedProfile, youth]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -156,7 +163,7 @@ export default function Youth() {
 
   return (
     <>
-      <div>
+      <div className="data-detail-page-content">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
@@ -172,14 +179,18 @@ export default function Youth() {
           />}
         />
 
-        <Table
-          columns={youthColumns}
-          data={youth}
-          loading={loading}
-          error={error}
-          emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'}
-          keyExtractor={(profile) => profile.id}
-          maxHeight="calc(100vh - 200px)"
+        <TableDetailLayout
+          ariaLabel="Youth profiles"
+          table={<Table columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} maxHeight="calc(100vh - 200px)" selectedKey={selectedProfile?.id} onRowSelect={setSelectedProfile} />}
+          details={<>
+            <PrimaryContactCard contact={selectedProfile?.contacts?.[0] ? {
+              firstName: selectedProfile.contacts[0].firstName,
+              lastName: selectedProfile.contacts[0].lastName,
+              phoneNumber: selectedProfile.contacts[0].phoneNumber,
+              relationship: selectedProfile.contacts[0].type,
+            } : null} emptyMessage={selectedProfile ? 'No primary contact recorded.' : undefined} />
+            <NotesCard notes={selectedProfile?.notes} selected={selectedProfile !== null} />
+          </>}
         />
       </div>
 
