@@ -31,7 +31,7 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type LeadOrigin = "expression_of_interest" | "staff_created";
 
-export type LeadStatus = "contacted" | "ineligible" | "lost" | "new" | "qualified" | "signed_up";
+export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
 export type SchoolBoard = "catholic" | "public";
 
@@ -120,6 +120,7 @@ export interface Leads {
   contact_last_name: string;
   contact_phone_number: string;
   contact_relationship: ContactType;
+  converted_youth_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   discovery_source: DiscoverySource;
@@ -294,6 +295,7 @@ export interface YouthProfiles {
   date_of_birth: Timestamp | null;
   grade_level: number | null;
   id: Generated<string>;
+  notes: string | null;
   program_id: string | null;
   school_id: string | null;
   status: Generated<YouthParticipationStatus>;

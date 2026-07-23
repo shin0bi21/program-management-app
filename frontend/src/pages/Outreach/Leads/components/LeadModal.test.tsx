@@ -61,7 +61,7 @@ describe('LeadModal', () => {
 
   it('prefills and updates an existing Lead', async () => {
     const lead = {
-      id: 'lead-1', origin: 'staff_created' as const, expressionOfInterestId: null,
+      id: 'lead-1', origin: 'staff_created' as const, expressionOfInterestId: null, convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
       programId: null, programName: null,
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
