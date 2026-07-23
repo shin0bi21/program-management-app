@@ -14,3 +14,13 @@
 .filter-card-checkbox.checked { border-color: var(--brand-ink); background: var(--brand-ink); }
 .filter-card-footer { display: flex; justify-content: space-between; gap: 8px; padding: 8px 6px 2px; border-top: 1px solid var(--ink-08); }
 .filter-card-root-footer { display: flex; justify-content: flex-start; margin-top: 4px; padding: 7px 6px 2px; border-top: 1px solid var(--ink-08); }
+
+@media (max-width: 768px) {
+  .filter-card-trigger {
+    padding-inline: 0.65rem;
+  }
+
+  .filter-card-trigger__label {
+    display: none;
+  }
+}

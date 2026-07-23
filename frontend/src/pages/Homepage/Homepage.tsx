@@ -43,7 +43,7 @@ export default function Homepage() {
   if (loading) return null
 
   const content = (
-    <main className="homepage-container">
+    <main className="homepage-container homepage-theme">
         <HeroSection photos={heroSectionPhotos} />
         <ProgrammingSection />
 
@@ -114,9 +114,9 @@ export default function Homepage() {
   }
 
   return (
-    <>
+    <div className="homepage-theme">
       <PublicTopBar />
       {content}
-    </>
+    </div>
   )
 }

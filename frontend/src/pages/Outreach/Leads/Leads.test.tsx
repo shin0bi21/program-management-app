@@ -52,7 +52,7 @@ describe('Leads', () => {
     render(<Leads />);
 
     expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
-    expect(screen.getByText('Expression of Interest')).toBeInTheDocument();
+    expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Create Lead' })).toBeInTheDocument();
   });
 

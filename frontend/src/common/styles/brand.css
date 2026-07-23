@@ -7,10 +7,13 @@
   /* ── Brand palette ──────────────────────────────────────── */
   --color-ink:          #12161f;
   --color-white:         #ffffff;
-  --color-accent:       #f3a524;
+  --color-accent:       #3b5ccc;
   --color-muted:        #6b7280;
   --color-surface:      #f7f6f2;
-  --color-surface-warm: #faf8f4;
+  --color-surface-warm: #f8fafc;
+  --color-accent-soft:  #eef2ff;
+  --color-accent-selected: #dfe7ff;
+  --color-accent-border: #6f86d9;
   --color-dark:         #1c1a17;
   --color-dark-text:    #f0ece4;
   --color-body:         #5a6272;
@@ -35,18 +38,18 @@
   --dark-text-35: rgba(240, 236, 228, 0.35);
 
   /* ── Accent at standard opacities ──────────────────────── */
-  --accent-55: rgba(243, 165, 36, 0.55);
-  --accent-50: rgba(243, 165, 36, 0.50);
-  --accent-45: rgba(243, 165, 36, 0.45);
-  --accent-35: rgba(243, 165, 36, 0.35);
-  --accent-28: rgba(243, 165, 36, 0.28);
-  --accent-20: rgba(243, 165, 36, 0.20);
-  --accent-18: rgba(243, 165, 36, 0.18);
-  --accent-16: rgba(243, 165, 36, 0.16);
-  --accent-12: rgba(243, 165, 36, 0.12);
-  --accent-10: rgba(243, 165, 36, 0.10);
-  --accent-08: rgba(243, 165, 36, 0.08);
-  --accent-06: rgba(243, 165, 36, 0.06);
+  --accent-55: rgba(59, 92, 204, 0.55);
+  --accent-50: rgba(59, 92, 204, 0.50);
+  --accent-45: rgba(59, 92, 204, 0.45);
+  --accent-35: rgba(59, 92, 204, 0.35);
+  --accent-28: rgba(59, 92, 204, 0.28);
+  --accent-20: rgba(59, 92, 204, 0.20);
+  --accent-18: rgba(59, 92, 204, 0.18);
+  --accent-16: rgba(59, 92, 204, 0.16);
+  --accent-12: rgba(59, 92, 204, 0.12);
+  --accent-10: rgba(59, 92, 204, 0.10);
+  --accent-08: rgba(59, 92, 204, 0.08);
+  --accent-06: rgba(59, 92, 204, 0.06);
 
   /* ── White at standard opacities (dark sections) ───────── */
   --white-88: rgba(255, 255, 255, 0.88);
@@ -116,6 +119,7 @@
   /* ── Legacy aliases (backwards compat) ─────────────────── */
   --brand-ink:            var(--color-ink);
   --brand-accent:         var(--color-accent);
+  --brand-primary:        var(--color-accent);
   --brand-muted:          var(--color-muted);
   --homepage-bg:          var(--color-surface);
   --homepage-card-radius: var(--radius-xl);

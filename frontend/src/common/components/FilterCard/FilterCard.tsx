@@ -88,9 +88,9 @@ export default function FilterCard({ categories, values, onApply, onClearAll, la
 
   return (
     <>
-      <Button ref={triggerRef} variant="secondary" onClick={toggle} aria-haspopup="menu" aria-expanded={isOpen} className="filter-card-trigger">
+      <Button ref={triggerRef} variant="secondary" onClick={toggle} aria-label={label} aria-haspopup="menu" aria-expanded={isOpen} className="filter-card-trigger">
         <FontAwesomeIcon icon={faFilter} />
-        <span>{label}</span>
+        <span className="filter-card-trigger__label">{label}</span>
         {appliedCount > 0 && <span className="filter-card-count" aria-label={`${appliedCount} active filters`}>{appliedCount}</span>}
       </Button>
 
