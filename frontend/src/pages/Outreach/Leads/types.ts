@@ -1,4 +1,4 @@
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'signed_up' | 'lost' | 'ineligible';
+export type LeadStatus = 'new' | 'contacted' | 'eligible' | 'ineligible' | 'signed_up';
 export type LeadOrigin = 'expression_of_interest' | 'staff_created';
 export type LeadRelationship = 'parent' | 'sibling' | 'guardian';
 export type DiscoverySource = 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
@@ -7,6 +7,7 @@ export interface Lead {
   id: string;
   origin: LeadOrigin;
   expressionOfInterestId: string | null;
+  convertedYouthId: string | null;
   youthFirstName: string;
   youthLastName: string;
   age: number;

@@ -157,6 +157,7 @@ Current example:
 | `accountService.ts` | account and invitation changes across users and credential records |
 | `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
 | `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
+| `leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
 
 ### `transactionId`
 

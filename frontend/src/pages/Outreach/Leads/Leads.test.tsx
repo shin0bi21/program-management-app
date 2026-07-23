@@ -4,12 +4,14 @@ import Leads from './Leads';
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
+const signUpLead = vi.fn();
 
 vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
   updateLeadStatus: vi.fn(),
+  signUpLead: (...args: unknown[]) => signUpLead(...args),
 }));
 
 vi.mock('../../../common/context/AuthContext', () => ({
@@ -22,14 +24,28 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
 
 describe('Leads', () => {
   beforeEach(() => {
+    signUpLead.mockResolvedValue({});
     getLeads.mockResolvedValue([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1',
+      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
       programId: 'program-1', programName: 'Soft Skills',
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);
+  });
+
+  it('signs up a Lead through the dedicated conversion action', async () => {
+    render(<Leads />);
+    await screen.findByText('Avery Outreach');
+
+    fireEvent.click(screen.getByRole('button', { name: '' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
+    expect(screen.getByRole('heading', { name: 'Sign Up Lead' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Mark Signed Up' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+    await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1'));
   });
 
   it('renders fetched leads and direct-create access', async () => {

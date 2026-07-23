@@ -11,6 +11,7 @@ describe('Leads API', () => {
   let youthUserId: string;
   let youthToken: string;
   let softSkillsProgramId: string;
+  let convertedYouthId: string | undefined;
 
   const payload = {
     youthFirstName: 'Event',
@@ -39,6 +40,7 @@ describe('Leads API', () => {
 
   afterAll(async () => {
     await sql`DELETE FROM leads WHERE created_by = ${staffUserId}`;
+    if (convertedYouthId) await sql`DELETE FROM users WHERE id = ${convertedYouthId}`;
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
   });
@@ -124,15 +126,27 @@ describe('Leads API', () => {
     const res = await request(app)
       .patch(`/api/leads/${lead.id}/status`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'contacted' });
+      .send({ status: 'eligible' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.objectContaining({
       id: lead.id,
-      status: 'contacted',
+      status: 'eligible',
       updatedBy: staffUserId,
       statusUpdatedAt: expect.any(String),
     }));
+  });
+
+  it('does not allow signed_up through the generic status endpoint', async () => {
+    const [lead] = await sql<{ id: string }[]>`
+      SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
+    `;
+    const res = await request(app)
+      .patch(`/api/leads/${lead.id}/status`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ status: 'signed_up' });
+
+    expect(res.status).toBe(400);
   });
 
   it('updates a Lead without changing its workflow metadata', async () => {
@@ -153,6 +167,57 @@ describe('Leads API', () => {
       status: lead.status,
       updatedBy: staffUserId,
     }));
+  });
+
+  it('signs up a lead into a youth profile and canonical contact', async () => {
+    const [lead] = await sql<{ id: string }[]>`
+      SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
+    `;
+    const res = await request(app)
+      .post(`/api/leads/${lead.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(expect.objectContaining({
+      id: lead.id,
+      status: 'signed_up',
+      convertedYouthId: expect.any(String),
+    }));
+    convertedYouthId = res.body.convertedYouthId;
+
+    const [profile] = await sql<{ firstName: string; programId: string; notes: string }[]>`
+      SELECT u.first_name, yp.program_id, yp.notes
+      FROM youth_profiles yp
+      JOIN users u ON u.id = yp.user_id
+      WHERE yp.user_id = ${convertedYouthId!}
+    `;
+    expect(profile).toEqual(expect.objectContaining({
+      firstName: payload.youthFirstName,
+      programId: softSkillsProgramId,
+      notes: payload.notes,
+    }));
+
+    const [contact] = await sql<{ firstName: string; phoneNumber: string }[]>`
+      SELECT c.first_name, c.phone_number
+      FROM contacts c
+      JOIN user_has_contacts uhc ON uhc.contact_id = c.id
+      WHERE uhc.user_id = ${convertedYouthId!} AND uhc.active = true
+    `;
+    expect(contact).toEqual(expect.objectContaining({
+      firstName: payload.contactFirstName,
+      phoneNumber: payload.contactPhoneNumber,
+    }));
+
+    const duplicate = await request(app)
+      .post(`/api/leads/${lead.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(duplicate.status).toBe(409);
+
+    const statusChange = await request(app)
+      .patch(`/api/leads/${lead.id}/status`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ status: 'contacted' });
+    expect(statusChange.status).toBe(409);
   });
 
   it('rejects youth accounts', async () => {
@@ -177,7 +242,7 @@ describe('Leads API', () => {
     const res = await request(app)
       .patch('/api/leads/00000000-0000-4000-8000-000000000000/status')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'lost' });
+      .send({ status: 'ineligible' });
 
     expect(res.status).toBe(404);
   });
