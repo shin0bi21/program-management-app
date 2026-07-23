@@ -1,0 +1,4 @@
+interface:
+  display_name: "Split Uncommitted Work"
+  short_description: "Safely separate mixed changes into issue commits"
+  default_prompt: "Use $split-uncommitted-work to review and split this working tree into issue-scoped commits."
