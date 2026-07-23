@@ -19,7 +19,7 @@
 
 .btn:hover {
   background-color: var(--brand-accent);
-  color: var(--brand-ink);
+  color: var(--color-white);
   border-color: var(--brand-accent);
 }
 
@@ -32,6 +32,7 @@
 .btn--secondary:hover {
   background-color: var(--accent-12);
   border-color: var(--accent-50);
+  color: var(--brand-ink);
 }
 
 .btn:focus-visible {
@@ -65,6 +66,7 @@
 .btn--ghost:hover {
   background: var(--accent-12);
   border-color: var(--accent-20);
+  color: var(--brand-ink);
 }
 
 .btn--danger {
