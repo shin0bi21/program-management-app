@@ -1,31 +1,9 @@
-import { ReactNode, memo } from 'react';
+import { useCallback, useRef } from 'react';
+import TableRow from './TableRow';
+import type { TableColumn, TableNavigationKey } from './Table.types';
 import './Table.css';
 
-export interface TableColumn<T> {
-  key: string;
-  header: string;
-  render: (item: T) => ReactNode;
-  width?: string;
-  className?: string;
-}
-
-interface TableRowProps<T> {
-  item: T;
-  columns: TableColumn<T>[];
-}
-
-function TableRowComponent<T>({ item, columns }: TableRowProps<T>) {
-  return (
-    <tr>
-      {columns.map((column) => (
-        <td key={column.key} className={column.className}>{column.render(item)}</td>
-      ))}
-    </tr>
-  );
-}
-
-// Cast preserves the generic signature through React.memo
-const TableRow = memo(TableRowComponent) as typeof TableRowComponent;
+export type { TableColumn } from './Table.types';
 
 interface TableProps<T> {
   columns: TableColumn<T>[];
@@ -35,6 +13,8 @@ interface TableProps<T> {
   emptyMessage?: string;
   keyExtractor: (item: T) => string;
   maxHeight?: string;
+  selectedKey?: string | null;
+  onRowSelect?: (item: T) => void;
 }
 
 export default function Table<T>({
@@ -45,9 +25,30 @@ export default function Table<T>({
   emptyMessage = 'No rows found',
   keyExtractor,
   maxHeight = '600px',
+  selectedKey,
+  onRowSelect,
 }: TableProps<T>) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const selectedIndex = selectedKey == null ? -1 : data.findIndex(item => keyExtractor(item) === selectedKey);
+  const tabbableIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
+  const navigateRows = useCallback((currentIndex: number, key: TableNavigationKey) => {
+    if (!onRowSelect || data.length === 0) return;
+
+    let nextIndex = currentIndex;
+    if (key === 'ArrowUp') nextIndex = Math.max(0, currentIndex - 1);
+    if (key === 'ArrowDown') nextIndex = Math.min(data.length - 1, currentIndex + 1);
+    if (key === 'Home') nextIndex = 0;
+    if (key === 'End') nextIndex = data.length - 1;
+
+    onRowSelect(data[nextIndex]);
+    wrapperRef.current
+      ?.querySelector<HTMLTableRowElement>(`tr[data-table-row-index="${nextIndex}"]`)
+      ?.focus();
+  }, [data, onRowSelect]);
+
   return (
-    <div className="table-wrapper" style={{ maxHeight }}>
+    <div ref={wrapperRef} className="table-wrapper" style={{ maxHeight }}>
       <table className="table">
         <thead>
           <tr>
@@ -76,8 +77,17 @@ export default function Table<T>({
               <td colSpan={columns.length} className="table-empty-cell">{emptyMessage}</td>
             </tr>
           ) : (
-            data.map((item) => (
-              <TableRow key={keyExtractor(item)} item={item} columns={columns} />
+            data.map((item, index) => (
+              <TableRow
+                key={keyExtractor(item)}
+                item={item}
+                columns={columns}
+                selected={selectedKey === keyExtractor(item)}
+                tabbable={index === tabbableIndex}
+                rowIndex={index}
+                onSelect={onRowSelect}
+                onNavigate={navigateRows}
+              />
             ))
           )}
         </tbody>

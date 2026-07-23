@@ -130,6 +130,10 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
           />
         </FormField>
 
+        <FormField id="notes" label="Notes" error={errors.notes?.message}>
+          <textarea id="notes" rows={4} {...register('notes')} />
+        </FormField>
+
         {/* Addresses Section */}
         <div className="section-divider">
           <div className="section-header">

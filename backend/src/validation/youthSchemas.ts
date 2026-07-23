@@ -35,6 +35,7 @@ export const setYouthSchema = z.object({
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
     programId: z.string().uuid('Invalid program ID').nullable().optional(),
+    notes: z.string().trim().max(5000, 'Notes are too long').nullable().optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
     status: z.enum(['active', 'inactive']),
     addresses: z

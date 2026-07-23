@@ -6,6 +6,8 @@ import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
+import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import { NotesCard, PrimaryContactCard } from '../../../common/components/DetailCards/DetailCards';
 import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
@@ -31,6 +33,7 @@ export default function Leads() {
   const { leads, loading, error, reload } = useLeads(queryFilters);
   const { programs } = usePrograms();
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
@@ -38,6 +41,10 @@ export default function Leads() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (selectedLead && !leads.some(lead => lead.id === selectedLead.id)) setSelectedLead(null);
+  }, [leads, selectedLead]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -105,9 +112,19 @@ export default function Leads() {
         onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
       />}
     />
-    <section className="outreach-tab-content leads-panel" aria-label="Leads">
-      <Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" />
-    </section>
+    <TableDetailLayout
+      ariaLabel="Leads"
+      table={<Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" selectedKey={selectedLead?.id} onRowSelect={setSelectedLead} />}
+      details={<>
+        <PrimaryContactCard contact={selectedLead ? {
+          firstName: selectedLead.contactFirstName,
+          lastName: selectedLead.contactLastName,
+          phoneNumber: selectedLead.contactPhoneNumber,
+          relationship: selectedLead.contactRelationship,
+        } : null} />
+        <NotesCard notes={selectedLead?.notes} selected={selectedLead !== null} />
+      </>}
+    />
     <LeadModal
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}

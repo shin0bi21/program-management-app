@@ -12,6 +12,7 @@ export function makeYouthProfile(overrides: Partial<YouthProfile> = {}): YouthPr
     schoolName: null,
     programId: null,
     programName: null,
+    notes: null,
     gradeLevel: null,
     ageGroup: null,
     createdAt: '2026-01-01T00:00:00Z',
