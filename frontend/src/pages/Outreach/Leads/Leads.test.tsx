@@ -56,6 +56,16 @@ describe('Leads', () => {
     expect(screen.getByRole('button', { name: '+ Create Lead' })).toBeInTheDocument();
   });
 
+  it('shows primary contact details when a lead row is selected', async () => {
+    render(<Leads />);
+
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+
+    expect(screen.getByText('Jordan Outreach')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+    expect(screen.getByText('No notes recorded.')).toBeInTheDocument();
+  });
+
   it('requests filtered lead data from the API', async () => {
     render(<Leads />);
     await screen.findByText('Avery Outreach');

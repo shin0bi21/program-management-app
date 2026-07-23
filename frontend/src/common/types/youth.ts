@@ -12,6 +12,7 @@ export interface YouthProfile {
   schoolName: string | null;
   programId: string | null;
   programName: string | null;
+  notes: string | null;
   gradeLevel: number | null;
   ageGroup: 'junior_youth' | 'senior_youth' | null;
   createdAt: string;
@@ -41,6 +42,7 @@ export interface SetYouthInput {
   dateOfBirth?: string;
   schoolId?: string;
   programId?: string | null;
+  notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{
     address: string;

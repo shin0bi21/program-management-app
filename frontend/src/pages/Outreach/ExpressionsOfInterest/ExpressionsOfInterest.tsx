@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import Button from '../../../common/components/Button/Button';
-import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import { NotesCard, PrimaryContactCard } from '../../../common/components/DetailCards/DetailCards';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { usePrograms } from '../../../common/hooks/usePrograms';
@@ -18,15 +18,6 @@ import './ExpressionsOfInterest.css';
 
 const submissionYouthName = (submission: ExpressionOfInterest) =>
   [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
-
-const primaryContactName = (submission: ExpressionOfInterest) =>
-  [submission.contactFirstName, submission.contactLastName].filter(Boolean).join(' ') || '—';
-
-const relationshipLabels: Record<NonNullable<ExpressionOfInterest['contactRelationship']>, string> = {
-  parent: 'Parent',
-  sibling: 'Sibling',
-  guardian: 'Guardian',
-};
 
 export default function ExpressionsOfInterest() {
   const [search, setSearch] = useState('');
@@ -39,8 +30,7 @@ export default function ExpressionsOfInterest() {
   const navigate = useNavigate();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const [selectedContactSubmission, setSelectedContactSubmission] = useState<ExpressionOfInterest | null>(null);
-  const [selectedNoteSubmission, setSelectedNoteSubmission] = useState<ExpressionOfInterest | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<ExpressionOfInterest | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
@@ -48,6 +38,10 @@ export default function ExpressionsOfInterest() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (selectedSubmission && !submissions.some(item => item.id === selectedSubmission.id)) setSelectedSubmission(null);
+  }, [selectedSubmission, submissions]);
 
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
   const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
@@ -58,8 +52,7 @@ export default function ExpressionsOfInterest() {
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
     const updated = await updateExpressionOfInterestStatus(item.id, status);
-    setSelectedContactSubmission((current) => (current?.id === updated.id ? updated : current));
-    setSelectedNoteSubmission((current) => (current?.id === updated.id ? updated : current));
+    setSelectedSubmission(current => current?.id === updated.id ? { ...current, ...updated } : current);
     setSubmissions(current => current.map(entry => entry.id === updated.id ? { ...entry, ...updated } : entry));
   };
 
@@ -113,26 +106,6 @@ export default function ExpressionsOfInterest() {
     { key: 'age', header: 'Age', width: '70px', render: item => item.age },
     { key: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },
     { key: 'submittedAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
-    {
-      key: 'note',
-      header: 'Note',
-      width: '100px',
-      render: item => (
-        <Button variant="secondary" size="sm" onClick={() => setSelectedNoteSubmission(item)}>
-          View
-        </Button>
-      ),
-    },
-    {
-      key: 'contactDetails',
-      header: 'Primary Contact',
-      width: '150px',
-      render: item => (
-        <Button variant="secondary" size="sm" onClick={() => setSelectedContactSubmission(item)}>
-          View
-        </Button>
-      ),
-    },
     { key: 'status', header: 'Status', width: '120px', render: item => statusBadge(item.status) },
     ...(canWrite ? [{
       key: 'actions' as const,
@@ -167,60 +140,23 @@ export default function ExpressionsOfInterest() {
           onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
         />}
       />
-      <div className="outreach-tab-content">
+      <div className="outreach-tab-content data-detail-page-content">
         {(error || actionError) && <p className="page-error">{error || actionError}</p>}
 
-        <Table
-          columns={columns}
-          data={submissions}
-          loading={loading}
-          emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet.'}
-          keyExtractor={(item) => item.id}
-          maxHeight="calc(100vh - 220px)"
+        <TableDetailLayout
+          ariaLabel="Expressions of interest"
+          table={<Table columns={columns} data={submissions} loading={loading} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet.'} keyExtractor={item => item.id} maxHeight="calc(100vh - 220px)" selectedKey={selectedSubmission?.id} onRowSelect={setSelectedSubmission} />}
+          details={<>
+            <PrimaryContactCard contact={selectedSubmission ? {
+              firstName: selectedSubmission.contactFirstName,
+              lastName: selectedSubmission.contactLastName,
+              phoneNumber: selectedSubmission.contactPhoneNumber,
+              relationship: selectedSubmission.contactRelationship,
+            } : null} />
+            <NotesCard notes={selectedSubmission?.notes} selected={selectedSubmission !== null} />
+          </>}
         />
       </div>
-
-      <Modal
-        isOpen={selectedContactSubmission !== null}
-        onClose={() => setSelectedContactSubmission(null)}
-        title={selectedContactSubmission ? `${submissionYouthName(selectedContactSubmission)} Primary Contact` : 'Primary contact'}
-        maxWidth="560px"
-      >
-        {selectedContactSubmission && (
-          <div className="expressions-of-interest-details">
-            <div className="expressions-of-interest-detail-row">
-              <span className="expressions-of-interest-detail-label">Contact name</span>
-              <span>{primaryContactName(selectedContactSubmission)}</span>
-            </div>
-            <div className="expressions-of-interest-detail-row">
-              <span className="expressions-of-interest-detail-label">Relationship</span>
-              <span>{selectedContactSubmission.contactRelationship
-                ? relationshipLabels[selectedContactSubmission.contactRelationship]
-                : '—'}</span>
-            </div>
-            <div className="expressions-of-interest-detail-row">
-              <span className="expressions-of-interest-detail-label">Contact phone</span>
-              <span>{selectedContactSubmission.contactPhoneNumber ?? '—'}</span>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        isOpen={selectedNoteSubmission !== null}
-        onClose={() => setSelectedNoteSubmission(null)}
-        title={selectedNoteSubmission ? `${submissionYouthName(selectedNoteSubmission)} Note` : 'Note'}
-        maxWidth="560px"
-      >
-        {selectedNoteSubmission && (
-          <div className="expressions-of-interest-details">
-            <div className="expressions-of-interest-detail-block">
-              <span className="expressions-of-interest-detail-label">Note</span>
-              <p>{selectedNoteSubmission.notes?.trim() || 'No note'}</p>
-            </div>
-          </div>
-        )}
-      </Modal>
     </>
   );
 }

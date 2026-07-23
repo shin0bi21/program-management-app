@@ -63,6 +63,8 @@ src/
       PublicTopBar/       ← public top bar + mobile menu (uses FloatingMenuPanel)
       ReLoginModal/       ← shown when access token expires mid-session
       Table/              ← shared data table
+      TableDetailLayout/  ← selected-row cards above table on desktop and below on mobile
+      DetailCards/        ← shared primary-contact and notes cards
     context/
       AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
     hooks/

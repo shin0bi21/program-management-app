@@ -203,6 +203,17 @@ describe('YouthModal', () => {
       });
     });
 
+    it('submits normalized profile notes', async () => {
+      renderModal();
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText('Notes'), { target: { value: ' Follow up with family ' } });
+      submitForm();
+
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ notes: 'Follow up with family' }));
+      });
+    });
+
     it('does not include id in payload when creating', async () => {
       renderModal();
       fillRequiredFields();

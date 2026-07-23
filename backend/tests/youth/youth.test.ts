@@ -122,11 +122,13 @@ describe('Youth API', () => {
           dateOfBirth: '2012-06-15',
           gradeLevel: 7,
           programId: softSkillsProgramId,
+          notes: 'Needs transportation support',
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
       expect(res.body.programId).toBe(softSkillsProgramId);
       expect(res.body.programName).toBe('Soft Skills');
+      expect(res.body.notes).toBe('Needs transportation support');
       createdIds.push(res.body.id);
     });
 
