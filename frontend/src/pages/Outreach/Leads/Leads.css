@@ -1,3 +1,24 @@
-.leads-panel { display: grid; gap: 14px; }
-.status-qualified { background: var(--color-status-active-bg); color: var(--color-status-active); }
-.status-ineligible { background: var(--color-status-warn-bg); color: var(--color-status-warn); }
+.status-new {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.status-contacted {
+  background: var(--ink-08);
+  color: var(--color-body);
+}
+
+.status-eligible {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.status-ineligible {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-dark);
+}
+
+.status-signed_up {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}

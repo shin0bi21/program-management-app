@@ -238,6 +238,7 @@ Protected Outreach endpoints for staff-originated and converted leads.
 | `POST` | `/` | Create a staff-originated lead | `write:outreach` |
 | `PUT` | `/:id` | Update a lead's intake details | `write:outreach` |
 | `PATCH` | `/:id/status` | Update lead follow-up status | `write:outreach` |
+| `POST` | `/:id/sign-up` | Atomically create a youth profile/contact and mark the lead signed up | `write:outreach` + `write:youth_profiles` |
 
 For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
 

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { createLead, getLeads, updateLead, updateLeadStatus } from '../services/leadService';
+import { createLead, getLeads, signUpLead, updateLead, updateLeadStatus } from '../services/leadService';
 import { leadQuerySchema, type CreateLeadInput, type UpdateLeadInput, type UpdateLeadStatusInput } from '../validation/leadSchemas';
 
 export const handleGetLeads = async (req: Request, res: Response) => {
@@ -21,4 +21,9 @@ export const handleUpdateLeadStatus = async (req: Request, res: Response) => {
 export const handleUpdateLead = async (req: Request, res: Response) => {
   const actorId = (req as AuthRequest).user!.userId;
   res.json(await updateLead(req.params.id, req.body as UpdateLeadInput, actorId));
+};
+
+export const handleSignUpLead = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.status(201).json(await signUpLead(req.params.id, actorId));
 };

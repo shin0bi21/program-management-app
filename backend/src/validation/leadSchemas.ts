@@ -3,11 +3,12 @@ import { z } from 'zod';
 export const leadStatusSchema = z.enum([
   'new',
   'contacted',
-  'qualified',
-  'signed_up',
-  'lost',
+  'eligible',
   'ineligible',
+  'signed_up',
 ]);
+
+const editableLeadStatusSchema = z.enum(['new', 'contacted', 'eligible', 'ineligible']);
 
 const commaSeparatedStatuses = z.preprocess(value => {
   if (value === undefined) return [];
@@ -53,7 +54,11 @@ export const updateLeadSchema = z.object({
 });
 
 export const updateLeadStatusSchema = z.object({
-  body: z.object({ status: leadStatusSchema }),
+  body: z.object({ status: editableLeadStatusSchema }),
+  params: z.object({ id: z.string().uuid('Invalid lead ID') }),
+});
+
+export const signUpLeadSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
 });
 

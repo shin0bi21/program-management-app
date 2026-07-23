@@ -4,17 +4,20 @@ import Button from '../../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
+import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
 import { usePrograms } from '../../../common/hooks/usePrograms';
-import { updateLeadStatus } from './api/leads.api';
+import { signUpLead, updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadFilters, LeadStatus } from './types';
 import './Leads.css';
 
-const statuses: LeadStatus[] = ['new', 'contacted', 'qualified', 'signed_up', 'lost', 'ineligible'];
+const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
+const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
 const title = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 
 export default function Leads() {
@@ -28,6 +31,8 @@ export default function Leads() {
   const { leads, loading, error, reload } = useLeads(queryFilters);
   const { programs } = usePrograms();
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -52,6 +57,17 @@ export default function Leads() {
     await reload();
   };
 
+  const requestSignUp = (lead: Lead) => setConfirmAction({
+    title: 'Sign Up Lead',
+    message: `Create a youth profile for ${lead.youthFirstName} ${lead.youthLastName}? Their lead details, primary contact, program, and notes will be copied to the profile.`,
+    confirmLabel: 'Sign Up',
+    successMessage: 'Youth profile created',
+    onConfirm: async () => {
+      await signUpLead(lead.id);
+      await reload();
+    },
+  });
+
   const columns: TableColumn<Lead>[] = [
     { key: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
     { key: 'school', header: 'School', render: lead => lead.school },
@@ -66,7 +82,10 @@ export default function Leads() {
       width: '32px',
       render: (lead: Lead) => <ActionsMenu items={[
         { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
-        ...statuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
+        ...(lead.status !== 'signed_up' ? [
+          { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
+          ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
+        ] : []),
       ]} />,
     }] : []),
   ];
@@ -95,5 +114,17 @@ export default function Leads() {
       onClose={() => setModalTarget(null)}
       onSuccess={() => { setModalTarget(null); void reload(); }}
     />
+    <Modal
+      isOpen={!!confirmAction}
+      onClose={() => setConfirmAction(null)}
+      title={confirmAction?.title ?? ''}
+      status={confirmModal.status}
+      statusMessage={confirmModal.statusMessage}
+      footer={confirmModal.footer}
+      disableClose={confirmModal.disableClose}
+      successDelay={confirmModal.successDelay}
+    >
+      {confirmAction && <p>{confirmAction.message}</p>}
+    </Modal>
   </>;
 }
