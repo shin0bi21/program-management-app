@@ -2,6 +2,26 @@
    Homepage
    ============================================================ */
 
+.homepage-theme {
+  --color-accent: #ffb52e;
+  --brand-accent: var(--color-accent);
+  --color-accent-soft: #fff6df;
+  --color-accent-selected: #ffedbd;
+  --color-accent-border: #f2b13b;
+  --accent-55: rgba(255, 181, 46, 0.55);
+  --accent-50: rgba(255, 181, 46, 0.50);
+  --accent-45: rgba(255, 181, 46, 0.45);
+  --accent-35: rgba(255, 181, 46, 0.35);
+  --accent-28: rgba(255, 181, 46, 0.28);
+  --accent-20: rgba(255, 181, 46, 0.20);
+  --accent-18: rgba(255, 181, 46, 0.18);
+  --accent-16: rgba(255, 181, 46, 0.16);
+  --accent-12: rgba(255, 181, 46, 0.12);
+  --accent-10: rgba(255, 181, 46, 0.10);
+  --accent-08: rgba(255, 181, 46, 0.08);
+  --accent-06: rgba(255, 181, 46, 0.06);
+}
+
 .homepage-container {
   --home-max: 1360px;
   --home-pad-x: 56px;
@@ -26,6 +46,10 @@
   width: 100%;
   padding-inline: var(--home-pad-x);
   box-sizing: border-box;
+}
+
+.homepage-theme .btn:hover {
+  color: var(--brand-ink);
 }
 
 .section-inner {
@@ -464,9 +488,9 @@
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border: 1px solid rgba(243, 165, 36, 0.36);
+  border: 1px solid var(--accent-35);
   border-radius: 8px;
-  background: rgba(243, 165, 36, 0.1);
+  background: var(--accent-10);
 }
 
 .next-session-date {
@@ -723,7 +747,7 @@
   place-items: center;
   border: 1px solid var(--accent-35);
   background:
-    radial-gradient(circle at 30% 25%, rgba(243, 165, 36, 0.38), transparent 42%),
+    radial-gradient(circle at 30% 25%, var(--accent-35), transparent 42%),
     var(--color-ink);
   color: var(--color-white);
   font-size: 2rem;
