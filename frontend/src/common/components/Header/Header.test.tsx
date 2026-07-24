@@ -64,7 +64,7 @@ describe('Header youth navigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Expressions of Interest' })).not.toBeInTheDocument();
   });
 
-  it('shows Profiles and Attendance in the Youth navigation card', () => {
+  it('keeps the Youth navigation focused on profiles', () => {
     authState.permissions = ['read:youth_profiles'];
     authState.role = 'staff';
 
@@ -76,7 +76,7 @@ describe('Header youth navigation', () => {
 
     expect(screen.getByRole('button', { name: 'Youth' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Profiles' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Attendance' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Attendance' })).not.toBeInTheDocument();
   });
 
   it('does not expose a standalone Schools destination', () => {

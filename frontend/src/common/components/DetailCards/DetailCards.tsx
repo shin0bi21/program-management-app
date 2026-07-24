@@ -1,4 +1,5 @@
 import './DetailCards.css';
+import { formatShortDate } from '../../utils/date';
 
 interface PrimaryContactCardProps {
   contact: {
@@ -37,6 +38,54 @@ export function NotesCard({ notes, selected }: { notes?: string | null; selected
         <p className={!selected || !notes?.trim() ? 'detail-card__empty' : undefined}>
           {!selected ? 'Select a row to view notes.' : notes?.trim() || 'No notes recorded.'}
         </p>
+      </div>
+    </section>
+  );
+}
+
+export function AttendanceCard({
+  cohorts,
+  selected,
+}: {
+  cohorts?: Array<{
+    id: string;
+    name: string;
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    lastAttendedOn: string | null;
+  }>;
+  selected: boolean;
+}) {
+  return (
+    <section className="detail-card">
+      <h2>Attendance</h2>
+      <div className="detail-card__content">
+        {!selected || !cohorts?.length ? (
+          <p className="detail-card__empty">
+            {!selected ? 'Select a row to view attendance.' : 'No attendance recorded.'}
+          </p>
+        ) : (
+          <div className="attendance-card__cohorts">
+            {cohorts.map(cohort => (
+              <div className="attendance-card__cohort" key={cohort.id}>
+                <strong>{cohort.name}</strong>
+                <p className="attendance-card__breakdown">
+                  Present {cohort.presentCount}
+                  <span aria-hidden="true"> · </span>
+                  Late {cohort.lateCount}
+                  <span aria-hidden="true"> · </span>
+                  Absent {cohort.absentCount}
+                </p>
+                <p className={!cohort.lastAttendedOn ? 'detail-card__empty' : undefined}>
+                  Last attended: {cohort.lastAttendedOn
+                    ? formatShortDate(cohort.lastAttendedOn)
+                    : 'Not recorded'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

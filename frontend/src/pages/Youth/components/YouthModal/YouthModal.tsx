@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import FormField from '../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
-import ProgramSelect from '../../../../common/components/ProgramSelect/ProgramSelect';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { useAuth } from '../../../../common/context/AuthContext';
@@ -33,8 +32,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
     schoolsError,
     schoolId,
     setSchoolId,
-    programId,
-    setProgramId,
     addresses,
     handleAddressChange,
     contacts,
@@ -119,14 +116,6 @@ export default function YouthModal({ isOpen, onClose, onSuccess, youthData, show
             placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
             disabled={schoolsLoading}
             action={canAddSchool ? { label: '+ Add school', onSelect: () => setAddSchoolOpen(true) } : undefined}
-          />
-        </FormField>
-
-        <FormField id="program" label="Program">
-          <ProgramSelect
-            id="program"
-            value={programId ?? ''}
-            onChange={setProgramId}
           />
         </FormField>
 

@@ -9,13 +9,13 @@ const app = createApp();
 const baseYouth = {
   firstName: 'Jamie',
   lastName: 'Test',
-  status: 'active',
 };
 
 describe('Youth API', () => {
   let adminUserId: string;
   let adminToken: string;
   let softSkillsProgramId: string;
+  let softSkillsCohortId: string;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, role: 'admin' });
@@ -23,9 +23,16 @@ describe('Youth API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
+    const [cohort] = await sql<{ id: string }[]>`
+      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
+      VALUES (${softSkillsProgramId}, ${`Youth Test ${Date.now()}`}, CURRENT_DATE - 30, CURRENT_DATE + 30)
+      RETURNING id
+    `;
+    softSkillsCohortId = cohort.id;
   });
 
   afterAll(async () => {
+    await sql`DELETE FROM program_cohorts WHERE id = ${softSkillsCohortId}`;
     await deleteTestUser(adminUserId);
   });
 
@@ -121,14 +128,16 @@ describe('Youth API', () => {
           firstName: 'Jordan',
           dateOfBirth: '2012-06-15',
           gradeLevel: 7,
-          programId: softSkillsProgramId,
           notes: 'Needs transportation support',
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
-      expect(res.body.programId).toBe(softSkillsProgramId);
-      expect(res.body.programName).toBe('Soft Skills');
+      expect(res.body.cohorts).toEqual([]);
       expect(res.body.notes).toBe('Needs transportation support');
+      await sql`
+        INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+        VALUES (${softSkillsCohortId}, ${res.body.id}, CURRENT_DATE)
+      `;
       createdIds.push(res.body.id);
     });
 
@@ -139,9 +148,47 @@ describe('Youth API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(expect.arrayContaining([
-        expect.objectContaining({ firstName: 'Jordan', programId: softSkillsProgramId }),
+        expect.objectContaining({
+          firstName: 'Jordan',
+          cohorts: expect.arrayContaining([
+            expect.objectContaining({ id: softSkillsCohortId, programId: softSkillsProgramId }),
+          ]),
+        }),
       ]));
-      expect(res.body.every((profile: { programId: string }) => profile.programId === softSkillsProgramId)).toBe(true);
+      expect(res.body.every((profile: { cohorts: Array<{ programId: string }> }) =>
+        profile.cohorts.some(cohort => cohort.programId === softSkillsProgramId)
+      )).toBe(true);
+    });
+
+    it('should filter youth by cohort UUID', async () => {
+      const res = await request(app)
+        .get(`/api/youth?cohortIds=${softSkillsCohortId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          firstName: 'Jordan',
+          cohorts: expect.arrayContaining([
+            expect.objectContaining({ id: softSkillsCohortId }),
+          ]),
+        }),
+      ]));
+      expect(res.body.every((profile: { cohorts: Array<{ id: string }> }) =>
+        profile.cohorts.some(cohort => cohort.id === softSkillsCohortId)
+      )).toBe(true);
+    });
+
+    it('should derive and filter active status from current cohort enrollment', async () => {
+      const res = await request(app)
+        .get('/api/youth?statuses=active')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({ firstName: 'Jordan', status: 'active' }),
+      ]));
+      expect(res.body.every((profile: { status: string }) => profile.status === 'active')).toBe(true);
     });
 
     it('should create and invite a youth account when email is provided', async () => {
@@ -218,20 +265,14 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should reject missing status field (400)', async () => {
+    it('should derive no active cohort for a newly created youth', async () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ firstName: 'Test', lastName: 'User' });
-      expect(res.status).toBe(400);
-    });
-
-    it('should reject invalid participation status (400)', async () => {
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Test', lastName: 'Youth', status: 'invited' });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('inactive');
+      createdIds.push(res.body.id);
     });
 
     it('should reject invalid dateOfBirth format (400)', async () => {
@@ -316,6 +357,64 @@ describe('Youth API', () => {
       expect(res.body).not.toBeNull();
       expect(res.body.id).toBe(youthId);
       expect(res.body.firstName).toBe('GetById');
+      expect(res.body.lastAttendedOn).toBeNull();
+    });
+
+    it('should return the latest session date marked present or late', async () => {
+      const [activity] = await sql<{ id: string }[]>`
+        INSERT INTO cohort_activities (cohort_id, name)
+        VALUES (${softSkillsCohortId}, ${`Attendance Test ${Date.now()}`})
+        RETURNING id
+      `;
+      const sessions = await sql<{ id: string; sessionDate: string }[]>`
+        INSERT INTO cohort_sessions (activity_id, starts_at, ends_at)
+        VALUES
+          (
+            ${activity.id},
+            (CURRENT_DATE - 2 + TIME '17:00') AT TIME ZONE 'America/Toronto',
+            (CURRENT_DATE - 2 + TIME '19:00') AT TIME ZONE 'America/Toronto'
+          ),
+          (
+            ${activity.id},
+            (CURRENT_DATE - 1 + TIME '17:00') AT TIME ZONE 'America/Toronto',
+            (CURRENT_DATE - 1 + TIME '19:00') AT TIME ZONE 'America/Toronto'
+          )
+        RETURNING id, (starts_at AT TIME ZONE 'America/Toronto')::date::text AS session_date
+      `;
+
+      try {
+        await sql`
+          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+          VALUES (${softSkillsCohortId}, ${youthId}, CURRENT_DATE - 3)
+        `;
+        await sql`
+          INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+          VALUES
+            (${sessions[0].id}, ${youthId}, 'present', ${adminUserId}),
+            (${sessions[1].id}, ${youthId}, 'absent', ${adminUserId})
+        `;
+
+        const res = await request(app)
+          .get(`/api/youth?id=${youthId}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.lastAttendedOn).toBe(sessions[0].sessionDate);
+        expect(res.body.cohorts).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            id: softSkillsCohortId,
+            presentCount: 1,
+            lateCount: 0,
+            absentCount: 1,
+            lastAttendedOn: sessions[0].sessionDate,
+          }),
+        ]));
+      } finally {
+        await sql`DELETE FROM attendance_records WHERE youth_id = ${youthId}`;
+        await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${youthId}`;
+        await sql`DELETE FROM cohort_sessions WHERE activity_id = ${activity.id}`;
+        await sql`DELETE FROM cohort_activities WHERE id = ${activity.id}`;
+      }
     });
 
     it('should return null for nonexistent id (200)', async () => {
@@ -334,7 +433,7 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ ...baseYouth, firstName: 'InviteTarget', status: 'inactive' });
+        .send({ ...baseYouth, firstName: 'InviteTarget' });
       youthId = res.body.id;
     });
 
@@ -405,7 +504,7 @@ describe('Youth API', () => {
       const updateRes = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: youthId, firstName: 'Updated', lastName: 'Name', status: 'inactive' });
+        .send({ id: youthId, firstName: 'Updated', lastName: 'Name' });
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.id).toBe(youthId);
 

@@ -21,14 +21,14 @@ import type { SeededUser } from '../shared/db';
 
 const app = createApp();
 
-async function seedYouthAccount(participationStatus: 'active' | 'inactive', accountStatus: 'invited' | 'active' | 'inactive') {
+async function seedYouthAccount(accountStatus: 'invited' | 'active' | 'inactive') {
   const user = await seedTestUser({
     email: `youth-auth-${Date.now()}-${Math.random().toString(36).slice(2)}@test.local`,
     role: 'youth',
   });
   await sql`
-    INSERT INTO youth_profiles (user_id, status)
-    VALUES (${user.userId}, ${participationStatus})
+    INSERT INTO youth_profiles (user_id)
+    VALUES (${user.userId})
   `;
   await sql`
     UPDATE user_credentials
@@ -718,8 +718,8 @@ describe('POST /api/auth/reset-password', () => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 describe('Youth account lifecycle', () => {
-  it('should allow an active youth account to authenticate when participation is inactive', async () => {
-    const user = await seedYouthAccount('inactive', 'active');
+  it('should allow an active youth account to authenticate without a current cohort', async () => {
+    const user = await seedYouthAccount('active');
 
     try {
       const res = await request(app)
@@ -728,18 +728,13 @@ describe('Youth account lifecycle', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.requires2FA).toBe(true);
-
-      const [profile] = await sql<{ status: string }[]>`
-        SELECT status FROM youth_profiles WHERE user_id = ${user.userId}
-      `;
-      expect(profile.status).toBe('inactive');
     } finally {
       await deleteTestUser(user.userId);
     }
   });
 
-  it('should reject an inactive youth account when participation is active', async () => {
-    const user = await seedYouthAccount('active', 'inactive');
+  it('should reject an inactive youth account independently of cohort enrollment', async () => {
+    const user = await seedYouthAccount('inactive');
 
     try {
       const res = await request(app)
@@ -747,18 +742,13 @@ describe('Youth account lifecycle', () => {
         .send({ email: user.email, password: user.password });
 
       expect(res.status).toBe(403);
-
-      const [profile] = await sql<{ status: string }[]>`
-        SELECT status FROM youth_profiles WHERE user_id = ${user.userId}
-      `;
-      expect(profile.status).toBe('active');
     } finally {
       await deleteTestUser(user.userId);
     }
   });
 
-  it('should activate invited youth credentials after password setup without changing participation', async () => {
-    const user = await seedYouthAccount('inactive', 'invited');
+  it('should activate invited youth credentials after password setup', async () => {
+    const user = await seedYouthAccount('invited');
 
     try {
       const beforeLogin = await request(app)
@@ -773,14 +763,13 @@ describe('Youth account lifecycle', () => {
         .send({ token: rawToken, newPassword });
       expect(resetRes.status).toBe(200);
 
-      const [states] = await sql<{ accountStatus: string; participationStatus: string }[]>`
-        SELECT uc.status AS account_status, yp.status AS participation_status
+      const [states] = await sql<{ accountStatus: string }[]>`
+        SELECT uc.status AS account_status
         FROM user_credentials uc
         INNER JOIN youth_profiles yp ON yp.user_id = uc.user_id
         WHERE uc.user_id = ${user.userId}
       `;
       expect(states.accountStatus).toBe('active');
-      expect(states.participationStatus).toBe('inactive');
 
       const afterLogin = await request(app)
         .post('/api/auth/login')

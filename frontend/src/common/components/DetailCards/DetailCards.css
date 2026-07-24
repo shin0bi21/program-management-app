@@ -4,11 +4,11 @@
   min-width: 0;
   height: 135px;
   overflow: hidden;
-  background: var(--color-surface-warm);
-  border: 1px solid var(--ink-10);
-  border-top: 3px solid var(--color-accent-border);
-  border-radius: var(--radius-sm);
-  padding: 18px;
+  padding: 20px;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
 }
 
 .detail-card h2 {
@@ -54,6 +54,29 @@
 
 .detail-card dd {
   margin: 3px 0 0;
+}
+
+.attendance-card__cohorts {
+  display: grid;
+  gap: 14px;
+}
+
+.attendance-card__cohort {
+  display: grid;
+  gap: 4px;
+}
+
+.attendance-card__cohort + .attendance-card__cohort {
+  padding-top: 14px;
+  border-top: var(--border-line-soft);
+}
+
+.attendance-card__cohort p {
+  font-size: 0.875rem;
+}
+
+.attendance-card__breakdown {
+  color: var(--color-ink);
 }
 
 @media (max-width: 768px) {

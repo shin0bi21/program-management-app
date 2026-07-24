@@ -6,7 +6,6 @@ import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
 import YouthLayout from './pages/Youth/YouthLayout'
-import Attendance from './pages/Youth/Attendance/Attendance'
 import Users from './pages/Settings/Users/Users'
 import Account from './pages/Settings/Account/Account'
 import Outreach from './pages/Outreach/Outreach'
@@ -42,7 +41,6 @@ function App() {
           }>
             <Route index element={<Navigate to="profiles" replace />} />
             <Route path="profiles" element={<Youth />} />
-            <Route path="attendance" element={<Attendance />} />
           </Route>
           <Route path="/settings/account" element={
             <ProtectedRoute>

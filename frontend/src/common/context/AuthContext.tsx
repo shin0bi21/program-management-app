@@ -13,6 +13,8 @@ export type Permission =
   | 'read:schools'
   | 'read:programs'
   | 'write:programs'
+  | 'read:cohorts'
+  | 'write:cohorts'
   | 'write:schools'
   | 'read:outreach'
   | 'write:outreach'

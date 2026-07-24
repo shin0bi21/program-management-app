@@ -185,9 +185,6 @@ export default function Header() {
           <button role="menuitem" onClick={() => go('/youth/profiles')} className={`settings-flyout-item${isActive('/youth/profiles') ? ' active' : ''}`}>
             Profiles
           </button>
-          <button role="menuitem" onClick={() => go('/youth/attendance')} className={`settings-flyout-item${isActive('/youth/attendance') ? ' active' : ''}`}>
-            Attendance
-          </button>
         </FloatingMenuPanel>
       )}
 
