@@ -9,4 +9,8 @@ describe('formatShortDate', () => {
   it('accepts Date instances', () => {
     expect(formatShortDate(new Date('2026-01-05T12:00:00Z'))).toBe('Jan 5, 2026');
   });
+
+  it('keeps date-only values on their calendar day', () => {
+    expect(formatShortDate('2026-07-01')).toBe('Jul 1, 2026');
+  });
 });

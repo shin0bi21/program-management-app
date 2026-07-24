@@ -11,10 +11,25 @@ import { applyYouthFilters } from './queryFilters/youthFilters';
 
 type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'program_id' | 'notes' | 'grade_level' | 'age_group' | 'status'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'notes' | 'grade_level' | 'age_group'>> &
   DbRow<Pick<Schools, 'name'>> & {
-    programName: string | null;
+    status: 'active' | 'inactive';
+    cohorts: Array<{
+      id: string;
+      name: string;
+      programId: string;
+      programName: string;
+      startsOn: string;
+      endsOn: string;
+      enrolledOn: string;
+      withdrawnOn: string | null;
+      presentCount: number;
+      lateCount: number;
+      absentCount: number;
+      lastAttendedOn: string | null;
+    }>;
     account: { email: string; status: 'invited' | 'active' | 'inactive' } | null;
+    lastAttendedOn: string | null;
   };
 
 // ============================================================================
@@ -30,12 +45,23 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
       u.id,
       u.first_name,
       u.last_name,
-      yp.status,
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM cohort_enrollments current_enrollment
+        INNER JOIN program_cohorts current_cohort
+          ON current_cohort.id = current_enrollment.cohort_id
+        WHERE current_enrollment.youth_id = u.id
+          AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+          AND (
+            current_enrollment.withdrawn_on IS NULL
+            OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date
+          )
+          AND (NOW() AT TIME ZONE 'America/Toronto')::date
+            BETWEEN current_cohort.starts_on AND current_cohort.ends_on
+      ) THEN 'active' ELSE 'inactive' END AS status,
       yp.date_of_birth,
       yp.school_id,
       s.name as school_name,
-      yp.program_id,
-      p.name as program_name,
       yp.notes,
       yp.grade_level,
       yp.age_group,
@@ -43,7 +69,53 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
         'email', uc.email,
         'status', uc.status
       ) END AS account,
+      (
+        SELECT (MAX(cs.starts_at) AT TIME ZONE 'America/Toronto')::date::text
+        FROM attendance_records ar
+        INNER JOIN cohort_sessions cs ON cs.id = ar.session_id
+        WHERE ar.youth_id = u.id
+          AND ar.status IN ('present', 'late')
+      ) AS last_attended_on,
       u.created_at,
+      COALESCE((
+        SELECT json_agg(
+          json_build_object(
+            'id', pc.id,
+            'name', pc.name,
+            'programId', p.id,
+            'programName', p.name,
+            'startsOn', pc.starts_on,
+            'endsOn', pc.ends_on,
+            'enrolledOn', ce.enrolled_on,
+            'withdrawnOn', ce.withdrawn_on,
+            'presentCount', attendance.present_count,
+            'lateCount', attendance.late_count,
+            'absentCount', attendance.absent_count,
+            'lastAttendedOn', attendance.last_attended_on
+          )
+          ORDER BY pc.starts_on DESC
+        )
+        FROM cohort_enrollments ce
+        INNER JOIN program_cohorts pc ON pc.id = ce.cohort_id
+        INNER JOIN programs p ON p.id = pc.program_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(ar.id) FILTER (WHERE ar.status = 'present')::int AS present_count,
+            COUNT(ar.id) FILTER (WHERE ar.status = 'late')::int AS late_count,
+            COUNT(ar.id) FILTER (WHERE ar.status = 'absent')::int AS absent_count,
+            (
+              MAX(cs.starts_at) FILTER (WHERE ar.status IN ('present', 'late'))
+              AT TIME ZONE 'America/Toronto'
+            )::date::text AS last_attended_on
+          FROM cohort_activities ca
+          INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+          INNER JOIN attendance_records ar
+            ON ar.session_id = cs.id
+            AND ar.youth_id = u.id
+          WHERE ca.cohort_id = pc.id
+        ) attendance ON TRUE
+        WHERE ce.youth_id = u.id
+      ), '[]'::json) AS cohorts,
       (
         SELECT json_agg(
           json_build_object(
@@ -77,7 +149,6 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
     INNER JOIN users u ON u.id = yp.user_id
     INNER JOIN user_roles ur ON ur.id = u.role_id
     LEFT JOIN schools s ON s.id = yp.school_id
-    LEFT JOIN programs p ON p.id = yp.program_id
     LEFT JOIN user_credentials uc ON uc.user_id = u.id
     WHERE ur.name = 'youth'
       ${id ? sql`AND u.id = ${id}` : sql``}
@@ -92,10 +163,8 @@ export interface SetYouthInput {
   firstName: string;
   lastName: string;
   email?: string;
-  status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
-  programId?: string | null;
   notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{ id?: string; address: string; city: string; province: string; postalCode: string }>;
@@ -103,7 +172,7 @@ export interface SetYouthInput {
 }
 
 export async function setYouth(data: SetYouthInput, actorId: string) {
-  const { id, firstName, lastName, dateOfBirth, schoolId, programId, notes, gradeLevel, status, addresses, contacts } = data;
+  const { id, firstName, lastName, dateOfBirth, schoolId, notes, gradeLevel, addresses, contacts } = data;
   const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
   const transactionId = crypto.randomUUID();
 
@@ -119,8 +188,8 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
         WHERE id = ${id}
         LIMIT 1
       `;
-      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'program_id' | 'notes' | 'grade_level' | 'age_group' | 'status'>>[]>`
-        SELECT user_id, date_of_birth, school_id, program_id, notes, grade_level, age_group, status
+      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'notes' | 'grade_level' | 'age_group'>>[]>`
+        SELECT user_id, date_of_birth, school_id, notes, grade_level, age_group
         FROM youth_profiles
         WHERE user_id = ${id}
         LIMIT 1
@@ -158,27 +227,23 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       );
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, program_id, notes, grade_level, age_group, status, created_at, updated_at)
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, notes, grade_level, age_group, created_at, updated_at)
         VALUES (
           ${persistedUserId},
           ${dateOfBirth || null},
           ${schoolId || null},
-          ${programId ?? null},
           ${notes ?? null},
           ${gradeLevel ?? null},
           ${ageGroup},
-          ${status},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${persistedUserId}), NOW()),
           NOW()
         )
         ON CONFLICT (user_id) DO UPDATE SET
           date_of_birth = EXCLUDED.date_of_birth,
           school_id = EXCLUDED.school_id,
-          program_id = EXCLUDED.program_id,
           notes = EXCLUDED.notes,
           grade_level = EXCLUDED.grade_level,
           age_group = EXCLUDED.age_group,
-          status = EXCLUDED.status,
           updated_at = EXCLUDED.updated_at
       `;
       await audit(
@@ -193,14 +258,12 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
               userId: existingProfiles[0].userId,
               dateOfBirth: existingProfiles[0].dateOfBirth,
               schoolId: existingProfiles[0].schoolId,
-              programId: existingProfiles[0].programId,
               notes: existingProfiles[0].notes,
               gradeLevel: existingProfiles[0].gradeLevel,
               ageGroup: existingProfiles[0].ageGroup,
-              status: existingProfiles[0].status,
             }
           : null,
-        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, programId: programId ?? null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup, status },
+        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup },
       );
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
@@ -213,10 +276,10 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, program_id, notes, grade_level, age_group, status)
-        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${programId ?? null}, ${notes ?? null}, ${gradeLevel ?? null}, ${ageGroup}, ${status})
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, notes, grade_level, age_group)
+        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${notes ?? null}, ${gradeLevel ?? null}, ${ageGroup})
       `;
-      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, programId: programId ?? null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup, status });
+      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup });
     }
 
     if (id) {
@@ -233,38 +296,4 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
   const savedYouth = await getYouth(userId);
   if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
   return savedYouth;
-}
-
-export async function toggleYouthStatus(youthId: string, actorId: string) {
-  const transactionId = crypto.randomUUID();
-
-  await sql.begin(async (tx) => {
-    const trx = asTransactionSql(tx);
-
-    const existing = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { status: 'active' | 'inactive' })[]>`
-      SELECT u.id, u.first_name, u.last_name, yp.status
-      FROM users u
-      INNER JOIN youth_profiles yp ON yp.user_id = u.id
-      INNER JOIN user_roles ur ON ur.id = u.role_id
-      WHERE u.id = ${youthId} AND ur.name = 'youth'
-      LIMIT 1
-    `;
-    if (!existing.length) throw new NotFoundError('Youth profile not found');
-
-    const prev = existing[0];
-    const newStatus = prev.status === 'active' ? 'inactive' : 'active';
-
-    await trx`
-      UPDATE youth_profiles SET status = ${newStatus}, updated_at = NOW()
-      WHERE user_id = ${youthId}
-    `;
-
-    await audit(
-      trx, actorId, transactionId, 'youth_profiles', youthId, 'UPDATE',
-      { userId: prev.id, status: prev.status },
-      { userId: prev.id, status: newStatus }
-    );
-  });
-
-  return getYouth(youthId);
 }

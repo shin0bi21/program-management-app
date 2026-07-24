@@ -39,8 +39,6 @@ export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export type YouthParticipationStatus = "active" | "inactive";
-
 export interface Addresses {
   address: string;
   city: string;
@@ -360,27 +358,10 @@ export interface YouthProfiles {
   grade_level: number | null;
   id: Generated<string>;
   notes: string | null;
-  program_id: string | null;
   school_id: string | null;
-  status: Generated<YouthParticipationStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
-}
-
-export interface YouthWorksheets {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  file_data: Buffer | null;
-  file_size: number | null;
-  file_type: string | null;
-  id: Generated<string>;
-  metadata: Generated<Json | null>;
-  note: string | null;
-  title: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-  youth_id: string;
 }
 
 export interface DB {
@@ -412,5 +393,4 @@ export interface DB {
   user_trusted_devices: UserTrustedDevices;
   users: Users;
   youth_profiles: YouthProfiles;
-  youth_worksheets: YouthWorksheets;
 }

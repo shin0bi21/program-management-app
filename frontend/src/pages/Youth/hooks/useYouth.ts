@@ -27,7 +27,7 @@ export function useYouth(filters: YouthFilters = {}) {
 
   useEffect(() => {
     loadYouth();
-  }, [filters.search, filters.statuses, filters.programIds]);
+  }, [filters.search, filters.statuses, filters.programIds, filters.cohortIds]);
 
   return { youth, setYouth, loading, error, refetch: loadYouth };
 }

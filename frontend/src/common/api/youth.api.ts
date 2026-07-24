@@ -7,16 +7,13 @@ export function getYouth(id?: string, filters: YouthFilters = {}) {
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  if (filters.cohortIds?.length) params.set('cohortIds', filters.cohortIds.join(','));
   const query = params.toString();
   return apiClient.get<YouthProfile[]>(`/youth${query ? `?${query}` : ''}`);
 }
 
 export function setYouth(data: SetYouthInput) {
   return apiClient.post<YouthProfile>('/youth', data);
-}
-
-export function toggleYouthStatus(id: string) {
-  return apiClient.patch<YouthProfile>(`/youth/${id}`);
 }
 
 export function inviteYouth(id: string, email: string) {
