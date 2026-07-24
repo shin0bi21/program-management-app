@@ -15,6 +15,6 @@ router.put('/:id', authenticateToken, requirePermission('write:outreach'), gener
 
 router.patch('/:id/status', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(updateLeadStatusSchema), asyncHandler(handleUpdateLeadStatus));
 
-router.post('/:id/sign-up', authenticateToken, requirePermission('write:outreach'), requirePermission('write:youth_profiles'), generalLimiter, validateRequest(signUpLeadSchema), asyncHandler(handleSignUpLead));
+router.post('/:id/sign-up', authenticateToken, requirePermission('write:outreach'), requirePermission('write:youth_profiles'), requirePermission('write:cohorts'), generalLimiter, validateRequest(signUpLeadSchema), asyncHandler(handleSignUpLead));
 
 export default router;

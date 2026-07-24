@@ -12,8 +12,9 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
 import { usePrograms } from '../../../common/hooks/usePrograms';
-import { signUpLead, updateLeadStatus } from './api/leads.api';
+import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
+import SignUpLeadModal from './components/SignUpLeadModal';
 import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadFilters, LeadStatus } from './types';
 import './Leads.css';
@@ -35,6 +36,7 @@ export default function Leads() {
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
   useEffect(() => {
@@ -43,8 +45,10 @@ export default function Leads() {
   }, [search]);
 
   useEffect(() => {
-    if (selectedLead && !leads.some(lead => lead.id === selectedLead.id)) setSelectedLead(null);
-  }, [leads, selectedLead]);
+    setSelectedLead(current => current
+      ? leads.find(lead => lead.id === current.id) ?? null
+      : null);
+  }, [leads]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -64,21 +68,12 @@ export default function Leads() {
     await reload();
   };
 
-  const requestSignUp = (lead: Lead) => setConfirmAction({
-    title: 'Sign Up Lead',
-    message: `Create a youth profile for ${lead.youthFirstName} ${lead.youthLastName}? Their lead details, primary contact, program, and notes will be copied to the profile.`,
-    confirmLabel: 'Sign Up',
-    successMessage: 'Youth profile created',
-    onConfirm: async () => {
-      await signUpLead(lead.id);
-      await reload();
-    },
-  });
+  const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
   const columns: TableColumn<Lead>[] = [
     { key: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
     { key: 'school', header: 'School', render: lead => lead.school },
-    { key: 'program', header: 'Program', render: lead => lead.programName ?? '—' },
+    { key: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
     { key: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
     { key: 'created', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
@@ -86,13 +81,16 @@ export default function Leads() {
       header: '',
       className: 'col-actions',
       width: '32px',
-      render: (lead: Lead) => <ActionsMenu items={[
-        { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
-        ...(lead.status !== 'signed_up' ? [
-          { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
-          ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
-        ] : []),
-      ]} />,
+      render: (lead: Lead) => <ActionsMenu
+        ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
+        items={[
+          { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
+          ...(lead.status !== 'signed_up' ? [
+            { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
+            ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
+          ] : []),
+        ]}
+      />,
     }] : []),
   ];
 
@@ -129,6 +127,11 @@ export default function Leads() {
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
       onSuccess={() => { setModalTarget(null); void reload(); }}
+    />
+    <SignUpLeadModal
+      lead={signUpTarget}
+      onClose={() => setSignUpTarget(null)}
+      onSuccess={reload}
     />
     <Modal
       isOpen={!!confirmAction}
