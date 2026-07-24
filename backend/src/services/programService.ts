@@ -4,7 +4,7 @@ import type { CreateProgramInput } from '../validation/programSchemas';
 
 export function getPrograms() {
   return sql`
-    SELECT id, name
+    SELECT id, name, description
     FROM programs
     ORDER BY name ASC
   `;
@@ -18,9 +18,9 @@ export async function createProgram(data: CreateProgramInput) {
   if (existing.length) throw new ConflictError('A program with this name already exists');
 
   const rows = await sql`
-    INSERT INTO programs (name)
-    VALUES (${name})
-    RETURNING id, name
+    INSERT INTO programs (name, description)
+    VALUES (${name}, ${data.description ?? null})
+    RETURNING id, name, description
   `;
   return rows[0];
 }

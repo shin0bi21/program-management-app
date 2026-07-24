@@ -11,6 +11,7 @@ import programRoutes from './routes/programRoutes';
 import publicRoutes from './routes/publicRoutes';
 import expressionOfInterestRoutes from './routes/expressionOfInterestRoutes';
 import leadRoutes from './routes/leadRoutes';
+import cohortRoutes from './routes/cohortRoutes';
 import { requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
 import { NotFoundError } from './errors';
@@ -65,6 +66,7 @@ app.use('/api/accounts', accountRoutes);
 app.use('/api/youth', youthRoutes);
 app.use('/api/schools', schoolRoutes);
 app.use('/api/programs', programRoutes);
+app.use('/api/cohorts', cohortRoutes);
 
 // 404 handler — catches all unmatched routes; forwards to errorHandler
 app.use((_req, _res, next) => {
