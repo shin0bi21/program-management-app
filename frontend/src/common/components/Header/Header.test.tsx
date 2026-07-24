@@ -64,7 +64,7 @@ describe('Header youth navigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Expressions of Interest' })).not.toBeInTheDocument();
   });
 
-  it('shows Profiles and Attendance in the Youth navigation card', () => {
+  it('keeps the Youth navigation focused on profiles', () => {
     authState.permissions = ['read:youth_profiles'];
     authState.role = 'staff';
 
@@ -76,7 +76,7 @@ describe('Header youth navigation', () => {
 
     expect(screen.getByRole('button', { name: 'Youth' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Profiles' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Attendance' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Attendance' })).not.toBeInTheDocument();
   });
 
   it('does not expose a standalone Schools destination', () => {
@@ -90,5 +90,21 @@ describe('Header youth navigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
+  });
+
+  it('shows Cohorts, Sessions, and Calendar in Programming navigation', () => {
+    authState.permissions = ['read:programs', 'read:cohorts', 'read:attendance'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter initialEntries={['/programming']}>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Programming' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cohorts' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Calendar' })).toBeInTheDocument();
   });
 });

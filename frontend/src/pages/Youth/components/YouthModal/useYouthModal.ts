@@ -16,7 +16,7 @@ const defaultValues: YouthFormData = {
   email: '',
   dateOfBirth: '',
   schoolId: '',
-  programId: '',
+  notes: '',
   gradeLevel: undefined,
 };
 
@@ -45,7 +45,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
 
   const { schools, setSchools, loading: schoolsLoading, error: schoolsError } = useSchools();
   const schoolId = watch('schoolId');
-  const programId = watch('programId');
 
   const {
     addresses,
@@ -75,7 +74,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
-      programId: youthData.programId || '',
+      notes: youthData.notes || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
     });
 
@@ -119,10 +118,9 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         ...(includeLoginEmail && data.email && { email: data.email.trim() }),
-        status: youthData?.status ?? 'active',
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
-        programId: data.programId || null,
+        notes: data.notes.trim() || null,
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
         addresses: getAddressPayload(),
         contacts: getContactPayload(),
@@ -155,8 +153,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     schoolsError,
     schoolId,
     setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
-    programId,
-    setProgramId: (id: string) => setValue('programId', id, { shouldDirty: true }),
     addresses,
     handleAddressChange,
     contacts,

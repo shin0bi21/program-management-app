@@ -1,0 +1,48 @@
+.enroll-youth-checklist__select-all {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.enroll-youth-checklist {
+  display: grid;
+  max-height: 360px;
+  overflow-y: auto;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+}
+
+.enroll-youth-checklist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  cursor: pointer;
+}
+
+.enroll-youth-checklist__item + .enroll-youth-checklist__item {
+  border-top: var(--border-line-soft);
+}
+
+.enroll-youth-checklist__item:hover {
+  background: var(--ink-03);
+}
+
+.enroll-youth-checklist__item > span {
+  display: grid;
+  gap: 2px;
+}
+
+.enroll-youth-checklist__item small {
+  color: var(--color-muted);
+}
+
+.enroll-youth-checklist input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}

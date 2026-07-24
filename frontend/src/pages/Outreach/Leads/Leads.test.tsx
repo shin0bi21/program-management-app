@@ -4,12 +4,14 @@ import Leads from './Leads';
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
+const signUpLead = vi.fn();
 
 vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
   updateLeadStatus: vi.fn(),
+  signUpLead: (...args: unknown[]) => signUpLead(...args),
 }));
 
 vi.mock('../../../common/context/AuthContext', () => ({
@@ -20,24 +22,57 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
 }));
 
+vi.mock('../../../common/api/cohorts.api', () => ({
+  getCohorts: vi.fn().mockResolvedValue([]),
+}));
+
 describe('Leads', () => {
   beforeEach(() => {
+    signUpLead.mockResolvedValue({});
     getLeads.mockResolvedValue([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1',
+      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programId: 'program-1', programName: 'Soft Skills',
+      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
       contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);
   });
 
+  it('signs up a Lead through the dedicated conversion action', async () => {
+    render(<Leads />);
+    await screen.findByText('Avery Outreach');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
+    expect(screen.getByRole('heading', { name: 'Sign Up Lead' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Mark Signed Up' })).not.toBeInTheDocument();
+
+    const submit = screen.getByRole('button', { name: 'Sign Up' });
+    await waitFor(() => expect(submit).toBeEnabled());
+    fireEvent.click(submit);
+    await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
+    expect(await screen.findByText(
+      'Youth profile successfully created for Avery Outreach.',
+    )).toBeInTheDocument();
+  });
+
   it('renders fetched leads and direct-create access', async () => {
     render(<Leads />);
 
     expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
-    expect(screen.getByText('Expression of Interest')).toBeInTheDocument();
+    expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Create Lead' })).toBeInTheDocument();
+  });
+
+  it('shows primary contact details when a lead row is selected', async () => {
+    render(<Leads />);
+
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+
+    expect(screen.getByText('Jordan Outreach')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+    expect(screen.getByText('No notes recorded.')).toBeInTheDocument();
   });
 
   it('requests filtered lead data from the API', async () => {
@@ -68,7 +103,7 @@ describe('Leads', () => {
     render(<Leads />);
     await screen.findByText('Avery Outreach');
 
-    fireEvent.click(screen.getByRole('button', { name: '' }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Lead' })).toBeInTheDocument();

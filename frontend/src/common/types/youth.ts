@@ -10,10 +10,24 @@ export interface YouthProfile {
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;
-  programId: string | null;
-  programName: string | null;
+  cohorts: Array<{
+    id: string;
+    name: string;
+    programId: string;
+    programName: string;
+    startsOn: string;
+    endsOn: string;
+    enrolledOn: string;
+    withdrawnOn: string | null;
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    lastAttendedOn: string | null;
+  }>;
+  notes: string | null;
   gradeLevel: number | null;
   ageGroup: 'junior_youth' | 'senior_youth' | null;
+  lastAttendedOn: string | null;
   createdAt: string;
   addresses: Array<{
     id: string;
@@ -37,10 +51,9 @@ export interface SetYouthInput {
   firstName: string;
   lastName: string;
   email?: string;
-  status: 'active' | 'inactive';
   dateOfBirth?: string;
   schoolId?: string;
-  programId?: string | null;
+  notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{
     address: string;
@@ -60,4 +73,5 @@ export interface YouthFilters {
   search?: string;
   statuses?: Array<'active' | 'inactive'>;
   programIds?: string[];
+  cohortIds?: string[];
 }

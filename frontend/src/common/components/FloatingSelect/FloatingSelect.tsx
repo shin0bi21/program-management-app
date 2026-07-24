@@ -16,6 +16,7 @@ interface FloatingSelectProps {
   options: FloatingSelectOption[];
   onChange: (value: string) => void;
   placeholder?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   action?: {
     label: string;
@@ -29,6 +30,7 @@ export default function FloatingSelect({
   options,
   onChange,
   placeholder = 'Select an option',
+  ariaLabel,
   disabled = false,
   action,
 }: FloatingSelectProps) {
@@ -55,6 +57,7 @@ export default function FloatingSelect({
         className="floating-select-trigger"
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        aria-label={ariaLabel}
         disabled={disabled}
         onClick={toggle}
       >

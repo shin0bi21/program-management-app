@@ -12,6 +12,7 @@ import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
 import leadRoutes from '../../src/routes/leadRoutes';
 import programRoutes from '../../src/routes/programRoutes';
+import cohortRoutes from '../../src/routes/cohortRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api/schools', schoolRoutes);
   app.use('/api/leads', leadRoutes);
   app.use('/api/programs', programRoutes);
+  app.use('/api/cohorts', cohortRoutes);
   app.use(handleError);
   return app;
 }

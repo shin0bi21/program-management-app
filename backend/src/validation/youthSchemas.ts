@@ -12,6 +12,7 @@ export const youthQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparated(z.enum(['active', 'inactive'])),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+    cohortIds: commaSeparated(z.string().uuid('Invalid cohort ID')),
   }),
 });
 
@@ -34,9 +35,8 @@ export const setYouthSchema = z.object({
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
-    programId: z.string().uuid('Invalid program ID').nullable().optional(),
+    notes: z.string().trim().max(5000, 'Notes are too long').nullable().optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
-    status: z.enum(['active', 'inactive']),
     addresses: z
       .array(
         z.object({

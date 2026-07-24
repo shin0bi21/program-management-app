@@ -1,0 +1,91 @@
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 135px;
+  overflow: hidden;
+  padding: 20px;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+
+.detail-card h2 {
+  flex: 0 0 auto;
+  color: var(--color-ink);
+  font-size: 1rem;
+  margin: 0 0 14px;
+}
+
+.detail-card__content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.detail-card p {
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.detail-card__empty {
+  color: var(--color-muted);
+}
+
+.detail-card dl,
+.detail-card dl div {
+  margin: 0;
+}
+
+.detail-card dl {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-card dt {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-card dd {
+  margin: 3px 0 0;
+}
+
+.attendance-card__cohorts {
+  display: grid;
+  gap: 14px;
+}
+
+.attendance-card__cohort {
+  display: grid;
+  gap: 4px;
+}
+
+.attendance-card__cohort + .attendance-card__cohort {
+  padding-top: 14px;
+  border-top: var(--border-line-soft);
+}
+
+.attendance-card__cohort p {
+  font-size: 0.875rem;
+}
+
+.attendance-card__breakdown {
+  color: var(--color-ink);
+}
+
+@media (max-width: 768px) {
+  .detail-card {
+    height: auto;
+    overflow: visible;
+  }
+
+  .detail-card__content {
+    overflow: visible;
+  }
+}

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { getYouth, setYouth, toggleYouthStatus } from '../services/youthService';
+import { getYouth, setYouth } from '../services/youthService';
 import { inviteYouthAccount } from '../services/accountService';
 import { youthQuerySchema } from '../validation/youthSchemas';
 
@@ -18,13 +18,6 @@ export const handleSetYouth = async (req: Request, res: Response) => {
     saved = { ...saved, account };
   }
   res.status(id ? 200 : 201).json(saved);
-};
-
-export const handleToggleYouthStatus = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  const youthId = req.params.id;
-  const updated = await toggleYouthStatus(youthId, actorId);
-  res.json(updated);
 };
 
 export const handleInviteYouth = async (req: Request, res: Response) => {

@@ -5,7 +5,7 @@ export default function YouthLayout() {
   return (
     <>
       <Header />
-      <main className="page-container">
+      <main className="page-container page-container--data">
         <Outlet />
       </main>
     </>

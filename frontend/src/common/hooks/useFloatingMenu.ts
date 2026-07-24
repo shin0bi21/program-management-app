@@ -84,6 +84,31 @@ export function useFloatingMenu(
     };
   }, [isOpen, close, triggerRef]);
 
+  // Initial placement uses estimates because the portalled menu does not exist
+  // until after open. Recalculate before paint with its rendered dimensions so
+  // flipped menus sit fully above/right/left of their trigger without overlap.
+  useLayoutEffect(() => {
+    if (!isOpen || !triggerRef.current || !menuRef.current) return;
+
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const measuredOptions = {
+      ...optionsRef.current,
+      widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
+      heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
+    };
+    const measuredPosition = calculateFloatingPosition(
+      triggerRef.current,
+      placementRef.current,
+      measuredOptions,
+    );
+
+    setPosition(current => current
+      && current.top === measuredPosition.top
+      && current.left === measuredPosition.left
+      ? current
+      : measuredPosition);
+  });
+
   // Focus management: first item on open; return focus to trigger on close
   useLayoutEffect(() => {
     if (!isOpen) return;

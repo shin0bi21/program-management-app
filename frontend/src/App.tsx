@@ -6,12 +6,15 @@ import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
 import Youth from './pages/Youth/Youth'
 import YouthLayout from './pages/Youth/YouthLayout'
-import Attendance from './pages/Youth/Attendance/Attendance'
 import Users from './pages/Settings/Users/Users'
 import Account from './pages/Settings/Account/Account'
 import Outreach from './pages/Outreach/Outreach'
 import ExpressionsOfInterest from './pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'
 import Leads from './pages/Outreach/Leads/Leads'
+import ProgrammingLayout from './pages/Programming/ProgrammingLayout'
+import Programming from './pages/Programming/Programming'
+import Sessions from './pages/Programming/Sessions'
+import Calendar from './pages/Programming/Calendar'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -42,13 +45,29 @@ function App() {
           }>
             <Route index element={<Navigate to="profiles" replace />} />
             <Route path="profiles" element={<Youth />} />
-            <Route path="attendance" element={<Attendance />} />
           </Route>
           <Route path="/settings/account" element={
             <ProtectedRoute>
               <Account />
             </ProtectedRoute>
           } />
+          <Route path="/programming" element={
+            <ProtectedRoute requiredPermission="read:cohorts">
+              <ProgrammingLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Programming />} />
+            <Route path="sessions" element={
+              <ProtectedRoute requiredPermission="read:attendance">
+                <Sessions />
+              </ProtectedRoute>
+            } />
+            <Route path="calendar" element={
+              <ProtectedRoute requiredPermission="read:attendance">
+                <Calendar />
+              </ProtectedRoute>
+            } />
+          </Route>
           <Route path="/outreach" element={
             <ProtectedRoute requiredPermission="read:outreach">
               <Outreach />

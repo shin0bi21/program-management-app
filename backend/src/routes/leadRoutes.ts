@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { handleCreateLead, handleGetLeads, handleUpdateLead, handleUpdateLeadStatus } from '../controllers/leadController';
+import { handleCreateLead, handleGetLeads, handleSignUpLead, handleUpdateLead, handleUpdateLeadStatus } from '../controllers/leadController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { createLeadSchema, leadQuerySchema, updateLeadSchema, updateLeadStatusSchema } from '../validation/leadSchemas';
+import { createLeadSchema, leadQuerySchema, signUpLeadSchema, updateLeadSchema, updateLeadStatusSchema } from '../validation/leadSchemas';
 
 const router = Router();
 
@@ -14,5 +14,7 @@ router.post('/', authenticateToken, requirePermission('write:outreach'), general
 router.put('/:id', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(updateLeadSchema), asyncHandler(handleUpdateLead));
 
 router.patch('/:id/status', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(updateLeadStatusSchema), asyncHandler(handleUpdateLeadStatus));
+
+router.post('/:id/sign-up', authenticateToken, requirePermission('write:outreach'), requirePermission('write:youth_profiles'), requirePermission('write:cohorts'), generalLimiter, validateRequest(signUpLeadSchema), asyncHandler(handleSignUpLead));
 
 export default router;

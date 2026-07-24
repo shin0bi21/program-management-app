@@ -6,7 +6,7 @@ export default function Outreach() {
   return (
     <>
       <Header />
-      <main className="page-container outreach-page">
+      <main className="page-container page-container--data outreach-page">
         <Outlet />
       </main>
     </>

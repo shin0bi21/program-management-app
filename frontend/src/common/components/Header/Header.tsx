@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faBullhorn } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
@@ -14,9 +14,12 @@ export default function Header() {
   const canViewHome = role !== 'youth';
   const canViewYouth = permissions.includes('read:youth_profiles');
   const canViewOutreach = permissions.includes('read:outreach');
+  const canViewProgramming = permissions.includes('read:programs') && permissions.includes('read:cohorts');
+  const canViewAttendance = permissions.includes('read:attendance');
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
   const outreachBtnRef = useRef<HTMLButtonElement>(null);
+  const programmingBtnRef = useRef<HTMLButtonElement>(null);
   const youthBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -26,7 +29,19 @@ export default function Header() {
     close: closeYouthFlyout,
     position: youthFlyoutPosition,
     menuRef: youthFlyoutRef,
-  } = useFloatingMenu(youthBtnRef, { side: 'right', align: 'start' }, { widthEstimate: 160, heightEstimate: 120 });
+  } = useFloatingMenu(youthBtnRef, { side: 'right', align: 'start' }, { widthEstimate: 160, heightEstimate: 70 });
+
+  const {
+    isOpen: isProgrammingFlyoutOpen,
+    toggle: toggleProgrammingFlyout,
+    close: closeProgrammingFlyout,
+    position: programmingFlyoutPosition,
+    menuRef: programmingFlyoutRef,
+  } = useFloatingMenu(
+    programmingBtnRef,
+    { side: 'right', align: 'start' },
+    { widthEstimate: 160, heightEstimate: 150 },
+  );
 
   const {
     isOpen: isSettingsFlyoutOpen,
@@ -55,17 +70,20 @@ export default function Header() {
   const isSettingsActive = location.pathname.startsWith('/settings');
   const isOutreachActive = location.pathname.startsWith('/outreach');
   const isYouthActive = location.pathname.startsWith('/youth');
+  const isProgrammingActive = location.pathname.startsWith('/programming');
 
   const go = (path: string) => {
     navigate(path);
     setMobileOpen(false);
     closeOutreachFlyout();
+    closeProgrammingFlyout();
     closeYouthFlyout();
     closeSettingsFlyout();
   };
 
   const handleOutreachToggle = () => {
     closeYouthFlyout();
+    closeProgrammingFlyout();
     closeSettingsFlyout();
     toggleOutreachFlyout();
   };
@@ -73,18 +91,28 @@ export default function Header() {
   const handleSettingsToggle = () => {
     closeYouthFlyout();
     closeOutreachFlyout();
+    closeProgrammingFlyout();
     toggleSettingsFlyout();
   };
 
   const handleYouthToggle = () => {
     closeOutreachFlyout();
+    closeProgrammingFlyout();
     closeSettingsFlyout();
     toggleYouthFlyout();
+  };
+
+  const handleProgrammingToggle = () => {
+    closeYouthFlyout();
+    closeOutreachFlyout();
+    closeSettingsFlyout();
+    toggleProgrammingFlyout();
   };
 
   // Close flyouts on route change
   useEffect(() => {
     closeOutreachFlyout();
+    closeProgrammingFlyout();
     closeYouthFlyout();
     closeSettingsFlyout();
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -152,6 +180,19 @@ export default function Header() {
                 </button>
               )}
 
+              {canViewProgramming && (
+                <button
+                  ref={programmingBtnRef}
+                  onClick={handleProgrammingToggle}
+                  aria-haspopup="menu"
+                  aria-expanded={isProgrammingFlyoutOpen}
+                  className={`sidebar-link${isProgrammingActive || isProgrammingFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
+                  <span>Programming</span>
+                </button>
+              )}
+
               <button
                 ref={settingsBtnRef}
                 onClick={handleSettingsToggle}
@@ -185,9 +226,6 @@ export default function Header() {
           <button role="menuitem" onClick={() => go('/youth/profiles')} className={`settings-flyout-item${isActive('/youth/profiles') ? ' active' : ''}`}>
             Profiles
           </button>
-          <button role="menuitem" onClick={() => go('/youth/attendance')} className={`settings-flyout-item${isActive('/youth/attendance') ? ' active' : ''}`}>
-            Attendance
-          </button>
         </FloatingMenuPanel>
       )}
 
@@ -212,6 +250,41 @@ export default function Header() {
           >
             Leads
           </button>
+        </FloatingMenuPanel>
+      )}
+
+      {canViewProgramming && programmingFlyoutPosition && (
+        <FloatingMenuPanel
+          menuRef={programmingFlyoutRef}
+          position={programmingFlyoutPosition}
+          onClose={closeProgrammingFlyout}
+          className="settings-flyout"
+        >
+          <button
+            role="menuitem"
+            onClick={() => go('/programming')}
+            className={`settings-flyout-item${isActive('/programming') ? ' active' : ''}`}
+          >
+            Cohorts
+          </button>
+          {canViewAttendance && (
+            <>
+              <button
+                role="menuitem"
+                onClick={() => go('/programming/sessions')}
+                className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
+              >
+                Sessions
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => go('/programming/calendar')}
+                className={`settings-flyout-item${isActive('/programming/calendar') ? ' active' : ''}`}
+              >
+                Calendar
+              </button>
+            </>
+          )}
         </FloatingMenuPanel>
       )}
 

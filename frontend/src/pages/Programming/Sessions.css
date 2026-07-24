@@ -1,0 +1,70 @@
+.sessions-page {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+}
+
+.session-state {
+  display: inline-flex;
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.session-state--upcoming {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.session-state--completed {
+  background: var(--color-status-active-bg);
+  color: var(--color-status-active);
+}
+
+.session-state--cancelled {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-dark);
+}
+
+.attendance-modal__context {
+  margin-bottom: 18px;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.attendance-roster {
+  overflow: hidden;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+}
+
+.attendance-roster__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-bottom: var(--border-line-soft);
+}
+
+.attendance-roster__row:last-child {
+  border-bottom: 0;
+}
+
+.attendance-roster__row > span {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.attendance-roster__row .floating-select-trigger {
+  min-height: 36px;
+}
+
+@media (max-width: 560px) {
+  .attendance-roster__row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

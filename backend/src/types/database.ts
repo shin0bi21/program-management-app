@@ -9,6 +9,8 @@ export type AccountStatus = "active" | "inactive" | "invited";
 
 export type AgeGroup = "junior_youth" | "senior_youth";
 
+export type AttendanceStatus = "absent" | "excused" | "late" | "present";
+
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
 
 export type DiscoverySource = "community_outreach" | "friend_family" | "online" | "other" | "school";
@@ -31,13 +33,11 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type LeadOrigin = "expression_of_interest" | "staff_created";
 
-export type LeadStatus = "contacted" | "ineligible" | "lost" | "new" | "qualified" | "signed_up";
+export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
 export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
-
-export type YouthParticipationStatus = "active" | "inactive";
 
 export interface Addresses {
   address: string;
@@ -50,6 +50,18 @@ export interface Addresses {
   province: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface AttendanceRecords {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  marked_at: Generated<Timestamp>;
+  marked_by: string;
+  notes: string | null;
+  session_id: string;
+  status: AttendanceStatus;
+  updated_at: Generated<Timestamp>;
+  youth_id: string;
 }
 
 export interface AuditLog {
@@ -78,6 +90,43 @@ export interface AuthLog {
 export interface BaseTable {
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface CohortActivities {
+  cohort_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  description: string | null;
+  id: Generated<string>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface CohortEnrollments {
+  cohort_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  enrolled_on: Generated<Timestamp>;
+  id: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  withdrawn_on: Timestamp | null;
+  youth_id: string;
+}
+
+export interface CohortSessions {
+  activity_id: string;
+  cancelled_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  ends_at: Timestamp;
+  focus: string | null;
+  id: Generated<string>;
+  notes: string | null;
+  starts_at: Timestamp;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -120,6 +169,7 @@ export interface Leads {
   contact_last_name: string;
   contact_phone_number: string;
   contact_relationship: ContactType;
+  converted_youth_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   discovery_source: DiscoverySource;
@@ -127,7 +177,7 @@ export interface Leads {
   id: Generated<string>;
   notes: string | null;
   origin: LeadOrigin;
-  program_id: string | null;
+  program_of_interest_id: string | null;
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;
@@ -137,7 +187,20 @@ export interface Leads {
   youth_last_name: string;
 }
 
+export interface ProgramCohorts {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  ends_on: Timestamp;
+  id: Generated<string>;
+  name: string;
+  program_id: string;
+  starts_on: Timestamp;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface Programs {
+  description: string | null;
   id: Generated<string>;
   name: string;
 }
@@ -294,37 +357,26 @@ export interface YouthProfiles {
   date_of_birth: Timestamp | null;
   grade_level: number | null;
   id: Generated<string>;
-  program_id: string | null;
+  notes: string | null;
   school_id: string | null;
-  status: Generated<YouthParticipationStatus>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   user_id: string;
 }
 
-export interface YouthWorksheets {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  file_data: Buffer | null;
-  file_size: number | null;
-  file_type: string | null;
-  id: Generated<string>;
-  metadata: Generated<Json | null>;
-  note: string | null;
-  title: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-  youth_id: string;
-}
-
 export interface DB {
   addresses: Addresses;
+  attendance_records: AttendanceRecords;
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
+  cohort_activities: CohortActivities;
+  cohort_enrollments: CohortEnrollments;
+  cohort_sessions: CohortSessions;
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   leads: Leads;
+  program_cohorts: ProgramCohorts;
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
@@ -341,5 +393,4 @@ export interface DB {
   user_trusted_devices: UserTrustedDevices;
   users: Users;
   youth_profiles: YouthProfiles;
-  youth_worksheets: YouthWorksheets;
 }

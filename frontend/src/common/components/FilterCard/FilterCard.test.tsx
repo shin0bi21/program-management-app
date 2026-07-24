@@ -16,7 +16,7 @@ function Harness() {
 
 function openStatus() {
   fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
 }
 
 describe('FilterCard', () => {
@@ -69,5 +69,29 @@ describe('FilterCard', () => {
     expect(screen.getByRole('menuitem', { name: 'Status' })).toHaveFocus();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
     expect(screen.getByRole('menuitem', { name: 'Back to filter categories' })).toHaveFocus();
+  });
+
+  it('keeps only one draft value for a single-select category', () => {
+    const singleCategories = [{ ...categories[0], selectionMode: 'single' as const }];
+    render(<FilterCard categories={singleCategories} values={{ status: [] }} onApply={vi.fn()} />);
+
+    openStatus();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Inactive' }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Active' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Inactive' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('keeps Apply disabled when the selected single value is clicked again', () => {
+    const singleCategories = [{ ...categories[0], selectionMode: 'single' as const }];
+    render(<FilterCard categories={singleCategories} values={{ status: ['active'] }} onApply={vi.fn()} />);
+
+    openStatus();
+    expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Active' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
   });
 });

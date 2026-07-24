@@ -25,9 +25,20 @@ describe('ExpressionsOfInterest', () => {
       id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
       school: 'Test School', contactFirstName: 'Parent', contactLastName: 'Contact',
       contactPhoneNumber: '416-555-0100', contactRelationship: 'parent', discoverySource: 'online',
-      notes: null, status: 'new', createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
+      notes: 'Follow up next week', status: 'new', createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
       suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
     }]);
+  });
+
+  it('shows contact and notes when a row is selected without View buttons', async () => {
+    render(<MemoryRouter><ExpressionsOfInterest /></MemoryRouter>);
+    const youthName = await screen.findByText('Avery Interest');
+
+    expect(screen.queryByRole('button', { name: 'View' })).not.toBeInTheDocument();
+    fireEvent.click(youthName.closest('tr')!);
+    expect(screen.getByText('Parent Contact')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0100')).toBeInTheDocument();
+    expect(screen.getByText('Follow up next week')).toBeInTheDocument();
   });
 
   it('renders the inferred program without a create action', async () => {

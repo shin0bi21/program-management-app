@@ -1,9 +1,10 @@
 .table-wrapper {
   overflow-y: auto;
   overflow-x: auto;
+  overscroll-behavior: none;
   background-color: var(--color-white);
-  box-shadow: var(--shadow-card);
-  border-radius: 8px;
+  border: 1px solid var(--ink-10);
+  border-radius: var(--radius-sm);
 }
 
 .table {
@@ -13,29 +14,52 @@
 }
 
 .table thead th {
-  background-color: var(--brand-ink);
+  background-color: var(--color-surface-warm);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .table th {
-  padding: 1rem;
+  padding: 0.875rem 1rem;
   text-align: left;
   font-weight: 600;
-  color: var(--color-white);
-  border-bottom: none;
+  color: var(--color-body);
+  border-bottom: 1px solid var(--ink-10);
   white-space: nowrap;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
 }
 
 .table td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--ink-12);
+  padding: 0.9375rem 1rem;
+  border-bottom: 1px solid var(--ink-08);
   color: var(--color-ink);
 }
 
+.table tbody tr:nth-child(even) {
+  background-color: var(--ink-04);
+}
+
 .table tbody tr:hover {
-  background-color: var(--color-surface);
+  background-color: var(--ink-06);
+}
+
+.table tbody tr.table-row--selectable {
+  cursor: pointer;
+}
+
+.table tbody tr[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+}
+
+.table tbody tr.table-row--selected {
+  background: var(--color-accent-soft);
+}
+
+.table tbody tr.table-row--selected:hover {
+  background: var(--color-accent-selected);
 }
 
 .table tbody tr:last-child td {
@@ -51,6 +75,12 @@
 }
 
 .table tbody .table-empty-row:hover {
+  background-color: transparent;
+}
+
+.table tbody .table-loading-row,
+.table tbody .table-error-row,
+.table tbody .table-empty-row {
   background-color: transparent;
 }
 
@@ -73,20 +103,24 @@
 }
 
 .table-wrapper::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: var(--color-white);
   border-radius: 4px;
 }
 
 .table-wrapper::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--ink-20);
   border-radius: 4px;
 }
 
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--ink-35);
 }
 
-.col-actions {
-  width: 62px;
-  max-width: 62px;
+.table th.col-actions,
+.table td.col-actions {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  padding: 0.5rem;
+  text-align: center;
 }

@@ -14,7 +14,7 @@ export function applyLeadFilters(filters: LeadQuery) {
     ? sql`CONCAT_WS(' ', youth_first_name, youth_last_name, school) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'`
     : sql`TRUE`;
   const programFilter = filters.programIds.length
-    ? sql`program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
+    ? sql`program_of_interest_id = ANY(${sql.array(filters.programIds)}::uuid[])`
     : sql`TRUE`;
 
   return sql`${statusFilter} AND ${programFilter} AND ${searchFilter}`;

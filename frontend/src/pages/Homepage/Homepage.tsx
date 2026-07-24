@@ -28,7 +28,7 @@ const partners = [
 
 const teamResources = [
   { name: 'Amanat',   role: 'Program Facilitator', badge: 'Co-founder', education: 'Master of Social Work', school: 'University of Windsor',          bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.' },
-  { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
+  { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  imageSrc: '/team/quinton.png', bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
   { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
   { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Psychology',           school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
   { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },
@@ -43,7 +43,7 @@ export default function Homepage() {
   if (loading) return null
 
   const content = (
-    <main className="homepage-container">
+    <main className="homepage-container homepage-theme">
         <HeroSection photos={heroSectionPhotos} />
         <ProgrammingSection />
 
@@ -75,7 +75,11 @@ export default function Homepage() {
                 <h2 id="resources-section-title" className="section-title">Meet our team</h2>
               </div>
             </div>
-            <div className="resource-cards-grid" aria-label="Employee and resource contacts">
+            <div
+              className="resource-cards-grid"
+              role="list"
+              aria-labelledby="resources-section-title"
+            >
               {teamResources.map((resource) => (
                 <ResourceCard key={resource.name} {...resource} />
               ))}
@@ -114,9 +118,9 @@ export default function Homepage() {
   }
 
   return (
-    <>
+    <div className="homepage-theme">
       <PublicTopBar />
       {content}
-    </>
+    </div>
   )
 }

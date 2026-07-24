@@ -1,7 +1,6 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
 import type { ExpressionOfInterestQuery, UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
-import { suggestProgramNameForAge } from './programService';
 import { applyExpressionOfInterestFilters } from './queryFilters/expressionOfInterestFilters';
 
 export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuery) {
@@ -94,11 +93,6 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
     }
 
     const expression = expressions[0];
-    const suggestedProgramName = suggestProgramNameForAge(expression.age);
-    const programs = suggestedProgramName
-      ? await tx<{ id: string }[]>`SELECT id FROM programs WHERE name = ${suggestedProgramName} LIMIT 1`
-      : [];
-    const programId = programs[0]?.id ?? null;
     const existingLead = await tx`
       SELECT id
       FROM leads
@@ -117,7 +111,7 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         youth_last_name,
         age,
         school,
-        program_id,
+        program_of_interest_id,
         contact_first_name,
         contact_last_name,
         contact_phone_number,
@@ -133,7 +127,7 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         ${expression.youthLastName},
         ${expression.age},
         ${expression.school},
-        ${programId},
+        ${null},
         ${expression.contactFirstName},
         ${expression.contactLastName},
         ${expression.contactPhoneNumber},
@@ -151,8 +145,8 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         youth_last_name,
         age,
         school,
-        program_id,
-        (SELECT name FROM programs WHERE id = program_id) AS program_name,
+        program_of_interest_id,
+        (SELECT name FROM programs WHERE id = program_of_interest_id) AS program_of_interest_name,
         contact_first_name,
         contact_last_name,
         contact_phone_number,

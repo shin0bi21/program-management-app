@@ -26,15 +26,6 @@ vi.mock('../../../../common/hooks/useSchools', () => ({
   }),
 }));
 
-vi.mock('../../../../common/hooks/usePrograms', () => ({
-  usePrograms: () => ({
-    programs: [{ id: 'program-1', name: 'Soft Skills' }],
-    setPrograms: vi.fn(),
-    loading: false,
-    error: '',
-  }),
-}));
-
 vi.mock('../../../../common/context/AuthContext', () => ({
   useAuth: () => authState,
 }));
@@ -116,19 +107,6 @@ describe('YouthModal', () => {
       expect(screen.queryByRole('menuitem', { name: '+ Add school' })).not.toBeInTheDocument();
     });
 
-    it('offers inline program creation only with program write permission', () => {
-      authState.permissions = ['write:programs'];
-      const { unmount } = renderModal();
-      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
-      expect(screen.getByRole('menuitem', { name: '+ Add program' })).toBeInTheDocument();
-      unmount();
-
-      authState.permissions = [];
-      renderModal();
-      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
-      expect(screen.queryByRole('menuitem', { name: '+ Add program' })).not.toBeInTheDocument();
-    });
-
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
       expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();
@@ -155,7 +133,7 @@ describe('YouthModal', () => {
   });
 
   describe('api calls', () => {
-    it('calls setYouth with active status when creating', async () => {
+    it('calls setYouth with the profile fields when creating', async () => {
       renderModal();
       fillRequiredFields();
       submitForm();
@@ -163,7 +141,6 @@ describe('YouthModal', () => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
           firstName: 'Jamie',
           lastName: 'Test',
-          status: 'active',
         }));
       });
     });
@@ -191,15 +168,14 @@ describe('YouthModal', () => {
       });
     });
 
-    it('submits the selected program id', async () => {
+    it('submits normalized profile notes', async () => {
       renderModal();
       fillRequiredFields();
-      fireEvent.click(screen.getByRole('button', { name: 'Program' }));
-      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
+      fireEvent.change(screen.getByLabelText('Notes'), { target: { value: ' Follow up with family ' } });
       submitForm();
 
       await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ programId: 'program-1' }));
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ notes: 'Follow up with family' }));
       });
     });
 
@@ -223,21 +199,14 @@ describe('YouthModal', () => {
       });
     });
 
-    it('preserves active status when updating an active profile', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', status: 'active' });
+    it('does not submit the cohort-derived status when updating', async () => {
+      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith' });
       renderModal({ youthData: profile });
       submitForm();
       await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
-      });
-    });
-
-    it('preserves inactive status when updating an inactive profile', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', status: 'inactive' });
-      renderModal({ youthData: profile });
-      submitForm();
-      await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ status: 'inactive' }));
+        expect(mockSetYouth).toHaveBeenCalledWith(
+          expect.not.objectContaining({ status: expect.anything() }),
+        );
       });
     });
   });
