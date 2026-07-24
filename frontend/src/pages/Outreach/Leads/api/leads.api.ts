@@ -13,4 +13,5 @@ export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/lead
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);
 export const updateLeadStatus = (id: string, status: LeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
-export const signUpLead = (id: string) => apiClient.post<Lead>(`/leads/${id}/sign-up`, {});
+export const signUpLead = (id: string, cohortId: string | null) =>
+  apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId });

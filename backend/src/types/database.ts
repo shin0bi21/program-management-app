@@ -177,7 +177,7 @@ export interface Leads {
   id: Generated<string>;
   notes: string | null;
   origin: LeadOrigin;
-  program_id: string | null;
+  program_of_interest_id: string | null;
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import type { CreateLeadInput, LeadQuery, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
 import { applyLeadFilters } from './queryFilters/leadFilters';
 import { audit } from './auditService';
 import { setContacts } from './contactService';
@@ -15,8 +15,8 @@ const leadColumns = sql`
   youth_last_name,
   age,
   school,
-  program_id,
-  (SELECT name FROM programs WHERE id = program_id) AS program_name,
+  program_of_interest_id,
+  (SELECT name FROM programs WHERE id = program_of_interest_id) AS program_of_interest_name,
   contact_first_name,
   contact_last_name,
   contact_phone_number,
@@ -49,7 +49,7 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       youth_last_name,
       age,
       school,
-      program_id,
+      program_of_interest_id,
       contact_first_name,
       contact_last_name,
       contact_phone_number,
@@ -64,7 +64,7 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       ${data.youthLastName},
       ${data.age},
       ${data.school},
-      ${data.programId ?? null},
+      ${data.programOfInterestId ?? null},
       ${data.contactFirstName},
       ${data.contactLastName},
       ${data.contactPhoneNumber},
@@ -86,7 +86,7 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
         youth_last_name = ${data.youthLastName},
         age = ${data.age},
         school = ${data.school},
-        program_id = ${data.programId ?? null},
+        program_of_interest_id = ${data.programOfInterestId ?? null},
         contact_first_name = ${data.contactFirstName},
         contact_last_name = ${data.contactLastName},
         contact_phone_number = ${data.contactPhoneNumber},
@@ -121,7 +121,7 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
   return rows[0];
 }
 
-export async function signUpLead(id: string, actorId: string) {
+export async function signUpLead(id: string, data: SignUpLeadInput, actorId: string) {
   const transactionId = crypto.randomUUID();
 
   const convertedYouthId = await sql.begin(async tx => {
@@ -133,7 +133,7 @@ export async function signUpLead(id: string, actorId: string) {
       youthFirstName: string;
       youthLastName: string;
       school: string;
-      programId: string | null;
+      programOfInterestId: string | null;
       contactFirstName: string;
       contactLastName: string;
       contactPhoneNumber: string;
@@ -142,7 +142,7 @@ export async function signUpLead(id: string, actorId: string) {
       status: string;
     }[]>`
       SELECT id, expression_of_interest_id, converted_youth_id,
-             youth_first_name, youth_last_name, school, program_id,
+             youth_first_name, youth_last_name, school, program_of_interest_id,
              contact_first_name, contact_last_name, contact_phone_number,
              contact_relationship, notes, status
       FROM leads
@@ -154,6 +154,20 @@ export async function signUpLead(id: string, actorId: string) {
     const lead = leads[0];
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
       throw new ConflictError('Lead has already been signed up');
+    }
+
+    if (data.cohortId) {
+      const cohorts = await trx<{ id: string; programId: string }[]>`
+        SELECT id, program_id
+        FROM program_cohorts
+        WHERE id = ${data.cohortId}
+          AND CURRENT_DATE <= ends_on
+        FOR UPDATE
+      `;
+      if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');
+      if (lead.programOfInterestId && cohorts[0].programId !== lead.programOfInterestId) {
+        throw new ConflictError('Selected cohort does not belong to the lead program of interest');
+      }
     }
 
     const users = await trx<{ id: string }[]>`
@@ -181,18 +195,32 @@ export async function signUpLead(id: string, actorId: string) {
 
     await trx`
       INSERT INTO youth_profiles (
-        user_id, school_id, program_id, notes, status, created_by, updated_by
+        user_id, school_id, notes, created_by, updated_by
       ) VALUES (
-        ${youthId}, ${schoolId}, ${lead.programId}, ${lead.notes}, 'active', ${actorId}, ${actorId}
+        ${youthId}, ${schoolId}, ${lead.notes}, ${actorId}, ${actorId}
       )
     `;
     await audit(trx, actorId, transactionId, 'youth_profiles', youthId, 'INSERT', null, {
       userId: youthId,
       schoolId,
-      programId: lead.programId,
       notes: lead.notes,
-      status: 'active',
     });
+
+    if (data.cohortId) {
+      const enrollments = await trx<{ id: string; enrolledOn: string }[]>`
+        INSERT INTO cohort_enrollments (
+          cohort_id, youth_id, created_by, updated_by
+        )
+        VALUES (${data.cohortId}, ${youthId}, ${actorId}, ${actorId})
+        RETURNING id, enrolled_on::text AS enrolled_on
+      `;
+      await audit(trx, actorId, transactionId, 'cohort_enrollments', enrollments[0].id, 'INSERT', null, {
+        id: enrollments[0].id,
+        cohortId: data.cohortId,
+        youthId,
+        enrolledOn: enrollments[0].enrolledOn,
+      });
+    }
 
     await setContacts(youthId, [{
       firstName: lead.contactFirstName,

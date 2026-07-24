@@ -201,7 +201,8 @@ describe('Expression of interest API', () => {
       discoverySource: 'online',
       notes: 'Needs follow-up',
       status: 'new',
-      programName: 'Soft Skills',
+      programOfInterestId: null,
+      programOfInterestName: null,
       createdBy: adminUserId,
     }));
 
@@ -224,7 +225,7 @@ describe('Expression of interest API', () => {
     expect(res.body.error).toBe('This expression of interest has already been converted');
   });
 
-  it('defaults ages 16–19 to Job Readiness', async () => {
+  it('does not automatically assign a program of interest during conversion', async () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id FROM expressions_of_interest WHERE youth_last_name = ${jobReadinessYouthLastName} LIMIT 1
     `;
@@ -234,6 +235,7 @@ describe('Expression of interest API', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(201);
-    expect(res.body.programName).toBe('Job Readiness');
+    expect(res.body.programOfInterestId).toBeNull();
+    expect(res.body.programOfInterestName).toBeNull();
   });
 });

@@ -26,7 +26,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
           register={register}
           errors={errors}
           programField={
-            <FormField id="lead-programId" label="Program" error={errors.programId?.message}>
+            <FormField id="lead-programId" label="Program of Interest" error={errors.programId?.message}>
               <Controller
                 name="programId"
                 control={control}
