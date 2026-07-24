@@ -2,8 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import { TooManyRequestsError } from '../errors';
 
-// Skip rate limiting in test environment
-const skipRateLimiting = process.env.NODE_ENV === 'test';
+// Tests bypass every limiter. Development bypasses only the shared general
+// limiter so normal page reloads and hot-module updates cannot exhaust it.
+const skipAllRateLimiting = process.env.NODE_ENV === 'test';
+const skipGeneralRateLimiting =
+  skipAllRateLimiting || process.env.NODE_ENV === 'development';
 
 // Forward to errorHandler via next(err) — keeps response shape and logging consistent.
 const rateLimitHandler = (message: string) =>
@@ -17,7 +20,7 @@ export const generalLimiter = rateLimit({
   max: 100,
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false,  // Disable `X-RateLimit-*` headers
-  skip: () => skipRateLimiting,
+  skip: () => skipGeneralRateLimiting,
   handler: rateLimitHandler('Too many requests from this IP, please try again later.'),
 });
 
@@ -27,7 +30,7 @@ export const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => skipRateLimiting,
+  skip: () => skipAllRateLimiting,
   handler: rateLimitHandler('Too many authentication attempts, please try again later.'),
 });
 
@@ -37,7 +40,7 @@ export const strictLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => skipRateLimiting,
+  skip: () => skipAllRateLimiting,
   handler: rateLimitHandler('Too many requests for this operation, please try again later.'),
 });
 
@@ -47,6 +50,6 @@ export const passwordResetLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => skipRateLimiting,
+  skip: () => skipAllRateLimiting,
   handler: rateLimitHandler('Too many password reset attempts, please try again in an hour.'),
 });
