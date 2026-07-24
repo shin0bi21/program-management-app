@@ -9,6 +9,8 @@ export type AccountStatus = "active" | "inactive" | "invited";
 
 export type AgeGroup = "junior_youth" | "senior_youth";
 
+export type AttendanceStatus = "absent" | "excused" | "late" | "present";
+
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
 
 export type DiscoverySource = "community_outreach" | "friend_family" | "online" | "other" | "school";
@@ -52,6 +54,18 @@ export interface Addresses {
   updated_by: string | null;
 }
 
+export interface AttendanceRecords {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  marked_at: Generated<Timestamp>;
+  marked_by: string;
+  notes: string | null;
+  session_id: string;
+  status: AttendanceStatus;
+  updated_at: Generated<Timestamp>;
+  youth_id: string;
+}
+
 export interface AuditLog {
   action: string;
   created_at: Generated<Timestamp>;
@@ -78,6 +92,43 @@ export interface AuthLog {
 export interface BaseTable {
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface CohortActivities {
+  cohort_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  description: string | null;
+  id: Generated<string>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface CohortEnrollments {
+  cohort_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  enrolled_on: Generated<Timestamp>;
+  id: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  withdrawn_on: Timestamp | null;
+  youth_id: string;
+}
+
+export interface CohortSessions {
+  activity_id: string;
+  cancelled_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  ends_at: Timestamp;
+  focus: string | null;
+  id: Generated<string>;
+  notes: string | null;
+  starts_at: Timestamp;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -138,7 +189,20 @@ export interface Leads {
   youth_last_name: string;
 }
 
+export interface ProgramCohorts {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  ends_on: Timestamp;
+  id: Generated<string>;
+  name: string;
+  program_id: string;
+  starts_on: Timestamp;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface Programs {
+  description: string | null;
   id: Generated<string>;
   name: string;
 }
@@ -321,12 +385,17 @@ export interface YouthWorksheets {
 
 export interface DB {
   addresses: Addresses;
+  attendance_records: AttendanceRecords;
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
+  cohort_activities: CohortActivities;
+  cohort_enrollments: CohortEnrollments;
+  cohort_sessions: CohortSessions;
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   leads: Leads;
+  program_cohorts: ProgramCohorts;
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;

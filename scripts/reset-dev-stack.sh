@@ -47,6 +47,11 @@ else
   echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
 fi
 
+# Step 5b: Seed deterministic programming demo data
+echo ""
+echo "Seeding programming demo data..."
+docker compose exec -T backend npm run seed:programming-demo
+
 # Step 6: Regenerate TypeScript types from live DB (includes backup tables)
 echo ""
 echo "Regenerating database types..."
