@@ -40,8 +40,10 @@ export default function ExpressionsOfInterest() {
   }, [search]);
 
   useEffect(() => {
-    if (selectedSubmission && !submissions.some(item => item.id === selectedSubmission.id)) setSelectedSubmission(null);
-  }, [selectedSubmission, submissions]);
+    setSelectedSubmission(current => current
+      ? submissions.find(item => item.id === current.id) ?? null
+      : null);
+  }, [submissions]);
 
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
   const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
@@ -114,6 +116,7 @@ export default function ExpressionsOfInterest() {
       width: '32px',
       render: (item: ExpressionOfInterest) => item.status === 'converted' ? null : (
         <ActionsMenu
+          ariaLabel={`More actions for ${submissionYouthName(item)}`}
           items={[
             { id: 'convert', label: 'Convert to Lead', onClick: () => void handleConvert(item) },
             { id: 'reviewed', label: 'Mark Reviewed', onClick: () => void handleStatusUpdate(item, 'reviewed') },

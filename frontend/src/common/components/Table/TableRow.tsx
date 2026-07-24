@@ -33,7 +33,7 @@ function TableRowComponent<T>({
     const target = event.target as HTMLElement;
     if (isInteractiveTarget(target)) return;
 
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (onSelect && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
       select();
       return;
@@ -47,12 +47,15 @@ function TableRowComponent<T>({
 
   return (
     <tr
-      className={selected ? 'table-row--selected' : undefined}
+      className={[
+        selected ? 'table-row--selected' : '',
+        onSelect ? 'table-row--selectable' : '',
+      ].filter(Boolean).join(' ') || undefined}
       aria-selected={onSelect ? selected : undefined}
       data-table-row-index={rowIndex}
-      tabIndex={onSelect ? (tabbable ? 0 : -1) : undefined}
+      tabIndex={tabbable ? 0 : -1}
       onClick={onSelect ? handleClick : undefined}
-      onKeyDown={onSelect ? handleKeyDown : undefined}
+      onKeyDown={handleKeyDown}
     >
       {columns.map(column => (
         <td key={column.key} className={column.className}>{column.render(item)}</td>

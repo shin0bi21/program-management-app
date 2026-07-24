@@ -15,6 +15,11 @@ describe('ActionsMenu', () => {
     expect(screen.getByRole('button')).toBeInTheDocument();
   });
 
+  it('uses the supplied accessible trigger label', () => {
+    render(<ActionsMenu items={makeItems()} ariaLabel="More actions for Jane Doe" />);
+    expect(screen.getByRole('button', { name: 'More actions for Jane Doe' })).toBeInTheDocument();
+  });
+
   it('does not show the menu initially', () => {
     render(<ActionsMenu items={makeItems()} />);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
@@ -29,7 +34,7 @@ describe('ActionsMenu', () => {
   });
 
   it('uses the rendered menu height when placement flips above the trigger', () => {
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       if (this.classList.contains('floating-menu-panel')) {
         return { top: 0, bottom: 240, left: 0, right: 160, width: 160, height: 240, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
       }

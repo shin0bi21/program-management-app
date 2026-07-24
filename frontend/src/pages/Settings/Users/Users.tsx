@@ -117,20 +117,23 @@ export default function Users() {
       className: 'col-actions',
       width: '32px',
       render: account => (
-        <ActionsMenu items={[
-          ...(isAdmin && account.role !== 'youth'
-            ? [{ id: 'edit', label: 'Edit', onClick: () => setModalTarget(account) }]
-            : []),
-          ...(account.status === 'invited'
-            ? [{ id: 'revoke', label: 'Revoke Invite', variant: 'danger' as const, onClick: () => requestRevoke(account) }]
-            : []),
-          ...(account.status === 'active'
-            ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => requestStatusToggle(account) }]
-            : []),
-          ...(account.status === 'inactive'
-            ? [{ id: 'activate', label: 'Activate', onClick: () => requestStatusToggle(account) }]
-            : []),
-        ]} />
+        <ActionsMenu
+          ariaLabel={`More actions for ${account.firstName} ${account.lastName}`}
+          items={[
+            ...(isAdmin && account.role !== 'youth'
+              ? [{ id: 'edit', label: 'Edit', onClick: () => setModalTarget(account) }]
+              : []),
+            ...(account.status === 'invited'
+              ? [{ id: 'revoke', label: 'Revoke Invite', variant: 'danger' as const, onClick: () => requestRevoke(account) }]
+              : []),
+            ...(account.status === 'active'
+              ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => requestStatusToggle(account) }]
+              : []),
+            ...(account.status === 'inactive'
+              ? [{ id: 'activate', label: 'Activate', onClick: () => requestStatusToggle(account) }]
+              : []),
+          ]}
+        />
       ),
     }];
   }, [canWrite, isAdmin]);

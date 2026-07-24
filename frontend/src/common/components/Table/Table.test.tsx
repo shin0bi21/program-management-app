@@ -81,6 +81,28 @@ describe('Table', () => {
     expect(first).toHaveFocus();
   });
 
+  it('provides arrow-key row navigation without making rows selectable', () => {
+    render(<Table
+      columns={columns}
+      data={[
+        { id: '1', name: 'First' },
+        { id: '2', name: 'Second' },
+      ]}
+      keyExtractor={row => row.id}
+    />);
+
+    const first = screen.getByRole('row', { name: /First Active/ });
+    const second = screen.getByRole('row', { name: /Second Active/ });
+
+    expect(first).toHaveAttribute('tabindex', '0');
+    expect(first).not.toHaveClass('table-row--selectable');
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowDown' });
+    expect(second).toHaveFocus();
+    fireEvent.keyDown(second, { key: 'ArrowUp' });
+    expect(first).toHaveFocus();
+  });
+
   it('does not select a row when an interactive control is clicked', () => {
     const onSelect = vi.fn();
     const onAction = vi.fn();

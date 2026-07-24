@@ -16,6 +16,7 @@ export interface FilterCardCategory {
   id: string;
   label: string;
   options: FilterCardOption[];
+  selectionMode?: 'single' | 'multiple';
 }
 
 export type FilterCardValues = Record<string, string[]>;
@@ -61,6 +62,12 @@ export default function FilterCard({ categories, values, onApply, onClearAll, la
   const toggleOption = (categoryId: string, value: string) => {
     setDrafts(current => {
       const selected = current[categoryId] ?? [];
+      const category = categories.find(item => item.id === categoryId);
+      if (category?.selectionMode === 'single') {
+        return selected.includes(value)
+          ? current
+          : { ...current, [categoryId]: [value] };
+      }
       return {
         ...current,
         [categoryId]: selected.includes(value)
