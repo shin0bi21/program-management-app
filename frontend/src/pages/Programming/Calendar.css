@@ -1,0 +1,22 @@
+.calendar-page {
+  width: min(1440px, 100%);
+  height: calc(100vh - 80px);
+  min-height: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-page .page-header {
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .calendar-page {
+    height: auto;
+  }
+
+  .calendar-page .page-header {
+    margin-bottom: var(--space-4);
+  }
+}

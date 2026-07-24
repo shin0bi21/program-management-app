@@ -1,0 +1,137 @@
+.programming-calendar {
+  --fc-classic-button: var(--color-accent);
+  --fc-classic-button-border: var(--color-accent);
+  --fc-classic-button-strong: var(--color-ink);
+  --fc-classic-button-strong-border: var(--color-ink);
+  --fc-classic-button-outline: var(--accent-28);
+  --fc-classic-primary: var(--color-accent);
+  --fc-classic-primary-foreground: var(--color-white);
+  --fc-classic-event: var(--color-accent);
+  --fc-classic-event-contrast: var(--color-white);
+  --fc-classic-highlight: var(--accent-12);
+  --fc-classic-today: var(--accent-10);
+  --fc-classic-background: var(--color-white);
+  --fc-classic-foreground: var(--color-ink);
+  --fc-classic-muted-foreground: var(--color-muted);
+  --fc-classic-border: var(--ink-12);
+
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--space-4);
+  border: 1px solid var(--ink-10);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+
+.programming-calendar .fc {
+  height: 100%;
+}
+
+.programming-calendar .fc-event {
+  cursor: pointer;
+}
+
+.programming-calendar .fc-event * {
+  cursor: inherit;
+}
+
+.programming-calendar .fc-daygrid-event-harness,
+.programming-calendar .fc-daygrid-event,
+.programming-calendar .fc-event-main,
+.programming-calendar .fc-event-main-frame,
+.programming-calendar .fc-event-title-container,
+.programming-calendar .fc-event-title {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.programming-calendar .fc-daygrid-event,
+.programming-calendar .fc-event-main {
+  overflow: hidden;
+}
+
+.programming-calendar .fc-event-main-frame {
+  align-items: flex-start;
+}
+
+.programming-calendar .fc-event-title-container,
+.programming-calendar .fc-daygrid-dot-event .fc-event-title {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.programming-calendar .fc-daygrid-event,
+.programming-calendar .fc-event-title,
+.programming-calendar .fc-event-title-container {
+  white-space: normal;
+}
+
+.programming-calendar .fc-event-title {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+.programming-calendar-event {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding-block: 2px;
+  white-space: normal;
+}
+
+.programming-calendar-event,
+.programming-calendar-event * {
+  pointer-events: none;
+}
+
+.programming-calendar-event__activity,
+.programming-calendar-event__focus,
+.programming-calendar-event__time {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.programming-calendar-event__activity {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.programming-calendar-event__focus,
+.programming-calendar-event__time {
+  opacity: 0.82;
+  font-size: 0.82em;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.programming-calendar-event__time {
+  word-break: normal;
+}
+
+@media (max-width: 1000px) {
+  .programming-calendar {
+    overflow: auto;
+  }
+
+  .programming-calendar .fc {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 768px) {
+  .programming-calendar {
+    flex: none;
+    min-height: 680px;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+  }
+}

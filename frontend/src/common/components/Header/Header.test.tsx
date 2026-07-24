@@ -91,4 +91,20 @@ describe('Header youth navigation', () => {
 
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
   });
+
+  it('shows Cohorts, Sessions, and Calendar in Programming navigation', () => {
+    authState.permissions = ['read:programs', 'read:cohorts', 'read:attendance'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter initialEntries={['/programming']}>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Programming' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cohorts' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Calendar' })).toBeInTheDocument();
+  });
 });
