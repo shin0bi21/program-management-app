@@ -17,6 +17,7 @@ import ManageCohortsModal from './components/ManageCohortsModal/ManageCohortsMod
 import { useAuth } from '../../common/context/AuthContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/hooks/usePrograms';
+import useTableSelection from '../../common/hooks/useTableSelection';
 import type { YouthFilters } from '../../common/types/youth';
 import { getCohorts } from '../../common/api/cohorts.api';
 import type { ProgramCohort } from '../../common/types/cohort';
@@ -35,8 +36,12 @@ export default function Youth() {
   }), [cohortFilters, debouncedSearch, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [manageCohortsYouthId, setManageCohortsYouthId] = useState<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
   const { youth, setYouth, loading, error, refetch } = useYouth(queryFilters);
+  const {
+    selectedItem: selectedProfile,
+    selectedKey: selectedProfileId,
+    selectItem: selectProfile,
+  } = useTableSelection(youth);
   const { programs } = usePrograms();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
@@ -50,12 +55,6 @@ export default function Youth() {
   useEffect(() => {
     getCohorts().then(setCohorts).catch(() => setCohorts([]));
   }, []);
-
-  useEffect(() => {
-    setSelectedProfile(current => current
-      ? youth.find(profile => profile.id === current.id) ?? null
-      : null);
-  }, [youth]);
 
   const cohortsForPrograms = useMemo(
     () => programFilters.length
@@ -130,7 +129,6 @@ export default function Youth() {
       key: 'actions',
       header: '',
       className: 'col-actions',
-      width: '32px',
       render: (profile) => canWrite || canManageCohorts ? (
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
@@ -176,7 +174,7 @@ export default function Youth() {
 
         <TableDetailLayout
           ariaLabel="Youth profiles"
-          table={<Table columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || programFilters.length || cohortFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} maxHeight="calc(100vh - 200px)" selectedKey={selectedProfile?.id} onRowSelect={setSelectedProfile} />}
+          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || programFilters.length || cohortFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
           details={<>
             <PrimaryContactCard contact={selectedProfile?.contacts?.[0] ? {
               firstName: selectedProfile.contacts[0].firstName,

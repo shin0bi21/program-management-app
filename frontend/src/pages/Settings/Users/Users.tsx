@@ -115,7 +115,6 @@ export default function Users() {
       key: 'actions',
       header: '',
       className: 'col-actions',
-      width: '32px',
       render: account => (
         <ActionsMenu
           ariaLabel={`More actions for ${account.firstName} ${account.lastName}`}
@@ -178,13 +177,13 @@ export default function Users() {
 
         <section className="accounts-panel" aria-label="Accounts">
           <Table
+            ariaLabel="Accounts"
             columns={columns}
             data={accounts}
             loading={loading}
             error={error}
             emptyMessage={search || statusFilters.length || roleFilters.length ? 'No accounts match these filters' : 'No accounts found'}
             keyExtractor={account => account.id}
-            maxHeight="calc(100vh - 250px)"
           />
         </section>
       </main>

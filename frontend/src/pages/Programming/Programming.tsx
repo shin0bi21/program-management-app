@@ -16,6 +16,7 @@ import { useAuth } from '../../common/context/AuthContext';
 import { useFloatingMenu } from '../../common/hooks/useFloatingMenu';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
+import useTableSelection from '../../common/hooks/useTableSelection';
 import type { ProgramCohort } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import EnrollYouthModal from './components/EnrollYouthModal';
@@ -35,7 +36,6 @@ export default function Programming() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedCohortId, setSelectedCohortId] = useState<string | null>(null);
   const [programModalOpen, setProgramModalOpen] = useState(false);
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
   const [cohortProgramId, setCohortProgramId] = useState('');
@@ -83,6 +83,11 @@ export default function Programming() {
     }),
     [cohorts, debouncedSearch, selectedStatus],
   );
+  const {
+    selectedItem: selectedCohort,
+    selectedKey: selectedCohortId,
+    selectItem: selectCohort,
+  } = useTableSelection(visibleCohorts);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -103,15 +108,6 @@ export default function Programming() {
     },
   ], [programs]);
 
-  const selectedCohort = useMemo(
-    () => visibleCohorts.find(cohort => cohort.id === selectedCohortId) ?? null,
-    [selectedCohortId, visibleCohorts],
-  );
-
-  useEffect(() => {
-    if (selectedCohortId && !selectedCohort) setSelectedCohortId(null);
-  }, [selectedCohort, selectedCohortId]);
-
   const columns = useMemo<TableColumn<ProgramCohort>[]>(() => [
     { key: 'program', header: 'Program', render: cohort => cohort.programName },
     { key: 'cohort', header: 'Cohort', render: cohort => cohort.name },
@@ -129,7 +125,6 @@ export default function Programming() {
     ...(canWriteCohorts ? [{
       key: 'actions',
       header: '',
-      width: '48px',
       className: 'col-actions',
       render: (cohort: ProgramCohort) => <ActionsMenu
         ariaLabel={`More actions for ${cohort.name}`}
@@ -275,8 +270,6 @@ export default function Programming() {
       />
 
       {programsError && <p className="programming-error">{programsError}</p>}
-      {error && <p className="programming-error">{error}</p>}
-
       <section className="programming-metrics" aria-label="Programming overview">
         <article>
           <span>Youth enrolled</span>
@@ -320,13 +313,14 @@ export default function Programming() {
       </section>
 
       <Table
+        ariaLabel="Cohorts"
         columns={columns}
         data={visibleCohorts}
         loading={cohortsLoading}
+        error={error ?? undefined}
         keyExtractor={cohort => cohort.id}
         selectedKey={selectedCohortId}
-        onRowSelect={cohort => setSelectedCohortId(cohort.id)}
-        maxHeight="calc(100vh - 210px)"
+        onRowSelect={selectCohort}
         emptyMessage={selectedProgramId || selectedStatus || debouncedSearch
           ? 'No cohorts match your search and filters'
           : 'No cohorts yet'}

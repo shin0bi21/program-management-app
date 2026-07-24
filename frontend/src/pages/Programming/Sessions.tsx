@@ -166,7 +166,6 @@ export default function Sessions() {
     ...(canWriteAttendance ? [{
       key: 'actions',
       header: '',
-      width: '48px',
       className: 'col-actions',
       render: (session: ManagedSession) => <ActionsMenu
         ariaLabel={`More actions for ${session.focus || session.activityName}`}
@@ -209,6 +208,7 @@ export default function Sessions() {
         />}
       />
       <Table
+        ariaLabel="Sessions"
         columns={columns}
         data={sessions}
         loading={loading}
@@ -216,8 +216,9 @@ export default function Sessions() {
         keyExtractor={session => session.id}
         selectedKey={selectedSessionId || null}
         scrollToSelected={Boolean(selectedSessionId)}
-        maxHeight="calc(100vh - 210px)"
-        emptyMessage="No sessions match your search and filters"
+        emptyMessage={search || programId || cohortId || timingFilters.length
+          ? 'No sessions match your search and filters'
+          : 'No sessions yet'}
       />
       <AttendanceModal
         session={attendanceTarget}
