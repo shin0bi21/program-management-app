@@ -181,7 +181,7 @@ export default function Youth() {
               lastName: selectedProfile.contacts[0].lastName,
               phoneNumber: selectedProfile.contacts[0].phoneNumber,
               relationship: selectedProfile.contacts[0].type,
-            } : null} emptyMessage={selectedProfile ? 'No primary contact recorded.' : undefined} />
+            } : null} selected={selectedProfile !== null} />
             <AttendanceCard
               cohorts={selectedProfile?.cohorts}
               selected={selectedProfile !== null}

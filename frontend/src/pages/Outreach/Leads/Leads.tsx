@@ -116,7 +116,7 @@ export default function Leads() {
           lastName: selectedLead.contactLastName,
           phoneNumber: selectedLead.contactPhoneNumber,
           relationship: selectedLead.contactRelationship,
-        } : null} />
+        } : null} selected={selectedLead !== null} />
         <NotesCard notes={selectedLead?.notes} selected={selectedLead !== null} />
       </>}
     />

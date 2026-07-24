@@ -152,7 +152,7 @@ export default function ExpressionsOfInterest() {
               lastName: selectedSubmission.contactLastName,
               phoneNumber: selectedSubmission.contactPhoneNumber,
               relationship: selectedSubmission.contactRelationship,
-            } : null} />
+            } : null} selected={selectedSubmission !== null} />
             <NotesCard notes={selectedSubmission?.notes} selected={selectedSubmission !== null} />
           </>}
         />

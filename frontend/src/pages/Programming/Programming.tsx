@@ -10,6 +10,7 @@ import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../common/components/Table/Table';
+import { DashboardCard, DashboardCardGroup } from '../../common/components/DashboardCard/DashboardCard';
 import { createCohort, getCohorts } from '../../common/api/cohorts.api';
 import { createProgram } from '../../common/api/programs.api';
 import { useAuth } from '../../common/context/AuthContext';
@@ -270,20 +271,16 @@ export default function Programming() {
       />
 
       {programsError && <p className="programming-error">{programsError}</p>}
-      <section className="programming-metrics" aria-label="Programming overview">
-        <article>
-          <span>Youth enrolled</span>
+      <DashboardCardGroup ariaLabel="Programming overview">
+        <DashboardCard title="Youth enrolled" emptyMessage="No cohort selected.">
+          {selectedCohort
+            ? <strong className="dashboard-card__metric">{selectedCohort.enrolledCount}</strong>
+            : undefined}
+        </DashboardCard>
+        <DashboardCard title="Next session" emptyMessage="No cohort selected.">
           {selectedCohort ? (
-            <strong>{selectedCohort.enrolledCount}</strong>
-          ) : (
-            <p className="programming-metric-empty">No cohort selected.</p>
-          )}
-        </article>
-        <article>
-          <span>Next session</span>
-          {selectedCohort ? (
-            <div className="programming-metric-value">
-              <strong>{selectedCohort.nextSessionAt
+            <div className="dashboard-card__metric-row">
+              <strong className="dashboard-card__metric">{selectedCohort.nextSessionAt
                 ? formatShortDate(selectedCohort.nextSessionAt)
                 : 'None'}</strong>
               {selectedCohort.nextSessionId && (
@@ -296,21 +293,16 @@ export default function Programming() {
                 </Button>
               )}
             </div>
-          ) : (
-            <p className="programming-metric-empty">No cohort selected.</p>
-          )}
-        </article>
-        <article>
-          <span>Average attendance</span>
-          {selectedCohort ? (
-            <strong>{selectedCohort.averageAttendance === null
+          ) : undefined}
+        </DashboardCard>
+        <DashboardCard title="Average attendance" emptyMessage="No cohort selected.">
+          {selectedCohort
+            ? <strong className="dashboard-card__metric">{selectedCohort.averageAttendance === null
               ? '—'
               : `${selectedCohort.averageAttendance}%`}</strong>
-          ) : (
-            <p className="programming-metric-empty">No cohort selected.</p>
-          )}
-        </article>
-      </section>
+            : undefined}
+        </DashboardCard>
+      </DashboardCardGroup>
 
       <Table
         ariaLabel="Cohorts"
