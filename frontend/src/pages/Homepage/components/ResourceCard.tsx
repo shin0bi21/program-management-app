@@ -22,22 +22,30 @@ export default function ResourceCard({
   const initial = name.charAt(0).toUpperCase();
 
   return (
-    <article className="resource-card">
+    <article className="resource-card" role="listitem">
       <header className="resource-header">
         <div className="resource-photo-panel">
           {imageSrc ? (
-            <img className="resource-photo" src={imageSrc} alt={imageAlt || name} />
+            <img
+              className="resource-photo"
+              src={imageSrc}
+              alt={imageAlt ?? ''}
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
-            <div className="resource-photo resource-photo-placeholder">
+            <div
+              className="resource-photo resource-photo-placeholder"
+              aria-hidden="true"
+            >
               <span>{initial}</span>
             </div>
           )}
         </div>
         <div className="resource-heading">
           <h3 className="resource-name">{name}</h3>
-          <p className="resource-role">
-            {badge ? `${badge}, ${role}` : role}
-          </p>
+          <p className="resource-role">{role}</p>
+          {badge && <p className="resource-badge">{badge}</p>}
         </div>
       </header>
 
