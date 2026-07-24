@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import TableRow from './TableRow';
 import type { TableColumn, TableNavigationKey } from './Table.types';
 import './Table.css';
@@ -14,6 +14,7 @@ interface TableProps<T> {
   keyExtractor: (item: T) => string;
   maxHeight?: string;
   selectedKey?: string | null;
+  scrollToSelected?: boolean;
   onRowSelect?: (item: T) => void;
 }
 
@@ -26,14 +27,22 @@ export default function Table<T>({
   keyExtractor,
   maxHeight = '600px',
   selectedKey,
+  scrollToSelected = false,
   onRowSelect,
 }: TableProps<T>) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const selectedIndex = selectedKey == null ? -1 : data.findIndex(item => keyExtractor(item) === selectedKey);
   const tabbableIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
+  useEffect(() => {
+    if (!scrollToSelected || selectedIndex < 0) return;
+    wrapperRef.current
+      ?.querySelector<HTMLTableRowElement>('.table-row--selected')
+      ?.scrollIntoView?.({ block: 'nearest' });
+  }, [data, scrollToSelected, selectedIndex, selectedKey]);
+
   const navigateRows = useCallback((currentIndex: number, key: TableNavigationKey) => {
-    if (!onRowSelect || data.length === 0) return;
+    if (data.length === 0) return;
 
     let nextIndex = currentIndex;
     if (key === 'ArrowUp') nextIndex = Math.max(0, currentIndex - 1);
@@ -41,7 +50,7 @@ export default function Table<T>({
     if (key === 'Home') nextIndex = 0;
     if (key === 'End') nextIndex = data.length - 1;
 
-    onRowSelect(data[nextIndex]);
+    onRowSelect?.(data[nextIndex]);
     wrapperRef.current
       ?.querySelector<HTMLTableRowElement>(`tr[data-table-row-index="${nextIndex}"]`)
       ?.focus();

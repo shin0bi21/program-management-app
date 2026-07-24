@@ -54,7 +54,7 @@
   }
 
   .page-container--data .table-detail-layout__table > .table-wrapper {
-    height: 100%;
-    max-height: none !important;
+    height: auto;
+    max-height: 100% !important;
   }
 }

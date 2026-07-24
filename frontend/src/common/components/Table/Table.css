@@ -45,7 +45,7 @@
   background-color: var(--ink-06);
 }
 
-.table tbody tr[tabindex="0"] {
+.table tbody tr.table-row--selectable {
   cursor: pointer;
 }
 

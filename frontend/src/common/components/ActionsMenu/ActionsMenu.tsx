@@ -17,9 +17,10 @@ interface ActionsMenuProps {
   items: ActionItem[];
   disabled?: boolean;
   triggerLabel?: string;
+  ariaLabel?: string;
 }
 
-export default function ActionsMenu({ items, disabled = false, triggerLabel }: ActionsMenuProps) {
+export default function ActionsMenu({ items, disabled = false, triggerLabel, ariaLabel }: ActionsMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
@@ -45,6 +46,7 @@ export default function ActionsMenu({ items, disabled = false, triggerLabel }: A
         onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        aria-label={ariaLabel}
         disabled={disabled}
         className={triggerLabel ? 'actions-menu-trigger--labeled' : 'actions-menu-trigger'}
       >
