@@ -1358,3 +1358,34 @@
     border-left: 0;
   }
 }
+
+/* Use the hero's actual content width so authenticated layouts with a sidebar
+   do not inherit desktop sizing from the wider browser viewport. */
+@container (min-width: 981px) and (max-width: 1359px) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
+  }
+}
+
+@container (max-width: 980px) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-visual-panel,
+  .hero-visual-card {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    justify-self: stretch;
+    justify-items: stretch;
+  }
+
+  .hero-photo-frame {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    aspect-ratio: 16 / 10;
+  }
+}
