@@ -2,13 +2,17 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   createCohort,
+  deleteCohort,
   getCohorts,
+  updateCohort,
 } from '../services/cohortService';
 import { enrollYouth, syncYouthCohorts, withdrawYouth } from '../services/enrollmentService';
 import {
   generateActivitySessions,
   getSessionList,
   getSessions,
+  deleteSession,
+  updateSession,
 } from '../services/sessionService';
 import {
   getSessionRoster,
@@ -21,6 +25,8 @@ import type {
   SessionListQuery,
   SaveAttendanceInput,
   SyncYouthCohortsInput,
+  UpdateCohortInput,
+  UpdateSessionInput,
 } from '../validation/cohortSchemas';
 
 const actorId = (req: Request) => (req as AuthRequest).user!.userId;
@@ -31,6 +37,13 @@ export const handleGetCohorts = async (req: Request, res: Response) => {
 
 export const handleCreateCohort = async (req: Request, res: Response) => {
   res.status(201).json(await createCohort(req.body as CreateCohortInput, actorId(req)));
+};
+export const handleUpdateCohort = async (req: Request, res: Response) => {
+  res.json(await updateCohort(req.params.cohortId, req.body as UpdateCohortInput, actorId(req)));
+};
+export const handleDeleteCohort = async (req: Request, res: Response) => {
+  await deleteCohort(req.params.cohortId);
+  res.json({ id: req.params.cohortId });
 };
 
 export const handleEnrollYouth = async (req: Request, res: Response) => {
@@ -63,6 +76,13 @@ export const handleGetSessions = async (req: Request, res: Response) => {
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
   res.json(await getSessionList(req.query as SessionListQuery));
+};
+export const handleUpdateSession = async (req: Request, res: Response) => {
+  res.json(await updateSession(req.params.sessionId, req.body as UpdateSessionInput, actorId(req)));
+};
+export const handleDeleteSession = async (req: Request, res: Response) => {
+  await deleteSession(req.params.sessionId);
+  res.json({ id: req.params.sessionId });
 };
 
 export const handleGetSessionRoster = async (req: Request, res: Response) => {

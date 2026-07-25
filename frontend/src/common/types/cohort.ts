@@ -38,6 +38,13 @@ export interface CreateCohortInput {
   startsOn: string;
   endsOn: string;
 }
+export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
+export interface UpdateSessionInput {
+  focus?: string | null;
+  startsAt: string;
+  endsAt: string;
+  notes?: string | null;
+}
 
 export interface EnrollYouthInput {
   youthIds: string[];

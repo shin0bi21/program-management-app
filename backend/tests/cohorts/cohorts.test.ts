@@ -415,6 +415,72 @@ describe('Cohorts and attendance API', () => {
     ]));
   });
 
+  it('edits and deletes sessions and cohorts that have no attendance', async () => {
+    const cohort = await request(app)
+      .post('/api/cohorts')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        programId,
+        name: `Disposable ${Date.now()}`,
+        startsOn: today,
+        endsOn: addDays(today, 10),
+      });
+    const disposableCohortId = cohort.body.id;
+    await request(app)
+      .post(`/api/cohorts/${disposableCohortId}/enrollments`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ youthIds: [youthId] });
+    const generated = await request(app)
+      .post(`/api/cohorts/${disposableCohortId}/activities/generate`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        name: 'Disposable Session',
+        frequency: 'once',
+        startsOn: addDays(today, 1),
+        startTime: '17:00',
+        endTime: '19:00',
+      });
+    const disposableSessionId = generated.body.sessions[0].id;
+
+    const updatedSession = await request(app)
+      .put(`/api/cohorts/sessions/${disposableSessionId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        focus: 'Updated focus',
+        startsAt: `${addDays(today, 1)}T21:30:00.000Z`,
+        endsAt: `${addDays(today, 1)}T23:00:00.000Z`,
+        notes: 'Updated notes',
+      });
+    expect(updatedSession.status).toBe(200);
+    expect((await sql`SELECT focus FROM cohort_sessions WHERE id = ${disposableSessionId}`)[0].focus)
+      .toBe('Updated focus');
+
+    expect((await request(app)
+      .delete(`/api/cohorts/sessions/${disposableSessionId}`)
+      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
+
+    expect((await request(app)
+      .put(`/api/cohorts/${disposableCohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ name: 'Disposable Updated', startsOn: today, endsOn: addDays(today, 12) })).status)
+      .toBe(200);
+
+    expect((await request(app)
+      .delete(`/api/cohorts/${disposableCohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
+    expect((await sql`SELECT id FROM cohort_enrollments WHERE cohort_id = ${disposableCohortId}`))
+      .toHaveLength(0);
+  });
+
+  it('returns a conflict when deleting a session or cohort with attendance', async () => {
+    expect((await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
+    expect((await request(app)
+      .delete(`/api/cohorts/${cohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
+  });
+
   it('uses attendance foreign keys to block deletion through the cohort tree', async () => {
     await expect(sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`).rejects.toBeDefined();
     await expect(sql`DELETE FROM cohort_activities WHERE id = ${activityId}`).rejects.toBeDefined();

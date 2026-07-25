@@ -1,5 +1,6 @@
-import { sql } from '../db/client';
-import type { CreateCohortInput } from '../validation/cohortSchemas';
+import { asTransactionSql, sql } from '../db/client';
+import { ConflictError, NotFoundError } from '../errors';
+import type { CreateCohortInput, UpdateCohortInput } from '../validation/cohortSchemas';
 
 export function getCohorts(programId?: string) {
   return sql`
@@ -98,4 +99,47 @@ export async function createCohort(data: CreateCohortInput, actorId: string) {
       (SELECT roster_mode FROM programs WHERE id = ${data.programId}) AS roster_mode
   `;
   return rows[0];
+}
+
+export async function updateCohort(id: string, data: UpdateCohortInput, actorId: string) {
+  const outside = await sql`
+    SELECT 1
+    FROM cohort_sessions cs
+    INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
+    WHERE ca.cohort_id = ${id}
+      AND (
+        (cs.starts_at AT TIME ZONE 'America/Toronto')::date < ${data.startsOn}
+        OR (cs.ends_at AT TIME ZONE 'America/Toronto')::date > ${data.endsOn}
+      )
+    LIMIT 1
+  `;
+  if (outside.length) throw new ConflictError('Cohort dates must contain all existing sessions');
+  const rows = await sql`
+    UPDATE program_cohorts
+    SET name = ${data.name}, starts_on = ${data.startsOn}, ends_on = ${data.endsOn},
+        updated_at = NOW(), updated_by = ${actorId}
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  if (!rows.length) throw new NotFoundError('Cohort not found');
+  return rows[0];
+}
+
+export async function deleteCohort(id: string) {
+  await sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const cohorts = await trx`SELECT id FROM program_cohorts WHERE id = ${id} FOR UPDATE`;
+    if (!cohorts.length) throw new NotFoundError('Cohort not found');
+    const attendance = await trx`
+      SELECT 1 FROM attendance_records ar
+      INNER JOIN cohort_sessions cs ON cs.id = ar.session_id
+      INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
+      WHERE ca.cohort_id = ${id} LIMIT 1
+    `;
+    if (attendance.length) {
+      throw new ConflictError('Cohort cannot be deleted because one or more sessions have attendance');
+    }
+    await trx`DELETE FROM cohort_enrollments WHERE cohort_id = ${id}`;
+    await trx`DELETE FROM program_cohorts WHERE id = ${id}`;
+  });
 }

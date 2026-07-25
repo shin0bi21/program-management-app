@@ -117,6 +117,8 @@ describe('Sessions', () => {
     expect(screen.queryByRole('heading', { name: 'Communication attendance' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Communication' }));
+    expect(screen.getByRole('menuitem', { name: 'Edit Session' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete Session' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Take Attendance' }));
 
     expect(screen.getByRole('heading', { name: 'Communication attendance' })).toBeInTheDocument();

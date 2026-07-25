@@ -9,9 +9,11 @@ import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../common/components/Table/Table';
-import { getCohorts, getManagedSessions } from '../../common/api/cohorts.api';
+import { deleteSession, getCohorts, getManagedSessions, updateSession } from '../../common/api/cohorts.api';
 import { useAuth } from '../../common/context/AuthContext';
 import { usePrograms } from '../../common/hooks/usePrograms';
+import { useConfirmModal, type ConfirmAction } from '../../common/hooks/useConfirmModal';
+import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
 import type { ManagedSession, ProgramCohort, SessionListFilters } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import AttendanceModal from './components/AttendanceModal';
@@ -22,6 +24,10 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
+const localDateTime = (value: string) => {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+};
 
 type TimingFilter = 'upcoming' | 'past';
 
@@ -39,6 +45,11 @@ export default function Sessions() {
   const [cohortPickerOpen, setCohortPickerOpen] = useState(false);
   const [scheduleCohortId, setScheduleCohortId] = useState('');
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
+  const [editTarget, setEditTarget] = useState<ManagedSession | null>(null);
+  const [editStatus, setEditStatus] = useState<SubmitStatus>('idle');
+  const [editMessage, setEditMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const programId = searchParams.get('program') ?? '';
   const cohortId = searchParams.get('cohort') ?? '';
   const selectedSessionId = searchParams.get('session') ?? '';
@@ -165,20 +176,56 @@ export default function Sessions() {
       width: '110px',
       render: session => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
     },
-    ...(canWriteAttendance ? [{
+    ...(canWriteAttendance || canWriteCohorts ? [{
       key: 'actions',
       header: '',
       className: 'col-actions',
       render: (session: ManagedSession) => <ActionsMenu
         ariaLabel={`More actions for ${session.focus || session.activityName}`}
-        items={[{
-          id: 'attendance',
-          label: 'Take Attendance',
-          onClick: () => setAttendanceTarget(session),
-        }]}
+        items={[
+          ...(canWriteAttendance ? [{
+            id: 'attendance', label: 'Take Attendance', onClick: () => setAttendanceTarget(session),
+          }] : []),
+          ...(canWriteCohorts ? [
+            { id: 'edit', label: 'Edit Session', onClick: () => { setEditStatus('idle'); setEditMessage(''); setEditTarget(session); } },
+            {
+              id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => setConfirmAction({
+                title: 'Delete Session',
+                message: `Delete ${session.focus || session.activityName}? This cannot be undone.`,
+                confirmLabel: 'Delete',
+                confirmVariant: 'danger',
+                successMessage: 'Session deleted',
+                onConfirm: async () => { await deleteSession(session.id); await loadSessions(); },
+              }),
+            },
+          ] : []),
+        ]}
       />,
     }] : []),
-  ], [canWriteAttendance]);
+  ], [canWriteAttendance, canWriteCohorts, programId, cohortId, timing, debouncedSearch]);
+
+  const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editTarget) return;
+    const form = new FormData(event.currentTarget);
+    setEditStatus('submitting');
+    setEditMessage('Updating session...');
+    try {
+      await updateSession(editTarget.id, {
+        focus: String(form.get('focus')).trim() || null,
+        startsAt: new Date(String(form.get('startsAt'))).toISOString(),
+        endsAt: new Date(String(form.get('endsAt'))).toISOString(),
+        notes: String(form.get('notes')).trim() || null,
+      });
+      await loadSessions();
+      setEditMessage('Session updated successfully.');
+      setEditStatus('success');
+    } catch (cause) {
+      setEditMessage(cause instanceof Error ? cause.message : 'Could not update session');
+      setEditStatus('error');
+    }
+  };
+  const editComplete = editStatus === 'submitting' || editStatus === 'success';
 
   return (
     <div className="sessions-page">
@@ -227,6 +274,47 @@ export default function Sessions() {
         onClose={() => setAttendanceTarget(null)}
         onSaved={loadSessions}
       />
+      <Modal
+        isOpen={editTarget !== null}
+        onClose={() => setEditTarget(null)}
+        title="Edit session"
+        status={editStatus}
+        statusMessage={editMessage}
+        successDelay={1200}
+        footer={<>
+          <Button variant="secondary" onClick={() => setEditTarget(null)} disabled={editComplete}>Cancel</Button>
+          <Button type="submit" form="edit-session-form" disabled={editComplete}>Save Changes</Button>
+        </>}
+      >
+        {editTarget && <form id="edit-session-form" onSubmit={submitEdit}>
+          <FormField id="edit-session-focus" label="Focus">
+            <input id="edit-session-focus" name="focus" defaultValue={editTarget.focus ?? ''} maxLength={160} />
+          </FormField>
+          <div className="form-row">
+            <FormField id="edit-session-start" label="Starts at">
+              <input id="edit-session-start" name="startsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.startsAt)} />
+            </FormField>
+            <FormField id="edit-session-end" label="Ends at">
+              <input id="edit-session-end" name="endsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.endsAt)} />
+            </FormField>
+          </div>
+          <FormField id="edit-session-notes" label="Notes">
+            <textarea id="edit-session-notes" name="notes" defaultValue={editTarget.notes ?? ''} maxLength={5000} />
+          </FormField>
+        </form>}
+      </Modal>
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? ''}
+        status={confirmModal.status}
+        statusMessage={confirmModal.statusMessage}
+        footer={confirmModal.footer}
+        disableClose={confirmModal.disableClose}
+        successDelay={confirmModal.successDelay}
+      >
+        {confirmAction && <p>{confirmAction.message}</p>}
+      </Modal>
       <Modal
         isOpen={cohortPickerOpen}
         onClose={() => setCohortPickerOpen(false)}

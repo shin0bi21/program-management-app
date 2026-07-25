@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import type { GenerateActivitySessionsInput, SessionListQuery } from '../validation/cohortSchemas';
+import type { GenerateActivitySessionsInput, SessionListQuery, UpdateSessionInput } from '../validation/cohortSchemas';
 import { audit } from './auditService';
 
 const intervalFor = {
@@ -221,4 +221,25 @@ export function getSessionList(filters: SessionListQuery) {
       CASE WHEN ${timing} = 'past' THEN cs.starts_at END DESC,
       CASE WHEN ${timing} != 'past' THEN cs.starts_at END ASC
   `;
+}
+
+export async function updateSession(id: string, data: UpdateSessionInput, actorId: string) {
+  const rows = await sql`
+    UPDATE cohort_sessions
+    SET focus = ${data.focus ?? null}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
+        notes = ${data.notes ?? null}, updated_at = NOW(), updated_by = ${actorId}
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  if (!rows.length) throw new NotFoundError('Session not found');
+  return rows[0];
+}
+
+export async function deleteSession(id: string) {
+  const attendance = await sql`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
+  if (attendance.length) {
+    throw new ConflictError('Session cannot be deleted because attendance has been recorded');
+  }
+  const rows = await sql`DELETE FROM cohort_sessions WHERE id = ${id} RETURNING id`;
+  if (!rows.length) throw new NotFoundError('Session not found');
 }

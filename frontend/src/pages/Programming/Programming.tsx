@@ -11,13 +11,14 @@ import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../common/components/Table/Table';
 import { DashboardCard, DashboardCardGroup } from '../../common/components/DashboardCard/DashboardCard';
-import { createCohort, getCohorts } from '../../common/api/cohorts.api';
+import { createCohort, deleteCohort, getCohorts, updateCohort } from '../../common/api/cohorts.api';
 import { createProgram } from '../../common/api/programs.api';
 import { useAuth } from '../../common/context/AuthContext';
 import { useFloatingMenu } from '../../common/hooks/useFloatingMenu';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
 import useTableSelection from '../../common/hooks/useTableSelection';
+import { useConfirmModal, type ConfirmAction } from '../../common/hooks/useConfirmModal';
 import type { ProgramCohort } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import EnrollYouthModal from './components/EnrollYouthModal';
@@ -47,6 +48,11 @@ export default function Programming() {
   const [programRosterMode, setProgramRosterMode] = useState<'enrolled' | 'open'>('enrolled');
   const [cohortSubmitStatus, setCohortSubmitStatus] = useState<SubmitStatus>('idle');
   const [cohortStatusMessage, setCohortStatusMessage] = useState('');
+  const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
+  const [editCohortStatus, setEditCohortStatus] = useState<SubmitStatus>('idle');
+  const [editCohortMessage, setEditCohortMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const {
     isOpen: addMenuOpen,
@@ -142,10 +148,24 @@ export default function Programming() {
             ? [{ id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) }]
             : []),
           { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
+          { id: 'edit', label: 'Edit Cohort', onClick: () => { setEditCohortStatus('idle'); setEditCohortMessage(''); setEditCohortTarget(cohort); } },
+          {
+            id: 'delete', label: 'Delete Cohort', variant: 'danger' as const, onClick: () => setConfirmAction({
+              title: 'Delete Cohort',
+              message: `Delete ${cohort.programName} · ${cohort.name}? Its sessions and enrollments will also be deleted. Cohorts with attendance cannot be deleted.`,
+              confirmLabel: 'Delete',
+              confirmVariant: 'danger',
+              successMessage: 'Cohort deleted',
+              onConfirm: async () => {
+                await deleteCohort(cohort.id);
+                setCohorts(await getCohorts(selectedProgramId || undefined));
+              },
+            }),
+          },
         ]}
       />,
     }] : []),
-  ], [canWriteCohorts]);
+  ], [canWriteCohorts, selectedProgramId]);
 
   const selectProgram = (programId: string) => {
     const next = new URLSearchParams(searchParams);
@@ -207,6 +227,28 @@ export default function Programming() {
       setCohortSubmitStatus('error');
     }
   };
+
+  const submitCohortEdit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editCohortTarget) return;
+    const form = new FormData(event.currentTarget);
+    setEditCohortStatus('submitting');
+    setEditCohortMessage('Updating cohort...');
+    try {
+      await updateCohort(editCohortTarget.id, {
+        name: String(form.get('name')),
+        startsOn: String(form.get('startsOn')),
+        endsOn: String(form.get('endsOn')),
+      });
+      setCohorts(await getCohorts(selectedProgramId || undefined));
+      setEditCohortMessage('Cohort updated successfully.');
+      setEditCohortStatus('success');
+    } catch (cause) {
+      setEditCohortMessage(cause instanceof Error ? cause.message : 'Could not update cohort');
+      setEditCohortStatus('error');
+    }
+  };
+  const editCohortComplete = editCohortStatus === 'submitting' || editCohortStatus === 'success';
 
   return (
     <div className="programming-page">
@@ -446,6 +488,45 @@ export default function Programming() {
           setCohorts(await getCohorts(selectedProgramId || undefined));
         }}
       />
+      <Modal
+        isOpen={editCohortTarget !== null}
+        onClose={() => setEditCohortTarget(null)}
+        title="Edit cohort"
+        status={editCohortStatus}
+        statusMessage={editCohortMessage}
+        successDelay={1200}
+        footer={<>
+          <Button variant="secondary" onClick={() => setEditCohortTarget(null)} disabled={editCohortComplete}>Cancel</Button>
+          <Button type="submit" form="edit-cohort-form" disabled={editCohortComplete}>Save Changes</Button>
+        </>}
+      >
+        {editCohortTarget && <form id="edit-cohort-form" onSubmit={submitCohortEdit}>
+          <FormField id="edit-cohort-name" label="Cohort name">
+            <input id="edit-cohort-name" name="name" required maxLength={120} defaultValue={editCohortTarget.name} />
+          </FormField>
+          <div className="form-row">
+            <FormField id="edit-cohort-start" label="Starts on">
+              <input id="edit-cohort-start" name="startsOn" type="date" required defaultValue={editCohortTarget.startsOn} />
+            </FormField>
+            <FormField id="edit-cohort-end" label="Ends on">
+              <input id="edit-cohort-end" name="endsOn" type="date" required defaultValue={editCohortTarget.endsOn} />
+            </FormField>
+          </div>
+        </form>}
+      </Modal>
+
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? ''}
+        status={confirmModal.status}
+        statusMessage={confirmModal.statusMessage}
+        footer={confirmModal.footer}
+        disableClose={confirmModal.disableClose}
+        successDelay={confirmModal.successDelay}
+      >
+        {confirmAction && <p>{confirmAction.message}</p>}
+      </Modal>
 
       <GenerateSessionsModal
         cohort={generationTarget}

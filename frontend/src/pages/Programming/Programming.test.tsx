@@ -114,6 +114,8 @@ describe('Programming', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Generate Sessions' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Go to' }));
