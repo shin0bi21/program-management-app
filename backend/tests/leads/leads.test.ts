@@ -255,6 +255,13 @@ describe('Leads API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'contacted' });
     expect(statusChange.status).toBe(409);
+
+    const edit = await request(app)
+      .put(`/api/leads/${lead.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, school: 'Should Not Change', programOfInterestId: softSkillsProgramId });
+    expect(edit.status).toBe(409);
+    expect(edit.body.error).toBe('Signed-up leads must be edited through their youth profile');
   });
 
   it('can create a youth profile without enrolling it in a cohort', async () => {

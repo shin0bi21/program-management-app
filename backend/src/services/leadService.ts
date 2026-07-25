@@ -96,9 +96,20 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
         updated_at = NOW(),
         updated_by = ${actorId}
     WHERE id = ${id}
+      AND status != 'signed_up'
+      AND converted_youth_id IS NULL
     RETURNING ${leadColumns}
   `;
-  if (!rows.length) throw new NotFoundError('Lead not found');
+  if (!rows.length) {
+    const existing = await sql<{ status: string; convertedYouthId: string | null }[]>`
+      SELECT status, converted_youth_id
+      FROM leads
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+    if (!existing.length) throw new NotFoundError('Lead not found');
+    throw new ConflictError('Signed-up leads must be edited through their youth profile');
+  }
   return rows[0];
 }
 

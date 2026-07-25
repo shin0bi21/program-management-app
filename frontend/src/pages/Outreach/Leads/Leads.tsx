@@ -79,16 +79,16 @@ export default function Leads() {
       key: 'actions' as const,
       header: '',
       className: 'col-actions',
-      render: (lead: Lead) => <ActionsMenu
-        ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
-        items={[
-          { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
-          ...(lead.status !== 'signed_up' ? [
+      render: (lead: Lead) => lead.status === 'signed_up'
+        ? null
+        : <ActionsMenu
+          ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
+          items={[
+            { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
             { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
             ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
-          ] : []),
-        ]}
-      />,
+          ]}
+        />,
     }] : []),
   ];
 

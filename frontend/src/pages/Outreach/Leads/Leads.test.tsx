@@ -48,7 +48,7 @@ describe('Leads', () => {
     expect(screen.getByRole('heading', { name: 'Sign Up Lead' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Mark Signed Up' })).not.toBeInTheDocument();
 
-    const submit = screen.getByRole('button', { name: 'Sign Up' });
+    const submit = screen.getByRole('button', { name: 'Create Profile' });
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
@@ -108,5 +108,23 @@ describe('Leads', () => {
 
     expect(screen.getByRole('heading', { name: 'Edit Lead' })).toBeInTheDocument();
     expect(document.getElementById('lead-youthFirstName')).toHaveValue('Avery');
+  });
+
+  it('does not offer edit actions for a signed-up lead', async () => {
+    getLeads.mockResolvedValueOnce([{
+      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1',
+      convertedYouthId: 'youth-1',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
+      contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
+      status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    }]);
+
+    render(<Leads />);
+    await screen.findByText('Avery Outreach');
+
+    expect(screen.queryByRole('button', { name: 'More actions for Avery Outreach' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
   });
 });
