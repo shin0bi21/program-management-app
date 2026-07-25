@@ -12,6 +12,7 @@ describe('Programs API', () => {
   let youthToken: string;
   let adminUserId: string;
   let adminToken: string;
+  let softSkillsProgramId: string;
   const createdName = `Leadership ${Date.now()}`;
 
   beforeAll(async () => {
@@ -24,6 +25,15 @@ describe('Programs API', () => {
     const admin = await seedTestUser({ email: `program-admin-${Date.now()}@test.local`, role: 'admin' });
     adminUserId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
+
+    const [softSkills] = await sql<{ id: string }[]>`
+      SELECT id FROM programs WHERE name = 'Soft Skills'
+    `;
+    softSkillsProgramId = softSkills.id;
+    await sql`
+      INSERT INTO staff_program_assignments (staff_id, program_id)
+      VALUES (${staffUserId}, ${softSkillsProgramId})
+    `;
   });
 
   afterAll(async () => {
@@ -56,16 +66,31 @@ describe('Programs API', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns the canonical seeded programs to staff', async () => {
+  it('returns assigned and open programs to staff', async () => {
+    const res = await request(app)
+      .get('/api/programs?scope=assigned')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: expect.any(String), name: 'Soft Skills' }),
+      expect.objectContaining({ id: expect.any(String), name: 'Drop In', rosterMode: 'open' }),
+    ]));
+    expect(res.body).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Job Readiness' }),
+    ]));
+  });
+
+  it('keeps the full program lookup available outside Programming', async () => {
     const res = await request(app)
       .get('/api/programs')
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: expect.any(String), name: 'Job Readiness' }),
-      expect.objectContaining({ id: expect.any(String), name: 'Soft Skills' }),
-      expect.objectContaining({ id: expect.any(String), name: 'Drop In', rosterMode: 'open' }),
+      expect.objectContaining({ name: 'Soft Skills' }),
+      expect.objectContaining({ name: 'Job Readiness' }),
+      expect.objectContaining({ name: 'Drop In' }),
     ]));
   });
 

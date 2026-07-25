@@ -1,8 +1,8 @@
 import { apiClient } from './http/client';
 import type { CreateProgramInput, Program } from '../types/program';
 
-export function getPrograms() {
-  return apiClient.get<Program[]>('/programs');
+export function getPrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}) {
+  return apiClient.get<Program[]>(`/programs${assignedOnly ? '?scope=assigned' : ''}`);
 }
 
 export function createProgram(data: CreateProgramInput | string) {

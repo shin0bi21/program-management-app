@@ -2,7 +2,9 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { Account } from '../../../../../common/types/account';
+import { usePrograms } from '../../../../../common/hooks/usePrograms';
 import { useAccountModal } from './useAccountModal';
+import './AccountModal.css';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -13,8 +15,11 @@ interface AccountModalProps {
 
 export default function AccountModal(props: AccountModalProps) {
   const { account } = props;
-  const { register, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
+  const { programs, loading: programsLoading } = usePrograms();
+  const { register, errors, onSubmit, submitStatus, error, handleClose, selectedRole } = useAccountModal(props);
   const isEdit = account !== undefined;
+  const assignablePrograms = programs.filter(program => program.rosterMode === 'enrolled');
+  const openPrograms = programs.filter(program => program.rosterMode === 'open');
 
   return (
     <Modal
@@ -49,6 +54,29 @@ export default function AccountModal(props: AccountModalProps) {
             </select>
           </FormField>
         </div>
+        {selectedRole === 'staff' && (
+          <fieldset className="account-programs">
+            <legend>Programs</legend>
+            <p>Select the enrollment-based programs this staff member works with.</p>
+            <div className="account-programs__list">
+              {programsLoading ? (
+                <span className="account-programs__empty">Loading programs…</span>
+              ) : assignablePrograms.length ? assignablePrograms.map(program => (
+                <label key={program.id} className="account-programs__option">
+                  <input type="checkbox" value={program.id} {...register('programIds')} />
+                  <span>{program.name}</span>
+                </label>
+              )) : (
+                <span className="account-programs__empty">No assignable programs.</span>
+              )}
+            </div>
+            {openPrograms.length > 0 && (
+              <small>
+                Automatically available: {openPrograms.map(program => program.name).join(', ')}
+              </small>
+            )}
+          </fieldset>
+        )}
       </form>
     </Modal>
   );

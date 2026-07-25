@@ -24,7 +24,7 @@ interface CalendarRange {
 export default function Calendar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions } = useAuth();
-  const { programs } = usePrograms();
+  const { programs } = usePrograms({ assignedOnly: true });
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const [sessions, setSessions] = useState<CohortSession[]>([]);
   const [currentRange, setCurrentRange] = useState<CalendarRange | null>(null);

@@ -1,8 +1,11 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
+import { assertSessionAccess } from '../policies/programAccessPolicy';
+import type { AccessTokenPayload } from '../types/auth';
 import type { SaveAttendanceInput } from '../validation/cohortSchemas';
 
-export async function getSessionRoster(sessionId: string) {
+export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
+  await assertSessionAccess(actor, sessionId);
   const sessions = await sql<{ rosterMode: 'enrolled' | 'open' }[]>`
     SELECT p.roster_mode
     FROM cohort_sessions cs
@@ -50,7 +53,12 @@ export async function getSessionRoster(sessionId: string) {
     `;
 }
 
-export async function saveAttendance(sessionId: string, data: SaveAttendanceInput, actorId: string) {
+export async function saveAttendance(
+  sessionId: string,
+  data: SaveAttendanceInput,
+  actor: AccessTokenPayload,
+) {
+  await assertSessionAccess(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const sessions = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
@@ -119,7 +127,7 @@ export async function saveAttendance(sessionId: string, data: SaveAttendanceInpu
           session_id, youth_id, status, notes, marked_at, marked_by
         )
         VALUES (
-          ${sessionId}, ${record.youthId}, ${record.status}, ${record.notes ?? null}, NOW(), ${actorId}
+          ${sessionId}, ${record.youthId}, ${record.status}, ${record.notes ?? null}, NOW(), ${actor.userId}
         )
         ON CONFLICT (session_id, youth_id) DO UPDATE SET
           status = EXCLUDED.status,
@@ -131,5 +139,5 @@ export async function saveAttendance(sessionId: string, data: SaveAttendanceInpu
     }
   });
 
-  return getSessionRoster(sessionId);
+  return getSessionRoster(sessionId, actor);
 }

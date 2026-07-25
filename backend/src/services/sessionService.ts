@@ -1,5 +1,7 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
+import { assertCohortAccess, assertSessionAccess, programAccessPredicate } from '../policies/programAccessPolicy';
+import type { AccessTokenPayload } from '../types/auth';
 import type { GenerateSessionsInput, SessionListQuery, UpdateSessionInput } from '../validation/cohortSchemas';
 
 const intervalFor = {
@@ -27,8 +29,9 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
 export async function generateSessions(
   cohortId: string,
   data: GenerateSessionsInput,
-  actorId: string,
+  actor: AccessTokenPayload,
 ) {
+  await assertCohortAccess(actor, cohortId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const theme = data.theme ?? null;
@@ -56,8 +59,8 @@ export async function generateSessions(
           ${theme},
           (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
-          ${actorId},
-          ${actorId}
+          ${actor.userId},
+          ${actor.userId}
         )
       `;
     } else if (data.frequency === 'weekly' || data.frequency === 'biweekly') {
@@ -74,8 +77,8 @@ export async function generateSessions(
           ${theme},
           (session_date::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (session_date::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
-          ${actorId},
-          ${actorId}
+          ${actor.userId},
+          ${actor.userId}
         FROM generate_series(
           ${firstSessionDate}::date,
           ${data.endsOn!}::date,
@@ -92,8 +95,8 @@ export async function generateSessions(
           ${theme},
           (candidate.session_date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (candidate.session_date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
-          ${actorId},
-          ${actorId}
+          ${actor.userId},
+          ${actor.userId}
         FROM generate_series(
           date_trunc('month', ${data.startsOn}::date),
           date_trunc('month', ${data.endsOn!}::date),
@@ -124,7 +127,7 @@ export async function generateSessions(
   });
 }
 
-export function getSessions(start: string, end: string) {
+export function getSessions(actor: AccessTokenPayload, start: string, end: string) {
   return sql`
     SELECT
       cs.id,
@@ -143,11 +146,12 @@ export function getSessions(start: string, end: string) {
     INNER JOIN programs p ON p.id = pc.program_id
     WHERE cs.starts_at < ${end}::timestamptz
       AND cs.ends_at > ${start}::timestamptz
+      AND ${programAccessPredicate(actor, sql`pc.program_id`)}
     ORDER BY cs.starts_at
   `;
 }
 
-export function getSessionList(filters: SessionListQuery) {
+export function getSessionList(actor: AccessTokenPayload, filters: SessionListQuery) {
   const search = filters.search ? `%${filters.search}%` : null;
   const timing = filters.timing ?? 'upcoming';
 
@@ -182,6 +186,7 @@ export function getSessionList(filters: SessionListQuery) {
     LEFT JOIN attendance_records ar ON ar.session_id = cs.id
     WHERE ${filters.programId ? sql`pc.program_id = ${filters.programId}` : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
+      AND ${programAccessPredicate(actor, sql`pc.program_id`)}
       AND ${timing === 'upcoming' ? sql`cs.starts_at >= NOW()` : timing === 'past' ? sql`cs.starts_at < NOW()` : sql`TRUE`}
       AND ${search ? sql`(
         COALESCE(cs.theme, '') ILIKE ${search}
@@ -196,11 +201,12 @@ export function getSessionList(filters: SessionListQuery) {
   `;
 }
 
-export async function updateSession(id: string, data: UpdateSessionInput, actorId: string) {
+export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
+  await assertSessionAccess(actor, id);
   const rows = await sql`
     UPDATE cohort_sessions
     SET theme = ${data.theme ?? null}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
-        description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actorId}
+        description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actor.userId}
     WHERE id = ${id}
     RETURNING id
   `;
@@ -208,7 +214,8 @@ export async function updateSession(id: string, data: UpdateSessionInput, actorI
   return rows[0];
 }
 
-export async function deleteSession(id: string) {
+export async function deleteSession(id: string, actor: AccessTokenPayload) {
+  await assertSessionAccess(actor, id);
   const attendance = await sql`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
   if (attendance.length) {
     throw new ConflictError('Session cannot be deleted because attendance has been recorded');

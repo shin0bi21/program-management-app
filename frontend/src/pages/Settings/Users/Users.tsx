@@ -188,9 +188,9 @@ export default function Users() {
         </section>
       </main>
 
-      {isAdmin && canWrite && (
+      {isAdmin && canWrite && modalTarget !== null && (
         <AccountModal
-          isOpen={modalTarget !== null}
+          isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
           onSuccess={account => {

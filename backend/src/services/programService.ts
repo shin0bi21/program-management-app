@@ -1,11 +1,14 @@
 import { sql } from '../db/client';
 import { ConflictError } from '../errors';
+import { programAccessPredicate } from '../policies/programAccessPolicy';
+import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput } from '../validation/programSchemas';
 
-export function getPrograms() {
+export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
   return sql`
-    SELECT id, name, description, roster_mode
-    FROM programs
+    SELECT p.id, p.name, p.description, p.roster_mode
+    FROM programs p
+    WHERE ${assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`}
     ORDER BY name ASC
   `;
 }

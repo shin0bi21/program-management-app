@@ -9,6 +9,7 @@ export interface Account {
   role: AccountRole;
   status: AccountStatus;
   createdAt: string;
+  programIds?: string[];
 }
 
 export interface AccountFilters {
@@ -22,6 +23,7 @@ export interface InviteAccountInput {
   lastName: string;
   email: string;
   role: 'staff' | 'admin';
+  programIds?: string[];
 }
 
 export interface UpdateAccountInput extends InviteAccountInput {

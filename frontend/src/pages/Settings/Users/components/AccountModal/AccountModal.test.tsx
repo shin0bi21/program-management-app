@@ -1,0 +1,68 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getPrograms } from '../../../../../common/api/programs.api';
+import { inviteAccount } from '../../../../../common/api/accounts.api';
+import AccountModal from './AccountModal';
+
+vi.mock('../../../../../common/api/programs.api', () => ({
+  getPrograms: vi.fn(),
+}));
+
+vi.mock('../../../../../common/api/accounts.api', () => ({
+  inviteAccount: vi.fn(),
+  updateAccount: vi.fn(),
+}));
+
+const softSkillsId = '11111111-1111-4111-8111-111111111111';
+
+describe('AccountModal program assignments', () => {
+  beforeEach(() => {
+    vi.mocked(getPrograms).mockResolvedValue([
+      { id: softSkillsId, name: 'Soft Skills', description: null, rosterMode: 'enrolled' },
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        name: 'Drop In',
+        description: null,
+        rosterMode: 'open',
+      },
+    ]);
+    vi.mocked(inviteAccount).mockResolvedValue({
+      id: '33333333-3333-4333-8333-333333333333',
+      firstName: 'Sam',
+      lastName: 'Staff',
+      email: 'sam@example.com',
+      role: 'staff',
+      status: 'invited',
+      createdAt: '2026-07-25T00:00:00.000Z',
+      programIds: [softSkillsId],
+    });
+  });
+
+  it('assigns selected enrollment programs and lists open programs as automatic', async () => {
+    const user = userEvent.setup();
+    render(
+      <AccountModal
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Automatically available: Drop In')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('First Name *'), 'Sam');
+    await user.type(screen.getByLabelText('Last Name *'), 'Staff');
+    await user.type(screen.getByLabelText('Email *'), 'sam@example.com');
+    await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+
+    await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith({
+      firstName: 'Sam',
+      lastName: 'Staff',
+      email: 'sam@example.com',
+      role: 'staff',
+      programIds: [softSkillsId],
+    }));
+    expect(screen.queryByRole('checkbox', { name: 'Drop In' })).not.toBeInTheDocument();
+  });
+});

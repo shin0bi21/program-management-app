@@ -14,9 +14,15 @@ import type {
 } from '../types/cohort';
 import { apiClient } from './http/client';
 
-export function getCohorts(programId?: string) {
-  const query = programId ? `?programId=${encodeURIComponent(programId)}` : '';
-  return apiClient.get<ProgramCohort[]>(`/cohorts${query}`);
+export function getCohorts(
+  programId?: string,
+  { includeAllPrograms = false }: { includeAllPrograms?: boolean } = {},
+) {
+  const query = new URLSearchParams();
+  if (programId) query.set('programId', programId);
+  if (includeAllPrograms) query.set('scope', 'all');
+  const suffix = query.toString();
+  return apiClient.get<ProgramCohort[]>(`/cohorts${suffix ? `?${suffix}` : ''}`);
 }
 
 export function createCohort(data: CreateCohortInput) {

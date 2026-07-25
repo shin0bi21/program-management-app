@@ -34,7 +34,7 @@ type TimingFilter = 'upcoming' | 'past';
 export default function Sessions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions } = useAuth();
-  const { programs } = usePrograms();
+  const { programs } = usePrograms({ assignedOnly: true });
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const [sessions, setSessions] = useState<ManagedSession[]>([]);
   const [search, setSearch] = useState('');

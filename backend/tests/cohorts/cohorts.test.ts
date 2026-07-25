@@ -27,6 +27,7 @@ describe('Cohorts and attendance API', () => {
   let openProgramId: string;
   let openCohortId: string;
   let openSessionId: string;
+  let unassignedCohortId: string;
   let today: string;
 
   beforeAll(async () => {
@@ -49,6 +50,10 @@ describe('Cohorts and attendance API', () => {
 
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     programId = program.id;
+    await sql`
+      INSERT INTO staff_program_assignments (staff_id, program_id)
+      VALUES (${staffId}, ${programId})
+    `;
     const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Drop In'`;
     openProgramId = openProgram.id;
     const [clock] = await sql<{ today: string }[]>`
@@ -60,6 +65,7 @@ describe('Cohorts and attendance API', () => {
   afterAll(async () => {
     if (openSessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${openSessionId}`;
     if (openCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
+    if (unassignedCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${unassignedCohortId}`;
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
     if (cohortId) await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
@@ -86,6 +92,50 @@ describe('Cohorts and attendance API', () => {
       startsOn: addDays(today, -7),
       endsOn: addDays(today, 60),
     }));
+  });
+
+  it('blocks cohorts outside the staff program scope', async () => {
+    const [jobReadiness] = await sql<{ id: string }[]>`
+      SELECT id FROM programs WHERE name = 'Job Readiness'
+    `;
+    const response = await request(app)
+      .post('/api/cohorts')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        programId: jobReadiness.id,
+        name: `Blocked ${Date.now()}`,
+        startsOn: addDays(today, -7),
+        endsOn: addDays(today, 60),
+      });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('keeps the full cohort lookup available for Youth profile filters', async () => {
+    const [jobReadiness] = await sql<{ id: string }[]>`
+      SELECT id FROM programs WHERE name = 'Job Readiness'
+    `;
+    const [unassignedCohort] = await sql<{ id: string }[]>`
+      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
+      VALUES (
+        ${jobReadiness.id},
+        ${`Profile Filter ${Date.now()}`},
+        ${addDays(today, -7)},
+        ${addDays(today, 60)}
+      )
+      RETURNING id
+    `;
+    unassignedCohortId = unassignedCohort.id;
+
+    const scoped = await request(app)
+      .get('/api/cohorts')
+      .set('Authorization', `Bearer ${staffToken}`);
+    const all = await request(app)
+      .get('/api/cohorts?scope=all')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(scoped.body.map((cohort: { id: string }) => cohort.id)).not.toContain(unassignedCohortId);
+    expect(all.body.map((cohort: { id: string }) => cohort.id)).toContain(unassignedCohortId);
   });
 
   it('does not partially enroll a batch containing an unknown youth', async () => {

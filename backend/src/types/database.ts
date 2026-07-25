@@ -217,6 +217,13 @@ export interface Schools {
   updated_by: string | null;
 }
 
+export interface StaffProgramAssignments {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  program_id: string;
+  staff_id: string;
+}
+
 export interface SystemRevokedTokens {
   blacklisted_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
@@ -371,6 +378,7 @@ export interface DB {
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
+  staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;

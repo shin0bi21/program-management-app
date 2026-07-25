@@ -1,8 +1,14 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
+import { assertCohortAccess, assertProgramAccess, programAccessPredicate } from '../policies/programAccessPolicy';
+import type { AccessTokenPayload } from '../types/auth';
 import type { CreateCohortInput, UpdateCohortInput } from '../validation/cohortSchemas';
 
-export function getCohorts(programId?: string) {
+export function getCohorts(
+  actor: AccessTokenPayload,
+  programId?: string,
+  includeAllPrograms = false,
+) {
   return sql`
     SELECT
       pc.id,
@@ -71,18 +77,20 @@ export function getCohorts(programId?: string) {
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN cohort_enrollments ce ON ce.cohort_id = pc.id
     WHERE ${programId ? sql`pc.program_id = ${programId}` : sql`TRUE`}
+      AND ${includeAllPrograms ? sql`TRUE` : programAccessPredicate(actor, sql`pc.program_id`)}
     GROUP BY pc.id, p.id
     ORDER BY pc.starts_on DESC, pc.name
   `;
 }
 
-export async function createCohort(data: CreateCohortInput, actorId: string) {
+export async function createCohort(data: CreateCohortInput, actor: AccessTokenPayload) {
+  await assertProgramAccess(actor, data.programId);
   const rows = await sql`
     INSERT INTO program_cohorts (
       program_id, name, starts_on, ends_on, created_by, updated_by
     )
     VALUES (
-      ${data.programId}, ${data.name}, ${data.startsOn}, ${data.endsOn}, ${actorId}, ${actorId}
+      ${data.programId}, ${data.name}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId}
     )
     RETURNING
       id,
@@ -95,7 +103,8 @@ export async function createCohort(data: CreateCohortInput, actorId: string) {
   return rows[0];
 }
 
-export async function updateCohort(id: string, data: UpdateCohortInput, actorId: string) {
+export async function updateCohort(id: string, data: UpdateCohortInput, actor: AccessTokenPayload) {
+  await assertCohortAccess(actor, id);
   const outside = await sql`
     SELECT 1
     FROM cohort_sessions cs
@@ -110,7 +119,7 @@ export async function updateCohort(id: string, data: UpdateCohortInput, actorId:
   const rows = await sql`
     UPDATE program_cohorts
     SET name = ${data.name}, starts_on = ${data.startsOn}, ends_on = ${data.endsOn},
-        updated_at = NOW(), updated_by = ${actorId}
+        updated_at = NOW(), updated_by = ${actor.userId}
     WHERE id = ${id}
     RETURNING id
   `;
@@ -118,7 +127,8 @@ export async function updateCohort(id: string, data: UpdateCohortInput, actorId:
   return rows[0];
 }
 
-export async function deleteCohort(id: string) {
+export async function deleteCohort(id: string, actor: AccessTokenPayload) {
+  await assertCohortAccess(actor, id);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const cohorts = await trx`SELECT id FROM program_cohorts WHERE id = ${id} FOR UPDATE`;

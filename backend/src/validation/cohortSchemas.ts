@@ -15,6 +15,7 @@ const weekdaySchema = z.enum([
 export const cohortQuerySchema = z.object({
   query: z.object({
     programId: z.string().uuid('Invalid program ID').optional(),
+    scope: z.enum(['all']).optional(),
   }),
 });
 

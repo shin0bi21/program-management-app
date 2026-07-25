@@ -53,7 +53,7 @@ export default function Youth() {
   }, [search]);
 
   useEffect(() => {
-    getCohorts().then(setCohorts).catch(() => setCohorts([]));
+    getCohorts(undefined, { includeAllPrograms: true }).then(setCohorts).catch(() => setCohorts([]));
   }, []);
 
   const cohortsForPrograms = useMemo(

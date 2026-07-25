@@ -30,7 +30,7 @@ export default function Programming() {
   const { permissions } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
-  const { programs, setPrograms, error: programsError } = usePrograms();
+  const { programs, setPrograms, error: programsError } = usePrograms({ assignedOnly: true });
   const selectedProgramId = searchParams.get('program') ?? '';
   const selectedStatus = searchParams.get('status') ?? '';
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
