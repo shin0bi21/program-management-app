@@ -152,7 +152,6 @@ export default function Sessions() {
     { key: 'program', header: 'Program', render: session => session.programName },
     { key: 'cohort', header: 'Cohort', render: session => session.cohortName },
     { key: 'theme', header: 'Theme', render: session => session.theme },
-    { key: 'description', header: 'Description', render: session => session.description || '—' },
     { key: 'date', header: 'Date', width: '135px', render: session => formatShortDate(session.startsAt) },
     {
       key: 'time',
