@@ -96,17 +96,6 @@ export interface BaseTable {
   updated_by: string | null;
 }
 
-export interface CohortActivities {
-  cohort_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  description: string | null;
-  id: Generated<string>;
-  name: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface CohortEnrollments {
   cohort_id: string;
   created_at: Generated<Timestamp>;
@@ -120,15 +109,15 @@ export interface CohortEnrollments {
 }
 
 export interface CohortSessions {
-  activity_id: string;
   cancelled_at: Timestamp | null;
+  cohort_id: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  description: string | null;
   ends_at: Timestamp;
-  focus: string | null;
   id: Generated<string>;
-  notes: string | null;
   starts_at: Timestamp;
+  theme: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -373,7 +362,6 @@ export interface DB {
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
-  cohort_activities: CohortActivities;
   cohort_enrollments: CohortEnrollments;
   cohort_sessions: CohortSessions;
   contacts: Contacts;

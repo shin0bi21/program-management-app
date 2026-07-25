@@ -18,17 +18,15 @@ export function getCohorts(programId?: string) {
       )::int AS enrolled_count,
       (
         SELECT MIN(cs.starts_at)
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
-        WHERE ca.cohort_id = pc.id
+        FROM cohort_sessions cs
+        WHERE cs.cohort_id = pc.id
           AND cs.starts_at >= NOW()
           AND cs.cancelled_at IS NULL
       ) AS next_session_at,
       (
         SELECT cs.id
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
-        WHERE ca.cohort_id = pc.id
+        FROM cohort_sessions cs
+        WHERE cs.cohort_id = pc.id
           AND cs.starts_at >= NOW()
           AND cs.cancelled_at IS NULL
         ORDER BY cs.starts_at
@@ -40,33 +38,29 @@ export function getCohorts(programId?: string) {
           / NULLIF(COUNT(ar.id) FILTER (WHERE ar.status != 'excused'), 0),
           1
         )::float
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+        FROM cohort_sessions cs
         INNER JOIN attendance_records ar ON ar.session_id = cs.id
-        WHERE ca.cohort_id = pc.id
+        WHERE cs.cohort_id = pc.id
       ) AS average_attendance,
       (
         SELECT COUNT(ar.id)::int
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+        FROM cohort_sessions cs
         INNER JOIN attendance_records ar ON ar.session_id = cs.id
-        WHERE ca.cohort_id = pc.id
+        WHERE cs.cohort_id = pc.id
           AND ar.status IN ('present', 'late')
       ) AS attendance_attended_count,
       (
         SELECT COUNT(ar.id)::int
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+        FROM cohort_sessions cs
         INNER JOIN attendance_records ar ON ar.session_id = cs.id
-        WHERE ca.cohort_id = pc.id
+        WHERE cs.cohort_id = pc.id
           AND ar.status != 'excused'
       ) AS attendance_recorded_count,
       (
         SELECT COUNT(DISTINCT ar.youth_id)::int
-        FROM cohort_activities ca
-        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+        FROM cohort_sessions cs
         INNER JOIN attendance_records ar ON ar.session_id = cs.id
-        WHERE ca.cohort_id = pc.id
+        WHERE cs.cohort_id = pc.id
       ) AS unique_attendee_count,
       CASE
         WHEN CURRENT_DATE < pc.starts_on THEN 'upcoming'
@@ -105,8 +99,7 @@ export async function updateCohort(id: string, data: UpdateCohortInput, actorId:
   const outside = await sql`
     SELECT 1
     FROM cohort_sessions cs
-    INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-    WHERE ca.cohort_id = ${id}
+    WHERE cs.cohort_id = ${id}
       AND (
         (cs.starts_at AT TIME ZONE 'America/Toronto')::date < ${data.startsOn}
         OR (cs.ends_at AT TIME ZONE 'America/Toronto')::date > ${data.endsOn}
@@ -133,8 +126,7 @@ export async function deleteCohort(id: string) {
     const attendance = await trx`
       SELECT 1 FROM attendance_records ar
       INNER JOIN cohort_sessions cs ON cs.id = ar.session_id
-      INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-      WHERE ca.cohort_id = ${id} LIMIT 1
+      WHERE cs.cohort_id = ${id} LIMIT 1
     `;
     if (attendance.length) {
       throw new ConflictError('Cohort cannot be deleted because one or more sessions have attendance');

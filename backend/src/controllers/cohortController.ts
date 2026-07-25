@@ -8,7 +8,7 @@ import {
 } from '../services/cohortService';
 import { enrollYouth, syncYouthCohorts, withdrawYouth } from '../services/enrollmentService';
 import {
-  generateActivitySessions,
+  generateSessions,
   getSessionList,
   getSessions,
   deleteSession,
@@ -21,7 +21,7 @@ import {
 import type {
   CreateCohortInput,
   EnrollYouthInput,
-  GenerateActivitySessionsInput,
+  GenerateSessionsInput,
   SessionListQuery,
   SaveAttendanceInput,
   SyncYouthCohortsInput,
@@ -62,10 +62,10 @@ export const handleSyncYouthCohorts = async (req: Request, res: Response) => {
   ));
 };
 
-export const handleGenerateActivitySessions = async (req: Request, res: Response) => {
-  res.status(201).json(await generateActivitySessions(
+export const handleGenerateSessions = async (req: Request, res: Response) => {
+  res.status(201).json(await generateSessions(
     req.params.cohortId,
-    req.body as GenerateActivitySessionsInput,
+    req.body as GenerateSessionsInput,
     actorId(req),
   ));
 };

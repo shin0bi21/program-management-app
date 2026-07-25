@@ -40,8 +40,7 @@ export function applyYouthFilters(filters: YouthQuery) {
           SELECT 1
           FROM attendance_records program_attendance
           INNER JOIN cohort_sessions program_session ON program_session.id = program_attendance.session_id
-          INNER JOIN cohort_activities program_activity ON program_activity.id = program_session.activity_id
-          INNER JOIN program_cohorts program_cohort ON program_cohort.id = program_activity.cohort_id
+          INNER JOIN program_cohorts program_cohort ON program_cohort.id = program_session.cohort_id
           INNER JOIN programs attendance_program ON attendance_program.id = program_cohort.program_id
           WHERE program_attendance.youth_id = yp.user_id
             AND attendance_program.roster_mode = 'open'
@@ -62,8 +61,7 @@ export function applyYouthFilters(filters: YouthQuery) {
           SELECT 1
           FROM attendance_records cohort_attendance
           INNER JOIN cohort_sessions cohort_session ON cohort_session.id = cohort_attendance.session_id
-          INNER JOIN cohort_activities cohort_activity ON cohort_activity.id = cohort_session.activity_id
-          INNER JOIN program_cohorts attendance_cohort ON attendance_cohort.id = cohort_activity.cohort_id
+          INNER JOIN program_cohorts attendance_cohort ON attendance_cohort.id = cohort_session.cohort_id
           INNER JOIN programs attendance_program ON attendance_program.id = attendance_cohort.program_id
           WHERE cohort_attendance.youth_id = yp.user_id
             AND attendance_program.roster_mode = 'open'
@@ -86,8 +84,7 @@ export function applyYouthFilters(filters: YouthQuery) {
           SELECT 1
           FROM attendance_records search_attendance
           INNER JOIN cohort_sessions search_session ON search_session.id = search_attendance.session_id
-          INNER JOIN cohort_activities search_activity ON search_activity.id = search_session.activity_id
-          INNER JOIN program_cohorts search_cohort ON search_cohort.id = search_activity.cohort_id
+          INNER JOIN program_cohorts search_cohort ON search_cohort.id = search_session.cohort_id
           INNER JOIN programs search_program ON search_program.id = search_cohort.program_id
           WHERE search_attendance.youth_id = yp.user_id
             AND search_program.roster_mode = 'open'

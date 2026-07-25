@@ -31,10 +31,8 @@ vi.mock('../../Youth/components/YouthModal/YouthModal', () => ({
 
 const session: CohortSession = {
   id: 'session-1',
-  activityId: 'activity-1',
   cohortId: 'cohort-1',
-  activityName: 'Weekly Soft Skills',
-  focus: 'Communication',
+  theme: 'Communication',
   cohortName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
@@ -42,7 +40,7 @@ const session: CohortSession = {
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',
   cancelledAt: null,
-  notes: null,
+  description: null,
 };
 
 describe('AttendanceModal', () => {

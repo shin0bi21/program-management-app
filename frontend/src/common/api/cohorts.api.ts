@@ -42,7 +42,7 @@ export function syncYouthCohorts(youthId: string, cohortIds: string[]) {
 }
 
 export function generateSessions(cohortId: string, data: GenerateSessionsInput) {
-  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/activities/generate`, data);
+  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
 }
 
 export function getManagedSessions(filters: SessionListFilters = {}) {

@@ -23,12 +23,9 @@ describe('Cohorts and attendance API', () => {
   let secondYouthId: string;
   let programId: string;
   let cohortId: string;
-  let activityId: string;
-  let monthlyActivityId: string;
   let sessionId: string;
   let openProgramId: string;
   let openCohortId: string;
-  let openActivityId: string;
   let openSessionId: string;
   let today: string;
 
@@ -62,12 +59,9 @@ describe('Cohorts and attendance API', () => {
 
   afterAll(async () => {
     if (openSessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${openSessionId}`;
-    if (openActivityId) await sql`DELETE FROM cohort_activities WHERE id = ${openActivityId}`;
     if (openCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
-    if (monthlyActivityId) await sql`DELETE FROM cohort_activities WHERE id = ${monthlyActivityId}`;
-    if (activityId) await sql`DELETE FROM cohort_activities WHERE id = ${activityId}`;
     if (cohortId) await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
     await deleteTestUser(youthId);
     await deleteTestUser(secondYouthId);
@@ -137,7 +131,7 @@ describe('Cohorts and attendance API', () => {
 
   it('requires a weekday for weekly and biweekly schedules', async () => {
     const response = await request(app)
-      .post(`/api/cohorts/${cohortId}/activities/generate`)
+      .post(`/api/cohorts/${cohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         name: 'Missing Weekday',
@@ -154,11 +148,10 @@ describe('Cohorts and attendance API', () => {
   it('generates weekly sessions from form input without persisting a schedule', async () => {
     const firstSessionDate = addDays(today, 1);
     const response = await request(app)
-      .post(`/api/cohorts/${cohortId}/activities/generate`)
+      .post(`/api/cohorts/${cohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        name: 'Weekly Soft Skills',
-        focus: 'Communication',
+        theme: 'Communication',
         frequency: 'weekly',
         dayOfWeek: weekdayFor(firstSessionDate),
         startsOn: firstSessionDate,
@@ -169,14 +162,13 @@ describe('Cohorts and attendance API', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.sessions).toHaveLength(3);
-    expect(response.body.sessions[0].focus).toBe('Communication');
-    activityId = response.body.activityId;
+    expect(response.body.sessions[0].theme).toBe('Communication');
     sessionId = response.body.sessions[0].id;
 
     const dates = await sql<{ localDate: string }[]>`
       SELECT (starts_at AT TIME ZONE 'America/Toronto')::date::text AS local_date
       FROM cohort_sessions
-      WHERE activity_id = ${activityId}
+      WHERE cohort_id = ${cohortId} AND theme = 'Communication'
       ORDER BY starts_at
     `;
     expect(dates.map(session => session.localDate)).toEqual([
@@ -188,10 +180,10 @@ describe('Cohorts and attendance API', () => {
 
   it('generates monthly sessions on the selected day of month', async () => {
     const response = await request(app)
-      .post(`/api/cohorts/${cohortId}/activities/generate`)
+      .post(`/api/cohorts/${cohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        name: 'Monthly Workshop',
+        theme: 'Monthly Workshop',
         frequency: 'monthly',
         dayOfMonth: 15,
         startsOn: addDays(today, 1),
@@ -202,12 +194,10 @@ describe('Cohorts and attendance API', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.sessions.length).toBeGreaterThan(0);
-    monthlyActivityId = response.body.activityId;
-
     const dates = await sql<{ dayOfMonth: number }[]>`
       SELECT EXTRACT(DAY FROM starts_at AT TIME ZONE 'America/Toronto')::int AS day_of_month
       FROM cohort_sessions
-      WHERE activity_id = ${monthlyActivityId}
+      WHERE cohort_id = ${cohortId} AND theme = 'Monthly Workshop'
     `;
     expect(dates.every(session => session.dayOfMonth === 15)).toBe(true);
   });
@@ -227,17 +217,16 @@ describe('Cohorts and attendance API', () => {
     openCohortId = cohort.body.id;
 
     const generated = await request(app)
-      .post(`/api/cohorts/${openCohortId}/activities/generate`)
+      .post(`/api/cohorts/${openCohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        name: 'Friday Drop In',
+        theme: 'Friday Drop In',
         frequency: 'once',
         startsOn: today,
         startTime: '17:00',
         endTime: '20:00',
       });
     expect(generated.status).toBe(201);
-    openActivityId = generated.body.activityId;
     openSessionId = generated.body.sessions[0].id;
 
     const roster = await request(app)
@@ -326,9 +315,10 @@ describe('Cohorts and attendance API', () => {
 
   it('enforces the cohort date range at the database boundary', async () => {
     await expect(sql`
-      INSERT INTO cohort_sessions (activity_id, starts_at, ends_at)
+      INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
       VALUES (
-        ${activityId},
+        ${cohortId},
+        'Outside range',
         ${`${addDays(today, 61)}T21:00:00.000Z`},
         ${`${addDays(today, 61)}T23:30:00.000Z`}
       )
@@ -408,7 +398,7 @@ describe('Cohorts and attendance API', () => {
         id: sessionId,
         cohortId,
         programId,
-        focus: 'Communication',
+        theme: 'Communication',
         attendanceMarkedCount: 2,
         attendanceRate: 100,
       }),
@@ -431,10 +421,10 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ youthIds: [youthId] });
     const generated = await request(app)
-      .post(`/api/cohorts/${disposableCohortId}/activities/generate`)
+      .post(`/api/cohorts/${disposableCohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        name: 'Disposable Session',
+        theme: 'Disposable Session',
         frequency: 'once',
         startsOn: addDays(today, 1),
         startTime: '17:00',
@@ -446,14 +436,14 @@ describe('Cohorts and attendance API', () => {
       .put(`/api/cohorts/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        focus: 'Updated focus',
+        theme: 'Updated theme',
         startsAt: `${addDays(today, 1)}T21:30:00.000Z`,
         endsAt: `${addDays(today, 1)}T23:00:00.000Z`,
-        notes: 'Updated notes',
+        description: 'Updated description',
       });
     expect(updatedSession.status).toBe(200);
-    expect((await sql`SELECT focus FROM cohort_sessions WHERE id = ${disposableSessionId}`)[0].focus)
-      .toBe('Updated focus');
+    expect((await sql`SELECT theme FROM cohort_sessions WHERE id = ${disposableSessionId}`)[0].theme)
+      .toBe('Updated theme');
 
     expect((await request(app)
       .delete(`/api/cohorts/sessions/${disposableSessionId}`)
@@ -483,7 +473,6 @@ describe('Cohorts and attendance API', () => {
 
   it('uses attendance foreign keys to block deletion through the cohort tree', async () => {
     await expect(sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`).rejects.toBeDefined();
-    await expect(sql`DELETE FROM cohort_activities WHERE id = ${activityId}`).rejects.toBeDefined();
     await expect(sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`).rejects.toBeDefined();
   });
 

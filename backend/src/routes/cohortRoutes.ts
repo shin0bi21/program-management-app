@@ -4,7 +4,7 @@ import {
   handleDeleteCohort,
   handleDeleteSession,
   handleEnrollYouth,
-  handleGenerateActivitySessions,
+  handleGenerateSessions,
   handleGetCohorts,
   handleGetSessionRoster,
   handleGetSessionList,
@@ -24,7 +24,7 @@ import {
   deleteCohortSchema,
   deleteSessionSchema,
   enrollYouthSchema,
-  generateActivitySessionsSchema,
+  generateSessionsSchema,
   saveAttendanceSchema,
   sessionListQuerySchema,
   sessionQuerySchema,
@@ -44,7 +44,7 @@ router.get('/sessions', authenticateToken, requirePermission('read:attendance'),
 router.put('/enrollments/:youthId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(syncYouthCohortsSchema), asyncHandler(handleSyncYouthCohorts));
 router.post('/:cohortId/enrollments', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(enrollYouthSchema), asyncHandler(handleEnrollYouth));
 router.patch('/:cohortId/enrollments/:youthId/withdraw', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(withdrawYouthSchema), asyncHandler(handleWithdrawYouth));
-router.post('/:cohortId/activities/generate', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(generateActivitySessionsSchema), asyncHandler(handleGenerateActivitySessions));
+router.post('/:cohortId/sessions/generate', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(generateSessionsSchema), asyncHandler(handleGenerateSessions));
 router.get('/sessions/calendar', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionQuerySchema), asyncHandler(handleGetSessions));
 router.get('/sessions/:sessionId/roster', authenticateToken, requirePermission('read:attendance'), generalLimiter, asyncHandler(handleGetSessionRoster));
 router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermission('write:attendance'), generalLimiter, validateRequest(saveAttendanceSchema), asyncHandler(handleSaveAttendance));

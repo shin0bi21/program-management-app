@@ -1,8 +1,6 @@
-import crypto from 'crypto';
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import type { GenerateActivitySessionsInput, SessionListQuery, UpdateSessionInput } from '../validation/cohortSchemas';
-import { audit } from './auditService';
+import type { GenerateSessionsInput, SessionListQuery, UpdateSessionInput } from '../validation/cohortSchemas';
 
 const intervalFor = {
   weekly: '1 week',
@@ -26,13 +24,11 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
   return first.toISOString().slice(0, 10);
 }
 
-export async function generateActivitySessions(
+export async function generateSessions(
   cohortId: string,
-  data: GenerateActivitySessionsInput,
+  data: GenerateSessionsInput,
   actorId: string,
 ) {
-  const transactionId = crypto.randomUUID();
-
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const cohorts = await trx<{ startsOn: string; endsOn: string }[]>`
@@ -46,28 +42,17 @@ export async function generateActivitySessions(
     const cohort = cohorts[0];
     const lastDate = data.frequency === 'once' ? data.startsOn : data.endsOn!;
     if (data.startsOn < cohort.startsOn || lastDate > cohort.endsOn) {
-      throw new ConflictError('Activity sessions must fall within the cohort date range');
+      throw new ConflictError('Sessions must fall within the cohort date range');
     }
-
-    const activities = await trx<{ id: string }[]>`
-      INSERT INTO cohort_activities (
-        cohort_id, name, description, created_by, updated_by
-      )
-      VALUES (
-        ${cohortId}, ${data.name}, ${data.description ?? null}, ${actorId}, ${actorId}
-      )
-      RETURNING id
-    `;
-    const activityId = activities[0].id;
 
     if (data.frequency === 'once') {
       await trx`
         INSERT INTO cohort_sessions (
-          activity_id, focus, starts_at, ends_at, created_by, updated_by
+          cohort_id, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES (
-          ${activityId},
-          ${data.focus ?? null},
+          ${cohortId},
+          ${data.theme},
           (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -81,11 +66,11 @@ export async function generateActivitySessions(
       }
       await trx`
         INSERT INTO cohort_sessions (
-          activity_id, focus, starts_at, ends_at, created_by, updated_by
+          cohort_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
-          ${activityId},
-          ${data.focus ?? null},
+          ${cohortId},
+          ${data.theme},
           (session_date::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (session_date::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -99,11 +84,11 @@ export async function generateActivitySessions(
     } else {
       await trx`
         INSERT INTO cohort_sessions (
-          activity_id, focus, starts_at, ends_at, created_by, updated_by
+          cohort_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
-          ${activityId},
-          ${data.focus ?? null},
+          ${cohortId},
+          ${data.theme},
           (candidate.session_date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (candidate.session_date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -122,26 +107,19 @@ export async function generateActivitySessions(
     }
 
     const sessions = await trx`
-      SELECT id, activity_id, focus, starts_at, ends_at, cancelled_at, notes
+      SELECT id, cohort_id, theme, starts_at, ends_at, cancelled_at, description
       FROM cohort_sessions
-      WHERE activity_id = ${activityId}
+      WHERE cohort_id = ${cohortId}
+        AND theme = ${data.theme}
+        AND starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
+        AND starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
       ORDER BY starts_at
     `;
     if (!sessions.length) {
       throw new ConflictError('No session dates match the selected schedule and date range');
     }
 
-    await audit(trx, actorId, transactionId, 'cohort_activities', activityId, 'INSERT', null, {
-      id: activityId,
-      cohortId,
-      name: data.name,
-      frequency: data.frequency,
-      dayOfWeek: data.dayOfWeek ?? null,
-      dayOfMonth: data.dayOfMonth ?? null,
-      sessionCount: sessions.length,
-    });
-
-    return { activityId, sessions };
+    return { sessions };
   });
 }
 
@@ -149,10 +127,8 @@ export function getSessions(start: string, end: string) {
   return sql`
     SELECT
       cs.id,
-      cs.activity_id,
-      ca.cohort_id,
-      ca.name AS activity_name,
-      cs.focus,
+      cs.cohort_id,
+      cs.theme,
       pc.name AS cohort_name,
       p.id AS program_id,
       p.name AS program_name,
@@ -160,10 +136,9 @@ export function getSessions(start: string, end: string) {
       cs.starts_at,
       cs.ends_at,
       cs.cancelled_at,
-      cs.notes
+      cs.description
     FROM cohort_sessions cs
-    INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-    INNER JOIN program_cohorts pc ON pc.id = ca.cohort_id
+    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     WHERE cs.starts_at < ${end}::timestamptz
       AND cs.ends_at > ${start}::timestamptz
@@ -178,10 +153,8 @@ export function getSessionList(filters: SessionListQuery) {
   return sql`
     SELECT
       cs.id,
-      cs.activity_id,
-      ca.cohort_id,
-      ca.name AS activity_name,
-      cs.focus,
+      cs.cohort_id,
+      cs.theme,
       pc.name AS cohort_name,
       p.id AS program_id,
       p.name AS program_name,
@@ -189,7 +162,7 @@ export function getSessionList(filters: SessionListQuery) {
       cs.starts_at,
       cs.ends_at,
       cs.cancelled_at,
-      cs.notes,
+      cs.description,
       COUNT(ar.id)::int AS attendance_marked_count,
       COUNT(ar.id) FILTER (WHERE ar.status IN ('present', 'late'))::int AS attended_count,
       ROUND(
@@ -203,20 +176,19 @@ export function getSessionList(filters: SessionListQuery) {
         ELSE 'upcoming'
       END AS state
     FROM cohort_sessions cs
-    INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-    INNER JOIN program_cohorts pc ON pc.id = ca.cohort_id
+    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN attendance_records ar ON ar.session_id = cs.id
     WHERE ${filters.programId ? sql`pc.program_id = ${filters.programId}` : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
       AND ${timing === 'upcoming' ? sql`cs.starts_at >= NOW()` : timing === 'past' ? sql`cs.starts_at < NOW()` : sql`TRUE`}
       AND ${search ? sql`(
-        ca.name ILIKE ${search}
-        OR COALESCE(cs.focus, '') ILIKE ${search}
+        cs.theme ILIKE ${search}
+        OR COALESCE(cs.description, '') ILIKE ${search}
         OR pc.name ILIKE ${search}
         OR p.name ILIKE ${search}
       )` : sql`TRUE`}
-    GROUP BY cs.id, ca.id, pc.id, p.id
+    GROUP BY cs.id, pc.id, p.id
     ORDER BY
       CASE WHEN ${timing} = 'past' THEN cs.starts_at END DESC,
       CASE WHEN ${timing} != 'past' THEN cs.starts_at END ASC
@@ -226,8 +198,8 @@ export function getSessionList(filters: SessionListQuery) {
 export async function updateSession(id: string, data: UpdateSessionInput, actorId: string) {
   const rows = await sql`
     UPDATE cohort_sessions
-    SET focus = ${data.focus ?? null}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
-        notes = ${data.notes ?? null}, updated_at = NOW(), updated_by = ${actorId}
+    SET theme = ${data.theme}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
+        description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actorId}
     WHERE id = ${id}
     RETURNING id
   `;

@@ -31,7 +31,6 @@ describe('GenerateSessionsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     generateSessions.mockResolvedValue({
-      activityId: 'activity-1',
       sessions: [{ id: 'session-1' }, { id: 'session-2' }],
     });
   });
@@ -40,7 +39,7 @@ describe('GenerateSessionsModal', () => {
     render(<GenerateSessionsModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
-    fireEvent.change(screen.getByLabelText('Activity'), { target: { value: 'Weekly Soft Skills' } });
+    fireEvent.change(screen.getByLabelText('Theme'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({
@@ -62,7 +61,7 @@ describe('GenerateSessionsModal', () => {
     expect(screen.getByRole('button', { name: 'Day of month' })).toHaveTextContent('1st');
     fireEvent.click(screen.getByRole('button', { name: 'Day of month' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: '15th' }));
-    fireEvent.change(screen.getByLabelText('Activity'), { target: { value: 'Monthly Workshop' } });
+    fireEvent.change(screen.getByLabelText('Theme'), { target: { value: 'Monthly Workshop' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({

@@ -151,8 +151,8 @@ export default function Sessions() {
   const columns = useMemo<TableColumn<ManagedSession>[]>(() => [
     { key: 'program', header: 'Program', render: session => session.programName },
     { key: 'cohort', header: 'Cohort', render: session => session.cohortName },
-    { key: 'activity', header: 'Session', render: session => session.activityName },
-    { key: 'focus', header: 'Focus', render: session => session.focus || '—' },
+    { key: 'theme', header: 'Theme', render: session => session.theme },
+    { key: 'description', header: 'Description', render: session => session.description || '—' },
     { key: 'date', header: 'Date', width: '135px', render: session => formatShortDate(session.startsAt) },
     {
       key: 'time',
@@ -181,7 +181,7 @@ export default function Sessions() {
       header: '',
       className: 'col-actions',
       render: (session: ManagedSession) => <ActionsMenu
-        ariaLabel={`More actions for ${session.focus || session.activityName}`}
+        ariaLabel={`More actions for ${session.theme}`}
         items={[
           ...(canWriteAttendance ? [{
             id: 'attendance', label: 'Take Attendance', onClick: () => setAttendanceTarget(session),
@@ -191,7 +191,7 @@ export default function Sessions() {
             {
               id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => setConfirmAction({
                 title: 'Delete Session',
-                message: `Delete ${session.focus || session.activityName}? This cannot be undone.`,
+                message: `Delete ${session.theme}? This cannot be undone.`,
                 confirmLabel: 'Delete',
                 confirmVariant: 'danger',
                 successMessage: 'Session deleted',
@@ -212,10 +212,10 @@ export default function Sessions() {
     setEditMessage('Updating session...');
     try {
       await updateSession(editTarget.id, {
-        focus: String(form.get('focus')).trim() || null,
+        theme: String(form.get('theme')),
         startsAt: new Date(String(form.get('startsAt'))).toISOString(),
         endsAt: new Date(String(form.get('endsAt'))).toISOString(),
-        notes: String(form.get('notes')).trim() || null,
+        description: String(form.get('description')).trim() || null,
       });
       await loadSessions();
       setEditMessage('Session updated successfully.');
@@ -240,7 +240,7 @@ export default function Sessions() {
           label="Search sessions"
           value={search}
           onChange={event => setSearch(event.target.value)}
-          placeholder="Search sessions, focuses, or cohorts"
+          placeholder="Search themes, descriptions, or cohorts"
         />}
         filters={<FilterCard
           categories={filterCategories}
@@ -287,8 +287,8 @@ export default function Sessions() {
         </>}
       >
         {editTarget && <form id="edit-session-form" onSubmit={submitEdit}>
-          <FormField id="edit-session-focus" label="Focus">
-            <input id="edit-session-focus" name="focus" defaultValue={editTarget.focus ?? ''} maxLength={160} />
+          <FormField id="edit-session-theme" label="Theme">
+            <input id="edit-session-theme" name="theme" required defaultValue={editTarget.theme} maxLength={160} />
           </FormField>
           <div className="form-row">
             <FormField id="edit-session-start" label="Starts at">
@@ -298,8 +298,8 @@ export default function Sessions() {
               <input id="edit-session-end" name="endsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.endsAt)} />
             </FormField>
           </div>
-          <FormField id="edit-session-notes" label="Notes">
-            <textarea id="edit-session-notes" name="notes" defaultValue={editTarget.notes ?? ''} maxLength={5000} />
+          <FormField id="edit-session-description" label="Description">
+            <textarea id="edit-session-description" name="description" defaultValue={editTarget.description ?? ''} maxLength={5000} />
           </FormField>
         </form>}
       </Modal>

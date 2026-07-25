@@ -52,8 +52,7 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
     setStatusMessage(`Adding sessions for ${cohort.programName} - ${cohort.name}...`);
     try {
       const result = await generateSessions(cohort.id, {
-        name: String(form.get('name')),
-        focus: String(form.get('focus')).trim() || null,
+        theme: String(form.get('theme')),
         frequency,
         ...((frequency === 'weekly' || frequency === 'biweekly') && { dayOfWeek }),
         ...(frequency === 'monthly' && { dayOfMonth: Number(dayOfMonth) }),
@@ -94,14 +93,9 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
       maxWidth="620px"
     >
       <form id="generate-sessions-form" onSubmit={event => void submit(event)}>
-        <div className="form-row">
-          <FormField id="activity-name" label="Activity">
-            <input id="activity-name" name="name" required maxLength={120} placeholder="Weekly Soft Skills" />
-          </FormField>
-          <FormField id="session-focus" label="Focus">
-            <input id="session-focus" name="focus" maxLength={160} placeholder="Communication" />
-          </FormField>
-        </div>
+        <FormField id="session-theme" label="Theme">
+          <input id="session-theme" name="theme" required maxLength={160} placeholder="Communication" />
+        </FormField>
         <div className="form-row">
           <FormField id="session-frequency" label="Frequency">
             <FloatingSelect

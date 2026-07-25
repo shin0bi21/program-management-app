@@ -44,10 +44,8 @@ describe('Sessions', () => {
     }]);
     getManagedSessions.mockResolvedValue([{
       id: 'session-1',
-      activityId: 'activity-1',
       cohortId: 'cohort-1',
-      activityName: 'Weekly Soft Skills',
-      focus: 'Communication',
+      theme: 'Communication',
       cohortName: 'Summer 2026',
       programId: 'program-1',
       programName: 'Soft Skills',
@@ -55,7 +53,7 @@ describe('Sessions', () => {
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       cancelledAt: null,
-      notes: null,
+      description: null,
       attendanceMarkedCount: 0,
       attendedCount: 0,
       attendanceRate: null,
@@ -73,10 +71,8 @@ describe('Sessions', () => {
   it('shows open attendance as a check-in count', async () => {
     getManagedSessions.mockResolvedValue([{
       id: 'drop-in-session',
-      activityId: 'drop-in-activity',
       cohortId: 'drop-in-cohort',
-      activityName: 'Friday Drop In',
-      focus: null,
+      theme: 'Friday Drop In',
       cohortName: 'Summer 2026',
       programId: 'drop-in',
       programName: 'Drop In',
@@ -84,7 +80,7 @@ describe('Sessions', () => {
       startsAt: '2026-07-31T21:00:00.000Z',
       endsAt: '2026-07-31T23:00:00.000Z',
       cancelledAt: null,
-      notes: null,
+      description: null,
       attendanceMarkedCount: 3,
       attendedCount: 3,
       attendanceRate: 100,

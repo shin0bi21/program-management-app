@@ -92,7 +92,7 @@
 }
 
 .programming-calendar-event__activity,
-.programming-calendar-event__focus,
+.programming-calendar-event__description,
 .programming-calendar-event__time {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -105,7 +105,7 @@
   line-height: 1.2;
 }
 
-.programming-calendar-event__focus,
+.programming-calendar-event__description,
 .programming-calendar-event__time {
   opacity: 0.82;
   font-size: 0.82em;

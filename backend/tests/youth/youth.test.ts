@@ -365,21 +365,18 @@ describe('Youth API', () => {
     });
 
     it('should return the latest session date marked present or late', async () => {
-      const [activity] = await sql<{ id: string }[]>`
-        INSERT INTO cohort_activities (cohort_id, name)
-        VALUES (${softSkillsCohortId}, ${`Attendance Test ${Date.now()}`})
-        RETURNING id
-      `;
       const sessions = await sql<{ id: string; sessionDate: string }[]>`
-        INSERT INTO cohort_sessions (activity_id, starts_at, ends_at)
+        INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
         VALUES
           (
-            ${activity.id},
+            ${softSkillsCohortId},
+            ${`Attendance Test ${Date.now()}`},
             (CURRENT_DATE - 2 + TIME '17:00') AT TIME ZONE 'America/Toronto',
             (CURRENT_DATE - 2 + TIME '19:00') AT TIME ZONE 'America/Toronto'
           ),
           (
-            ${activity.id},
+            ${softSkillsCohortId},
+            ${`Attendance Test Latest ${Date.now()}`},
             (CURRENT_DATE - 1 + TIME '17:00') AT TIME ZONE 'America/Toronto',
             (CURRENT_DATE - 1 + TIME '19:00') AT TIME ZONE 'America/Toronto'
           )
@@ -416,8 +413,7 @@ describe('Youth API', () => {
       } finally {
         await sql`DELETE FROM attendance_records WHERE youth_id = ${youthId}`;
         await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${youthId}`;
-        await sql`DELETE FROM cohort_sessions WHERE activity_id = ${activity.id}`;
-        await sql`DELETE FROM cohort_activities WHERE id = ${activity.id}`;
+        await sql`DELETE FROM cohort_sessions WHERE id = ANY(${sql.array(sessions.map(session => session.id))}::uuid[])`;
       }
     });
 

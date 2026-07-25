@@ -6,8 +6,7 @@ export async function getSessionRoster(sessionId: string) {
   const sessions = await sql<{ rosterMode: 'enrolled' | 'open' }[]>`
     SELECT p.roster_mode
     FROM cohort_sessions cs
-    INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-    INNER JOIN program_cohorts pc ON pc.id = ca.cohort_id
+    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     WHERE cs.id = ${sessionId}
   `;
@@ -36,8 +35,7 @@ export async function getSessionRoster(sessionId: string) {
         ar.status,
         ar.notes
       FROM cohort_sessions cs
-      INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-      INNER JOIN cohort_enrollments ce ON ce.cohort_id = ca.cohort_id
+      INNER JOIN cohort_enrollments ce ON ce.cohort_id = cs.cohort_id
       INNER JOIN users u ON u.id = ce.youth_id
       LEFT JOIN attendance_records ar
         ON ar.session_id = cs.id
@@ -58,8 +56,7 @@ export async function saveAttendance(sessionId: string, data: SaveAttendanceInpu
     const sessions = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
       SELECT cs.id, p.roster_mode
       FROM cohort_sessions cs
-      INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-      INNER JOIN program_cohorts pc ON pc.id = ca.cohort_id
+      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
       INNER JOIN programs p ON p.id = pc.program_id
       WHERE cs.id = ${sessionId}
     `;
@@ -92,8 +89,7 @@ export async function saveAttendance(sessionId: string, data: SaveAttendanceInpu
       const eligibleYouth = await trx<{ youthId: string }[]>`
         SELECT ce.youth_id
         FROM cohort_sessions cs
-        INNER JOIN cohort_activities ca ON ca.id = cs.activity_id
-        INNER JOIN cohort_enrollments ce ON ce.cohort_id = ca.cohort_id
+        INNER JOIN cohort_enrollments ce ON ce.cohort_id = cs.cohort_id
         WHERE cs.id = ${sessionId}
           AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
           AND (
