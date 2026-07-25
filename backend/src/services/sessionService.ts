@@ -31,6 +31,7 @@ export async function generateSessions(
 ) {
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+    const theme = data.theme ?? null;
     const cohorts = await trx<{ startsOn: string; endsOn: string }[]>`
       SELECT starts_on::text AS starts_on, ends_on::text AS ends_on
       FROM program_cohorts
@@ -52,7 +53,7 @@ export async function generateSessions(
         )
         VALUES (
           ${cohortId},
-          ${data.theme},
+          ${theme},
           (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -70,7 +71,7 @@ export async function generateSessions(
         )
         SELECT
           ${cohortId},
-          ${data.theme},
+          ${theme},
           (session_date::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (session_date::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -88,7 +89,7 @@ export async function generateSessions(
         )
         SELECT
           ${cohortId},
-          ${data.theme},
+          ${theme},
           (candidate.session_date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (candidate.session_date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
           ${actorId},
@@ -110,7 +111,7 @@ export async function generateSessions(
       SELECT id, cohort_id, theme, starts_at, ends_at, cancelled_at, description
       FROM cohort_sessions
       WHERE cohort_id = ${cohortId}
-        AND theme = ${data.theme}
+        AND theme IS NOT DISTINCT FROM ${theme}
         AND starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
         AND starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
       ORDER BY starts_at
@@ -183,7 +184,7 @@ export function getSessionList(filters: SessionListQuery) {
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
       AND ${timing === 'upcoming' ? sql`cs.starts_at >= NOW()` : timing === 'past' ? sql`cs.starts_at < NOW()` : sql`TRUE`}
       AND ${search ? sql`(
-        cs.theme ILIKE ${search}
+        COALESCE(cs.theme, '') ILIKE ${search}
         OR COALESCE(cs.description, '') ILIKE ${search}
         OR pc.name ILIKE ${search}
         OR p.name ILIKE ${search}
@@ -198,7 +199,7 @@ export function getSessionList(filters: SessionListQuery) {
 export async function updateSession(id: string, data: UpdateSessionInput, actorId: string) {
   const rows = await sql`
     UPDATE cohort_sessions
-    SET theme = ${data.theme}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
+    SET theme = ${data.theme ?? null}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
         description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actorId}
     WHERE id = ${id}
     RETURNING id

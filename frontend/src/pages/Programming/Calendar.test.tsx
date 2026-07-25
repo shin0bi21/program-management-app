@@ -51,7 +51,7 @@ vi.mock('@fullcalendar/react', () => ({
         title: string;
         start: Date;
         end: Date;
-        extendedProps: { description?: string | null };
+        extendedProps: { programName?: string };
       };
     }) => React.ReactNode;
     events: Array<{
@@ -59,7 +59,7 @@ vi.mock('@fullcalendar/react', () => ({
       title: string;
       start: string;
       end: string;
-      extendedProps?: { description?: string | null };
+      extendedProps?: { programName?: string };
     }>;
   }) => (
     <div
@@ -125,7 +125,7 @@ describe('Programming calendar', () => {
       startsAt: '2026-07-07T21:00:00.000Z',
       endsAt: '2026-07-07T23:30:00.000Z',
       cancelledAt: null,
-      description: null,
+      description: 'Practising clear group communication.',
     }]);
     api.getSessionRoster.mockResolvedValue([]);
   });
@@ -148,9 +148,10 @@ describe('Programming calendar', () => {
 
     await user.click(screen.getByRole('button', { name: 'Load calendar range' }));
     await user.click(await screen.findByRole('button', {
-      name: 'Communication, 5pm – 7:30pm',
+      name: 'Soft Skills, Communication, 5pm – 7:30pm',
     }));
 
+    expect(screen.queryByText('Practising clear group communication.')).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Communication attendance' })).toBeInTheDocument();
     expect(api.getSessionRoster).toHaveBeenCalledWith('session-1');
   });
@@ -205,10 +206,10 @@ describe('Programming calendar', () => {
     await user.click(screen.getByRole('button', { name: 'Load calendar range' }));
 
     expect(await screen.findByRole('button', {
-      name: 'Communication, 5pm – 7:30pm',
+      name: 'Soft Skills, Communication, 5pm – 7:30pm',
     })).toBeInTheDocument();
     expect(screen.getByRole('button', {
-      name: 'Resumes, 5pm – 7pm',
+      name: 'Job Readiness, Resumes, 5pm – 7pm',
     })).toBeInTheDocument();
     expect(screen.queryByRole('button', {
       name: 'Drop In, Open Gym, 5pm – 7pm',

@@ -76,7 +76,7 @@ export const syncYouthCohortsSchema = z.object({
 export const generateSessionsSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({
-    theme: z.string().trim().min(1).max(160),
+    theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     frequency: z.enum(['once', 'weekly', 'biweekly', 'monthly']),
     dayOfWeek: weekdaySchema.optional(),
     dayOfMonth: z.number().int().min(1).max(31).optional(),
@@ -135,7 +135,7 @@ export const saveAttendanceSchema = z.object({
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
-    theme: z.string().trim().min(1).max(160),
+    theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
     description: z.string().trim().max(5000).nullable().optional(),

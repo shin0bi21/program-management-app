@@ -178,6 +178,22 @@ describe('Cohorts and attendance API', () => {
     ]);
   });
 
+  it('generates a session without a theme', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/${cohortId}/sessions/generate`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        frequency: 'once',
+        startsOn: addDays(today, 2),
+        startTime: '13:00',
+        endTime: '14:00',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.sessions).toHaveLength(1);
+    expect(response.body.sessions[0].theme).toBeNull();
+  });
+
   it('generates monthly sessions on the selected day of month', async () => {
     const response = await request(app)
       .post(`/api/cohorts/${cohortId}/sessions/generate`)

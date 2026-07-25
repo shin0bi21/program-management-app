@@ -151,7 +151,7 @@ export default function Sessions() {
   const columns = useMemo<TableColumn<ManagedSession>[]>(() => [
     { key: 'program', header: 'Program', render: session => session.programName },
     { key: 'cohort', header: 'Cohort', render: session => session.cohortName },
-    { key: 'theme', header: 'Theme', render: session => session.theme },
+    { key: 'theme', header: 'Theme', render: session => session.theme || '—' },
     { key: 'date', header: 'Date', width: '135px', render: session => formatShortDate(session.startsAt) },
     {
       key: 'time',
@@ -180,7 +180,7 @@ export default function Sessions() {
       header: '',
       className: 'col-actions',
       render: (session: ManagedSession) => <ActionsMenu
-        ariaLabel={`More actions for ${session.theme}`}
+        ariaLabel={`More actions for ${session.theme || `${session.programName} session`}`}
         items={[
           ...(canWriteAttendance ? [{
             id: 'attendance', label: 'Take Attendance', onClick: () => setAttendanceTarget(session),
@@ -190,7 +190,7 @@ export default function Sessions() {
             {
               id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => setConfirmAction({
                 title: 'Delete Session',
-                message: `Delete ${session.theme}? This cannot be undone.`,
+                message: `Delete ${session.theme || `${session.programName} session`}? This cannot be undone.`,
                 confirmLabel: 'Delete',
                 confirmVariant: 'danger',
                 successMessage: 'Session deleted',
@@ -211,7 +211,7 @@ export default function Sessions() {
     setEditMessage('Updating session...');
     try {
       await updateSession(editTarget.id, {
-        theme: String(form.get('theme')),
+        theme: String(form.get('theme')).trim() || null,
         startsAt: new Date(String(form.get('startsAt'))).toISOString(),
         endsAt: new Date(String(form.get('endsAt'))).toISOString(),
         description: String(form.get('description')).trim() || null,
@@ -286,8 +286,8 @@ export default function Sessions() {
         </>}
       >
         {editTarget && <form id="edit-session-form" onSubmit={submitEdit}>
-          <FormField id="edit-session-theme" label="Theme">
-            <input id="edit-session-theme" name="theme" required defaultValue={editTarget.theme} maxLength={160} />
+          <FormField id="edit-session-theme" label="Theme (optional)">
+            <input id="edit-session-theme" name="theme" defaultValue={editTarget.theme ?? ''} maxLength={160} />
           </FormField>
           <div className="form-row edit-session-time-row">
             <FormField id="edit-session-start" label="Starts at">

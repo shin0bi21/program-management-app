@@ -19,7 +19,7 @@ export interface ProgramCohort {
 export interface CohortSession {
   id: string;
   cohortId: string;
-  theme: string;
+  theme: string | null;
   cohortName: string;
   programId: string;
   programName: string;
@@ -38,7 +38,7 @@ export interface CreateCohortInput {
 }
 export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
 export interface UpdateSessionInput {
-  theme: string;
+  theme: string | null;
   startsAt: string;
   endsAt: string;
   description?: string | null;
@@ -49,7 +49,7 @@ export interface EnrollYouthInput {
 }
 
 export interface GenerateSessionsInput {
-  theme: string;
+  theme: string | null;
   frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
   dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
   dayOfMonth?: number;

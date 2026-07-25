@@ -96,7 +96,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
 
   const save = async () => {
     if (!session) return;
-    const sessionName = session.theme;
+    const sessionName = session.theme || `${session.programName} session`;
     setSubmitStatus('submitting');
     setStatusMessage(`Saving attendance for ${sessionName}...`);
     setError(null);
@@ -128,7 +128,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
     <Modal
       isOpen={session !== null && !creatingYouth}
       onClose={onClose}
-      title={session ? `${session.theme} attendance` : 'Attendance'}
+      title={session ? `${session.theme || session.programName} attendance` : 'Attendance'}
       maxWidth="720px"
       status={submitStatus}
       statusMessage={statusMessage}

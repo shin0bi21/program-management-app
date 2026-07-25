@@ -52,7 +52,7 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
     setStatusMessage(`Adding sessions for ${cohort.programName} - ${cohort.name}...`);
     try {
       const result = await generateSessions(cohort.id, {
-        theme: String(form.get('theme')),
+        theme: String(form.get('theme')).trim() || null,
         frequency,
         ...((frequency === 'weekly' || frequency === 'biweekly') && { dayOfWeek }),
         ...(frequency === 'monthly' && { dayOfMonth: Number(dayOfMonth) }),
@@ -93,8 +93,8 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
       maxWidth="620px"
     >
       <form id="generate-sessions-form" onSubmit={event => void submit(event)}>
-        <FormField id="session-theme" label="Theme">
-          <input id="session-theme" name="theme" required maxLength={160} placeholder="Communication" />
+        <FormField id="session-theme" label="Theme (optional)">
+          <input id="session-theme" name="theme" maxLength={160} placeholder="Communication" />
         </FormField>
         <div className="form-row">
           <FormField id="session-frequency" label="Frequency">

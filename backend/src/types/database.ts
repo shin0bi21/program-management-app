@@ -117,7 +117,7 @@ export interface CohortSessions {
   ends_at: Timestamp;
   id: Generated<string>;
   starts_at: Timestamp;
-  theme: string;
+  theme: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
