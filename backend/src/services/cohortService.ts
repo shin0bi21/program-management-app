@@ -7,6 +7,7 @@ export function getCohorts(programId?: string) {
       pc.id,
       pc.program_id,
       p.name AS program_name,
+      p.roster_mode,
       pc.name,
       pc.starts_on::text AS starts_on,
       pc.ends_on::text AS ends_on,
@@ -59,6 +60,13 @@ export function getCohorts(programId?: string) {
         WHERE ca.cohort_id = pc.id
           AND ar.status != 'excused'
       ) AS attendance_recorded_count,
+      (
+        SELECT COUNT(DISTINCT ar.youth_id)::int
+        FROM cohort_activities ca
+        INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+        INNER JOIN attendance_records ar ON ar.session_id = cs.id
+        WHERE ca.cohort_id = pc.id
+      ) AS unique_attendee_count,
       CASE
         WHEN CURRENT_DATE < pc.starts_on THEN 'upcoming'
         WHEN CURRENT_DATE > pc.ends_on THEN 'completed'
@@ -81,7 +89,13 @@ export async function createCohort(data: CreateCohortInput, actorId: string) {
     VALUES (
       ${data.programId}, ${data.name}, ${data.startsOn}, ${data.endsOn}, ${actorId}, ${actorId}
     )
-    RETURNING id, program_id, name, starts_on::text AS starts_on, ends_on::text AS ends_on
+    RETURNING
+      id,
+      program_id,
+      name,
+      starts_on::text AS starts_on,
+      ends_on::text AS ends_on,
+      (SELECT roster_mode FROM programs WHERE id = ${data.programId}) AS roster_mode
   `;
   return rows[0];
 }

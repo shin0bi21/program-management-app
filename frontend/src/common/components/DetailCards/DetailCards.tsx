@@ -49,6 +49,8 @@ export function AttendanceCard({
   cohorts?: Array<{
     id: string;
     name: string;
+    programName: string;
+    rosterMode: 'enrolled' | 'open';
     presentCount: number;
     lateCount: number;
     absentCount: number;
@@ -65,14 +67,22 @@ export function AttendanceCard({
         <div className="attendance-card__cohorts">
           {cohorts.map(cohort => (
             <div className="attendance-card__cohort" key={cohort.id}>
-              <strong>{cohort.name}</strong>
-              <p className="attendance-card__breakdown">
-                Present {cohort.presentCount}
-                <span aria-hidden="true"> · </span>
-                Late {cohort.lateCount}
-                <span aria-hidden="true"> · </span>
-                Absent {cohort.absentCount}
-              </p>
+              <strong>{cohort.rosterMode === 'open'
+                ? `${cohort.programName} · ${cohort.name}`
+                : cohort.name}</strong>
+              {cohort.rosterMode === 'open' ? (
+                <p className="attendance-card__breakdown">
+                  {cohort.presentCount} {cohort.presentCount === 1 ? 'visit' : 'visits'}
+                </p>
+              ) : (
+                <p className="attendance-card__breakdown">
+                  Present {cohort.presentCount}
+                  <span aria-hidden="true"> · </span>
+                  Late {cohort.lateCount}
+                  <span aria-hidden="true"> · </span>
+                  Absent {cohort.absentCount}
+                </p>
+              )}
               <p className={!cohort.lastAttendedOn ? 'dashboard-card__empty' : undefined}>
                 Last attended: {cohort.lastAttendedOn
                   ? formatShortDate(cohort.lastAttendedOn)

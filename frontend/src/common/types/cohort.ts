@@ -2,6 +2,7 @@ export interface ProgramCohort {
   id: string;
   programId: string;
   programName: string;
+  rosterMode: 'enrolled' | 'open';
   name: string;
   startsOn: string;
   endsOn: string;
@@ -12,6 +13,7 @@ export interface ProgramCohort {
   averageAttendance: number | null;
   attendanceAttendedCount: number;
   attendanceRecordedCount: number;
+  uniqueAttendeeCount: number;
 }
 
 export interface CohortSession {
@@ -23,6 +25,7 @@ export interface CohortSession {
   cohortName: string;
   programId: string;
   programName: string;
+  rosterMode: 'enrolled' | 'open';
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;

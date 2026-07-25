@@ -12,9 +12,27 @@ vi.mock('../../../../common/api/cohorts.api', () => cohortApi);
 
 const cohorts = [
   {
+    id: 'open-cohort',
+    programId: 'drop-in',
+    programName: 'Drop In',
+    rosterMode: 'open',
+    name: 'Summer Drop In',
+    startsOn: '2026-06-30',
+    endsOn: '2026-08-31',
+    state: 'active',
+    enrolledCount: 0,
+    nextSessionAt: null,
+    nextSessionId: null,
+    averageAttendance: 100,
+    attendanceAttendedCount: 2,
+    attendanceRecordedCount: 2,
+    uniqueAttendeeCount: 2,
+  },
+  {
     id: 'active-cohort',
     programId: 'soft-skills',
     programName: 'Soft Skills',
+    rosterMode: 'enrolled',
     name: 'Summer 2026',
     startsOn: '2026-06-30',
     endsOn: '2026-08-31',
@@ -25,11 +43,13 @@ const cohorts = [
     averageAttendance: null,
     attendanceAttendedCount: 0,
     attendanceRecordedCount: 0,
+    uniqueAttendeeCount: 0,
   },
   {
     id: 'upcoming-cohort',
     programId: 'job-readiness',
     programName: 'Job Readiness',
+    rosterMode: 'enrolled',
     name: 'Fall 2026',
     startsOn: '2026-09-01',
     endsOn: '2026-11-30',
@@ -40,11 +60,13 @@ const cohorts = [
     averageAttendance: null,
     attendanceAttendedCount: 0,
     attendanceRecordedCount: 0,
+    uniqueAttendeeCount: 0,
   },
   {
     id: 'completed-cohort',
     programId: 'soft-skills',
     programName: 'Soft Skills',
+    rosterMode: 'enrolled',
     name: 'Spring 2026',
     startsOn: '2026-03-01',
     endsOn: '2026-05-31',
@@ -55,6 +77,7 @@ const cohorts = [
     averageAttendance: 90,
     attendanceAttendedCount: 9,
     attendanceRecordedCount: 10,
+    uniqueAttendeeCount: 1,
   },
 ] as const;
 
@@ -79,6 +102,7 @@ describe('ManageCohortsModal', () => {
     expect(await screen.findByRole('checkbox', { name: /Soft Skills · Summer 2026/ })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Job Readiness · Fall 2026/ })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /Spring 2026/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Summer Drop In/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Soft Skills · Summer 2026/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Job Readiness · Fall 2026/ }));
@@ -101,6 +125,7 @@ describe('ManageCohortsModal', () => {
             name: 'Summer 2026',
             programId: 'soft-skills',
             programName: 'Soft Skills',
+            rosterMode: 'enrolled',
             startsOn: '2026-06-30',
             endsOn: '2026-08-31',
             enrolledOn: '2026-06-30',

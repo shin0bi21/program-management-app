@@ -44,6 +44,7 @@ export default function Programming() {
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
   const [programSubmitStatus, setProgramSubmitStatus] = useState<SubmitStatus>('idle');
   const [programStatusMessage, setProgramStatusMessage] = useState('');
+  const [programRosterMode, setProgramRosterMode] = useState<'enrolled' | 'open'>('enrolled');
   const [cohortSubmitStatus, setCohortSubmitStatus] = useState<SubmitStatus>('idle');
   const [cohortStatusMessage, setCohortStatusMessage] = useState('');
   const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -122,7 +123,14 @@ export default function Programming() {
     },
     { key: 'start', header: 'Start', width: '140px', render: cohort => formatShortDate(cohort.startsOn) },
     { key: 'end', header: 'End', width: '140px', render: cohort => formatShortDate(cohort.endsOn) },
-    { key: 'enrollment', header: 'Enrollment', width: '120px', render: cohort => cohort.enrolledCount },
+    {
+      key: 'youth',
+      header: 'Youth',
+      width: '120px',
+      render: cohort => cohort.rosterMode === 'open'
+        ? cohort.uniqueAttendeeCount
+        : cohort.enrolledCount,
+    },
     ...(canWriteCohorts ? [{
       key: 'actions',
       header: '',
@@ -130,7 +138,9 @@ export default function Programming() {
       render: (cohort: ProgramCohort) => <ActionsMenu
         ariaLabel={`More actions for ${cohort.name}`}
         items={[
-          { id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) },
+          ...(cohort.rosterMode === 'enrolled'
+            ? [{ id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) }]
+            : []),
           { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
         ]}
       />,
@@ -161,6 +171,7 @@ export default function Programming() {
       const program = await createProgram({
         name: programName,
         description: String(form.get('description')).trim() || null,
+        rosterMode: programRosterMode,
       });
       setPrograms(current => [...current, program].sort((a, b) => a.name.localeCompare(b.name)));
       selectProgram(program.id);
@@ -225,6 +236,7 @@ export default function Programming() {
                     closeAddMenu();
                     setProgramSubmitStatus('idle');
                     setProgramStatusMessage('');
+                    setProgramRosterMode('enrolled');
                     setProgramModalOpen(true);
                   }}
                 >
@@ -272,9 +284,16 @@ export default function Programming() {
 
       {programsError && <p className="programming-error">{programsError}</p>}
       <DashboardCardGroup ariaLabel="Programming overview">
-        <DashboardCard title="Youth enrolled" emptyMessage="No cohort selected.">
+        <DashboardCard
+          title={selectedCohort?.rosterMode === 'open' ? 'Unique youth reached' : 'Youth enrolled'}
+          emptyMessage="No cohort selected."
+        >
           {selectedCohort
-            ? <strong className="dashboard-card__metric">{selectedCohort.enrolledCount}</strong>
+            ? <strong className="dashboard-card__metric">
+                {selectedCohort.rosterMode === 'open'
+                  ? selectedCohort.uniqueAttendeeCount
+                  : selectedCohort.enrolledCount}
+              </strong>
             : undefined}
         </DashboardCard>
         <DashboardCard title="Next session" emptyMessage="No cohort selected.">
@@ -295,11 +314,18 @@ export default function Programming() {
             </div>
           ) : undefined}
         </DashboardCard>
-        <DashboardCard title="Average attendance" emptyMessage="No cohort selected.">
+        <DashboardCard
+          title={selectedCohort?.rosterMode === 'open' ? 'Total visits' : 'Average attendance'}
+          emptyMessage="No cohort selected."
+        >
           {selectedCohort
-            ? <strong className="dashboard-card__metric">{selectedCohort.averageAttendance === null
-              ? '—'
-              : `${selectedCohort.averageAttendance}%`}</strong>
+            ? <strong className="dashboard-card__metric">
+                {selectedCohort.rosterMode === 'open'
+                  ? selectedCohort.attendanceRecordedCount
+                  : selectedCohort.averageAttendance === null
+                    ? '—'
+                    : `${selectedCohort.averageAttendance}%`}
+              </strong>
             : undefined}
         </DashboardCard>
       </DashboardCardGroup>
@@ -349,6 +375,17 @@ export default function Programming() {
           </FormField>
           <FormField id="program-description" label="Description">
             <textarea id="program-description" name="description" rows={4} maxLength={2000} />
+          </FormField>
+          <FormField id="program-roster-mode" label="Attendance">
+            <FloatingSelect
+              id="program-roster-mode"
+              value={programRosterMode}
+              onChange={value => setProgramRosterMode(value as 'enrolled' | 'open')}
+              options={[
+                { value: 'enrolled', label: 'Enrollment required' },
+                { value: 'open', label: 'Open attendance' },
+              ]}
+            />
           </FormField>
         </form>
       </Modal>

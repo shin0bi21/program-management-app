@@ -37,10 +37,14 @@ describe('Programs API', () => {
     const res = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: ` ${createdName} ` });
+      .send({ name: ` ${createdName} `, rosterMode: 'open' });
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual(expect.objectContaining({ id: expect.any(String), name: createdName }));
+    expect(res.body).toEqual(expect.objectContaining({
+      id: expect.any(String),
+      name: createdName,
+      rosterMode: 'open',
+    }));
   });
 
   it('rejects program creation by staff', async () => {
@@ -61,6 +65,7 @@ describe('Programs API', () => {
     expect(res.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: expect.any(String), name: 'Job Readiness' }),
       expect.objectContaining({ id: expect.any(String), name: 'Soft Skills' }),
+      expect.objectContaining({ id: expect.any(String), name: 'Drop In', rosterMode: 'open' }),
     ]));
   });
 

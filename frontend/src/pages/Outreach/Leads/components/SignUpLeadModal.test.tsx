@@ -39,6 +39,7 @@ const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Soft Skills',
+  rosterMode: 'enrolled' as const,
   name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
@@ -49,6 +50,7 @@ const cohort = {
   averageAttendance: null,
   attendanceAttendedCount: 0,
   attendanceRecordedCount: 0,
+  uniqueAttendeeCount: 0,
 };
 
 describe('SignUpLeadModal', () => {
@@ -56,6 +58,7 @@ describe('SignUpLeadModal', () => {
     vi.mocked(getCohorts).mockResolvedValue([
       cohort,
       { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
+      { ...cohort, id: 'cohort-open', name: 'Drop In', rosterMode: 'open' },
     ]);
     vi.mocked(signUpLead).mockResolvedValue(lead);
   });
@@ -66,6 +69,7 @@ describe('SignUpLeadModal', () => {
 
     expect(await screen.findByRole('option', { name: /Soft Skills — Summer 2026/ })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /Spring 2026/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Drop In/ })).not.toBeInTheDocument();
     expect(getCohorts).toHaveBeenCalledWith('program-1');
 
     fireEvent.change(screen.getByLabelText('Cohort enrollment'), { target: { value: 'cohort-1' } });

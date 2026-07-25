@@ -28,7 +28,9 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
     setError('');
     setCohortId('');
     getCohorts(lead.programOfInterestId ?? undefined)
-      .then(rows => setCohorts(rows.filter(cohort => cohort.state !== 'completed')))
+      .then(rows => setCohorts(rows.filter(cohort => (
+        cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
+      ))))
       .catch(err => {
         const message = getErrorMessage(err, 'Unable to load cohorts');
         setError(message);

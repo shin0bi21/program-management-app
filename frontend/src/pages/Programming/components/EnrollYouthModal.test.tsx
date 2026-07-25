@@ -21,6 +21,7 @@ describe('EnrollYouthModal', () => {
     id: 'cohort-1',
     programId: 'program-1',
     programName: 'Soft Skills',
+    rosterMode: 'enrolled' as const,
     name: 'Summer 2026',
     startsOn: '2026-06-30',
     endsOn: '2026-08-31',
@@ -31,6 +32,7 @@ describe('EnrollYouthModal', () => {
     averageAttendance: null,
     attendanceAttendedCount: 0,
     attendanceRecordedCount: 0,
+    uniqueAttendeeCount: 0,
   };
 
   beforeEach(() => {
@@ -47,6 +49,7 @@ describe('EnrollYouthModal', () => {
           name: cohort.name,
           programId: cohort.programId,
           programName: cohort.programName,
+          rosterMode: 'enrolled',
           startsOn: cohort.startsOn,
           endsOn: cohort.endsOn,
           enrolledOn: cohort.startsOn,

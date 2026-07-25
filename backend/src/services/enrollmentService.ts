@@ -1,16 +1,20 @@
 import { asTransactionSql, sql } from '../db/client';
-import { NotFoundError } from '../errors';
+import { ConflictError, NotFoundError } from '../errors';
 import type { EnrollYouthInput, SyncYouthCohortsInput } from '../validation/cohortSchemas';
 
 export async function enrollYouth(cohortId: string, data: EnrollYouthInput, actorId: string) {
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const cohorts = await trx<{ id: string }[]>`
-      SELECT id
-      FROM program_cohorts
-      WHERE id = ${cohortId}
+    const cohorts = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
+      SELECT pc.id, p.roster_mode
+      FROM program_cohorts pc
+      INNER JOIN programs p ON p.id = pc.program_id
+      WHERE pc.id = ${cohortId}
     `;
     if (!cohorts.length) throw new NotFoundError('Cohort not found');
+    if (cohorts[0].rosterMode === 'open') {
+      throw new ConflictError('Open attendance cohorts do not use enrollment');
+    }
 
     const youth = await trx<{ id: string }[]>`
       SELECT user_id AS id
@@ -86,15 +90,19 @@ export async function syncYouthCohorts(
     if (!youth.length) throw new NotFoundError('Youth profile not found');
 
     const cohorts = data.cohortIds.length
-      ? await trx<{ id: string }[]>`
-          SELECT id
-          FROM program_cohorts
-          WHERE id = ANY(${sql.array(data.cohortIds)}::uuid[])
-            AND ends_on >= (NOW() AT TIME ZONE 'America/Toronto')::date
+      ? await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
+          SELECT pc.id, p.roster_mode
+          FROM program_cohorts pc
+          INNER JOIN programs p ON p.id = pc.program_id
+          WHERE pc.id = ANY(${sql.array(data.cohortIds)}::uuid[])
+            AND pc.ends_on >= (NOW() AT TIME ZONE 'America/Toronto')::date
         `
       : [];
     if (cohorts.length !== data.cohortIds.length) {
       throw new NotFoundError('One or more manageable cohorts were not found');
+    }
+    if (cohorts.some(cohort => cohort.rosterMode === 'open')) {
+      throw new ConflictError('Open attendance cohorts do not use enrollment');
     }
 
     await trx`

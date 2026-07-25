@@ -136,7 +136,11 @@ describe('Youth API', () => {
       expect(res.body.notes).toBe('Needs transportation support');
       await sql`
         INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
-        VALUES (${softSkillsCohortId}, ${res.body.id}, CURRENT_DATE)
+        VALUES (
+          ${softSkillsCohortId},
+          ${res.body.id},
+          (NOW() AT TIME ZONE 'America/Toronto')::date
+        )
       `;
       createdIds.push(res.body.id);
     });

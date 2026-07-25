@@ -62,6 +62,39 @@
   min-height: 36px;
 }
 
+.open-attendance-picker {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.open-attendance-picker__controls,
+.open-attendance-results__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.open-attendance-picker__controls .search-input {
+  flex: 1;
+}
+
+.open-attendance-results {
+  overflow: hidden;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.open-attendance-results__row {
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: var(--border-line-soft);
+}
+
+.open-attendance-results__row:last-child {
+  border-bottom: 0;
+}
+
 @media (max-width: 560px) {
   .attendance-roster__row {
     grid-template-columns: 1fr;

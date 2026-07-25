@@ -13,6 +13,7 @@ const cohort: ProgramCohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Soft Skills',
+  rosterMode: 'enrolled',
   name: 'Summer 2026',
   startsOn: '2026-07-01',
   endsOn: '2026-08-31',
@@ -23,6 +24,7 @@ const cohort: ProgramCohort = {
   averageAttendance: null,
   attendanceAttendedCount: 0,
   attendanceRecordedCount: 0,
+  uniqueAttendeeCount: 0,
 };
 
 describe('GenerateSessionsModal', () => {

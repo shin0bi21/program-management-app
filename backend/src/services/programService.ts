@@ -4,7 +4,7 @@ import type { CreateProgramInput } from '../validation/programSchemas';
 
 export function getPrograms() {
   return sql`
-    SELECT id, name, description
+    SELECT id, name, description, roster_mode
     FROM programs
     ORDER BY name ASC
   `;
@@ -18,9 +18,9 @@ export async function createProgram(data: CreateProgramInput) {
   if (existing.length) throw new ConflictError('A program with this name already exists');
 
   const rows = await sql`
-    INSERT INTO programs (name, description)
-    VALUES (${name}, ${data.description ?? null})
-    RETURNING id, name, description
+    INSERT INTO programs (name, description, roster_mode)
+    VALUES (${name}, ${data.description ?? null}, ${data.rosterMode ?? 'enrolled'})
+    RETURNING id, name, description, roster_mode
   `;
   return rows[0];
 }

@@ -153,9 +153,11 @@ export default function Sessions() {
       key: 'attendance',
       header: 'Attendance',
       width: '150px',
-      render: session => session.attendanceRate === null
-        ? 'Not taken'
-        : `${session.attendedCount}/${session.attendanceMarkedCount} · ${session.attendanceRate}%`,
+      render: session => session.rosterMode === 'open'
+        ? (session.attendanceMarkedCount ? `${session.attendanceMarkedCount} attended` : 'No check-ins')
+        : session.attendanceRate === null
+          ? 'Not taken'
+          : `${session.attendedCount}/${session.attendanceMarkedCount} · ${session.attendanceRate}%`,
     },
     {
       key: 'status',

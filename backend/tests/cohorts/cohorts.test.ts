@@ -26,6 +26,10 @@ describe('Cohorts and attendance API', () => {
   let activityId: string;
   let monthlyActivityId: string;
   let sessionId: string;
+  let openProgramId: string;
+  let openCohortId: string;
+  let openActivityId: string;
+  let openSessionId: string;
   let today: string;
 
   beforeAll(async () => {
@@ -48,6 +52,8 @@ describe('Cohorts and attendance API', () => {
 
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     programId = program.id;
+    const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Drop In'`;
+    openProgramId = openProgram.id;
     const [clock] = await sql<{ today: string }[]>`
       SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date::text AS today
     `;
@@ -55,6 +61,9 @@ describe('Cohorts and attendance API', () => {
   });
 
   afterAll(async () => {
+    if (openSessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${openSessionId}`;
+    if (openActivityId) await sql`DELETE FROM cohort_activities WHERE id = ${openActivityId}`;
+    if (openCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
     if (monthlyActivityId) await sql`DELETE FROM cohort_activities WHERE id = ${monthlyActivityId}`;
@@ -201,6 +210,118 @@ describe('Cohorts and attendance API', () => {
       WHERE activity_id = ${monthlyActivityId}
     `;
     expect(dates.every(session => session.dayOfMonth === 15)).toBe(true);
+  });
+
+  it('creates an open Drop In session with no enrollment roster', async () => {
+    const cohort = await request(app)
+      .post('/api/cohorts')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        programId: openProgramId,
+        name: `Open Drop In ${Date.now()}`,
+        startsOn: addDays(today, -7),
+        endsOn: addDays(today, 60),
+      });
+    expect(cohort.status).toBe(201);
+    expect(cohort.body.rosterMode).toBe('open');
+    openCohortId = cohort.body.id;
+
+    const generated = await request(app)
+      .post(`/api/cohorts/${openCohortId}/activities/generate`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        name: 'Friday Drop In',
+        frequency: 'once',
+        startsOn: today,
+        startTime: '17:00',
+        endTime: '20:00',
+      });
+    expect(generated.status).toBe(201);
+    openActivityId = generated.body.activityId;
+    openSessionId = generated.body.sessions[0].id;
+
+    const roster = await request(app)
+      .get(`/api/cohorts/sessions/${openSessionId}/roster`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(roster.status).toBe(200);
+    expect(roster.body).toEqual([]);
+  });
+
+  it('checks any youth profile into an open session as attended', async () => {
+    const checkedIn = await request(app)
+      .put(`/api/cohorts/sessions/${openSessionId}/attendance`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ records: [{ youthId, status: 'present' }] });
+    expect(checkedIn.status).toBe(200);
+    expect(checkedIn.body).toEqual([
+      expect.objectContaining({ youthId, status: 'present' }),
+    ]);
+
+    const late = await request(app)
+      .put(`/api/cohorts/sessions/${openSessionId}/attendance`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ records: [{ youthId, status: 'late' }] });
+    expect(late.status).toBe(409);
+
+    const replaced = await request(app)
+      .put(`/api/cohorts/sessions/${openSessionId}/attendance`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ records: [{ youthId: secondYouthId, status: 'present' }] });
+    expect(replaced.status).toBe(200);
+    expect(replaced.body).toEqual([
+      expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
+    ]);
+  });
+
+  it('rejects enrollment in an open attendance cohort', async () => {
+    const directEnrollment = await request(app)
+      .post(`/api/cohorts/${openCohortId}/enrollments`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ youthIds: [youthId] });
+    expect(directEnrollment.status).toBe(409);
+
+    const checklistEnrollment = await request(app)
+      .put(`/api/cohorts/enrollments/${youthId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ cohortIds: [openCohortId] });
+    expect(checklistEnrollment.status).toBe(409);
+  });
+
+  it('reports open-session reach without creating an enrollment', async () => {
+    const enrollments = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int AS count
+      FROM cohort_enrollments
+      WHERE cohort_id = ${openCohortId}
+    `;
+    expect(enrollments[0].count).toBe(0);
+
+    const overview = await request(app)
+      .get(`/api/cohorts?programId=${openProgramId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(overview.status).toBe(200);
+    expect(overview.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: openCohortId,
+        rosterMode: 'open',
+        enrolledCount: 0,
+        uniqueAttendeeCount: 1,
+        attendanceRecordedCount: 1,
+      }),
+    ]));
+
+    const profile = await request(app)
+      .get(`/api/youth?id=${secondYouthId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(profile.status).toBe(200);
+    expect(profile.body.cohorts).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: openCohortId,
+        programName: 'Drop In',
+        rosterMode: 'open',
+        enrolledOn: null,
+        presentCount: 1,
+      }),
+    ]));
   });
 
   it('enforces the cohort date range at the database boundary', async () => {

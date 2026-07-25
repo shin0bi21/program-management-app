@@ -35,6 +35,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type ProgramRosterMode = "enrolled" | "open";
+
 export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -203,6 +205,7 @@ export interface Programs {
   description: string | null;
   id: Generated<string>;
   name: string;
+  roster_mode: Generated<ProgramRosterMode>;
 }
 
 export interface SchemaMigrations {
