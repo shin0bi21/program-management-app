@@ -1099,6 +1099,16 @@
 }
 
 /* ============================================================
+   Constrained desktop hero (1181px–1359px)
+   ============================================================ */
+@media (max-width: 1359px) and (min-width: 1181px) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
+    gap: 40px;
+  }
+}
+
+/* ============================================================
    Constrained two-column layout (981px–1180px)
    ============================================================ */
 @media (max-width: 1180px) and (min-width: 981px) {
