@@ -95,9 +95,24 @@
   border-bottom: 0;
 }
 
+.edit-session-time-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edit-session-time-row .form-field,
+.edit-session-time-row input {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 560px) {
   .attendance-roster__row {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .edit-session-time-row {
+    grid-template-columns: 1fr;
   }
 }

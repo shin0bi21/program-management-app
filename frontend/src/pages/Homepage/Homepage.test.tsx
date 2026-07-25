@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Homepage from './Homepage';
@@ -27,5 +27,13 @@ describe('Homepage', () => {
     expect(screen.getByRole('heading', { name: /interested/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /meet our team/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /partners/i })).toBeInTheDocument();
+
+    const teamSection = screen.getByRole('heading', { name: /meet our team/i }).closest('section');
+    expect(teamSection).not.toBeNull();
+    const teamCards = within(teamSection!).getAllByRole('listitem');
+    expect(teamCards[0]).toHaveTextContent('Quinton Macnevins');
+    expect(teamCards[0]).toHaveTextContent(
+      'Drawing from both his professional experience and his lived experience as a former Crown ward',
+    );
   });
 });

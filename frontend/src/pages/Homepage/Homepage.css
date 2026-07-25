@@ -1108,7 +1108,7 @@
   }
 
   .hero-inner {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 0.52fr);
+    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
     gap: 32px;
   }
 

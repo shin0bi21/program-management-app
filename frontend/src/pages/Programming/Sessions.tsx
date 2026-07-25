@@ -289,7 +289,7 @@ export default function Sessions() {
           <FormField id="edit-session-theme" label="Theme">
             <input id="edit-session-theme" name="theme" required defaultValue={editTarget.theme} maxLength={160} />
           </FormField>
-          <div className="form-row">
+          <div className="form-row edit-session-time-row">
             <FormField id="edit-session-start" label="Starts at">
               <input id="edit-session-start" name="startsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.startsAt)} />
             </FormField>
