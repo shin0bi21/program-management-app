@@ -1150,7 +1150,25 @@
   }
 
   .hero-visual-panel {
-    justify-self: center;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    justify-self: stretch;
+    justify-items: stretch;
+  }
+
+  .hero-visual-card {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .hero-photo-frame {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    aspect-ratio: 16 / 10;
   }
 
   .program-grid {
