@@ -915,8 +915,8 @@
 
   .hero-visual-panel,
   .hero-visual-card {
-    width: 33.5cqi;
-    min-width: 33.5cqi;
+    width: 100%;
+    min-width: 0;
     max-width: none;
   }
 
@@ -1089,10 +1089,9 @@
   }
 }
 
-/* ============================================================
-   Non-compact screens: proportional hero title (821px+)
-   ============================================================ */
-@media (min-width: 821px) {
+/* Keep the hero heading proportional to the available homepage width on
+   desktop, including ultrawide and 4K displays. */
+@media (min-width: 1001px) {
   .hero-title {
     font-size: 7.5cqi;
   }
@@ -1109,9 +1108,9 @@
 }
 
 /* ============================================================
-   Constrained two-column layout (981px–1180px)
+   Constrained two-column layout (1001px–1180px)
    ============================================================ */
-@media (max-width: 1180px) and (min-width: 981px) {
+@media (max-width: 1180px) and (min-width: 1001px) {
   .homepage-container {
     --home-pad-x: 32px;
     --hero-photo-size: 360px;
@@ -1132,9 +1131,9 @@
 }
 
 /* ============================================================
-   Stacked layout (980px and below)
+   Stacked layout (1000px and below)
    ============================================================ */
-@media (max-width: 980px) {
+@media (max-width: 1000px) {
   .homepage-container {
     --home-pad-x: 32px;
     --hero-photo-size: 360px;
@@ -1173,6 +1172,15 @@
 
   .program-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cohort-section .section-inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .cohort-section-copy {
+    position: static;
   }
 
   .timeline {
@@ -1274,15 +1282,6 @@
     font-size: 0.88rem;
   }
 
-  .cohort-section .section-inner {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-
-  .cohort-section-copy {
-    position: static;
-  }
-
   .cohort-form-shell {
     padding: 18px;
   }
@@ -1361,31 +1360,8 @@
 
 /* Use the hero's actual content width so authenticated layouts with a sidebar
    do not inherit desktop sizing from the wider browser viewport. */
-@container (min-width: 981px) and (max-width: 1359px) {
+@container (min-width: 1001px) and (max-width: 1359px) {
   .hero-inner {
     grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
-  }
-}
-
-@container (max-width: 980px) {
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hero-visual-panel,
-  .hero-visual-card {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    justify-self: stretch;
-    justify-items: stretch;
-  }
-
-  .hero-photo-frame {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    height: auto;
-    aspect-ratio: 16 / 10;
   }
 }
