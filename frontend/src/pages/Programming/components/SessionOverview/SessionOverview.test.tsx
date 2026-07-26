@@ -1,7 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ManagedSession } from '../../../../common/types/cohort';
 import SessionOverview from './SessionOverview';
+
+const getSessionNotes = vi.fn();
+const getSessionRoster = vi.fn();
+
+vi.mock('../../../../common/api/cohorts.api', () => ({
+  getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
+  getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
+  createSessionNote: vi.fn(),
+}));
 
 const session: ManagedSession = {
   id: 'session-1',
@@ -22,6 +31,11 @@ const session: ManagedSession = {
 };
 
 describe('SessionOverview', () => {
+  beforeEach(() => {
+    getSessionNotes.mockResolvedValue([]);
+    getSessionRoster.mockResolvedValue([]);
+  });
+
   it('keeps every card visible before a session is selected', () => {
     render(
       <SessionOverview
@@ -38,7 +52,7 @@ describe('SessionOverview', () => {
     expect(screen.getAllByText('No session selected.')).toHaveLength(3);
   });
 
-  it('summarizes attendance and delegates the add action', () => {
+  it('summarizes attendance and delegates the add action', async () => {
     const onAddAttendance = vi.fn();
     render(
       <SessionOverview
@@ -52,7 +66,37 @@ describe('SessionOverview', () => {
     expect(screen.getByText('4/5')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add attendance' }));
     expect(onAddAttendance).toHaveBeenCalledWith(session);
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
+    expect(await screen.findByText('No notes.')).toBeInTheDocument();
+    const addNotes = screen.getByRole('button', { name: 'Add notes' });
+    expect(addNotes).toBeEnabled();
+    fireEvent.click(addNotes);
+    expect(screen.getByRole('heading', { name: 'Add note to Communication' })).toBeInTheDocument();
+    expect(await screen.findByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+  });
+
+  it('shows note authors and linked youth', async () => {
+    getSessionNotes.mockResolvedValue([{
+      id: 'note-1',
+      sessionId: session.id,
+      note: 'Maya led the opening activity.',
+      createdAt: '2026-07-28T23:30:00.000Z',
+      updatedAt: '2026-07-28T23:30:00.000Z',
+      createdByName: 'Programming Demo',
+      youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
+    }]);
+
+    render(
+      <SessionOverview
+        session={session}
+        canWriteAttendance
+        canWriteNotes
+        onAddAttendance={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Maya led the opening activity.')).toBeInTheDocument();
+    expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
+    expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
   });
 });

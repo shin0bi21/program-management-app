@@ -1,14 +1,16 @@
 import type {
+  AttendanceStatus,
   CohortSession,
   CreateCohortInput,
+  CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
   GenerateSessionsResult,
   ManagedSession,
   ProgramCohort,
   SessionListFilters,
+  SessionNote,
   SessionRosterMember,
-  AttendanceStatus,
   UpdateCohortInput,
   UpdateSessionInput,
 } from '../types/cohort';
@@ -28,9 +30,11 @@ export function getCohorts(
 export function createCohort(data: CreateCohortInput) {
   return apiClient.post<ProgramCohort>('/cohorts', data);
 }
+
 export function updateCohort(cohortId: string, data: UpdateCohortInput) {
   return apiClient.put(`/cohorts/${cohortId}`, data);
 }
+
 export function deleteCohort(cohortId: string) {
   return apiClient.delete(`/cohorts/${cohortId}`);
 }
@@ -70,9 +74,19 @@ export function saveSessionAttendance(
 ) {
   return apiClient.put<SessionRosterMember[]>(`/cohorts/sessions/${sessionId}/attendance`, { records });
 }
+
+export function getSessionNotes(sessionId: string) {
+  return apiClient.get<SessionNote[]>(`/cohorts/sessions/${sessionId}/notes`);
+}
+
+export function createSessionNote(sessionId: string, data: CreateSessionNoteInput) {
+  return apiClient.post<SessionNote>(`/cohorts/sessions/${sessionId}/notes`, data);
+}
+
 export function updateSession(sessionId: string, data: UpdateSessionInput) {
   return apiClient.put(`/cohorts/sessions/${sessionId}`, data);
 }
+
 export function deleteSession(sessionId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}`);
 }

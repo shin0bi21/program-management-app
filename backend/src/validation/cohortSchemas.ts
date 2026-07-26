@@ -148,6 +148,19 @@ export const updateSessionSchema = z.object({
 export const deleteSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
 });
+export const sessionNotesSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+});
+export const createSessionNoteSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+  body: z.object({
+    note: z.string().trim().min(1, 'Note is required').max(5000),
+    youthIds: z.array(z.string().uuid('Invalid youth ID')).max(50).default([]),
+  }).refine(
+    data => new Set(data.youthIds).size === data.youthIds.length,
+    { message: 'Youth attachments must be unique', path: ['youthIds'] },
+  ),
+});
 
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
@@ -157,3 +170,4 @@ export type SyncYouthCohortsInput = z.infer<typeof syncYouthCohortsSchema.shape.
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
+export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;

@@ -1,0 +1,27 @@
+.session-notes-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.session-note {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.session-note + .session-note {
+  padding-top: var(--space-3);
+  border-top: var(--border-line-soft);
+}
+
+.session-note p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.session-note__meta {
+  display: grid;
+  gap: 2px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}

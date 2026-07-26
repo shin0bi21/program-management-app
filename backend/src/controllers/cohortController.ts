@@ -8,18 +8,20 @@ import {
 } from '../services/cohortService';
 import { enrollYouth, syncYouthCohorts, withdrawYouth } from '../services/enrollmentService';
 import {
+  deleteSession,
   generateSessions,
   getSessionList,
   getSessions,
-  deleteSession,
   updateSession,
 } from '../services/sessionService';
 import {
   getSessionRoster,
   saveAttendance,
 } from '../services/attendanceService';
+import { createSessionNote, getSessionNotes } from '../services/sessionNoteService';
 import type {
   CreateCohortInput,
+  CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
   SessionListQuery,
@@ -95,4 +97,16 @@ export const handleGetSessionRoster = async (req: Request, res: Response) => {
 
 export const handleSaveAttendance = async (req: Request, res: Response) => {
   res.json(await saveAttendance(req.params.sessionId, req.body as SaveAttendanceInput, actor(req)));
+};
+
+export const handleGetSessionNotes = async (req: Request, res: Response) => {
+  res.json(await getSessionNotes(req.params.sessionId, actor(req)));
+};
+
+export const handleCreateSessionNote = async (req: Request, res: Response) => {
+  res.status(201).json(await createSessionNote(
+    req.params.sessionId,
+    req.body as CreateSessionNoteInput,
+    actor(req),
+  ));
 };

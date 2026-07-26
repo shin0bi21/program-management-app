@@ -145,6 +145,14 @@ export async function deleteCohort(id: string, actor: AccessTokenPayload) {
     if (attendance.length) {
       throw new ConflictError('Cohort cannot be deleted because one or more sessions have attendance');
     }
+    const notes = await trx`
+      SELECT 1 FROM session_notes sn
+      INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
+      WHERE cs.cohort_id = ${id} LIMIT 1
+    `;
+    if (notes.length) {
+      throw new ConflictError('Cohort cannot be deleted because one or more sessions have notes');
+    }
     await trx`DELETE FROM cohort_enrollments WHERE cohort_id = ${id}`;
     await trx`DELETE FROM program_cohorts WHERE id = ${id}`;
   });

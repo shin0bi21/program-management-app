@@ -220,6 +220,10 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
   if (attendance.length) {
     throw new ConflictError('Session cannot be deleted because attendance has been recorded');
   }
+  const notes = await sql`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
+  if (notes.length) {
+    throw new ConflictError('Session cannot be deleted because session notes have been recorded');
+  }
   const rows = await sql`DELETE FROM cohort_sessions WHERE id = ${id} RETURNING id`;
   if (!rows.length) throw new NotFoundError('Session not found');
 }

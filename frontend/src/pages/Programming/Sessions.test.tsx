@@ -6,11 +6,14 @@ import Sessions from './Sessions';
 const getManagedSessions = vi.fn();
 const getSessionRoster = vi.fn();
 const getCohorts = vi.fn();
+const getSessionNotes = vi.fn();
 
 vi.mock('../../common/api/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
   getManagedSessions: (...args: unknown[]) => getManagedSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
+  getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
+  createSessionNote: vi.fn(),
   saveSessionAttendance: vi.fn(),
   generateSessions: vi.fn(),
 }));
@@ -70,6 +73,7 @@ describe('Sessions', () => {
       status: null,
       notes: null,
     }]);
+    getSessionNotes.mockResolvedValue([]);
   });
 
   it('shows open attendance as a check-in count', async () => {
@@ -104,7 +108,7 @@ describe('Sessions', () => {
 
     expect(screen.getByRole('button', { name: 'Add attendance' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
     expect(screen.getByText('3 check-ins')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();

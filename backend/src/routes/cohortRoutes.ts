@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import {
   handleCreateCohort,
+  handleCreateSessionNote,
   handleDeleteCohort,
   handleDeleteSession,
   handleEnrollYouth,
   handleGenerateSessions,
   handleGetCohorts,
-  handleGetSessionRoster,
   handleGetSessionList,
+  handleGetSessionNotes,
+  handleGetSessionRoster,
   handleGetSessions,
   handleSaveAttendance,
   handleSyncYouthCohorts,
@@ -21,12 +23,14 @@ import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   cohortQuerySchema,
   createCohortSchema,
+  createSessionNoteSchema,
   deleteCohortSchema,
   deleteSessionSchema,
   enrollYouthSchema,
   generateSessionsSchema,
   saveAttendanceSchema,
   sessionListQuerySchema,
+  sessionNotesSchema,
   sessionQuerySchema,
   syncYouthCohortsSchema,
   updateCohortSchema,
@@ -48,6 +52,8 @@ router.post('/:cohortId/sessions/generate', authenticateToken, requirePermission
 router.get('/sessions/calendar', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionQuerySchema), asyncHandler(handleGetSessions));
 router.get('/sessions/:sessionId/roster', authenticateToken, requirePermission('read:attendance'), generalLimiter, asyncHandler(handleGetSessionRoster));
 router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermission('write:attendance'), generalLimiter, validateRequest(saveAttendanceSchema), asyncHandler(handleSaveAttendance));
+router.get('/sessions/:sessionId/notes', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionNotesSchema), asyncHandler(handleGetSessionNotes));
+router.post('/sessions/:sessionId/notes', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(createSessionNoteSchema), asyncHandler(handleCreateSessionNote));
 router.put('/sessions/:sessionId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateSessionSchema), asyncHandler(handleUpdateSession));
 router.delete('/sessions/:sessionId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteSessionSchema), asyncHandler(handleDeleteSession));
 

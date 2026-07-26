@@ -219,6 +219,22 @@ export interface Schools {
   updated_by: string | null;
 }
 
+export interface SessionNotes {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  note: string;
+  session_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface SessionNoteYouth {
+  created_at: Generated<Timestamp>;
+  note_id: string;
+  youth_id: string;
+}
+
 export interface StaffProgramAssignments {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -380,6 +396,8 @@ export interface DB {
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
+  session_note_youth: SessionNoteYouth;
+  session_notes: SessionNotes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;

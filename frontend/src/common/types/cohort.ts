@@ -88,3 +88,24 @@ export interface SessionRosterMember {
   status: AttendanceStatus | null;
   notes: string | null;
 }
+
+export interface SessionNoteYouth {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface SessionNote {
+  id: string;
+  sessionId: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: SessionNoteYouth[];
+}
+
+export interface CreateSessionNoteInput {
+  note: string;
+  youthIds: string[];
+}

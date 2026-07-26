@@ -63,10 +63,24 @@ describe('Cohorts and attendance API', () => {
   });
 
   afterAll(async () => {
+    if (openSessionId) {
+      await sql`
+        DELETE FROM session_note_youth
+        WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${openSessionId})
+      `;
+      await sql`DELETE FROM session_notes WHERE session_id = ${openSessionId}`;
+    }
     if (openSessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${openSessionId}`;
     if (openCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
     if (unassignedCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${unassignedCohortId}`;
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
+    if (sessionId) {
+      await sql`
+        DELETE FROM session_note_youth
+        WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${sessionId})
+      `;
+      await sql`DELETE FROM session_notes WHERE session_id = ${sessionId}`;
+    }
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
     if (cohortId) await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
     await deleteTestUser(youthId);
@@ -244,6 +258,93 @@ describe('Cohorts and attendance API', () => {
     expect(response.body.sessions[0].theme).toBeNull();
   });
 
+  it('stores session notes separately with optional enrolled youth attachments', async () => {
+    const attached = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        note: 'Youth led the group discussion.',
+        youthIds: [youthId, secondYouthId],
+      });
+    expect(attached.status).toBe(201);
+    expect(attached.body).toEqual(expect.objectContaining({
+      sessionId,
+      note: 'Youth led the group discussion.',
+      youth: expect.arrayContaining([
+        expect.objectContaining({ youthId }),
+        expect.objectContaining({ youthId: secondYouthId }),
+      ]),
+    }));
+
+    const unlinked = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ note: 'The session ran fifteen minutes long.', youthIds: [] });
+    expect(unlinked.status).toBe(201);
+    expect(unlinked.body.youth).toEqual([]);
+
+    const notes = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(notes.status).toBe(200);
+    expect(notes.body).toHaveLength(2);
+
+    const [session] = await sql<{ description: string | null }[]>`
+      SELECT description FROM cohort_sessions WHERE id = ${sessionId}
+    `;
+    expect(session.description).toBeNull();
+  });
+
+  it('rejects youth attachments outside the session cohort', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        note: 'This should not be saved.',
+        youthIds: ['00000000-0000-0000-0000-000000000000'],
+      });
+
+    expect(response.status).toBe(409);
+  });
+
+  it('rejects youth who were not enrolled on the session date', async () => {
+    await sql`
+      UPDATE cohort_enrollments
+      SET enrolled_on = ${addDays(today, 2)}
+      WHERE cohort_id = ${cohortId}
+        AND youth_id = ${secondYouthId}
+    `;
+
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        note: 'This should not be saved.',
+        youthIds: [secondYouthId],
+      });
+
+    await sql`
+      UPDATE cohort_enrollments
+      SET enrolled_on = ${today}
+      WHERE cohort_id = ${cohortId}
+        AND youth_id = ${secondYouthId}
+    `;
+
+    expect(response.status).toBe(409);
+  });
+
+  it('prevents deleting a session or cohort that has session notes', async () => {
+    const sessionResponse = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    const cohortResponse = await request(app)
+      .delete(`/api/cohorts/${cohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(sessionResponse.status).toBe(409);
+    expect(cohortResponse.status).toBe(409);
+  });
+
   it('generates monthly sessions on the selected day of month', async () => {
     const response = await request(app)
       .post(`/api/cohorts/${cohortId}/sessions/generate`)
@@ -326,6 +427,33 @@ describe('Cohorts and attendance API', () => {
     expect(replaced.body).toEqual([
       expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
     ]);
+  });
+
+  it('allows open session notes to attach checked-in youth', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${openSessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        note: 'Followed up after Drop In.',
+        youthIds: [secondYouthId],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.youth).toEqual([
+      expect.objectContaining({ youthId: secondYouthId }),
+    ]);
+  });
+
+  it('rejects open session notes for youth who are not checked in', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${openSessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        note: 'This should not be saved.',
+        youthIds: [youthId],
+      });
+
+    expect(response.status).toBe(409);
   });
 
   it('rejects enrollment in an open attendance cohort', async () => {
