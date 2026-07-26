@@ -268,22 +268,13 @@ export default function Header() {
             Cohorts
           </button>
           {canViewAttendance && (
-            <>
-              <button
-                role="menuitem"
-                onClick={() => go('/programming/sessions')}
-                className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
-              >
-                Sessions
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => go('/programming/calendar')}
-                className={`settings-flyout-item${isActive('/programming/calendar') ? ' active' : ''}`}
-              >
-                Calendar
-              </button>
-            </>
+            <button
+              role="menuitem"
+              onClick={() => go('/programming/sessions')}
+              className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
+            >
+              Sessions
+            </button>
           )}
         </FloatingMenuPanel>
       )}

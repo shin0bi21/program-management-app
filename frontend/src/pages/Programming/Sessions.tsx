@@ -9,15 +9,18 @@ import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../common/components/Table/Table';
+import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
 import { deleteSession, getCohorts, getManagedSessions, updateSession } from '../../common/api/cohorts.api';
 import { useAuth } from '../../common/context/AuthContext';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../common/hooks/useConfirmModal';
 import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
-import type { ManagedSession, ProgramCohort, SessionListFilters } from '../../common/types/cohort';
+import type { CohortSession, ManagedSession, ProgramCohort, SessionListFilters } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import AttendanceModal from './components/AttendanceModal';
 import GenerateSessionsModal from './components/GenerateSessionsModal';
+import SessionOverview from './components/SessionOverview/SessionOverview';
+import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
 import './Sessions.css';
 
 const timeFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -30,6 +33,7 @@ const localDateTime = (value: string) => {
 };
 
 type TimingFilter = 'upcoming' | 'past';
+type SessionsView = 'list' | 'calendar';
 
 export default function Sessions() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,7 +45,7 @@ export default function Sessions() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attendanceTarget, setAttendanceTarget] = useState<ManagedSession | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const [cohortPickerOpen, setCohortPickerOpen] = useState(false);
   const [scheduleCohortId, setScheduleCohortId] = useState('');
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
@@ -49,8 +53,10 @@ export default function Sessions() {
   const [editStatus, setEditStatus] = useState<SubmitStatus>('idle');
   const [editMessage, setEditMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-  const programId = searchParams.get('program') ?? '';
+  const view: SessionsView = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
+  const selectedProgramIds = (searchParams.get('program') ?? '').split(',').filter(Boolean);
   const cohortId = searchParams.get('cohort') ?? '';
   const selectedSessionId = searchParams.get('session') ?? '';
   const timingFilters = (searchParams.get('timing') ?? '')
@@ -75,7 +81,7 @@ export default function Sessions() {
     setLoading(true);
     setError(null);
     return getManagedSessions({
-      programId: programId || undefined,
+      programId: selectedProgramIds.length === 1 ? selectedProgramIds[0] : undefined,
       cohortId: cohortId || undefined,
       timing,
       search: debouncedSearch || undefined,
@@ -86,12 +92,15 @@ export default function Sessions() {
   };
 
   useEffect(() => {
+    if (view !== 'list') return;
     void loadSessions();
-  }, [programId, cohortId, timing, debouncedSearch]);
+  }, [view, selectedProgramIds.join(','), cohortId, timing, debouncedSearch]);
 
   const filteredCohorts = useMemo(
-    () => programId ? cohorts.filter(cohort => cohort.programId === programId) : cohorts,
-    [cohorts, programId],
+    () => selectedProgramIds.length
+      ? cohorts.filter(cohort => selectedProgramIds.includes(cohort.programId))
+      : cohorts,
+    [cohorts, selectedProgramIds.join(',')],
   );
   const schedulableCohorts = useMemo(
     () => filteredCohorts.filter(cohort => cohort.state !== 'completed'),
@@ -102,7 +111,6 @@ export default function Sessions() {
     {
       id: 'program',
       label: 'Program',
-      selectionMode: 'single',
       options: programs.map(program => ({ value: program.id, label: program.name })),
     },
     {
@@ -114,21 +122,40 @@ export default function Sessions() {
         label: `${cohort.programName} · ${cohort.name}`,
       })),
     },
-    {
+    ...(view === 'list' ? [{
       id: 'timing',
       label: 'Timing',
       options: [
         { value: 'upcoming', label: 'Upcoming' },
         { value: 'past', label: 'Past' },
       ],
-    },
-  ], [filteredCohorts, programs]);
+    }] : []),
+  ], [filteredCohorts, programs, view]);
 
-  const setFilter = (key: string, value: string) => {
+  const setFilter = (key: string, values: string[]) => {
     const next = new URLSearchParams(searchParams);
-    if (value) next.set(key, value);
+    if (values.length) next.set(key, values.join(','));
     else next.delete(key);
     if (key === 'program') next.delete('cohort');
+    next.delete('session');
+    setSearchParams(next);
+  };
+
+  const setView = (nextView: SessionsView) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextView === 'calendar') next.set('view', 'calendar');
+    else next.delete('view');
+    next.delete('session');
+    setSearchParams(next);
+  };
+
+  const clearFilters = () => {
+    setSearchParams(view === 'calendar' ? { view: 'calendar' } : {});
+  };
+
+  const selectSession = (session: ManagedSession) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('session', session.id);
     setSearchParams(next);
   };
 
@@ -158,16 +185,6 @@ export default function Sessions() {
       header: 'Time',
       width: '165px',
       render: session => `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
-    },
-    {
-      key: 'attendance',
-      header: 'Attendance',
-      width: '150px',
-      render: session => session.rosterMode === 'open'
-        ? (session.attendanceMarkedCount ? `${session.attendanceMarkedCount} attended` : 'No check-ins')
-        : session.attendanceRate === null
-          ? 'Not taken'
-          : `${session.attendedCount}/${session.attendanceMarkedCount} · ${session.attendanceRate}%`,
     },
     {
       key: 'status',
@@ -201,7 +218,23 @@ export default function Sessions() {
         ]}
       />,
     }] : []),
-  ], [canWriteAttendance, canWriteCohorts, programId, cohortId, timing, debouncedSearch]);
+  ], [canWriteAttendance, canWriteCohorts, selectedProgramIds.join(','), cohortId, timing, debouncedSearch]);
+
+  const visibleListSessions = useMemo(
+    () => selectedProgramIds.length
+      ? sessions.filter(session => selectedProgramIds.includes(session.programId))
+      : sessions,
+    [selectedProgramIds.join(','), sessions],
+  );
+  const selectedSession = useMemo(
+    () => visibleListSessions.find(session => session.id === selectedSessionId) ?? null,
+    [selectedSessionId, visibleListSessions],
+  );
+
+  const refreshActiveView = async () => {
+    if (view === 'list') await loadSessions();
+    else setCalendarRefreshToken(current => current + 1);
+  };
 
   const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -227,12 +260,12 @@ export default function Sessions() {
   const editComplete = editStatus === 'submitting' || editStatus === 'success';
 
   return (
-    <div className="sessions-page">
+    <div className={`sessions-page data-detail-page-content${view === 'calendar' ? ' sessions-page--calendar' : ''}`}>
       <PageHeader
         title="Sessions"
         actions={canWriteCohorts ? (
           <Button onClick={openCohortPicker} disabled={!schedulableCohorts.length}>
-            + Add Sessions
+            + Add
           </Button>
         ) : undefined}
         search={<SearchInput
@@ -244,34 +277,76 @@ export default function Sessions() {
         filters={<FilterCard
           categories={filterCategories}
           values={{
-            program: programId ? [programId] : [],
+            program: selectedProgramIds,
             cohort: cohortId ? [cohortId] : [],
             timing: timingFilters,
           }}
           onApply={(category, selected) => setFilter(
             category,
-            category === 'timing' ? selected.join(',') : selected[0] ?? '',
+            category === 'cohort' ? selected.slice(0, 1) : selected,
           )}
-          onClearAll={() => setSearchParams({})}
+          onClearAll={clearFilters}
         />}
       />
-      <Table
-        ariaLabel="Sessions"
-        columns={columns}
-        data={sessions}
-        loading={loading}
-        error={error ?? undefined}
-        keyExtractor={session => session.id}
-        selectedKey={selectedSessionId || null}
-        scrollToSelected={Boolean(selectedSessionId)}
-        emptyMessage={search || programId || cohortId || timingFilters.length
-          ? 'No sessions match your search and filters'
-          : 'No sessions yet'}
-      />
+      <div className="sessions-view-row">
+        <div className="sessions-view-toggle" role="group" aria-label="Session view">
+          <Button
+            size="sm"
+            variant={view === 'list' ? 'primary' : 'secondary'}
+            aria-pressed={view === 'list'}
+            onClick={() => setView('list')}
+          >
+            List
+          </Button>
+          <Button
+            size="sm"
+            variant={view === 'calendar' ? 'primary' : 'secondary'}
+            aria-pressed={view === 'calendar'}
+            onClick={() => setView('calendar')}
+          >
+            Calendar
+          </Button>
+        </div>
+      </div>
+      {view === 'list' ? (
+        <TableDetailLayout
+          ariaLabel="Sessions and overview"
+          table={<Table
+            ariaLabel="Sessions"
+            columns={columns}
+            data={visibleListSessions}
+            loading={loading}
+            error={error ?? undefined}
+            keyExtractor={session => session.id}
+            selectedKey={selectedSessionId || null}
+            scrollToSelected={Boolean(selectedSessionId)}
+            onRowSelect={selectSession}
+            emptyMessage={search || selectedProgramIds.length || cohortId || timingFilters.length
+              ? 'No sessions match your search and filters'
+              : 'No sessions yet'}
+          />}
+          details={(
+            <SessionOverview
+              session={selectedSession}
+              canWriteAttendance={canWriteAttendance}
+              canWriteNotes={canWriteCohorts}
+              onAddAttendance={setAttendanceTarget}
+            />
+          )}
+        />
+      ) : (
+        <SessionsCalendarView
+          selectedProgramIds={selectedProgramIds}
+          selectedCohortId={cohortId}
+          search={debouncedSearch}
+          refreshToken={calendarRefreshToken}
+          onSessionSelect={setAttendanceTarget}
+        />
+      )}
       <AttendanceModal
         session={attendanceTarget}
         onClose={() => setAttendanceTarget(null)}
-        onSaved={loadSessions}
+        onSaved={refreshActiveView}
       />
       <Modal
         isOpen={editTarget !== null}
@@ -297,7 +372,7 @@ export default function Sessions() {
               <input id="edit-session-end" name="endsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.endsAt)} />
             </FormField>
           </div>
-          <FormField id="edit-session-description" label="Description">
+          <FormField id="edit-session-description" label="Planned description">
             <textarea id="edit-session-description" name="description" defaultValue={editTarget.description ?? ''} maxLength={5000} />
           </FormField>
         </form>}
@@ -344,7 +419,7 @@ export default function Sessions() {
         onClose={() => setGenerationTarget(null)}
         onSuccess={async () => {
           await Promise.all([
-            loadSessions(),
+            refreshActiveView(),
             getCohorts().then(setCohorts),
           ]);
         }}

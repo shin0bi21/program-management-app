@@ -23,6 +23,10 @@ vi.mock('../../common/context/AuthContext', () => ({
   useAuth: () => ({ permissions: ['read:attendance', 'write:attendance', 'write:cohorts'] }),
 }));
 
+vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
+  default: () => <div data-testid="sessions-calendar-view">Calendar view</div>,
+}));
+
 describe('Sessions', () => {
   beforeEach(() => {
     getCohorts.mockResolvedValue([{
@@ -53,7 +57,7 @@ describe('Sessions', () => {
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       cancelledAt: null,
-      description: null,
+      description: 'Planned communication exercise',
       attendanceMarkedCount: 0,
       attendedCount: 0,
       attendanceRate: null,
@@ -93,8 +97,18 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('3 attended')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
+    fireEvent.click(await screen.findByText('Friday Drop In'));
+
+    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
+    expect(screen.getByText('3 check-ins')).toBeInTheDocument();
+    expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
   });
 
   it('highlights a linked session and opens attendance from its actions menu', async () => {
@@ -106,8 +120,13 @@ describe('Sessions', () => {
 
     expect(screen.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
     expect(await screen.findByText('Communication')).toBeInTheDocument();
-    expect(screen.getByText('Not taken')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attendance.');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('Not available yet.');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No notes.');
+    expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Communication'));
     expect(screen.queryByRole('heading', { name: 'Communication attendance' })).not.toBeInTheDocument();
@@ -150,7 +169,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    const addButton = await screen.findByRole('button', { name: '+ Add Sessions' });
+    const addButton = await screen.findByRole('button', { name: '+ Add' });
     fireEvent.click(addButton);
 
     expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
@@ -158,5 +177,26 @@ describe('Sessions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('heading', { name: 'Add sessions for Summer 2026' })).toBeInTheDocument();
+  });
+
+  it('switches between list and calendar views on the same page', async () => {
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
+    const viewSelector = screen.getByRole('group', { name: 'Session view' });
+    expect(pageHeader).not.toBeNull();
+    expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
