@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Button from '../../../../common/components/Button/Button';
+import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
+import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
@@ -7,6 +9,15 @@ import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import { signUpLead } from '../api/leads.api';
 import type { Lead } from '../types';
+import './SignUpLeadModal.css';
+
+const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));
 
 export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   lead: Lead | null;
@@ -18,33 +29,43 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!lead) return;
+    let active = true;
     setLoading(true);
     setSubmitStatus('idle');
     setStatusMessage('');
-    setError('');
     setCohortId('');
     getCohorts(lead.programOfInterestId ?? undefined)
-      .then(rows => setCohorts(rows.filter(cohort => cohort.state !== 'completed')))
+      .then(rows => {
+        if (!active) return;
+        setCohorts(rows.filter(cohort => (
+          cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
+        )));
+      })
       .catch(err => {
+        if (!active) return;
         const message = getErrorMessage(err, 'Unable to load cohorts');
-        setError(message);
         setStatusMessage(message);
         setSubmitStatus('error');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [lead]);
 
-  const submit = async () => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!lead) return;
     const youthName = `${lead.youthFirstName} ${lead.youthLastName}`;
     const selectedCohort = cohorts.find(cohort => cohort.id === cohortId);
     setSubmitStatus('submitting');
     setStatusMessage(`Creating youth profile for ${youthName}...`);
-    setError('');
     try {
       await signUpLead(lead.id, cohortId || null);
       await onSuccess();
@@ -54,13 +75,19 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       setSubmitStatus('success');
     } catch (err) {
       const message = getErrorMessage(err, 'Unable to create youth profile');
-      setError(message);
       setStatusMessage(message);
       setSubmitStatus('error');
     }
   };
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+  const cohortOptions = [
+    { value: '', label: 'Do not enroll yet' },
+    ...cohorts.map(cohort => ({
+      value: cohort.id,
+      label: `${cohort.programName} — ${cohort.name} · ${formatDate(cohort.startsOn)}–${formatDate(cohort.endsOn)}`,
+    })),
+  ];
 
   return (
     <Modal
@@ -68,36 +95,68 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       onClose={onClose}
       title="Sign Up Lead"
       status={submitStatus}
-      statusMessage={statusMessage || error || undefined}
+      statusMessage={statusMessage || undefined}
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
+      maxWidth="600px"
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={submissionComplete}>Cancel</Button>
-        <Button onClick={() => void submit()} disabled={submissionComplete || loading}>Sign Up</Button>
+        <Button type="submit" form="sign-up-lead-form" disabled={submissionComplete || loading}>
+          Create Profile
+        </Button>
       </>}
     >
-      {lead && <>
-        <p>
-          Create a youth profile for {lead.youthFirstName} {lead.youthLastName}.
-          {lead.programOfInterestName ? ` Their program of interest is ${lead.programOfInterestName}.` : ''}
-        </p>
-        <div className="form-group">
-          <label htmlFor="sign-up-cohort">Cohort enrollment</label>
-          <select
-            id="sign-up-cohort"
-            value={cohortId}
-            onChange={event => setCohortId(event.target.value)}
-            disabled={loading || submissionComplete}
-          >
-            <option value="">{loading ? 'Loading cohorts...' : 'Do not enroll yet'}</option>
-            {cohorts.map(cohort => (
-              <option key={cohort.id} value={cohort.id}>
-                {cohort.programName} — {cohort.name} ({cohort.startsOn} to {cohort.endsOn})
-              </option>
-            ))}
-          </select>
-        </div>
-      </>}
+      {lead && (
+        <form
+          id="sign-up-lead-form"
+          className="sign-up-lead-form"
+          onSubmit={event => void submit(event)}
+        >
+          <section className="sign-up-lead-summary" aria-labelledby="sign-up-lead-name">
+            <p className="sign-up-lead-eyebrow">New youth profile</p>
+            <h3 id="sign-up-lead-name">
+              {lead.youthFirstName} {lead.youthLastName}
+            </h3>
+            <dl className="sign-up-lead-details">
+              <div>
+                <dt>Age</dt>
+                <dd>{lead.age}</dd>
+              </div>
+              <div>
+                <dt>School</dt>
+                <dd>{lead.school}</dd>
+              </div>
+              <div>
+                <dt>Program interest</dt>
+                <dd>{lead.programOfInterestName || 'Not specified'}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">
+            <div>
+              <h3 id="sign-up-lead-enrollment-title">Cohort enrollment</h3>
+              <p>Optional. You can create the profile now and manage cohorts later.</p>
+            </div>
+            <FormField id="sign-up-cohort" label="Choose a cohort">
+              <FloatingSelect
+                id="sign-up-cohort"
+                ariaLabel="Cohort enrollment"
+                value={cohortId}
+                onChange={setCohortId}
+                options={cohortOptions}
+                placeholder={loading ? 'Loading cohorts...' : 'Do not enroll yet'}
+                disabled={loading || submissionComplete}
+              />
+            </FormField>
+            {!loading && cohorts.length === 0 && (
+              <p className="sign-up-lead-empty">
+                No eligible cohorts are available. The youth profile can still be created.
+              </p>
+            )}
+          </section>
+        </form>
+      )}
     </Modal>
   );
 }

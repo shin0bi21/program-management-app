@@ -27,8 +27,16 @@ const partners = [
 ]
 
 const teamResources = [
+  {
+    name: 'Quinton Macnevins',
+    role: 'Program Facilitator',
+    badge: 'Co-founder',
+    education: 'Child and Youth Care',
+    school: 'Mohawk College',
+    imageSrc: '/team/quinton.png',
+    bio: 'Quinton is the Co-Founder of Be Original Youth Group, where he is committed to creating a safe, welcoming space for youth to be themselves while developing important life skills. A graduate of Mohawk College’s Child and Youth Care program, Quinton has worked with youth and adults since 2017 through organizations including the Boys & Girls Club of Hamilton, the Downtown Mission, and the Salvation Army. Drawing from both his professional experience and his lived experience as a former Crown ward, he is passionate about helping young people build confidence, strengthen their life skills, and discover their potential.',
+  },
   { name: 'Amanat',   role: 'Program Facilitator', badge: 'Co-founder', education: 'Master of Social Work', school: 'University of Windsor',          bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.' },
-  { name: 'Quinton',  role: 'Program Facilitator', badge: 'Co-founder',  education: undefined,              school: undefined,                  imageSrc: '/team/quinton.png', bio: 'Helps students connect with tutoring, attendance support, and academic planning resources.' },
   { name: 'Bilal',    role: 'Program Facilitator', badge: 'Treasurer',   education: 'Computer Science',     school: 'University of Windsor',    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.' },
   { name: 'Jomariel', role: 'Program Facilitator', badge: undefined,     education: 'Psychology',           school: 'University of Windsor',    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.' },
   { name: 'Elijah',   role: 'Program Facilitator', badge: undefined,     education: undefined,              school: undefined,                  bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.' },

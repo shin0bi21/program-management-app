@@ -48,6 +48,7 @@ describe('Programming', () => {
       id: 'cohort-1',
       programId: 'program-1',
       programName: 'Soft Skills',
+      rosterMode: 'enrolled',
       name: 'Summer 2026',
       startsOn: '2026-07-01',
       endsOn: '2026-09-01',
@@ -58,6 +59,7 @@ describe('Programming', () => {
       averageAttendance: 80,
       attendanceAttendedCount: 4,
       attendanceRecordedCount: 5,
+      uniqueAttendeeCount: 4,
     }]);
     api.createProgram.mockResolvedValue({
       id: 'program-2',
@@ -68,6 +70,7 @@ describe('Programming', () => {
       id: 'cohort-2',
       programId: 'program-1',
       programName: 'Soft Skills',
+      rosterMode: 'enrolled',
       name: 'Fall 2026',
       startsOn: '2026-09-01',
       endsOn: '2026-11-30',
@@ -78,6 +81,7 @@ describe('Programming', () => {
       averageAttendance: null,
       attendanceAttendedCount: 0,
       attendanceRecordedCount: 0,
+      uniqueAttendeeCount: 0,
     });
   });
 
@@ -98,7 +102,7 @@ describe('Programming', () => {
     expect(screen.getAllByText('No cohort selected.')).toHaveLength(3);
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
     expect(screen.getAllByText('5')).toHaveLength(1);
-    expect(screen.getByRole('columnheader', { name: 'Enrollment' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Youth' })).toBeInTheDocument();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
     expect(cohortRow).toHaveAttribute('tabindex', '0');
     expect(cohortRow).toHaveClass('table-row--selectable');
@@ -110,6 +114,8 @@ describe('Programming', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Generate Sessions' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Go to' }));
@@ -132,6 +138,7 @@ describe('Programming', () => {
     expect(api.createProgram).toHaveBeenCalledWith({
       name: 'Job Readiness',
       description: null,
+      rosterMode: 'enrolled',
     });
     expect(await screen.findByText('Job Readiness successfully added.')).toBeInTheDocument();
   });
@@ -160,5 +167,41 @@ describe('Programming', () => {
     expect(await screen.findByText(
       'Fall 2026 successfully added to Soft Skills.',
     )).toBeInTheDocument();
+  });
+
+  it('shows reach metrics and no enrollment action for an open cohort', async () => {
+    const user = userEvent.setup();
+    api.getCohorts.mockResolvedValue([{
+      id: 'drop-in-cohort',
+      programId: 'drop-in',
+      programName: 'Drop In',
+      rosterMode: 'open',
+      name: 'Summer 2026',
+      startsOn: '2026-07-01',
+      endsOn: '2026-09-01',
+      state: 'active',
+      enrolledCount: 0,
+      nextSessionAt: null,
+      nextSessionId: null,
+      averageAttendance: 100,
+      attendanceAttendedCount: 12,
+      attendanceRecordedCount: 12,
+      uniqueAttendeeCount: 8,
+    }]);
+
+    render(
+      <MemoryRouter initialEntries={['/programming']}>
+        <Programming />
+      </MemoryRouter>,
+    );
+
+    const cohortRow = (await screen.findByText('Summer 2026')).closest('tr');
+    await user.click(cohortRow!);
+    expect(screen.getByRole('region', { name: 'Programming overview' })).toHaveTextContent('Unique youth reached8');
+    expect(screen.getByRole('region', { name: 'Programming overview' })).toHaveTextContent('Total visits12');
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
+    expect(screen.queryByRole('menuitem', { name: 'Enroll Youth' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 });

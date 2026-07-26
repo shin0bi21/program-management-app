@@ -9,16 +9,30 @@ import type {
   SessionListFilters,
   SessionRosterMember,
   AttendanceStatus,
+  UpdateCohortInput,
+  UpdateSessionInput,
 } from '../types/cohort';
 import { apiClient } from './http/client';
 
-export function getCohorts(programId?: string) {
-  const query = programId ? `?programId=${encodeURIComponent(programId)}` : '';
-  return apiClient.get<ProgramCohort[]>(`/cohorts${query}`);
+export function getCohorts(
+  programId?: string,
+  { includeAllPrograms = false }: { includeAllPrograms?: boolean } = {},
+) {
+  const query = new URLSearchParams();
+  if (programId) query.set('programId', programId);
+  if (includeAllPrograms) query.set('scope', 'all');
+  const suffix = query.toString();
+  return apiClient.get<ProgramCohort[]>(`/cohorts${suffix ? `?${suffix}` : ''}`);
 }
 
 export function createCohort(data: CreateCohortInput) {
   return apiClient.post<ProgramCohort>('/cohorts', data);
+}
+export function updateCohort(cohortId: string, data: UpdateCohortInput) {
+  return apiClient.put(`/cohorts/${cohortId}`, data);
+}
+export function deleteCohort(cohortId: string) {
+  return apiClient.delete(`/cohorts/${cohortId}`);
 }
 
 export function enrollYouth(cohortId: string, data: EnrollYouthInput) {
@@ -34,7 +48,7 @@ export function syncYouthCohorts(youthId: string, cohortIds: string[]) {
 }
 
 export function generateSessions(cohortId: string, data: GenerateSessionsInput) {
-  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/activities/generate`, data);
+  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
 }
 
 export function getManagedSessions(filters: SessionListFilters = {}) {
@@ -55,6 +69,12 @@ export function saveSessionAttendance(
   records: Array<{ youthId: string; status: AttendanceStatus; notes?: string | null }>,
 ) {
   return apiClient.put<SessionRosterMember[]>(`/cohorts/sessions/${sessionId}/attendance`, { records });
+}
+export function updateSession(sessionId: string, data: UpdateSessionInput) {
+  return apiClient.put(`/cohorts/sessions/${sessionId}`, data);
+}
+export function deleteSession(sessionId: string) {
+  return apiClient.delete(`/cohorts/sessions/${sessionId}`);
 }
 
 export function getCohortSessions(start: string, end: string) {

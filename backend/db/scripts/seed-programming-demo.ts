@@ -119,40 +119,22 @@ async function main() {
       `;
     }
 
-    const [activity] = await tx<{ id: string }[]>`
-      INSERT INTO cohort_activities (
-        cohort_id, name, description, created_by, updated_by
-      )
-      VALUES (
-        ${cohort.id},
-        'Weekly Soft Skills',
-        'Tuesday evening group sessions.',
-        ${fixtureStaffId},
-        ${fixtureStaffId}
-      )
-      ON CONFLICT (cohort_id, name) DO UPDATE SET
-        description = EXCLUDED.description,
-        updated_at = NOW(),
-        updated_by = EXCLUDED.updated_by
-      RETURNING id
-    `;
-
     const sessionIds: string[] = [];
-    for (const [date, focus] of sessionFixtures) {
+    for (const [date, theme] of sessionFixtures) {
       const [session] = await tx<{ id: string }[]>`
         INSERT INTO cohort_sessions (
-          activity_id, focus, starts_at, ends_at, created_by, updated_by
+          cohort_id, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES (
-          ${activity.id},
-          ${focus},
+          ${cohort.id},
+          ${theme},
           (${date}::date + '17:00'::time) AT TIME ZONE 'America/Toronto',
           (${date}::date + '19:30'::time) AT TIME ZONE 'America/Toronto',
           ${fixtureStaffId},
           ${fixtureStaffId}
         )
-        ON CONFLICT (activity_id, starts_at) DO UPDATE SET
-          focus = EXCLUDED.focus,
+        ON CONFLICT (cohort_id, theme, starts_at) DO UPDATE SET
+          theme = EXCLUDED.theme,
           ends_at = EXCLUDED.ends_at,
           cancelled_at = NULL,
           updated_at = NOW(),

@@ -205,6 +205,9 @@ describe('Accounts API', () => {
 
     it('should create staff user with valid data (admin)', async () => {
       const uniqueEmail = `create-${Date.now()}@test.local`;
+      const [program] = await sql<{ id: string }[]>`
+        SELECT id FROM programs WHERE name = 'Soft Skills'
+      `;
       const res = await request(app)
         .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -214,12 +217,14 @@ describe('Accounts API', () => {
           email: uniqueEmail,
           password: 'password123',
           role: 'staff',
+          programIds: [program.id],
           active: true,
         });
 
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
       expect(res.body.email).toBe(uniqueEmail);
+      expect(res.body.programIds).toEqual([program.id]);
       createdUserIds.push(res.body.id);
     });
 

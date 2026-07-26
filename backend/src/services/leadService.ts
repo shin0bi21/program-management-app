@@ -96,9 +96,20 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
         updated_at = NOW(),
         updated_by = ${actorId}
     WHERE id = ${id}
+      AND status != 'signed_up'
+      AND converted_youth_id IS NULL
     RETURNING ${leadColumns}
   `;
-  if (!rows.length) throw new NotFoundError('Lead not found');
+  if (!rows.length) {
+    const existing = await sql<{ status: string; convertedYouthId: string | null }[]>`
+      SELECT status, converted_youth_id
+      FROM leads
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+    if (!existing.length) throw new NotFoundError('Lead not found');
+    throw new ConflictError('Signed-up leads must be edited through their youth profile');
+  }
   return rows[0];
 }
 
@@ -157,16 +168,24 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     }
 
     if (data.cohortId) {
-      const cohorts = await trx<{ id: string; programId: string }[]>`
-        SELECT id, program_id
-        FROM program_cohorts
-        WHERE id = ${data.cohortId}
-          AND CURRENT_DATE <= ends_on
-        FOR UPDATE
+      const cohorts = await trx<{
+        id: string;
+        programId: string;
+        rosterMode: 'enrolled' | 'open';
+      }[]>`
+        SELECT pc.id, pc.program_id, p.roster_mode
+        FROM program_cohorts pc
+        INNER JOIN programs p ON p.id = pc.program_id
+        WHERE pc.id = ${data.cohortId}
+          AND CURRENT_DATE <= pc.ends_on
+        FOR UPDATE OF pc
       `;
       if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');
       if (lead.programOfInterestId && cohorts[0].programId !== lead.programOfInterestId) {
         throw new ConflictError('Selected cohort does not belong to the lead program of interest');
+      }
+      if (cohorts[0].rosterMode === 'open') {
+        throw new ConflictError('Open attendance cohorts do not use enrollment');
       }
     }
 

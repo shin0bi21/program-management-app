@@ -1,11 +1,14 @@
 import { sql } from '../db/client';
 import { ConflictError } from '../errors';
+import { programAccessPredicate } from '../policies/programAccessPolicy';
+import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput } from '../validation/programSchemas';
 
-export function getPrograms() {
+export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
   return sql`
-    SELECT id, name, description
-    FROM programs
+    SELECT p.id, p.name, p.description, p.roster_mode
+    FROM programs p
+    WHERE ${assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`}
     ORDER BY name ASC
   `;
 }
@@ -18,9 +21,9 @@ export async function createProgram(data: CreateProgramInput) {
   if (existing.length) throw new ConflictError('A program with this name already exists');
 
   const rows = await sql`
-    INSERT INTO programs (name, description)
-    VALUES (${name}, ${data.description ?? null})
-    RETURNING id, name, description
+    INSERT INTO programs (name, description, roster_mode)
+    VALUES (${name}, ${data.description ?? null}, ${data.rosterMode ?? 'enrolled'})
+    RETURNING id, name, description, roster_mode
   `;
   return rows[0];
 }

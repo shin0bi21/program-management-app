@@ -39,6 +39,7 @@ const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Soft Skills',
+  rosterMode: 'enrolled' as const,
   name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
@@ -49,6 +50,7 @@ const cohort = {
   averageAttendance: null,
   attendanceAttendedCount: 0,
   attendanceRecordedCount: 0,
+  uniqueAttendeeCount: 0,
 };
 
 describe('SignUpLeadModal', () => {
@@ -56,6 +58,7 @@ describe('SignUpLeadModal', () => {
     vi.mocked(getCohorts).mockResolvedValue([
       cohort,
       { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
+      { ...cohort, id: 'cohort-open', name: 'Drop In', rosterMode: 'open' },
     ]);
     vi.mocked(signUpLead).mockResolvedValue(lead);
   });
@@ -64,12 +67,17 @@ describe('SignUpLeadModal', () => {
     const onSuccess = vi.fn();
     render(<SignUpLeadModal lead={lead} onClose={vi.fn()} onSuccess={onSuccess} />);
 
-    expect(await screen.findByRole('option', { name: /Soft Skills — Summer 2026/ })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: /Spring 2026/ })).not.toBeInTheDocument();
+    const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
+    await waitFor(() => expect(cohortSelect).toBeEnabled());
+    fireEvent.click(cohortSelect);
+    const cohortOption = await screen.findByRole('menuitemradio', { name: /Soft Skills — Summer 2026/ });
+    expect(cohortOption).toBeInTheDocument();
+    expect(screen.queryByRole('menuitemradio', { name: /Spring 2026/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitemradio', { name: /Drop In/ })).not.toBeInTheDocument();
     expect(getCohorts).toHaveBeenCalledWith('program-1');
 
-    fireEvent.change(screen.getByLabelText('Cohort enrollment'), { target: { value: 'cohort-1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+    fireEvent.click(cohortOption);
+    fireEvent.click(screen.getByRole('button', { name: 'Create Profile' }));
 
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1'));
     expect(onSuccess).toHaveBeenCalled();

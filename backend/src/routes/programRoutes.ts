@@ -3,11 +3,11 @@ import { handleCreateProgram, handleGetPrograms } from '../controllers/programCo
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { createProgramSchema } from '../validation/programSchemas';
+import { createProgramSchema, programQuerySchema } from '../validation/programSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('read:programs'), generalLimiter, asyncHandler(handleGetPrograms));
+router.get('/', authenticateToken, requirePermission('read:programs'), generalLimiter, validateRequest(programQuerySchema), asyncHandler(handleGetPrograms));
 router.post('/', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(createProgramSchema), asyncHandler(handleCreateProgram));
 
 export default router;

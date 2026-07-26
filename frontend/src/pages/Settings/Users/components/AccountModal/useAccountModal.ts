@@ -12,6 +12,7 @@ const defaultValues: AccountFormData = {
   lastName: '',
   email: '',
   role: 'staff',
+  programIds: [],
 };
 
 interface AccountModalControllerProps {
@@ -27,6 +28,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<AccountFormData>({ resolver: zodResolver(accountSchema), defaultValues });
 
@@ -37,6 +39,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       lastName: account.lastName,
       email: account.email,
       role: account.role === 'admin' ? 'admin' : 'staff',
+      programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();
   }, [account, isOpen, reset]); // resetStatus is intentionally scoped to modal-open changes
@@ -56,6 +59,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
         lastName: data.lastName.trim(),
         email: data.email.trim(),
         role: data.role,
+        programIds: data.role === 'staff' ? data.programIds : [],
       };
       const result = account
         ? await updateAccount({ id: account.id, ...payload })
@@ -78,5 +82,6 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     submitStatus,
     error,
     handleClose,
+    selectedRole: watch('role'),
   };
 }

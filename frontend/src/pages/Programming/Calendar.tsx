@@ -24,7 +24,7 @@ interface CalendarRange {
 export default function Calendar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions } = useAuth();
-  const { programs } = usePrograms();
+  const { programs } = usePrograms({ assignedOnly: true });
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const [sessions, setSessions] = useState<CohortSession[]>([]);
   const [currentRange, setCurrentRange] = useState<CalendarRange | null>(null);
@@ -81,13 +81,13 @@ export default function Calendar() {
 
   const events = useMemo<EventInput[]>(() => visibleSessions.map(session => ({
     id: session.id,
-    title: session.activityName,
+    title: session.theme ?? '',
     start: session.startsAt,
     end: session.endsAt,
     backgroundColor: session.cancelledAt ? '#6b7280' : undefined,
     borderColor: session.cancelledAt ? '#6b7280' : undefined,
     extendedProps: {
-      focus: session.focus,
+      programName: session.programName,
     },
   })), [visibleSessions]);
 

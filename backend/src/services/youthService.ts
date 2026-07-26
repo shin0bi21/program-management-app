@@ -19,9 +19,10 @@ type YouthRow =
       name: string;
       programId: string;
       programName: string;
+      rosterMode: 'enrolled' | 'open';
       startsOn: string;
       endsOn: string;
-      enrolledOn: string;
+      enrolledOn: string | null;
       withdrawnOn: string | null;
       presentCount: number;
       lateCount: number;
@@ -84,10 +85,11 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
             'name', pc.name,
             'programId', p.id,
             'programName', p.name,
+            'rosterMode', p.roster_mode,
             'startsOn', pc.starts_on,
             'endsOn', pc.ends_on,
-            'enrolledOn', ce.enrolled_on,
-            'withdrawnOn', ce.withdrawn_on,
+            'enrolledOn', participation.enrolled_on,
+            'withdrawnOn', participation.withdrawn_on,
             'presentCount', attendance.present_count,
             'lateCount', attendance.late_count,
             'absentCount', attendance.absent_count,
@@ -95,8 +97,35 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
           )
           ORDER BY pc.starts_on DESC
         )
-        FROM cohort_enrollments ce
-        INNER JOIN program_cohorts pc ON pc.id = ce.cohort_id
+        FROM (
+          SELECT
+            ce.cohort_id,
+            ce.enrolled_on,
+            ce.withdrawn_on
+          FROM cohort_enrollments ce
+          WHERE ce.youth_id = u.id
+
+          UNION ALL
+
+          SELECT
+            open_cs.cohort_id,
+            NULL::date AS enrolled_on,
+            NULL::date AS withdrawn_on
+          FROM attendance_records open_ar
+          INNER JOIN cohort_sessions open_cs ON open_cs.id = open_ar.session_id
+          INNER JOIN program_cohorts open_pc ON open_pc.id = open_cs.cohort_id
+          INNER JOIN programs open_program ON open_program.id = open_pc.program_id
+          WHERE open_ar.youth_id = u.id
+            AND open_program.roster_mode = 'open'
+            AND NOT EXISTS (
+              SELECT 1
+              FROM cohort_enrollments existing_enrollment
+              WHERE existing_enrollment.cohort_id = open_cs.cohort_id
+                AND existing_enrollment.youth_id = u.id
+            )
+          GROUP BY open_cs.cohort_id
+        ) participation
+        INNER JOIN program_cohorts pc ON pc.id = participation.cohort_id
         INNER JOIN programs p ON p.id = pc.program_id
         LEFT JOIN LATERAL (
           SELECT
@@ -107,14 +136,12 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
               MAX(cs.starts_at) FILTER (WHERE ar.status IN ('present', 'late'))
               AT TIME ZONE 'America/Toronto'
             )::date::text AS last_attended_on
-          FROM cohort_activities ca
-          INNER JOIN cohort_sessions cs ON cs.activity_id = ca.id
+          FROM cohort_sessions cs
           INNER JOIN attendance_records ar
             ON ar.session_id = cs.id
             AND ar.youth_id = u.id
-          WHERE ca.cohort_id = pc.id
+          WHERE cs.cohort_id = pc.id
         ) attendance ON TRUE
-        WHERE ce.youth_id = u.id
       ), '[]'::json) AS cohorts,
       (
         SELECT json_agg(

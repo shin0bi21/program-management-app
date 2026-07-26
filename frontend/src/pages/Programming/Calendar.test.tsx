@@ -51,7 +51,7 @@ vi.mock('@fullcalendar/react', () => ({
         title: string;
         start: Date;
         end: Date;
-        extendedProps: { focus?: string | null };
+        extendedProps: { programName?: string };
       };
     }) => React.ReactNode;
     events: Array<{
@@ -59,7 +59,7 @@ vi.mock('@fullcalendar/react', () => ({
       title: string;
       start: string;
       end: string;
-      extendedProps?: { focus?: string | null };
+      extendedProps?: { programName?: string };
     }>;
   }) => (
     <div
@@ -117,17 +117,15 @@ describe('Programming calendar', () => {
     }]);
     api.getCohortSessions.mockResolvedValue([{
       id: 'session-1',
-      activityId: 'activity-1',
       cohortId: 'cohort-1',
-      activityName: 'Soft Skills',
-      focus: 'Communication',
+      theme: 'Communication',
       cohortName: 'Summer 2026',
       programId: 'program-1',
       programName: 'Soft Skills',
       startsAt: '2026-07-07T21:00:00.000Z',
       endsAt: '2026-07-07T23:30:00.000Z',
       cancelledAt: null,
-      notes: null,
+      description: 'Practising clear group communication.',
     }]);
     api.getSessionRoster.mockResolvedValue([]);
   });
@@ -153,6 +151,7 @@ describe('Programming calendar', () => {
       name: 'Soft Skills, Communication, 5pm – 7:30pm',
     }));
 
+    expect(screen.queryByText('Practising clear group communication.')).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Communication attendance' })).toBeInTheDocument();
     expect(api.getSessionRoster).toHaveBeenCalledWith('session-1');
   });
@@ -162,45 +161,39 @@ describe('Programming calendar', () => {
     api.getCohortSessions.mockResolvedValue([
       {
         id: 'session-1',
-        activityId: 'activity-1',
         cohortId: 'cohort-1',
-        activityName: 'Soft Skills',
-        focus: 'Communication',
+        theme: 'Communication',
         cohortName: 'Summer 2026',
         programId: 'program-1',
         programName: 'Soft Skills',
         startsAt: '2026-07-07T21:00:00.000Z',
         endsAt: '2026-07-07T23:30:00.000Z',
         cancelledAt: null,
-        notes: null,
+        description: null,
       },
       {
         id: 'session-2',
-        activityId: 'activity-2',
         cohortId: 'cohort-2',
-        activityName: 'Job Readiness',
-        focus: 'Resumes',
+        theme: 'Resumes',
         cohortName: 'Summer 2026',
         programId: 'program-2',
         programName: 'Job Readiness',
         startsAt: '2026-07-08T21:00:00.000Z',
         endsAt: '2026-07-08T23:00:00.000Z',
         cancelledAt: null,
-        notes: null,
+        description: null,
       },
       {
         id: 'session-3',
-        activityId: 'activity-3',
         cohortId: 'cohort-3',
-        activityName: 'Drop In',
-        focus: 'Open Gym',
+        theme: 'Open Gym',
         cohortName: 'Summer 2026',
         programId: 'program-3',
         programName: 'Drop In',
         startsAt: '2026-07-10T21:00:00.000Z',
         endsAt: '2026-07-10T23:00:00.000Z',
         cancelledAt: null,
-        notes: null,
+        description: null,
       },
     ]);
 

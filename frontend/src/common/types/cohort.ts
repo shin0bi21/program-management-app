@@ -2,6 +2,7 @@ export interface ProgramCohort {
   id: string;
   programId: string;
   programName: string;
+  rosterMode: 'enrolled' | 'open';
   name: string;
   startsOn: string;
   endsOn: string;
@@ -12,21 +13,21 @@ export interface ProgramCohort {
   averageAttendance: number | null;
   attendanceAttendedCount: number;
   attendanceRecordedCount: number;
+  uniqueAttendeeCount: number;
 }
 
 export interface CohortSession {
   id: string;
-  activityId: string;
   cohortId: string;
-  activityName: string;
-  focus: string | null;
+  theme: string | null;
   cohortName: string;
   programId: string;
   programName: string;
+  rosterMode: 'enrolled' | 'open';
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;
-  notes: string | null;
+  description: string | null;
 }
 
 export interface CreateCohortInput {
@@ -35,15 +36,20 @@ export interface CreateCohortInput {
   startsOn: string;
   endsOn: string;
 }
+export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
+export interface UpdateSessionInput {
+  theme: string | null;
+  startsAt: string;
+  endsAt: string;
+  description?: string | null;
+}
 
 export interface EnrollYouthInput {
   youthIds: string[];
 }
 
 export interface GenerateSessionsInput {
-  name: string;
-  description?: string | null;
-  focus?: string | null;
+  theme: string | null;
   frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
   dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
   dayOfMonth?: number;
@@ -54,7 +60,6 @@ export interface GenerateSessionsInput {
 }
 
 export interface GenerateSessionsResult {
-  activityId: string;
   sessions: Array<{ id: string }>;
 }
 

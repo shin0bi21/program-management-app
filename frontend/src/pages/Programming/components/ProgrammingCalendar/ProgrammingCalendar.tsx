@@ -62,15 +62,17 @@ export default function ProgrammingCalendar({
         eventClick={info => onEventSelect?.(info.event.id)}
         displayEventTime={false}
         eventContent={info => {
-          const focus = info.event.extendedProps.focus as string | null | undefined;
+          const programName = info.event.extendedProps.programName as string | undefined;
           const timeRange = compactTimeRange(info.event.start, info.event.end);
           return (
             <span
               className="programming-calendar-event"
-              aria-label={[info.event.title, focus, timeRange].filter(Boolean).join(', ')}
+              aria-label={[programName, info.event.title, timeRange].filter(Boolean).join(', ')}
             >
-              <span className="programming-calendar-event__activity">{info.event.title}</span>
-              {focus && <span className="programming-calendar-event__focus">{focus}</span>}
+              {programName && <span className="programming-calendar-event__program">{programName}</span>}
+              {info.event.title && (
+                <span className="programming-calendar-event__session">{info.event.title}</span>
+              )}
               <span className="programming-calendar-event__time">{timeRange}</span>
             </span>
           );

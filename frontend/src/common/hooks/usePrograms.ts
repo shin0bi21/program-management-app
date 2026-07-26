@@ -3,19 +3,19 @@ import { getPrograms } from '../api/programs.api';
 import type { Program } from '../types/program';
 import { getErrorMessage } from '../utils/clientErrors';
 
-export function usePrograms() {
+export function usePrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
-    getPrograms()
+    getPrograms({ assignedOnly })
       .then(data => { if (active) setPrograms(data); })
       .catch(err => { if (active) setError(getErrorMessage(err, 'Failed to load programs')); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [assignedOnly]);
 
   return { programs, setPrograms, loading, error };
 }

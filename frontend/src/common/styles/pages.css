@@ -24,7 +24,7 @@
   margin: 0;
 }
 
-@media (min-width: 901px) {
+@media (min-width: 1001px) {
   .page-container--data {
     height: 100dvh;
     min-height: 0;

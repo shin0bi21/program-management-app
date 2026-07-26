@@ -35,6 +35,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type ProgramRosterMode = "enrolled" | "open";
+
 export type SchoolBoard = "catholic" | "public";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -94,17 +96,6 @@ export interface BaseTable {
   updated_by: string | null;
 }
 
-export interface CohortActivities {
-  cohort_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  description: string | null;
-  id: Generated<string>;
-  name: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface CohortEnrollments {
   cohort_id: string;
   created_at: Generated<Timestamp>;
@@ -118,15 +109,15 @@ export interface CohortEnrollments {
 }
 
 export interface CohortSessions {
-  activity_id: string;
   cancelled_at: Timestamp | null;
+  cohort_id: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  description: string | null;
   ends_at: Timestamp;
-  focus: string | null;
   id: Generated<string>;
-  notes: string | null;
   starts_at: Timestamp;
+  theme: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -203,6 +194,7 @@ export interface Programs {
   description: string | null;
   id: Generated<string>;
   name: string;
+  roster_mode: Generated<ProgramRosterMode>;
 }
 
 export interface SchemaMigrations {
@@ -223,6 +215,13 @@ export interface Schools {
   postal_code: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface StaffProgramAssignments {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  program_id: string;
+  staff_id: string;
 }
 
 export interface SystemRevokedTokens {
@@ -370,7 +369,6 @@ export interface DB {
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
-  cohort_activities: CohortActivities;
   cohort_enrollments: CohortEnrollments;
   cohort_sessions: CohortSessions;
   contacts: Contacts;
@@ -380,6 +378,7 @@ export interface DB {
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
+  staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;

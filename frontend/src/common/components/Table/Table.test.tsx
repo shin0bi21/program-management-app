@@ -14,8 +14,9 @@ const columns: TableColumn<Row>[] = [
 
 describe('Table', () => {
   it('keeps the header and renders a full-width row when data is empty', () => {
-    render(<Table columns={columns} data={[]} keyExtractor={row => row.id} emptyMessage="No accounts found" />);
+    render(<Table ariaLabel="Accounts" columns={columns} data={[]} keyExtractor={row => row.id} emptyMessage="No accounts found" />);
 
+    expect(screen.getByRole('table', { name: 'Accounts' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
     const emptyCell = screen.getByRole('cell', { name: 'No accounts found' });
@@ -24,12 +25,12 @@ describe('Table', () => {
   });
 
   it('uses the shared empty-row message by default', () => {
-    render(<Table columns={columns} data={[]} keyExtractor={row => row.id} />);
+    render(<Table ariaLabel="Accounts" columns={columns} data={[]} keyExtractor={row => row.id} />);
     expect(screen.getByRole('cell', { name: 'No rows found' })).toBeInTheDocument();
   });
 
   it('keeps the header mounted while only the table body is loading', () => {
-    render(<Table columns={columns} data={[]} loading keyExtractor={row => row.id} />);
+    render(<Table ariaLabel="Accounts" columns={columns} data={[]} loading keyExtractor={row => row.id} />);
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
@@ -40,7 +41,7 @@ describe('Table', () => {
 
   it('supports mouse and keyboard row selection', () => {
     const onSelect = vi.fn();
-    render(<Table columns={columns} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} selectedKey="1" onRowSelect={onSelect} />);
+    render(<Table ariaLabel="Accounts" columns={columns} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} selectedKey="1" onRowSelect={onSelect} />);
 
     const row = screen.getByRole('row', { name: /Jamie Active/ });
     expect(row).toHaveAttribute('aria-selected', 'true');
@@ -52,6 +53,7 @@ describe('Table', () => {
   it('moves row focus and selection with arrow, Home, and End keys', () => {
     const onSelect = vi.fn();
     render(<Table
+      ariaLabel="Accounts"
       columns={columns}
       data={[
         { id: '1', name: 'First' },
@@ -83,6 +85,7 @@ describe('Table', () => {
 
   it('provides arrow-key row navigation without making rows selectable', () => {
     render(<Table
+      ariaLabel="Accounts"
       columns={columns}
       data={[
         { id: '1', name: 'First' },
@@ -110,11 +113,24 @@ describe('Table', () => {
       ...columns,
       { key: 'action', header: '', render: () => <button onClick={onAction}>More actions</button> },
     ];
-    render(<Table columns={columnsWithAction} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} onRowSelect={onSelect} />);
+    render(<Table ariaLabel="Accounts" columns={columnsWithAction} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} onRowSelect={onSelect} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
 
     expect(onAction).toHaveBeenCalledOnce();
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('renders fetch errors inside the table while preserving its header', () => {
+    render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[]}
+      error="Unable to load accounts"
+      keyExtractor={row => row.id}
+    />);
+
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Unable to load accounts' })).toHaveClass('table-error-cell');
   });
 });

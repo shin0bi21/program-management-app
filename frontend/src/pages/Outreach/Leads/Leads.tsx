@@ -12,6 +12,7 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
 import { usePrograms } from '../../../common/hooks/usePrograms';
+import useTableSelection from '../../../common/hooks/useTableSelection';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal';
@@ -34,7 +35,11 @@ export default function Leads() {
   const { leads, loading, error, reload } = useLeads(queryFilters);
   const { programs } = usePrograms();
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const {
+    selectedItem: selectedLead,
+    selectedKey: selectedLeadId,
+    selectItem: selectLead,
+  } = useTableSelection(leads);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
@@ -43,12 +48,6 @@ export default function Leads() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
-
-  useEffect(() => {
-    setSelectedLead(current => current
-      ? leads.find(lead => lead.id === current.id) ?? null
-      : null);
-  }, [leads]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -80,17 +79,16 @@ export default function Leads() {
       key: 'actions' as const,
       header: '',
       className: 'col-actions',
-      width: '32px',
-      render: (lead: Lead) => <ActionsMenu
-        ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
-        items={[
-          { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
-          ...(lead.status !== 'signed_up' ? [
+      render: (lead: Lead) => lead.status === 'signed_up'
+        ? null
+        : <ActionsMenu
+          ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
+          items={[
+            { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
             { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
             ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
-          ] : []),
-        ]}
-      />,
+          ]}
+        />,
     }] : []),
   ];
 
@@ -111,14 +109,14 @@ export default function Leads() {
     />
     <TableDetailLayout
       ariaLabel="Leads"
-      table={<Table columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} maxHeight="calc(100vh - 260px)" selectedKey={selectedLead?.id} onRowSelect={setSelectedLead} />}
+      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} />}
       details={<>
         <PrimaryContactCard contact={selectedLead ? {
           firstName: selectedLead.contactFirstName,
           lastName: selectedLead.contactLastName,
           phoneNumber: selectedLead.contactPhoneNumber,
           relationship: selectedLead.contactRelationship,
-        } : null} />
+        } : null} selected={selectedLead !== null} />
         <NotesCard notes={selectedLead?.notes} selected={selectedLead !== null} />
       </>}
     />

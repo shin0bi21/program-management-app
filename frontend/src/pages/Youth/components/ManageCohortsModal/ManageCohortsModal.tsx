@@ -52,7 +52,9 @@ export default function ManageCohortsModal({
   }, [youth?.id]);
 
   const manageableCohorts = useMemo(
-    () => cohorts.filter(cohort => cohort.state !== 'completed'),
+    () => cohorts.filter(cohort => (
+      cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
+    )),
     [cohorts],
   );
 

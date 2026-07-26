@@ -29,6 +29,7 @@ describe('Sessions', () => {
       id: 'cohort-1',
       programId: 'program-1',
       programName: 'Soft Skills',
+      rosterMode: 'enrolled',
       name: 'Summer 2026',
       startsOn: '2026-07-01',
       endsOn: '2026-09-01',
@@ -39,20 +40,20 @@ describe('Sessions', () => {
       averageAttendance: null,
       attendanceAttendedCount: 0,
       attendanceRecordedCount: 0,
+      uniqueAttendeeCount: 0,
     }]);
     getManagedSessions.mockResolvedValue([{
       id: 'session-1',
-      activityId: 'activity-1',
       cohortId: 'cohort-1',
-      activityName: 'Weekly Soft Skills',
-      focus: 'Communication',
+      theme: 'Communication',
       cohortName: 'Summer 2026',
       programId: 'program-1',
       programName: 'Soft Skills',
+      rosterMode: 'enrolled',
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       cancelledAt: null,
-      notes: null,
+      description: null,
       attendanceMarkedCount: 0,
       attendedCount: 0,
       attendanceRate: null,
@@ -65,6 +66,35 @@ describe('Sessions', () => {
       status: null,
       notes: null,
     }]);
+  });
+
+  it('shows open attendance as a check-in count', async () => {
+    getManagedSessions.mockResolvedValue([{
+      id: 'drop-in-session',
+      cohortId: 'drop-in-cohort',
+      theme: 'Friday Drop In',
+      cohortName: 'Summer 2026',
+      programId: 'drop-in',
+      programName: 'Drop In',
+      rosterMode: 'open',
+      startsAt: '2026-07-31T21:00:00.000Z',
+      endsAt: '2026-07-31T23:00:00.000Z',
+      cancelledAt: null,
+      description: null,
+      attendanceMarkedCount: 3,
+      attendedCount: 3,
+      attendanceRate: 100,
+      state: 'upcoming',
+    }]);
+
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('3 attended')).toBeInTheDocument();
+    expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
   });
 
   it('highlights a linked session and opens attendance from its actions menu', async () => {
@@ -83,6 +113,8 @@ describe('Sessions', () => {
     expect(screen.queryByRole('heading', { name: 'Communication attendance' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Communication' }));
+    expect(screen.getByRole('menuitem', { name: 'Edit Session' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete Session' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Take Attendance' }));
 
     expect(screen.getByRole('heading', { name: 'Communication attendance' })).toBeInTheDocument();

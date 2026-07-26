@@ -16,6 +16,7 @@ export type AccountRow =
   DbRow<Pick<UserCredentials, 'status'>> & {
     email: string;
     role: string;
+    programIds: string[];
   };
 
 export async function getAccounts(actor: AccessTokenPayload, filters: AccountQuery) {
@@ -28,7 +29,13 @@ export async function getAccounts(actor: AccessTokenPayload, filters: AccountQue
       uc.status,
       u.created_at,
       uc.email,
-      ur.name AS role
+      ur.name AS role,
+      ARRAY(
+        SELECT assignment.program_id
+        FROM staff_program_assignments assignment
+        WHERE assignment.staff_id = u.id
+        ORDER BY assignment.program_id
+      ) AS program_ids
     FROM users u
     INNER JOIN user_credentials uc ON uc.user_id = u.id
     INNER JOIN user_roles ur ON ur.id = u.role_id
@@ -51,6 +58,33 @@ async function getAccountRole(userId: string): Promise<UserRole> {
 }
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function replaceStaffProgramAssignments(
+  trx: typeof sql,
+  staffId: string,
+  role: 'staff' | 'admin',
+  programIds: string[],
+  actorId: string,
+) {
+  await trx`DELETE FROM staff_program_assignments WHERE staff_id = ${staffId}`;
+  if (role !== 'staff' || !programIds.length) return;
+
+  const assignablePrograms = await trx<{ id: string }[]>`
+    SELECT id
+    FROM programs
+    WHERE id = ANY(${sql.array(programIds)}::uuid[])
+      AND roster_mode = 'enrolled'
+  `;
+  if (assignablePrograms.length !== programIds.length) {
+    throw new ConflictError('One or more selected programs cannot be assigned');
+  }
+
+  await trx`
+    INSERT INTO staff_program_assignments (staff_id, program_id, created_by)
+    SELECT ${staffId}, selected.program_id, ${actorId}
+    FROM UNNEST(${sql.array(programIds)}::uuid[]) AS selected(program_id)
+  `;
+}
 
 export async function inviteYouthAccount(userId: string, email: string, actorId: string) {
   const transactionId = crypto.randomUUID();
@@ -100,7 +134,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
 }
 
 export async function setAccount(data: SetAccountInput, actor: AccessTokenPayload) {
-  const { id, firstName, lastName, email, role = 'staff' } = data;
+  const { id, firstName, lastName, email, role = 'staff', programIds } = data;
   if (id) {
     assertCanManageAccount(actor, await getAccountRole(id));
   }
@@ -188,6 +222,10 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         `;
         newInviteToken = rawToken;
       }
+
+      if (role === 'admin' || programIds !== undefined) {
+        await replaceStaffProgramAssignments(trx, userId, role, programIds ?? [], actorId);
+      }
     });
 
     // Post-transaction: send emails based on what changed
@@ -235,6 +273,8 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
         VALUES (${userId}, ${tokenHash}, ${expiresAt})
       `;
+
+      await replaceStaffProgramAssignments(trx, userId, role, programIds ?? [], actorId);
     });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -251,7 +291,13 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       uc.status,
       u.created_at,
       uc.email,
-      ur.name AS role
+      ur.name AS role,
+      ARRAY(
+        SELECT assignment.program_id
+        FROM staff_program_assignments assignment
+        WHERE assignment.staff_id = u.id
+        ORDER BY assignment.program_id
+      ) AS program_ids
     FROM users u
     INNER JOIN user_credentials uc ON uc.user_id = u.id
     INNER JOIN user_roles ur ON ur.id = u.role_id
@@ -345,7 +391,13 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
     const rows = await trx<AccountRow[]>`
       SELECT
         u.id, u.first_name, u.last_name, uc.status, u.created_at,
-        uc.email, ur.name AS role
+        uc.email, ur.name AS role,
+        ARRAY(
+          SELECT assignment.program_id
+          FROM staff_program_assignments assignment
+          WHERE assignment.staff_id = u.id
+          ORDER BY assignment.program_id
+        ) AS program_ids
       FROM users u
       INNER JOIN user_credentials uc ON uc.user_id = u.id
       INNER JOIN user_roles ur ON ur.id = u.role_id

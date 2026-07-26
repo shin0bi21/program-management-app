@@ -1,0 +1,98 @@
+.sign-up-lead-form {
+  display: grid;
+  gap: 24px;
+  padding-block: 8px 12px;
+}
+
+.sign-up-lead-summary {
+  padding: 20px;
+  border: 1px solid var(--ink-08);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.sign-up-lead-eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sign-up-lead-summary h3,
+.sign-up-lead-enrollment h3 {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.sign-up-lead-summary h3 {
+  font-size: 1.3rem;
+}
+
+.sign-up-lead-details {
+  display: grid;
+  grid-template-columns: 70px minmax(120px, 1fr) minmax(140px, 1fr);
+  gap: 16px;
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ink-08);
+}
+
+.sign-up-lead-details div {
+  min-width: 0;
+}
+
+.sign-up-lead-details dt {
+  margin-bottom: 3px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sign-up-lead-details dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sign-up-lead-enrollment {
+  display: grid;
+  gap: 16px;
+}
+
+.sign-up-lead-enrollment h3 {
+  font-size: 1rem;
+}
+
+.sign-up-lead-enrollment > div > p,
+.sign-up-lead-empty {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.sign-up-lead-enrollment .form-field {
+  margin-bottom: 0;
+}
+
+.sign-up-lead-empty {
+  margin-top: -6px;
+}
+
+@media (max-width: 560px) {
+  .sign-up-lead-summary {
+    padding: 16px;
+  }
+
+  .sign-up-lead-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sign-up-lead-details div:last-child {
+    grid-column: 1 / -1;
+  }
+}

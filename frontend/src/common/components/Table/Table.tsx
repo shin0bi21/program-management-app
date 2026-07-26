@@ -6,6 +6,7 @@ import './Table.css';
 export type { TableColumn } from './Table.types';
 
 interface TableProps<T> {
+  ariaLabel: string;
   columns: TableColumn<T>[];
   data: T[];
   loading?: boolean;
@@ -19,13 +20,14 @@ interface TableProps<T> {
 }
 
 export default function Table<T>({
+  ariaLabel,
   columns,
   data,
   loading = false,
   error,
   emptyMessage = 'No rows found',
   keyExtractor,
-  maxHeight = '600px',
+  maxHeight = 'calc(100dvh - 200px)',
   selectedKey,
   scrollToSelected = false,
   onRowSelect,
@@ -58,7 +60,7 @@ export default function Table<T>({
 
   return (
     <div ref={wrapperRef} className="table-wrapper" style={{ maxHeight }}>
-      <table className="table">
+      <table className="table" aria-label={ariaLabel}>
         <thead>
           <tr>
             {columns.map((column) => (

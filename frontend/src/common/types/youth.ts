@@ -15,9 +15,10 @@ export interface YouthProfile {
     name: string;
     programId: string;
     programName: string;
+    rosterMode: 'enrolled' | 'open';
     startsOn: string;
     endsOn: string;
-    enrolledOn: string;
+    enrolledOn: string | null;
     withdrawnOn: string | null;
     presentCount: number;
     lateCount: number;

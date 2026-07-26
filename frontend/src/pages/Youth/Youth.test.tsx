@@ -9,6 +9,7 @@ const cohortFixture = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Soft Skills',
+  rosterMode: 'enrolled',
   name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
@@ -19,6 +20,7 @@ const cohortFixture = {
   averageAttendance: null,
   attendanceAttendedCount: 0,
   attendanceRecordedCount: 0,
+  uniqueAttendeeCount: 0,
 };
 
 vi.mock('./hooks/useYouth', () => ({
@@ -110,6 +112,7 @@ describe('Youth', () => {
           name: 'Summer 2026',
           programId: 'program-1',
           programName: 'Soft Skills',
+          rosterMode: 'enrolled',
           startsOn: '2026-06-30',
           endsOn: '2026-08-31',
           enrolledOn: '2026-06-30',

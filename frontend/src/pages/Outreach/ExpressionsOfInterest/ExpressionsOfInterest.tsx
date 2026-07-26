@@ -11,6 +11,7 @@ import { NotesCard, PrimaryContactCard } from '../../../common/components/Detail
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { usePrograms } from '../../../common/hooks/usePrograms';
+import useTableSelection from '../../../common/hooks/useTableSelection';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters } from './types';
@@ -30,7 +31,11 @@ export default function ExpressionsOfInterest() {
   const navigate = useNavigate();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const [selectedSubmission, setSelectedSubmission] = useState<ExpressionOfInterest | null>(null);
+  const {
+    selectedItem: selectedSubmission,
+    selectedKey: selectedSubmissionId,
+    selectItem: selectSubmission,
+  } = useTableSelection(submissions);
   const [actionError, setActionError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
@@ -38,12 +43,6 @@ export default function ExpressionsOfInterest() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
-
-  useEffect(() => {
-    setSelectedSubmission(current => current
-      ? submissions.find(item => item.id === current.id) ?? null
-      : null);
-  }, [submissions]);
 
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
   const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
@@ -54,7 +53,6 @@ export default function ExpressionsOfInterest() {
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
     const updated = await updateExpressionOfInterestStatus(item.id, status);
-    setSelectedSubmission(current => current?.id === updated.id ? { ...current, ...updated } : current);
     setSubmissions(current => current.map(entry => entry.id === updated.id ? { ...entry, ...updated } : entry));
   };
 
@@ -113,7 +111,6 @@ export default function ExpressionsOfInterest() {
       key: 'actions' as const,
       header: '',
       className: 'col-actions',
-      width: '32px',
       render: (item: ExpressionOfInterest) => item.status === 'converted' ? null : (
         <ActionsMenu
           ariaLabel={`More actions for ${submissionYouthName(item)}`}
@@ -144,18 +141,18 @@ export default function ExpressionsOfInterest() {
         />}
       />
       <div className="outreach-tab-content data-detail-page-content">
-        {(error || actionError) && <p className="page-error">{error || actionError}</p>}
+        {actionError && <p className="page-error">{actionError}</p>}
 
         <TableDetailLayout
           ariaLabel="Expressions of interest"
-          table={<Table columns={columns} data={submissions} loading={loading} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet.'} keyExtractor={item => item.id} maxHeight="calc(100vh - 220px)" selectedKey={selectedSubmission?.id} onRowSelect={setSelectedSubmission} />}
+          table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} />}
           details={<>
             <PrimaryContactCard contact={selectedSubmission ? {
               firstName: selectedSubmission.contactFirstName,
               lastName: selectedSubmission.contactLastName,
               phoneNumber: selectedSubmission.contactPhoneNumber,
               relationship: selectedSubmission.contactRelationship,
-            } : null} />
+            } : null} selected={selectedSubmission !== null} />
             <NotesCard notes={selectedSubmission?.notes} selected={selectedSubmission !== null} />
           </>}
         />
