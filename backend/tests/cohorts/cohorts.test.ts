@@ -449,6 +449,8 @@ describe('Cohorts and attendance API', () => {
         nextSessionId: sessionId,
         nextSessionAt: expect.any(String),
         averageAttendance: 100,
+        minAge: 12,
+        maxAge: 15,
       }),
     ]));
   });

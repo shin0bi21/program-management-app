@@ -47,13 +47,20 @@ describe('Programs API', () => {
     const res = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: ` ${createdName} `, rosterMode: 'open' });
+      .send({
+        name: ` ${createdName} `,
+        rosterMode: 'open',
+        minAge: 14,
+        maxAge: 18,
+      });
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
       id: expect.any(String),
       name: createdName,
       rosterMode: 'open',
+      minAge: 14,
+      maxAge: 18,
     }));
   });
 
@@ -66,6 +73,20 @@ describe('Programs API', () => {
     expect(res.status).toBe(403);
   });
 
+  it('requires a complete valid age range', async () => {
+    const missingMaximum = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Incomplete Age Range', minAge: 12 });
+    const reversedRange = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Reversed Age Range', minAge: 19, maxAge: 16 });
+
+    expect(missingMaximum.status).toBe(400);
+    expect(reversedRange.status).toBe(400);
+  });
+
   it('returns assigned and open programs to staff', async () => {
     const res = await request(app)
       .get('/api/programs?scope=assigned')
@@ -73,11 +94,16 @@ describe('Programs API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: expect.any(String), name: 'Soft Skills' }),
+      expect.objectContaining({
+        id: expect.any(String),
+        name: 'Soft Skills',
+        minAge: 12,
+        maxAge: 15,
+      }),
       expect.objectContaining({ id: expect.any(String), name: 'Drop In', rosterMode: 'open' }),
     ]));
     expect(res.body).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Job Readiness' }),
+      expect.objectContaining({ name: 'Job Readiness', minAge: 16, maxAge: 19 }),
     ]));
   });
 

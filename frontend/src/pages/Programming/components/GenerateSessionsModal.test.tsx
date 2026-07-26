@@ -14,6 +14,8 @@ const cohort: ProgramCohort = {
   programId: 'program-1',
   programName: 'Soft Skills',
   rosterMode: 'enrolled',
+  minAge: 12,
+  maxAge: 15,
   name: 'Summer 2026',
   startsOn: '2026-07-01',
   endsOn: '2026-08-31',

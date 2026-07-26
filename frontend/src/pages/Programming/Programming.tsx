@@ -193,6 +193,8 @@ export default function Programming() {
         name: programName,
         description: String(form.get('description')).trim() || null,
         rosterMode: programRosterMode,
+        minAge: form.get('minAge') ? Number(form.get('minAge')) : null,
+        maxAge: form.get('maxAge') ? Number(form.get('maxAge')) : null,
       });
       setPrograms(current => [...current, program].sort((a, b) => a.name.localeCompare(b.name)));
       selectProgram(program.id);
@@ -434,6 +436,14 @@ export default function Programming() {
           <FormField id="program-description" label="Description">
             <textarea id="program-description" name="description" rows={4} maxLength={2000} />
           </FormField>
+          <div className="form-row">
+            <FormField id="program-min-age" label="Minimum age">
+              <input id="program-min-age" name="minAge" type="number" min={0} max={30} />
+            </FormField>
+            <FormField id="program-max-age" label="Maximum age">
+              <input id="program-max-age" name="maxAge" type="number" min={0} max={30} />
+            </FormField>
+          </div>
           <FormField id="program-roster-mode" label="Attendance">
             <FloatingSelect
               id="program-roster-mode"

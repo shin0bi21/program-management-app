@@ -144,12 +144,16 @@ describe('Programming', () => {
     await user.click(screen.getByRole('button', { name: '+ Add' }));
     await user.click(screen.getByRole('menuitem', { name: 'Add Program' }));
     await user.type(screen.getByRole('textbox', { name: 'Program name' }), 'Job Readiness');
+    await user.type(screen.getByRole('spinbutton', { name: 'Minimum age' }), '16');
+    await user.type(screen.getByRole('spinbutton', { name: 'Maximum age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Add Program' }));
 
     expect(api.createProgram).toHaveBeenCalledWith({
       name: 'Job Readiness',
       description: null,
       rosterMode: 'enrolled',
+      minAge: 16,
+      maxAge: 19,
     });
     expect(await screen.findByText('Job Readiness successfully added.')).toBeInTheDocument();
   });

@@ -7,6 +7,7 @@ import { getYouth } from '../../../common/api/youth.api';
 import type { SubmitStatus } from '../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../common/types/cohort';
 import type { YouthProfile } from '../../../common/types/youth';
+import { getAge } from '../../../common/utils/time';
 import './EnrollYouthModal.css';
 
 interface EnrollYouthModalProps {
@@ -19,6 +20,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
   const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [ageFilterEnabled, setAgeFilterEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     let active = true;
     setSelectedYouthIds([]);
     setSearch('');
+    setAgeFilterEnabled(true);
     setLoading(true);
     setSubmitStatus('idle');
     setError(null);
@@ -40,7 +43,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     return () => { active = false; };
   }, [cohort]);
 
-  const availableYouth = useMemo(
+  const unenrolledYouth = useMemo(
     () => cohort
       ? youth.filter(profile => !profile.cohorts.some(enrollment => (
         enrollment.id === cohort.id && enrollment.withdrawnOn === null
@@ -48,6 +51,17 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
       : [],
     [cohort, youth],
   );
+
+  const minAge = cohort?.minAge ?? null;
+  const maxAge = cohort?.maxAge ?? null;
+  const hasAgeRange = minAge !== null && maxAge !== null;
+  const availableYouth = useMemo(() => {
+    if (!ageFilterEnabled || minAge === null || maxAge === null) return unenrolledYouth;
+    return unenrolledYouth.filter(profile => {
+      const age = getAge(profile.dateOfBirth);
+      return age !== null && age >= minAge && age <= maxAge;
+    });
+  }, [ageFilterEnabled, maxAge, minAge, unenrolledYouth]);
 
   const visibleYouth = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -58,10 +72,6 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     ));
   }, [availableYouth, search]);
 
-  const visibleIds = visibleYouth.map(profile => profile.id);
-  const allVisibleSelected = Boolean(visibleIds.length)
-    && visibleIds.every(id => selectedYouthIds.includes(id));
-
   const toggleYouth = (youthId: string) => {
     setSelectedYouthIds(current => (
       current.includes(youthId)
@@ -70,11 +80,16 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     ));
   };
 
-  const toggleVisible = () => {
-    setSelectedYouthIds(current => {
-      if (allVisibleSelected) return current.filter(id => !visibleIds.includes(id));
-      return [...new Set([...current, ...visibleIds])];
-    });
+  const toggleAgeFilter = () => {
+    const enabled = !ageFilterEnabled;
+    setAgeFilterEnabled(enabled);
+    if (enabled && minAge !== null && maxAge !== null) {
+      setSelectedYouthIds(selected => selected.filter(id => {
+        const profile = youth.find(item => item.id === id);
+        const age = getAge(profile?.dateOfBirth);
+        return age !== null && age >= minAge && age <= maxAge;
+      }));
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -94,18 +109,27 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
 
   const selectedCount = selectedYouthIds.length;
   const cohortLabel = cohort ? `${cohort.programName} - ${cohort.name}` : '';
-  const statusMessage = submitStatus === 'submitting'
-    ? `Adding ${selectedCount} youth to ${cohortLabel}...`
-    : submitStatus === 'success'
-      ? `${selectedCount} youth successfully added to ${cohortLabel}.`
-      : error ?? undefined;
+  let statusMessage = error ?? undefined;
+  if (submitStatus === 'submitting') {
+    statusMessage = `Adding ${selectedCount} youth to ${cohortLabel}...`;
+  } else if (submitStatus === 'success') {
+    statusMessage = `${selectedCount} youth successfully added to ${cohortLabel}.`;
+  }
+
+  let emptyMessage = 'All youth are already enrolled.';
+  if (availableYouth.length) {
+    emptyMessage = 'No youth match your search.';
+  } else if (ageFilterEnabled && hasAgeRange && unenrolledYouth.length) {
+    emptyMessage = `No available youth are ages ${minAge}–${maxAge}. Choose “Show all youth” to make an exception.`;
+  }
+
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
   return (
     <Modal
       isOpen={cohort !== null}
       onClose={onClose}
-      title={`Enroll youth in ${cohort?.name ?? ''}`}
+      title={cohort ? `${cohort.programName} - ${cohort.name} Enrollment` : ''}
       status={submitStatus}
       statusMessage={statusMessage}
       successDelay={1400}
@@ -125,23 +149,30 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     >
       {error && submitStatus === 'idle' && <p className="form-error">{error}</p>}
       <form id="enroll-youth-form" onSubmit={event => void submit(event)}>
+        {hasAgeRange && (
+          <div className="enroll-youth-age-filter">
+            <span>
+              {ageFilterEnabled
+                ? `Currently showing youth aged ${minAge}–${maxAge}.`
+                : 'Currently showing all youth.'}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleAgeFilter}
+              disabled={submissionComplete}
+            >
+              {ageFilterEnabled ? 'Show all youth' : `Show ages ${minAge}–${maxAge}`}
+            </Button>
+          </div>
+        )}
+
         <SearchInput
           label="Search youth"
           value={search}
           onChange={event => setSearch(event.target.value)}
           placeholder="Search by name or school"
         />
-
-        {!loading && visibleYouth.length > 0 && (
-          <label className="enroll-youth-checklist__select-all">
-            <input
-              type="checkbox"
-              checked={allVisibleSelected}
-              onChange={toggleVisible}
-            />
-            <span>Select all shown</span>
-          </label>
-        )}
 
         <div className="enroll-youth-checklist" aria-label="Youth available for enrollment">
           {loading ? (
@@ -159,9 +190,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
               </span>
             </label>
           )) : (
-            <p className="programming-empty">
-              {availableYouth.length ? 'No youth match your search.' : 'All youth are already enrolled.'}
-            </p>
+            <p className="programming-empty">{emptyMessage}</p>
           )}
         </div>
       </form>

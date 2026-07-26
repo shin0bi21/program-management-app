@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
@@ -59,6 +59,15 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
     };
   }, [lead]);
 
+  const visibleCohorts = useMemo(() => {
+    if (!lead) return cohorts;
+    return cohorts.filter(cohort => (
+      cohort.minAge == null
+      || cohort.maxAge == null
+      || (lead.age >= cohort.minAge && lead.age <= cohort.maxAge)
+    ));
+  }, [cohorts, lead]);
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!lead) return;
@@ -83,7 +92,7 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const cohortOptions = [
     { value: '', label: 'Do not enroll yet' },
-    ...cohorts.map(cohort => ({
+    ...visibleCohorts.map(cohort => ({
       value: cohort.id,
       label: `${cohort.programName} — ${cohort.name} · ${formatDate(cohort.startsOn)}–${formatDate(cohort.endsOn)}`,
     })),
@@ -149,9 +158,11 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
                 disabled={loading || submissionComplete}
               />
             </FormField>
-            {!loading && cohorts.length === 0 && (
+            {!loading && visibleCohorts.length === 0 && (
               <p className="sign-up-lead-empty">
-                No eligible cohorts are available. The youth profile can still be created.
+                {cohorts.length
+                  ? 'No cohorts match this youth’s age. Create the profile now and manage cohorts later.'
+                  : 'No eligible cohorts are available. The youth profile can still be created.'}
               </p>
             )}
           </section>

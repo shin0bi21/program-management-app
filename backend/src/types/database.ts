@@ -193,6 +193,8 @@ export interface ProgramCohorts {
 export interface Programs {
   description: string | null;
   id: Generated<string>;
+  max_age: number | null;
+  min_age: number | null;
   name: string;
   roster_mode: Generated<ProgramRosterMode>;
 }

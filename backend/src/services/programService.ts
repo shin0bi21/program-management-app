@@ -6,7 +6,7 @@ import type { CreateProgramInput } from '../validation/programSchemas';
 
 export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
   return sql`
-    SELECT p.id, p.name, p.description, p.roster_mode
+    SELECT p.id, p.name, p.description, p.roster_mode, p.min_age, p.max_age
     FROM programs p
     WHERE ${assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`}
     ORDER BY name ASC
@@ -21,9 +21,15 @@ export async function createProgram(data: CreateProgramInput) {
   if (existing.length) throw new ConflictError('A program with this name already exists');
 
   const rows = await sql`
-    INSERT INTO programs (name, description, roster_mode)
-    VALUES (${name}, ${data.description ?? null}, ${data.rosterMode ?? 'enrolled'})
-    RETURNING id, name, description, roster_mode
+    INSERT INTO programs (name, description, roster_mode, min_age, max_age)
+    VALUES (
+      ${name},
+      ${data.description ?? null},
+      ${data.rosterMode ?? 'enrolled'},
+      ${data.minAge ?? null},
+      ${data.maxAge ?? null}
+    )
+    RETURNING id, name, description, roster_mode, min_age, max_age
   `;
   return rows[0];
 }

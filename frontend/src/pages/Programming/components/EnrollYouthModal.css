@@ -1,15 +1,21 @@
-.enroll-youth-checklist__select-all {
+.enroll-youth-age-filter {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
-  margin: var(--space-4) 0 var(--space-2);
+  margin-bottom: var(--space-3);
   color: var(--color-muted);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
+.enroll-youth-age-filter .btn {
+  flex: 0 0 auto;
+}
+
 .enroll-youth-checklist {
   display: grid;
+  margin-top: var(--space-4);
   max-height: 360px;
   overflow-y: auto;
   border: var(--border-line-soft);
@@ -45,4 +51,10 @@
   width: 18px;
   height: 18px;
   accent-color: var(--color-accent);
+}
+
+@media (max-width: 520px) {
+  .enroll-youth-age-filter {
+    align-items: flex-start;
+  }
 }

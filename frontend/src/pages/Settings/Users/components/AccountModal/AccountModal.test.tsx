@@ -19,12 +19,21 @@ const softSkillsId = '11111111-1111-4111-8111-111111111111';
 describe('AccountModal program assignments', () => {
   beforeEach(() => {
     vi.mocked(getPrograms).mockResolvedValue([
-      { id: softSkillsId, name: 'Soft Skills', description: null, rosterMode: 'enrolled' },
+      {
+        id: softSkillsId,
+        name: 'Soft Skills',
+        description: null,
+        rosterMode: 'enrolled',
+        minAge: 12,
+        maxAge: 15,
+      },
       {
         id: '22222222-2222-4222-8222-222222222222',
         name: 'Drop In',
         description: null,
         rosterMode: 'open',
+        minAge: null,
+        maxAge: null,
       },
     ]);
     vi.mocked(inviteAccount).mockResolvedValue({

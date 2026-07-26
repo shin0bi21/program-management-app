@@ -16,12 +16,16 @@ vi.mock('../../../common/api/youth.api', () => ({
   getYouth: api.getYouth,
 }));
 
+const birthDateForAge = (age: number) => `${new Date().getFullYear() - age}-01-01`;
+
 describe('EnrollYouthModal', () => {
   const cohort = {
     id: 'cohort-1',
     programId: 'program-1',
     programName: 'Soft Skills',
     rosterMode: 'enrolled' as const,
+    minAge: 12,
+    maxAge: 15,
     name: 'Summer 2026',
     startsOn: '2026-06-30',
     endsOn: '2026-08-31',
@@ -38,8 +42,18 @@ describe('EnrollYouthModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getYouth.mockResolvedValue([
-      makeYouthProfile({ id: 'youth-1', firstName: 'Jamie', lastName: 'One' }),
-      makeYouthProfile({ id: 'youth-2', firstName: 'Morgan', lastName: 'Two' }),
+      makeYouthProfile({
+        id: 'youth-1',
+        firstName: 'Jamie',
+        lastName: 'One',
+        dateOfBirth: birthDateForAge(14),
+      }),
+      makeYouthProfile({
+        id: 'youth-2',
+        firstName: 'Morgan',
+        lastName: 'Two',
+        dateOfBirth: birthDateForAge(13),
+      }),
       makeYouthProfile({
         id: 'youth-3',
         firstName: 'Already',
@@ -79,6 +93,9 @@ describe('EnrollYouthModal', () => {
       />,
     );
 
+    expect(screen.getByRole('heading', {
+      name: 'Soft Skills - Summer 2026 Enrollment',
+    })).toBeInTheDocument();
     await user.click(await screen.findByRole('checkbox', { name: 'Jamie One' }));
     await user.click(screen.getByRole('checkbox', { name: 'Morgan Two' }));
     expect(screen.queryByRole('checkbox', { name: 'Already Enrolled' })).not.toBeInTheDocument();
@@ -98,5 +115,48 @@ describe('EnrollYouthModal', () => {
     expect(await screen.findByText(
       '2 youth successfully added to Soft Skills - Summer 2026.',
     )).toBeInTheDocument();
+  });
+
+  it('defaults to the program age range and can be disabled for exceptions', async () => {
+    const user = userEvent.setup();
+    api.getYouth.mockResolvedValue([
+      makeYouthProfile({
+        id: 'eligible',
+        firstName: 'Eligible',
+        lastName: 'Youth',
+        dateOfBirth: birthDateForAge(14),
+      }),
+      makeYouthProfile({
+        id: 'older',
+        firstName: 'Older',
+        lastName: 'Youth',
+        dateOfBirth: birthDateForAge(17),
+      }),
+      makeYouthProfile({
+        id: 'unknown',
+        firstName: 'Unknown',
+        lastName: 'Age',
+        dateOfBirth: null,
+      }),
+    ]);
+
+    render(
+      <EnrollYouthModal
+        cohort={cohort}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Currently showing youth aged 12–15.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Eligible Youth' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Older Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Unknown Age' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show all youth' }));
+
+    expect(screen.getByText('Currently showing all youth.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Older Youth' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Unknown Age' })).toBeInTheDocument();
   });
 });

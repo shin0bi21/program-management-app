@@ -3,6 +3,8 @@ export interface ProgramCohort {
   programId: string;
   programName: string;
   rosterMode: 'enrolled' | 'open';
+  minAge: number | null;
+  maxAge: number | null;
   name: string;
   startsOn: string;
   endsOn: string;
