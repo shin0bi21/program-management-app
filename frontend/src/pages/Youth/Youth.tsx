@@ -35,6 +35,7 @@ export default function Youth() {
     cohortIds: cohortFilters,
   }), [cohortFilters, debouncedSearch, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [manageCohortsYouthId, setManageCohortsYouthId] = useState<string | null>(null);
   const { youth, setYouth, loading, error, refetch } = useYouth(queryFilters);
   const {
@@ -83,6 +84,7 @@ export default function Youth() {
 
   const handleSaveYouth = (savedYouth: YouthProfile) => {
     setModalTarget(null);
+    setContactTarget(null);
     setYouth(prev => {
       const exists = prev.some(y => y.id === savedYouth.id);
       return exists ? prev.map(y => y.id === savedYouth.id ? savedYouth : y) : [...prev, savedYouth];
@@ -150,7 +152,7 @@ export default function Youth() {
       <div className="data-detail-page-content">
         <PageHeader
           title="Profiles"
-          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
+          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
           filters={<FilterCard
             categories={filterCategories}
@@ -176,12 +178,28 @@ export default function Youth() {
           ariaLabel="Youth profiles"
           table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || programFilters.length || cohortFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
           details={<>
-            <PrimaryContactCard contact={selectedProfile?.contacts?.[0] ? {
-              firstName: selectedProfile.contacts[0].firstName,
-              lastName: selectedProfile.contacts[0].lastName,
-              phoneNumber: selectedProfile.contacts[0].phoneNumber,
-              relationship: selectedProfile.contacts[0].type,
-            } : null} selected={selectedProfile !== null} />
+            <PrimaryContactCard
+              contact={selectedProfile?.contacts?.[0] ? {
+                firstName: selectedProfile.contacts[0].firstName,
+                lastName: selectedProfile.contacts[0].lastName,
+                phoneNumber: selectedProfile.contacts[0].phoneNumber,
+                relationship: selectedProfile.contacts[0].type,
+              } : null}
+              selected={selectedProfile !== null}
+              action={canWrite ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!selectedProfile}
+                  aria-label="Add primary contact"
+                  onClick={() => {
+                    if (selectedProfile) setContactTarget(selectedProfile);
+                  }}
+                >
+                  + Add
+                </Button>
+              ) : undefined}
+            />
             <AttendanceCard
               cohorts={selectedProfile?.cohorts}
               selected={selectedProfile !== null}
@@ -195,6 +213,13 @@ export default function Youth() {
         isOpen={modalTarget !== null}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={() => setModalTarget(null)}
+        onSuccess={handleSaveYouth}
+      />
+      <YouthModal
+        isOpen={contactTarget !== null}
+        youthData={contactTarget ?? undefined}
+        mode="contact"
+        onClose={() => setContactTarget(null)}
         onSuccess={handleSaveYouth}
       />
 

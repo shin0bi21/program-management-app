@@ -6,15 +6,20 @@ export function DashboardCard({
   children,
   emptyMessage,
   className,
+  action,
 }: {
   title: string;
   children?: ReactNode;
   emptyMessage?: string;
   className?: string;
+  action?: ReactNode;
 }) {
   return (
     <article className={['dashboard-card', className].filter(Boolean).join(' ')}>
-      <h2>{title}</h2>
+      <div className="dashboard-card__header">
+        <h2>{title}</h2>
+        {action}
+      </div>
       <div className="dashboard-card__content">
         {children ?? (
           <p className="dashboard-card__empty">{emptyMessage ?? 'No data available.'}</p>

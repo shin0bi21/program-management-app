@@ -37,7 +37,11 @@ vi.mock('../../common/context/AuthContext', () => ({
 }));
 
 vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
-vi.mock('./components/YouthModal/YouthModal', () => ({ default: () => null }));
+vi.mock('./components/YouthModal/YouthModal', () => ({
+  default: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) => isOpen
+    ? <div data-testid="youth-modal">{mode ?? 'full'}</div>
+    : null,
+}));
 vi.mock('./components/ManageCohortsModal/ManageCohortsModal', () => ({ default: () => null }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
   default: ({ items }: { items: { id: string; label: string }[] }) => (
@@ -60,7 +64,7 @@ describe('Youth', () => {
   it('keeps account invitation controls out of the Youth page', () => {
     render(<Youth />);
 
-    expect(screen.getByRole('button', { name: '+ Add Youth' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('Manage Cohorts')).toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
@@ -135,5 +139,17 @@ describe('Youth', () => {
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
     expect(screen.getByText('Last attended: Jul 21, 2026')).toBeInTheDocument();
     expect(screen.getByText('Youth profile note')).toBeInTheDocument();
+  });
+
+  it('opens only the contact section from the primary contact card', () => {
+    render(<Youth />);
+
+    expect(screen.getByRole('button', { name: 'Add primary contact' })).toBeDisabled();
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    const addContact = screen.getByRole('button', { name: 'Add primary contact' });
+    expect(addContact).toBeEnabled();
+    fireEvent.click(addContact);
+
+    expect(screen.getByTestId('youth-modal')).toHaveTextContent('contact');
   });
 });

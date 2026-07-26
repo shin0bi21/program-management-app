@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import './DetailCards.css';
 import { formatShortDate } from '../../utils/date';
 import { DashboardCard } from '../DashboardCard/DashboardCard';
@@ -10,18 +11,20 @@ interface PrimaryContactCardProps {
     relationship?: string | null;
   } | null;
   selected: boolean;
+  action?: ReactNode;
 }
 
 const relationshipLabel = (value?: string | null) => value
   ? value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ')
   : '—';
 
-export function PrimaryContactCard({ contact, selected }: PrimaryContactCardProps) {
+export function PrimaryContactCard({ contact, selected, action }: PrimaryContactCardProps) {
   return (
     <DashboardCard
       title="Primary Contact"
       emptyMessage={selected ? 'No primary contact recorded.' : 'Select a row to view the primary contact.'}
       className="primary-contact-card"
+      action={action}
     >
       {contact ? <dl>
         <div><dt>Name</dt><dd>{[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}</dd></div>

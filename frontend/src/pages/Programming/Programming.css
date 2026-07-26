@@ -1,6 +1,5 @@
 .programming-page {
-  width: min(1180px, 100%);
-  margin: 0 auto;
+  width: 100%;
 }
 
 .programming-error {

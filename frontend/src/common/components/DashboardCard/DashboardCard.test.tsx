@@ -10,6 +10,16 @@ describe('DashboardCard', () => {
     expect(screen.getByText('No profile selected.')).toHaveClass('dashboard-card__empty');
   });
 
+  it('renders an optional action in the card header', () => {
+    render(
+      <DashboardCard title="Primary Contact" action={<button type="button">+ Add</button>} />,
+    );
+
+    const heading = screen.getByRole('heading', { name: 'Primary Contact' });
+    const action = screen.getByRole('button', { name: '+ Add' });
+    expect(heading.parentElement).toContainElement(action);
+  });
+
   it('groups dashboard cards under an accessible region', () => {
     render(
       <DashboardCardGroup ariaLabel="Cohort overview">

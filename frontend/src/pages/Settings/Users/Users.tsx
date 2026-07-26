@@ -147,16 +147,16 @@ export default function Users() {
             <div className="users-actions">
               {isAdmin && canWrite && canInviteYouth ? (
                 <ActionsMenu
-                  triggerLabel="+ Invite"
+                  triggerLabel="+ Add"
                   items={[
                     { id: 'invite-staff', label: 'Invite Staff', onClick: () => setModalTarget('new') },
                     { id: 'invite-youth', label: 'Invite Youth', onClick: () => setYouthInviteOpen(true) },
                   ]}
                 />
               ) : canInviteYouth ? (
-                <Button onClick={() => setYouthInviteOpen(true)}>+ Invite Youth</Button>
+                <Button onClick={() => setYouthInviteOpen(true)}>+ Add</Button>
               ) : isAdmin && canWrite ? (
-                <Button onClick={() => setModalTarget('new')}>+ Invite Staff</Button>
+                <Button onClick={() => setModalTarget('new')}>+ Add</Button>
               ) : null}
             </div>
           )}

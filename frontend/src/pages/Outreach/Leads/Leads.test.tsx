@@ -62,7 +62,8 @@ describe('Leads', () => {
 
     expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Create Lead' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
   });
 
   it('shows primary contact details when a lead row is selected', async () => {
