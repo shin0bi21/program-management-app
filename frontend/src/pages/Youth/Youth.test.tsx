@@ -204,9 +204,9 @@ describe('Youth', () => {
   it('opens only the contact section from the primary contact card', () => {
     render(<Youth />);
 
-    expect(screen.getByRole('button', { name: 'Add primary contact' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Manage primary contact' })).toBeDisabled();
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    const addContact = screen.getByRole('button', { name: 'Add primary contact' });
+    const addContact = screen.getByRole('button', { name: 'Manage primary contact' });
     expect(addContact).toBeEnabled();
     fireEvent.click(addContact);
 

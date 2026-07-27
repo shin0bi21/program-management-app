@@ -229,12 +229,12 @@ export default function Youth() {
                   size="sm"
                   variant="secondary"
                   disabled={!selectedProfile}
-                  aria-label="Add primary contact"
+                  aria-label="Manage primary contact"
                   onClick={() => {
                     if (selectedProfile) setContactTarget(selectedProfile);
                   }}
                 >
-                  + Add
+                  Manage
                 </Button>
               ) : undefined}
             />

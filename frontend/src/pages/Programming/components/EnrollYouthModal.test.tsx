@@ -148,14 +148,25 @@ describe('EnrollYouthModal', () => {
       />,
     );
 
-    expect(await screen.findByText('Currently showing youth aged 12–15.')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Youth age filter' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ages 12–15' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'All ages' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(screen.getByRole('checkbox', { name: 'Eligible Youth' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Older Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Unknown Age' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Show all youth' }));
+    await user.click(screen.getByRole('button', { name: 'All ages' }));
 
-    expect(screen.getByText('Currently showing all youth.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All ages' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getByRole('checkbox', { name: 'Older Youth' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Unknown Age' })).toBeInTheDocument();
   });

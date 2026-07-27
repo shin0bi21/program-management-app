@@ -7,6 +7,7 @@ const getCohortSessions = vi.fn();
 interface MockFullCalendarProps {
   initialView: string;
   noEventsText: string;
+  dayMaxEvents: number;
   headerToolbar: { end: string };
   datesSet: (range: { start: Date; end: Date }) => void;
   eventClick: (info: { event: { id: string } }) => void;
@@ -45,6 +46,7 @@ vi.mock('@fullcalendar/react', async () => {
     default: React.forwardRef<MockFullCalendarHandle, MockFullCalendarProps>(function MockFullCalendar({
       initialView,
       noEventsText,
+      dayMaxEvents,
       headerToolbar,
       datesSet,
       eventClick,
@@ -60,6 +62,7 @@ vi.mock('@fullcalendar/react', async () => {
           data-testid="full-calendar"
           data-initial-view={initialView}
           data-view-options={headerToolbar.end}
+          data-day-max-events={dayMaxEvents}
         >
           <span>{noEventsText}</span>
           <button
@@ -153,6 +156,7 @@ describe('SessionsCalendarView', () => {
       'data-view-options',
       'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
     );
+    expect(screen.getByTestId('full-calendar')).toHaveAttribute('data-day-max-events', '1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
     const session = await screen.findByRole('button', {

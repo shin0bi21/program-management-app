@@ -24,6 +24,7 @@ import type { ProgramCohort } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import EnrollYouthModal from './components/EnrollYouthModal';
 import GenerateSessionsModal from './components/GenerateSessionsModal';
+import WithdrawYouthModal from './components/WithdrawYouthModal';
 
 export default function Programming() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export default function Programming() {
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
   const [cohortProgramId, setCohortProgramId] = useState('');
   const [enrollTarget, setEnrollTarget] = useState<ProgramCohort | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<ProgramCohort | null>(null);
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
   const [programSubmitStatus, setProgramSubmitStatus] = useState<SubmitStatus>('idle');
   const [programStatusMessage, setProgramStatusMessage] = useState('');
@@ -146,7 +148,10 @@ export default function Programming() {
         ariaLabel={`More actions for ${cohort.name}`}
         items={[
           ...(cohort.rosterMode === 'enrolled'
-            ? [{ id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) }]
+            ? [
+                { id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) },
+                { id: 'withdraw', label: 'Withdraw Youth', onClick: () => setWithdrawTarget(cohort) },
+              ]
             : []),
           { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
           { id: 'edit', label: 'Edit Cohort', onClick: () => { setEditCohortStatus('idle'); setEditCohortMessage(''); setEditCohortTarget(cohort); } },
@@ -352,17 +357,30 @@ export default function Programming() {
             title="Youth enrolled"
             emptyMessage="No cohort selected."
             action={!selectedCohort || selectedCohort.rosterMode === 'enrolled' ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!selectedCohort}
-                aria-label="Enroll youth"
-                onClick={() => {
-                  if (selectedCohort) setEnrollTarget(selectedCohort);
-                }}
-              >
-                + Add
-              </Button>
+              <div className="programming-card-actions">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!selectedCohort}
+                  aria-label="Enroll youth"
+                  onClick={() => {
+                    if (selectedCohort) setEnrollTarget(selectedCohort);
+                  }}
+                >
+                  Enroll
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!selectedCohort}
+                  aria-label="Withdraw youth"
+                  onClick={() => {
+                    if (selectedCohort) setWithdrawTarget(selectedCohort);
+                  }}
+                >
+                  Withdraw
+                </Button>
+              </div>
             ) : undefined}
           >
             {selectedCohort
@@ -371,22 +389,23 @@ export default function Programming() {
                 </strong>
               : undefined}
           </DashboardCard>
-          <DashboardCard title="Next session" emptyMessage="No cohort selected.">
+          <DashboardCard
+            title="Next session"
+            emptyMessage="No cohort selected."
+            action={selectedCohort?.nextSessionId ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => navigate(`/programming/sessions?session=${selectedCohort.nextSessionId}`)}
+              >
+                Go to
+              </Button>
+            ) : undefined}
+          >
             {selectedCohort ? (
-              <div className="dashboard-card__metric-row">
-                <strong className="dashboard-card__metric">{selectedCohort.nextSessionAt
-                  ? formatShortDate(selectedCohort.nextSessionAt)
-                  : 'None'}</strong>
-                {selectedCohort.nextSessionId && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => navigate(`/programming/sessions?session=${selectedCohort.nextSessionId}`)}
-                  >
-                    Go to
-                  </Button>
-                )}
-              </div>
+              <strong className="dashboard-card__metric">{selectedCohort.nextSessionAt
+                ? formatShortDate(selectedCohort.nextSessionAt)
+                : 'None'}</strong>
             ) : undefined}
           </DashboardCard>
           <DashboardCard
@@ -510,6 +529,13 @@ export default function Programming() {
       <EnrollYouthModal
         cohort={enrollTarget}
         onClose={() => setEnrollTarget(null)}
+        onSuccess={async () => {
+          setCohorts(await getCohorts(selectedProgramId || undefined));
+        }}
+      />
+      <WithdrawYouthModal
+        cohort={withdrawTarget}
+        onClose={() => setWithdrawTarget(null)}
         onSuccess={async () => {
           setCohorts(await getCohorts(selectedProgramId || undefined));
         }}

@@ -29,6 +29,10 @@
   height: 100%;
 }
 
+.programming-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
+  min-height: 5rem;
+}
+
 .programming-calendar .fc-event {
   cursor: pointer;
 }

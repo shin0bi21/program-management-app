@@ -121,7 +121,7 @@ export default function ProgrammingCalendar({
           );
         }}
         nowIndicator
-        dayMaxEvents
+        dayMaxEvents={1}
         expandRows
         height="100%"
         noEventsText="No sessions scheduled for this period."

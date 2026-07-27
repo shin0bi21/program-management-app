@@ -108,6 +108,7 @@ describe('Programming', () => {
     expect(screen.getAllByText('5')).toHaveLength(1);
     expect(screen.getByRole('columnheader', { name: 'Youth' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeDisabled();
     const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
     const firstOverviewCard = screen.getByRole('heading', { name: 'Youth enrolled' }).closest('article');
@@ -120,10 +121,13 @@ describe('Programming', () => {
     expect(cohortRow).toHaveClass('table-row--selected');
     expect(cohortRow).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeEnabled();
     expect(overview).toHaveTextContent('80%');
     expect(screen.getAllByText('5')).toHaveLength(2);
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
+    expect(screen.getByRole('menuitem', { name: 'Enroll Youth' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Withdraw Youth' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
@@ -234,9 +238,11 @@ describe('Programming', () => {
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');
     expect(screen.queryByRole('button', { name: 'Enroll youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Withdraw youth' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.queryByRole('menuitem', { name: 'Enroll Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Withdraw Youth' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 });

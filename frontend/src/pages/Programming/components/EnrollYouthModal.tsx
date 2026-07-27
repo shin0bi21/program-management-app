@@ -80,8 +80,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     ));
   };
 
-  const toggleAgeFilter = () => {
-    const enabled = !ageFilterEnabled;
+  const setAgeFilter = (enabled: boolean) => {
     setAgeFilterEnabled(enabled);
     if (enabled && minAge !== null && maxAge !== null) {
       setSelectedYouthIds(selected => selected.filter(id => {
@@ -120,7 +119,7 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
   if (availableYouth.length) {
     emptyMessage = 'No youth match your search.';
   } else if (ageFilterEnabled && hasAgeRange && unenrolledYouth.length) {
-    emptyMessage = `No available youth are ages ${minAge}–${maxAge}. Choose “Show all youth” to make an exception.`;
+    emptyMessage = `No available youth are ages ${minAge}–${maxAge}. Choose “All ages” to make an exception.`;
   }
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
@@ -150,19 +149,28 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
       {error && submitStatus === 'idle' && <p className="form-error">{error}</p>}
       <form id="enroll-youth-form" onSubmit={event => void submit(event)}>
         {hasAgeRange && (
-          <div className="enroll-youth-age-filter">
-            <span>
-              {ageFilterEnabled
-                ? `Currently showing youth aged ${minAge}–${maxAge}.`
-                : 'Currently showing all youth.'}
-            </span>
+          <div
+            className="enroll-youth-age-filter"
+            role="group"
+            aria-label="Youth age filter"
+          >
             <Button
-              variant="ghost"
               size="sm"
-              onClick={toggleAgeFilter}
+              variant={!ageFilterEnabled ? 'primary' : 'secondary'}
+              aria-pressed={!ageFilterEnabled}
+              onClick={() => setAgeFilter(false)}
               disabled={submissionComplete}
             >
-              {ageFilterEnabled ? 'Show all youth' : `Show ages ${minAge}–${maxAge}`}
+              All ages
+            </Button>
+            <Button
+              size="sm"
+              variant={ageFilterEnabled ? 'primary' : 'secondary'}
+              aria-pressed={ageFilterEnabled}
+              onClick={() => setAgeFilter(true)}
+              disabled={submissionComplete}
+            >
+              Ages {minAge}–{maxAge}
             </Button>
           </div>
         )}
