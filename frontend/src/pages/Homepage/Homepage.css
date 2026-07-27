@@ -25,7 +25,7 @@
 .homepage-container {
   --home-max: 1360px;
   --home-pad-x: 56px;
-  --home-section-y: 88px;
+  --home-section-y: 72px;
   --hero-photo-size: 420px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
@@ -889,7 +889,7 @@
   .homepage-container {
     --home-max: 92vw;
     --home-pad-x: 4vw;
-    --home-section-y: max(88px, 5vw);
+    --home-section-y: max(72px, 4vw);
   }
 
   .homepage-hero {
@@ -1228,7 +1228,7 @@
 @media (max-width: 820px) {
   .homepage-container {
     --home-pad-x: 20px;
-    --home-section-y: 58px;
+    --home-section-y: 44px;
     --hero-photo-size: 320px;
   }
 
