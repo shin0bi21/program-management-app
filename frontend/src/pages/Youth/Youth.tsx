@@ -4,8 +4,9 @@ import Table, { TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
 import {
   AttendanceCard,
-  NotesCard,
   PrimaryContactCard,
+  type NotesTab,
+  YouthNotesCard,
 } from '../../common/components/DetailCards/DetailCards';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
@@ -20,8 +21,17 @@ import { usePrograms } from '../../common/hooks/usePrograms';
 import useTableSelection from '../../common/hooks/useTableSelection';
 import type { YouthFilters } from '../../common/types/youth';
 import { getCohorts } from '../../common/api/cohorts.api';
-import type { ProgramCohort } from '../../common/types/cohort';
+import type { ProgramCohort, YouthSessionNote } from '../../common/types/cohort';
+import { getYouthSessionNotes } from '../../common/api/youth.api';
+import { STORAGE_KEYS } from '../../common/utils/storage';
+import Modal from '../../common/components/Modal/Modal';
+import SessionNoteDetails from '../../common/components/SessionNoteDetails/SessionNoteDetails';
+import { formatShortDate } from '../../common/utils/date';
 import './Youth.css';
+
+const initialNotesTab = (): NotesTab => (
+  localStorage.getItem(STORAGE_KEYS.YOUTH_NOTES_TAB) === 'session' ? 'session' : 'profile'
+);
 
 export default function Youth() {
   const [search, setSearch] = useState('');
@@ -37,6 +47,11 @@ export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [manageCohortsYouthId, setManageCohortsYouthId] = useState<string | null>(null);
+  const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
+  const [sessionNotes, setSessionNotes] = useState<YouthSessionNote[]>([]);
+  const [sessionNotesLoading, setSessionNotesLoading] = useState(false);
+  const [sessionNotesError, setSessionNotesError] = useState<string | null>(null);
+  const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
   const { youth, setYouth, loading, error, refetch } = useYouth(queryFilters);
   const {
     selectedItem: selectedProfile,
@@ -56,6 +71,39 @@ export default function Youth() {
   useEffect(() => {
     getCohorts(undefined, { includeAllPrograms: true }).then(setCohorts).catch(() => setCohorts([]));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setSessionNotes([]);
+    setSessionNotesError(null);
+    setSelectedSessionNote(null);
+    if (notesTab !== 'session' || !selectedProfileId) {
+      setSessionNotesLoading(false);
+      return () => { active = false; };
+    }
+
+    setSessionNotesLoading(true);
+    getYouthSessionNotes(selectedProfileId)
+      .then(notes => {
+        if (active) setSessionNotes(notes);
+      })
+      .catch(cause => {
+        if (active) {
+          setSessionNotesError(
+            cause instanceof Error ? cause.message : 'Could not load session notes',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setSessionNotesLoading(false);
+      });
+    return () => { active = false; };
+  }, [notesTab, selectedProfileId]);
+
+  const selectNotesTab = (tab: NotesTab) => {
+    setNotesTab(tab);
+    localStorage.setItem(STORAGE_KEYS.YOUTH_NOTES_TAB, tab);
+  };
 
   const cohortsForPrograms = useMemo(
     () => programFilters.length
@@ -204,7 +252,16 @@ export default function Youth() {
               cohorts={selectedProfile?.cohorts}
               selected={selectedProfile !== null}
             />
-            <NotesCard notes={selectedProfile?.notes} selected={selectedProfile !== null} />
+            <YouthNotesCard
+              notes={selectedProfile?.notes}
+              selected={selectedProfile !== null}
+              activeTab={notesTab}
+              onTabChange={selectNotesTab}
+              sessionNotes={sessionNotes}
+              sessionNotesLoading={sessionNotesLoading}
+              sessionNotesError={sessionNotesError}
+              onSelectSessionNote={setSelectedSessionNote}
+            />
           </>}
         />
       </div>
@@ -228,6 +285,29 @@ export default function Youth() {
         onClose={() => setManageCohortsYouthId(null)}
         onChanged={refetch}
       />
+
+      <Modal
+        isOpen={selectedSessionNote !== null}
+        onClose={() => setSelectedSessionNote(null)}
+        title={selectedSessionNote?.title ?? ''}
+        footer={(
+          <Button variant="secondary" onClick={() => setSelectedSessionNote(null)}>
+            Close
+          </Button>
+        )}
+      >
+        {selectedSessionNote && (
+          <SessionNoteDetails
+            note={selectedSessionNote}
+            context={[
+              selectedSessionNote.programName,
+              selectedSessionNote.cohortName,
+              selectedSessionNote.sessionTheme,
+              formatShortDate(selectedSessionNote.startsAt),
+            ].filter(Boolean).join(' · ')}
+          />
+        )}
+      </Modal>
     </>
   );
 }
