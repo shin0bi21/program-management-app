@@ -1,13 +1,33 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Program } from '../../common/types/program';
 import Sessions from './Sessions';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}{location.search}</span>;
+}
 
 const getManagedSessions = vi.fn();
 const getSessionRoster = vi.fn();
 const getCohorts = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionTypes = vi.fn();
+const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
+  role: 'admin',
+  permissions: ['read:attendance', 'write:attendance', 'write:cohorts'],
+}));
+const programState = vi.hoisted<{ programs: Program[] }>(() => ({
+  programs: [{
+    id: 'program-1',
+    name: 'Soft Skills',
+    description: null,
+    rosterMode: 'enrolled',
+    minAge: 12,
+    maxAge: 15,
+  }],
+}));
 
 vi.mock('../../common/api/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
@@ -21,13 +41,11 @@ vi.mock('../../common/api/cohorts.api', () => ({
 }));
 
 vi.mock('../../common/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }] }),
+  usePrograms: () => ({ programs: programState.programs, loading: false }),
 }));
 
 vi.mock('../../common/context/AuthContext', () => ({
-  useAuth: () => ({
-    permissions: ['read:attendance', 'write:attendance', 'write:cohorts'],
-  }),
+  useAuth: () => auth,
 }));
 
 vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
@@ -75,6 +93,16 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
+    auth.role = 'admin';
+    auth.permissions = ['read:attendance', 'write:attendance', 'write:cohorts'];
+    programState.programs = [{
+      id: 'program-1',
+      name: 'Soft Skills',
+      description: null,
+      rosterMode: 'enrolled',
+      minAge: 12,
+      maxAge: 15,
+    }];
     getSessionTypes.mockResolvedValue([
       { id: 'type-regular', name: 'Regular' },
       { id: 'type-field-trip', name: 'Field Trip' },
@@ -248,6 +276,64 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Completed' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('defaults staff with one assigned program to its active cohort', async () => {
+    auth.role = 'staff';
+    programState.programs = [
+      ...programState.programs,
+      {
+        id: 'drop-in',
+        name: 'Drop In',
+        description: null,
+        rosterMode: 'open',
+        minAge: null,
+        maxAge: null,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
+      '/programming/sessions?program=program-1&cohort=cohort-1',
+    ));
+    await waitFor(() => expect(getManagedSessions).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        programIds: ['program-1'],
+        cohortId: 'cohort-1',
+      }),
+    ));
+  });
+
+  it('does not default session filters when staff has multiple assigned programs', async () => {
+    auth.role = 'staff';
+    programState.programs = [
+      ...programState.programs,
+      {
+        id: 'program-2',
+        name: 'Job Readiness',
+        description: null,
+        rosterMode: 'enrolled',
+        minAge: 16,
+        maxAge: 19,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Communication')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
   it('opens the add sessions flow from the page header', async () => {

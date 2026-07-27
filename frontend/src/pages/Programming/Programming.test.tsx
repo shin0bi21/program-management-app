@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Program } from '../../common/types/program';
 import Programming from './Programming';
 
 function LocationProbe() {
@@ -15,8 +16,19 @@ const api = vi.hoisted(() => ({
   getCohorts: vi.fn(),
   getSessionTypes: vi.fn(),
 }));
-const auth = vi.hoisted(() => ({
+const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
+  role: 'admin',
   permissions: ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'],
+}));
+const programState = vi.hoisted<{ programs: Program[] }>(() => ({
+  programs: [{
+    id: 'program-1',
+    name: 'Soft Skills',
+    description: 'Communication and practical life skills.',
+    rosterMode: 'enrolled' as const,
+    minAge: 12,
+    maxAge: 15,
+  }],
 }));
 
 vi.mock('../../common/api/cohorts.api', () => ({
@@ -30,16 +42,12 @@ vi.mock('../../common/api/programs.api', () => ({
 }));
 
 vi.mock('../../common/context/AuthContext', () => ({
-  useAuth: () => ({ permissions: auth.permissions }),
+  useAuth: () => auth,
 }));
 
 vi.mock('../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({
-    programs: [{
-      id: 'program-1',
-      name: 'Soft Skills',
-      description: 'Communication and practical life skills.',
-    }],
+    programs: programState.programs,
     setPrograms: vi.fn(),
     loading: false,
     error: null,
@@ -49,7 +57,16 @@ vi.mock('../../common/hooks/usePrograms', () => ({
 describe('Programming', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'];
+    programState.programs = [{
+      id: 'program-1',
+      name: 'Soft Skills',
+      description: 'Communication and practical life skills.',
+      rosterMode: 'enrolled',
+      minAge: 12,
+      maxAge: 15,
+    }];
     api.getSessionTypes.mockResolvedValue([
       { id: 'type-regular', name: 'Regular' },
     ]);
@@ -197,6 +214,7 @@ describe('Programming', () => {
   });
 
   it('opens Add Cohort directly for staff without exposing program creation', async () => {
+    auth.role = 'staff';
     auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
     const user = userEvent.setup();
     render(
@@ -210,6 +228,61 @@ describe('Programming', () => {
     expect(screen.getByRole('heading', { name: 'Add cohort' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Add Program' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Add Cohort' })).not.toBeInTheDocument();
+  });
+
+  it('defaults staff with one assigned program to that program and active cohorts', async () => {
+    auth.role = 'staff';
+    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
+    programState.programs = [
+      ...programState.programs,
+      {
+        id: 'drop-in',
+        name: 'Drop In',
+        description: null,
+        rosterMode: 'open',
+        minAge: null,
+        maxAge: null,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/programming']}>
+        <Programming />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
+      '/programming?program=program-1&status=active',
+    ));
+    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith('program-1'));
+  });
+
+  it('does not default filters when staff has multiple assigned programs', async () => {
+    auth.role = 'staff';
+    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
+    programState.programs = [
+      ...programState.programs,
+      {
+        id: 'program-2',
+        name: 'Job Readiness',
+        description: null,
+        rosterMode: 'enrolled',
+        minAge: 16,
+        maxAge: 19,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/programming']}>
+        <Programming />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
   it('keeps standard cohort metrics and no enrollment action for an open cohort', async () => {
