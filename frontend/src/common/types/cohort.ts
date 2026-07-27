@@ -119,6 +119,15 @@ export interface SessionNote {
   youth: SessionNoteYouth[];
 }
 
+export interface YouthSessionNote extends SessionNote {
+  sessionTheme: string | null;
+  startsAt: string;
+  cohortId: string;
+  cohortName: string;
+  programId: string;
+  programName: string;
+}
+
 export interface CreateSessionNoteInput {
   category: SessionNoteCategory;
   title: string;
