@@ -12,6 +12,7 @@ import type {
   SessionNote,
   SessionRosterMember,
   UpdateCohortInput,
+  UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../types/cohort';
 import { apiClient } from './http/client';
@@ -81,6 +82,18 @@ export function getSessionNotes(sessionId: string) {
 
 export function createSessionNote(sessionId: string, data: CreateSessionNoteInput) {
   return apiClient.post<SessionNote>(`/cohorts/sessions/${sessionId}/notes`, data);
+}
+
+export function updateSessionNote(
+  sessionId: string,
+  noteId: string,
+  data: UpdateSessionNoteInput,
+) {
+  return apiClient.put<SessionNote>(`/cohorts/sessions/${sessionId}/notes/${noteId}`, data);
+}
+
+export function deleteSessionNote(sessionId: string, noteId: string) {
+  return apiClient.delete(`/cohorts/sessions/${sessionId}/notes/${noteId}`);
 }
 
 export function updateSession(sessionId: string, data: UpdateSessionInput) {

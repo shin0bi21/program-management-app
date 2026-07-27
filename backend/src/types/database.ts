@@ -220,11 +220,13 @@ export interface Schools {
 }
 
 export interface SessionNotes {
+  category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  details: string;
   id: Generated<string>;
-  note: string;
   session_id: string;
+  title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }

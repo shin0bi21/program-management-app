@@ -16,6 +16,10 @@ export const youthQuerySchema = z.object({
   }),
 });
 
+export const youthSessionNotesSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid youth ID') }),
+});
+
 export type YouthQuery = z.infer<typeof youthQuerySchema.shape.query>;
 
 export const setYouthSchema = z.object({

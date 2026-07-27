@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSessionNotes } from '../../../../common/api/cohorts.api';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  deleteSessionNote,
+  getSessionNotes,
+} from '../../../../common/api/cohorts.api';
 import Button from '../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
+import Modal from '../../../../common/components/Modal/Modal';
+import SessionNoteDetails, {
+  SessionNoteCategoryBadge,
+} from '../../../../common/components/SessionNoteDetails/SessionNoteDetails';
+import { useConfirmModal, type ConfirmAction } from '../../../../common/hooks/useConfirmModal';
 import type { ManagedSession, SessionNote } from '../../../../common/types/cohort';
 import { formatShortDate } from '../../../../common/utils/date';
 import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
@@ -28,10 +38,18 @@ function SessionNotesContent({
   notes,
   loading,
   error,
+  canWrite,
+  onView,
+  onEdit,
+  onDelete,
 }: {
   notes: SessionNote[];
   loading: boolean;
   error: string | null;
+  canWrite: boolean;
+  onView: (note: SessionNote) => void;
+  onEdit: (note: SessionNote) => void;
+  onDelete: (note: SessionNote) => void;
 }) {
   if (loading) return <p className="dashboard-card__empty">Loading notes…</p>;
   if (error) return <p className="form-error">{error}</p>;
@@ -41,15 +59,51 @@ function SessionNotesContent({
     <div className="session-notes-list">
       {notes.map(note => (
         <article key={note.id} className="session-note">
-          <p>{note.note}</p>
-          <div className="session-note__meta">
-            <span>
-              {note.createdByName || 'Staff'} · {formatShortDate(note.createdAt)}
+          <div className="session-note__main">
+            <span className="session-note__summary">
+              <strong>{note.title}</strong>
+              <SessionNoteCategoryBadge category={note.category} />
             </span>
-            {note.youth.length > 0 && (
+            <div className="session-note__meta">
               <span>
-                {note.youth.map(youth => `${youth.firstName} ${youth.lastName}`).join(', ')}
+                {note.createdByName || 'Staff'} · {formatShortDate(note.createdAt)}
               </span>
+            </div>
+          </div>
+          <div className="session-note__actions">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="session-note__action-button"
+              aria-label={`View ${note.title}`}
+              title="View note"
+              onClick={() => onView(note)}
+            >
+              <FontAwesomeIcon icon={faEye} aria-hidden="true" />
+            </Button>
+            {canWrite && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="session-note__action-button"
+                  aria-label={`Edit ${note.title}`}
+                  title="Edit note"
+                  onClick={() => onEdit(note)}
+                >
+                  <FontAwesomeIcon icon={faPen} aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="session-note__action-button session-note__action-button--danger"
+                  aria-label={`Delete ${note.title}`}
+                  title="Delete note"
+                  onClick={() => onDelete(note)}
+                >
+                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+                </Button>
+              </>
             )}
           </div>
         </article>
@@ -66,10 +120,17 @@ export default function SessionOverview({
 }: SessionOverviewProps) {
   const attendanceSummary = getAttendanceSummary(session);
   const [noteTarget, setNoteTarget] = useState<ManagedSession | null>(null);
+  const [editNote, setEditNote] = useState<SessionNote | null>(null);
+  const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const confirmModal = useConfirmModal({
+    action: confirmAction,
+    onClose: () => setConfirmAction(null),
+  });
 
   const loadNotes = async (sessionId: string) => {
     const requestId = ++requestIdRef.current;
@@ -90,6 +151,9 @@ export default function SessionOverview({
 
   useEffect(() => {
     setNoteTarget(null);
+    setEditNote(null);
+    setDetailNote(null);
+    setConfirmAction(null);
     if (!session) {
       requestIdRef.current += 1;
       setNotes([]);
@@ -146,7 +210,31 @@ export default function SessionOverview({
         ) : undefined}
       >
         {session
-          ? <SessionNotesContent notes={notes} loading={loading} error={error} />
+          ? (
+              <SessionNotesContent
+                notes={notes}
+                loading={loading}
+                error={error}
+                canWrite={canWriteNotes}
+                onView={setDetailNote}
+                onEdit={note => {
+                  setEditNote(note);
+                  setNoteTarget(session);
+                }}
+                onDelete={note => setConfirmAction({
+                  title: 'Delete Note',
+                  message: `Delete “${note.title}”? This cannot be undone.`,
+                  confirmLabel: 'Delete',
+                  confirmVariant: 'danger',
+                  successMessage: 'Session note successfully deleted.',
+                  onConfirm: async () => {
+                    await deleteSessionNote(session.id, note.id);
+                    await loadNotes(session.id);
+                    if (detailNote?.id === note.id) setDetailNote(null);
+                  },
+                })}
+              />
+            )
           : undefined}
       </DashboardCard>
       <DashboardCard
@@ -166,11 +254,39 @@ export default function SessionOverview({
       />
       <SessionNoteModal
         session={noteTarget}
-        onClose={() => setNoteTarget(null)}
+        note={editNote}
+        onClose={() => {
+          setNoteTarget(null);
+          setEditNote(null);
+        }}
         onSaved={async () => {
           if (noteTarget) await loadNotes(noteTarget.id);
         }}
       />
+      <Modal
+        isOpen={detailNote !== null}
+        onClose={() => setDetailNote(null)}
+        title={detailNote?.title ?? ''}
+        footer={(
+          <Button variant="secondary" onClick={() => setDetailNote(null)}>
+            Close
+          </Button>
+        )}
+      >
+        {detailNote && <SessionNoteDetails note={detailNote} />}
+      </Modal>
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? ''}
+        footer={confirmModal.footer}
+        status={confirmModal.status}
+        statusMessage={confirmModal.statusMessage}
+        successDelay={confirmModal.successDelay}
+        disableClose={confirmModal.disableClose}
+      >
+        <p>{confirmAction?.message}</p>
+      </Modal>
     </>
   );
 }

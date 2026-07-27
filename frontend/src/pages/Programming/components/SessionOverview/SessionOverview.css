@@ -1,22 +1,58 @@
 .session-notes-list {
   display: grid;
-  gap: var(--space-3);
+  overflow: hidden;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
 }
 
 .session-note {
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-white);
+  color: var(--color-ink);
+  text-align: left;
 }
 
 .session-note + .session-note {
-  padding-top: var(--space-3);
   border-top: var(--border-line-soft);
 }
 
-.session-note p {
-  margin: 0;
-  white-space: pre-wrap;
+.session-note__main {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.session-note__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.session-note__summary strong {
   overflow-wrap: anywhere;
+}
+
+.session-note__actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.session-note__action-button.btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.session-note__action-button--danger.btn {
+  color: var(--color-danger-btn);
 }
 
 .session-note__meta {

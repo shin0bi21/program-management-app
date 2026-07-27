@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { getYouth, setYouth } from '../services/youthService';
+import { getYouth, getYouthSessionNotes, setYouth } from '../services/youthService';
 import { inviteYouthAccount } from '../services/accountService';
 import { youthQuerySchema } from '../validation/youthSchemas';
 
@@ -18,6 +18,11 @@ export const handleSetYouth = async (req: Request, res: Response) => {
     saved = { ...saved, account };
   }
   res.status(id ? 200 : 201).json(saved);
+};
+
+export const handleGetYouthSessionNotes = async (req: Request, res: Response) => {
+  const actor = (req as AuthRequest).user!;
+  res.json(await getYouthSessionNotes(req.params.id, actor));
 };
 
 export const handleInviteYouth = async (req: Request, res: Response) => {
