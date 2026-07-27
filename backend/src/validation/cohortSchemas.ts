@@ -158,7 +158,7 @@ export const createSessionNoteSchema = z.object({
   body: z.object({
     category: z.enum(['general', 'attendance', 'behaviour', 'achievement', 'follow_up']),
     title: z.string().trim().min(1, 'Title is required').max(160),
-    details: z.string().trim().min(1, 'Details are required').max(5000),
+    details: z.string().trim().max(5000).nullable().optional().transform(value => value || null),
     youthIds: z.array(z.string().uuid('Invalid youth ID')).max(50).default([]),
   }).refine(
     data => new Set(data.youthIds).size === data.youthIds.length,

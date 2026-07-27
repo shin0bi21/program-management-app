@@ -49,9 +49,11 @@ export default function SessionNoteDetails({
         </span>
       </div>
       {context && <div className="session-note-details__context">{context}</div>}
-      <div className="session-note-details__body">
-        <p>{note.details}</p>
-      </div>
+      {note.details && (
+        <div className="session-note-details__body">
+          <p>{note.details}</p>
+        </div>
+      )}
       {note.youth.length > 0 && (
         <section className="session-note-details__youth">
           <h3>Linked youth</h3>

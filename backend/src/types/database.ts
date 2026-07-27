@@ -237,7 +237,7 @@ export interface SessionNotes {
   category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  details: string;
+  details: string | null;
   id: Generated<string>;
   session_id: string;
   title: string;
