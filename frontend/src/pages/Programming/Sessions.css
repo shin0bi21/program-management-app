@@ -15,7 +15,7 @@
 .sessions-view-row {
   display: flex;
   width: 100%;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .sessions-view-toggle {
@@ -46,6 +46,32 @@
   font-weight: 750;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.session-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.session-type--regular {
+  background: var(--ink-08);
+  color: var(--color-body);
+}
+
+.session-type--guest-speaker {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.session-type--field-trip {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .session-state--upcoming {

@@ -70,6 +70,8 @@ export const withdrawYouthSchema = z.object({
 export const generateSessionsSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({
+    sessionTypeId: z.string().uuid('Invalid session type ID')
+      .default('00000000-0000-4000-8000-000000000001'),
     theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     frequency: z.enum(['once', 'weekly', 'biweekly', 'monthly']),
     dayOfWeek: weekdaySchema.optional(),
@@ -103,6 +105,7 @@ export const sessionQuerySchema = z.object({
     end: z.string().datetime({ offset: true }),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
   }),
@@ -112,6 +115,7 @@ export const sessionListQuerySchema = z.object({
   query: z.object({
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
   }),
@@ -133,6 +137,7 @@ export const saveAttendanceSchema = z.object({
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
+    sessionTypeId: z.string().uuid('Invalid session type ID').optional(),
     theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
@@ -153,7 +158,7 @@ export const createSessionNoteSchema = z.object({
   body: z.object({
     category: z.enum(['general', 'attendance', 'behaviour', 'achievement', 'follow_up']),
     title: z.string().trim().min(1, 'Title is required').max(160),
-    details: z.string().trim().min(1, 'Details are required').max(5000),
+    details: z.string().trim().max(5000).nullable().optional().transform(value => value || null),
     youthIds: z.array(z.string().uuid('Invalid youth ID')).max(50).default([]),
   }).refine(
     data => new Set(data.youthIds).size === data.youthIds.length,

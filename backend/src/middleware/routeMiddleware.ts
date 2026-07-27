@@ -37,7 +37,7 @@ export const asyncHandler =
  */
 export function requestId(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.headers['x-request-id'] as string | undefined;
-  const id = incoming && /^[\w\-]{1,128}$/.test(incoming) ? incoming : randomUUID();
+  const id = incoming && /^[\w-]{1,128}$/.test(incoming) ? incoming : randomUUID();
   res.locals.requestId = id;
   res.setHeader('X-Request-ID', id);
   next();

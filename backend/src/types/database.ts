@@ -116,6 +116,7 @@ export interface CohortSessions {
   description: string | null;
   ends_at: Timestamp;
   id: Generated<string>;
+  session_type_id: Generated<string>;
   starts_at: Timestamp;
   theme: string | null;
   updated_at: Generated<Timestamp>;
@@ -152,6 +153,19 @@ export interface ExpressionsOfInterest {
   updated_by: string | null;
   youth_first_name: string;
   youth_last_name: string;
+}
+
+export interface HomepageImages {
+  alt_text: string;
+  caption: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  display_order: number;
+  id: Generated<string>;
+  public_path: string | null;
+  storage_key: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
 }
 
 export interface Leads {
@@ -223,7 +237,7 @@ export interface SessionNotes {
   category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  details: string;
+  details: string | null;
   id: Generated<string>;
   session_id: string;
   title: string;
@@ -235,6 +249,11 @@ export interface SessionNoteYouth {
   created_at: Generated<Timestamp>;
   note_id: string;
   youth_id: string;
+}
+
+export interface SessionTypes {
+  id: Generated<string>;
+  name: string;
 }
 
 export interface StaffProgramAssignments {
@@ -393,6 +412,7 @@ export interface DB {
   cohort_sessions: CohortSessions;
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
+  homepage_images: HomepageImages;
   leads: Leads;
   program_cohorts: ProgramCohorts;
   programs: Programs;
@@ -400,6 +420,7 @@ export interface DB {
   schools: Schools;
   session_note_youth: SessionNoteYouth;
   session_notes: SessionNotes;
+  session_types: SessionTypes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;

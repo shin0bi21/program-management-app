@@ -57,7 +57,6 @@ export default function AccountModal(props: AccountModalProps) {
         {selectedRole === 'staff' && (
           <fieldset className="account-programs">
             <legend>Programs</legend>
-            <p>Select the enrollment-based programs this staff member works with.</p>
             <div className="account-programs__list">
               {programsLoading ? (
                 <span className="account-programs__empty">Loading programs…</span>

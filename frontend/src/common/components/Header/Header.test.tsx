@@ -39,13 +39,28 @@ describe('Header youth navigation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Homepage' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'My Account' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Outreach' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+  });
+
+  it('opens homepage management from Settings for staff with homepage access', () => {
+    authState.permissions = ['read:homepage'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter initialEntries={['/homepage/manage']}>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('active');
+    expect(screen.getByRole('menuitem', { name: 'Manage Homepage' })).toHaveClass('active');
   });
 
   it('shows Outreach as top-level navigation for users with outreach access', () => {

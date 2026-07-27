@@ -30,8 +30,10 @@ vi.mock('../../Youth/components/YouthModal/YouthModal', () => ({
 }));
 
 const session: CohortSession = {
-  id: 'session-1',
-  cohortId: 'cohort-1',
+      id: 'session-1',
+      cohortId: 'cohort-1',
+      sessionTypeId: 'type-regular',
+      sessionTypeName: 'Regular',
   theme: 'Communication',
   cohortName: 'Summer 2026',
   programId: 'program-1',

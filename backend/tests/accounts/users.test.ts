@@ -331,7 +331,6 @@ describe('Accounts API', () => {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   describe('POST /api/accounts (UPDATE)', () => {
-    let testStaffUser: SeededUser;
     let testStaffId: string;
 
     beforeAll(async () => {
@@ -369,6 +368,49 @@ describe('Accounts API', () => {
       expect(res.body.id).toBe(testStaffId);
       expect(res.body.firstName).toBe('Updated');
       expect(res.body.role).toBe('admin');
+    });
+
+    it('should let admins replace a staff member program assignments', async () => {
+      const email = `assigned-staff-${Date.now()}@test.local`;
+      const created = await request(app)
+        .post('/api/accounts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Assigned',
+          lastName: 'Staff',
+          email,
+          role: 'staff',
+        });
+      try {
+        const programs = await sql<{ id: string }[]>`
+          SELECT id
+          FROM programs
+          WHERE roster_mode = 'enrolled'
+          ORDER BY name
+          LIMIT 2
+        `;
+        expect(programs).toHaveLength(2);
+
+        const updated = await request(app)
+          .post('/api/accounts')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            id: created.body.id,
+            firstName: 'Assigned',
+            lastName: 'Staff',
+            email,
+            role: 'staff',
+            programIds: programs.map(program => program.id),
+          });
+
+        expect(updated.status).toBe(201);
+        expect(updated.body.programIds).toEqual(
+          expect.arrayContaining(programs.map(program => program.id)),
+        );
+        expect(updated.body.programIds).toHaveLength(programs.length);
+      } finally {
+        await deleteTestUser(created.body.id);
+      }
     });
 
     it('should reject update with invalid staff id', async () => {
@@ -429,6 +471,7 @@ describe('Accounts API', () => {
           firstName: 'Updated',
           lastName: 'Name',
           email: `update-${Date.now()}@test.local`,
+          programIds: [],
           role: 'staff',
         });
 

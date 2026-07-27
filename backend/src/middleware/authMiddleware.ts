@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request } from 'express';
 import jwt from 'jsonwebtoken';
 import type { Permission } from '../types/auth';
 import type { AccessTokenPayload } from '../types/auth';
@@ -60,4 +60,3 @@ export const requirePermission = (...required: Permission[]) =>
 
     next();
   });
-

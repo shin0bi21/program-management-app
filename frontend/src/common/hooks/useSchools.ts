@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getSchools } from '../api/schools.api';
 import type { School } from '../types/school';
+import { getErrorMessage } from '../utils/clientErrors';
 
 export type { School };
 
@@ -16,8 +17,8 @@ export function useSchools() {
     try {
       const data = await getSchools();
       setSchools(data);
-    } catch (err: unknown) {
-      setError('Failed to load schools');
+    } catch (cause) {
+      setError(getErrorMessage(cause, 'Failed to load schools'));
     } finally {
       setLoading(false);
     }
