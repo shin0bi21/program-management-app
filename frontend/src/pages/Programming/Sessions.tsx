@@ -1,36 +1,32 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
-import FormField from '../../common/components/FormField/FormField';
 import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
-import { deleteSession, getCohorts, getManagedSessions, updateSession } from '../../common/api/cohorts.api';
+import { deleteSession } from '../../common/api/cohorts.api';
 import { useAuth } from '../../common/context/AuthContext';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../common/hooks/useConfirmModal';
-import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
-import type { CohortSession, ManagedSession, ProgramCohort } from '../../common/types/cohort';
+import type { CohortSession, ManagedSession } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import AttendanceModal from './components/AttendanceModal';
 import GenerateSessionsModal from './components/GenerateSessionsModal';
 import SessionOverview from './components/SessionOverview/SessionOverview';
 import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
+import EditSessionModal from './components/EditSessionModal/EditSessionModal';
+import { useCohorts } from './hooks/useCohorts';
+import { useManagedSessions } from './hooks/useManagedSessions';
 import './Sessions.css';
 
 const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
-const localDateTime = (value: string) => {
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-
 type StatusFilter = 'upcoming' | 'completed';
 type SessionsView = 'list' | 'calendar';
 
@@ -38,17 +34,12 @@ export default function Sessions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions } = useAuth();
   const { programs } = usePrograms({ assignedOnly: true });
-  const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
-  const [sessions, setSessions] = useState<ManagedSession[]>([]);
+  const { cohorts, refresh: refreshCohorts } = useCohorts();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ManagedSession | null>(null);
-  const [editStatus, setEditStatus] = useState<SubmitStatus>('idle');
-  const [editMessage, setEditMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
@@ -71,37 +62,27 @@ export default function Sessions() {
   const canWriteCohorts = permissions.includes('write:cohorts');
 
   useEffect(() => {
-    getCohorts().then(setCohorts).catch(() => setCohorts([]));
-  }, []);
-
-  useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
 
-  const loadSessions = () => {
-    setLoading(true);
-    setError(null);
-    return getManagedSessions({
-      programIds: selectedProgramIds,
-      cohortId: cohortId || undefined,
-      statuses: statusFilters,
-      search: debouncedSearch || undefined,
-    })
-      .then(setSessions)
-      .catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load sessions'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    void loadSessions();
-  }, [selectedProgramIds.join(','), cohortId, statusFilters.join(','), debouncedSearch]);
+  const {
+    sessions,
+    loading,
+    error,
+    refresh: refreshSessions,
+  } = useManagedSessions({
+    programIds: selectedProgramIds,
+    cohortId: cohortId || undefined,
+    statuses: statusFilters,
+    search: debouncedSearch || undefined,
+  });
 
   const filteredCohorts = useMemo(
     () => selectedProgramIds.length
       ? cohorts.filter(cohort => selectedProgramIds.includes(cohort.programId))
       : cohorts,
-    [cohorts, selectedProgramIds.join(',')],
+    [cohorts, selectedProgramIds],
   );
   const schedulableCohorts = useMemo(
     () => filteredCohorts.filter(cohort => cohort.state !== 'completed'),
@@ -187,7 +168,7 @@ export default function Sessions() {
             id: 'attendance', label: 'Take Attendance', onClick: () => setAttendanceTarget(session),
           }] : []),
           ...(canWriteCohorts ? [
-            { id: 'edit', label: 'Edit Session', onClick: () => { setEditStatus('idle'); setEditMessage(''); setEditTarget(session); } },
+            { id: 'edit', label: 'Edit Session', onClick: () => setEditTarget(session) },
             {
               id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => setConfirmAction({
                 title: 'Delete Session',
@@ -195,14 +176,14 @@ export default function Sessions() {
                 confirmLabel: 'Delete',
                 confirmVariant: 'danger',
                 successMessage: 'Session deleted',
-                onConfirm: async () => { await deleteSession(session.id); await loadSessions(); },
+                onConfirm: async () => { await deleteSession(session.id); await refreshSessions(); },
               }),
             },
           ] : []),
         ]}
       />,
     }] : []),
-  ], [canWriteAttendance, canWriteCohorts, selectedProgramIds.join(','), cohortId, statusFilters.join(','), debouncedSearch]);
+  ], [canWriteAttendance, canWriteCohorts, refreshSessions]);
 
   const selectedSession = useMemo(
     () => sessions.find(session => session.id === selectedSessionId) ?? null,
@@ -210,32 +191,9 @@ export default function Sessions() {
   );
 
   const refreshActiveView = async () => {
-    await loadSessions();
+    await refreshSessions();
     if (view === 'calendar') setCalendarRefreshToken(current => current + 1);
   };
-
-  const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!editTarget) return;
-    const form = new FormData(event.currentTarget);
-    setEditStatus('submitting');
-    setEditMessage('Updating session...');
-    try {
-      await updateSession(editTarget.id, {
-        theme: String(form.get('theme')).trim() || null,
-        startsAt: new Date(String(form.get('startsAt'))).toISOString(),
-        endsAt: new Date(String(form.get('endsAt'))).toISOString(),
-        description: String(form.get('description')).trim() || null,
-      });
-      await loadSessions();
-      setEditMessage('Session updated successfully.');
-      setEditStatus('success');
-    } catch (cause) {
-      setEditMessage(cause instanceof Error ? cause.message : 'Could not update session');
-      setEditStatus('error');
-    }
-  };
-  const editComplete = editStatus === 'submitting' || editStatus === 'success';
 
   return (
     <div className={`sessions-page data-detail-page-content${view === 'calendar' ? ' sessions-page--calendar' : ''}`}>
@@ -341,35 +299,11 @@ export default function Sessions() {
         onClose={() => setAttendanceTarget(null)}
         onSaved={refreshActiveView}
       />
-      <Modal
-        isOpen={editTarget !== null}
+      <EditSessionModal
+        session={editTarget}
         onClose={() => setEditTarget(null)}
-        title="Edit session"
-        status={editStatus}
-        statusMessage={editMessage}
-        successDelay={1200}
-        footer={<>
-          <Button variant="secondary" onClick={() => setEditTarget(null)} disabled={editComplete}>Cancel</Button>
-          <Button type="submit" form="edit-session-form" disabled={editComplete}>Save Changes</Button>
-        </>}
-      >
-        {editTarget && <form id="edit-session-form" onSubmit={submitEdit}>
-          <FormField id="edit-session-theme" label="Theme (optional)">
-            <input id="edit-session-theme" name="theme" defaultValue={editTarget.theme ?? ''} maxLength={160} />
-          </FormField>
-          <div className="form-row edit-session-time-row">
-            <FormField id="edit-session-start" label="Starts at">
-              <input id="edit-session-start" name="startsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.startsAt)} />
-            </FormField>
-            <FormField id="edit-session-end" label="Ends at">
-              <input id="edit-session-end" name="endsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.endsAt)} />
-            </FormField>
-          </div>
-          <FormField id="edit-session-description" label="Description">
-            <textarea id="edit-session-description" name="description" defaultValue={editTarget.description ?? ''} maxLength={5000} />
-          </FormField>
-        </form>}
-      </Modal>
+        onUpdated={refreshActiveView}
+      />
       <Modal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
@@ -391,7 +325,7 @@ export default function Sessions() {
         onSuccess={async () => {
           await Promise.all([
             refreshActiveView(),
-            getCohorts().then(setCohorts),
+            refreshCohorts(),
           ]);
         }}
       />

@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
 import Modal from '../../../common/components/Modal/Modal';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { withdrawYouth } from '../../../common/api/cohorts.api';
-import { getYouth } from '../../../common/api/youth.api';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import type { ProgramCohort } from '../../../common/types/cohort';
 import type { YouthProfile } from '../../../common/types/youth';
+import { useCohortRoster } from '../hooks/useCohortRoster';
 import './WithdrawYouthModal.css';
 
 interface WithdrawYouthModalProps {
@@ -20,55 +20,25 @@ export default function WithdrawYouthModal({
   onClose,
   onSuccess,
 }: WithdrawYouthModalProps) {
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const {
+    enrolledYouth,
+    search,
+    setSearch,
+    filterBySearch,
+    loading,
+    error,
+    refresh,
+  } = useCohortRoster(cohort);
   const confirmModal = useConfirmModal({
     action: confirmAction,
     onClose: () => setConfirmAction(null),
   });
 
-  useEffect(() => {
-    if (!cohort) return;
-    let active = true;
-    setSearch('');
-    setLoading(true);
-    setError(null);
-    setConfirmAction(null);
-    getYouth()
-      .then(data => {
-        if (active) setYouth(data);
-      })
-      .catch(cause => {
-        if (active) setError(cause instanceof Error ? cause.message : 'Could not load youth');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [cohort]);
-
-  const enrolledYouth = useMemo(
-    () => cohort
-      ? youth.filter(profile => profile.cohorts.some(enrollment => (
-        enrollment.id === cohort.id && enrollment.withdrawnOn === null
-      )))
-      : [],
-    [cohort, youth],
+  const visibleYouth = useMemo(
+    () => filterBySearch(enrolledYouth),
+    [enrolledYouth, filterBySearch],
   );
-
-  const visibleYouth = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return enrolledYouth;
-    return enrolledYouth.filter(profile => (
-      `${profile.firstName} ${profile.lastName}`.toLowerCase().includes(query)
-      || profile.schoolName?.toLowerCase().includes(query)
-    ));
-  }, [enrolledYouth, search]);
 
   const requestWithdrawal = (profile: YouthProfile) => {
     if (!cohort) return;
@@ -80,8 +50,7 @@ export default function WithdrawYouthModal({
       successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
       onConfirm: async () => {
         await withdrawYouth(cohort.id, profile.id);
-        const refreshedYouth = await getYouth();
-        setYouth(refreshedYouth);
+        await refresh();
         await onSuccess();
       },
     });

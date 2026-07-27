@@ -3,11 +3,11 @@ import Button from '../../../common/components/Button/Button';
 import Modal from '../../../common/components/Modal/Modal';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { enrollYouth } from '../../../common/api/cohorts.api';
-import { getYouth } from '../../../common/api/youth.api';
 import type { SubmitStatus } from '../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../common/types/cohort';
-import type { YouthProfile } from '../../../common/types/youth';
 import { getAge } from '../../../common/utils/time';
+import { getErrorMessage } from '../../../common/utils/clientErrors';
+import { useCohortRoster } from '../hooks/useCohortRoster';
 import './EnrollYouthModal.css';
 
 interface EnrollYouthModalProps {
@@ -17,40 +17,27 @@ interface EnrollYouthModalProps {
 }
 
 export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollYouthModalProps) {
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
   const [ageFilterEnabled, setAgeFilterEnabled] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    youth,
+    unenrolledYouth,
+    search,
+    setSearch,
+    filterBySearch,
+    loading,
+    error: loadError,
+  } = useCohortRoster(cohort);
 
   useEffect(() => {
     if (!cohort) return;
-    let active = true;
     setSelectedYouthIds([]);
-    setSearch('');
     setAgeFilterEnabled(true);
-    setLoading(true);
     setSubmitStatus('idle');
-    setError(null);
-    getYouth()
-      .then(data => { if (active) setYouth(data); })
-      .catch(cause => {
-        if (active) setError(cause instanceof Error ? cause.message : 'Could not load youth');
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    setSubmitError(null);
   }, [cohort]);
-
-  const unenrolledYouth = useMemo(
-    () => cohort
-      ? youth.filter(profile => !profile.cohorts.some(enrollment => (
-        enrollment.id === cohort.id && enrollment.withdrawnOn === null
-      )))
-      : [],
-    [cohort, youth],
-  );
 
   const minAge = cohort?.minAge ?? null;
   const maxAge = cohort?.maxAge ?? null;
@@ -63,14 +50,10 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     });
   }, [ageFilterEnabled, maxAge, minAge, unenrolledYouth]);
 
-  const visibleYouth = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return availableYouth;
-    return availableYouth.filter(profile => (
-      `${profile.firstName} ${profile.lastName}`.toLowerCase().includes(query)
-      || profile.schoolName?.toLowerCase().includes(query)
-    ));
-  }, [availableYouth, search]);
+  const visibleYouth = useMemo(
+    () => filterBySearch(availableYouth),
+    [availableYouth, filterBySearch],
+  );
 
   const toggleYouth = (youthId: string) => {
     setSelectedYouthIds(current => (
@@ -95,20 +78,20 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
     event.preventDefault();
     if (!cohort || !selectedYouthIds.length) return;
     setSubmitStatus('submitting');
-    setError(null);
+    setSubmitError(null);
     try {
       await enrollYouth(cohort.id, { youthIds: selectedYouthIds });
       await onSuccess();
       setSubmitStatus('success');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not enroll youth');
+      setSubmitError(getErrorMessage(cause, 'Could not enroll youth'));
       setSubmitStatus('error');
     }
   };
 
   const selectedCount = selectedYouthIds.length;
   const cohortLabel = cohort ? `${cohort.programName} - ${cohort.name}` : '';
-  let statusMessage = error ?? undefined;
+  let statusMessage = submitError ?? undefined;
   if (submitStatus === 'submitting') {
     statusMessage = `Adding ${selectedCount} youth to ${cohortLabel}...`;
   } else if (submitStatus === 'success') {
@@ -146,7 +129,8 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
         </Button>
       </>}
     >
-      {error && submitStatus === 'idle' && <p className="form-error">{error}</p>}
+      {loadError && <p className="form-error">{loadError}</p>}
+      {submitError && submitStatus === 'idle' && <p className="form-error">{submitError}</p>}
       <form id="enroll-youth-form" onSubmit={event => void submit(event)}>
         {hasAgeRange && (
           <div
