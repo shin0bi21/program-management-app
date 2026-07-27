@@ -376,10 +376,9 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 
     const newStatus = existing.status === 'active' ? 'inactive' : 'active';
 
-    const updated = await trx<DbRow<UserCredentials>[]>`
+    await trx`
       UPDATE user_credentials SET status = ${newStatus}, updated_at = NOW()
       WHERE user_id = ${userId}
-      RETURNING *
     `;
 
     await audit(
