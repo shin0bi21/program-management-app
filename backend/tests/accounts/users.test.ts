@@ -331,7 +331,6 @@ describe('Accounts API', () => {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   describe('POST /api/accounts (UPDATE)', () => {
-    let testStaffUser: SeededUser;
     let testStaffId: string;
 
     beforeAll(async () => {

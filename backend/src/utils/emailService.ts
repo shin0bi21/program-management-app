@@ -19,7 +19,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       html,
     });
   } catch (error) {
-    throw new Error('Failed to send email');
+    throw new Error('Failed to send email', { cause: error });
   }
 };
 

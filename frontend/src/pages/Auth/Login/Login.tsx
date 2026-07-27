@@ -6,13 +6,13 @@ import Button from '../../../common/components/Button/Button';
 
 export default function Login() {
   const { isAuthenticated, loading } = useAuth();
-  if (!loading && isAuthenticated) return <Navigate to="/" replace />;
   const { form, error, onSubmit } = useLogin();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form;
+  if (!loading && isAuthenticated) return <Navigate to="/" replace />;
 
   return (
     <AuthLayout>
