@@ -24,6 +24,10 @@ const weekdayIndex = {
   saturday: 6,
 } as const;
 
+export function getSessionTypes() {
+  return sql`SELECT id, name FROM session_types ORDER BY name`;
+}
+
 function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex) {
   const first = new Date(`${date}T12:00:00.000Z`);
   const offset = (weekdayIndex[weekday] - first.getUTCDay() + 7) % 7;
@@ -31,13 +35,9 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
   return first.toISOString().slice(0, 10);
 }
 
-export async function generateSessions(
-  cohortId: string,
-  data: GenerateSessionsInput,
-  actor: AccessTokenPayload,
-) {
+export async function generateSessions(cohortId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
   await assertCohortAccess(actor, cohortId);
-  return sql.begin(async tx => {
+  return sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
     const theme = data.theme ?? null;
     const cohorts = await trx<{ startsOn: string; endsOn: string }[]>`
@@ -57,10 +57,11 @@ export async function generateSessions(
     if (data.frequency === 'once') {
       await trx`
         INSERT INTO cohort_sessions (
-          cohort_id, theme, starts_at, ends_at, created_by, updated_by
+          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES (
           ${cohortId},
+          ${data.sessionTypeId},
           ${theme},
           (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
@@ -75,10 +76,11 @@ export async function generateSessions(
       }
       await trx`
         INSERT INTO cohort_sessions (
-          cohort_id, theme, starts_at, ends_at, created_by, updated_by
+          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
           ${cohortId},
+          ${data.sessionTypeId},
           ${theme},
           (session_date::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (session_date::date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
@@ -93,10 +95,11 @@ export async function generateSessions(
     } else {
       await trx`
         INSERT INTO cohort_sessions (
-          cohort_id, theme, starts_at, ends_at, created_by, updated_by
+          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
           ${cohortId},
+          ${data.sessionTypeId},
           ${theme},
           (candidate.session_date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto',
           (candidate.session_date + ${data.endTime}::time) AT TIME ZONE 'America/Toronto',
@@ -116,13 +119,16 @@ export async function generateSessions(
     }
 
     const sessions = await trx`
-      SELECT id, cohort_id, theme, starts_at, ends_at, cancelled_at, description
-      FROM cohort_sessions
-      WHERE cohort_id = ${cohortId}
-        AND theme IS NOT DISTINCT FROM ${theme}
-        AND starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
-        AND starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
-      ORDER BY starts_at
+      SELECT cs.id, cs.cohort_id, cs.session_type_id, st.name AS session_type_name,
+        cs.theme, cs.starts_at, cs.ends_at, cs.cancelled_at, cs.description
+      FROM cohort_sessions cs
+      INNER JOIN session_types st ON st.id = cs.session_type_id
+      WHERE cs.cohort_id = ${cohortId}
+        AND cs.session_type_id = ${data.sessionTypeId}
+        AND cs.theme IS NOT DISTINCT FROM ${theme}
+        AND cs.starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
+        AND cs.starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
+      ORDER BY cs.starts_at
     `;
     if (!sessions.length) {
       throw new ConflictError('No session dates match the selected schedule and date range');
@@ -138,6 +144,8 @@ export function getSessions(actor: AccessTokenPayload, filters: SessionCalendarQ
     SELECT
       cs.id,
       cs.cohort_id,
+      cs.session_type_id,
+      st.name AS session_type_name,
       cs.theme,
       pc.name AS cohort_name,
       p.id AS program_id,
@@ -148,25 +156,32 @@ export function getSessions(actor: AccessTokenPayload, filters: SessionCalendarQ
       cs.cancelled_at,
       cs.description
     FROM cohort_sessions cs
+    INNER JOIN session_types st ON st.id = cs.session_type_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     WHERE cs.starts_at < ${filters.end}::timestamptz
       AND cs.ends_at > ${filters.start}::timestamptz
-      AND ${filters.programIds.length
-        ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
-        : sql`TRUE`}
+      AND ${filters.programIds.length ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])` : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
-      AND ${filters.statuses.length === 1
-        ? filters.statuses[0] === 'completed'
-          ? sql`cs.ends_at < NOW()`
-          : sql`cs.ends_at >= NOW()`
-        : sql`TRUE`}
-      AND ${search ? sql`(
+      AND ${filters.sessionTypeIds.length ? sql`cs.session_type_id = ANY(${sql.array(filters.sessionTypeIds)}::uuid[])` : sql`TRUE`}
+      AND ${
+        filters.statuses.length === 1
+          ? filters.statuses[0] === 'completed'
+            ? sql`cs.ends_at < NOW()`
+            : sql`cs.ends_at >= NOW()`
+          : sql`TRUE`
+      }
+      AND ${
+        search
+          ? sql`(
         COALESCE(cs.theme, '') ILIKE ${search}
         OR COALESCE(cs.description, '') ILIKE ${search}
         OR pc.name ILIKE ${search}
         OR p.name ILIKE ${search}
-      )` : sql`TRUE`}
+        OR st.name ILIKE ${search}
+      )`
+          : sql`TRUE`
+      }
       AND ${programAccessPredicate(actor, sql`pc.program_id`)}
     ORDER BY cs.starts_at
   `;
@@ -180,6 +195,8 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
     SELECT
       cs.id,
       cs.cohort_id,
+      cs.session_type_id,
+      st.name AS session_type_name,
       cs.theme,
       pc.name AS cohort_name,
       p.id AS program_id,
@@ -202,26 +219,29 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
         ELSE 'upcoming'
       END AS state
     FROM cohort_sessions cs
+    INNER JOIN session_types st ON st.id = cs.session_type_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN attendance_records ar ON ar.session_id = cs.id
-    WHERE ${filters.programIds.length
-      ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
-      : sql`TRUE`}
+    WHERE ${filters.programIds.length ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])` : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
+      AND ${filters.sessionTypeIds.length ? sql`cs.session_type_id = ANY(${sql.array(filters.sessionTypeIds)}::uuid[])` : sql`TRUE`}
       AND ${programAccessPredicate(actor, sql`pc.program_id`)}
-      AND ${filters.statuses.length === 1
-        ? completedOnly
-          ? sql`cs.ends_at < NOW()`
-          : sql`cs.ends_at >= NOW()`
-        : sql`TRUE`}
-      AND ${search ? sql`(
+      AND ${
+        filters.statuses.length === 1 ? (completedOnly ? sql`cs.ends_at < NOW()` : sql`cs.ends_at >= NOW()`) : sql`TRUE`
+      }
+      AND ${
+        search
+          ? sql`(
         COALESCE(cs.theme, '') ILIKE ${search}
         OR COALESCE(cs.description, '') ILIKE ${search}
         OR pc.name ILIKE ${search}
         OR p.name ILIKE ${search}
-      )` : sql`TRUE`}
-    GROUP BY cs.id, pc.id, p.id
+        OR st.name ILIKE ${search}
+      )`
+          : sql`TRUE`
+      }
+    GROUP BY cs.id, pc.id, p.id, st.id
     ORDER BY
       CASE WHEN ${completedOnly} THEN cs.starts_at END DESC,
       CASE WHEN NOT ${completedOnly} THEN cs.starts_at END ASC
@@ -232,7 +252,9 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
   await assertSessionAccess(actor, id);
   const rows = await sql`
     UPDATE cohort_sessions
-    SET theme = ${data.theme ?? null}, starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
+    SET session_type_id = COALESCE(${data.sessionTypeId ?? null}, session_type_id),
+        theme = ${data.theme ?? null},
+        starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
         description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actor.userId}
     WHERE id = ${id}
     RETURNING id

@@ -4,9 +4,14 @@ import type { ProgramCohort } from '../../../common/types/cohort';
 import GenerateSessionsModal from './GenerateSessionsModal';
 
 const generateSessions = vi.fn();
+const regularTypeId = '00000000-0000-4000-8000-000000000001';
 
 vi.mock('../../../common/api/cohorts.api', () => ({
   generateSessions: (...args: unknown[]) => generateSessions(...args),
+  getSessionTypes: () => Promise.resolve([
+    { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },
+    { id: 'type-guest', name: 'Guest Speaker' },
+  ]),
 }));
 
 const cohort: ProgramCohort = {
@@ -42,11 +47,13 @@ describe('GenerateSessionsModal', () => {
 
     expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
+    expect(await screen.findByRole('button', { name: 'Type' })).toHaveTextContent('Regular');
     fireEvent.change(screen.getByLabelText('Theme (optional)'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({
       frequency: 'weekly',
+      sessionTypeId: regularTypeId,
       dayOfWeek: 'tuesday',
       startsOn: '2026-07-01',
       endsOn: '2026-08-31',

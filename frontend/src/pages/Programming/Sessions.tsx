@@ -21,6 +21,8 @@ import SessionsCalendarView from './components/SessionsCalendarView/SessionsCale
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import { useCohorts } from './hooks/useCohorts';
 import { useManagedSessions } from './hooks/useManagedSessions';
+import { useSessionTypes } from './hooks/useSessionTypes';
+import { sessionTypeModifier } from './utils/sessionType';
 import './Sessions.css';
 
 const timeFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -35,6 +37,7 @@ export default function Sessions() {
   const { permissions } = useAuth();
   const { programs } = usePrograms({ assignedOnly: true });
   const { cohorts, refresh: refreshCohorts } = useCohorts();
+  const sessionTypes = useSessionTypes();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -45,17 +48,15 @@ export default function Sessions() {
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const view: SessionsView = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
   const programFilter = searchParams.get('program') ?? '';
-  const selectedProgramIds = useMemo(
-    () => programFilter.split(',').filter(Boolean),
-    [programFilter],
-  );
+  const selectedProgramIds = useMemo(() => programFilter.split(',').filter(Boolean), [programFilter]);
   const cohortId = searchParams.get('cohort') ?? '';
   const selectedSessionId = searchParams.get('session') ?? '';
   const statusFilter = searchParams.get('status') ?? '';
+  const sessionTypeFilter = searchParams.get('type') ?? '';
+  const selectedSessionTypeIds = useMemo(() => sessionTypeFilter.split(',').filter(Boolean), [sessionTypeFilter]);
   const statusFilters = useMemo(
-    () => statusFilter
-      .split(',')
-      .filter((value): value is StatusFilter => value === 'upcoming' || value === 'completed'),
+    () =>
+      statusFilter.split(',').filter((value): value is StatusFilter => value === 'upcoming' || value === 'completed'),
     [statusFilter],
   );
   const canWriteAttendance = permissions.includes('write:attendance');
@@ -74,45 +75,53 @@ export default function Sessions() {
   } = useManagedSessions({
     programIds: selectedProgramIds,
     cohortId: cohortId || undefined,
+    sessionTypeIds: selectedSessionTypeIds,
     statuses: statusFilters,
     search: debouncedSearch || undefined,
   });
 
   const filteredCohorts = useMemo(
-    () => selectedProgramIds.length
-      ? cohorts.filter(cohort => selectedProgramIds.includes(cohort.programId))
-      : cohorts,
+    () =>
+      selectedProgramIds.length ? cohorts.filter((cohort) => selectedProgramIds.includes(cohort.programId)) : cohorts,
     [cohorts, selectedProgramIds],
   );
   const schedulableCohorts = useMemo(
-    () => filteredCohorts.filter(cohort => cohort.state !== 'completed'),
+    () => filteredCohorts.filter((cohort) => cohort.state !== 'completed'),
     [filteredCohorts],
   );
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    {
-      id: 'program',
-      label: 'Program',
-      options: programs.map(program => ({ value: program.id, label: program.name })),
-    },
-    {
-      id: 'cohort',
-      label: 'Cohort',
-      selectionMode: 'single',
-      options: filteredCohorts.map(cohort => ({
-        value: cohort.id,
-        label: `${cohort.programName} · ${cohort.name}`,
-      })),
-    },
-    {
-      id: 'status',
-      label: 'Status',
-      options: [
-        { value: 'upcoming', label: 'Upcoming' },
-        { value: 'completed', label: 'Completed' },
-      ],
-    },
-  ], [filteredCohorts, programs]);
+  const filterCategories = useMemo<FilterCardCategory[]>(
+    () => [
+      {
+        id: 'program',
+        label: 'Program',
+        options: programs.map((program) => ({ value: program.id, label: program.name })),
+      },
+      {
+        id: 'cohort',
+        label: 'Cohort',
+        selectionMode: 'single',
+        options: filteredCohorts.map((cohort) => ({
+          value: cohort.id,
+          label: `${cohort.programName} · ${cohort.name}`,
+        })),
+      },
+      {
+        id: 'type',
+        label: 'Type',
+        options: sessionTypes.map(type => ({ value: type.id, label: type.name })),
+      },
+      {
+        id: 'status',
+        label: 'Status',
+        options: [
+          { value: 'upcoming', label: 'Upcoming' },
+          { value: 'completed', label: 'Completed' },
+        ],
+      },
+    ],
+    [filteredCohorts, programs, sessionTypes],
+  );
 
   const setFilter = (key: string, values: string[]) => {
     const next = new URLSearchParams(searchParams);
@@ -140,89 +149,130 @@ export default function Sessions() {
     setSearchParams(next);
   };
 
-  const columns = useMemo<TableColumn<ManagedSession>[]>(() => [
-    { key: 'program', header: 'Program', render: session => session.programName },
-    { key: 'cohort', header: 'Cohort', render: session => session.cohortName },
-    { key: 'theme', header: 'Theme', render: session => session.theme || '—' },
-    { key: 'date', header: 'Date', width: '135px', render: session => formatShortDate(session.startsAt) },
-    {
-      key: 'time',
-      header: 'Time',
-      width: '165px',
-      render: session => `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: '110px',
-      render: session => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
-    },
-    ...(canWriteAttendance || canWriteCohorts ? [{
-      key: 'actions',
-      header: '',
-      className: 'col-actions',
-      render: (session: ManagedSession) => <ActionsMenu
-        ariaLabel={`More actions for ${session.theme || `${session.programName} session`}`}
-        items={[
-          ...(canWriteAttendance ? [{
-            id: 'attendance', label: 'Take Attendance', onClick: () => setAttendanceTarget(session),
-          }] : []),
-          ...(canWriteCohorts ? [
-            { id: 'edit', label: 'Edit Session', onClick: () => setEditTarget(session) },
+  const columns = useMemo<TableColumn<ManagedSession>[]>(
+    () => [
+      { key: 'program', header: 'Program', render: (session) => session.programName },
+      { key: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
+      { key: 'theme', header: 'Theme', render: (session) => session.theme || '—' },
+      { key: 'date', header: 'Date', width: '135px', render: (session) => formatShortDate(session.startsAt) },
+      {
+        key: 'time',
+        header: 'Time',
+        width: '165px',
+        render: (session) =>
+          `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
+      },
+      {
+        key: 'type',
+        header: 'Type',
+        width: '135px',
+        render: (session) => (
+          <span className={`session-type session-type--${sessionTypeModifier(session.sessionTypeName)}`}>
+            {session.sessionTypeName}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: '110px',
+        render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
+      },
+      ...(canWriteAttendance || canWriteCohorts
+        ? [
             {
-              id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => setConfirmAction({
-                title: 'Delete Session',
-                message: `Delete ${session.theme || `${session.programName} session`}? This cannot be undone.`,
-                confirmLabel: 'Delete',
-                confirmVariant: 'danger',
-                successMessage: 'Session deleted',
-                onConfirm: async () => { await deleteSession(session.id); await refreshSessions(); },
-              }),
+              key: 'actions',
+              header: '',
+              className: 'col-actions',
+              render: (session: ManagedSession) => (
+                <ActionsMenu
+                  ariaLabel={`More actions for ${session.theme || `${session.programName} session`}`}
+                  items={[
+                    ...(canWriteAttendance
+                      ? [
+                          {
+                            id: 'attendance',
+                            label: 'Take Attendance',
+                            onClick: () => setAttendanceTarget(session),
+                          },
+                        ]
+                      : []),
+                    ...(canWriteCohorts
+                      ? [
+                          { id: 'edit', label: 'Edit Session', onClick: () => setEditTarget(session) },
+                          {
+                            id: 'delete',
+                            label: 'Delete Session',
+                            variant: 'danger' as const,
+                            onClick: () =>
+                              setConfirmAction({
+                                title: 'Delete Session',
+                                message: `Delete ${session.theme || `${session.programName} session`}? This cannot be undone.`,
+                                confirmLabel: 'Delete',
+                                confirmVariant: 'danger',
+                                successMessage: 'Session deleted',
+                                onConfirm: async () => {
+                                  await deleteSession(session.id);
+                                  await refreshSessions();
+                                },
+                              }),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              ),
             },
-          ] : []),
-        ]}
-      />,
-    }] : []),
-  ], [canWriteAttendance, canWriteCohorts, refreshSessions]);
+          ]
+        : []),
+    ],
+    [canWriteAttendance, canWriteCohorts, refreshSessions],
+  );
 
   const selectedSession = useMemo(
-    () => sessions.find(session => session.id === selectedSessionId) ?? null,
+    () => sessions.find((session) => session.id === selectedSessionId) ?? null,
     [selectedSessionId, sessions],
   );
 
   const refreshActiveView = async () => {
     await refreshSessions();
-    if (view === 'calendar') setCalendarRefreshToken(current => current + 1);
+    if (view === 'calendar') setCalendarRefreshToken((current) => current + 1);
   };
 
   return (
     <div className={`sessions-page data-detail-page-content${view === 'calendar' ? ' sessions-page--calendar' : ''}`}>
       <PageHeader
         title="Sessions"
-        actions={canWriteCohorts ? (
-          <Button onClick={() => setAddSessionsOpen(true)} disabled={!schedulableCohorts.length}>
-            + Add
-          </Button>
-        ) : undefined}
-        search={<SearchInput
-          label="Search sessions"
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          placeholder="Search themes, descriptions, or cohorts"
-        />}
-        filters={<FilterCard
-          categories={filterCategories}
-          values={{
-            program: selectedProgramIds,
-            cohort: cohortId ? [cohortId] : [],
-            status: statusFilters,
-          }}
-          onApply={(category, selected) => setFilter(
-            category,
-            category === 'cohort' ? selected.slice(0, 1) : selected,
-          )}
-          onClearAll={clearFilters}
-        />}
+        actions={
+          canWriteCohorts ? (
+            <Button onClick={() => setAddSessionsOpen(true)} disabled={!schedulableCohorts.length}>
+              + Add
+            </Button>
+          ) : undefined
+        }
+        search={
+          <SearchInput
+            label="Search sessions"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search themes, descriptions, or cohorts"
+          />
+        }
+        filters={
+          <FilterCard
+            categories={filterCategories}
+            values={{
+              program: selectedProgramIds,
+              cohort: cohortId ? [cohortId] : [],
+              status: statusFilters,
+              type: selectedSessionTypeIds,
+            }}
+            onApply={(category, selected) =>
+              setFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)
+            }
+            onClearAll={clearFilters}
+          />
+        }
       />
       <div className="sessions-view-row">
         <div className="sessions-view-toggle" role="group" aria-label="Session view">
@@ -247,51 +297,56 @@ export default function Sessions() {
       {view === 'list' ? (
         <TableDetailLayout
           ariaLabel="Sessions and overview"
-          table={<Table
-            ariaLabel="Sessions"
-            columns={columns}
-            data={sessions}
-            loading={loading}
-            error={error ?? undefined}
-            keyExtractor={session => session.id}
-            selectedKey={selectedSessionId || null}
-            scrollToSelected={Boolean(selectedSessionId)}
-            onRowSelect={selectSession}
-            emptyMessage={search || selectedProgramIds.length || cohortId || statusFilters.length
-              ? 'No sessions match your search and filters'
-              : 'No sessions yet'}
-          />}
-          details={(
+          table={
+            <Table
+              ariaLabel="Sessions"
+              columns={columns}
+              data={sessions}
+              loading={loading}
+              error={error ?? undefined}
+              keyExtractor={(session) => session.id}
+              selectedKey={selectedSessionId || null}
+              scrollToSelected={Boolean(selectedSessionId)}
+              onRowSelect={selectSession}
+              emptyMessage={
+                search || selectedProgramIds.length || cohortId || selectedSessionTypeIds.length || statusFilters.length
+                  ? 'No sessions match your search and filters'
+                  : 'No sessions yet'
+              }
+            />
+          }
+          details={
             <SessionOverview
               session={selectedSession}
               canWriteAttendance={canWriteAttendance}
               canWriteNotes={canWriteCohorts}
               onAddAttendance={setAttendanceTarget}
             />
-          )}
+          }
         />
       ) : (
         <TableDetailLayout
           ariaLabel="Sessions calendar and overview"
-          table={(
+          table={
             <SessionsCalendarView
               selectedProgramIds={selectedProgramIds}
               selectedCohortId={cohortId}
               selectedSessionId={selectedSessionId}
+              selectedSessionTypeIds={selectedSessionTypeIds}
               selectedStatuses={statusFilters}
               search={debouncedSearch}
               refreshToken={calendarRefreshToken}
               onSessionSelect={selectSession}
             />
-          )}
-          details={(
+          }
+          details={
             <SessionOverview
               session={selectedSession}
               canWriteAttendance={canWriteAttendance}
               canWriteNotes={canWriteCohorts}
               onAddAttendance={setAttendanceTarget}
             />
-          )}
+          }
         />
       )}
       <AttendanceModal
@@ -299,11 +354,7 @@ export default function Sessions() {
         onClose={() => setAttendanceTarget(null)}
         onSaved={refreshActiveView}
       />
-      <EditSessionModal
-        session={editTarget}
-        onClose={() => setEditTarget(null)}
-        onUpdated={refreshActiveView}
-      />
+      <EditSessionModal session={editTarget} onClose={() => setEditTarget(null)} onUpdated={refreshActiveView} />
       <Modal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
@@ -323,10 +374,7 @@ export default function Sessions() {
         initialCohortId={cohortId || schedulableCohorts[0]?.id}
         onClose={() => setAddSessionsOpen(false)}
         onSuccess={async () => {
-          await Promise.all([
-            refreshActiveView(),
-            refreshCohorts(),
-          ]);
+          await Promise.all([refreshActiveView(), refreshCohorts()]);
         }}
       />
     </div>

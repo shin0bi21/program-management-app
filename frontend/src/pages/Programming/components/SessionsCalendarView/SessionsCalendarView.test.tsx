@@ -101,6 +101,8 @@ const sessions = [
   {
     id: 'session-1',
     cohortId: 'cohort-1',
+    sessionTypeId: 'type-guest-speaker',
+    sessionTypeName: 'Guest Speaker',
     theme: 'Communication',
     cohortName: 'Summer 2026',
     programId: 'program-1',
@@ -114,6 +116,8 @@ const sessions = [
   {
     id: 'session-2',
     cohortId: 'cohort-2',
+    sessionTypeId: 'type-regular',
+    sessionTypeName: 'Regular',
     theme: 'Resumes',
     cohortName: 'Summer 2026',
     programId: 'program-2',
@@ -160,7 +164,7 @@ describe('SessionsCalendarView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
     const session = await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, 5pm – 7:30pm',
+      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
     });
     expect(session).toHaveClass('programming-calendar-event--selected');
     fireEvent.click(session);
@@ -245,10 +249,13 @@ describe('SessionsCalendarView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
 
     expect(await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, 5pm – 7:30pm',
+      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
     })).toBeInTheDocument();
+    expect(screen.getByText('Guest Speaker')).toHaveClass(
+      'programming-calendar-event__type--guest-speaker',
+    );
     expect(screen.getByRole('button', {
-      name: 'Job Readiness, Resumes, 5pm – 7pm',
+      name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
     })).toBeInTheDocument();
     await waitFor(() => expect(getCohortSessions).toHaveBeenCalledTimes(1));
   });
@@ -270,10 +277,10 @@ describe('SessionsCalendarView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
 
     expect(await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, 5pm – 7:30pm',
+      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
     })).toBeInTheDocument();
     expect(screen.queryByRole('button', {
-      name: 'Job Readiness, Resumes, 5pm – 7pm',
+      name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
     })).not.toBeInTheDocument();
     expect(getCohortSessions).toHaveBeenCalledWith(expect.objectContaining({
       statuses: ['upcoming'],

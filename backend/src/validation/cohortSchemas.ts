@@ -70,6 +70,8 @@ export const withdrawYouthSchema = z.object({
 export const generateSessionsSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({
+    sessionTypeId: z.string().uuid('Invalid session type ID')
+      .default('00000000-0000-4000-8000-000000000001'),
     theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     frequency: z.enum(['once', 'weekly', 'biweekly', 'monthly']),
     dayOfWeek: weekdaySchema.optional(),
@@ -103,6 +105,7 @@ export const sessionQuerySchema = z.object({
     end: z.string().datetime({ offset: true }),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
   }),
@@ -112,6 +115,7 @@ export const sessionListQuerySchema = z.object({
   query: z.object({
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
   }),
@@ -133,6 +137,7 @@ export const saveAttendanceSchema = z.object({
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
+    sessionTypeId: z.string().uuid('Invalid session type ID').optional(),
     theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),

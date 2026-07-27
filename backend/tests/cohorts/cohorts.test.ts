@@ -46,6 +46,7 @@ describe('Cohorts and attendance API', () => {
   let openSessionId: string;
   let unassignedCohortId: string;
   let today: string;
+  const guestSpeakerTypeId = '00000000-0000-4000-8000-000000000002';
 
   beforeAll(async () => {
     const staff = await seedTestUser({ role: 'staff' });
@@ -226,12 +227,26 @@ describe('Cohorts and attendance API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('lists the available session types', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/session-types')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.arrayContaining([
+      { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },
+      { id: guestSpeakerTypeId, name: 'Guest Speaker' },
+      { id: '00000000-0000-4000-8000-000000000003', name: 'Field Trip' },
+    ]));
+  });
+
   it('generates weekly sessions from form input without persisting a schedule', async () => {
     const firstSessionDate = addDays(today, 1);
     const response = await request(app)
       .post(`/api/cohorts/${cohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
+        sessionTypeId: guestSpeakerTypeId,
         theme: 'Communication',
         frequency: 'weekly',
         dayOfWeek: weekdayFor(firstSessionDate),
@@ -244,6 +259,7 @@ describe('Cohorts and attendance API', () => {
     expect(response.status).toBe(201);
     expect(response.body.sessions).toHaveLength(3);
     expect(response.body.sessions[0].theme).toBe('Communication');
+    expect(response.body.sessions[0].sessionTypeName).toBe('Guest Speaker');
     sessionId = response.body.sessions[0].id;
 
     const dates = await sql<{ localDate: string }[]>`
@@ -685,7 +701,7 @@ describe('Cohorts and attendance API', () => {
     const response = await request(app)
       .get(
         `/api/cohorts/sessions?programIds=${programId}&cohortId=${cohortId}`
-        + '&statuses=upcoming&search=Communication',
+        + `&sessionTypeIds=${guestSpeakerTypeId}&statuses=upcoming&search=Communication`,
       )
       .set('Authorization', `Bearer ${staffToken}`);
 
@@ -696,6 +712,8 @@ describe('Cohorts and attendance API', () => {
         cohortId,
         programId,
         theme: 'Communication',
+        sessionTypeId: guestSpeakerTypeId,
+        sessionTypeName: 'Guest Speaker',
         attendanceMarkedCount: 2,
         attendanceRate: 100,
       }),

@@ -3,7 +3,13 @@ import { getManagedSessions } from '../../../common/api/cohorts.api';
 import type { ManagedSession, SessionListFilters } from '../../../common/types/cohort';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
 
-export function useManagedSessions({ programIds = [], cohortId, statuses = [], search }: SessionListFilters) {
+export function useManagedSessions({
+  programIds = [],
+  cohortId,
+  sessionTypeIds = [],
+  statuses = [],
+  search,
+}: SessionListFilters) {
   const [sessions, setSessions] = useState<ManagedSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +23,7 @@ export function useManagedSessions({ programIds = [], cohortId, statuses = [], s
       const data = await getManagedSessions({
         programIds,
         cohortId,
+        sessionTypeIds,
         statuses,
         search,
       });
@@ -28,7 +35,7 @@ export function useManagedSessions({ programIds = [], cohortId, statuses = [], s
     } finally {
       if (requestIdRef.current === requestId) setLoading(false);
     }
-  }, [cohortId, programIds, search, statuses]);
+  }, [cohortId, programIds, search, sessionTypeIds, statuses]);
 
   useEffect(() => {
     void refresh();

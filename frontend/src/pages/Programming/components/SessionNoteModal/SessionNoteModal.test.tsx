@@ -18,6 +18,8 @@ vi.mock('../../../../common/api/cohorts.api', () => ({
 const session: ManagedSession = {
   id: 'session-1',
   cohortId: 'cohort-1',
+  sessionTypeId: 'type-regular',
+  sessionTypeName: 'Regular',
   theme: 'Communication',
   cohortName: 'Summer 2026',
   programId: 'program-1',

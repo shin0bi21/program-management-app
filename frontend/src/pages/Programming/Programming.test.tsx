@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
   createProgram: vi.fn(),
   getCohorts: vi.fn(),
+  getSessionTypes: vi.fn(),
 }));
 const auth = vi.hoisted(() => ({
   permissions: ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'],
@@ -20,6 +21,7 @@ const auth = vi.hoisted(() => ({
 
 vi.mock('../../common/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
+  getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
 }));
 
@@ -48,6 +50,9 @@ describe('Programming', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'];
+    api.getSessionTypes.mockResolvedValue([
+      { id: 'type-regular', name: 'Regular' },
+    ]);
     api.getCohorts.mockResolvedValue([{
       id: 'cohort-1',
       programId: 'program-1',
