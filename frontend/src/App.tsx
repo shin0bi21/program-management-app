@@ -4,6 +4,7 @@ import { AuthProvider } from './common/context/AuthContext'
 import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute'
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal'
 import Homepage from './pages/Homepage/Homepage'
+import ManageHomepage from './pages/Homepage/ManageHomepage'
 import Youth from './pages/Youth/Youth'
 import YouthLayout from './pages/Youth/YouthLayout'
 import Users from './pages/Settings/Users/Users'
@@ -37,6 +38,11 @@ function App() {
           {HOMEPAGE_ROUTE_PATHS.map((path) => (
             <Route key={path} path={path} element={<Homepage />} />
           ))}
+          <Route path="/homepage/manage" element={
+            <ProtectedRoute requiredPermission="read:homepage">
+              <ManageHomepage />
+            </ProtectedRoute>
+          } />
           <Route path="/youth" element={
             <ProtectedRoute requiredPermission="read:youth_profiles">
               <YouthLayout />

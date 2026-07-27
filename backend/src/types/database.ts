@@ -154,6 +154,19 @@ export interface ExpressionsOfInterest {
   youth_last_name: string;
 }
 
+export interface HomepageImages {
+  alt_text: string;
+  caption: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  display_order: number;
+  id: Generated<string>;
+  public_path: string | null;
+  storage_key: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface Leads {
   age: number;
   contact_first_name: string;
@@ -393,6 +406,7 @@ export interface DB {
   cohort_sessions: CohortSessions;
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
+  homepage_images: HomepageImages;
   leads: Leads;
   program_cohorts: ProgramCohorts;
   programs: Programs;

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faHouse, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
@@ -10,8 +10,8 @@ import './Header.css';
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, role, permissions, logout } = useAuth();
-  const canViewHome = role !== 'youth';
+  const { isAuthenticated, permissions, logout } = useAuth();
+  const canManageHomepage = permissions.includes('read:homepage');
   const canViewYouth = permissions.includes('read:youth_profiles');
   const canViewOutreach = permissions.includes('read:outreach');
   const canViewProgramming = permissions.includes('read:programs') && permissions.includes('read:cohorts');
@@ -52,7 +52,7 @@ export default function Header() {
   } = useFloatingMenu(
     settingsBtnRef,
     { side: 'right', align: 'start' },
-    { widthEstimate: 160, heightEstimate: 120 },
+    { widthEstimate: 180, heightEstimate: 165 },
   );
   const {
     isOpen: isOutreachFlyoutOpen,
@@ -144,16 +144,6 @@ export default function Header() {
         <nav className="sidebar-nav">
           {isAuthenticated && (
             <>
-              {canViewHome && (
-                <button
-                  onClick={() => go('/')}
-                  className={`sidebar-link${isActive('/') && !isSettingsFlyoutOpen && !isOutreachFlyoutOpen ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
-                  <span>Home</span>
-                </button>
-              )}
-
               {canViewYouth && (
                 <button
                   ref={youthBtnRef}
@@ -294,6 +284,15 @@ export default function Header() {
           >
             My Account
           </button>
+          {canManageHomepage && (
+            <button
+              role="menuitem"
+              onClick={() => go('/homepage/manage')}
+              className={`settings-flyout-item${isActive('/homepage/manage') ? ' active' : ''}`}
+            >
+              Manage Homepage
+            </button>
+          )}
           {canManageAccounts && (
             <button
               role="menuitem"

@@ -16,6 +16,7 @@ bash scripts/backend/run-youth-tests.sh
 bash scripts/backend/run-schools-tests.sh
 bash scripts/backend/run-programs-tests.sh
 bash scripts/backend/run-cohorts-tests.sh
+bash scripts/backend/run-homepage-tests.sh
 bash scripts/backend/run-outreach-tests.sh
 
 echo ""

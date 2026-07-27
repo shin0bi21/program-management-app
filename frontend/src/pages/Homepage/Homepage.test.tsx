@@ -14,6 +14,26 @@ vi.mock('../../common/context/AuthContext', () => ({
   }),
 }));
 
+vi.mock('./hooks/useHomepageContent', () => ({
+  useHomepageContent: () => ({
+    content: {
+      images: [{
+        id: 'image-1',
+        imageUrl: '/programming/adventure_bay.png',
+        altText: 'Youth trip',
+        caption: 'Youth trip.',
+        displayOrder: 0,
+        createdAt: '2026-07-27T12:00:00.000Z',
+        updatedAt: '2026-07-27T12:00:00.000Z',
+      }],
+      sessions: [],
+    },
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+}));
+
 describe('Homepage', () => {
   it('renders the public homepage sections', () => {
     render(
