@@ -1,9 +1,13 @@
 CREATE TABLE session_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES cohort_sessions(id) ON DELETE RESTRICT,
-    note TEXT NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    details TEXT NOT NULL,
     LIKE base_table INCLUDING ALL,
-    CHECK (LENGTH(BTRIM(note)) > 0)
+    CHECK (category IN ('general', 'attendance', 'behaviour', 'achievement', 'follow_up')),
+    CHECK (LENGTH(BTRIM(title)) > 0),
+    CHECK (LENGTH(BTRIM(details)) > 0)
 );
 
 CREATE INDEX idx_session_notes_session_id ON session_notes(session_id);

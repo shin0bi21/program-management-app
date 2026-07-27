@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   handleCreateCohort,
   handleCreateSessionNote,
+  handleDeleteSessionNote,
   handleDeleteCohort,
   handleDeleteSession,
   handleEnrollYouth,
@@ -14,6 +15,7 @@ import {
   handleSaveAttendance,
   handleSyncYouthCohorts,
   handleUpdateCohort,
+  handleUpdateSessionNote,
   handleUpdateSession,
   handleWithdrawYouth,
 } from '../controllers/cohortController';
@@ -24,6 +26,7 @@ import {
   cohortQuerySchema,
   createCohortSchema,
   createSessionNoteSchema,
+  deleteSessionNoteSchema,
   deleteCohortSchema,
   deleteSessionSchema,
   enrollYouthSchema,
@@ -34,6 +37,7 @@ import {
   sessionQuerySchema,
   syncYouthCohortsSchema,
   updateCohortSchema,
+  updateSessionNoteSchema,
   updateSessionSchema,
   withdrawYouthSchema,
 } from '../validation/cohortSchemas';
@@ -54,6 +58,8 @@ router.get('/sessions/:sessionId/roster', authenticateToken, requirePermission('
 router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermission('write:attendance'), generalLimiter, validateRequest(saveAttendanceSchema), asyncHandler(handleSaveAttendance));
 router.get('/sessions/:sessionId/notes', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionNotesSchema), asyncHandler(handleGetSessionNotes));
 router.post('/sessions/:sessionId/notes', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(createSessionNoteSchema), asyncHandler(handleCreateSessionNote));
+router.put('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateSessionNoteSchema), asyncHandler(handleUpdateSessionNote));
+router.delete('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteSessionNoteSchema), asyncHandler(handleDeleteSessionNote));
 router.put('/sessions/:sessionId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateSessionSchema), asyncHandler(handleUpdateSession));
 router.delete('/sessions/:sessionId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteSessionSchema), asyncHandler(handleDeleteSession));
 

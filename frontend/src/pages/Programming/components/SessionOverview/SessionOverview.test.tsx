@@ -1,15 +1,18 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ManagedSession } from '../../../../common/types/cohort';
 import SessionOverview from './SessionOverview';
 
 const getSessionNotes = vi.fn();
 const getSessionRoster = vi.fn();
+const deleteSessionNote = vi.fn();
 
 vi.mock('../../../../common/api/cohorts.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),
+  updateSessionNote: vi.fn(),
+  deleteSessionNote: (...args: unknown[]) => deleteSessionNote(...args),
 }));
 
 const session: ManagedSession = {
@@ -34,6 +37,7 @@ describe('SessionOverview', () => {
   beforeEach(() => {
     getSessionNotes.mockResolvedValue([]);
     getSessionRoster.mockResolvedValue([]);
+    deleteSessionNote.mockResolvedValue({});
   });
 
   it('keeps every card visible before a session is selected', () => {
@@ -70,7 +74,7 @@ describe('SessionOverview', () => {
     const addNotes = screen.getByRole('button', { name: 'Add notes' });
     expect(addNotes).toBeEnabled();
     fireEvent.click(addNotes);
-    expect(screen.getByRole('heading', { name: 'Add note to Communication' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
     expect(await screen.findByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
   });
@@ -79,7 +83,9 @@ describe('SessionOverview', () => {
     getSessionNotes.mockResolvedValue([{
       id: 'note-1',
       sessionId: session.id,
-      note: 'Maya led the opening activity.',
+      category: 'achievement',
+      title: 'Led opening activity',
+      details: 'Maya led the opening activity.',
       createdAt: '2026-07-28T23:30:00.000Z',
       updatedAt: '2026-07-28T23:30:00.000Z',
       createdByName: 'Programming Demo',
@@ -95,8 +101,54 @@ describe('SessionOverview', () => {
       />,
     );
 
-    expect(await screen.findByText('Maya led the opening activity.')).toBeInTheDocument();
+    expect(await screen.findByText('Led opening activity')).toBeInTheDocument();
+    expect(screen.getByText('Achievement')).toBeInTheDocument();
     expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
+    expect(screen.queryByText('Maya led the opening activity.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Led opening activity' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Led opening activity' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View Led opening activity' }));
+    expect(screen.getByRole('heading', { name: 'Led opening activity' })).toBeInTheDocument();
+    expect(screen.getByText('Maya led the opening activity.')).toBeInTheDocument();
     expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
+  });
+
+  it('opens note editing and confirms deletion from the list', async () => {
+    const note = {
+      id: 'note-1',
+      sessionId: session.id,
+      category: 'achievement',
+      title: 'Led opening activity',
+      details: 'Maya led the opening activity.',
+      createdAt: '2026-07-28T23:30:00.000Z',
+      updatedAt: '2026-07-28T23:30:00.000Z',
+      createdByName: 'Programming Demo',
+      youth: [],
+    };
+    getSessionNotes.mockResolvedValue([note]);
+
+    render(
+      <SessionOverview
+        session={session}
+        canWriteAttendance
+        canWriteNotes
+        onAddAttendance={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(note.title);
+    fireEvent.click(screen.getByRole('button', { name: `Edit ${note.title}` }));
+    expect(screen.getByRole('heading', { name: 'Edit Note' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    fireEvent.click(screen.getByRole('button', { name: `Delete ${note.title}` }));
+    const deleteHeading = screen.getByRole('heading', { name: 'Delete Note' });
+    const deleteModal = deleteHeading.closest('.modal-container');
+    expect(deleteModal).not.toBeNull();
+    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => {
+      expect(deleteSessionNote).toHaveBeenCalledWith(session.id, note.id);
+      expect(screen.getByText('Session note successfully deleted.')).toBeInTheDocument();
+    });
   });
 });

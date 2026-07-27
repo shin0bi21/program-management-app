@@ -16,6 +16,23 @@ function weekdayFor(date: string) {
   return weekdays[new Date(`${date}T12:00:00.000Z`).getUTCDay()];
 }
 
+function sessionNoteInput(
+  overrides: Partial<{
+    category: 'general' | 'attendance' | 'behaviour' | 'achievement' | 'follow_up';
+    title: string;
+    details: string;
+    youthIds: string[];
+  }> = {},
+) {
+  return {
+    category: 'general' as const,
+    title: 'Session note',
+    details: 'Session note details.',
+    youthIds: [],
+    ...overrides,
+  };
+}
+
 describe('Cohorts and attendance API', () => {
   let staffId: string;
   let staffToken: string;
@@ -262,14 +279,18 @@ describe('Cohorts and attendance API', () => {
     const attached = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        note: 'Youth led the group discussion.',
+      .send(sessionNoteInput({
+        category: 'achievement',
+        title: 'Youth-led discussion',
+        details: 'Youth led the group discussion.',
         youthIds: [youthId, secondYouthId],
-      });
+      }));
     expect(attached.status).toBe(201);
     expect(attached.body).toEqual(expect.objectContaining({
       sessionId,
-      note: 'Youth led the group discussion.',
+      category: 'achievement',
+      title: 'Youth-led discussion',
+      details: 'Youth led the group discussion.',
       youth: expect.arrayContaining([
         expect.objectContaining({ youthId }),
         expect.objectContaining({ youthId: secondYouthId }),
@@ -279,7 +300,10 @@ describe('Cohorts and attendance API', () => {
     const unlinked = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ note: 'The session ran fifteen minutes long.', youthIds: [] });
+      .send(sessionNoteInput({
+        title: 'Extended session',
+        details: 'The session ran fifteen minutes long.',
+      }));
     expect(unlinked.status).toBe(201);
     expect(unlinked.body.youth).toEqual([]);
 
@@ -295,14 +319,92 @@ describe('Cohorts and attendance API', () => {
     expect(session.description).toBeNull();
   });
 
+  it('updates and deletes session notes', async () => {
+    const notes = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    const attached = notes.body.find((note: { title: string }) => (
+      note.title === 'Youth-led discussion'
+    ));
+    const unlinked = notes.body.find((note: { title: string }) => (
+      note.title === 'Extended session'
+    ));
+
+    const updated = await request(app)
+      .put(`/api/cohorts/sessions/${sessionId}/notes/${attached.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        category: 'behaviour',
+        title: 'Updated discussion note',
+        details: 'Updated details.',
+        youthIds: [secondYouthId],
+      }));
+    expect(updated.status).toBe(200);
+    expect(updated.body).toEqual(expect.objectContaining({
+      id: attached.id,
+      category: 'behaviour',
+      title: 'Updated discussion note',
+      details: 'Updated details.',
+      youth: [expect.objectContaining({ youthId: secondYouthId })],
+    }));
+
+    const deleted = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${unlinked.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ id: unlinked.id });
+
+    const remaining = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(remaining.body).toHaveLength(1);
+    expect(remaining.body[0].id).toBe(attached.id);
+  });
+
+  it('returns linked session notes with context on a youth profile', async () => {
+    const response = await request(app)
+      .get(`/api/youth/${secondYouthId}/session-notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        category: 'behaviour',
+        title: 'Updated discussion note',
+        details: 'Updated details.',
+        sessionId,
+        cohortId,
+        programId,
+        programName: 'Soft Skills',
+        youth: [expect.objectContaining({ youthId: secondYouthId })],
+      }),
+    ]);
+
+    const unassignedStaff = await seedTestUser({ role: 'staff' });
+    try {
+      const unassignedToken = generateToken(
+        unassignedStaff.userId,
+        'staff',
+        unassignedStaff.email,
+      );
+      const restricted = await request(app)
+        .get(`/api/youth/${secondYouthId}/session-notes`)
+        .set('Authorization', `Bearer ${unassignedToken}`);
+      expect(restricted.status).toBe(200);
+      expect(restricted.body).toEqual([]);
+    } finally {
+      await deleteTestUser(unassignedStaff.userId);
+    }
+  });
+
   it('rejects youth attachments outside the session cohort', async () => {
     const response = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        note: 'This should not be saved.',
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
         youthIds: ['00000000-0000-0000-0000-000000000000'],
-      });
+      }));
 
     expect(response.status).toBe(409);
   });
@@ -318,10 +420,10 @@ describe('Cohorts and attendance API', () => {
     const response = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        note: 'This should not be saved.',
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
         youthIds: [secondYouthId],
-      });
+      }));
 
     await sql`
       UPDATE cohort_enrollments
@@ -433,10 +535,12 @@ describe('Cohorts and attendance API', () => {
     const response = await request(app)
       .post(`/api/cohorts/sessions/${openSessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        note: 'Followed up after Drop In.',
+      .send(sessionNoteInput({
+        category: 'follow_up',
+        title: 'Drop In follow-up',
+        details: 'Followed up after Drop In.',
         youthIds: [secondYouthId],
-      });
+      }));
 
     expect(response.status).toBe(201);
     expect(response.body.youth).toEqual([
@@ -448,10 +552,10 @@ describe('Cohorts and attendance API', () => {
     const response = await request(app)
       .post(`/api/cohorts/sessions/${openSessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        note: 'This should not be saved.',
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
         youthIds: [youthId],
-      });
+      }));
 
     expect(response.status).toBe(409);
   });
