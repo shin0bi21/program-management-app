@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Button from '../Button/Button';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useFloatingMenu } from '../../hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
 import { HOMEPAGE_NAV_SECTIONS } from '../../utils/homepageSections';
 import './PublicTopBar.css';
 
 export default function PublicTopBar() {
-  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -83,9 +83,12 @@ export default function PublicTopBar() {
         )}
       </div>
 
-      <Button className="topbar-login-btn" onClick={() => navigate('/login')}>
-        Login
-      </Button>
+      <Link
+        to={isAuthenticated ? '/settings/account' : '/login'}
+        className="btn topbar-login-btn"
+      >
+        {isAuthenticated ? 'My Account' : 'Login'}
+      </Link>
     </header>
   );
 }

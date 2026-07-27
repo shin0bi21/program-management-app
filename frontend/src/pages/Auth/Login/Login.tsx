@@ -12,7 +12,7 @@ export default function Login() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form;
-  if (!loading && isAuthenticated) return <Navigate to="/" replace />;
+  if (!loading && isAuthenticated) return <Navigate to="/settings/account" replace />;
 
   return (
     <AuthLayout>
