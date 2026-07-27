@@ -107,4 +107,26 @@ describe('Header youth navigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Calendar' })).not.toBeInTheDocument();
   });
+
+  it('places Programming before Outreach in application navigation', () => {
+    authState.permissions = [
+      'read:programs',
+      'read:cohorts',
+      'read:attendance',
+      'read:outreach',
+    ];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    const programming = screen.getByRole('button', { name: 'Programming' });
+    const outreach = screen.getByRole('button', { name: 'Outreach' });
+    expect(
+      programming.compareDocumentPosition(outreach) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
