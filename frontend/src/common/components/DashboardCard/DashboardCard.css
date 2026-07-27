@@ -59,13 +59,6 @@
   font-size: 1.65rem;
 }
 
-.dashboard-card__metric-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
 @media (max-width: 768px) {
   .dashboard-card {
     height: auto;
