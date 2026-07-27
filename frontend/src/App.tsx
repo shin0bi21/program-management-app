@@ -14,7 +14,6 @@ import Leads from './pages/Outreach/Leads/Leads'
 import ProgrammingLayout from './pages/Programming/ProgrammingLayout'
 import Programming from './pages/Programming/Programming'
 import Sessions from './pages/Programming/Sessions'
-import Calendar from './pages/Programming/Calendar'
 import Login from './pages/Auth/Login/Login'
 import VerifyPassword from './pages/Auth/VerifyPassword/VerifyPassword'
 import ForgotPassword from './pages/Auth/ForgotPassword/ForgotPassword'
@@ -64,7 +63,7 @@ function App() {
             } />
             <Route path="calendar" element={
               <ProtectedRoute requiredPermission="read:attendance">
-                <Calendar />
+                <Navigate to="/programming/sessions?view=calendar" replace />
               </ProtectedRoute>
             } />
           </Route>

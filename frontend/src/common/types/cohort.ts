@@ -3,6 +3,8 @@ export interface ProgramCohort {
   programId: string;
   programName: string;
   rosterMode: 'enrolled' | 'open';
+  minAge: number | null;
+  maxAge: number | null;
   name: string;
   startsOn: string;
   endsOn: string;
@@ -71,10 +73,15 @@ export interface ManagedSession extends CohortSession {
 }
 
 export interface SessionListFilters {
-  programId?: string;
+  programIds?: string[];
   cohortId?: string;
-  timing?: 'upcoming' | 'past' | 'all';
+  statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
+}
+
+export interface SessionCalendarFilters extends SessionListFilters {
+  start: string;
+  end: string;
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -86,3 +93,46 @@ export interface SessionRosterMember {
   status: AttendanceStatus | null;
   notes: string | null;
 }
+
+export interface SessionNoteYouth {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export type SessionNoteCategory =
+  | 'general'
+  | 'attendance'
+  | 'behaviour'
+  | 'achievement'
+  | 'follow_up';
+
+export interface SessionNote {
+  id: string;
+  sessionId: string;
+  category: SessionNoteCategory;
+  title: string;
+  details: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: SessionNoteYouth[];
+}
+
+export interface YouthSessionNote extends SessionNote {
+  sessionTheme: string | null;
+  startsAt: string;
+  cohortId: string;
+  cohortName: string;
+  programId: string;
+  programName: string;
+}
+
+export interface CreateSessionNoteInput {
+  category: SessionNoteCategory;
+  title: string;
+  details: string;
+  youthIds: string[];
+}
+
+export type UpdateSessionNoteInput = CreateSessionNoteInput;

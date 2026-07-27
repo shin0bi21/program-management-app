@@ -53,22 +53,32 @@ async function main() {
     `;
 
     const [softSkills] = await tx<{ id: string }[]>`
-      INSERT INTO programs (name, description)
+      INSERT INTO programs (name, description, min_age, max_age)
       VALUES (
         'Soft Skills',
-        'Builds communication, emotional regulation, teamwork, and practical life skills.'
+        'Builds communication, emotional regulation, teamwork, and practical life skills.',
+        12,
+        15
       )
-      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+      ON CONFLICT (name) DO UPDATE SET
+        description = EXCLUDED.description,
+        min_age = EXCLUDED.min_age,
+        max_age = EXCLUDED.max_age
       RETURNING id
     `;
 
     await tx`
-      INSERT INTO programs (name, description)
+      INSERT INTO programs (name, description, min_age, max_age)
       VALUES (
         'Job Readiness',
-        'Prepares older youth for resumes, interviews, workplace communication, and employment.'
+        'Prepares older youth for resumes, interviews, workplace communication, and employment.',
+        16,
+        19
       )
-      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+      ON CONFLICT (name) DO UPDATE SET
+        description = EXCLUDED.description,
+        min_age = EXCLUDED.min_age,
+        max_age = EXCLUDED.max_age
     `;
 
     const [cohort] = await tx<{ id: string }[]>`

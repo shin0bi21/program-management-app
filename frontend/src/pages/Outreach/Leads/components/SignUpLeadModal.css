@@ -11,15 +11,6 @@
   background: var(--color-surface);
 }
 
-.sign-up-lead-eyebrow {
-  margin: 0 0 4px;
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .sign-up-lead-summary h3,
 .sign-up-lead-enrollment h3 {
   margin: 0;
@@ -67,20 +58,11 @@
   font-size: 1rem;
 }
 
-.sign-up-lead-enrollment > div > p,
 .sign-up-lead-empty {
-  margin: 5px 0 0;
+  margin: -6px 0 0;
   color: var(--color-muted);
   font-size: 0.875rem;
   line-height: 1.5;
-}
-
-.sign-up-lead-enrollment .form-field {
-  margin-bottom: 0;
-}
-
-.sign-up-lead-empty {
-  margin-top: -6px;
 }
 
 @media (max-width: 560px) {

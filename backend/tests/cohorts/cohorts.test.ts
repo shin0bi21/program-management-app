@@ -16,6 +16,23 @@ function weekdayFor(date: string) {
   return weekdays[new Date(`${date}T12:00:00.000Z`).getUTCDay()];
 }
 
+function sessionNoteInput(
+  overrides: Partial<{
+    category: 'general' | 'attendance' | 'behaviour' | 'achievement' | 'follow_up';
+    title: string;
+    details: string;
+    youthIds: string[];
+  }> = {},
+) {
+  return {
+    category: 'general' as const,
+    title: 'Session note',
+    details: 'Session note details.',
+    youthIds: [],
+    ...overrides,
+  };
+}
+
 describe('Cohorts and attendance API', () => {
   let staffId: string;
   let staffToken: string;
@@ -63,10 +80,24 @@ describe('Cohorts and attendance API', () => {
   });
 
   afterAll(async () => {
+    if (openSessionId) {
+      await sql`
+        DELETE FROM session_note_youth
+        WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${openSessionId})
+      `;
+      await sql`DELETE FROM session_notes WHERE session_id = ${openSessionId}`;
+    }
     if (openSessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${openSessionId}`;
     if (openCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
     if (unassignedCohortId) await sql`DELETE FROM program_cohorts WHERE id = ${unassignedCohortId}`;
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
+    if (sessionId) {
+      await sql`
+        DELETE FROM session_note_youth
+        WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${sessionId})
+      `;
+      await sql`DELETE FROM session_notes WHERE session_id = ${sessionId}`;
+    }
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
     if (cohortId) await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
     await deleteTestUser(youthId);
@@ -244,6 +275,178 @@ describe('Cohorts and attendance API', () => {
     expect(response.body.sessions[0].theme).toBeNull();
   });
 
+  it('stores session notes separately with optional enrolled youth attachments', async () => {
+    const attached = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        category: 'achievement',
+        title: 'Youth-led discussion',
+        details: 'Youth led the group discussion.',
+        youthIds: [youthId, secondYouthId],
+      }));
+    expect(attached.status).toBe(201);
+    expect(attached.body).toEqual(expect.objectContaining({
+      sessionId,
+      category: 'achievement',
+      title: 'Youth-led discussion',
+      details: 'Youth led the group discussion.',
+      youth: expect.arrayContaining([
+        expect.objectContaining({ youthId }),
+        expect.objectContaining({ youthId: secondYouthId }),
+      ]),
+    }));
+
+    const unlinked = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        title: 'Extended session',
+        details: 'The session ran fifteen minutes long.',
+      }));
+    expect(unlinked.status).toBe(201);
+    expect(unlinked.body.youth).toEqual([]);
+
+    const notes = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(notes.status).toBe(200);
+    expect(notes.body).toHaveLength(2);
+
+    const [session] = await sql<{ description: string | null }[]>`
+      SELECT description FROM cohort_sessions WHERE id = ${sessionId}
+    `;
+    expect(session.description).toBeNull();
+  });
+
+  it('updates and deletes session notes', async () => {
+    const notes = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    const attached = notes.body.find((note: { title: string }) => (
+      note.title === 'Youth-led discussion'
+    ));
+    const unlinked = notes.body.find((note: { title: string }) => (
+      note.title === 'Extended session'
+    ));
+
+    const updated = await request(app)
+      .put(`/api/cohorts/sessions/${sessionId}/notes/${attached.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        category: 'behaviour',
+        title: 'Updated discussion note',
+        details: 'Updated details.',
+        youthIds: [secondYouthId],
+      }));
+    expect(updated.status).toBe(200);
+    expect(updated.body).toEqual(expect.objectContaining({
+      id: attached.id,
+      category: 'behaviour',
+      title: 'Updated discussion note',
+      details: 'Updated details.',
+      youth: [expect.objectContaining({ youthId: secondYouthId })],
+    }));
+
+    const deleted = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${unlinked.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ id: unlinked.id });
+
+    const remaining = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(remaining.body).toHaveLength(1);
+    expect(remaining.body[0].id).toBe(attached.id);
+  });
+
+  it('returns linked session notes with context on a youth profile', async () => {
+    const response = await request(app)
+      .get(`/api/youth/${secondYouthId}/session-notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        category: 'behaviour',
+        title: 'Updated discussion note',
+        details: 'Updated details.',
+        sessionId,
+        cohortId,
+        programId,
+        programName: 'Soft Skills',
+        youth: [expect.objectContaining({ youthId: secondYouthId })],
+      }),
+    ]);
+
+    const unassignedStaff = await seedTestUser({ role: 'staff' });
+    try {
+      const unassignedToken = generateToken(
+        unassignedStaff.userId,
+        'staff',
+        unassignedStaff.email,
+      );
+      const restricted = await request(app)
+        .get(`/api/youth/${secondYouthId}/session-notes`)
+        .set('Authorization', `Bearer ${unassignedToken}`);
+      expect(restricted.status).toBe(200);
+      expect(restricted.body).toEqual([]);
+    } finally {
+      await deleteTestUser(unassignedStaff.userId);
+    }
+  });
+
+  it('rejects youth attachments outside the session cohort', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
+        youthIds: ['00000000-0000-0000-0000-000000000000'],
+      }));
+
+    expect(response.status).toBe(409);
+  });
+
+  it('rejects youth who were not enrolled on the session date', async () => {
+    await sql`
+      UPDATE cohort_enrollments
+      SET enrolled_on = ${addDays(today, 2)}
+      WHERE cohort_id = ${cohortId}
+        AND youth_id = ${secondYouthId}
+    `;
+
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
+        youthIds: [secondYouthId],
+      }));
+
+    await sql`
+      UPDATE cohort_enrollments
+      SET enrolled_on = ${today}
+      WHERE cohort_id = ${cohortId}
+        AND youth_id = ${secondYouthId}
+    `;
+
+    expect(response.status).toBe(409);
+  });
+
+  it('prevents deleting a session or cohort that has session notes', async () => {
+    const sessionResponse = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    const cohortResponse = await request(app)
+      .delete(`/api/cohorts/${cohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(sessionResponse.status).toBe(409);
+    expect(cohortResponse.status).toBe(409);
+  });
+
   it('generates monthly sessions on the selected day of month', async () => {
     const response = await request(app)
       .post(`/api/cohorts/${cohortId}/sessions/generate`)
@@ -328,18 +531,41 @@ describe('Cohorts and attendance API', () => {
     ]);
   });
 
+  it('allows open session notes to attach checked-in youth', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${openSessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        category: 'follow_up',
+        title: 'Drop In follow-up',
+        details: 'Followed up after Drop In.',
+        youthIds: [secondYouthId],
+      }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.youth).toEqual([
+      expect.objectContaining({ youthId: secondYouthId }),
+    ]);
+  });
+
+  it('rejects open session notes for youth who are not checked in', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${openSessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send(sessionNoteInput({
+        details: 'This should not be saved.',
+        youthIds: [youthId],
+      }));
+
+    expect(response.status).toBe(409);
+  });
+
   it('rejects enrollment in an open attendance cohort', async () => {
     const directEnrollment = await request(app)
       .post(`/api/cohorts/${openCohortId}/enrollments`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ youthIds: [youthId] });
     expect(directEnrollment.status).toBe(409);
-
-    const checklistEnrollment = await request(app)
-      .put(`/api/cohorts/enrollments/${youthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [openCohortId] });
-    expect(checklistEnrollment.status).toBe(409);
   });
 
   it('reports open-session reach without creating an enrollment', async () => {
@@ -449,13 +675,18 @@ describe('Cohorts and attendance API', () => {
         nextSessionId: sessionId,
         nextSessionAt: expect.any(String),
         averageAttendance: 100,
+        minAge: 12,
+        maxAge: 15,
       }),
     ]));
   });
 
   it('lists sessions for management with cohort filters and attendance', async () => {
     const response = await request(app)
-      .get(`/api/cohorts/sessions?cohortId=${cohortId}&timing=all&search=Communication`)
+      .get(
+        `/api/cohorts/sessions?programIds=${programId}&cohortId=${cohortId}`
+        + '&statuses=upcoming&search=Communication',
+      )
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
@@ -469,6 +700,40 @@ describe('Cohorts and attendance API', () => {
         attendanceRate: 100,
       }),
     ]));
+  });
+
+  it('defaults omitted management session filters', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/sessions')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: sessionId }),
+    ]));
+  });
+
+  it('filters calendar sessions on the backend', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/sessions/calendar')
+      .query({
+        start: `${addDays(today, -1)}T00:00:00.000Z`,
+        end: `${addDays(today, 10)}T00:00:00.000Z`,
+        programIds: openProgramId,
+        cohortId: openCohortId,
+        statuses: 'upcoming',
+        search: 'Drop In',
+      })
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: openSessionId,
+        programId: openProgramId,
+        cohortId: openCohortId,
+      }),
+    ]);
   });
 
   it('edits and deletes sessions and cohorts that have no attendance', async () => {
@@ -575,23 +840,4 @@ describe('Cohorts and attendance API', () => {
     expect(attendance[0].count).toBe(1);
   });
 
-  it('synchronizes a youth cohort checklist in one request', async () => {
-    const remove = await request(app)
-      .put(`/api/cohorts/enrollments/${secondYouthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [] });
-    expect(remove.status).toBe(200);
-    expect(remove.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cohortId, youthId: secondYouthId, withdrawnOn: today }),
-    ]));
-
-    const restore = await request(app)
-      .put(`/api/cohorts/enrollments/${secondYouthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [cohortId] });
-    expect(restore.status).toBe(200);
-    expect(restore.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cohortId, youthId: secondYouthId, withdrawnOn: null }),
-    ]));
-  });
 });

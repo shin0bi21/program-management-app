@@ -4,8 +4,9 @@ import Table, { TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
 import {
   AttendanceCard,
-  NotesCard,
   PrimaryContactCard,
+  type NotesTab,
+  YouthNotesCard,
 } from '../../common/components/DetailCards/DetailCards';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
@@ -13,15 +14,23 @@ import FilterCard, { type FilterCardCategory } from '../../common/components/Fil
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
-import ManageCohortsModal from './components/ManageCohortsModal/ManageCohortsModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import useTableSelection from '../../common/hooks/useTableSelection';
 import type { YouthFilters } from '../../common/types/youth';
 import { getCohorts } from '../../common/api/cohorts.api';
-import type { ProgramCohort } from '../../common/types/cohort';
+import type { ProgramCohort, YouthSessionNote } from '../../common/types/cohort';
+import { getYouthSessionNotes } from '../../common/api/youth.api';
+import { STORAGE_KEYS } from '../../common/utils/storage';
+import Modal from '../../common/components/Modal/Modal';
+import SessionNoteDetails from '../../common/components/SessionNoteDetails/SessionNoteDetails';
+import { formatShortDate } from '../../common/utils/date';
 import './Youth.css';
+
+const initialNotesTab = (): NotesTab => (
+  localStorage.getItem(STORAGE_KEYS.YOUTH_NOTES_TAB) === 'session' ? 'session' : 'profile'
+);
 
 export default function Youth() {
   const [search, setSearch] = useState('');
@@ -35,8 +44,13 @@ export default function Youth() {
     cohortIds: cohortFilters,
   }), [cohortFilters, debouncedSearch, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const [manageCohortsYouthId, setManageCohortsYouthId] = useState<string | null>(null);
-  const { youth, setYouth, loading, error, refetch } = useYouth(queryFilters);
+  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
+  const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
+  const [sessionNotes, setSessionNotes] = useState<YouthSessionNote[]>([]);
+  const [sessionNotesLoading, setSessionNotesLoading] = useState(false);
+  const [sessionNotesError, setSessionNotesError] = useState<string | null>(null);
+  const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
+  const { youth, setYouth, loading, error } = useYouth(queryFilters);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
@@ -45,7 +59,6 @@ export default function Youth() {
   const { programs } = usePrograms();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
-  const canManageCohorts = permissions.includes('write:cohorts');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -55,6 +68,39 @@ export default function Youth() {
   useEffect(() => {
     getCohorts(undefined, { includeAllPrograms: true }).then(setCohorts).catch(() => setCohorts([]));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setSessionNotes([]);
+    setSessionNotesError(null);
+    setSelectedSessionNote(null);
+    if (notesTab !== 'session' || !selectedProfileId) {
+      setSessionNotesLoading(false);
+      return () => { active = false; };
+    }
+
+    setSessionNotesLoading(true);
+    getYouthSessionNotes(selectedProfileId)
+      .then(notes => {
+        if (active) setSessionNotes(notes);
+      })
+      .catch(cause => {
+        if (active) {
+          setSessionNotesError(
+            cause instanceof Error ? cause.message : 'Could not load session notes',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setSessionNotesLoading(false);
+      });
+    return () => { active = false; };
+  }, [notesTab, selectedProfileId]);
+
+  const selectNotesTab = (tab: NotesTab) => {
+    setNotesTab(tab);
+    localStorage.setItem(STORAGE_KEYS.YOUTH_NOTES_TAB, tab);
+  };
 
   const cohortsForPrograms = useMemo(
     () => programFilters.length
@@ -83,6 +129,7 @@ export default function Youth() {
 
   const handleSaveYouth = (savedYouth: YouthProfile) => {
     setModalTarget(null);
+    setContactTarget(null);
     setYouth(prev => {
       const exists = prev.some(y => y.id === savedYouth.id);
       return exists ? prev.map(y => y.id === savedYouth.id ? savedYouth : y) : [...prev, savedYouth];
@@ -129,28 +176,21 @@ export default function Youth() {
       key: 'actions',
       header: '',
       className: 'col-actions',
-      render: (profile) => canWrite || canManageCohorts ? (
+      render: (profile) => canWrite ? (
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
-          items={[
-            ...(canWrite ? [{ id: 'edit', label: 'Edit', onClick: () => handleEditProfile(profile) }] : []),
-            ...(canManageCohorts ? [{
-              id: 'manage-cohorts',
-              label: 'Manage Cohorts',
-              onClick: () => setManageCohortsYouthId(profile.id),
-            }] : []),
-          ]}
+          items={[{ id: 'edit', label: 'Edit', onClick: () => handleEditProfile(profile) }]}
         />
       ) : null,
     },
-  ], [canManageCohorts, canWrite]);
+  ], [canWrite]);
 
   return (
     <>
       <div className="data-detail-page-content">
         <PageHeader
           title="Profiles"
-          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add Youth</Button> : undefined}
+          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
           filters={<FilterCard
             categories={filterCategories}
@@ -176,17 +216,42 @@ export default function Youth() {
           ariaLabel="Youth profiles"
           table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || programFilters.length || cohortFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
           details={<>
-            <PrimaryContactCard contact={selectedProfile?.contacts?.[0] ? {
-              firstName: selectedProfile.contacts[0].firstName,
-              lastName: selectedProfile.contacts[0].lastName,
-              phoneNumber: selectedProfile.contacts[0].phoneNumber,
-              relationship: selectedProfile.contacts[0].type,
-            } : null} selected={selectedProfile !== null} />
+            <PrimaryContactCard
+              contact={selectedProfile?.contacts?.[0] ? {
+                firstName: selectedProfile.contacts[0].firstName,
+                lastName: selectedProfile.contacts[0].lastName,
+                phoneNumber: selectedProfile.contacts[0].phoneNumber,
+                relationship: selectedProfile.contacts[0].type,
+              } : null}
+              selected={selectedProfile !== null}
+              action={canWrite ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!selectedProfile}
+                  aria-label="Manage primary contact"
+                  onClick={() => {
+                    if (selectedProfile) setContactTarget(selectedProfile);
+                  }}
+                >
+                  Manage
+                </Button>
+              ) : undefined}
+            />
             <AttendanceCard
               cohorts={selectedProfile?.cohorts}
               selected={selectedProfile !== null}
             />
-            <NotesCard notes={selectedProfile?.notes} selected={selectedProfile !== null} />
+            <YouthNotesCard
+              notes={selectedProfile?.notes}
+              selected={selectedProfile !== null}
+              activeTab={notesTab}
+              onTabChange={selectNotesTab}
+              sessionNotes={sessionNotes}
+              sessionNotesLoading={sessionNotesLoading}
+              sessionNotesError={sessionNotesError}
+              onSelectSessionNote={setSelectedSessionNote}
+            />
           </>}
         />
       </div>
@@ -197,12 +262,36 @@ export default function Youth() {
         onClose={() => setModalTarget(null)}
         onSuccess={handleSaveYouth}
       />
-
-      <ManageCohortsModal
-        youth={youth.find(profile => profile.id === manageCohortsYouthId) ?? null}
-        onClose={() => setManageCohortsYouthId(null)}
-        onChanged={refetch}
+      <YouthModal
+        isOpen={contactTarget !== null}
+        youthData={contactTarget ?? undefined}
+        mode="contact"
+        onClose={() => setContactTarget(null)}
+        onSuccess={handleSaveYouth}
       />
+
+      <Modal
+        isOpen={selectedSessionNote !== null}
+        onClose={() => setSelectedSessionNote(null)}
+        title={selectedSessionNote?.title ?? ''}
+        footer={(
+          <Button variant="secondary" onClick={() => setSelectedSessionNote(null)}>
+            Close
+          </Button>
+        )}
+      >
+        {selectedSessionNote && (
+          <SessionNoteDetails
+            note={selectedSessionNote}
+            context={[
+              selectedSessionNote.programName,
+              selectedSessionNote.cohortName,
+              selectedSessionNote.sessionTheme,
+              formatShortDate(selectedSessionNote.startsAt),
+            ].filter(Boolean).join(' · ')}
+          />
+        )}
+      </Modal>
     </>
   );
 }

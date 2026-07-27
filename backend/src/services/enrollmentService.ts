@@ -1,8 +1,8 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
-import { assertCohortAccess, programAccessPredicate } from '../policies/programAccessPolicy';
+import { assertCohortAccess } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
-import type { EnrollYouthInput, SyncYouthCohortsInput } from '../validation/cohortSchemas';
+import type { EnrollYouthInput } from '../validation/cohortSchemas';
 
 export async function enrollYouth(cohortId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
   await assertCohortAccess(actor, cohortId);
@@ -81,82 +81,4 @@ export async function withdrawYouth(
   `;
   if (!rows.length) throw new NotFoundError('Active cohort enrollment not found');
   return rows[0];
-}
-
-export async function syncYouthCohorts(
-  youthId: string,
-  data: SyncYouthCohortsInput,
-  actor: AccessTokenPayload,
-) {
-  return sql.begin(async tx => {
-    const trx = asTransactionSql(tx);
-    const youth = await trx<{ id: string }[]>`
-      SELECT user_id AS id
-      FROM youth_profiles
-      WHERE user_id = ${youthId}
-    `;
-    if (!youth.length) throw new NotFoundError('Youth profile not found');
-
-    const cohorts = data.cohortIds.length
-      ? await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-          SELECT pc.id, p.roster_mode
-          FROM program_cohorts pc
-          INNER JOIN programs p ON p.id = pc.program_id
-          WHERE pc.id = ANY(${sql.array(data.cohortIds)}::uuid[])
-            AND pc.ends_on >= (NOW() AT TIME ZONE 'America/Toronto')::date
-            AND ${programAccessPredicate(actor, sql`pc.program_id`)}
-        `
-      : [];
-    if (cohorts.length !== data.cohortIds.length) {
-      throw new NotFoundError('One or more manageable cohorts were not found');
-    }
-    if (cohorts.some(cohort => cohort.rosterMode === 'open')) {
-      throw new ConflictError('Open attendance cohorts do not use enrollment');
-    }
-
-    await trx`
-      UPDATE cohort_enrollments enrollment
-      SET
-        withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
-        updated_at = NOW(),
-        updated_by = ${actor.userId}
-      FROM program_cohorts cohort
-      WHERE enrollment.cohort_id = cohort.id
-        AND enrollment.youth_id = ${youthId}
-        AND enrollment.withdrawn_on IS NULL
-        AND cohort.ends_on >= (NOW() AT TIME ZONE 'America/Toronto')::date
-        AND ${programAccessPredicate(actor, sql`cohort.program_id`)}
-        AND NOT (enrollment.cohort_id = ANY(${sql.array(data.cohortIds)}::uuid[]))
-    `;
-
-    if (data.cohortIds.length) {
-      await trx`
-        INSERT INTO cohort_enrollments (
-          cohort_id, youth_id, created_by, updated_by
-        )
-        SELECT
-          selected.cohort_id,
-          ${youthId},
-          ${actor.userId},
-          ${actor.userId}
-        FROM UNNEST(${sql.array(data.cohortIds)}::uuid[]) AS selected(cohort_id)
-        ON CONFLICT (cohort_id, youth_id) DO UPDATE SET
-          withdrawn_on = NULL,
-          enrolled_on = EXCLUDED.enrolled_on,
-          updated_at = NOW(),
-          updated_by = EXCLUDED.updated_by
-      `;
-    }
-
-    return trx`
-      SELECT
-        cohort_id,
-        youth_id,
-        enrolled_on::text AS enrolled_on,
-        withdrawn_on::text AS withdrawn_on
-      FROM cohort_enrollments
-      WHERE youth_id = ${youthId}
-      ORDER BY enrolled_on DESC
-    `;
-  });
 }

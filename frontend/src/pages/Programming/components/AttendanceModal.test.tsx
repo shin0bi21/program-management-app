@@ -73,6 +73,10 @@ describe('AttendanceModal', () => {
       />,
     );
 
+    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
+    expect(screen.getByText(
+      'Soft Skills · Summer 2026 · Jul 28, 2026 · Communication',
+    )).toBeInTheDocument();
     await screen.findByText('Maya Thompson');
     await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
 

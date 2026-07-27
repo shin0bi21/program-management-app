@@ -128,7 +128,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
     <Modal
       isOpen={session !== null && !creatingYouth}
       onClose={onClose}
-      title={session ? `${session.theme || session.programName} attendance` : 'Attendance'}
+      title="Attendance"
       maxWidth="720px"
       status={submitStatus}
       statusMessage={statusMessage}
@@ -147,6 +147,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
       {session && (
         <p className="attendance-modal__context">
           {session.programName} · {session.cohortName} · {formatShortDate(session.startsAt)}
+          {session.theme ? ` · ${session.theme}` : ''}
         </p>
       )}
       {error && submitStatus === 'idle' && <p className="form-error">{error}</p>}

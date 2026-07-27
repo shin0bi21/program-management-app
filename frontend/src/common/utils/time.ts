@@ -13,13 +13,18 @@ export const formatTime = (seconds: number): string => {
  * Returns '\u2014' if dateOfBirth is null/undefined.
  */
 export function calculateAge(dateOfBirth: string | null | undefined): string {
-  if (!dateOfBirth) return '\u2014';
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  const age = getAge(dateOfBirth);
+  return age === null ? '\u2014' : age.toString();
+}
+
+export function getAge(dateOfBirth: string | null | undefined, today = new Date()): number | null {
+  if (!dateOfBirth) return null;
+  const [year, month, day] = dateOfBirth.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  let age = today.getFullYear() - year;
+  const monthDiff = today.getMonth() + 1 - month;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < day)) {
     age--;
   }
-  return age.toString();
+  return age;
 }

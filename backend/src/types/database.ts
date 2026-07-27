@@ -193,6 +193,8 @@ export interface ProgramCohorts {
 export interface Programs {
   description: string | null;
   id: Generated<string>;
+  max_age: number | null;
+  min_age: number | null;
   name: string;
   roster_mode: Generated<ProgramRosterMode>;
 }
@@ -215,6 +217,24 @@ export interface Schools {
   postal_code: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface SessionNotes {
+  category: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string;
+  id: Generated<string>;
+  session_id: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface SessionNoteYouth {
+  created_at: Generated<Timestamp>;
+  note_id: string;
+  youth_id: string;
 }
 
 export interface StaffProgramAssignments {
@@ -378,6 +398,8 @@ export interface DB {
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
+  session_note_youth: SessionNoteYouth;
+  session_notes: SessionNotes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   user_auth_codes: UserAuthCodes;

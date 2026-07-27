@@ -15,6 +15,8 @@ export function getCohorts(
       pc.program_id,
       p.name AS program_name,
       p.roster_mode,
+      p.min_age,
+      p.max_age,
       pc.name,
       pc.starts_on::text AS starts_on,
       pc.ends_on::text AS ends_on,
@@ -98,7 +100,9 @@ export async function createCohort(data: CreateCohortInput, actor: AccessTokenPa
       name,
       starts_on::text AS starts_on,
       ends_on::text AS ends_on,
-      (SELECT roster_mode FROM programs WHERE id = ${data.programId}) AS roster_mode
+      (SELECT roster_mode FROM programs WHERE id = ${data.programId}) AS roster_mode,
+      (SELECT min_age FROM programs WHERE id = ${data.programId}) AS min_age,
+      (SELECT max_age FROM programs WHERE id = ${data.programId}) AS max_age
   `;
   return rows[0];
 }
@@ -140,6 +144,14 @@ export async function deleteCohort(id: string, actor: AccessTokenPayload) {
     `;
     if (attendance.length) {
       throw new ConflictError('Cohort cannot be deleted because one or more sessions have attendance');
+    }
+    const notes = await trx`
+      SELECT 1 FROM session_notes sn
+      INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
+      WHERE cs.cohort_id = ${id} LIMIT 1
+    `;
+    if (notes.length) {
+      throw new ConflictError('Cohort cannot be deleted because one or more sessions have notes');
     }
     await trx`DELETE FROM cohort_enrollments WHERE cohort_id = ${id}`;
     await trx`DELETE FROM program_cohorts WHERE id = ${id}`;

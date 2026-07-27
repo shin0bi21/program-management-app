@@ -167,19 +167,6 @@ export default function Header() {
                 </button>
               )}
 
-              {canViewOutreach && (
-                <button
-                  ref={outreachBtnRef}
-                  onClick={handleOutreachToggle}
-                  aria-haspopup="menu"
-                  aria-expanded={isOutreachFlyoutOpen}
-                  className={`sidebar-link${isOutreachActive || isOutreachFlyoutOpen ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBullhorn} /></span>
-                  <span>Outreach</span>
-                </button>
-              )}
-
               {canViewProgramming && (
                 <button
                   ref={programmingBtnRef}
@@ -190,6 +177,19 @@ export default function Header() {
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
                   <span>Programming</span>
+                </button>
+              )}
+
+              {canViewOutreach && (
+                <button
+                  ref={outreachBtnRef}
+                  onClick={handleOutreachToggle}
+                  aria-haspopup="menu"
+                  aria-expanded={isOutreachFlyoutOpen}
+                  className={`sidebar-link${isOutreachActive || isOutreachFlyoutOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBullhorn} /></span>
+                  <span>Outreach</span>
                 </button>
               )}
 
@@ -268,22 +268,13 @@ export default function Header() {
             Cohorts
           </button>
           {canViewAttendance && (
-            <>
-              <button
-                role="menuitem"
-                onClick={() => go('/programming/sessions')}
-                className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
-              >
-                Sessions
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => go('/programming/calendar')}
-                className={`settings-flyout-item${isActive('/programming/calendar') ? ' active' : ''}`}
-              >
-                Calendar
-              </button>
-            </>
+            <button
+              role="menuitem"
+              onClick={() => go('/programming/sessions')}
+              className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
+            >
+              Sessions
+            </button>
           )}
         </FloatingMenuPanel>
       )}

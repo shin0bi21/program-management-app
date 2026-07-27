@@ -94,8 +94,8 @@ export default function Leads() {
 
   return <>
     <PageHeader
-      title="Outreach"
-      actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Create Lead</Button> : undefined}
+      title="Leads"
+      actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
       search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
       filters={<FilterCard
         categories={filterCategories}

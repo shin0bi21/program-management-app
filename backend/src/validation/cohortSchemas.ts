@@ -11,6 +11,11 @@ const weekdaySchema = z.enum([
   'friday',
   'saturday',
 ]);
+const commaSeparated = <T extends z.ZodType>(schema: T) => z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(schema).max(20));
 
 export const cohortQuerySchema = z.object({
   query: z.object({
@@ -62,18 +67,6 @@ export const withdrawYouthSchema = z.object({
   }),
 });
 
-export const syncYouthCohortsSchema = z.object({
-  params: z.object({
-    youthId: z.string().uuid('Invalid youth ID'),
-  }),
-  body: z.object({
-    cohortIds: z.array(z.string().uuid('Invalid cohort ID')).max(200),
-  }).refine(data => new Set(data.cohortIds).size === data.cohortIds.length, {
-    message: 'Cohort selections must be unique',
-    path: ['cohortIds'],
-  }),
-});
-
 export const generateSessionsSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({
@@ -108,15 +101,19 @@ export const sessionQuerySchema = z.object({
   query: z.object({
     start: z.string().datetime({ offset: true }),
     end: z.string().datetime({ offset: true }),
+    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+    cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
+    search: z.string().trim().max(120).optional().default(''),
   }),
 });
 
 export const sessionListQuerySchema = z.object({
   query: z.object({
-    programId: z.string().uuid('Invalid program ID').optional(),
+    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
-    timing: z.enum(['upcoming', 'past', 'all']).optional(),
-    search: z.string().trim().max(120).optional(),
+    statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
+    search: z.string().trim().max(120).optional().default(''),
   }),
 });
 
@@ -148,12 +145,42 @@ export const updateSessionSchema = z.object({
 export const deleteSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
 });
+export const sessionNotesSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+});
+export const createSessionNoteSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+  body: z.object({
+    category: z.enum(['general', 'attendance', 'behaviour', 'achievement', 'follow_up']),
+    title: z.string().trim().min(1, 'Title is required').max(160),
+    details: z.string().trim().min(1, 'Details are required').max(5000),
+    youthIds: z.array(z.string().uuid('Invalid youth ID')).max(50).default([]),
+  }).refine(
+    data => new Set(data.youthIds).size === data.youthIds.length,
+    { message: 'Youth attachments must be unique', path: ['youthIds'] },
+  ),
+});
+export const updateSessionNoteSchema = z.object({
+  params: z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+    noteId: z.string().uuid('Invalid note ID'),
+  }),
+  body: createSessionNoteSchema.shape.body,
+});
+export const deleteSessionNoteSchema = z.object({
+  params: z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+    noteId: z.string().uuid('Invalid note ID'),
+  }),
+});
 
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
-export type SyncYouthCohortsInput = z.infer<typeof syncYouthCohortsSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
+export type SessionCalendarQuery = z.infer<typeof sessionQuerySchema.shape.query>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
+export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
+export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;

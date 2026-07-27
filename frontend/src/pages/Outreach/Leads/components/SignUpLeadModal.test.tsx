@@ -40,6 +40,8 @@ const cohort = {
   programId: 'program-1',
   programName: 'Soft Skills',
   rosterMode: 'enrolled' as const,
+  minAge: 12,
+  maxAge: 15,
   name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
@@ -69,6 +71,11 @@ describe('SignUpLeadModal', () => {
 
     const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
     await waitFor(() => expect(cohortSelect).toBeEnabled());
+    expect(screen.queryByText('New youth profile')).not.toBeInTheDocument();
+    expect(screen.queryByText(
+      'Optional. You can create the profile now and manage cohorts later.',
+    )).not.toBeInTheDocument();
+    expect(screen.queryByText('Choose a cohort')).not.toBeInTheDocument();
     fireEvent.click(cohortSelect);
     const cohortOption = await screen.findByRole('menuitemradio', { name: /Soft Skills — Summer 2026/ });
     expect(cohortOption).toBeInTheDocument();
@@ -84,5 +91,27 @@ describe('SignUpLeadModal', () => {
     expect(await screen.findByText(
       'Youth profile successfully created and added to Soft Skills - Summer 2026.',
     )).toBeInTheDocument();
+  });
+
+  it('quietly excludes cohorts outside the lead age range', async () => {
+    const user = {
+      ...lead,
+      age: 16,
+    };
+    render(<SignUpLeadModal lead={user} onClose={vi.fn()} onSuccess={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole('button', {
+      name: 'Cohort enrollment',
+    })).toBeEnabled());
+    expect(screen.queryByText(/Filter cohorts by age/)).not.toBeInTheDocument();
+    expect(screen.getByText(
+      'No cohorts match this youth’s age. Create the profile now and manage cohorts later.',
+    )).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cohort enrollment' }));
+
+    expect(screen.queryByRole('menuitemradio', {
+      name: /Soft Skills — Summer 2026/,
+    })).not.toBeInTheDocument();
   });
 });

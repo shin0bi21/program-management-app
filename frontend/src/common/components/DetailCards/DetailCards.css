@@ -1,22 +1,19 @@
-.primary-contact-card dl,
-.primary-contact-card dl div {
-  margin: 0;
+.primary-contact-card__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.primary-contact-card dl {
-  display: grid;
-  gap: 12px;
+.primary-contact-card__summary span {
+  display: inline-flex;
+  align-items: center;
 }
 
-.primary-contact-card dt {
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.primary-contact-card dd {
-  margin: 3px 0 0;
+.primary-contact-card__summary span + span::before {
+  margin-right: var(--space-2);
+  color: var(--ink-40);
+  content: "·";
 }
 
 .attendance-card__cohorts {
@@ -40,4 +37,70 @@
 
 .attendance-card__breakdown {
   color: var(--color-ink);
+}
+
+.notes-card__tabs {
+  display: inline-flex;
+  padding: 2px;
+  border: var(--border-line-soft);
+  border-radius: 7px;
+  background: var(--color-surface);
+}
+
+.notes-card__tabs button {
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.notes-card__tabs button.is-active {
+  background: var(--color-white);
+  color: var(--color-ink);
+  box-shadow: 0 1px 4px var(--ink-10);
+}
+
+.profile-session-notes {
+  display: grid;
+}
+
+.profile-session-note {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0 0 var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-session-note + .profile-session-note {
+  padding-top: var(--space-3);
+  border-top: var(--border-line-soft);
+}
+
+.profile-session-note:last-child {
+  padding-bottom: 0;
+}
+
+.profile-session-note__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.profile-session-note__heading strong {
+  overflow-wrap: anywhere;
+}
+
+.profile-session-note > span:last-child {
+  color: var(--color-muted);
+  font-size: 0.75rem;
 }

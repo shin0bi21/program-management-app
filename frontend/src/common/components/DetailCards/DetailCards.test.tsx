@@ -12,6 +12,21 @@ describe('DetailCards', () => {
     expect(screen.getByText('No primary contact recorded.')).toBeInTheDocument();
   });
 
+  it('shows primary contact details in one compact summary', () => {
+    render(<PrimaryContactCard contact={{
+      firstName: 'Test',
+      lastName: 'User',
+      phoneNumber: '2262604073',
+      relationship: 'parent',
+    }} selected />);
+
+    const summary = screen.getByText('Test User').closest('p');
+    expect(summary).toHaveClass('primary-contact-card__summary');
+    expect(summary).toContainElement(screen.getByText('2262604073'));
+    expect(summary).toContainElement(screen.getByText('Parent'));
+    expect(screen.queryByText('Name')).not.toBeInTheDocument();
+  });
+
   it('keeps attendance empty state inside its own dashboard card', () => {
     render(<AttendanceCard cohorts={[]} selected />);
 

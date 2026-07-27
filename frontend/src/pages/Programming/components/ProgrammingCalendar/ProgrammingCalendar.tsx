@@ -1,6 +1,8 @@
-import FullCalendar, { type DatesSetInfo, type EventInput } from '@fullcalendar/react';
+import { useEffect, useRef, useState } from 'react';
+import FullCalendar, { type CalendarRef, type DatesSetInfo, type EventInput } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
 import listPlugin from '@fullcalendar/react/list';
+import timeGridPlugin from '@fullcalendar/react/timegrid';
 import classicThemePlugin from '@fullcalendar/react/themes/classic';
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/theme.css';
@@ -16,8 +18,39 @@ interface ProgrammingCalendarProps {
 const calendarPlugins = [
   classicThemePlugin,
   dayGridPlugin,
+  timeGridPlugin,
   listPlugin,
 ];
+
+const mobileCalendarQuery = '(max-width: 1000px)';
+
+const isMobileCalendar = () => {
+  if (typeof window === 'undefined') return false;
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia(mobileCalendarQuery).matches;
+  }
+  return window.innerWidth <= 1000;
+};
+
+function useMobileCalendar() {
+  const [mobile, setMobile] = useState(isMobileCalendar);
+
+  useEffect(() => {
+    if (typeof window.matchMedia === 'function') {
+      const media = window.matchMedia(mobileCalendarQuery);
+      const update = (event: MediaQueryListEvent) => setMobile(event.matches);
+      setMobile(media.matches);
+      media.addEventListener('change', update);
+      return () => media.removeEventListener('change', update);
+    }
+
+    const update = () => setMobile(isMobileCalendar());
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return mobile;
+}
 
 const eventTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Toronto',
@@ -47,15 +80,25 @@ export default function ProgrammingCalendar({
   onDatesSet,
   onEventSelect,
 }: ProgrammingCalendarProps) {
+  const mobile = useMobileCalendar();
+  const calendarRef = useRef<CalendarRef | null>(null);
+
+  useEffect(() => {
+    if (mobile) calendarRef.current?.getApi().changeView('timeGridDay');
+  }, [mobile]);
+
   return (
     <section className="programming-calendar" aria-label="Programming calendar">
       <FullCalendar
+        ref={calendarRef}
         plugins={calendarPlugins}
-        initialView="dayGridMonth"
+        initialView={mobile ? 'timeGridDay' : 'dayGridMonth'}
         headerToolbar={{
           start: 'prev,next today',
           center: 'title',
-          end: 'dayGridMonth,listMonth',
+          end: mobile
+            ? 'timeGridDay,listMonth'
+            : 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
         }}
         events={events}
         eventInteractive={Boolean(onEventSelect)}
@@ -78,7 +121,7 @@ export default function ProgrammingCalendar({
           );
         }}
         nowIndicator
-        dayMaxEvents
+        dayMaxEvents={1}
         expandRows
         height="100%"
         noEventsText="No sessions scheduled for this period."

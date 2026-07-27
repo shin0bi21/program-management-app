@@ -6,26 +6,34 @@ import {
   getCohorts,
   updateCohort,
 } from '../services/cohortService';
-import { enrollYouth, syncYouthCohorts, withdrawYouth } from '../services/enrollmentService';
+import { enrollYouth, withdrawYouth } from '../services/enrollmentService';
 import {
+  deleteSession,
   generateSessions,
   getSessionList,
   getSessions,
-  deleteSession,
   updateSession,
 } from '../services/sessionService';
 import {
   getSessionRoster,
   saveAttendance,
 } from '../services/attendanceService';
+import {
+  createSessionNote,
+  deleteSessionNote,
+  getSessionNotes,
+  updateSessionNote,
+} from '../services/sessionNoteService';
 import type {
   CreateCohortInput,
+  CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
+  SessionCalendarQuery,
   SessionListQuery,
   SaveAttendanceInput,
-  SyncYouthCohortsInput,
   UpdateCohortInput,
+  UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
 
@@ -58,14 +66,6 @@ export const handleWithdrawYouth = async (req: Request, res: Response) => {
   res.json(await withdrawYouth(req.params.cohortId, req.params.youthId, actor(req)));
 };
 
-export const handleSyncYouthCohorts = async (req: Request, res: Response) => {
-  res.json(await syncYouthCohorts(
-    req.params.youthId,
-    req.body as SyncYouthCohortsInput,
-    actor(req),
-  ));
-};
-
 export const handleGenerateSessions = async (req: Request, res: Response) => {
   res.status(201).json(await generateSessions(
     req.params.cohortId,
@@ -75,7 +75,7 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
 };
 
 export const handleGetSessions = async (req: Request, res: Response) => {
-  res.json(await getSessions(actor(req), req.query.start as string, req.query.end as string));
+  res.json(await getSessions(actor(req), req.query as unknown as SessionCalendarQuery));
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
@@ -95,4 +95,30 @@ export const handleGetSessionRoster = async (req: Request, res: Response) => {
 
 export const handleSaveAttendance = async (req: Request, res: Response) => {
   res.json(await saveAttendance(req.params.sessionId, req.body as SaveAttendanceInput, actor(req)));
+};
+
+export const handleGetSessionNotes = async (req: Request, res: Response) => {
+  res.json(await getSessionNotes(req.params.sessionId, actor(req)));
+};
+
+export const handleCreateSessionNote = async (req: Request, res: Response) => {
+  res.status(201).json(await createSessionNote(
+    req.params.sessionId,
+    req.body as CreateSessionNoteInput,
+    actor(req),
+  ));
+};
+
+export const handleUpdateSessionNote = async (req: Request, res: Response) => {
+  res.json(await updateSessionNote(
+    req.params.sessionId,
+    req.params.noteId,
+    req.body as UpdateSessionNoteInput,
+    actor(req),
+  ));
+};
+
+export const handleDeleteSessionNote = async (req: Request, res: Response) => {
+  await deleteSessionNote(req.params.sessionId, req.params.noteId, actor(req));
+  res.json({ id: req.params.noteId });
 };

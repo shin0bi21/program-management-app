@@ -46,8 +46,8 @@ describe('Users', () => {
     render(<Users />);
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Invite' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '+ Invite' }));
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
     expect(screen.getByRole('menuitem', { name: 'Invite Staff' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Invite Youth' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
@@ -70,8 +70,8 @@ describe('Users', () => {
     render(<Users />);
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '+ Invite' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Invite Youth' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add', expanded: false })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Role' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Status' })).toBeInTheDocument();

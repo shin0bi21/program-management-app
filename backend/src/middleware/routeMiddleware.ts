@@ -55,11 +55,19 @@ export function requestId(req: Request, res: Response, next: NextFunction): void
 export const validateRequest = (schema: ZodSchema) =>
   asyncHandler(async (req, _res, next) => {
     try {
-      await schema.parseAsync({
+      const parsed = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
-      });
+      }) as {
+        body?: Request['body'];
+        query?: Request['query'];
+        params?: Request['params'];
+      };
+
+      if ('body' in parsed) req.body = parsed.body;
+      if ('query' in parsed) req.query = parsed.query ?? {};
+      if ('params' in parsed) req.params = parsed.params ?? {};
       next();
     } catch (error) {
       if (error instanceof ZodError) {

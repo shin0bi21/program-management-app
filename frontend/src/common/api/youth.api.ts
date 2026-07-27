@@ -1,5 +1,6 @@
 import { apiClient } from './http/client';
 import type { YouthFilters, YouthProfile, SetYouthInput } from '../types/youth';
+import type { YouthSessionNote } from '../types/cohort';
 
 export function getYouth(id?: string, filters: YouthFilters = {}) {
   const params = new URLSearchParams();
@@ -14,6 +15,10 @@ export function getYouth(id?: string, filters: YouthFilters = {}) {
 
 export function setYouth(data: SetYouthInput) {
   return apiClient.post<YouthProfile>('/youth', data);
+}
+
+export function getYouthSessionNotes(id: string) {
+  return apiClient.get<YouthSessionNote[]>(`/youth/${id}/session-notes`);
 }
 
 export function inviteYouth(id: string, email: string) {
