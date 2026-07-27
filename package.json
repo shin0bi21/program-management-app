@@ -1,0 +1,19 @@
+{
+  "name": "my-webapp-quality",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint frontend/src frontend/vite.config.ts backend/src backend/tests",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write frontend/src backend/src backend/tests"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.8.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.65.0"
+  }
+}
