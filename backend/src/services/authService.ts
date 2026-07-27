@@ -36,6 +36,9 @@ const REFRESH_TOKEN_EXPIRY = '8h';
 const ACCESS_TOKEN_EXPIRY = '1h';
 const AUTH_CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+function isTwoFactorDisabled(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.DISABLE_2FA === 'true';
+}
 
 // Generate dummy hash at startup for timing attack protection on invalid emails
 const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection', 10);
@@ -147,6 +150,45 @@ async function generateAndStoreTokenPair(
   return { accessToken, refreshToken };
 }
 
+async function completeLogin(
+  cred: LoginCredentialsRow,
+  method: 'local_development' | 'trusted_device',
+  ipAddress?: string,
+  deviceFingerprintHash?: string,
+): Promise<LoginResult> {
+  await sql`
+    UPDATE user_credentials SET last_login = NOW() WHERE user_id = ${cred.userId}
+  `;
+
+  const tokens = await generateAndStoreTokenPair(
+    cred.userId,
+    cred.email,
+    cred.role,
+    cred.permissions,
+    crypto.randomUUID(),
+  );
+
+  await logAuthEvent({
+    event: 'login_success',
+    userId: cred.userId,
+    email: cred.email,
+    ipAddress,
+    deviceFingerprintHash,
+    metadata: { method },
+  });
+
+  return {
+    type: 'success',
+    tokens,
+    user: {
+      id: cred.userId,
+      firstName: cred.firstName,
+      lastName: cred.lastName,
+      email: cred.email,
+    },
+  };
+}
+
 // ============================================================================
 // SERVICE FUNCTIONS
 // ============================================================================
@@ -249,6 +291,12 @@ export async function loginUser(
     throw new ForbiddenError('Account is deactivated');
   }
 
+  // Local development can bypass 2FA explicitly. The NODE_ENV guard ensures
+  // this switch cannot disable 2FA in production or the test environment.
+  if (isTwoFactorDisabled()) {
+    return completeLogin(cred, 'local_development', ipAddress);
+  }
+
   // 6. Check trusted device — skip 2FA if device is known
   if (deviceFingerprint) {
     const deviceHash = hashDeviceFingerprint(deviceFingerprint);
@@ -262,24 +310,7 @@ export async function loginUser(
     `;
 
     if (trustedDevices.length > 0) {
-      await sql`
-        UPDATE user_credentials SET last_login = NOW() WHERE user_id = ${cred.userId}
-      `;
-
-      const tokens = await generateAndStoreTokenPair(
-        cred.userId,
-        cred.email,
-        cred.role,
-        cred.permissions,
-        crypto.randomUUID(),
-      );
-
-      await logAuthEvent({ event: 'login_success', userId: cred.userId, email: cred.email, ipAddress, deviceFingerprintHash: deviceHash, metadata: { method: 'trusted_device' } });
-      return {
-        type: 'success',
-        tokens,
-        user: { id: cred.userId, firstName: cred.firstName, lastName: cred.lastName, email: cred.email },
-      };
+      return completeLogin(cred, 'trusted_device', ipAddress, deviceHash);
     }
   }
 
