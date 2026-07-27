@@ -40,6 +40,7 @@ describe('GenerateSessionsModal', () => {
   it('includes the selected weekday for a weekly schedule', async () => {
     render(<GenerateSessionsModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
+    expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
     fireEvent.change(screen.getByLabelText('Theme (optional)'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
@@ -53,6 +54,30 @@ describe('GenerateSessionsModal', () => {
     expect(await screen.findByText(
       '2 sessions successfully added to Soft Skills - Summer 2026.',
     )).toBeInTheDocument();
+  });
+
+  it('selects a cohort and schedules in one step from the Sessions page', async () => {
+    render(
+      <GenerateSessionsModal
+        cohort={null}
+        cohorts={[cohort]}
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cohort' })).toHaveTextContent(
+      'Soft Skills · Summer 2026',
+    );
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
+
+    await waitFor(() => expect(generateSessions).toHaveBeenCalledWith(
+      cohort.id,
+      expect.objectContaining({ startsOn: cohort.startsOn, endsOn: cohort.endsOn }),
+    ));
   });
 
   it('switches monthly schedules to a day-of-month selector', async () => {

@@ -23,6 +23,7 @@ interface MockFullCalendarProps {
     title: string;
     start: string;
     end: string;
+    classNames?: string[];
     extendedProps?: { programName?: string };
   }>;
 }
@@ -74,6 +75,7 @@ vi.mock('@fullcalendar/react', async () => {
             <button
               type="button"
               key={event.id}
+              className={event.classNames?.join(' ')}
               onClick={() => eventClick({ event: { id: event.id } })}
             >
               {eventContent({
@@ -101,8 +103,8 @@ const sessions = [
     programId: 'program-1',
     programName: 'Soft Skills',
     rosterMode: 'enrolled' as const,
-    startsAt: '2026-07-07T21:00:00.000Z',
-    endsAt: '2026-07-07T23:30:00.000Z',
+    startsAt: '2099-07-07T21:00:00.000Z',
+    endsAt: '2099-07-07T23:30:00.000Z',
     cancelledAt: null,
     description: null,
   },
@@ -114,8 +116,8 @@ const sessions = [
     programId: 'program-2',
     programName: 'Job Readiness',
     rosterMode: 'enrolled' as const,
-    startsAt: '2026-07-08T21:00:00.000Z',
-    endsAt: '2026-07-08T23:00:00.000Z',
+    startsAt: '2000-07-08T21:00:00.000Z',
+    endsAt: '2000-07-08T23:00:00.000Z',
     cancelledAt: null,
     description: null,
   },
@@ -138,6 +140,8 @@ describe('SessionsCalendarView', () => {
       <SessionsCalendarView
         selectedProgramIds={[]}
         selectedCohortId=""
+        selectedSessionId="session-1"
+        selectedStatuses={[]}
         search=""
         refreshToken={0}
         onSessionSelect={onSessionSelect}
@@ -154,12 +158,17 @@ describe('SessionsCalendarView', () => {
     const session = await screen.findByRole('button', {
       name: 'Soft Skills, Communication, 5pm – 7:30pm',
     });
+    expect(session).toHaveClass('programming-calendar-event--selected');
     fireEvent.click(session);
 
-    expect(getCohortSessions).toHaveBeenCalledWith(
-      '2026-07-01T00:00:00.000Z',
-      '2026-08-01T00:00:00.000Z',
-    );
+    expect(getCohortSessions).toHaveBeenCalledWith({
+      start: '2026-07-01T00:00:00.000Z',
+      end: '2026-08-01T00:00:00.000Z',
+      programIds: [],
+      cohortId: undefined,
+      statuses: [],
+      search: undefined,
+    });
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
   });
 
@@ -174,6 +183,8 @@ describe('SessionsCalendarView', () => {
       <SessionsCalendarView
         selectedProgramIds={[]}
         selectedCohortId=""
+        selectedSessionId=""
+        selectedStatuses={[]}
         search=""
         refreshToken={0}
         onSessionSelect={vi.fn()}
@@ -192,6 +203,8 @@ describe('SessionsCalendarView', () => {
       <SessionsCalendarView
         selectedProgramIds={[]}
         selectedCohortId=""
+        selectedSessionId=""
+        selectedStatuses={[]}
         search=""
         refreshToken={0}
         onSessionSelect={vi.fn()}
@@ -217,6 +230,8 @@ describe('SessionsCalendarView', () => {
       <SessionsCalendarView
         selectedProgramIds={['program-1', 'program-2']}
         selectedCohortId=""
+        selectedSessionId=""
+        selectedStatuses={[]}
         search=""
         refreshToken={0}
         onSessionSelect={vi.fn()}
@@ -232,5 +247,32 @@ describe('SessionsCalendarView', () => {
       name: 'Job Readiness, Resumes, 5pm – 7pm',
     })).toBeInTheDocument();
     await waitFor(() => expect(getCohortSessions).toHaveBeenCalledTimes(1));
+  });
+
+  it('applies the same status filter used by the list view', async () => {
+    getCohortSessions.mockResolvedValue([sessions[0]]);
+    render(
+      <SessionsCalendarView
+        selectedProgramIds={[]}
+        selectedCohortId=""
+        selectedSessionId=""
+        selectedStatuses={['upcoming']}
+        search=""
+        refreshToken={0}
+        onSessionSelect={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
+
+    expect(await screen.findByRole('button', {
+      name: 'Soft Skills, Communication, 5pm – 7:30pm',
+    })).toBeInTheDocument();
+    expect(screen.queryByRole('button', {
+      name: 'Job Readiness, Resumes, 5pm – 7pm',
+    })).not.toBeInTheDocument();
+    expect(getCohortSessions).toHaveBeenCalledWith(expect.objectContaining({
+      statuses: ['upcoming'],
+    }));
   });
 });

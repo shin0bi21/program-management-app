@@ -13,6 +13,8 @@ interface CalendarRange {
 interface SessionsCalendarViewProps {
   selectedProgramIds: string[];
   selectedCohortId: string;
+  selectedSessionId: string;
+  selectedStatuses: Array<'upcoming' | 'completed'>;
   search: string;
   refreshToken: number;
   onSessionSelect: (session: CohortSession) => void;
@@ -21,6 +23,8 @@ interface SessionsCalendarViewProps {
 export default function SessionsCalendarView({
   selectedProgramIds,
   selectedCohortId,
+  selectedSessionId,
+  selectedStatuses,
   search,
   refreshToken,
   onSessionSelect,
@@ -34,14 +38,21 @@ export default function SessionsCalendarView({
     const requestId = ++requestIdRef.current;
     setError(null);
     try {
-      const nextSessions = await getCohortSessions(currentRange.start, currentRange.end);
+      const nextSessions = await getCohortSessions({
+        start: currentRange.start,
+        end: currentRange.end,
+        programIds: selectedProgramIds,
+        cohortId: selectedCohortId || undefined,
+        statuses: selectedStatuses,
+        search: search || undefined,
+      });
       if (requestIdRef.current === requestId) setSessions(nextSessions);
     } catch (cause) {
       if (requestIdRef.current === requestId) {
         setError(cause instanceof Error ? cause.message : 'Could not load sessions');
       }
     }
-  }, []);
+  }, [search, selectedCohortId, selectedProgramIds, selectedStatuses]);
 
   useEffect(() => () => {
     requestIdRef.current += 1;
@@ -51,30 +62,18 @@ export default function SessionsCalendarView({
     if (range) void loadSessions(range);
   }, [loadSessions, range, refreshToken]);
 
-  const visibleSessions = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    return sessions.filter(session => {
-      if (selectedProgramIds.length && !selectedProgramIds.includes(session.programId)) return false;
-      if (selectedCohortId && session.cohortId !== selectedCohortId) return false;
-      if (!normalizedSearch) return true;
-      return session.theme?.toLowerCase().includes(normalizedSearch)
-        || session.description?.toLowerCase().includes(normalizedSearch)
-        || session.programName.toLowerCase().includes(normalizedSearch)
-        || session.cohortName.toLowerCase().includes(normalizedSearch);
-    });
-  }, [search, selectedCohortId, selectedProgramIds, sessions]);
-
-  const events = useMemo<EventInput[]>(() => visibleSessions.map(session => ({
+  const events = useMemo<EventInput[]>(() => sessions.map(session => ({
     id: session.id,
     title: session.theme ?? '',
     start: session.startsAt,
     end: session.endsAt,
     backgroundColor: session.cancelledAt ? '#6b7280' : undefined,
     borderColor: session.cancelledAt ? '#6b7280' : undefined,
+    classNames: session.id === selectedSessionId ? ['programming-calendar-event--selected'] : [],
     extendedProps: {
       programName: session.programName,
     },
-  })), [visibleSessions]);
+  })), [selectedSessionId, sessions]);
 
   const handleDatesSet = useCallback((nextRange: DatesSetInfo) => {
     setRange({
@@ -90,7 +89,7 @@ export default function SessionsCalendarView({
         events={events}
         onDatesSet={handleDatesSet}
         onEventSelect={sessionId => {
-          const session = visibleSessions.find(candidate => candidate.id === sessionId);
+          const session = sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionSelect(session);
         }}
       />

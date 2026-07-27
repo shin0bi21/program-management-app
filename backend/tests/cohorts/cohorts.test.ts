@@ -689,7 +689,10 @@ describe('Cohorts and attendance API', () => {
 
   it('lists sessions for management with cohort filters and attendance', async () => {
     const response = await request(app)
-      .get(`/api/cohorts/sessions?cohortId=${cohortId}&timing=all&search=Communication`)
+      .get(
+        `/api/cohorts/sessions?programIds=${programId}&cohortId=${cohortId}`
+        + '&statuses=upcoming&search=Communication',
+      )
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
@@ -703,6 +706,40 @@ describe('Cohorts and attendance API', () => {
         attendanceRate: 100,
       }),
     ]));
+  });
+
+  it('defaults omitted management session filters', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/sessions')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: sessionId }),
+    ]));
+  });
+
+  it('filters calendar sessions on the backend', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/sessions/calendar')
+      .query({
+        start: `${addDays(today, -1)}T00:00:00.000Z`,
+        end: `${addDays(today, 10)}T00:00:00.000Z`,
+        programIds: openProgramId,
+        cohortId: openCohortId,
+        statuses: 'upcoming',
+        search: 'Drop In',
+      })
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: openSessionId,
+        programId: openProgramId,
+        cohortId: openCohortId,
+      }),
+    ]);
   });
 
   it('edits and deletes sessions and cohorts that have no attendance', async () => {

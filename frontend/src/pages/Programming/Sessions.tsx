@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
-import FloatingSelect from '../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../common/components/FormField/FormField';
 import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
@@ -15,7 +14,7 @@ import { useAuth } from '../../common/context/AuthContext';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../common/hooks/useConfirmModal';
 import type { SubmitStatus } from '../../common/hooks/useSubmitStatus';
-import type { CohortSession, ManagedSession, ProgramCohort, SessionListFilters } from '../../common/types/cohort';
+import type { CohortSession, ManagedSession, ProgramCohort } from '../../common/types/cohort';
 import { formatShortDate } from '../../common/utils/date';
 import AttendanceModal from './components/AttendanceModal';
 import GenerateSessionsModal from './components/GenerateSessionsModal';
@@ -32,7 +31,7 @@ const localDateTime = (value: string) => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
 
-type TimingFilter = 'upcoming' | 'past';
+type StatusFilter = 'upcoming' | 'completed';
 type SessionsView = 'list' | 'calendar';
 
 export default function Sessions() {
@@ -46,9 +45,7 @@ export default function Sessions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
-  const [cohortPickerOpen, setCohortPickerOpen] = useState(false);
-  const [scheduleCohortId, setScheduleCohortId] = useState('');
-  const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
+  const [addSessionsOpen, setAddSessionsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ManagedSession | null>(null);
   const [editStatus, setEditStatus] = useState<SubmitStatus>('idle');
   const [editMessage, setEditMessage] = useState('');
@@ -56,15 +53,20 @@ export default function Sessions() {
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const view: SessionsView = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
-  const selectedProgramIds = (searchParams.get('program') ?? '').split(',').filter(Boolean);
+  const programFilter = searchParams.get('program') ?? '';
+  const selectedProgramIds = useMemo(
+    () => programFilter.split(',').filter(Boolean),
+    [programFilter],
+  );
   const cohortId = searchParams.get('cohort') ?? '';
   const selectedSessionId = searchParams.get('session') ?? '';
-  const timingFilters = (searchParams.get('timing') ?? '')
-    .split(',')
-    .filter((value): value is TimingFilter => value === 'upcoming' || value === 'past');
-  const timing: NonNullable<SessionListFilters['timing']> = timingFilters.length === 1
-    ? timingFilters[0]
-    : 'all';
+  const statusFilter = searchParams.get('status') ?? '';
+  const statusFilters = useMemo(
+    () => statusFilter
+      .split(',')
+      .filter((value): value is StatusFilter => value === 'upcoming' || value === 'completed'),
+    [statusFilter],
+  );
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteCohorts = permissions.includes('write:cohorts');
 
@@ -81,9 +83,9 @@ export default function Sessions() {
     setLoading(true);
     setError(null);
     return getManagedSessions({
-      programId: selectedProgramIds.length === 1 ? selectedProgramIds[0] : undefined,
+      programIds: selectedProgramIds,
       cohortId: cohortId || undefined,
-      timing,
+      statuses: statusFilters,
       search: debouncedSearch || undefined,
     })
       .then(setSessions)
@@ -92,9 +94,8 @@ export default function Sessions() {
   };
 
   useEffect(() => {
-    if (view !== 'list') return;
     void loadSessions();
-  }, [view, selectedProgramIds.join(','), cohortId, timing, debouncedSearch]);
+  }, [selectedProgramIds.join(','), cohortId, statusFilters.join(','), debouncedSearch]);
 
   const filteredCohorts = useMemo(
     () => selectedProgramIds.length
@@ -122,15 +123,15 @@ export default function Sessions() {
         label: `${cohort.programName} · ${cohort.name}`,
       })),
     },
-    ...(view === 'list' ? [{
-      id: 'timing',
-      label: 'Timing',
+    {
+      id: 'status',
+      label: 'Status',
       options: [
         { value: 'upcoming', label: 'Upcoming' },
-        { value: 'past', label: 'Past' },
+        { value: 'completed', label: 'Completed' },
       ],
-    }] : []),
-  ], [filteredCohorts, programs, view]);
+    },
+  ], [filteredCohorts, programs]);
 
   const setFilter = (key: string, values: string[]) => {
     const next = new URLSearchParams(searchParams);
@@ -145,7 +146,6 @@ export default function Sessions() {
     const next = new URLSearchParams(searchParams);
     if (nextView === 'calendar') next.set('view', 'calendar');
     else next.delete('view');
-    next.delete('session');
     setSearchParams(next);
   };
 
@@ -153,26 +153,10 @@ export default function Sessions() {
     setSearchParams(view === 'calendar' ? { view: 'calendar' } : {});
   };
 
-  const selectSession = (session: ManagedSession) => {
+  const selectSession = (session: Pick<CohortSession, 'id'>) => {
     const next = new URLSearchParams(searchParams);
     next.set('session', session.id);
     setSearchParams(next);
-  };
-
-  const openCohortPicker = () => {
-    const preferredCohort = cohortId
-      ? schedulableCohorts.find(cohort => cohort.id === cohortId)
-      : schedulableCohorts[0];
-    setScheduleCohortId(preferredCohort?.id ?? '');
-    setCohortPickerOpen(true);
-  };
-
-  const chooseCohort = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const cohort = schedulableCohorts.find(candidate => candidate.id === scheduleCohortId);
-    if (!cohort) return;
-    setCohortPickerOpen(false);
-    setGenerationTarget(cohort);
   };
 
   const columns = useMemo<TableColumn<ManagedSession>[]>(() => [
@@ -218,22 +202,16 @@ export default function Sessions() {
         ]}
       />,
     }] : []),
-  ], [canWriteAttendance, canWriteCohorts, selectedProgramIds.join(','), cohortId, timing, debouncedSearch]);
+  ], [canWriteAttendance, canWriteCohorts, selectedProgramIds.join(','), cohortId, statusFilters.join(','), debouncedSearch]);
 
-  const visibleListSessions = useMemo(
-    () => selectedProgramIds.length
-      ? sessions.filter(session => selectedProgramIds.includes(session.programId))
-      : sessions,
-    [selectedProgramIds.join(','), sessions],
-  );
   const selectedSession = useMemo(
-    () => visibleListSessions.find(session => session.id === selectedSessionId) ?? null,
-    [selectedSessionId, visibleListSessions],
+    () => sessions.find(session => session.id === selectedSessionId) ?? null,
+    [selectedSessionId, sessions],
   );
 
   const refreshActiveView = async () => {
-    if (view === 'list') await loadSessions();
-    else setCalendarRefreshToken(current => current + 1);
+    await loadSessions();
+    if (view === 'calendar') setCalendarRefreshToken(current => current + 1);
   };
 
   const submitEdit = async (event: FormEvent<HTMLFormElement>) => {
@@ -264,7 +242,7 @@ export default function Sessions() {
       <PageHeader
         title="Sessions"
         actions={canWriteCohorts ? (
-          <Button onClick={openCohortPicker} disabled={!schedulableCohorts.length}>
+          <Button onClick={() => setAddSessionsOpen(true)} disabled={!schedulableCohorts.length}>
             + Add
           </Button>
         ) : undefined}
@@ -279,7 +257,7 @@ export default function Sessions() {
           values={{
             program: selectedProgramIds,
             cohort: cohortId ? [cohortId] : [],
-            timing: timingFilters,
+            status: statusFilters,
           }}
           onApply={(category, selected) => setFilter(
             category,
@@ -314,14 +292,14 @@ export default function Sessions() {
           table={<Table
             ariaLabel="Sessions"
             columns={columns}
-            data={visibleListSessions}
+            data={sessions}
             loading={loading}
             error={error ?? undefined}
             keyExtractor={session => session.id}
             selectedKey={selectedSessionId || null}
             scrollToSelected={Boolean(selectedSessionId)}
             onRowSelect={selectSession}
-            emptyMessage={search || selectedProgramIds.length || cohortId || timingFilters.length
+            emptyMessage={search || selectedProgramIds.length || cohortId || statusFilters.length
               ? 'No sessions match your search and filters'
               : 'No sessions yet'}
           />}
@@ -335,12 +313,27 @@ export default function Sessions() {
           )}
         />
       ) : (
-        <SessionsCalendarView
-          selectedProgramIds={selectedProgramIds}
-          selectedCohortId={cohortId}
-          search={debouncedSearch}
-          refreshToken={calendarRefreshToken}
-          onSessionSelect={setAttendanceTarget}
+        <TableDetailLayout
+          ariaLabel="Sessions calendar and overview"
+          table={(
+            <SessionsCalendarView
+              selectedProgramIds={selectedProgramIds}
+              selectedCohortId={cohortId}
+              selectedSessionId={selectedSessionId}
+              selectedStatuses={statusFilters}
+              search={debouncedSearch}
+              refreshToken={calendarRefreshToken}
+              onSessionSelect={selectSession}
+            />
+          )}
+          details={(
+            <SessionOverview
+              session={selectedSession}
+              canWriteAttendance={canWriteAttendance}
+              canWriteNotes={canWriteCohorts}
+              onAddAttendance={setAttendanceTarget}
+            />
+          )}
         />
       )}
       <AttendanceModal
@@ -372,7 +365,7 @@ export default function Sessions() {
               <input id="edit-session-end" name="endsAt" type="datetime-local" required defaultValue={localDateTime(editTarget.endsAt)} />
             </FormField>
           </div>
-          <FormField id="edit-session-description" label="Planned description">
+          <FormField id="edit-session-description" label="Description">
             <textarea id="edit-session-description" name="description" defaultValue={editTarget.description ?? ''} maxLength={5000} />
           </FormField>
         </form>}
@@ -389,34 +382,12 @@ export default function Sessions() {
       >
         {confirmAction && <p>{confirmAction.message}</p>}
       </Modal>
-      <Modal
-        isOpen={cohortPickerOpen}
-        onClose={() => setCohortPickerOpen(false)}
-        title="Add sessions"
-        maxWidth="520px"
-        footer={<>
-          <Button variant="secondary" onClick={() => setCohortPickerOpen(false)}>Cancel</Button>
-          <Button type="submit" form="choose-session-cohort" disabled={!scheduleCohortId}>Continue</Button>
-        </>}
-      >
-        <form id="choose-session-cohort" onSubmit={chooseCohort}>
-          <FormField id="session-cohort" label="Cohort">
-            <FloatingSelect
-              id="session-cohort"
-              value={scheduleCohortId}
-              onChange={setScheduleCohortId}
-              placeholder="Choose a cohort"
-              options={schedulableCohorts.map(cohort => ({
-                value: cohort.id,
-                label: `${cohort.programName} · ${cohort.name}`,
-              }))}
-            />
-          </FormField>
-        </form>
-      </Modal>
       <GenerateSessionsModal
-        cohort={generationTarget}
-        onClose={() => setGenerationTarget(null)}
+        cohort={null}
+        cohorts={schedulableCohorts}
+        isOpen={addSessionsOpen}
+        initialCohortId={cohortId || schedulableCohorts[0]?.id}
+        onClose={() => setAddSessionsOpen(false)}
         onSuccess={async () => {
           await Promise.all([
             refreshActiveView(),

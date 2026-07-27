@@ -29,6 +29,7 @@ import type {
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
+  SessionCalendarQuery,
   SessionListQuery,
   SaveAttendanceInput,
   SyncYouthCohortsInput,
@@ -83,7 +84,7 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
 };
 
 export const handleGetSessions = async (req: Request, res: Response) => {
-  res.json(await getSessions(actor(req), req.query.start as string, req.query.end as string));
+  res.json(await getSessions(actor(req), req.query as unknown as SessionCalendarQuery));
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {

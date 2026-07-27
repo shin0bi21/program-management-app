@@ -68,7 +68,7 @@ describe('SessionOverview', () => {
     );
 
     expect(screen.getByText('4/5')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Add attendance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
     expect(onAddAttendance).toHaveBeenCalledWith(session);
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     const addNotes = screen.getByRole('button', { name: 'Add notes' });

@@ -11,6 +11,11 @@ const weekdaySchema = z.enum([
   'friday',
   'saturday',
 ]);
+const commaSeparated = <T extends z.ZodType>(schema: T) => z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(schema).max(20));
 
 export const cohortQuerySchema = z.object({
   query: z.object({
@@ -108,15 +113,19 @@ export const sessionQuerySchema = z.object({
   query: z.object({
     start: z.string().datetime({ offset: true }),
     end: z.string().datetime({ offset: true }),
+    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+    cohortId: z.string().uuid('Invalid cohort ID').optional(),
+    statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
+    search: z.string().trim().max(120).optional().default(''),
   }),
 });
 
 export const sessionListQuerySchema = z.object({
   query: z.object({
-    programId: z.string().uuid('Invalid program ID').optional(),
+    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
-    timing: z.enum(['upcoming', 'past', 'all']).optional(),
-    search: z.string().trim().max(120).optional(),
+    statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
+    search: z.string().trim().max(120).optional().default(''),
   }),
 });
 
@@ -183,6 +192,7 @@ export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type SyncYouthCohortsInput = z.infer<typeof syncYouthCohortsSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
+export type SessionCalendarQuery = z.infer<typeof sessionQuerySchema.shape.query>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
