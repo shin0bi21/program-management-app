@@ -71,6 +71,11 @@ describe('SignUpLeadModal', () => {
 
     const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
     await waitFor(() => expect(cohortSelect).toBeEnabled());
+    expect(screen.queryByText('New youth profile')).not.toBeInTheDocument();
+    expect(screen.queryByText(
+      'Optional. You can create the profile now and manage cohorts later.',
+    )).not.toBeInTheDocument();
+    expect(screen.queryByText('Choose a cohort')).not.toBeInTheDocument();
     fireEvent.click(cohortSelect);
     const cohortOption = await screen.findByRole('menuitemradio', { name: /Soft Skills — Summer 2026/ });
     expect(cohortOption).toBeInTheDocument();
