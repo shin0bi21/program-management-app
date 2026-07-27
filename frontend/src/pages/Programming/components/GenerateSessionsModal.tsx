@@ -5,7 +5,12 @@ import FormField from '../../../common/components/FormField/FormField';
 import Modal from '../../../common/components/Modal/Modal';
 import { generateSessions } from '../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../common/hooks/useSubmitStatus';
-import type { GenerateSessionsInput, ProgramCohort } from '../../../common/types/cohort';
+import {
+  REGULAR_SESSION_TYPE_ID,
+  type GenerateSessionsInput,
+  type ProgramCohort,
+} from '../../../common/types/cohort';
+import { useSessionTypes } from '../hooks/useSessionTypes';
 
 interface GenerateSessionsModalProps {
   cohort: ProgramCohort | null;
@@ -45,6 +50,8 @@ export default function GenerateSessionsModal({
 }: GenerateSessionsModalProps) {
   const open = isOpen ?? cohort !== null;
   const [selectedCohortId, setSelectedCohortId] = useState('');
+  const sessionTypes = useSessionTypes();
+  const [sessionTypeId, setSessionTypeId] = useState(REGULAR_SESSION_TYPE_ID);
   const [frequency, setFrequency] = useState<GenerateSessionsInput['frequency']>('weekly');
   const [dayOfWeek, setDayOfWeek] = useState<NonNullable<GenerateSessionsInput['dayOfWeek']>>('tuesday');
   const [dayOfMonth, setDayOfMonth] = useState('1');
@@ -70,6 +77,15 @@ export default function GenerateSessionsModal({
   }, [cohort, cohorts, initialCohortId, open]);
 
   useEffect(() => {
+    if (!open || !sessionTypes.length) return;
+    setSessionTypeId(current => (
+      sessionTypes.some(type => type.id === current)
+        ? current
+        : sessionTypes.find(type => type.name === 'Regular')?.id ?? sessionTypes[0].id
+    ));
+  }, [open, sessionTypes]);
+
+  useEffect(() => {
     if (!selectedCohort) return;
     setStartsOn(selectedCohort.startsOn);
     setEndsOn(selectedCohort.endsOn);
@@ -83,6 +99,7 @@ export default function GenerateSessionsModal({
     setStatusMessage(`Adding sessions for ${selectedCohort.programName} - ${selectedCohort.name}...`);
     try {
       const result = await generateSessions(selectedCohort.id, {
+        sessionTypeId,
         theme: String(form.get('theme')).trim() || null,
         frequency,
         ...((frequency === 'weekly' || frequency === 'biweekly') && { dayOfWeek }),
@@ -122,7 +139,7 @@ export default function GenerateSessionsModal({
         <Button
           type="submit"
           form="generate-sessions-form"
-          disabled={submissionComplete || !selectedCohort}
+          disabled={submissionComplete || !selectedCohort || !sessionTypeId}
         >
           Add Sessions
         </Button>
@@ -144,6 +161,15 @@ export default function GenerateSessionsModal({
             />
           </FormField>
         )}
+        <FormField id="session-type" label="Type">
+          <FloatingSelect
+            id="session-type"
+            value={sessionTypeId}
+            onChange={setSessionTypeId}
+            placeholder="Choose a type"
+            options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
+          />
+        </FormField>
         <FormField id="session-theme" label="Theme (optional)">
           <input id="session-theme" name="theme" maxLength={160} placeholder="Communication" />
         </FormField>

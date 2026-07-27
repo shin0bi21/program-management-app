@@ -9,11 +9,13 @@ interface CalendarRange {
   start: string;
   end: string;
 }
+const noSessionTypeIds: string[] = [];
 
 interface SessionsCalendarViewProps {
   selectedProgramIds: string[];
   selectedCohortId: string;
   selectedSessionId: string;
+  selectedSessionTypeIds?: string[];
   selectedStatuses: Array<'upcoming' | 'completed'>;
   search: string;
   refreshToken: number;
@@ -24,6 +26,7 @@ export default function SessionsCalendarView({
   selectedProgramIds,
   selectedCohortId,
   selectedSessionId,
+  selectedSessionTypeIds = noSessionTypeIds,
   selectedStatuses,
   search,
   refreshToken,
@@ -43,6 +46,7 @@ export default function SessionsCalendarView({
         end: currentRange.end,
         programIds: selectedProgramIds,
         cohortId: selectedCohortId || undefined,
+        ...(selectedSessionTypeIds.length && { sessionTypeIds: selectedSessionTypeIds }),
         statuses: selectedStatuses,
         search: search || undefined,
       });
@@ -52,7 +56,7 @@ export default function SessionsCalendarView({
         setError(cause instanceof Error ? cause.message : 'Could not load sessions');
       }
     }
-  }, [search, selectedCohortId, selectedProgramIds, selectedStatuses]);
+  }, [search, selectedCohortId, selectedProgramIds, selectedSessionTypeIds, selectedStatuses]);
 
   useEffect(() => () => {
     requestIdRef.current += 1;
@@ -72,6 +76,7 @@ export default function SessionsCalendarView({
     classNames: session.id === selectedSessionId ? ['programming-calendar-event--selected'] : [],
     extendedProps: {
       programName: session.programName,
+      sessionTypeName: session.sessionTypeName,
     },
   })), [selectedSessionId, sessions]);
 

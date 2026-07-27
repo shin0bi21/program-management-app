@@ -21,6 +21,8 @@ export interface ProgramCohort {
 export interface CohortSession {
   id: string;
   cohortId: string;
+  sessionTypeId: string;
+  sessionTypeName: string;
   theme: string | null;
   cohortName: string;
   programId: string;
@@ -40,6 +42,7 @@ export interface CreateCohortInput {
 }
 export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
 export interface UpdateSessionInput {
+  sessionTypeId: string;
   theme: string | null;
   startsAt: string;
   endsAt: string;
@@ -51,6 +54,7 @@ export interface EnrollYouthInput {
 }
 
 export interface GenerateSessionsInput {
+  sessionTypeId: string;
   theme: string | null;
   frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
   dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
@@ -75,6 +79,7 @@ export interface ManagedSession extends CohortSession {
 export interface SessionListFilters {
   programIds?: string[];
   cohortId?: string;
+  sessionTypeIds?: string[];
   statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
 }
@@ -83,6 +88,13 @@ export interface SessionCalendarFilters extends SessionListFilters {
   start: string;
   end: string;
 }
+
+export interface SessionType {
+  id: string;
+  name: string;
+}
+
+export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 

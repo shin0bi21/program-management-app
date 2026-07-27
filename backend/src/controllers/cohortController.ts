@@ -11,6 +11,7 @@ import {
   deleteSession,
   generateSessions,
   getSessionList,
+  getSessionTypes,
   getSessions,
   updateSession,
 } from '../services/sessionService';
@@ -80,6 +81,9 @@ export const handleGetSessions = async (req: Request, res: Response) => {
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
   res.json(await getSessionList(actor(req), req.query as SessionListQuery));
+};
+export const handleGetSessionTypes = async (_req: Request, res: Response) => {
+  res.json(await getSessionTypes());
 };
 export const handleUpdateSession = async (req: Request, res: Response) => {
   res.json(await updateSession(req.params.sessionId, req.body as UpdateSessionInput, actor(req)));

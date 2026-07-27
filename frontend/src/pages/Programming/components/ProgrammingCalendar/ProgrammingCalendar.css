@@ -101,12 +101,20 @@
 }
 
 .programming-calendar-event__program,
+.programming-calendar-event__session-line,
 .programming-calendar-event__session,
 .programming-calendar-event__time {
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
+}
+
+.programming-calendar-event__session-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .programming-calendar-event__program {
@@ -120,6 +128,31 @@
   font-size: 0.82em;
   font-weight: 500;
   line-height: 1.2;
+}
+
+.programming-calendar-event__type {
+  display: inline-flex;
+  padding: 2px 5px;
+  border-radius: var(--radius-full);
+  font-size: 0.62em;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.programming-calendar-event__type--regular {
+  background: var(--ink-08);
+  color: var(--color-body);
+}
+
+.programming-calendar-event__type--guest-speaker {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.programming-calendar-event__type--field-trip {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .programming-calendar-event__time {

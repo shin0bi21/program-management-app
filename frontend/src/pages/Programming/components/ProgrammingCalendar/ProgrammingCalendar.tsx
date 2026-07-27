@@ -7,6 +7,7 @@ import classicThemePlugin from '@fullcalendar/react/themes/classic';
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/theme.css';
 import '@fullcalendar/react/themes/classic/palette.css';
+import { sessionTypeModifier } from '../../utils/sessionType';
 import './ProgrammingCalendar.css';
 
 interface ProgrammingCalendarProps {
@@ -106,16 +107,29 @@ export default function ProgrammingCalendar({
         displayEventTime={false}
         eventContent={info => {
           const programName = info.event.extendedProps.programName as string | undefined;
+          const sessionTypeName = info.event.extendedProps.sessionTypeName as string | undefined;
           const timeRange = compactTimeRange(info.event.start, info.event.end);
           return (
             <span
               className="programming-calendar-event"
-              aria-label={[programName, info.event.title, timeRange].filter(Boolean).join(', ')}
+              aria-label={[programName, info.event.title, sessionTypeName, timeRange].filter(Boolean).join(', ')}
             >
               {programName && <span className="programming-calendar-event__program">{programName}</span>}
-              {info.event.title && (
-                <span className="programming-calendar-event__session">{info.event.title}</span>
-              )}
+              <span className="programming-calendar-event__session-line">
+                {info.event.title && (
+                  <span className="programming-calendar-event__session">{info.event.title}</span>
+                )}
+                {sessionTypeName && (
+                  <span
+                    className={
+                      `programming-calendar-event__type `
+                      + `programming-calendar-event__type--${sessionTypeModifier(sessionTypeName)}`
+                    }
+                  >
+                    {sessionTypeName}
+                  </span>
+                )}
+              </span>
               <span className="programming-calendar-event__time">{timeRange}</span>
             </span>
           );

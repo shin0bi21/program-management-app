@@ -1,11 +1,13 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { updateSession } from '../../../../common/api/cohorts.api';
 import Button from '../../../../common/components/Button/Button';
+import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { ManagedSession } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { useSessionTypes } from '../../hooks/useSessionTypes';
 
 const localDateTime = (value: string) => {
   const date = new Date(value);
@@ -21,11 +23,14 @@ interface EditSessionModalProps {
 export default function EditSessionModal({ session, onClose, onUpdated }: EditSessionModalProps) {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const sessionTypes = useSessionTypes();
+  const [sessionTypeId, setSessionTypeId] = useState('');
 
   useEffect(() => {
     if (!session) return;
     setStatus('idle');
     setStatusMessage('');
+    setSessionTypeId(session.sessionTypeId);
   }, [session]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -36,6 +41,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
     setStatusMessage('Updating session...');
     try {
       await updateSession(session.id, {
+        sessionTypeId,
         theme: String(form.get('theme')).trim() || null,
         startsAt: new Date(String(form.get('startsAt'))).toISOString(),
         endsAt: new Date(String(form.get('endsAt'))).toISOString(),
@@ -66,7 +72,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
           <Button variant="secondary" onClick={onClose} disabled={complete}>
             Cancel
           </Button>
-          <Button type="submit" form="edit-session-form" disabled={complete}>
+          <Button type="submit" form="edit-session-form" disabled={complete || !sessionTypeId}>
             Save Changes
           </Button>
         </>
@@ -74,6 +80,14 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
     >
       {session && (
         <form id="edit-session-form" onSubmit={(event) => void submit(event)}>
+          <FormField id="edit-session-type" label="Type">
+            <FloatingSelect
+              id="edit-session-type"
+              value={sessionTypeId}
+              onChange={setSessionTypeId}
+              options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
+            />
+          </FormField>
           <FormField id="edit-session-theme" label="Theme (optional)">
             <input id="edit-session-theme" name="theme" defaultValue={session.theme ?? ''} maxLength={160} />
           </FormField>
