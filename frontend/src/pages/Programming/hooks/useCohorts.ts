@@ -5,7 +5,7 @@ import { getErrorMessage } from '../../../common/utils/clientErrors';
 
 export function useCohorts(programId?: string) {
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 

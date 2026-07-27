@@ -25,14 +25,21 @@ import AddProgramModal from './components/ProgramModal/AddProgramModal';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import { useCohorts } from './hooks/useCohorts';
+import { getSingleAssignedProgram } from './utils/staffProgrammingDefaults';
 
 export default function Programming() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { permissions } = useAuth();
+  const { permissions, role } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
-  const { programs, setPrograms, error: programsError } = usePrograms({ assignedOnly: true });
+  const {
+    programs,
+    setPrograms,
+    loading: programsLoading,
+    error: programsError,
+  } = usePrograms({ assignedOnly: true });
+  const staffDefaultsApplied = useRef(false);
   const selectedProgramId = searchParams.get('program') ?? '';
   const selectedStatus = searchParams.get('status') ?? '';
   const {
@@ -68,6 +75,25 @@ export default function Programming() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (staffDefaultsApplied.current || programsLoading || role === null) return;
+    staffDefaultsApplied.current = true;
+    const assignedProgram = getSingleAssignedProgram(role, programs);
+    if (!assignedProgram) return;
+
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    if (!next.has('program')) {
+      next.set('program', assignedProgram.id);
+      changed = true;
+    }
+    if (!next.has('status')) {
+      next.set('status', 'active');
+      changed = true;
+    }
+    if (changed) setSearchParams(next, { replace: true });
+  }, [programs, programsLoading, role, searchParams, setSearchParams]);
 
   const visibleCohorts = useMemo(
     () => cohorts.filter(cohort => {

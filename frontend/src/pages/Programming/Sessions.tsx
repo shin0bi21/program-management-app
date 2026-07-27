@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
@@ -23,6 +23,10 @@ import { useCohorts } from './hooks/useCohorts';
 import { useManagedSessions } from './hooks/useManagedSessions';
 import { useSessionTypes } from './hooks/useSessionTypes';
 import { sessionTypeModifier } from './utils/sessionType';
+import {
+  getSingleActiveCohort,
+  getSingleAssignedProgram,
+} from './utils/staffProgrammingDefaults';
 import './Sessions.css';
 
 const timeFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -34,10 +38,15 @@ type SessionsView = 'list' | 'calendar';
 
 export default function Sessions() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { permissions } = useAuth();
-  const { programs } = usePrograms({ assignedOnly: true });
-  const { cohorts, refresh: refreshCohorts } = useCohorts();
+  const { permissions, role } = useAuth();
+  const { programs, loading: programsLoading } = usePrograms({ assignedOnly: true });
+  const {
+    cohorts,
+    loading: cohortsLoading,
+    refresh: refreshCohorts,
+  } = useCohorts();
   const sessionTypes = useSessionTypes();
+  const staffDefaultsApplied = useRef(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -66,6 +75,47 @@ export default function Sessions() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (
+      staffDefaultsApplied.current
+      || programsLoading
+      || cohortsLoading
+      || role === null
+    ) return;
+    staffDefaultsApplied.current = true;
+    if (searchParams.has('session')) return;
+
+    const assignedProgram = getSingleAssignedProgram(role, programs);
+    if (!assignedProgram) return;
+
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    const requestedProgramId = next.get('program');
+    if (!requestedProgramId) {
+      next.set('program', assignedProgram.id);
+      changed = true;
+    }
+    if (
+      !next.has('cohort')
+      && (!requestedProgramId || requestedProgramId === assignedProgram.id)
+    ) {
+      const activeCohort = getSingleActiveCohort(cohorts, assignedProgram.id);
+      if (activeCohort) {
+        next.set('cohort', activeCohort.id);
+        changed = true;
+      }
+    }
+    if (changed) setSearchParams(next, { replace: true });
+  }, [
+    cohorts,
+    cohortsLoading,
+    programs,
+    programsLoading,
+    role,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const {
     sessions,
