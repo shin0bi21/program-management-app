@@ -69,10 +69,11 @@ export default function SessionNoteModal({
     setSubmitStatus('submitting');
     setStatusMessage(note ? 'Saving session note...' : 'Adding session note...');
     try {
+      const details = form.get('details');
       const data = {
         category,
         title: String(form.get('title')).trim(),
-        details: String(form.get('details')).trim(),
+        details: typeof details === 'string' && details.trim() ? details.trim() : null,
         youthIds: selectedYouthIds,
       };
       if (note) {
@@ -112,15 +113,6 @@ export default function SessionNoteModal({
       </>}
     >
       <form id="session-note-form" onSubmit={event => void submit(event)}>
-        <FormField id="session-note-category" label="Category">
-          <FloatingSelect
-            id="session-note-category"
-            ariaLabel="Category"
-            value={category}
-            options={sessionNoteCategoryOptions}
-            onChange={value => setCategory(value as SessionNoteCategory)}
-          />
-        </FormField>
         <FormField id="session-note-title" label="Title">
           <input
             key={`${note?.id ?? 'new'}-title`}
@@ -131,7 +123,16 @@ export default function SessionNoteModal({
             required
           />
         </FormField>
-        <FormField id="session-note-details" label="Details">
+        <FormField id="session-note-category" label="Category">
+          <FloatingSelect
+            id="session-note-category"
+            ariaLabel="Category"
+            value={category}
+            options={sessionNoteCategoryOptions}
+            onChange={value => setCategory(value as SessionNoteCategory)}
+          />
+        </FormField>
+        <FormField id="session-note-details" label="Details (optional)">
           <textarea
             key={`${note?.id ?? 'new'}-details`}
             id="session-note-details"
@@ -139,7 +140,6 @@ export default function SessionNoteModal({
             rows={5}
             maxLength={5000}
             defaultValue={note?.details ?? ''}
-            required
           />
         </FormField>
 

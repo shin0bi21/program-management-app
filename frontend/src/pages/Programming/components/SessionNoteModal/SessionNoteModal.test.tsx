@@ -79,7 +79,7 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
       target: { value: 'Group leadership' },
     });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Details' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Details (optional)' }), {
       target: { value: 'Maya helped lead the group discussion.' },
     });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Maya Thompson' }));
@@ -104,6 +104,22 @@ describe('SessionNoteModal', () => {
     expect(screen.getByRole('button', { name: 'Add Note' })).toBeEnabled();
     expect(screen.getByRole('group', { name: 'Link youth' })).toBeInTheDocument();
     expect(screen.getByText('Loading youth…')).toBeInTheDocument();
+  });
+
+  it('adds a note without optional details', async () => {
+    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'Attendance follow-up' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+
+    await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledWith('session-1', {
+      category: 'general',
+      title: 'Attendance follow-up',
+      details: null,
+      youthIds: [],
+    }));
   });
 
   it('edits the note fields and linked youth', async () => {
@@ -132,7 +148,7 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
       target: { value: 'Updated title' },
     });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Details' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Details (optional)' }), {
       target: { value: 'Updated details.' },
     });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Noah Williams' }));

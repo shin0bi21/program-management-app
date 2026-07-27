@@ -20,7 +20,7 @@ function sessionNoteInput(
   overrides: Partial<{
     category: 'general' | 'attendance' | 'behaviour' | 'achievement' | 'follow_up';
     title: string;
-    details: string;
+    details: string | null;
     youthIds: string[];
   }> = {},
 ) {
@@ -316,11 +316,13 @@ describe('Cohorts and attendance API', () => {
     const unlinked = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send(sessionNoteInput({
+      .send({
+        category: 'general',
         title: 'Extended session',
-        details: 'The session ran fifteen minutes long.',
-      }));
+        youthIds: [],
+      });
     expect(unlinked.status).toBe(201);
+    expect(unlinked.body.details).toBeNull();
     expect(unlinked.body.youth).toEqual([]);
 
     const notes = await request(app)

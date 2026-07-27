@@ -124,7 +124,7 @@ export interface SessionNote {
   sessionId: string;
   category: SessionNoteCategory;
   title: string;
-  details: string;
+  details: string | null;
   createdAt: string;
   updatedAt: string;
   createdByName: string | null;
@@ -143,7 +143,7 @@ export interface YouthSessionNote extends SessionNote {
 export interface CreateSessionNoteInput {
   category: SessionNoteCategory;
   title: string;
-  details: string;
+  details: string | null;
   youthIds: string[];
 }
 
