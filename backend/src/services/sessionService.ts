@@ -242,9 +242,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
           : sql`TRUE`
       }
     GROUP BY cs.id, pc.id, p.id, st.id
-    ORDER BY
-      CASE WHEN ${completedOnly} THEN cs.starts_at END DESC,
-      CASE WHEN NOT ${completedOnly} THEN cs.starts_at END ASC
+    ORDER BY cs.starts_at DESC
   `;
 }
 
