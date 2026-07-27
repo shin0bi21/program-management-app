@@ -8,6 +8,7 @@ import type {
   GenerateSessionsResult,
   ManagedSession,
   ProgramCohort,
+  SessionCalendarFilters,
   SessionListFilters,
   SessionNote,
   SessionRosterMember,
@@ -58,9 +59,9 @@ export function generateSessions(cohortId: string, data: GenerateSessionsInput) 
 
 export function getManagedSessions(filters: SessionListFilters = {}) {
   const query = new URLSearchParams();
-  if (filters.programId) query.set('programId', filters.programId);
+  if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
   if (filters.cohortId) query.set('cohortId', filters.cohortId);
-  if (filters.timing) query.set('timing', filters.timing);
+  if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);
   return apiClient.get<ManagedSession[]>(`/cohorts/sessions?${query}`);
 }
@@ -104,7 +105,11 @@ export function deleteSession(sessionId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}`);
 }
 
-export function getCohortSessions(start: string, end: string) {
-  const query = new URLSearchParams({ start, end });
+export function getCohortSessions(filters: SessionCalendarFilters) {
+  const query = new URLSearchParams({ start: filters.start, end: filters.end });
+  if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
+  if (filters.cohortId) query.set('cohortId', filters.cohortId);
+  if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
+  if (filters.search) query.set('search', filters.search);
   return apiClient.get<CohortSession[]>(`/cohorts/sessions/calendar?${query}`);
 }

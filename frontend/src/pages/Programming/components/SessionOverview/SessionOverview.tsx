@@ -177,12 +177,12 @@ export default function SessionOverview({
             size="sm"
             variant="secondary"
             disabled={!session}
-            aria-label="Add attendance"
+            aria-label="Manage attendance"
             onClick={() => {
               if (session) onAddAttendance(session);
             }}
           >
-            + Add
+            Manage
           </Button>
         ) : undefined}
       >

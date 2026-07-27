@@ -9,6 +9,9 @@ import type { GenerateSessionsInput, ProgramCohort } from '../../../common/types
 
 interface GenerateSessionsModalProps {
   cohort: ProgramCohort | null;
+  cohorts?: ProgramCohort[];
+  isOpen?: boolean;
+  initialCohortId?: string;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -22,6 +25,7 @@ const weekdays: Array<NonNullable<GenerateSessionsInput['dayOfWeek']>> = [
   'saturday',
   'sunday',
 ];
+const noCohorts: ProgramCohort[] = [];
 
 const ordinal = (day: number) => {
   if (day >= 11 && day <= 13) return `${day}th`;
@@ -31,27 +35,54 @@ const ordinal = (day: number) => {
   return `${day}th`;
 };
 
-export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: GenerateSessionsModalProps) {
+export default function GenerateSessionsModal({
+  cohort,
+  cohorts = noCohorts,
+  isOpen,
+  initialCohortId,
+  onClose,
+  onSuccess,
+}: GenerateSessionsModalProps) {
+  const open = isOpen ?? cohort !== null;
+  const [selectedCohortId, setSelectedCohortId] = useState('');
   const [frequency, setFrequency] = useState<GenerateSessionsInput['frequency']>('weekly');
   const [dayOfWeek, setDayOfWeek] = useState<NonNullable<GenerateSessionsInput['dayOfWeek']>>('tuesday');
   const [dayOfMonth, setDayOfMonth] = useState('1');
+  const [startsOn, setStartsOn] = useState('');
+  const [endsOn, setEndsOn] = useState('');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const selectedCohort = cohort
+    ?? cohorts.find(candidate => candidate.id === selectedCohortId)
+    ?? null;
 
   useEffect(() => {
-    if (!cohort) return;
+    if (!open) return;
+    setSelectedCohortId(
+      cohort?.id
+      ?? (initialCohortId && cohorts.some(candidate => candidate.id === initialCohortId)
+        ? initialCohortId
+        : cohorts[0]?.id)
+      ?? '',
+    );
     setSubmitStatus('idle');
     setStatusMessage('');
-  }, [cohort]);
+  }, [cohort, cohorts, initialCohortId, open]);
+
+  useEffect(() => {
+    if (!selectedCohort) return;
+    setStartsOn(selectedCohort.startsOn);
+    setEndsOn(selectedCohort.endsOn);
+  }, [selectedCohort?.id]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!cohort) return;
+    if (!selectedCohort) return;
     const form = new FormData(event.currentTarget);
     setSubmitStatus('submitting');
-    setStatusMessage(`Adding sessions for ${cohort.programName} - ${cohort.name}...`);
+    setStatusMessage(`Adding sessions for ${selectedCohort.programName} - ${selectedCohort.name}...`);
     try {
-      const result = await generateSessions(cohort.id, {
+      const result = await generateSessions(selectedCohort.id, {
         theme: String(form.get('theme')).trim() || null,
         frequency,
         ...((frequency === 'weekly' || frequency === 'biweekly') && { dayOfWeek }),
@@ -65,7 +96,7 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
       const sessionCount = result.sessions.length;
       setStatusMessage(
         `${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'} successfully added to `
-        + `${cohort.programName} - ${cohort.name}.`,
+        + `${selectedCohort.programName} - ${selectedCohort.name}.`,
       );
       setSubmitStatus('success');
     } catch (cause) {
@@ -79,20 +110,40 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
 
   return (
     <Modal
-      isOpen={cohort !== null}
+      isOpen={open}
       onClose={onClose}
-      title={`Add sessions for ${cohort?.name ?? ''}`}
+      title={cohort ? `Add sessions for ${cohort.name}` : 'Add sessions'}
       status={submitStatus}
       statusMessage={statusMessage}
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={submissionComplete}>Cancel</Button>
-        <Button type="submit" form="generate-sessions-form" disabled={submissionComplete}>Add Sessions</Button>
+        <Button
+          type="submit"
+          form="generate-sessions-form"
+          disabled={submissionComplete || !selectedCohort}
+        >
+          Add Sessions
+        </Button>
       </>}
       maxWidth="620px"
     >
       <form id="generate-sessions-form" onSubmit={event => void submit(event)}>
+        {!cohort && (
+          <FormField id="session-cohort" label="Cohort">
+            <FloatingSelect
+              id="session-cohort"
+              value={selectedCohortId}
+              onChange={setSelectedCohortId}
+              placeholder="Choose a cohort"
+              options={cohorts.map(candidate => ({
+                value: candidate.id,
+                label: `${candidate.programName} · ${candidate.name}`,
+              }))}
+            />
+          </FormField>
+        )}
         <FormField id="session-theme" label="Theme (optional)">
           <input id="session-theme" name="theme" maxLength={160} placeholder="Communication" />
         </FormField>
@@ -144,9 +195,10 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
               name="startsOn"
               type="date"
               required
-              min={cohort?.startsOn}
-              max={cohort?.endsOn}
-              defaultValue={cohort?.startsOn}
+              min={selectedCohort?.startsOn}
+              max={selectedCohort?.endsOn}
+              value={startsOn}
+              onChange={event => setStartsOn(event.target.value)}
             />
           </FormField>
           {frequency !== 'once' && (
@@ -156,9 +208,10 @@ export default function GenerateSessionsModal({ cohort, onClose, onSuccess }: Ge
                 name="endsOn"
                 type="date"
                 required
-                min={cohort?.startsOn}
-                max={cohort?.endsOn}
-                defaultValue={cohort?.endsOn}
+                min={selectedCohort?.startsOn}
+                max={selectedCohort?.endsOn}
+                value={endsOn}
+                onChange={event => setEndsOn(event.target.value)}
               />
             </FormField>
           )}

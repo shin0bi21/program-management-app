@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Sessions from './Sessions';
@@ -27,7 +27,39 @@ vi.mock('../../common/context/AuthContext', () => ({
 }));
 
 vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
-  default: () => <div data-testid="sessions-calendar-view">Calendar view</div>,
+  default: ({ onSessionSelect }: {
+    onSessionSelect: (session: {
+      id: string;
+      cohortId: string;
+      theme: string;
+      cohortName: string;
+      programId: string;
+      programName: string;
+      rosterMode: 'enrolled';
+      startsAt: string;
+      endsAt: string;
+      cancelledAt: null;
+      description: string;
+    }) => void;
+  }) => (
+    <div data-testid="sessions-calendar-view">
+      <button type="button" onClick={() => onSessionSelect({
+        id: 'session-1',
+        cohortId: 'cohort-1',
+        theme: 'Communication',
+        cohortName: 'Summer 2026',
+        programId: 'program-1',
+        programName: 'Soft Skills',
+        rosterMode: 'enrolled',
+        startsAt: '2026-07-28T21:00:00.000Z',
+        endsAt: '2026-07-28T23:30:00.000Z',
+        cancelledAt: null,
+        description: 'Planned communication exercise',
+      })}>
+        Calendar session
+      </button>
+    </div>
+  ),
 }));
 
 describe('Sessions', () => {
@@ -101,12 +133,12 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
 
-    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
     expect(screen.getByText('3 check-ins')).toBeInTheDocument();
@@ -129,22 +161,25 @@ describe('Sessions', () => {
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('Not available yet.');
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No notes.');
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add attendance' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Communication'));
-    expect(screen.queryByRole('heading', { name: 'Communication attendance' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Communication' }));
     expect(screen.getByRole('menuitem', { name: 'Edit Session' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete Session' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Take Attendance' }));
 
-    expect(screen.getByRole('heading', { name: 'Communication attendance' })).toBeInTheDocument();
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
+    expect(screen.getByText(
+      'Soft Skills · Summer 2026 · Jul 28, 2026 · Communication',
+    )).toBeInTheDocument();
   });
 
-  it('treats timing as a multi-filter and disables Apply when its draft is unchanged', async () => {
+  it('aligns the status filter with session table states', async () => {
     render(
       <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
@@ -153,17 +188,41 @@ describe('Sessions', () => {
 
     await screen.findByText('Communication');
     fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Timing/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
 
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Upcoming' }));
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Past' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Upcoming' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Past' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Completed' })).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Upcoming' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Past' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
+  });
+
+  it('preserves applied filters when switching session views', async () => {
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Communication');
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(getManagedSessions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ statuses: ['completed'] }),
+    ));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Completed' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 
   it('opens the add sessions flow from the page header', async () => {
@@ -178,9 +237,8 @@ describe('Sessions', () => {
 
     expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cohort' })).toHaveTextContent('Soft Skills · Summer 2026');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.getByRole('heading', { name: 'Add sessions for Summer 2026' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 
   it('switches between list and calendar views on the same page', async () => {
@@ -202,5 +260,15 @@ describe('Sessions', () => {
     expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name: 'Sessions calendar and overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
+
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    expect((await screen.findByText('Communication')).closest('tr')).toHaveClass(
+      'table-row--selected',
+    );
   });
 });

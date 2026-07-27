@@ -37,6 +37,11 @@
   cursor: inherit;
 }
 
+.programming-calendar .programming-calendar-event--selected {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 1px;
+}
+
 .programming-calendar .fc-daygrid-event-harness,
 .programming-calendar .fc-daygrid-event,
 .programming-calendar .fc-event-main,

@@ -73,10 +73,15 @@ export interface ManagedSession extends CohortSession {
 }
 
 export interface SessionListFilters {
-  programId?: string;
+  programIds?: string[];
   cohortId?: string;
-  timing?: 'upcoming' | 'past' | 'all';
+  statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
+}
+
+export interface SessionCalendarFilters extends SessionListFilters {
+  start: string;
+  end: string;
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';

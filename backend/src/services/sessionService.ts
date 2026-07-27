@@ -2,7 +2,12 @@ import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
 import { assertCohortAccess, assertSessionAccess, programAccessPredicate } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
-import type { GenerateSessionsInput, SessionListQuery, UpdateSessionInput } from '../validation/cohortSchemas';
+import type {
+  GenerateSessionsInput,
+  SessionCalendarQuery,
+  SessionListQuery,
+  UpdateSessionInput,
+} from '../validation/cohortSchemas';
 
 const intervalFor = {
   weekly: '1 week',
@@ -127,7 +132,8 @@ export async function generateSessions(
   });
 }
 
-export function getSessions(actor: AccessTokenPayload, start: string, end: string) {
+export function getSessions(actor: AccessTokenPayload, filters: SessionCalendarQuery) {
+  const search = filters.search ? `%${filters.search}%` : null;
   return sql`
     SELECT
       cs.id,
@@ -144,8 +150,23 @@ export function getSessions(actor: AccessTokenPayload, start: string, end: strin
     FROM cohort_sessions cs
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
-    WHERE cs.starts_at < ${end}::timestamptz
-      AND cs.ends_at > ${start}::timestamptz
+    WHERE cs.starts_at < ${filters.end}::timestamptz
+      AND cs.ends_at > ${filters.start}::timestamptz
+      AND ${filters.programIds.length
+        ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
+        : sql`TRUE`}
+      AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
+      AND ${filters.statuses.length === 1
+        ? filters.statuses[0] === 'completed'
+          ? sql`cs.ends_at < NOW()`
+          : sql`cs.ends_at >= NOW()`
+        : sql`TRUE`}
+      AND ${search ? sql`(
+        COALESCE(cs.theme, '') ILIKE ${search}
+        OR COALESCE(cs.description, '') ILIKE ${search}
+        OR pc.name ILIKE ${search}
+        OR p.name ILIKE ${search}
+      )` : sql`TRUE`}
       AND ${programAccessPredicate(actor, sql`pc.program_id`)}
     ORDER BY cs.starts_at
   `;
@@ -153,7 +174,7 @@ export function getSessions(actor: AccessTokenPayload, start: string, end: strin
 
 export function getSessionList(actor: AccessTokenPayload, filters: SessionListQuery) {
   const search = filters.search ? `%${filters.search}%` : null;
-  const timing = filters.timing ?? 'upcoming';
+  const completedOnly = filters.statuses.length === 1 && filters.statuses[0] === 'completed';
 
   return sql`
     SELECT
@@ -184,10 +205,16 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN attendance_records ar ON ar.session_id = cs.id
-    WHERE ${filters.programId ? sql`pc.program_id = ${filters.programId}` : sql`TRUE`}
+    WHERE ${filters.programIds.length
+      ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
+      : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
       AND ${programAccessPredicate(actor, sql`pc.program_id`)}
-      AND ${timing === 'upcoming' ? sql`cs.starts_at >= NOW()` : timing === 'past' ? sql`cs.starts_at < NOW()` : sql`TRUE`}
+      AND ${filters.statuses.length === 1
+        ? completedOnly
+          ? sql`cs.ends_at < NOW()`
+          : sql`cs.ends_at >= NOW()`
+        : sql`TRUE`}
       AND ${search ? sql`(
         COALESCE(cs.theme, '') ILIKE ${search}
         OR COALESCE(cs.description, '') ILIKE ${search}
@@ -196,8 +223,8 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
       )` : sql`TRUE`}
     GROUP BY cs.id, pc.id, p.id
     ORDER BY
-      CASE WHEN ${timing} = 'past' THEN cs.starts_at END DESC,
-      CASE WHEN ${timing} != 'past' THEN cs.starts_at END ASC
+      CASE WHEN ${completedOnly} THEN cs.starts_at END DESC,
+      CASE WHEN NOT ${completedOnly} THEN cs.starts_at END ASC
   `;
 }
 
