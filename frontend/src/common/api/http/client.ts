@@ -88,7 +88,8 @@ async function execute<T>(
   const { auth = true, timeout = DEFAULT_TIMEOUT, signal } = opts;
 
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
 
   if (auth) {
     const token = await getValidToken();
@@ -99,7 +100,9 @@ async function execute<T>(
     method,
     credentials: 'include',
     headers,
-    ...(body !== undefined && { body: JSON.stringify(body) }),
+    ...(body !== undefined && {
+      body: isFormData ? body : JSON.stringify(body),
+    }),
   };
 
   let res = await rawFetch(api(path), init, timeout, signal);

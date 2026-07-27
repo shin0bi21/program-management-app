@@ -1,93 +1,76 @@
-import type { Program, ProgramSession } from './programCardSchema'
+import type { HomepageSession } from '../../../api/homepage.api';
+import type { Program } from './programCardSchema';
 
-type SessionWithStatus = ProgramSession & {
-  status: 'past' | 'today' | 'upcoming'
+const weekdayFormatter = new Intl.DateTimeFormat('en-CA', { weekday: 'long' });
+const monthFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short' });
+const millisecondsPerDay = 86_400_000;
+
+function daysUntil(startsAt: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sessionDate = new Date(startsAt);
+  sessionDate.setHours(0, 0, 0, 0);
+  return Math.round((sessionDate.getTime() - today.getTime()) / millisecondsPerDay);
 }
 
-type UpcomingSessionsProps = {
-  upcoming: SessionWithStatus[]
-  nextDays: number | null
-  dropIn?: boolean
-}
+function UpcomingSessions({ sessions, dropIn }: { sessions: HomepageSession[]; dropIn?: boolean }) {
+  const [next, ...following] = sessions;
 
-type ProgramCardProps = {
-  program: Program
-}
-
-const TODAY = new Date()
-TODAY.setHours(0, 0, 0, 0)
-
-const MS_PER_DAY = 1000 * 60 * 60 * 24
-const WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
-const MONTH_FMT = new Intl.DateTimeFormat('en-US', { month: 'short' })
-
-function sessionStatus(date: Date): SessionWithStatus['status'] {
-  const normalized = new Date(date)
-  normalized.setHours(0, 0, 0, 0)
-  if (normalized < TODAY) return 'past'
-  if (normalized.getTime() === TODAY.getTime()) return 'today'
-  return 'upcoming'
-}
-
-function daysUntil(date: Date): number {
-  const normalized = new Date(date)
-  normalized.setHours(0, 0, 0, 0)
-  return Math.round((normalized.getTime() - TODAY.getTime()) / MS_PER_DAY)
-}
-
-function UpcomingSessions({ upcoming, nextDays, dropIn }: UpcomingSessionsProps) {
-  const next = upcoming[0] ?? null
-  const following = upcoming.slice(1)
-
-  if (upcoming.length === 0) {
+  if (!next) {
     return (
       <p className="program-empty">
-        {dropIn ? 'No upcoming drop-in days scheduled.' : 'All sessions complete for this cycle.'}
+        {dropIn ? 'No upcoming drop-in days scheduled.' : 'No upcoming sessions scheduled.'}
       </p>
-    )
+    );
   }
+
+  const nextDate = new Date(next.startsAt);
+  const nextDays = daysUntil(next.startsAt);
 
   return (
     <>
       <div className="next-session" aria-label={dropIn ? 'Next drop-in day' : 'Next session'}>
         <div className="next-session-date">
-          <span className="next-session-day">{next!.date.getDate()}</span>
-          <span className="next-session-month">{MONTH_FMT.format(next!.date)}</span>
+          <span className="next-session-day">{nextDate.getDate()}</span>
+          <span className="next-session-month">{monthFormatter.format(nextDate)}</span>
         </div>
         <div className="next-session-body">
           <span className="next-session-tag">
             {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
           </span>
-          <p className="next-session-topic">{dropIn ? 'Drop-in Day' : next!.topic}</p>
-          <p className="next-session-weekday">{WEEKDAY_FMT.format(next!.date)}</p>
+          <p className="next-session-topic">{dropIn ? 'Drop-in Day' : next.theme || next.programName}</p>
+          <p className="next-session-weekday">{weekdayFormatter.format(nextDate)}</p>
         </div>
       </div>
       {following.length > 0 && (
         <ul className="upcoming-rows">
-          {following.map((session) => (
-            <li key={session.date.toISOString()} className="upcoming-row">
-              <span className="upcoming-row-date">
-                <strong>{session.date.getDate()}</strong>
-                <span>{MONTH_FMT.format(session.date)}</span>
-              </span>
-              <span className="upcoming-row-topic">{dropIn ? 'Drop-in Day' : session.topic}</span>
-              <span className="upcoming-row-weekday">{WEEKDAY_FMT.format(session.date)}</span>
-            </li>
-          ))}
+          {following.map((session) => {
+            const date = new Date(session.startsAt);
+            return (
+              <li key={session.id} className="upcoming-row">
+                <span className="upcoming-row-date">
+                  <strong>{date.getDate()}</strong>
+                  <span>{monthFormatter.format(date)}</span>
+                </span>
+                <span className="upcoming-row-topic">
+                  {dropIn ? 'Drop-in Day' : session.theme || session.programName}
+                </span>
+                <span className="upcoming-row-weekday">{weekdayFormatter.format(date)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
-  )
+  );
 }
 
-export default function ProgramCard({ program }: ProgramCardProps) {
-  const sessionsWithStatus = program.sessions.map((session) => ({
-    ...session,
-    status: sessionStatus(session.date),
-  }))
-  const upcoming = sessionsWithStatus.filter((session) => session.status !== 'past')
-  const nextDays = upcoming[0] ? daysUntil(upcoming[0].date) : null
+interface ProgramCardProps {
+  program: Program;
+  sessions: HomepageSession[];
+}
 
+export default function ProgramCard({ program, sessions }: ProgramCardProps) {
   return (
     <article className="program-card">
       <header className="program-card-head">
@@ -100,8 +83,8 @@ export default function ProgramCard({ program }: ProgramCardProps) {
       </div>
       <div className="program-sessions">
         <p className="program-sessions-label">Upcoming</p>
-        <UpcomingSessions upcoming={upcoming} nextDays={nextDays} dropIn={program.dropIn} />
+        <UpcomingSessions sessions={sessions} dropIn={program.dropIn} />
       </div>
     </article>
-  )
+  );
 }

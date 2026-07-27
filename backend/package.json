@@ -14,6 +14,7 @@
     "test:schools": "jest --testPathPatterns=tests/schools",
     "test:programs": "jest --testPathPatterns=tests/programs",
     "test:cohorts": "jest --testPathPatterns=tests/cohorts",
+    "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
     "db:migrate:test": "sh -c 'set -a && . ./.env.test && set +a && npx tsx db/scripts/update_schemas.ts'",
     "test:watch": "jest --watch",
@@ -39,6 +40,7 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "nodemailer": "^7.0.12",
     "postgres": "^3.4.8",
     "zod": "^4.3.6"
@@ -50,6 +52,7 @@
     "@types/express": "5.0.6",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.5",
     "@types/pg": "^8.15.6",

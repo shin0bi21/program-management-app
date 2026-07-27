@@ -9,15 +9,15 @@
   --color-accent-selected: #ffedbd;
   --color-accent-border: #f2b13b;
   --accent-55: rgba(255, 181, 46, 0.55);
-  --accent-50: rgba(255, 181, 46, 0.50);
+  --accent-50: rgba(255, 181, 46, 0.5);
   --accent-45: rgba(255, 181, 46, 0.45);
   --accent-35: rgba(255, 181, 46, 0.35);
   --accent-28: rgba(255, 181, 46, 0.28);
-  --accent-20: rgba(255, 181, 46, 0.20);
+  --accent-20: rgba(255, 181, 46, 0.2);
   --accent-18: rgba(255, 181, 46, 0.18);
   --accent-16: rgba(255, 181, 46, 0.16);
   --accent-12: rgba(255, 181, 46, 0.12);
-  --accent-10: rgba(255, 181, 46, 0.10);
+  --accent-10: rgba(255, 181, 46, 0.1);
   --accent-08: rgba(255, 181, 46, 0.08);
   --accent-06: rgba(255, 181, 46, 0.06);
 }
@@ -147,6 +147,10 @@
   gap: 48px;
 }
 
+.hero-inner--without-photo {
+  grid-template-columns: 1fr;
+}
+
 .hero-main {
   min-width: 0;
 }
@@ -238,7 +242,9 @@
   cursor: pointer;
   pointer-events: auto;
   text-shadow: 0 1px 6px rgba(18, 22, 31, 0.6);
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .hero-photo-nav-button:hover {
@@ -497,7 +503,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;  
+  justify-content: center;
   min-height: 70px;
   padding: 0.5rem;
   border-radius: 8px;
@@ -714,7 +720,10 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 8px 22px rgba(18, 22, 31, 0.035);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
 }
 
 .resource-card:hover {
@@ -748,9 +757,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--accent-35);
-  background:
-    radial-gradient(circle at 30% 25%, var(--accent-35), transparent 42%),
-    var(--color-ink);
+  background: radial-gradient(circle at 30% 25%, var(--accent-35), transparent 42%), var(--color-ink);
   color: var(--color-white);
   font-size: 2.75rem;
   font-weight: 900;
@@ -857,7 +864,11 @@
   border: 1px solid rgba(18, 22, 31, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
-  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
 }
 
 .partners-logo {
@@ -867,7 +878,9 @@
   max-height: 124px;
   object-fit: contain;
   opacity: 0.86;
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .partners-logo-item:hover {

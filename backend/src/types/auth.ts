@@ -14,6 +14,8 @@ export type Permission =
   | 'write:schools'
   | 'read:outreach'
   | 'write:outreach'
+  | 'read:homepage'
+  | 'write:homepage'
   | 'read:settings'
   | 'write:settings';
 

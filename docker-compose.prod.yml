@@ -33,6 +33,9 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - UPLOAD_ROOT=/app/uploads
+    volumes:
+      - homepage_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -64,3 +67,4 @@ services:
 
 volumes:
   db_data:
+  homepage_uploads:
