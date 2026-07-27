@@ -7,6 +7,13 @@
   border-radius: var(--radius-sm);
 }
 
+@media (max-width: 1000px) {
+  .table-wrapper {
+    overscroll-behavior-y: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
