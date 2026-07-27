@@ -26,11 +26,13 @@ export function PrimaryContactCard({ contact, selected, action }: PrimaryContact
       className="primary-contact-card"
       action={action}
     >
-      {contact ? <dl>
-        <div><dt>Name</dt><dd>{[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}</dd></div>
-        <div><dt>Phone</dt><dd>{contact.phoneNumber || '—'}</dd></div>
-        <div><dt>Relationship</dt><dd>{relationshipLabel(contact.relationship)}</dd></div>
-      </dl> : undefined}
+      {contact ? (
+        <p className="primary-contact-card__summary">
+          <span>{[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}</span>
+          <span>{contact.phoneNumber || '—'}</span>
+          <span>{relationshipLabel(contact.relationship)}</span>
+        </p>
+      ) : undefined}
     </DashboardCard>
   );
 }

@@ -1,22 +1,19 @@
-.primary-contact-card dl,
-.primary-contact-card dl div {
-  margin: 0;
+.primary-contact-card__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.primary-contact-card dl {
-  display: grid;
-  gap: 12px;
+.primary-contact-card__summary span {
+  display: inline-flex;
+  align-items: center;
 }
 
-.primary-contact-card dt {
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.primary-contact-card dd {
-  margin: 3px 0 0;
+.primary-contact-card__summary span + span::before {
+  margin-right: var(--space-2);
+  color: var(--ink-40);
+  content: "·";
 }
 
 .attendance-card__cohorts {

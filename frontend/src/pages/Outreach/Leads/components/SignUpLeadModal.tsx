@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
-import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
@@ -122,7 +121,6 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
           onSubmit={event => void submit(event)}
         >
           <section className="sign-up-lead-summary" aria-labelledby="sign-up-lead-name">
-            <p className="sign-up-lead-eyebrow">New youth profile</p>
             <h3 id="sign-up-lead-name">
               {lead.youthFirstName} {lead.youthLastName}
             </h3>
@@ -143,21 +141,16 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
           </section>
 
           <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">
-            <div>
-              <h3 id="sign-up-lead-enrollment-title">Cohort enrollment</h3>
-              <p>Optional. You can create the profile now and manage cohorts later.</p>
-            </div>
-            <FormField id="sign-up-cohort" label="Choose a cohort">
-              <FloatingSelect
-                id="sign-up-cohort"
-                ariaLabel="Cohort enrollment"
-                value={cohortId}
-                onChange={setCohortId}
-                options={cohortOptions}
-                placeholder={loading ? 'Loading cohorts...' : 'Do not enroll yet'}
-                disabled={loading || submissionComplete}
-              />
-            </FormField>
+            <h3 id="sign-up-lead-enrollment-title">Cohort enrollment</h3>
+            <FloatingSelect
+              id="sign-up-cohort"
+              ariaLabel="Cohort enrollment"
+              value={cohortId}
+              onChange={setCohortId}
+              options={cohortOptions}
+              placeholder={loading ? 'Loading cohorts...' : 'Do not enroll yet'}
+              disabled={loading || submissionComplete}
+            />
             {!loading && visibleCohorts.length === 0 && (
               <p className="sign-up-lead-empty">
                 {cohorts.length
