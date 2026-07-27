@@ -134,8 +134,8 @@ describe('Programming', () => {
     expect(screen.getAllByText('5')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
-    expect(screen.getByRole('menuitem', { name: 'Enroll Youth' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Withdraw Youth' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Enroll Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Withdraw Youth' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
