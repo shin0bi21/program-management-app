@@ -14,7 +14,6 @@ import FilterCard, { type FilterCardCategory } from '../../common/components/Fil
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
-import ManageCohortsModal from './components/ManageCohortsModal/ManageCohortsModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/hooks/usePrograms';
@@ -46,13 +45,12 @@ export default function Youth() {
   }), [cohortFilters, debouncedSearch, programFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
-  const [manageCohortsYouthId, setManageCohortsYouthId] = useState<string | null>(null);
   const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
   const [sessionNotes, setSessionNotes] = useState<YouthSessionNote[]>([]);
   const [sessionNotesLoading, setSessionNotesLoading] = useState(false);
   const [sessionNotesError, setSessionNotesError] = useState<string | null>(null);
   const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
-  const { youth, setYouth, loading, error, refetch } = useYouth(queryFilters);
+  const { youth, setYouth, loading, error } = useYouth(queryFilters);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
@@ -61,7 +59,6 @@ export default function Youth() {
   const { programs } = usePrograms();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
-  const canManageCohorts = permissions.includes('write:cohorts');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -179,21 +176,14 @@ export default function Youth() {
       key: 'actions',
       header: '',
       className: 'col-actions',
-      render: (profile) => canWrite || canManageCohorts ? (
+      render: (profile) => canWrite ? (
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
-          items={[
-            ...(canWrite ? [{ id: 'edit', label: 'Edit', onClick: () => handleEditProfile(profile) }] : []),
-            ...(canManageCohorts ? [{
-              id: 'manage-cohorts',
-              label: 'Manage Cohorts',
-              onClick: () => setManageCohortsYouthId(profile.id),
-            }] : []),
-          ]}
+          items={[{ id: 'edit', label: 'Edit', onClick: () => handleEditProfile(profile) }]}
         />
       ) : null,
     },
-  ], [canManageCohorts, canWrite]);
+  ], [canWrite]);
 
   return (
     <>
@@ -278,12 +268,6 @@ export default function Youth() {
         mode="contact"
         onClose={() => setContactTarget(null)}
         onSuccess={handleSaveYouth}
-      />
-
-      <ManageCohortsModal
-        youth={youth.find(profile => profile.id === manageCohortsYouthId) ?? null}
-        onClose={() => setManageCohortsYouthId(null)}
-        onChanged={refetch}
       />
 
       <Modal

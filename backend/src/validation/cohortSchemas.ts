@@ -67,18 +67,6 @@ export const withdrawYouthSchema = z.object({
   }),
 });
 
-export const syncYouthCohortsSchema = z.object({
-  params: z.object({
-    youthId: z.string().uuid('Invalid youth ID'),
-  }),
-  body: z.object({
-    cohortIds: z.array(z.string().uuid('Invalid cohort ID')).max(200),
-  }).refine(data => new Set(data.cohortIds).size === data.cohortIds.length, {
-    message: 'Cohort selections must be unique',
-    path: ['cohortIds'],
-  }),
-});
-
 export const generateSessionsSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({
@@ -190,7 +178,6 @@ export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
-export type SyncYouthCohortsInput = z.infer<typeof syncYouthCohortsSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionCalendarQuery = z.infer<typeof sessionQuerySchema.shape.query>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;

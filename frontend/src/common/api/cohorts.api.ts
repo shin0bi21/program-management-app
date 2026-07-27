@@ -49,10 +49,6 @@ export function withdrawYouth(cohortId: string, youthId: string) {
   return apiClient.patch(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
 }
 
-export function syncYouthCohorts(youthId: string, cohortIds: string[]) {
-  return apiClient.put(`/cohorts/enrollments/${youthId}`, { cohortIds });
-}
-
 export function generateSessions(cohortId: string, data: GenerateSessionsInput) {
   return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
 }

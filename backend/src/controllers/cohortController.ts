@@ -6,7 +6,7 @@ import {
   getCohorts,
   updateCohort,
 } from '../services/cohortService';
-import { enrollYouth, syncYouthCohorts, withdrawYouth } from '../services/enrollmentService';
+import { enrollYouth, withdrawYouth } from '../services/enrollmentService';
 import {
   deleteSession,
   generateSessions,
@@ -32,7 +32,6 @@ import type {
   SessionCalendarQuery,
   SessionListQuery,
   SaveAttendanceInput,
-  SyncYouthCohortsInput,
   UpdateCohortInput,
   UpdateSessionNoteInput,
   UpdateSessionInput,
@@ -65,14 +64,6 @@ export const handleEnrollYouth = async (req: Request, res: Response) => {
 
 export const handleWithdrawYouth = async (req: Request, res: Response) => {
   res.json(await withdrawYouth(req.params.cohortId, req.params.youthId, actor(req)));
-};
-
-export const handleSyncYouthCohorts = async (req: Request, res: Response) => {
-  res.json(await syncYouthCohorts(
-    req.params.youthId,
-    req.body as SyncYouthCohortsInput,
-    actor(req),
-  ));
 };
 
 export const handleGenerateSessions = async (req: Request, res: Response) => {

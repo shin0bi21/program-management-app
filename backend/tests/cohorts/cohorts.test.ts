@@ -566,12 +566,6 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ youthIds: [youthId] });
     expect(directEnrollment.status).toBe(409);
-
-    const checklistEnrollment = await request(app)
-      .put(`/api/cohorts/enrollments/${youthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [openCohortId] });
-    expect(checklistEnrollment.status).toBe(409);
   });
 
   it('reports open-session reach without creating an enrollment', async () => {
@@ -846,23 +840,4 @@ describe('Cohorts and attendance API', () => {
     expect(attendance[0].count).toBe(1);
   });
 
-  it('synchronizes a youth cohort checklist in one request', async () => {
-    const remove = await request(app)
-      .put(`/api/cohorts/enrollments/${secondYouthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [] });
-    expect(remove.status).toBe(200);
-    expect(remove.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cohortId, youthId: secondYouthId, withdrawnOn: today }),
-    ]));
-
-    const restore = await request(app)
-      .put(`/api/cohorts/enrollments/${secondYouthId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortIds: [cohortId] });
-    expect(restore.status).toBe(200);
-    expect(restore.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cohortId, youthId: secondYouthId, withdrawnOn: null }),
-    ]));
-  });
 });

@@ -44,7 +44,6 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     ? <div data-testid="youth-modal">{mode ?? 'full'}</div>
     : null,
 }));
-vi.mock('./components/ManageCohortsModal/ManageCohortsModal', () => ({ default: () => null }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
   default: ({ items }: { items: { id: string; label: string }[] }) => (
     <div>{items.map(item => <span key={item.id}>{item.label}</span>)}</div>
@@ -70,7 +69,7 @@ describe('Youth', () => {
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText('Manage Cohorts')).toBeInTheDocument();
+    expect(screen.queryByText('Manage Cohorts')).not.toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate')).not.toBeInTheDocument();
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
