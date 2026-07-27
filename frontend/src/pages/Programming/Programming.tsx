@@ -123,12 +123,6 @@ export default function Programming() {
       render: (cohort: ProgramCohort) => <ActionsMenu
         ariaLabel={`More actions for ${cohort.name}`}
         items={[
-          ...(cohort.rosterMode === 'enrolled'
-            ? [
-                { id: 'enroll', label: 'Enroll Youth', onClick: () => setEnrollTarget(cohort) },
-                { id: 'withdraw', label: 'Withdraw Youth', onClick: () => setWithdrawTarget(cohort) },
-              ]
-            : []),
           { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
           { id: 'edit', label: 'Edit Cohort', onClick: () => setEditCohortTarget(cohort) },
           {
