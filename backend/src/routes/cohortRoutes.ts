@@ -13,7 +13,6 @@ import {
   handleGetSessionRoster,
   handleGetSessions,
   handleSaveAttendance,
-  handleSyncYouthCohorts,
   handleUpdateCohort,
   handleUpdateSessionNote,
   handleUpdateSession,
@@ -35,7 +34,6 @@ import {
   sessionListQuerySchema,
   sessionNotesSchema,
   sessionQuerySchema,
-  syncYouthCohortsSchema,
   updateCohortSchema,
   updateSessionNoteSchema,
   updateSessionSchema,
@@ -49,7 +47,6 @@ router.post('/', authenticateToken, requirePermission('write:cohorts'), generalL
 router.put('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateCohortSchema), asyncHandler(handleUpdateCohort));
 router.delete('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleDeleteCohort));
 router.get('/sessions', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionListQuerySchema), asyncHandler(handleGetSessionList));
-router.put('/enrollments/:youthId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(syncYouthCohortsSchema), asyncHandler(handleSyncYouthCohorts));
 router.post('/:cohortId/enrollments', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(enrollYouthSchema), asyncHandler(handleEnrollYouth));
 router.patch('/:cohortId/enrollments/:youthId/withdraw', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(withdrawYouthSchema), asyncHandler(handleWithdrawYouth));
 router.post('/:cohortId/sessions/generate', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(generateSessionsSchema), asyncHandler(handleGenerateSessions));
