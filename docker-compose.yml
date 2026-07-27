@@ -45,6 +45,7 @@ services:
       - .env
     environment:
       - NODE_ENV=development
+      - DISABLE_2FA=true
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - UPLOAD_ROOT=/app/uploads
     depends_on:

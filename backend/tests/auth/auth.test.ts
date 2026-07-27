@@ -115,6 +115,63 @@ describe('POST /api/auth/login', () => {
       expect(res.body.userId).toBe(user.userId);
       expect(res.body.message).toMatch(/2FA code sent/i);
     });
+
+    it('should bypass 2FA only when explicitly enabled in development', async () => {
+      const localUser = await seedTestUser({
+        email: `local-2fa-bypass-${Date.now()}@test.local`,
+      });
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalDisable2FA = process.env.DISABLE_2FA;
+
+      try {
+        process.env.NODE_ENV = 'development';
+        process.env.DISABLE_2FA = 'true';
+
+        const res = await request(app)
+          .post('/api/auth/login')
+          .send({ email: localUser.email, password: localUser.password });
+
+        expect(res.status).toBe(200);
+        expect(res.body.requires2FA).toBeUndefined();
+        expect(res.body.token).toBeDefined();
+        expect(res.body.user.id).toBe(localUser.userId);
+        expect(extractCookie(res.headers, 'refreshToken')).toBeDefined();
+      } finally {
+        if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = originalNodeEnv;
+        if (originalDisable2FA === undefined) delete process.env.DISABLE_2FA;
+        else process.env.DISABLE_2FA = originalDisable2FA;
+        await deleteTestUser(localUser.userId);
+      }
+    });
+
+    it('should ignore the 2FA bypass outside development', async () => {
+      const protectedUser = await seedTestUser({
+        email: `protected-2fa-${Date.now()}@test.local`,
+      });
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalDisable2FA = process.env.DISABLE_2FA;
+
+      try {
+        process.env.NODE_ENV = 'test';
+        process.env.DISABLE_2FA = 'true';
+
+        const res = await request(app)
+          .post('/api/auth/login')
+          .send({ email: protectedUser.email, password: protectedUser.password });
+
+        expect(res.status).toBe(200);
+        expect(res.body.requires2FA).toBe(true);
+        expect(res.body.userId).toBe(protectedUser.userId);
+        expect(res.body.token).toBeUndefined();
+      } finally {
+        if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = originalNodeEnv;
+        if (originalDisable2FA === undefined) delete process.env.DISABLE_2FA;
+        else process.env.DISABLE_2FA = originalDisable2FA;
+        await deleteTestUser(protectedUser.userId);
+      }
+    });
   });
 
   // ── Account Lockout ─────────────────────────────────────────────
