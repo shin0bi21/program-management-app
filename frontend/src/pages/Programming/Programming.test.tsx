@@ -110,8 +110,11 @@ describe('Programming', () => {
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
     expect(screen.getAllByText('No cohort selected.')).toHaveLength(3);
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
-    expect(screen.getAllByText('5')).toHaveLength(1);
-    expect(screen.getByRole('columnheader', { name: 'Youth' })).toBeInTheDocument();
+    expect(screen.queryAllByText('5')).toHaveLength(0);
+    expect(screen.queryByRole('columnheader', { name: 'Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Enrolled' })).not.toBeInTheDocument();
+    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
+    expect(headers.slice(2, 5)).toEqual(['Start', 'End', 'Status']);
     expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeDisabled();
     const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
@@ -128,7 +131,7 @@ describe('Programming', () => {
     expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeEnabled();
     expect(overview).toHaveTextContent('80%');
-    expect(screen.getAllByText('5')).toHaveLength(2);
+    expect(screen.getAllByText('5')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.getByRole('menuitem', { name: 'Enroll Youth' })).toBeInTheDocument();

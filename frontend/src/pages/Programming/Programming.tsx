@@ -106,6 +106,8 @@ export default function Programming() {
   const columns = useMemo<TableColumn<ProgramCohort>[]>(() => [
     { key: 'program', header: 'Program', render: cohort => cohort.programName },
     { key: 'cohort', header: 'Cohort', render: cohort => cohort.name },
+    { key: 'start', header: 'Start', width: '140px', render: cohort => formatShortDate(cohort.startsOn) },
+    { key: 'end', header: 'End', width: '140px', render: cohort => formatShortDate(cohort.endsOn) },
     {
       key: 'status',
       header: 'Status',
@@ -113,16 +115,6 @@ export default function Programming() {
       render: cohort => (
         <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>
       ),
-    },
-    { key: 'start', header: 'Start', width: '140px', render: cohort => formatShortDate(cohort.startsOn) },
-    { key: 'end', header: 'End', width: '140px', render: cohort => formatShortDate(cohort.endsOn) },
-    {
-      key: 'youth',
-      header: 'Youth',
-      width: '120px',
-      render: cohort => cohort.rosterMode === 'open'
-        ? cohort.uniqueAttendeeCount
-        : cohort.enrolledCount,
     },
     ...(canWriteCohorts ? [{
       key: 'actions',
