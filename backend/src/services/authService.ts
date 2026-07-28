@@ -33,7 +33,7 @@ const REFRESH_SECRET = requireEnv('REFRESH_SECRET');
 const TRUSTED_DEVICE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const REFRESH_TOKEN_EXPIRY_MS = 8 * 60 * 60 * 1000; // 8 hours
 const REFRESH_TOKEN_EXPIRY = '8h';
-const ACCESS_TOKEN_EXPIRY = '1h';
+const ACCESS_TOKEN_EXPIRY = '4h';
 const AUTH_CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 function isTwoFactorDisabled(): boolean {
