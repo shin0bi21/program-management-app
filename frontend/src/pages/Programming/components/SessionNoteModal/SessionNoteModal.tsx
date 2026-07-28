@@ -4,10 +4,10 @@ import {
   getSessionRoster,
   updateSessionNote,
 } from '../../../../common/api/cohorts.api';
-import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { sessionNoteCategoryOptions } from '../../../../common/components/SessionNoteDetails/SessionNoteDetails';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type {
@@ -105,12 +105,14 @@ export default function SessionNoteModal({
       statusMessage={statusMessage || undefined}
       successDelay={1200}
       disableClose={submitStatus === 'submitting'}
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={complete}>Cancel</Button>
-        <Button type="submit" form="session-note-form" disabled={complete}>
-          {note ? 'Save' : 'Add Note'}
-        </Button>
-      </>}
+      footer={(
+        <ModalFormFooter
+          formId="session-note-form"
+          submitLabel={note ? 'Save' : 'Add Note'}
+          submitStatus={submitStatus}
+          onClose={onClose}
+        />
+      )}
     >
       <form id="session-note-form" onSubmit={event => void submit(event)}>
         <FormField id="session-note-title" label="Title">

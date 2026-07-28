@@ -1,8 +1,8 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { updateCohort } from '../../../../common/api/cohorts.api';
-import Button from '../../../../common/components/Button/Button';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
@@ -55,16 +55,14 @@ export default function EditCohortModal({ cohort, onClose, onUpdated }: EditCoho
       statusMessage={statusMessage}
       successDelay={1200}
       disableClose={complete}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={complete}>
-            Cancel
-          </Button>
-          <Button type="submit" form="edit-cohort-form" disabled={complete}>
-            Save Changes
-          </Button>
-        </>
-      }
+      footer={(
+        <ModalFormFooter
+          formId="edit-cohort-form"
+          submitLabel="Save Changes"
+          submitStatus={status}
+          onClose={onClose}
+        />
+      )}
     >
       {cohort && (
         <form id="edit-cohort-form" onSubmit={(event) => void submit(event)}>

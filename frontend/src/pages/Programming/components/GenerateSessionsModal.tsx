@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
-import Button from '../../../common/components/Button/Button';
 import FloatingSelect from '../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../common/components/FormField/FormField';
 import Modal from '../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../common/components/ModalFormFooter/ModalFormFooter';
 import { generateSessions } from '../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../common/hooks/useSubmitStatus';
 import {
@@ -123,8 +123,6 @@ export default function GenerateSessionsModal({
     }
   };
 
-  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
-
   return (
     <Modal
       isOpen={open}
@@ -134,16 +132,15 @@ export default function GenerateSessionsModal({
       statusMessage={statusMessage}
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={submissionComplete}>Cancel</Button>
-        <Button
-          type="submit"
-          form="generate-sessions-form"
-          disabled={submissionComplete || !selectedCohort || !sessionTypeId}
-        >
-          Add Sessions
-        </Button>
-      </>}
+      footer={(
+        <ModalFormFooter
+          formId="generate-sessions-form"
+          submitLabel="Add Sessions"
+          submitStatus={submitStatus}
+          submitDisabled={!selectedCohort || !sessionTypeId}
+          onClose={onClose}
+        />
+      )}
       maxWidth="620px"
     >
       <form id="generate-sessions-form" onSubmit={event => void submit(event)}>
