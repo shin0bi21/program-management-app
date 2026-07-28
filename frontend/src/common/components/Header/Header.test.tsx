@@ -112,7 +112,7 @@ describe('Header youth navigation', () => {
     authState.role = 'staff';
 
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Header />
       </MemoryRouter>,
     );

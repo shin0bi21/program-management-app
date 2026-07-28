@@ -252,8 +252,8 @@ export default function Header() {
         >
           <button
             role="menuitem"
-            onClick={() => go('/programming')}
-            className={`settings-flyout-item${isActive('/programming') ? ' active' : ''}`}
+            onClick={() => go('/programming/cohorts')}
+            className={`settings-flyout-item${isActive('/programming/cohorts') ? ' active' : ''}`}
           >
             Cohorts
           </button>

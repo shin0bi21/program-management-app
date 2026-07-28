@@ -114,7 +114,7 @@ describe('Cohorts', () => {
   it('shows all cohorts by default and can display a selected program', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
         <LocationProbe />
       </MemoryRouter>,
@@ -165,7 +165,7 @@ describe('Cohorts', () => {
   it('shows success feedback after adding a program', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -190,7 +190,7 @@ describe('Cohorts', () => {
   it('shows success feedback after adding a cohort', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -218,7 +218,7 @@ describe('Cohorts', () => {
     auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -246,7 +246,7 @@ describe('Cohorts', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
         <LocationProbe />
       </MemoryRouter>,
@@ -274,14 +274,14 @@ describe('Cohorts', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
         <LocationProbe />
       </MemoryRouter>,
     );
 
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming');
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
     expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
@@ -306,7 +306,7 @@ describe('Cohorts', () => {
     }]);
 
     render(
-      <MemoryRouter initialEntries={['/programming']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
       </MemoryRouter>,
     );
