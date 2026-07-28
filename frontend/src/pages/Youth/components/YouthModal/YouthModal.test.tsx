@@ -68,6 +68,15 @@ describe('YouthModal', () => {
       expect(screen.getByText('Add Youth Profile')).toBeInTheDocument();
     });
 
+    it('collects only a street address for youth addresses', () => {
+      renderModal();
+
+      expect(screen.getByLabelText('Street Address')).toBeInTheDocument();
+      expect(screen.queryByLabelText('City')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Province')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Postal Code')).not.toBeInTheDocument();
+    });
+
     it('shows Update Youth Profile title when editing', () => {
       renderModal({ youthData: makeYouthProfile() });
       expect(screen.getByRole('heading', { name: 'Update Youth Profile' })).toBeInTheDocument();
@@ -153,6 +162,21 @@ describe('YouthModal', () => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
           firstName: 'Jamie',
           lastName: 'Test',
+        }));
+      });
+    });
+
+    it('submits a youth address with only the street address', async () => {
+      renderModal();
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText('Street Address'), {
+        target: { value: ' 123 Main Street ' },
+      });
+      submitForm();
+
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
+          addresses: [{ address: '123 Main Street' }],
         }));
       });
     });

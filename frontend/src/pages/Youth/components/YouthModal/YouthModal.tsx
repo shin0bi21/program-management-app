@@ -173,35 +173,6 @@ export default function YouthModal({
                           placeholder="123 Main Street"
                         />
                       </FormField>
-                      <div className="form-row">
-                        <FormField id={`city-${index}`} label="City">
-                          <input
-                            id={`city-${index}`}
-                            type="text"
-                            value={address.city}
-                            onChange={event => handleAddressChange(index, 'city', event.target.value)}
-                            placeholder="Toronto"
-                          />
-                        </FormField>
-                        <FormField id={`province-${index}`} label="Province">
-                          <input
-                            id={`province-${index}`}
-                            type="text"
-                            value={address.province}
-                            onChange={event => handleAddressChange(index, 'province', event.target.value)}
-                            placeholder="ON"
-                          />
-                        </FormField>
-                      </div>
-                      <FormField id={`postalCode-${index}`} label="Postal Code">
-                        <input
-                          id={`postalCode-${index}`}
-                          type="text"
-                          value={address.postalCode}
-                          onChange={event => handleAddressChange(index, 'postalCode', event.target.value)}
-                          placeholder="A1A 1A1"
-                        />
-                      </FormField>
                     </div>
                   ))}
                 </div>

@@ -149,11 +149,7 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
         SELECT json_agg(
           json_build_object(
             'id', a.id,
-            'address', a.address,
-            'city', a.city,
-            'province', a.province,
-            'postalCode', a.postal_code,
-            'country', a.country
+            'address', a.address
           )
         )
         FROM addresses a
@@ -249,7 +245,7 @@ export interface SetYouthInput {
   schoolId?: string;
   notes?: string | null;
   gradeLevel?: number;
-  addresses?: Array<{ id?: string; address: string; city: string; province: string; postalCode: string }>;
+  addresses?: Array<{ id?: string; address: string }>;
   contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
