@@ -17,8 +17,6 @@ const leadColumns = sql`
   school,
   program_of_interest_id,
   (SELECT name FROM programs WHERE id = program_of_interest_id) AS program_of_interest_name,
-  contact_first_name,
-  contact_last_name,
   contact_phone_number,
   contact_relationship,
   discovery_source,
@@ -50,8 +48,6 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       age,
       school,
       program_of_interest_id,
-      contact_first_name,
-      contact_last_name,
       contact_phone_number,
       contact_relationship,
       discovery_source,
@@ -65,8 +61,6 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       ${data.age},
       ${data.school},
       ${data.programOfInterestId ?? null},
-      ${data.contactFirstName},
-      ${data.contactLastName},
       ${data.contactPhoneNumber},
       ${data.contactRelationship},
       ${data.discoverySource},
@@ -87,8 +81,6 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
         age = ${data.age},
         school = ${data.school},
         program_of_interest_id = ${data.programOfInterestId ?? null},
-        contact_first_name = ${data.contactFirstName},
-        contact_last_name = ${data.contactLastName},
         contact_phone_number = ${data.contactPhoneNumber},
         contact_relationship = ${data.contactRelationship},
         discovery_source = ${data.discoverySource},
@@ -145,8 +137,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       youthLastName: string;
       school: string;
       programOfInterestId: string | null;
-      contactFirstName: string;
-      contactLastName: string;
       contactPhoneNumber: string;
       contactRelationship: string;
       notes: string | null;
@@ -154,7 +144,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     }[]>`
       SELECT id, expression_of_interest_id, converted_youth_id,
              youth_first_name, youth_last_name, school, program_of_interest_id,
-             contact_first_name, contact_last_name, contact_phone_number,
+             contact_phone_number,
              contact_relationship, notes, status
       FROM leads
       WHERE id = ${id}
@@ -242,8 +232,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     }
 
     await setContacts(youthId, [{
-      firstName: lead.contactFirstName,
-      lastName: lead.contactLastName,
       phoneNumber: lead.contactPhoneNumber,
       type: lead.contactRelationship,
     }], actorId, transactionId, trx);

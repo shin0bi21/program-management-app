@@ -13,8 +13,6 @@ const valuesForLead = (lead?: Lead): OutreachFormValues => lead ? {
   age: lead.age,
   school: lead.school,
   programId: lead.programOfInterestId ?? '',
-  contactFirstName: lead.contactFirstName,
-  contactLastName: lead.contactLastName,
   contactPhoneNumber: lead.contactPhoneNumber,
   contactRelationship: lead.contactRelationship,
   discoverySource: lead.discoverySource,
@@ -46,7 +44,7 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
     try {
       const payload = {
         youthFirstName: data.youthFirstName.trim(), youthLastName: data.youthLastName.trim(), age: data.age,
-        school: data.school.trim(), programOfInterestId: data.programId || null, contactFirstName: data.contactFirstName.trim(), contactLastName: data.contactLastName.trim(),
+        school: data.school.trim(), programOfInterestId: data.programId || null,
         contactPhoneNumber: data.contactPhoneNumber.trim(), contactRelationship: data.contactRelationship,
         discoverySource: data.discoverySource, notes: data.notes.trim() || undefined,
       };

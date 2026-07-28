@@ -46,15 +46,13 @@ describe('LeadModal', () => {
     fireEvent.change(document.getElementById('lead-school')!, { target: { value: ' Test School ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Program of Interest' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
-    fireEvent.change(document.getElementById('lead-contactFirstName')!, { target: { value: ' Jordan ' } });
-    fireEvent.change(document.getElementById('lead-contactLastName')!, { target: { value: ' Outreach ' } });
     fireEvent.change(document.getElementById('lead-contactPhoneNumber')!, { target: { value: ' 416-555-0142 ' } });
     fireEvent.submit(document.getElementById('lead-form')!);
 
     await waitFor(() => expect(createLead).toHaveBeenCalledWith(expect.objectContaining({
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
       programOfInterestId: 'program-1',
-      contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
+      contactPhoneNumber: '416-555-0142',
       contactRelationship: 'parent', discoverySource: 'online',
     })));
   });
@@ -64,7 +62,7 @@ describe('LeadModal', () => {
       id: 'lead-1', origin: 'staff_created' as const, expressionOfInterestId: null, convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
       programOfInterestId: null, programOfInterestName: null,
-      contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
+      contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian' as const, discoverySource: 'online' as const, notes: null,
       status: 'new' as const, statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     };

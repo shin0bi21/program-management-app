@@ -164,8 +164,6 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
         SELECT json_agg(
           json_build_object(
             'id', c.id,
-            'firstName', c.first_name,
-            'lastName', c.last_name,
             'phoneNumber', c.phone_number,
             'type', c.type
           )
@@ -252,7 +250,7 @@ export interface SetYouthInput {
   notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{ id?: string; address: string; city: string; province: string; postalCode: string }>;
-  contacts?: Array<{ id?: string; firstName: string; lastName: string; phoneNumber?: string; type: string }>;
+  contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
 export async function setYouth(data: SetYouthInput, actorId: string) {

@@ -112,8 +112,6 @@ export default function Leads() {
       table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} />}
       details={<>
         <PrimaryContactCard contact={selectedLead ? {
-          firstName: selectedLead.contactFirstName,
-          lastName: selectedLead.contactLastName,
           phoneNumber: selectedLead.contactPhoneNumber,
           relationship: selectedLead.contactRelationship,
         } : null} selected={selectedLead !== null} />

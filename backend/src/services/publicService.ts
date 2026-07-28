@@ -8,8 +8,6 @@ type ExpressionOfInterestInput = {
   age: number;
   school: string;
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
-  contactFirstName: string;
-  contactLastName: string;
   contactPhoneNumber: string;
   contactRelationship: 'parent' | 'sibling' | 'guardian' | 'emergency';
   notes?: string;
@@ -18,8 +16,6 @@ type ExpressionOfInterestInput = {
 export async function submitExpressionOfInterest(data: ExpressionOfInterestInput) {
   const school = data.school?.trim() || null;
   const discoverySource = data.discoverySource?.trim() || null;
-  const contactFirstName = data.contactFirstName?.trim() || null;
-  const contactLastName = data.contactLastName?.trim() || null;
   const contactPhoneNumber = data.contactPhoneNumber?.trim() || null;
   const contactRelationship = data.contactRelationship?.trim() || null;
   const notes = data.notes?.trim() || null;
@@ -31,8 +27,6 @@ export async function submitExpressionOfInterest(data: ExpressionOfInterestInput
       age,
       school,
       discovery_source,
-      contact_first_name,
-      contact_last_name,
       contact_phone_number,
       contact_relationship,
       notes
@@ -43,8 +37,6 @@ export async function submitExpressionOfInterest(data: ExpressionOfInterestInput
       ${data.age},
       ${school},
       ${discoverySource},
-      ${contactFirstName},
-      ${contactLastName},
       ${contactPhoneNumber},
       ${contactRelationship}::contact_type,
       ${notes}

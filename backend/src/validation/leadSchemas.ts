@@ -36,8 +36,6 @@ const leadDataSchema = z.object({
     age: z.number().int().min(5).max(24),
     school: z.string().trim().min(1, 'School is required').max(255),
     programOfInterestId: z.string().uuid('Invalid program ID').nullable().optional(),
-    contactFirstName: z.string().trim().min(1, 'Contact first name is required').max(120),
-    contactLastName: z.string().trim().min(1, 'Contact last name is required').max(120),
     contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(40),
     contactRelationship: z.enum(['parent', 'sibling', 'guardian']),
     discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other']),

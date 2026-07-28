@@ -20,8 +20,6 @@ describe('Expression of interest API', () => {
       INSERT INTO expressions_of_interest (
         youth_first_name,
         youth_last_name,
-        contact_first_name,
-        contact_last_name,
         contact_phone_number,
         contact_relationship,
         age,
@@ -32,8 +30,6 @@ describe('Expression of interest API', () => {
       VALUES (
         ${'Dashboard'},
         ${fixtureYouthLastName},
-        ${'Parent'},
-        ${'Viewer'},
         ${'416-555-0188'},
         ${'parent'},
         ${15},
@@ -44,10 +40,10 @@ describe('Expression of interest API', () => {
     `;
     await sql`
       INSERT INTO expressions_of_interest (
-        youth_first_name, youth_last_name, contact_first_name, contact_last_name,
+        youth_first_name, youth_last_name,
         contact_phone_number, contact_relationship, age, school, discovery_source
       ) VALUES (
-        'Older', ${jobReadinessYouthLastName}, 'Parent', 'Viewer', '416-555-0189',
+        'Older', ${jobReadinessYouthLastName}, '416-555-0189',
         'parent', 17, 'Test School', 'online'
       )
     `;
@@ -75,14 +71,14 @@ describe('Expression of interest API', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body[0]).toEqual(expect.objectContaining({
-      youthFirstName: expect.any(String),
-      youthLastName: expect.any(String),
-      contactFirstName: 'Parent',
+    expect(res.body).toEqual(expect.arrayContaining([expect.objectContaining({
+      youthFirstName: 'Dashboard',
+      youthLastName: fixtureYouthLastName,
+      contactPhoneNumber: '416-555-0188',
       age: expect.any(Number),
       status: expect.any(String),
       statusUpdatedAt: expect.any(String),
-    }));
+    })]));
   });
 
   it('returns submissions for staff', async () => {
@@ -197,7 +193,7 @@ describe('Expression of interest API', () => {
       origin: 'expression_of_interest',
       expressionOfInterestId: submission.id,
       youthFirstName: 'Dashboard',
-      contactFirstName: 'Parent',
+      contactPhoneNumber: '416-555-0188',
       discoverySource: 'online',
       notes: 'Needs follow-up',
       status: 'new',

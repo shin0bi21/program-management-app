@@ -29,8 +29,6 @@ export function useSignupSection() {
         youthLastName: data.youthLastName.trim(),
         age: data.age,
         school: data.school.trim(),
-        contactFirstName: data.contactFirstName.trim(),
-        contactLastName: data.contactLastName.trim(),
         contactPhoneNumber: data.contactPhoneNumber.trim(),
         contactRelationship: data.contactRelationship,
         discoverySource: data.discoverySource,

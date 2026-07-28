@@ -81,8 +81,8 @@ describe('YouthModal', () => {
       expect(screen.queryByRole('heading', { name: 'General Information' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Address/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('School')).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Phone Number')).toBeInTheDocument();
-      expect(screen.getByLabelText('Relationship')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Phone Number/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Relationship/)).toBeInTheDocument();
     });
 
     it('pre-fills first and last name when editing', () => {
@@ -220,9 +220,7 @@ describe('YouthModal', () => {
         contacts: null,
       });
       renderModal({ youthData: profile, mode: 'contact' });
-      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Pat' } });
-      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Smith' } });
-      fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '519-555-0101' } });
+      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '519-555-0101' } });
       submitForm();
 
       await waitFor(() => {
@@ -232,8 +230,6 @@ describe('YouthModal', () => {
           lastName: 'Smith',
           notes: 'Existing note',
           contacts: [{
-            firstName: 'Pat',
-            lastName: 'Smith',
             phoneNumber: '519-555-0101',
             type: 'parent',
           }],

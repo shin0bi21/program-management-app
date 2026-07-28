@@ -126,9 +126,7 @@ export interface CohortSessions {
 export interface Contacts {
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  first_name: string;
   id: Generated<string>;
-  last_name: string;
   phone_number: string | null;
   type: Generated<ContactType>;
   updated_at: Generated<Timestamp>;
@@ -137,8 +135,6 @@ export interface Contacts {
 
 export interface ExpressionsOfInterest {
   age: number;
-  contact_first_name: string;
-  contact_last_name: string;
   contact_phone_number: string;
   contact_relationship: ContactType;
   created_at: Generated<Timestamp>;
@@ -170,8 +166,6 @@ export interface HomepageImages {
 
 export interface Leads {
   age: number;
-  contact_first_name: string;
-  contact_last_name: string;
   contact_phone_number: string;
   contact_relationship: ContactType;
   converted_youth_id: string | null;
