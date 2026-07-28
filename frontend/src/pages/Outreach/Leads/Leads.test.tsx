@@ -33,7 +33,7 @@ describe('Leads', () => {
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
       programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
-      contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
+      contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);
@@ -71,7 +71,7 @@ describe('Leads', () => {
 
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
 
-    expect(screen.getByText('Jordan Outreach')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('No notes recorded.')).toBeInTheDocument();
   });
@@ -117,7 +117,7 @@ describe('Leads', () => {
       convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
       programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
-      contactFirstName: 'Jordan', contactLastName: 'Outreach', contactPhoneNumber: '416-555-0142',
+      contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);

@@ -7,15 +7,13 @@ type SqlExecutor = typeof sql;
 
 export type ContactInput = {
   id?: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   type: string;
 };
 
 async function syncContacts(trx: SqlExecutor, userId: string, contactsData: ContactInput[], auditUserId: string, transactionId: string) {
-  const existingLinks = await trx<{ contactId: string; firstName: string; lastName: string; phoneNumber: string | null; type: string }[]>`
-    SELECT uhc.contact_id as "contactId", c.first_name as "firstName", c.last_name as "lastName", c.phone_number as "phoneNumber", c.type
+  const existingLinks = await trx<{ contactId: string; phoneNumber: string | null; type: string }[]>`
+    SELECT uhc.contact_id as "contactId", c.phone_number as "phoneNumber", c.type
     FROM user_has_contacts uhc
     JOIN contacts c ON uhc.contact_id = c.id
     WHERE uhc.user_id = ${userId} AND uhc.active = true
@@ -25,8 +23,6 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
     existingLinks
       .filter(link => link.contactId)
       .map(link => [link.contactId, {
-        firstName: link.firstName,
-        lastName: link.lastName,
         phoneNumber: link.phoneNumber || '',
         type: link.type,
       }]),
@@ -42,9 +38,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
       const existing = existingContactMap.get(contactData.id);
       if (existing) {
         const hasChanged =
-          existing.firstName !== contactData.firstName ||
-          existing.lastName !== contactData.lastName ||
-          existing.phoneNumber !== (contactData.phoneNumber || '') ||
+          existing.phoneNumber !== contactData.phoneNumber ||
           existing.type !== contactData.type;
         if (hasChanged) toUpdate.push(contactData);
       }
@@ -63,46 +57,40 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
     `;
     for (const contactId of toDelete) {
       const old = existingContactMap.get(contactId)!;
-      await audit(trx, auditUserId, transactionId, 'user_has_contacts', contactId, 'DELETE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, null);
+      await audit(trx, auditUserId, transactionId, 'user_has_contacts', contactId, 'DELETE', { userId, phoneNumber: old.phoneNumber, type: old.type }, null);
     }
   }
 
   if (toUpdate.length > 0) {
     const ids = toUpdate.map(item => item.id!);
-    const firstNames = toUpdate.map(item => item.firstName);
-    const lastNames = toUpdate.map(item => item.lastName);
-    const phoneNumbers = toUpdate.map(item => item.phoneNumber || null);
+    const phoneNumbers = toUpdate.map(item => item.phoneNumber);
     const types = toUpdate.map(item => item.type);
 
     await trx`
       UPDATE contacts AS c
       SET
-        first_name = updates.first_name,
-        last_name = updates.last_name,
         phone_number = updates.phone_number,
         type = updates.type::contact_type,
         updated_at = NOW()
       FROM (
         SELECT * FROM UNNEST(
           ${trx.array(ids)}::uuid[],
-          ${trx.array(firstNames)}::text[],
-          ${trx.array(lastNames)}::text[],
           ${trx.array(phoneNumbers)}::text[],
           ${trx.array(types)}::text[]
-        ) AS t(id, first_name, last_name, phone_number, type)
+        ) AS t(id, phone_number, type)
       ) AS updates
       WHERE c.id = updates.id
     `;
     for (const item of toUpdate) {
       const old = existingContactMap.get(item.id!)!;
-      await audit(trx, auditUserId, transactionId, 'contacts', item.id!, 'UPDATE', { userId, firstName: old.firstName, lastName: old.lastName, phoneNumber: old.phoneNumber, type: old.type }, { userId, firstName: item.firstName, lastName: item.lastName, phoneNumber: item.phoneNumber || null, type: item.type });
+      await audit(trx, auditUserId, transactionId, 'contacts', item.id!, 'UPDATE', { userId, phoneNumber: old.phoneNumber, type: old.type }, { userId, phoneNumber: item.phoneNumber, type: item.type });
     }
   }
 
   for (const contactData of toInsert) {
     const newContacts = await trx<DbRow<Contacts>[]>`
-      INSERT INTO contacts (first_name, last_name, phone_number, type)
-      VALUES (${contactData.firstName}, ${contactData.lastName}, ${contactData.phoneNumber || null}, ${contactData.type}::contact_type)
+      INSERT INTO contacts (phone_number, type)
+      VALUES (${contactData.phoneNumber}, ${contactData.type}::contact_type)
       RETURNING *
     `;
 
@@ -111,7 +99,7 @@ async function syncContacts(trx: SqlExecutor, userId: string, contactsData: Cont
       VALUES (${userId}, ${newContacts[0].id}, true)
       ON CONFLICT (user_id, contact_id) DO UPDATE SET active = true, updated_at = NOW()
     `;
-    await audit(trx, auditUserId, transactionId, 'contacts', newContacts[0].id, 'INSERT', null, { userId, firstName: newContacts[0].firstName, lastName: newContacts[0].lastName, phoneNumber: newContacts[0].phoneNumber || null, type: newContacts[0].type });
+    await audit(trx, auditUserId, transactionId, 'contacts', newContacts[0].id, 'INSERT', null, { userId, phoneNumber: newContacts[0].phoneNumber, type: newContacts[0].type });
   }
 }
 

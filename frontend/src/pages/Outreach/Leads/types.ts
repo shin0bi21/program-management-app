@@ -14,8 +14,6 @@ export interface Lead {
   school: string;
   programOfInterestId: string | null;
   programOfInterestName: string | null;
-  contactFirstName: string;
-  contactLastName: string;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
   discoverySource: DiscoverySource;
@@ -31,8 +29,6 @@ export interface CreateLeadInput {
   age: number;
   school: string;
   programOfInterestId?: string | null;
-  contactFirstName: string;
-  contactLastName: string;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
   discoverySource: DiscoverySource;

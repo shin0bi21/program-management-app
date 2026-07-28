@@ -231,7 +231,7 @@ describe('Youth API', () => {
           ...baseYouth,
           firstName: 'Morgan',
           contacts: [
-            { firstName: 'Parent', lastName: 'One', phoneNumber: '4165551234', type: 'parent' },
+            { phoneNumber: '4165551234', type: 'parent' },
           ],
         });
       expect(res.status).toBe(201);
@@ -545,7 +545,7 @@ describe('Youth API', () => {
           id: youthId,
           ...baseYouth,
           contacts: [
-            { firstName: 'Jane', lastName: 'Doe', phoneNumber: '4165559999', type: 'guardian' },
+            { phoneNumber: '4165559999', type: 'guardian' },
           ],
         });
       expect(updateRes.status).toBe(200);
@@ -555,7 +555,10 @@ describe('Youth API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(Array.isArray(getRes.body.contacts)).toBe(true);
       expect(getRes.body.contacts).toHaveLength(1);
-      expect(getRes.body.contacts[0].firstName).toBe('Jane');
+      expect(getRes.body.contacts[0]).toEqual(expect.objectContaining({
+        phoneNumber: '4165559999',
+        type: 'guardian',
+      }));
     });
 
     it('should remove addresses when synced with empty array (200)', async () => {

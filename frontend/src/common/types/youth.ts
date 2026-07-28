@@ -40,8 +40,6 @@ export interface YouthProfile {
   }> | null;
   contacts: Array<{
     id: string;
-    firstName: string;
-    lastName: string;
     phoneNumber: string | null;
     type: string;
   }> | null;
@@ -63,8 +61,6 @@ export interface SetYouthInput {
     postalCode: string;
   }>;
   contacts?: Array<{
-    firstName: string;
-    lastName: string;
     phoneNumber: string;
     type: 'parent' | 'sibling' | 'guardian';
   }>;

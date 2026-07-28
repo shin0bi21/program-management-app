@@ -148,8 +148,6 @@ export default function ExpressionsOfInterest() {
           table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} />}
           details={<>
             <PrimaryContactCard contact={selectedSubmission ? {
-              firstName: selectedSubmission.contactFirstName,
-              lastName: selectedSubmission.contactLastName,
               phoneNumber: selectedSubmission.contactPhoneNumber,
               relationship: selectedSubmission.contactRelationship,
             } : null} selected={selectedSubmission !== null} />

@@ -12,8 +12,6 @@ export const expressionOfInterestSchema = z.object({
     discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], {
       error: 'Discovery source is required',
     }),
-    contactFirstName: z.string().trim().min(1, 'Contact first name is required').max(120, 'Contact first name is too long'),
-    contactLastName: z.string().trim().min(1, 'Contact last name is required').max(120, 'Contact last name is too long'),
     contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(40, 'Contact phone number is too long'),
     contactRelationship: z.enum(['parent', 'sibling', 'guardian'], {
       error: 'Contact relationship is required',

@@ -21,8 +21,6 @@ describe('Leads API', () => {
     youthLastName: 'Prospect',
     age: 14,
     school: 'Community School',
-    contactFirstName: 'Primary',
-    contactLastName: 'Contact',
     contactPhoneNumber: '416-555-0199',
     contactRelationship: 'guardian',
     discoverySource: 'community_outreach',
@@ -233,14 +231,13 @@ describe('Leads API', () => {
       youthId: convertedYouthId,
     });
 
-    const [contact] = await sql<{ firstName: string; phoneNumber: string }[]>`
-      SELECT c.first_name, c.phone_number
+    const [contact] = await sql<{ phoneNumber: string }[]>`
+      SELECT c.phone_number
       FROM contacts c
       JOIN user_has_contacts uhc ON uhc.contact_id = c.id
       WHERE uhc.user_id = ${convertedYouthId!} AND uhc.active = true
     `;
     expect(contact).toEqual(expect.objectContaining({
-      firstName: payload.contactFirstName,
       phoneNumber: payload.contactPhoneNumber,
     }));
 

@@ -24,8 +24,6 @@ const lead: Lead = {
   school: 'Test School',
   programOfInterestId: 'program-1',
   programOfInterestName: 'Soft Skills',
-  contactFirstName: 'Jordan',
-  contactLastName: 'Outreach',
   contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian',
   discoverySource: 'online',
