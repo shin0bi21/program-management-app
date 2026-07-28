@@ -65,7 +65,7 @@ function App() {
             }
           />
           <Route
-            path="/programming"
+            path="/programming/cohorts"
             element={
               <ProtectedRoute requiredPermission="read:cohorts">
                 <Cohorts />
