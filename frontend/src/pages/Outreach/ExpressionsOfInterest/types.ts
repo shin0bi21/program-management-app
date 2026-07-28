@@ -2,8 +2,6 @@ export interface ExpressionOfInterest {
   id: string;
   youthFirstName: string;
   youthLastName: string;
-  contactFirstName: string | null;
-  contactLastName: string | null;
   contactPhoneNumber: string | null;
   contactRelationship: 'parent' | 'sibling' | 'guardian' | null;
   age: number;

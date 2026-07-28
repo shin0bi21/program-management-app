@@ -43,10 +43,6 @@ export default function OutreachFormFields({ idPrefix, register, errors, program
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-contact-title`}>
       <h3 id={`${idPrefix}-contact-title`} className="outreach-form-section-title">Primary Contact</h3>
       <div className="form-row">
-        <FormField id={id('contactFirstName')} label="First Name *" error={errors.contactFirstName?.message}><input id={id('contactFirstName')} {...register('contactFirstName')} /></FormField>
-        <FormField id={id('contactLastName')} label="Last Name *" error={errors.contactLastName?.message}><input id={id('contactLastName')} {...register('contactLastName')} /></FormField>
-      </div>
-      <div className="form-row">
         <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message}><input id={id('contactPhoneNumber')} type="tel" {...register('contactPhoneNumber')} /></FormField>
         <FormField id={id('contactRelationship')} label="Relationship *" error={errors.contactRelationship?.message}>
           <select id={id('contactRelationship')} {...register('contactRelationship')}>

@@ -215,7 +215,7 @@ describe('Youth API', () => {
           ...baseYouth,
           firstName: 'Alex',
           addresses: [
-            { address: '123 Main St', city: 'Toronto', province: 'ON', postalCode: 'M1A 1A1' },
+            { address: '123 Main St' },
           ],
         });
       expect(res.status).toBe(201);
@@ -231,7 +231,7 @@ describe('Youth API', () => {
           ...baseYouth,
           firstName: 'Morgan',
           contacts: [
-            { firstName: 'Parent', lastName: 'One', phoneNumber: '4165551234', type: 'parent' },
+            { phoneNumber: '4165551234', type: 'parent' },
           ],
         });
       expect(res.status).toBe(201);
@@ -524,7 +524,7 @@ describe('Youth API', () => {
           id: youthId,
           ...baseYouth,
           addresses: [
-            { address: '456 Oak Ave', city: 'Mississauga', province: 'ON', postalCode: 'L5A 2B2' },
+            { address: '456 Oak Ave' },
           ],
         });
       expect(updateRes.status).toBe(200);
@@ -534,7 +534,9 @@ describe('Youth API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(Array.isArray(getRes.body.addresses)).toBe(true);
       expect(getRes.body.addresses).toHaveLength(1);
-      expect(getRes.body.addresses[0].city).toBe('Mississauga');
+      expect(getRes.body.addresses[0]).toEqual(expect.objectContaining({
+        address: '456 Oak Ave',
+      }));
     });
 
     it('should add contacts on update (200)', async () => {
@@ -545,7 +547,7 @@ describe('Youth API', () => {
           id: youthId,
           ...baseYouth,
           contacts: [
-            { firstName: 'Jane', lastName: 'Doe', phoneNumber: '4165559999', type: 'guardian' },
+            { phoneNumber: '4165559999', type: 'guardian' },
           ],
         });
       expect(updateRes.status).toBe(200);
@@ -555,7 +557,10 @@ describe('Youth API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(Array.isArray(getRes.body.contacts)).toBe(true);
       expect(getRes.body.contacts).toHaveLength(1);
-      expect(getRes.body.contacts[0].firstName).toBe('Jane');
+      expect(getRes.body.contacts[0]).toEqual(expect.objectContaining({
+        phoneNumber: '4165559999',
+        type: 'guardian',
+      }));
     });
 
     it('should remove addresses when synced with empty array (200)', async () => {
@@ -566,7 +571,7 @@ describe('Youth API', () => {
         .send({
           id: youthId,
           ...baseYouth,
-          addresses: [{ address: '789 Elm St', city: 'Brampton', province: 'ON', postalCode: 'L6P 1A1' }],
+          addresses: [{ address: '789 Elm St' }],
         });
 
       // Then sync with empty — should clear addresses

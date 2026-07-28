@@ -46,9 +46,6 @@ export const setYouthSchema = z.object({
         z.object({
           id: z.string().uuid('Invalid address ID').optional(),
           address: z.string().min(1, 'Street address is required'),
-          city: z.string().min(1, 'City is required'),
-          province: z.string().min(1, 'Province is required'),
-          postalCode: z.string().min(1, 'Postal code is required'),
         }),
       )
       .optional(),
@@ -56,15 +53,7 @@ export const setYouthSchema = z.object({
       .array(
         z.object({
           id: z.string().uuid('Invalid contact ID').optional(),
-          firstName: z
-            .string()
-            .min(1, 'Contact first name is required')
-            .regex(/^[a-zA-Z\s'-]+$/, 'Contact first name can only contain letters, spaces, hyphens, and apostrophes'),
-          lastName: z
-            .string()
-            .min(1, 'Contact last name is required')
-            .regex(/^[a-zA-Z\s'-]+$/, 'Contact last name can only contain letters, spaces, hyphens, and apostrophes'),
-          phoneNumber: z.string().optional(),
+          phoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
           type: z.enum(['parent', 'sibling', 'guardian', 'emergency']).default('parent'),
         }),
       )

@@ -218,8 +218,6 @@ export default function Youth() {
           details={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {
-                firstName: selectedProfile.contacts[0].firstName,
-                lastName: selectedProfile.contacts[0].lastName,
                 phoneNumber: selectedProfile.contacts[0].phoneNumber,
                 relationship: selectedProfile.contacts[0].type,
               } : null}

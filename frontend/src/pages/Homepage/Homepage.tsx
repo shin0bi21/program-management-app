@@ -159,8 +159,8 @@ export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; ses
 }
 
 export default function Homepage() {
-  const { content, error } = useHomepageContent();
-  useSectionRouting();
+  const { content, error, loading } = useHomepageContent();
+  useSectionRouting({ disabled: loading });
 
   const photos = error
     ? heroSectionPhotos

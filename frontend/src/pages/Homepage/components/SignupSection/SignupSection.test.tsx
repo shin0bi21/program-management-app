@@ -33,8 +33,6 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: '  Test  ' } })
     fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: '  Westview  ' } })
-    fireEvent.change(document.getElementById('cohort-contactFirstName')!, { target: { value: '  Taylor  ' } })
-    fireEvent.change(document.getElementById('cohort-contactLastName')!, { target: { value: '  Test  ' } })
     fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '  519-555-0199  ' } })
     fireEvent.change(document.getElementById('cohort-contactRelationship')!, { target: { value: 'guardian' } })
     fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
@@ -47,8 +45,6 @@ describe('SignupSection', () => {
         youthLastName: 'Test',
         age: 14,
         school: 'Westview',
-        contactFirstName: 'Taylor',
-        contactLastName: 'Test',
         contactPhoneNumber: '519-555-0199',
         contactRelationship: 'guardian',
         discoverySource: 'online',
@@ -64,8 +60,6 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: 'Test' } })
     fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: 'Westview' } })
-    fireEvent.change(document.getElementById('cohort-contactFirstName')!, { target: { value: 'Taylor' } })
-    fireEvent.change(document.getElementById('cohort-contactLastName')!, { target: { value: 'Test' } })
     fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '519-555-0199' } })
     fireEvent.change(document.getElementById('cohort-contactRelationship')!, { target: { value: 'guardian' } })
     fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
@@ -79,7 +73,7 @@ describe('SignupSection', () => {
     expect((document.getElementById('cohort-youthFirstName') as HTMLInputElement).value).toBe('')
   })
 
-  it('requires the primary contact text fields', async () => {
+  it('requires the primary contact phone number', async () => {
     render(<SignupSection />)
 
     fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: 'Jordan' } })
@@ -89,9 +83,7 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
     fireEvent.submit(screen.getByRole('button', { name: /submit/i }).closest('form')!)
 
-    expect(await screen.findByText(/contact first name is required/i)).toBeInTheDocument()
-    expect(screen.getByText(/contact last name is required/i)).toBeInTheDocument()
-    expect(screen.getByText(/contact phone number is required/i)).toBeInTheDocument()
+    expect(await screen.findByText(/contact phone number is required/i)).toBeInTheDocument()
     expect(mockSubmitExpressionOfInterest).not.toHaveBeenCalled()
   })
 })

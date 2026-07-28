@@ -7,8 +7,6 @@ import { SessionNoteCategoryBadge } from '../SessionNoteDetails/SessionNoteDetai
 
 interface PrimaryContactCardProps {
   contact: {
-    firstName?: string | null;
-    lastName?: string | null;
     phoneNumber?: string | null;
     relationship?: string | null;
   } | null;
@@ -30,7 +28,6 @@ export function PrimaryContactCard({ contact, selected, action }: PrimaryContact
     >
       {contact ? (
         <p className="primary-contact-card__summary">
-          <span>{[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}</span>
           <span>{contact.phoneNumber || '—'}</span>
           <span>{relationshipLabel(contact.relationship)}</span>
         </p>

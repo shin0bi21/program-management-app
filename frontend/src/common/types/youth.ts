@@ -33,15 +33,9 @@ export interface YouthProfile {
   addresses: Array<{
     id: string;
     address: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
   }> | null;
   contacts: Array<{
     id: string;
-    firstName: string;
-    lastName: string;
     phoneNumber: string | null;
     type: string;
   }> | null;
@@ -58,13 +52,8 @@ export interface SetYouthInput {
   gradeLevel?: number;
   addresses?: Array<{
     address: string;
-    city: string;
-    province: string;
-    postalCode: string;
   }>;
   contacts?: Array<{
-    firstName: string;
-    lastName: string;
     phoneNumber: string;
     type: 'parent' | 'sibling' | 'guardian';
   }>;

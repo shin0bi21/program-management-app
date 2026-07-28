@@ -1,7 +1,13 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Homepage from './Homepage';
+
+const homepageState = vi.hoisted(() => ({
+  loading: false,
+  error: null as string | null,
+}));
+const mockUseSectionRouting = vi.hoisted(() => vi.fn());
 
 vi.mock('../../common/context/AuthContext', () => ({
   useAuth: () => ({
@@ -28,13 +34,23 @@ vi.mock('./hooks/useHomepageContent', () => ({
       }],
       sessions: [],
     },
-    loading: false,
-    error: null,
+    loading: homepageState.loading,
+    error: homepageState.error,
     refresh: vi.fn(),
   }),
 }));
 
+vi.mock('./hooks/useSectionRouting', () => ({
+  useSectionRouting: mockUseSectionRouting,
+}));
+
 describe('Homepage', () => {
+  beforeEach(() => {
+    homepageState.loading = false;
+    homepageState.error = null;
+    mockUseSectionRouting.mockClear();
+  });
+
   it('renders the public homepage sections', () => {
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -55,5 +71,25 @@ describe('Homepage', () => {
     expect(teamCards[0]).toHaveTextContent(
       'Drawing from both his professional experience and his lived experience as a former Crown ward',
     );
+  });
+
+  it('defers direct section routing until managed content has loaded', () => {
+    homepageState.loading = true;
+    const view = render(
+      <MemoryRouter initialEntries={['/sign-up']}>
+        <Homepage />
+      </MemoryRouter>,
+    );
+
+    expect(mockUseSectionRouting).toHaveBeenLastCalledWith({ disabled: true });
+
+    homepageState.loading = false;
+    view.rerender(
+      <MemoryRouter initialEntries={['/sign-up']}>
+        <Homepage />
+      </MemoryRouter>,
+    );
+
+    expect(mockUseSectionRouting).toHaveBeenLastCalledWith({ disabled: false });
   });
 });

@@ -96,3 +96,9 @@
   background-color: var(--color-status-warn-bg);
   color: var(--color-status-warn);
 }
+
+.page-empty {
+  padding: 28px;
+  color: var(--color-muted);
+  text-align: center;
+}

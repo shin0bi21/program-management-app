@@ -68,6 +68,15 @@ describe('YouthModal', () => {
       expect(screen.getByText('Add Youth Profile')).toBeInTheDocument();
     });
 
+    it('collects only a street address for youth addresses', () => {
+      renderModal();
+
+      expect(screen.getByLabelText('Street Address')).toBeInTheDocument();
+      expect(screen.queryByLabelText('City')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Province')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Postal Code')).not.toBeInTheDocument();
+    });
+
     it('shows Update Youth Profile title when editing', () => {
       renderModal({ youthData: makeYouthProfile() });
       expect(screen.getByRole('heading', { name: 'Update Youth Profile' })).toBeInTheDocument();
@@ -81,8 +90,8 @@ describe('YouthModal', () => {
       expect(screen.queryByRole('heading', { name: 'General Information' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Address/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('School')).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Phone Number')).toBeInTheDocument();
-      expect(screen.getByLabelText('Relationship')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Phone Number/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Relationship/)).toBeInTheDocument();
     });
 
     it('pre-fills first and last name when editing', () => {
@@ -157,6 +166,21 @@ describe('YouthModal', () => {
       });
     });
 
+    it('submits a youth address with only the street address', async () => {
+      renderModal();
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText('Street Address'), {
+        target: { value: ' 123 Main Street ' },
+      });
+      submitForm();
+
+      await waitFor(() => {
+        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
+          addresses: [{ address: '123 Main Street' }],
+        }));
+      });
+    });
+
     it('includes login email when inviting during youth creation', async () => {
       renderModal({ showLoginEmail: true });
       fillRequiredFields();
@@ -220,9 +244,7 @@ describe('YouthModal', () => {
         contacts: null,
       });
       renderModal({ youthData: profile, mode: 'contact' });
-      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Pat' } });
-      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Smith' } });
-      fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '519-555-0101' } });
+      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '519-555-0101' } });
       submitForm();
 
       await waitFor(() => {
@@ -232,8 +254,6 @@ describe('YouthModal', () => {
           lastName: 'Smith',
           notes: 'Existing note',
           contacts: [{
-            firstName: 'Pat',
-            lastName: 'Smith',
             phoneNumber: '519-555-0101',
             type: 'parent',
           }],

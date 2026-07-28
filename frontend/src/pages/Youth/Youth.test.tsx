@@ -129,14 +129,14 @@ describe('Youth', () => {
           absentCount: 4,
           lastAttendedOn: '2026-07-21',
         }],
-        contacts: [{ id: 'contact-1', firstName: 'Parent', lastName: 'One', phoneNumber: '416-555-0101', type: 'parent' }],
+        contacts: [{ id: 'contact-1', phoneNumber: '416-555-0101', type: 'parent' }],
       })],
       setYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
     });
     render(<Youth />);
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    expect(screen.getByText('Parent One')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0101')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(screen.getByText('Summer 2026')).toBeInTheDocument();
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();

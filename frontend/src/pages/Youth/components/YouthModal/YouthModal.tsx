@@ -173,35 +173,6 @@ export default function YouthModal({
                           placeholder="123 Main Street"
                         />
                       </FormField>
-                      <div className="form-row">
-                        <FormField id={`city-${index}`} label="City">
-                          <input
-                            id={`city-${index}`}
-                            type="text"
-                            value={address.city}
-                            onChange={event => handleAddressChange(index, 'city', event.target.value)}
-                            placeholder="Toronto"
-                          />
-                        </FormField>
-                        <FormField id={`province-${index}`} label="Province">
-                          <input
-                            id={`province-${index}`}
-                            type="text"
-                            value={address.province}
-                            onChange={event => handleAddressChange(index, 'province', event.target.value)}
-                            placeholder="ON"
-                          />
-                        </FormField>
-                      </div>
-                      <FormField id={`postalCode-${index}`} label="Postal Code">
-                        <input
-                          id={`postalCode-${index}`}
-                          type="text"
-                          value={address.postalCode}
-                          onChange={event => handleAddressChange(index, 'postalCode', event.target.value)}
-                          placeholder="A1A 1A1"
-                        />
-                      </FormField>
                     </div>
                   ))}
                 </div>
@@ -219,27 +190,7 @@ export default function YouthModal({
               {contacts.map((contact, index) => (
                 <div key={index} className="contact-form-item">
                   <div className="form-row">
-                    <FormField id={`contact-firstName-${index}`} label="First Name">
-                      <input
-                        id={`contact-firstName-${index}`}
-                        type="text"
-                        value={contact.firstName}
-                        onChange={(e) => handleContactChange(index, 'firstName', e.target.value)}
-                        placeholder="John"
-                      />
-                    </FormField>
-                    <FormField id={`contact-lastName-${index}`} label="Last Name">
-                      <input
-                        id={`contact-lastName-${index}`}
-                        type="text"
-                        value={contact.lastName}
-                        onChange={(e) => handleContactChange(index, 'lastName', e.target.value)}
-                        placeholder="Doe"
-                      />
-                    </FormField>
-                  </div>
-                  <div className="form-row">
-                    <FormField id={`phoneNumber-${index}`} label="Phone Number">
+                    <FormField id={`phoneNumber-${index}`} label="Phone Number *">
                       <input
                         id={`phoneNumber-${index}`}
                         type="tel"
@@ -248,7 +199,7 @@ export default function YouthModal({
                         placeholder="(416) 555-1234"
                       />
                     </FormField>
-                    <FormField id={`type-${index}`} label="Relationship">
+                    <FormField id={`type-${index}`} label="Relationship *">
                       <select
                         id={`type-${index}`}
                         value={contact.type}

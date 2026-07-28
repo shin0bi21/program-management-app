@@ -23,7 +23,7 @@ describe('ExpressionsOfInterest', () => {
   beforeEach(() => {
     getExpressions.mockResolvedValue([{
       id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
-      school: 'Test School', contactFirstName: 'Parent', contactLastName: 'Contact',
+      school: 'Test School',
       contactPhoneNumber: '416-555-0100', contactRelationship: 'parent', discoverySource: 'online',
       notes: 'Follow up next week', status: 'new', createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
       suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
@@ -36,7 +36,6 @@ describe('ExpressionsOfInterest', () => {
 
     expect(screen.queryByRole('button', { name: 'View' })).not.toBeInTheDocument();
     fireEvent.click(youthName.closest('tr')!);
-    expect(screen.getByText('Parent Contact')).toBeInTheDocument();
     expect(screen.getByText('416-555-0100')).toBeInTheDocument();
     expect(screen.getByText('Follow up next week')).toBeInTheDocument();
   });
