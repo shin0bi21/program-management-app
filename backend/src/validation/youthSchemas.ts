@@ -46,9 +46,6 @@ export const setYouthSchema = z.object({
         z.object({
           id: z.string().uuid('Invalid address ID').optional(),
           address: z.string().min(1, 'Street address is required'),
-          city: z.string().min(1, 'City is required'),
-          province: z.string().min(1, 'Province is required'),
-          postalCode: z.string().min(1, 'Postal code is required'),
         }),
       )
       .optional(),

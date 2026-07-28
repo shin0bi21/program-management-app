@@ -43,13 +43,9 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Addresses {
   address: string;
-  city: string;
-  country: Generated<string>;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   id: Generated<string>;
-  postal_code: string;
-  province: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
