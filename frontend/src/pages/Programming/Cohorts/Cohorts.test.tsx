@@ -253,7 +253,7 @@ describe('Cohorts', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
-      '/programming?program=program-1&status=active',
+      '/programming/cohorts?program=program-1&status=active',
     ));
     await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith('program-1'));
   });
