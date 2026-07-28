@@ -1,0 +1,29 @@
+.cohort-card-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cohort-state {
+  display: inline-flex;
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cohort-state--active {
+  background: var(--color-status-active-bg);
+  color: var(--color-status-active);
+}
+
+.cohort-state--upcoming {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.cohort-state--completed {
+  background: var(--ink-08);
+  color: var(--color-muted);
+}
