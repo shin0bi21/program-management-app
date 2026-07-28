@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import Button from '../../../../common/components/Button/Button';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { createHomepageImage, updateHomepageImage, type HomepageImage } from '../../api/homepage.api';
@@ -64,16 +64,14 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
       statusMessage={statusMessage}
       successDelay={1200}
       disableClose={disabled}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={disabled}>
-            Cancel
-          </Button>
-          <Button type="submit" form="homepage-image-form" disabled={disabled}>
-            {image ? 'Save' : 'Add Image'}
-          </Button>
-        </>
-      }
+      footer={(
+        <ModalFormFooter
+          formId="homepage-image-form"
+          submitLabel={image ? 'Save' : 'Add Image'}
+          submitStatus={status}
+          onClose={onClose}
+        />
+      )}
     >
       <form id="homepage-image-form" onSubmit={(event) => void submit(event)}>
         {!image && (

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
@@ -107,12 +107,15 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
       maxWidth="600px"
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={submissionComplete}>Cancel</Button>
-        <Button type="submit" form="sign-up-lead-form" disabled={submissionComplete || loading}>
-          Create Profile
-        </Button>
-      </>}
+      footer={(
+        <ModalFormFooter
+          formId="sign-up-lead-form"
+          submitLabel="Create Profile"
+          submitStatus={submitStatus}
+          submitDisabled={loading}
+          onClose={onClose}
+        />
+      )}
     >
       {lead && (
         <form

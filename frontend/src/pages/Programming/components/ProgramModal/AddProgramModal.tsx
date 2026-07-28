@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { createProgram } from '../../../../common/api/programs.api';
-import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { Program } from '../../../../common/types/program';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
@@ -60,16 +60,14 @@ export default function AddProgramModal({ isOpen, onClose, onCreated }: AddProgr
       statusMessage={statusMessage}
       successDelay={1400}
       disableClose={complete}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={complete}>
-            Cancel
-          </Button>
-          <Button type="submit" form="add-program-form" disabled={complete}>
-            Add Program
-          </Button>
-        </>
-      }
+      footer={(
+        <ModalFormFooter
+          formId="add-program-form"
+          submitLabel="Add Program"
+          submitStatus={status}
+          onClose={onClose}
+        />
+      )}
     >
       <form id="add-program-form" onSubmit={(event) => void submit(event)}>
         <FormField id="program-name" label="Program name">

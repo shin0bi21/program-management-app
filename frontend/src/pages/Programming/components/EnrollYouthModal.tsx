@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
 import Modal from '../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../common/components/ModalFormFooter/ModalFormFooter';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { enrollYouth } from '../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../common/hooks/useSubmitStatus';
@@ -116,18 +117,17 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
       statusMessage={statusMessage}
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={submissionComplete}>Cancel</Button>
-        <Button
-          type="submit"
-          form="enroll-youth-form"
-          disabled={submissionComplete || loading || !selectedYouthIds.length}
-        >
-          {selectedYouthIds.length
+      footer={(
+        <ModalFormFooter
+          formId="enroll-youth-form"
+          submitLabel={selectedYouthIds.length
             ? `Enroll ${selectedYouthIds.length} Youth`
             : 'Enroll Youth'}
-        </Button>
-      </>}
+          submitStatus={submitStatus}
+          submitDisabled={loading || !selectedYouthIds.length}
+          onClose={onClose}
+        />
+      )}
     >
       {loadError && <p className="form-error">{loadError}</p>}
       {submitError && submitStatus === 'idle' && <p className="form-error">{submitError}</p>}

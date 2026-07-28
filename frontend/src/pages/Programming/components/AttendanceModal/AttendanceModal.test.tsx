@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CohortSession } from '../../../common/types/cohort';
+import type { CohortSession } from '../../../../common/types/cohort';
 import AttendanceModal from './AttendanceModal';
 
 const api = vi.hoisted(() => ({
@@ -10,9 +10,9 @@ const api = vi.hoisted(() => ({
   getYouth: vi.fn(),
 }));
 
-vi.mock('../../../common/api/cohorts.api', () => api);
-vi.mock('../../../common/api/youth.api', () => ({ getYouth: api.getYouth }));
-vi.mock('../../Youth/components/YouthModal/YouthModal', () => ({
+vi.mock('../../../../common/api/cohorts.api', () => api);
+vi.mock('../../../../common/api/youth.api', () => ({ getYouth: api.getYouth }));
+vi.mock('../../../Youth/components/YouthModal/YouthModal', () => ({
   default: ({
     isOpen,
     onSuccess,
