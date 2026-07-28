@@ -14,10 +14,10 @@ const rateLimitHandler = (message: string) =>
     next(new TooManyRequestsError(message));
   };
 
-// General API rate limiter: 100 requests per 15 minutes
+// General API rate limiter: 300 requests per 15 minutes
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false,  // Disable `X-RateLimit-*` headers
   skip: () => skipGeneralRateLimiting,
