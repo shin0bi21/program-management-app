@@ -12,19 +12,19 @@ import SessionNoteDetails, {
   SessionNoteCategoryBadge,
 } from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/hooks/useConfirmModal';
-import type { ManagedSession, SessionNote } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
 import { formatShortDate } from '../../../../../common/utils/date';
 import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
 import './SessionOverview.css';
 
 interface SessionOverviewProps {
-  session: ManagedSession | null;
+  session: CohortSession | null;
   canWriteAttendance: boolean;
   canWriteNotes: boolean;
-  onAddAttendance: (session: ManagedSession) => void;
+  onAddAttendance: (session: CohortSession) => void;
 }
 
-const getAttendanceSummary = (session: ManagedSession | null) => {
+const getAttendanceSummary = (session: CohortSession | null) => {
   if (!session || session.attendanceRate === null) return null;
   if (session.rosterMode === 'open') {
     return session.attendanceMarkedCount
@@ -119,7 +119,7 @@ export default function SessionOverview({
   onAddAttendance,
 }: SessionOverviewProps) {
   const attendanceSummary = getAttendanceSummary(session);
-  const [noteTarget, setNoteTarget] = useState<ManagedSession | null>(null);
+  const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);

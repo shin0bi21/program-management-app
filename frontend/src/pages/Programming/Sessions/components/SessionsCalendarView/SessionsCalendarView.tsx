@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
-import { getCohortSessions } from '../../../../../common/api/cohorts.api';
+import { getSessions } from '../../../../../common/api/cohorts.api';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import ProgrammingCalendar from '../ProgrammingCalendar/ProgrammingCalendar';
 import './SessionsCalendarView.css';
@@ -19,6 +19,7 @@ interface SessionsCalendarViewProps {
   selectedStatuses: Array<'upcoming' | 'completed'>;
   search: string;
   refreshToken: number;
+  onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
 }
 
@@ -30,6 +31,7 @@ export default function SessionsCalendarView({
   selectedStatuses,
   search,
   refreshToken,
+  onSessionsLoaded,
   onSessionSelect,
 }: SessionsCalendarViewProps) {
   const [range, setRange] = useState<CalendarRange | null>(null);
@@ -41,7 +43,7 @@ export default function SessionsCalendarView({
     const requestId = ++requestIdRef.current;
     setError(null);
     try {
-      const nextSessions = await getCohortSessions({
+      const nextSessions = await getSessions({
         start: currentRange.start,
         end: currentRange.end,
         programIds: selectedProgramIds,
@@ -50,13 +52,25 @@ export default function SessionsCalendarView({
         statuses: selectedStatuses,
         search: search || undefined,
       });
-      if (requestIdRef.current === requestId) setSessions(nextSessions);
+      if (requestIdRef.current === requestId) {
+        setSessions(nextSessions);
+        onSessionsLoaded?.(nextSessions);
+      }
     } catch (cause) {
       if (requestIdRef.current === requestId) {
+        setSessions([]);
+        onSessionsLoaded?.([]);
         setError(cause instanceof Error ? cause.message : 'Could not load sessions');
       }
     }
-  }, [search, selectedCohortId, selectedProgramIds, selectedSessionTypeIds, selectedStatuses]);
+  }, [
+    onSessionsLoaded,
+    search,
+    selectedCohortId,
+    selectedProgramIds,
+    selectedSessionTypeIds,
+    selectedStatuses,
+  ]);
 
   useEffect(() => () => {
     requestIdRef.current += 1;

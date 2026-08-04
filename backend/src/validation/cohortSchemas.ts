@@ -99,25 +99,30 @@ export const generateSessionsSchema = z.object({
   }),
 });
 
-export const sessionQuerySchema = z.object({
-  query: z.object({
-    start: z.string().datetime({ offset: true }),
-    end: z.string().datetime({ offset: true }),
-    programIds: commaSeparated(z.string().uuid('Invalid program ID')),
-    cohortId: z.string().uuid('Invalid cohort ID').optional(),
-    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
-    statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
-    search: z.string().trim().max(120).optional().default(''),
-  }),
-});
-
 export const sessionListQuerySchema = z.object({
   query: z.object({
+    start: z.string().datetime({ offset: true }).optional(),
+    end: z.string().datetime({ offset: true }).optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
     sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
+  }).superRefine((data, context) => {
+    if (Boolean(data.start) !== Boolean(data.end)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Session range requires both start and end',
+        path: [data.start ? 'end' : 'start'],
+      });
+    }
+    if (data.start && data.end && Date.parse(data.end) <= Date.parse(data.start)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Session range end must be after start',
+        path: ['end'],
+      });
+    }
   }),
 });
 
@@ -184,7 +189,6 @@ export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
-export type SessionCalendarQuery = z.infer<typeof sessionQuerySchema.shape.query>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;

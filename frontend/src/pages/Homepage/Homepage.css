@@ -25,7 +25,7 @@
 .homepage-container {
   --home-max: 1360px;
   --home-pad-x: 56px;
-  --home-section-y: 72px;
+  --home-section-y: 80px;
   --hero-photo-size: 420px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
@@ -114,12 +114,12 @@
 }
 
 .cohort-section {
-  background: var(--color-ink);
-  color: var(--color-white);
+  background: var(--home-soft);
+  color: var(--color-ink);
 }
 
 .cohort-section .section-title {
-  color: var(--color-white);
+  color: var(--color-ink);
 }
 
 .timeline-section,
@@ -289,7 +289,7 @@
 
 .cohort-section-title {
   margin: 0;
-  color: var(--color-white);
+  color: var(--color-ink);
   font-size: 2rem;
   font-weight: 800;
   line-height: 1.12;
@@ -303,7 +303,7 @@
 .cohort-section-description {
   margin: 16px 0 0;
   max-width: 36rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-body);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -312,7 +312,7 @@
   position: relative;
   width: 100%;
   padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--home-line);
   border-radius: 8px;
   background: var(--color-white);
   box-shadow: none;
@@ -920,10 +920,10 @@
   }
 
   .hero-description {
-    margin-top: 2.24cqi;
+    margin-top: 2.5cqi;
     width: 100%;
     max-width: 70ch;
-    font-size: 1.43cqi;
+    font-size: 1.25cqi;
   }
 
   .hero-visual-panel,
@@ -943,9 +943,9 @@
   }
 
   .hero-photo-caption {
-    min-height: 5.75cqi;
-    max-height: 7.7cqi;
-    font-size: 1.18cqi;
+    min-height: 4.55cqi;
+    max-height: 7.5cqi;
+    font-size: 1.25cqi;
   }
 
   .section-title {

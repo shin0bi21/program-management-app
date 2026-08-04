@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ManagedSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../../../../common/types/cohort';
 import SessionOverview from './SessionOverview';
 
 const getSessionNotes = vi.fn();
@@ -15,7 +15,7 @@ vi.mock('../../../../../common/api/cohorts.api', () => ({
   deleteSessionNote: (...args: unknown[]) => deleteSessionNote(...args),
 }));
 
-const session: ManagedSession = {
+const session: CohortSession = {
   id: 'session-1',
   cohortId: 'cohort-1',
   sessionTypeId: 'type-regular',

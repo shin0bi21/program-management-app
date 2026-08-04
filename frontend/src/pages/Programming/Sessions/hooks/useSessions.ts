@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getManagedSessions } from '../../../../common/api/cohorts.api';
-import type { ManagedSession, SessionListFilters } from '../../../../common/types/cohort';
+import { getSessions } from '../../../../common/api/cohorts.api';
+import type { CohortSession, SessionListFilters } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 
-export function useManagedSessions({
+export function useSessions({
   programIds = [],
   cohortId,
   sessionTypeIds = [],
   statuses = [],
   search,
-}: SessionListFilters) {
-  const [sessions, setSessions] = useState<ManagedSession[]>([]);
+}: SessionListFilters, enabled = true) {
+  const [sessions, setSessions] = useState<CohortSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      const data = await getManagedSessions({
+      const data = await getSessions({
         programIds,
         cohortId,
         sessionTypeIds,
@@ -35,14 +36,21 @@ export function useManagedSessions({
     } finally {
       if (requestIdRef.current === requestId) setLoading(false);
     }
-  }, [cohortId, programIds, search, sessionTypeIds, statuses]);
+  }, [cohortId, enabled, programIds, search, sessionTypeIds, statuses]);
 
   useEffect(() => {
+    if (!enabled) {
+      requestIdRef.current += 1;
+      setSessions([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     void refresh();
     return () => {
       requestIdRef.current += 1;
     };
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   return { sessions, loading, error, refresh };
 }

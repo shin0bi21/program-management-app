@@ -5,7 +5,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import type { ManagedSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../../common/utils/clientErrors';
 import { useSessionTypes } from '../../../common/hooks/useSessionTypes';
 
@@ -15,7 +15,7 @@ const localDateTime = (value: string) => {
 };
 
 interface EditSessionModalProps {
-  session: ManagedSession | null;
+  session: CohortSession | null;
   onClose: () => void;
   onUpdated: () => void | Promise<void>;
 }

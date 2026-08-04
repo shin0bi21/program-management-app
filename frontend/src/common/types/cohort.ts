@@ -32,6 +32,10 @@ export interface CohortSession {
   endsAt: string;
   cancelledAt: string | null;
   description: string | null;
+  attendanceMarkedCount: number;
+  attendedCount: number;
+  attendanceRate: number | null;
+  state: 'upcoming' | 'completed' | 'cancelled';
 }
 
 export interface CreateCohortInput {
@@ -67,13 +71,6 @@ export interface GenerateSessionsInput {
 
 export interface GenerateSessionsResult {
   sessions: Array<{ id: string }>;
-}
-
-export interface ManagedSession extends CohortSession {
-  attendanceMarkedCount: number;
-  attendedCount: number;
-  attendanceRate: number | null;
-  state: 'upcoming' | 'completed' | 'cancelled';
 }
 
 export interface SessionListFilters {

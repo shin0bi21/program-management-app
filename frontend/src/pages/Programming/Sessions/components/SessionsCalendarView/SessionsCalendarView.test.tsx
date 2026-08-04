@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionsCalendarView from './SessionsCalendarView';
 
-const getCohortSessions = vi.fn();
+const getSessions = vi.fn();
 
 interface MockFullCalendarProps {
   initialView: string;
@@ -36,7 +36,7 @@ interface MockFullCalendarHandle {
 }
 
 vi.mock('../../../../../common/api/cohorts.api', () => ({
-  getCohortSessions: (...args: unknown[]) => getCohortSessions(...args),
+  getSessions: (...args: unknown[]) => getSessions(...args),
 }));
 
 vi.mock('@fullcalendar/react', async () => {
@@ -138,11 +138,12 @@ describe('SessionsCalendarView', () => {
       writable: true,
       configurable: true,
     });
-    getCohortSessions.mockResolvedValue(sessions);
+    getSessions.mockResolvedValue(sessions);
   });
 
   it('loads the visible range and opens the selected session', async () => {
     const onSessionSelect = vi.fn();
+    const onSessionsLoaded = vi.fn();
     render(
       <SessionsCalendarView
         selectedProgramIds={[]}
@@ -151,6 +152,7 @@ describe('SessionsCalendarView', () => {
         selectedStatuses={[]}
         search=""
         refreshToken={0}
+        onSessionsLoaded={onSessionsLoaded}
         onSessionSelect={onSessionSelect}
       />,
     );
@@ -169,7 +171,7 @@ describe('SessionsCalendarView', () => {
     expect(session).toHaveClass('programming-calendar-event--selected');
     fireEvent.click(session);
 
-    expect(getCohortSessions).toHaveBeenCalledWith({
+    expect(getSessions).toHaveBeenCalledWith({
       start: '2026-07-01T00:00:00.000Z',
       end: '2026-08-01T00:00:00.000Z',
       programIds: [],
@@ -177,6 +179,7 @@ describe('SessionsCalendarView', () => {
       statuses: [],
       search: undefined,
     });
+    expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
   });
 
@@ -257,11 +260,11 @@ describe('SessionsCalendarView', () => {
     expect(screen.getByRole('button', {
       name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
     })).toBeInTheDocument();
-    await waitFor(() => expect(getCohortSessions).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(1));
   });
 
   it('applies the same status filter used by the list view', async () => {
-    getCohortSessions.mockResolvedValue([sessions[0]]);
+    getSessions.mockResolvedValue([sessions[0]]);
     render(
       <SessionsCalendarView
         selectedProgramIds={[]}
@@ -282,7 +285,7 @@ describe('SessionsCalendarView', () => {
     expect(screen.queryByRole('button', {
       name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
     })).not.toBeInTheDocument();
-    expect(getCohortSessions).toHaveBeenCalledWith(expect.objectContaining({
+    expect(getSessions).toHaveBeenCalledWith(expect.objectContaining({
       statuses: ['upcoming'],
     }));
   });

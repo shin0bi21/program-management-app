@@ -12,7 +12,6 @@ import {
   generateSessions,
   getSessionList,
   getSessionTypes,
-  getSessions,
   updateSession,
 } from '../services/sessionService';
 import {
@@ -30,7 +29,6 @@ import type {
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
-  SessionCalendarQuery,
   SessionListQuery,
   SaveAttendanceInput,
   UpdateCohortInput,
@@ -73,10 +71,6 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
     req.body as GenerateSessionsInput,
     actor(req),
   ));
-};
-
-export const handleGetSessions = async (req: Request, res: Response) => {
-  res.json(await getSessions(actor(req), req.query as unknown as SessionCalendarQuery));
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {

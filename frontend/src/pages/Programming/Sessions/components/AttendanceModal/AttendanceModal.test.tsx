@@ -43,6 +43,10 @@ const session: CohortSession = {
   endsAt: '2026-07-28T23:30:00.000Z',
   cancelledAt: null,
   description: null,
+  attendanceMarkedCount: 0,
+  attendedCount: 0,
+  attendanceRate: null,
+  state: 'upcoming',
 };
 
 describe('AttendanceModal', () => {
@@ -76,9 +80,7 @@ describe('AttendanceModal', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByText(
-      'Soft Skills · Summer 2026 · Jul 28, 2026 · Communication',
-    )).toBeInTheDocument();
+    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
     await screen.findByText('Maya Thompson');
     await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
 

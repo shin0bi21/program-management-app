@@ -12,7 +12,6 @@ import {
   handleGetSessionNotes,
   handleGetSessionRoster,
   handleGetSessionTypes,
-  handleGetSessions,
   handleSaveAttendance,
   handleUpdateCohort,
   handleUpdateSessionNote,
@@ -34,7 +33,6 @@ import {
   saveAttendanceSchema,
   sessionListQuerySchema,
   sessionNotesSchema,
-  sessionQuerySchema,
   updateCohortSchema,
   updateSessionNoteSchema,
   updateSessionSchema,
@@ -52,7 +50,6 @@ router.get('/session-types', authenticateToken, requirePermission('read:attendan
 router.post('/:cohortId/enrollments', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(enrollYouthSchema), asyncHandler(handleEnrollYouth));
 router.patch('/:cohortId/enrollments/:youthId/withdraw', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(withdrawYouthSchema), asyncHandler(handleWithdrawYouth));
 router.post('/:cohortId/sessions/generate', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(generateSessionsSchema), asyncHandler(handleGenerateSessions));
-router.get('/sessions/calendar', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionQuerySchema), asyncHandler(handleGetSessions));
 router.get('/sessions/:sessionId/roster', authenticateToken, requirePermission('read:attendance'), generalLimiter, asyncHandler(handleGetSessionRoster));
 router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermission('write:attendance'), generalLimiter, validateRequest(saveAttendanceSchema), asyncHandler(handleSaveAttendance));
 router.get('/sessions/:sessionId/notes', authenticateToken, requirePermission('read:attendance'), generalLimiter, validateRequest(sessionNotesSchema), asyncHandler(handleGetSessionNotes));

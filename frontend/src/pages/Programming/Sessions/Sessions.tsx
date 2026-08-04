@@ -13,7 +13,7 @@ import { deleteSession } from '../../../common/api/cohorts.api';
 import { useAuth } from '../../../common/context/AuthContext';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
-import type { CohortSession, ManagedSession } from '../../../common/types/cohort';
+import type { CohortSession } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
@@ -23,7 +23,7 @@ import AttendanceModal from './components/AttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionOverview from './components/SessionOverview/SessionOverview';
 import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
-import { useManagedSessions } from './hooks/useManagedSessions';
+import { useSessions } from './hooks/useSessions';
 import { sessionTypeModifier } from './utils/sessionType';
 import './Sessions.css';
 
@@ -45,7 +45,8 @@ export default function Sessions() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<ManagedSession | null>(null);
+  const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
+  const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
@@ -100,13 +101,16 @@ export default function Sessions() {
     loading,
     error,
     refresh: refreshSessions,
-  } = useManagedSessions({
-    programIds: selectedProgramIds,
-    cohortId: cohortId || undefined,
-    sessionTypeIds: selectedSessionTypeIds,
-    statuses: statusFilters,
-    search: debouncedSearch || undefined,
-  });
+  } = useSessions(
+    {
+      programIds: selectedProgramIds,
+      cohortId: cohortId || undefined,
+      sessionTypeIds: selectedSessionTypeIds,
+      statuses: statusFilters,
+      search: debouncedSearch || undefined,
+    },
+    view === 'list',
+  );
 
   const filteredCohorts = useMemo(
     () =>
@@ -177,7 +181,7 @@ export default function Sessions() {
     setSearchParams(next);
   };
 
-  const columns = useMemo<TableColumn<ManagedSession>[]>(
+  const columns = useMemo<TableColumn<CohortSession>[]>(
     () => [
       { key: 'program', header: 'Program', render: (session) => session.programName },
       { key: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
@@ -212,7 +216,7 @@ export default function Sessions() {
               key: 'actions',
               header: '',
               className: 'col-actions',
-              render: (session: ManagedSession) => (
+              render: (session: CohortSession) => (
                 <ActionsMenu
                   ariaLabel={`More actions for ${session.theme || `${session.programName} session`}`}
                   items={[
@@ -257,14 +261,18 @@ export default function Sessions() {
     [canWriteAttendance, canWriteCohorts, refreshSessions],
   );
 
+  const activeSessions = view === 'calendar' ? calendarSessions : sessions;
   const selectedSession = useMemo(
-    () => sessions.find((session) => session.id === selectedSessionId) ?? null,
-    [selectedSessionId, sessions],
+    () => activeSessions.find((session) => session.id === selectedSessionId) ?? null,
+    [activeSessions, selectedSessionId],
   );
 
   const refreshActiveView = async () => {
+    if (view === 'calendar') {
+      setCalendarRefreshToken((current) => current + 1);
+      return;
+    }
     await refreshSessions();
-    if (view === 'calendar') setCalendarRefreshToken((current) => current + 1);
   };
 
   return (
@@ -373,7 +381,15 @@ export default function Sessions() {
                   selectedStatuses={statusFilters}
                   search={debouncedSearch}
                   refreshToken={calendarRefreshToken}
-                  onSessionSelect={selectSession}
+                  onSessionsLoaded={setCalendarSessions}
+                  onSessionSelect={(session) => {
+                    setCalendarSessions((current) =>
+                      current.some((candidate) => candidate.id === session.id)
+                        ? current
+                        : [...current, session],
+                    );
+                    selectSession(session);
+                  }}
                 />
               }
               details={
