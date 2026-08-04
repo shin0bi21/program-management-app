@@ -114,12 +114,12 @@
 }
 
 .cohort-section {
-  background: var(--color-ink);
-  color: var(--color-white);
+  background: var(--home-soft);
+  color: var(--color-ink);
 }
 
 .cohort-section .section-title {
-  color: var(--color-white);
+  color: var(--color-ink);
 }
 
 .timeline-section,
@@ -289,7 +289,7 @@
 
 .cohort-section-title {
   margin: 0;
-  color: var(--color-white);
+  color: var(--color-ink);
   font-size: 2rem;
   font-weight: 800;
   line-height: 1.12;
@@ -303,7 +303,7 @@
 .cohort-section-description {
   margin: 16px 0 0;
   max-width: 36rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-body);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -312,7 +312,7 @@
   position: relative;
   width: 100%;
   padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--home-line);
   border-radius: 8px;
   background: var(--color-white);
   box-shadow: none;

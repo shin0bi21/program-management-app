@@ -1,8 +1,8 @@
 export const HOMEPAGE_SECTIONS = [
   { id: 'home', path: '/', label: 'Home', showInNav: false },
   { id: 'programming', path: '/programming', label: 'Programming', showInNav: true },
-  { id: 'about', path: '/about', label: 'Organizational History', showInNav: true },
   { id: 'signup', path: '/sign-up', label: 'Sign Up', showInNav: true },
+  { id: 'about', path: '/about', label: 'Organizational History', showInNav: true },
   { id: 'team', path: '/team', label: 'Staff', showInNav: true },
   { id: 'partners', path: '/partners', label: 'Partners', showInNav: true },
 ] as const;

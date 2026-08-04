@@ -44,7 +44,7 @@ const partners = [
 
 const teamResources = [
   {
-    name: 'Quinton Macnevins',
+    name: 'Quinton Macnevin',
     role: 'Program Facilitator',
     badge: 'Co-founder',
     education: 'Child and Youth Care',
@@ -94,6 +94,8 @@ export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; ses
       <HeroSection photos={photos} />
       <ProgrammingSection sessions={sessions} />
 
+      <SignupSection />
+
       <section id="about" className="timeline-section" aria-labelledby="timeline-title">
         <div className="section-inner">
           <div className="section-heading">
@@ -114,8 +116,6 @@ export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; ses
           </div>
         </div>
       </section>
-
-      <SignupSection />
 
       <section id="team" className="resources-section" aria-labelledby="resources-section-title">
         <div className="section-inner">
