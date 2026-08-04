@@ -244,7 +244,7 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
-    expect(screen.getByText('Soft Skills · Summer 2026 · Jul 28, 2026 · Communication')).toBeInTheDocument();
+    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
   });
 
   it('aligns the status filter with session table states', async () => {

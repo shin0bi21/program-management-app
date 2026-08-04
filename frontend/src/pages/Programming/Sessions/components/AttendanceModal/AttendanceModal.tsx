@@ -161,7 +161,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
         <form id="attendance-form" onSubmit={submit}>
           {session && (
             <p className="attendance-modal__context">
-              {session.programName} · {session.cohortName} · {formatShortDate(session.startsAt)}
+              {formatShortDate(session.startsAt)}
               {session.theme ? ` · ${session.theme}` : ''}
             </p>
           )}
