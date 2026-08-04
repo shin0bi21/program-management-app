@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../common/context/AuthContext';
@@ -28,7 +27,6 @@ export default function ExpressionsOfInterest() {
   const queryFilters = useMemo<ExpressionOfInterestFilters>(() => ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters }), [debouncedSearch, statusFilters, programFilters]);
   const { submissions, setSubmissions, loading, error } = useExpressionsOfInterest(queryFilters);
   const { programs } = usePrograms();
-  const navigate = useNavigate();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
   const {
@@ -61,7 +59,10 @@ export default function ExpressionsOfInterest() {
     setConvertingId(item.id);
     try {
       await convertExpressionOfInterest(item.id);
-      navigate('/outreach/leads');
+      setSubmissions(current => current.map(entry => (
+        entry.id === item.id ? { ...entry, status: 'converted' } : entry
+      )));
+      setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
       setConvertingId(null);
@@ -104,6 +105,7 @@ export default function ExpressionsOfInterest() {
   const columns: TableColumn<ExpressionOfInterest>[] = [
     { key: 'youthName', header: 'Youth Name', render: submissionYouthName },
     { key: 'age', header: 'Age', width: '70px', render: item => item.age },
+    { key: 'school', header: 'School', render: item => item.school },
     { key: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },
     { key: 'submittedAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
     { key: 'status', header: 'Status', width: '120px', render: item => statusBadge(item.status) },

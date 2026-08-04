@@ -4,11 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpressionsOfInterest from './ExpressionsOfInterest';
 
 const getExpressions = vi.fn();
+const convertExpression = vi.fn();
 
 vi.mock('./api/expressionsOfInterest.api', () => ({
   getExpressionsOfInterest: (...args: unknown[]) => getExpressions(...args),
   updateExpressionOfInterestStatus: vi.fn(),
-  convertExpressionOfInterest: vi.fn(),
+  convertExpressionOfInterest: (...args: unknown[]) => convertExpression(...args),
 }));
 
 vi.mock('../../../common/hooks/usePrograms', () => ({
@@ -21,6 +22,8 @@ vi.mock('../../../common/context/AuthContext', () => ({
 
 describe('ExpressionsOfInterest', () => {
   beforeEach(() => {
+    convertExpression.mockReset();
+    convertExpression.mockResolvedValue({ id: 'lead-1' });
     getExpressions.mockResolvedValue([{
       id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
       school: 'Test School',
@@ -44,8 +47,21 @@ describe('ExpressionsOfInterest', () => {
     render(<MemoryRouter><ExpressionsOfInterest /></MemoryRouter>);
 
     expect(await screen.findByText('Avery Interest')).toBeInTheDocument();
+    expect(screen.getByText('Test School')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+  });
+
+  it('stays on expressions of interest and marks the row converted after conversion', async () => {
+    render(<MemoryRouter><ExpressionsOfInterest /></MemoryRouter>);
+    await screen.findByText('Avery Interest');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Interest' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Convert to Lead' }));
+
+    await waitFor(() => expect(convertExpression).toHaveBeenCalledWith('expression-1'));
+    expect(await screen.findByText('Converted')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Expressions of interest' })).toBeInTheDocument();
   });
 
   it('requests expressions filtered by inferred program', async () => {
