@@ -11,7 +11,7 @@ import ModalFormFooter from '../../../../../common/components/ModalFormFooter/Mo
 import { sessionNoteCategoryOptions } from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type {
-  ManagedSession,
+  CohortSession,
   SessionNote,
   SessionNoteCategory,
   SessionRosterMember,
@@ -24,7 +24,7 @@ export default function SessionNoteModal({
   onClose,
   onSaved,
 }: {
-  session: ManagedSession | null;
+  session: CohortSession | null;
   note?: SessionNote | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;

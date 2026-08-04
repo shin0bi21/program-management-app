@@ -9,7 +9,7 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}{location.search}</span>;
 }
 
-const getManagedSessions = vi.fn();
+const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
 const getCohorts = vi.fn();
 const getSessionNotes = vi.fn();
@@ -31,7 +31,7 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
 
 vi.mock('../../../common/api/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
-  getManagedSessions: (...args: unknown[]) => getManagedSessions(...args),
+  getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
@@ -55,6 +55,8 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
     onSessionSelect: (session: {
       id: string;
       cohortId: string;
+      sessionTypeId: string;
+      sessionTypeName: string;
       theme: string;
       cohortName: string;
       programId: string;
@@ -64,6 +66,10 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
       endsAt: string;
       cancelledAt: null;
       description: string;
+      attendanceMarkedCount: number;
+      attendedCount: number;
+      attendanceRate: number | null;
+      state: 'upcoming';
     }) => void;
   }) => (
     <div data-testid="sessions-calendar-view">
@@ -73,6 +79,8 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
           onSessionSelect({
             id: 'session-1',
             cohortId: 'cohort-1',
+            sessionTypeId: 'type-1',
+            sessionTypeName: 'Regular',
             theme: 'Communication',
             cohortName: 'Summer 2026',
             programId: 'program-1',
@@ -82,6 +90,10 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
             endsAt: '2026-07-28T23:30:00.000Z',
             cancelledAt: null,
             description: 'Planned communication exercise',
+            attendanceMarkedCount: 0,
+            attendedCount: 0,
+            attendanceRate: null,
+            state: 'upcoming',
           })
         }
       >
@@ -126,7 +138,7 @@ describe('Sessions', () => {
         uniqueAttendeeCount: 0,
       },
     ]);
-    getManagedSessions.mockResolvedValue([
+    getSessions.mockResolvedValue([
       {
         id: 'session-1',
         cohortId: 'cohort-1',
@@ -160,7 +172,7 @@ describe('Sessions', () => {
   });
 
   it('shows open attendance as a check-in count', async () => {
-    getManagedSessions.mockResolvedValue([
+    getSessions.mockResolvedValue([
       {
         id: 'drop-in-session',
         cohortId: 'drop-in-cohort',
@@ -270,7 +282,7 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
     await waitFor(() =>
-      expect(getManagedSessions).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] })),
+      expect(getSessions).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] })),
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
@@ -302,7 +314,7 @@ describe('Sessions', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
       '/programming/sessions?program=program-1&cohort=cohort-1',
     ));
-    await waitFor(() => expect(getManagedSessions).toHaveBeenLastCalledWith(
+    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
       expect.objectContaining({
         programIds: ['program-1'],
         cohortId: 'cohort-1',

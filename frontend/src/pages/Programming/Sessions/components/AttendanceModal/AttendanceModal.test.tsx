@@ -43,6 +43,10 @@ const session: CohortSession = {
   endsAt: '2026-07-28T23:30:00.000Z',
   cancelledAt: null,
   description: null,
+  attendanceMarkedCount: 0,
+  attendedCount: 0,
+  attendanceRate: null,
+  state: 'upcoming',
 };
 
 describe('AttendanceModal', () => {

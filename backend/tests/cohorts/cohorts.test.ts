@@ -509,7 +509,7 @@ describe('Cohorts and attendance API', () => {
       .send({
         theme: 'Friday Drop In',
         frequency: 'once',
-        startsOn: today,
+        startsOn: addDays(today, 1),
         startTime: '17:00',
         endTime: '20:00',
       });
@@ -737,7 +737,7 @@ describe('Cohorts and attendance API', () => {
 
   it('filters calendar sessions on the backend', async () => {
     const response = await request(app)
-      .get('/api/cohorts/sessions/calendar')
+      .get('/api/cohorts/sessions')
       .query({
         start: `${addDays(today, -1)}T00:00:00.000Z`,
         end: `${addDays(today, 10)}T00:00:00.000Z`,
@@ -754,8 +754,24 @@ describe('Cohorts and attendance API', () => {
         id: openSessionId,
         programId: openProgramId,
         cohortId: openCohortId,
+        attendanceMarkedCount: 1,
+        attendedCount: 1,
+        attendanceRate: 100,
+        state: 'upcoming',
       }),
     ]);
+  });
+
+  it('rejects a session range whose end is chronologically before its start', async () => {
+    const response = await request(app)
+      .get('/api/cohorts/sessions')
+      .query({
+        start: '2026-07-01T10:00:00.000-04:00',
+        end: '2026-07-01T13:00:00.000Z',
+      })
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(400);
   });
 
   it('edits and deletes sessions and cohorts that have no attendance', async () => {

@@ -6,7 +6,6 @@ import type {
   EnrollYouthInput,
   GenerateSessionsInput,
   GenerateSessionsResult,
-  ManagedSession,
   ProgramCohort,
   SessionCalendarFilters,
   SessionListFilters,
@@ -58,14 +57,16 @@ export function getSessionTypes() {
   return apiClient.get<SessionType[]>('/cohorts/session-types');
 }
 
-export function getManagedSessions(filters: SessionListFilters = {}) {
+export function getSessions(filters: SessionListFilters | SessionCalendarFilters = {}) {
   const query = new URLSearchParams();
+  if ('start' in filters) query.set('start', filters.start);
+  if ('end' in filters) query.set('end', filters.end);
   if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
   if (filters.cohortId) query.set('cohortId', filters.cohortId);
   if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
   if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);
-  return apiClient.get<ManagedSession[]>(`/cohorts/sessions?${query}`);
+  return apiClient.get<CohortSession[]>(`/cohorts/sessions?${query}`);
 }
 
 export function getSessionRoster(sessionId: string) {
@@ -105,14 +106,4 @@ export function updateSession(sessionId: string, data: UpdateSessionInput) {
 
 export function deleteSession(sessionId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}`);
-}
-
-export function getCohortSessions(filters: SessionCalendarFilters) {
-  const query = new URLSearchParams({ start: filters.start, end: filters.end });
-  if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
-  if (filters.cohortId) query.set('cohortId', filters.cohortId);
-  if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
-  if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
-  if (filters.search) query.set('search', filters.search);
-  return apiClient.get<CohortSession[]>(`/cohorts/sessions/calendar?${query}`);
 }
