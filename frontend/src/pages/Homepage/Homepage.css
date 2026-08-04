@@ -25,7 +25,7 @@
 .homepage-container {
   --home-max: 1360px;
   --home-pad-x: 56px;
-  --home-section-y: 72px;
+  --home-section-y: 80px;
   --hero-photo-size: 420px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
@@ -920,10 +920,10 @@
   }
 
   .hero-description {
-    margin-top: 2.24cqi;
+    margin-top: 2.5cqi;
     width: 100%;
     max-width: 70ch;
-    font-size: 1.43cqi;
+    font-size: 1.25cqi;
   }
 
   .hero-visual-panel,
@@ -943,9 +943,9 @@
   }
 
   .hero-photo-caption {
-    min-height: 5.75cqi;
-    max-height: 7.7cqi;
-    font-size: 1.18cqi;
+    min-height: 4.55cqi;
+    max-height: 7.5cqi;
+    font-size: 1.25cqi;
   }
 
   .section-title {
