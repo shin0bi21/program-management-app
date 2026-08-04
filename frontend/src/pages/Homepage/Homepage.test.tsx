@@ -71,6 +71,8 @@ describe('Homepage', () => {
     expect(teamCards[0]).toHaveTextContent(
       'Drawing from both his professional experience and his lived experience as a former Crown ward',
     );
+    expect(teamCards[1]).toHaveTextContent('Hi, my name is Amanat!');
+    expect(teamCards[1].querySelector('img')).toHaveAttribute('src', '/team/amanat.png');
   });
 
   it('defers direct section routing until managed content has loaded', () => {

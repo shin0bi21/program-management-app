@@ -58,7 +58,8 @@ const teamResources = [
     badge: 'Co-founder',
     education: 'Master of Social Work',
     school: 'University of Windsor',
-    bio: 'Supports youth and families by coordinating enrollment, intake, and follow-up services across partner schools.',
+    imageSrc: '/team/amanat.png',
+    bio: 'Hi, my name is Amanat! I was born in India and immigrated to Canada when I was 5 years old. I didn’t have any older siblings, so growing up that sometimes that left me without someone I could share problems with or get advice from. I also let anxiety and anger get in the way of many things I wanted to do. I am hoping this mentorship program can save you some of the trouble I experienced and help you succeed! I am so excited to work with you all :)',
   },
   {
     name: 'Bilal',
