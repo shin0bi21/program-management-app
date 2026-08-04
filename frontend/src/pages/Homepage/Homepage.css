@@ -26,7 +26,6 @@
   --home-max: 1360px;
   --home-pad-x: 56px;
   --home-section-y: 80px;
-  --hero-photo-size: 420px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
   --home-soft: #f4f1ea;
@@ -142,9 +141,9 @@
 
 .hero-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  grid-template-columns: minmax(0, 66.4fr) minmax(320px, 33.6fr);
   align-items: start;
-  gap: 48px;
+  gap: max(28px, 3.2cqi);
 }
 
 .hero-inner--without-photo {
@@ -158,7 +157,7 @@
 .hero-title {
   margin: 0;
   color: var(--color-ink);
-  font-size: clamp(3.2rem, 7vw, 5.9rem);
+  font-size: max(3.2rem, 6cqi);
   line-height: 0.94;
   font-weight: 850;
   letter-spacing: 0;
@@ -170,19 +169,19 @@
 }
 
 .hero-description {
-  margin: 28px 0 0;
+  margin: max(28px, 1.792cqi) 0 0;
   max-width: 60ch;
   color: var(--color-body);
-  font-size: 1.12rem;
+  font-size: max(1.12rem, 1.144cqi);
   line-height: 1.72;
 }
 
 .hero-visual-panel {
   align-self: start;
   display: grid;
-  width: var(--hero-photo-size);
-  min-width: var(--hero-photo-size);
-  max-width: var(--hero-photo-size);
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   justify-self: end;
   justify-items: end;
 }
@@ -192,9 +191,9 @@
   align-content: end;
   gap: 12px;
   min-height: 100%;
-  width: var(--hero-photo-size);
-  min-width: var(--hero-photo-size);
-  max-width: var(--hero-photo-size);
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .hero-photo-frame {
@@ -202,7 +201,8 @@
   width: 100%;
   min-width: 100%;
   max-width: 100%;
-  height: var(--hero-photo-size);
+  height: auto;
+  aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
   background: transparent;
@@ -259,13 +259,13 @@
 
 .hero-photo-caption {
   margin: 0;
-  min-height: 72px;
+  min-height: 50px;
   max-height: 96px;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-ink);
-  font-size: 0.92rem;
+  font-size: max(0.92rem, 0.944cqi);
   line-height: 1.5;
   overflow-y: auto;
 }
@@ -905,49 +905,6 @@
     --home-section-y: max(72px, 4vw);
   }
 
-  .homepage-hero {
-    min-height: auto;
-  }
-
-  .hero-inner {
-    grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
-    gap: 4cqi;
-  }
-
-  .hero-title {
-    max-width: none;
-    line-height: 0.98;
-  }
-
-  .hero-description {
-    margin-top: 2.5cqi;
-    width: 100%;
-    max-width: 70ch;
-    font-size: 1.25cqi;
-  }
-
-  .hero-visual-panel,
-  .hero-visual-card {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .hero-photo-frame {
-    height: auto;
-    aspect-ratio: 1;
-  }
-
-  .hero-visual-card {
-    gap: 0.96cqi;
-  }
-
-  .hero-photo-caption {
-    min-height: 4.55cqi;
-    max-height: 7.5cqi;
-    font-size: 1.25cqi;
-  }
-
   .section-title {
     font-size: 2.765cqi;
   }
@@ -1102,44 +1059,12 @@
   }
 }
 
-/* Keep the hero heading proportional to the available homepage width on
-   desktop, including ultrawide and 4K displays. */
-@media (min-width: 1001px) {
-  .hero-title {
-    font-size: 7.5cqi;
-  }
-}
-
-/* ============================================================
-   Constrained desktop hero (1181px–1359px)
-   ============================================================ */
-@media (max-width: 1359px) and (min-width: 1181px) {
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
-    gap: 40px;
-  }
-}
-
 /* ============================================================
    Constrained two-column layout (1001px–1180px)
    ============================================================ */
 @media (max-width: 1180px) and (min-width: 1001px) {
   .homepage-container {
     --home-pad-x: 32px;
-    --hero-photo-size: 360px;
-  }
-
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
-    gap: 32px;
-  }
-
-  .hero-description {
-    max-width: 56ch;
-  }
-
-  .hero-visual-panel {
-    justify-self: end;
   }
 }
 
@@ -1149,38 +1074,6 @@
 @media (max-width: 1000px) {
   .homepage-container {
     --home-pad-x: 32px;
-    --hero-photo-size: 360px;
-  }
-
-  .hero-inner {
-    grid-template-columns: 1fr;
-    gap: 34px;
-  }
-
-  .hero-description {
-    max-width: 68ch;
-  }
-
-  .hero-visual-panel {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    justify-self: stretch;
-    justify-items: stretch;
-  }
-
-  .hero-visual-card {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .hero-photo-frame {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    height: auto;
-    aspect-ratio: 16 / 10;
   }
 
   .program-grid {
@@ -1242,7 +1135,6 @@
   .homepage-container {
     --home-pad-x: 20px;
     --home-section-y: 44px;
-    --hero-photo-size: 320px;
   }
 
   .homepage-hero {
@@ -1260,6 +1152,11 @@
     gap: 14px;
   }
 
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
   .hero-title {
     line-height: 0.98;
     max-width: 100%;
@@ -1273,11 +1170,16 @@
   }
 
   .hero-visual-panel {
-    justify-self: center;
+    justify-self: stretch;
+    justify-items: stretch;
   }
 
   .hero-visual-card {
     min-height: auto;
+  }
+
+  .hero-photo-frame {
+    aspect-ratio: 16 / 10;
   }
 
   .hero-photo-nav {
@@ -1291,7 +1193,7 @@
   }
 
   .hero-photo-caption {
-    min-height: 66px;
+    min-height: 50px;
     font-size: 0.88rem;
   }
 
@@ -1368,13 +1270,5 @@
     padding: 18px 0 0;
     border-top: 1px solid var(--home-line);
     border-left: 0;
-  }
-}
-
-/* Use the hero's actual content width so authenticated layouts with a sidebar
-   do not inherit desktop sizing from the wider browser viewport. */
-@container (min-width: 1001px) and (max-width: 1359px) {
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr) var(--hero-photo-size);
   }
 }
