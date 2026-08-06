@@ -65,8 +65,8 @@ export default function ExpressionsOfInterest() {
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
   const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
+    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
   ], [programs]);
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {

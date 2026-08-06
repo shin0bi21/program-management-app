@@ -97,7 +97,10 @@ describe('Leads', () => {
     await screen.findByText('Avery Outreach');
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Program/ }));
+    const programFilter = screen.getByRole('menuitem', { name: /Program/ });
+    const statusFilter = screen.getByRole('menuitem', { name: /Status/ });
+    expect(programFilter.compareDocumentPosition(statusFilter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(programFilter);
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
