@@ -1,4 +1,5 @@
 import request from 'supertest';
+import sharp from 'sharp';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
@@ -6,6 +7,7 @@ import { generateToken } from '../shared/tokenHelpers';
 const app = createApp();
 
 describe('Homepage management API', () => {
+  let pngFixture: Buffer;
   let staffId: string;
   let staffToken: string;
   let youthId: string;
@@ -14,6 +16,9 @@ describe('Homepage management API', () => {
   let uploadedImageId: string | undefined;
 
   beforeAll(async () => {
+    pngFixture = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: '#cc3366' },
+    }).png().toBuffer();
     const staff = await seedTestUser({ role: 'staff' });
     staffId = staff.userId;
     staffToken = generateToken(staff.userId, 'staff', staff.email);
@@ -82,7 +87,7 @@ describe('Homepage management API', () => {
       .post('/api/homepage/images')
       .set('Authorization', `Bearer ${staffToken}`)
       .field('caption', 'Youth workshop.')
-      .attach('image', Buffer.from('test-image'), {
+      .attach('image', pngFixture, {
         filename: 'workshop.png',
         contentType: 'image/png',
       });
@@ -103,7 +108,8 @@ describe('Homepage management API', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: uploadedImageId,
-          imageUrl: `/public/homepage/images/${uploadedImageId}/file`,
+          imageUrl: `/public/homepage/images/${uploadedImageId}/display`,
+          thumbnailUrl: `/public/homepage/images/${uploadedImageId}/thumbnail`,
           caption: 'Youth workshop updated.',
           altText: 'Youth workshop updated.',
         }),
@@ -121,6 +127,12 @@ describe('Homepage management API', () => {
 
     const file = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/file`);
     expect(file.status).toBe(200);
+    const thumbnail = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/thumbnail`);
+    const display = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/display`);
+    expect(thumbnail.status).toBe(200);
+    expect(display.status).toBe(200);
+    expect(thumbnail.headers['content-type']).toBe('image/webp');
+    expect(display.headers['content-type']).toBe('image/webp');
 
     const deleted = await request(app)
       .delete(`/api/homepage/images/${uploadedImageId}`)
@@ -135,6 +147,8 @@ describe('Homepage management API', () => {
     expect(restored.status).toBe(200);
 
     expect((await request(app).get(`/api/public/homepage/images/${created.body.id}/file`)).status).toBe(404);
+    expect((await request(app).get(`/api/public/homepage/images/${created.body.id}/thumbnail`)).status).toBe(404);
+    expect((await request(app).get(`/api/public/homepage/images/${created.body.id}/display`)).status).toBe(404);
   });
 
   it('automatically returns the next three sessions for each homepage program', async () => {

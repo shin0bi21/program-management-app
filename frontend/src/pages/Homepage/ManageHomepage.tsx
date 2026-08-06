@@ -196,7 +196,7 @@ export default function ManageHomepage() {
                       <span className="homepage-image-row__drag-handle" aria-hidden="true">
                         <FontAwesomeIcon icon={faGripVertical} />
                       </span>
-                      <img className="homepage-image-row__thumbnail" src={image.imageUrl} alt="" draggable={false} />
+                      <img className="homepage-image-row__thumbnail" src={image.thumbnailUrl} alt="" draggable={false} />
                       <span className="homepage-image-row__caption" title={image.caption}>
                         {image.caption}
                       </span>

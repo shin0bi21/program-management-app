@@ -43,5 +43,7 @@ export const handleReorderHomepageImages = async (req: Request, res: Response) =
 };
 
 export const handleGetHomepageImageFile = async (req: Request, res: Response) => {
-  res.sendFile(await getHomepageImageFile(req.params.imageId));
+  const variant = (req.params.variant ?? 'original') as 'original' | 'thumbnail' | 'display';
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(await getHomepageImageFile(req.params.imageId, variant));
 };
