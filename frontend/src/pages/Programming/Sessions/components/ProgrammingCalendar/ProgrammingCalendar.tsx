@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import FullCalendar, { type CalendarRef, type DatesSetInfo, type EventInput } from '@fullcalendar/react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
 import listPlugin from '@fullcalendar/react/list';
 import timeGridPlugin from '@fullcalendar/react/timegrid';
@@ -14,6 +16,8 @@ interface ProgrammingCalendarProps {
   events?: EventInput[];
   onDatesSet?: (range: DatesSetInfo) => void;
   onEventSelect?: (eventId: string) => void;
+  onEventEdit?: (eventId: string) => void;
+  onEventDelete?: (eventId: string) => void;
 }
 
 const calendarPlugins = [
@@ -80,12 +84,14 @@ export default function ProgrammingCalendar({
   events = [],
   onDatesSet,
   onEventSelect,
+  onEventEdit,
+  onEventDelete,
 }: ProgrammingCalendarProps) {
   const mobile = useMobileCalendar();
   const calendarRef = useRef<CalendarRef | null>(null);
 
   useEffect(() => {
-    if (mobile) calendarRef.current?.getApi().changeView('timeGridDay');
+    calendarRef.current?.getApi().changeView(mobile ? 'timeGridDay' : 'dayGridMonth');
   }, [mobile]);
 
   return (
@@ -102,36 +108,66 @@ export default function ProgrammingCalendar({
             : 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
         }}
         events={events}
-        eventInteractive={Boolean(onEventSelect)}
-        eventClick={info => onEventSelect?.(info.event.id)}
+        eventInteractive={false}
         displayEventTime={false}
         eventContent={info => {
           const programName = info.event.extendedProps.programName as string | undefined;
           const sessionTypeName = info.event.extendedProps.sessionTypeName as string | undefined;
           const timeRange = compactTimeRange(info.event.start, info.event.end);
+          const eventLabel = [programName, info.event.title, sessionTypeName, timeRange].filter(Boolean).join(', ');
+          const actionLabel = info.event.title || programName || 'session';
           return (
-            <span
-              className="programming-calendar-event"
-              aria-label={[programName, info.event.title, sessionTypeName, timeRange].filter(Boolean).join(', ')}
-            >
-              {programName && <span className="programming-calendar-event__program">{programName}</span>}
-              <span className="programming-calendar-event__session-line">
-                {info.event.title && (
-                  <span className="programming-calendar-event__session">{info.event.title}</span>
-                )}
-                {sessionTypeName && (
-                  <span
-                    className={
-                      `programming-calendar-event__type `
-                      + `programming-calendar-event__type--${sessionTypeModifier(sessionTypeName)}`
-                    }
-                  >
-                    {sessionTypeName}
+            <div className="programming-calendar-event">
+              <span className="programming-calendar-event__program-line">
+                {programName && <span className="programming-calendar-event__program">{programName}</span>}
+                {(onEventEdit || onEventDelete) && (
+                  <span className="programming-calendar-event__actions">
+                    {onEventEdit && (
+                      <button
+                        type="button"
+                        aria-label={`Edit ${actionLabel}`}
+                        onClick={() => onEventEdit(info.event.id)}
+                      >
+                        <FontAwesomeIcon icon={faPen} />
+                      </button>
+                    )}
+                    {onEventDelete && (
+                      <button
+                        type="button"
+                        className="programming-calendar-event__delete"
+                        aria-label={`Delete ${actionLabel}`}
+                        onClick={() => onEventDelete(info.event.id)}
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    )}
                   </span>
                 )}
               </span>
+              <span className="programming-calendar-event__session-line">
+                <button
+                  type="button"
+                  className="programming-calendar-event__select"
+                  aria-label={eventLabel}
+                  onClick={() => onEventSelect?.(info.event.id)}
+                >
+                  {info.event.title && (
+                    <span className="programming-calendar-event__session">{info.event.title}</span>
+                  )}
+                  {sessionTypeName && (
+                    <span
+                      className={
+                        `programming-calendar-event__type `
+                        + `programming-calendar-event__type--${sessionTypeModifier(sessionTypeName)}`
+                      }
+                    >
+                      {sessionTypeName}
+                    </span>
+                  )}
+                </button>
+              </span>
               <span className="programming-calendar-event__time">{timeRange}</span>
-            </span>
+            </div>
           );
         }}
         nowIndicator

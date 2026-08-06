@@ -139,14 +139,22 @@ describe('Homepage management API', () => {
 
   it('automatically returns the next three sessions for each homepage program', async () => {
     const publicContent = await request(app).get('/api/public/homepage');
-    const testSessions = publicContent.body.sessions.filter(
-      (session: { cohortId: string }) => session.cohortId === cohortId,
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const expected = await sql<{ id: string }[]>`
+      SELECT cs.id
+      FROM cohort_sessions cs
+      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+      WHERE pc.program_id = ${program.id}
+        AND cs.ends_at >= NOW()
+        AND cs.cancelled_at IS NULL
+      ORDER BY cs.starts_at
+      LIMIT 3
+    `;
+    const softSkillsSessions = publicContent.body.sessions.filter(
+      (session: { programId: string }) => session.programId === program.id,
     );
-    expect(testSessions.map((session: { theme: string }) => session.theme)).toEqual([
-      'Homepage Session 1',
-      'Homepage Session 2',
-      'Homepage Session 3',
-    ]);
+    expect(softSkillsSessions.map((session: { id: string }) => session.id))
+      .toEqual(expected.map(session => session.id));
 
     const managed = await request(app).get('/api/homepage').set('Authorization', `Bearer ${staffToken}`);
     expect(managed.status).toBe(200);

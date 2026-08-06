@@ -1,12 +1,33 @@
 .page-header {
   display: flex;
   align-items: flex-end;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.4rem;
 }
 
 .page-header--with-controls {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+}
+
+.page-header .page-title {
+  font-size: 1.75rem;
+}
+
+.page-header .btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.875rem;
+}
+
+.page-header .btn,
+.page-header .filter-card-trigger {
+  box-sizing: border-box;
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.page-header .search-input input {
+  padding-block: 7px;
+  font-size: 0.9rem;
 }
 
 .page-header--with-controls .page-title-row {
@@ -21,7 +42,8 @@
   gap: 1rem;
 }
 
-.page-header-filters {
+.page-header-filters,
+.page-header-view {
   flex: 0 0 auto;
 }
 
@@ -58,6 +80,10 @@
   }
 
   .page-header-filters {
+    order: 2;
+  }
+
+  .page-header-view {
     order: 2;
   }
 

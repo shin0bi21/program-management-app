@@ -10,9 +10,9 @@ interface MockFullCalendarProps {
   dayMaxEvents: number;
   headerToolbar: { end: string };
   datesSet: (range: { start: Date; end: Date }) => void;
-  eventClick: (info: { event: { id: string } }) => void;
   eventContent: (info: {
     event: {
+      id: string;
       title: string;
       start: Date;
       end: Date;
@@ -49,7 +49,6 @@ vi.mock('@fullcalendar/react', async () => {
       dayMaxEvents,
       headerToolbar,
       datesSet,
-      eventClick,
       eventContent,
       events,
     }: MockFullCalendarProps, ref) {
@@ -75,21 +74,17 @@ vi.mock('@fullcalendar/react', async () => {
             Load calendar range
           </button>
           {events.map(event => (
-            <button
-              type="button"
-              key={event.id}
-              className={event.classNames?.join(' ')}
-              onClick={() => eventClick({ event: { id: event.id } })}
-            >
+            <div key={event.id} className={event.classNames?.join(' ')}>
               {eventContent({
                 event: {
+                  id: event.id,
                   title: event.title,
                   start: new Date(event.start),
                   end: new Date(event.end),
                   extendedProps: event.extendedProps ?? {},
                 },
               })}
-            </button>
+            </div>
           ))}
         </div>
       );
@@ -143,6 +138,8 @@ describe('SessionsCalendarView', () => {
 
   it('loads the visible range and opens the selected session', async () => {
     const onSessionSelect = vi.fn();
+    const onSessionEdit = vi.fn();
+    const onSessionDelete = vi.fn();
     const onSessionsLoaded = vi.fn();
     render(
       <SessionsCalendarView
@@ -154,6 +151,8 @@ describe('SessionsCalendarView', () => {
         refreshToken={0}
         onSessionsLoaded={onSessionsLoaded}
         onSessionSelect={onSessionSelect}
+        onSessionEdit={onSessionEdit}
+        onSessionDelete={onSessionDelete}
       />,
     );
 
@@ -168,7 +167,7 @@ describe('SessionsCalendarView', () => {
     const session = await screen.findByRole('button', {
       name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
     });
-    expect(session).toHaveClass('programming-calendar-event--selected');
+    expect(session.closest('.programming-calendar-event--selected')).not.toBeNull();
     fireEvent.click(session);
 
     expect(getSessions).toHaveBeenCalledWith({
@@ -181,6 +180,10 @@ describe('SessionsCalendarView', () => {
     });
     expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Communication' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Communication' }));
+    expect(onSessionEdit).toHaveBeenCalledWith(sessions[0]);
+    expect(onSessionDelete).toHaveBeenCalledWith(sessions[0]);
   });
 
   it('limits the mobile calendar to day and list views', () => {

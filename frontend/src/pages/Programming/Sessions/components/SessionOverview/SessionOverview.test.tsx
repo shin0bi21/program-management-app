@@ -6,6 +6,7 @@ import SessionOverview from './SessionOverview';
 const getSessionNotes = vi.fn();
 const getSessionRoster = vi.fn();
 const deleteSessionNote = vi.fn();
+const getSessionAttachments = vi.fn();
 
 vi.mock('../../../../../common/api/cohorts.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
@@ -13,6 +14,10 @@ vi.mock('../../../../../common/api/cohorts.api', () => ({
   createSessionNote: vi.fn(),
   updateSessionNote: vi.fn(),
   deleteSessionNote: (...args: unknown[]) => deleteSessionNote(...args),
+  getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
+  createSessionAttachment: vi.fn(),
+  deleteSessionAttachment: vi.fn(),
+  downloadSessionAttachment: vi.fn(),
 }));
 
 const session: CohortSession = {
@@ -40,6 +45,7 @@ describe('SessionOverview', () => {
     getSessionNotes.mockResolvedValue([]);
     getSessionRoster.mockResolvedValue([]);
     deleteSessionNote.mockResolvedValue({});
+    getSessionAttachments.mockResolvedValue([]);
   });
 
   it('keeps every card visible before a session is selected', () => {
@@ -47,14 +53,14 @@ describe('SessionOverview', () => {
       <SessionOverview
         session={null}
         canWriteAttendance
-        canWriteNotes
+        canWriteSessions
         onAddAttendance={vi.fn()}
       />,
     );
 
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Session notes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Worksheets' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Attachments' })).toBeInTheDocument();
     expect(screen.getAllByText('No session selected.')).toHaveLength(3);
   });
 
@@ -64,7 +70,7 @@ describe('SessionOverview', () => {
       <SessionOverview
         session={session}
         canWriteAttendance
-        canWriteNotes
+        canWriteSessions
         onAddAttendance={onAddAttendance}
       />,
     );
@@ -78,7 +84,7 @@ describe('SessionOverview', () => {
     fireEvent.click(addNotes);
     expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
     expect(await screen.findByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
   });
 
   it('shows note authors and linked youth', async () => {
@@ -98,7 +104,7 @@ describe('SessionOverview', () => {
       <SessionOverview
         session={session}
         canWriteAttendance
-        canWriteNotes
+        canWriteSessions
         onAddAttendance={vi.fn()}
       />,
     );
@@ -133,7 +139,7 @@ describe('SessionOverview', () => {
       <SessionOverview
         session={session}
         canWriteAttendance
-        canWriteNotes
+        canWriteSessions
         onAddAttendance={vi.fn()}
       />,
     );

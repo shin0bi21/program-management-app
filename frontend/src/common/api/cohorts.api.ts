@@ -8,6 +8,7 @@ import type {
   GenerateSessionsResult,
   ProgramCohort,
   SessionCalendarFilters,
+  SessionAttachment,
   SessionListFilters,
   SessionNote,
   SessionRosterMember,
@@ -98,6 +99,40 @@ export function updateSessionNote(
 
 export function deleteSessionNote(sessionId: string, noteId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}/notes/${noteId}`);
+}
+
+export function getSessionAttachments(sessionId: string) {
+  return apiClient.get<SessionAttachment[]>(`/cohorts/sessions/${sessionId}/attachments`);
+}
+
+export function createSessionAttachment(sessionId: string, data: {
+  title: string;
+  description: string | null;
+  youthIds: string[];
+  file: File;
+}) {
+  const form = new FormData();
+  form.set('title', data.title);
+  if (data.description) form.set('description', data.description);
+  form.set('youthIds', JSON.stringify(data.youthIds));
+  form.set('file', data.file);
+  return apiClient.post<SessionAttachment>(`/cohorts/sessions/${sessionId}/attachments`, form);
+}
+
+export function deleteSessionAttachment(sessionId: string, attachmentId: string) {
+  return apiClient.delete(`/cohorts/sessions/${sessionId}/attachments/${attachmentId}`);
+}
+
+export async function downloadSessionAttachment(sessionId: string, attachment: SessionAttachment) {
+  const blob = await apiClient.download(`/cohorts/sessions/${sessionId}/attachments/${attachment.id}/file`);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = attachment.originalFilename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function updateSession(sessionId: string, data: UpdateSessionInput) {

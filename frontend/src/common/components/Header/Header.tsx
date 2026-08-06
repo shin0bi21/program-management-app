@@ -14,8 +14,9 @@ export default function Header() {
   const canManageHomepage = permissions.includes('read:homepage');
   const canViewYouth = permissions.includes('read:youth_profiles');
   const canViewOutreach = permissions.includes('read:outreach');
-  const canViewProgramming = permissions.includes('read:programs') && permissions.includes('read:cohorts');
-  const canViewAttendance = permissions.includes('read:attendance');
+  const canViewCohorts = permissions.includes('read:cohorts');
+  const canViewSessions = permissions.includes('read:sessions');
+  const canViewProgramming = canViewCohorts || canViewSessions;
   const canManageAccounts = permissions.includes('read:accounts');
   const [mobileOpen, setMobileOpen] = useState(false);
   const outreachBtnRef = useRef<HTMLButtonElement>(null);
@@ -250,14 +251,16 @@ export default function Header() {
           onClose={closeProgrammingFlyout}
           className="settings-flyout"
         >
-          <button
-            role="menuitem"
-            onClick={() => go('/programming/cohorts')}
-            className={`settings-flyout-item${isActive('/programming/cohorts') ? ' active' : ''}`}
-          >
-            Cohorts
-          </button>
-          {canViewAttendance && (
+          {canViewCohorts && (
+            <button
+              role="menuitem"
+              onClick={() => go('/programming/cohorts')}
+              className={`settings-flyout-item${isActive('/programming/cohorts') ? ' active' : ''}`}
+            >
+              Cohorts
+            </button>
+          )}
+          {canViewSessions && (
             <button
               role="menuitem"
               onClick={() => go('/programming/sessions')}

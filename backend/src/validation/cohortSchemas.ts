@@ -184,6 +184,38 @@ export const deleteSessionNoteSchema = z.object({
   }),
 });
 
+const multipartYouthIds = z.preprocess(value => {
+  if (value === undefined || value === '') return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}, z.array(z.string().uuid('Invalid youth ID')).max(50));
+
+export const sessionAttachmentsSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+});
+export const createSessionAttachmentSchema = z.object({
+  params: sessionAttachmentsSchema.shape.params,
+  body: z.object({
+    title: z.string().trim().min(1, 'Title is required').max(160),
+    description: z.string().trim().max(5000).optional().transform(value => value || null),
+    youthIds: multipartYouthIds,
+  }).refine(data => new Set(data.youthIds).size === data.youthIds.length, {
+    message: 'Youth attachments must be unique',
+    path: ['youthIds'],
+  }),
+});
+export const sessionAttachmentParamsSchema = z.object({
+  params: z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+    attachmentId: z.string().uuid('Invalid attachment ID'),
+  }),
+});
+
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
@@ -193,3 +225,4 @@ export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;
+export type CreateSessionAttachmentInput = z.infer<typeof createSessionAttachmentSchema.shape.body>;

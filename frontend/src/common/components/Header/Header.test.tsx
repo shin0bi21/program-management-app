@@ -108,7 +108,7 @@ describe('Header youth navigation', () => {
   });
 
   it('shows Cohorts and Sessions in Programming navigation', () => {
-    authState.permissions = ['read:programs', 'read:cohorts', 'read:attendance'];
+    authState.permissions = ['read:programs', 'read:cohorts', 'read:sessions'];
     authState.role = 'staff';
 
     render(
@@ -127,7 +127,7 @@ describe('Header youth navigation', () => {
     authState.permissions = [
       'read:programs',
       'read:cohorts',
-      'read:attendance',
+      'read:sessions',
       'read:outreach',
     ];
     authState.role = 'staff';
