@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   createSessionNote,
   getSessionRoster,
@@ -29,31 +30,23 @@ export default function SessionNoteModal({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const [roster, setRoster] = useState<SessionRosterMember[]>([]);
   const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
   const [category, setCategory] = useState<SessionNoteCategory>('general');
-  const [loadingRoster, setLoadingRoster] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const rosterQuery = useQuery<SessionRosterMember[]>({
+    queryKey: ['sessions', session?.id, 'roster'],
+    queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
+    enabled: session !== null,
+  });
+  const roster = rosterQuery.data ?? [];
 
   useEffect(() => {
     if (!session) return;
-    let active = true;
-    setRoster([]);
     setSelectedYouthIds(note?.youth.map(youth => youth.youthId) ?? []);
     setCategory(note?.category ?? 'general');
     setSubmitStatus('idle');
     setStatusMessage('');
-    setLoadingRoster(true);
-    getSessionRoster(session.id)
-      .then(rows => { if (active) setRoster(rows); })
-      .catch(cause => {
-        if (!active) return;
-        setStatusMessage(cause instanceof Error ? cause.message : 'Could not load cohort youth');
-        setSubmitStatus('error');
-      })
-      .finally(() => { if (active) setLoadingRoster(false); });
-    return () => { active = false; };
   }, [session, note]);
 
   const toggleYouth = (youthId: string) => {
@@ -148,8 +141,14 @@ export default function SessionNoteModal({
         {session && (
           <fieldset className="session-note-youth" disabled={complete}>
             <legend>Link youth</legend>
-            {loadingRoster ? (
+            {rosterQuery.isLoading ? (
               <p>Loading youth…</p>
+            ) : rosterQuery.error ? (
+              <p className="form-error" role="alert">
+                {rosterQuery.error instanceof Error
+                  ? rosterQuery.error.message
+                  : 'Could not load session roster'}
+              </p>
             ) : roster.length > 0 ? (
               <div className="session-note-youth__checklist">
                 {roster.map(youth => (

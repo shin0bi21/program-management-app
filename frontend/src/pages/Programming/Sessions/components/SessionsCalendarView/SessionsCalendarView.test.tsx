@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionsCalendarView from './SessionsCalendarView';
 
@@ -177,7 +178,7 @@ describe('SessionsCalendarView', () => {
       cohortId: undefined,
       statuses: [],
       search: undefined,
-    });
+    }, { signal: expect.any(AbortSignal) });
     expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
     fireEvent.click(screen.getByText('Soft Skills'));
@@ -292,8 +293,9 @@ describe('SessionsCalendarView', () => {
     expect(screen.queryByRole('button', {
       name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
     })).not.toBeInTheDocument();
-    expect(getSessions).toHaveBeenCalledWith(expect.objectContaining({
-      statuses: ['upcoming'],
-    }));
+    expect(getSessions).toHaveBeenCalledWith(
+      expect.objectContaining({ statuses: ['upcoming'] }),
+      { signal: expect.any(AbortSignal) },
+    );
   });
 });

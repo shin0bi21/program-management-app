@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
 import GenerateSessionsModal from './GenerateSessionsModal';
@@ -47,7 +48,7 @@ describe('GenerateSessionsModal', () => {
 
     expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
-    expect(await screen.findByRole('button', { name: 'Type' })).toHaveTextContent('Regular');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
     fireEvent.change(screen.getByLabelText('Theme (optional)'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 

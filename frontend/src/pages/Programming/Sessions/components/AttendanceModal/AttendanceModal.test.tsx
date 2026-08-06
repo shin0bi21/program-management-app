@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import render from '../../../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
@@ -91,6 +92,16 @@ describe('AttendanceModal', () => {
       'Attendance successfully saved for Communication.',
     )).toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  it('shows a roster loading failure', async () => {
+    api.getSessionRoster.mockRejectedValue(new Error('Roster unavailable'));
+
+    render(
+      <AttendanceModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
   });
 
   it('searches, creates, and checks profiles into an open session without statuses', async () => {

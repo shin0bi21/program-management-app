@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import SessionNoteModal from './SessionNoteModal';
@@ -104,6 +105,15 @@ describe('SessionNoteModal', () => {
     expect(screen.getByRole('button', { name: 'Add Note' })).toBeEnabled();
     expect(screen.getByRole('group', { name: 'Link youth' })).toBeInTheDocument();
     expect(screen.getByText('Loading youth…')).toBeInTheDocument();
+  });
+
+  it('shows a roster loading failure instead of an empty roster message', async () => {
+    api.getSessionRoster.mockRejectedValue(new Error('Roster unavailable'));
+
+    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
+    expect(screen.queryByText('No youth are enrolled in this cohort.')).not.toBeInTheDocument();
   });
 
   it('adds a note without optional details', async () => {

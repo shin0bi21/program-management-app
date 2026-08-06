@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getYouth } from '../../../../common/api/youth.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../common/types/youth';
@@ -8,36 +9,17 @@ const belongsToCohort = (profile: YouthProfile, cohortId: string) =>
   profile.cohorts.some((enrollment) => enrollment.id === cohortId && enrollment.withdrawnOn === null);
 
 export function useCohortRoster(cohort: ProgramCohort | null) {
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
-
-  const refresh = useCallback(async () => {
-    if (!cohort) return;
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getYouth();
-      if (requestIdRef.current === requestId) setYouth(data);
-    } catch (cause) {
-      if (requestIdRef.current === requestId) {
-        setError(getErrorMessage(cause, 'Could not load youth'));
-      }
-    } finally {
-      if (requestIdRef.current === requestId) setLoading(false);
-    }
-  }, [cohort]);
+  const query = useQuery({
+    queryKey: ['cohort-roster-youth'],
+    queryFn: ({ signal }) => getYouth(undefined, {}, { signal }),
+    enabled: cohort !== null,
+  });
+  const youth = query.data ?? [];
 
   useEffect(() => {
     setSearch('');
-    if (cohort) void refresh();
-    return () => {
-      requestIdRef.current += 1;
-    };
-  }, [cohort, refresh]);
+  }, [cohort]);
 
   const enrolledYouth = useMemo(
     () => (cohort ? youth.filter((profile) => belongsToCohort(profile, cohort.id)) : []),
@@ -67,8 +49,8 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
     search,
     setSearch,
     filterBySearch,
-    loading,
-    error,
-    refresh,
+    loading: query.isLoading,
+    error: query.error ? getErrorMessage(query.error, 'Could not load youth') : null,
+    refresh: async () => { await query.refetch(); },
   };
 }

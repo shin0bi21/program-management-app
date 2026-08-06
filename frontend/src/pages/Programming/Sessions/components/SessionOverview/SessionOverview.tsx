@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownload, faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -15,7 +16,7 @@ import SessionNoteDetails, {
   SessionNoteCategoryBadge,
 } from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/hooks/useConfirmModal';
-import type { CohortSession, SessionAttachment, SessionNote } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
 import { formatShortDate } from '../../../../../common/utils/date';
 import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
 import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';
@@ -127,53 +128,26 @@ export default function SessionOverview({
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [notes, setNotes] = useState<SessionNote[]>([]);
-  const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
-  const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
-  const attachmentRequestIdRef = useRef(0);
+  const notesQuery = useQuery({
+    queryKey: ['sessions', session?.id, 'notes'],
+    queryFn: ({ signal }) => getSessionNotes(session!.id, { signal }),
+    enabled: session !== null,
+  });
+  const attachmentsQuery = useQuery({
+    queryKey: ['sessions', session?.id, 'attachments'],
+    queryFn: ({ signal }) => getSessionAttachments(session!.id, { signal }),
+    enabled: session !== null,
+  });
+  const notes = notesQuery.data ?? [];
+  const attachments = attachmentsQuery.data ?? [];
   const confirmModal = useConfirmModal({
     action: confirmAction,
     onClose: () => setConfirmAction(null),
   });
 
-  const loadNotes = async (sessionId: string) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const nextNotes = await getSessionNotes(sessionId);
-      if (requestIdRef.current === requestId) setNotes(nextNotes);
-    } catch (cause) {
-      if (requestIdRef.current === requestId) {
-        setNotes([]);
-        setError(cause instanceof Error ? cause.message : 'Could not load session notes');
-      }
-    } finally {
-      if (requestIdRef.current === requestId) setLoading(false);
-    }
-  };
-
-  const loadAttachments = async (sessionId: string) => {
-    const requestId = ++attachmentRequestIdRef.current;
-    setAttachmentsLoading(true);
-    setAttachmentsError(null);
-    try {
-      const nextAttachments = await getSessionAttachments(sessionId);
-      if (attachmentRequestIdRef.current === requestId) setAttachments(nextAttachments);
-    } catch (cause) {
-      if (attachmentRequestIdRef.current === requestId) {
-        setAttachments([]);
-        setAttachmentsError(cause instanceof Error ? cause.message : 'Could not load session attachments');
-      }
-    } finally {
-      if (attachmentRequestIdRef.current === requestId) setAttachmentsLoading(false);
-    }
-  };
+  const loadNotes = async () => { await notesQuery.refetch(); };
+  const loadAttachments = async () => { await attachmentsQuery.refetch(); };
 
   useEffect(() => {
     setNoteTarget(null);
@@ -181,22 +155,6 @@ export default function SessionOverview({
     setDetailNote(null);
     setConfirmAction(null);
     setAttachmentTarget(null);
-    if (!session) {
-      requestIdRef.current += 1;
-      attachmentRequestIdRef.current += 1;
-      setNotes([]);
-      setAttachments([]);
-      setError(null);
-      setAttachmentsError(null);
-      setLoading(false);
-      setAttachmentsLoading(false);
-      return;
-    }
-    void Promise.all([loadNotes(session.id), loadAttachments(session.id)]);
-    return () => {
-      requestIdRef.current += 1;
-      attachmentRequestIdRef.current += 1;
-    };
   }, [session?.id]);
 
   return (
@@ -245,8 +203,8 @@ export default function SessionOverview({
           ? (
               <SessionNotesContent
                 notes={notes}
-                loading={loading}
-                error={error}
+                loading={notesQuery.isLoading}
+                error={notesQuery.error instanceof Error ? notesQuery.error.message : null}
                 canWrite={canWriteSessions}
                 onView={setDetailNote}
                 onEdit={note => {
@@ -261,7 +219,7 @@ export default function SessionOverview({
                   successMessage: 'Session note successfully deleted.',
                   onConfirm: async () => {
                     await deleteSessionNote(session.id, note.id);
-                    await loadNotes(session.id);
+                    await loadNotes();
                     if (detailNote?.id === note.id) setDetailNote(null);
                   },
                 })}
@@ -284,10 +242,10 @@ export default function SessionOverview({
           </Button>
         ) : undefined}
       >
-        {session ? attachmentsLoading ? (
+        {session ? attachmentsQuery.isLoading ? (
           <p role="status">Loading attachments…</p>
-        ) : attachmentsError ? (
-          <p role="alert">{attachmentsError}</p>
+        ) : attachmentsQuery.error ? (
+          <p role="alert">{attachmentsQuery.error instanceof Error ? attachmentsQuery.error.message : 'Could not load session attachments'}</p>
         ) : attachments.length ? (
           <div className="session-notes-list">
             {attachments.map(attachment => (
@@ -324,7 +282,7 @@ export default function SessionOverview({
                         successMessage: 'Attachment successfully deleted.',
                         onConfirm: async () => {
                           await deleteSessionAttachment(session.id, attachment.id);
-                          await loadAttachments(session.id);
+                          await loadAttachments();
                         },
                       })}
                     >
@@ -340,7 +298,7 @@ export default function SessionOverview({
       <SessionAttachmentModal
         session={attachmentTarget}
         onClose={() => setAttachmentTarget(null)}
-        onSaved={async () => { if (attachmentTarget) await loadAttachments(attachmentTarget.id); }}
+        onSaved={loadAttachments}
       />
       <SessionNoteModal
         session={noteTarget}
@@ -350,7 +308,7 @@ export default function SessionOverview({
           setEditNote(null);
         }}
         onSaved={async () => {
-          if (noteTarget) await loadNotes(noteTarget.id);
+          if (noteTarget) await loadNotes();
         }}
       />
       <Modal
