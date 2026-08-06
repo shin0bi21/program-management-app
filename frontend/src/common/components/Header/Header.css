@@ -3,7 +3,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 160px;
+  width: 166px;
   height: 100dvh;
   background: var(--color-surface);
   display: flex;
@@ -15,7 +15,7 @@
 /* Brand */
 .sidebar-brand {
   height: 52px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--ink-12);
   flex-shrink: 0;
   display: flex;
