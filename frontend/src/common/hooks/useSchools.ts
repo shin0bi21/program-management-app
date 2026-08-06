@@ -14,6 +14,7 @@ export function useSchools() {
   return {
     schools: query.rows,
     upsertSchool: query.upsert,
+    removeSchool: query.remove,
     loading: query.loading,
     error: query.error,
     refetch: query.refetch,

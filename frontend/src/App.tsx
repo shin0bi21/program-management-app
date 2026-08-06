@@ -12,6 +12,7 @@ const Youth = lazy(() => import('./pages/Youth/Youth'));
 const YouthLayout = lazy(() => import('./pages/Youth/YouthLayout'));
 const Users = lazy(() => import('./pages/Settings/Users/Users'));
 const Account = lazy(() => import('./pages/Settings/Account/Account'));
+const Schools = lazy(() => import('./pages/Settings/Schools/Schools'));
 const Outreach = lazy(() => import('./pages/Outreach/Outreach'));
 const ExpressionsOfInterest = lazy(() => import('./pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'));
 const Leads = lazy(() => import('./pages/Outreach/Leads/Leads'));
@@ -100,6 +101,14 @@ function App() {
               element={
                 <ProtectedRoute requiredPermission="read:accounts">
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/schools"
+              element={
+                <ProtectedRoute requiredPermission="read:schools">
+                  <Schools />
                 </ProtectedRoute>
               }
             />
