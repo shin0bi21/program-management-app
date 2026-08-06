@@ -180,10 +180,14 @@ describe('SessionsCalendarView', () => {
     });
     expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
+    fireEvent.click(screen.getByText('Soft Skills'));
+    fireEvent.click(screen.getByText('5pm – 7:30pm'));
+    expect(onSessionSelect).toHaveBeenCalledTimes(3);
     fireEvent.click(screen.getByRole('button', { name: 'Edit Communication' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete Communication' }));
     expect(onSessionEdit).toHaveBeenCalledWith(sessions[0]);
     expect(onSessionDelete).toHaveBeenCalledWith(sessions[0]);
+    expect(onSessionSelect).toHaveBeenCalledTimes(3);
   });
 
   it('limits the mobile calendar to day and list views', () => {

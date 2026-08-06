@@ -117,7 +117,10 @@ export default function ProgrammingCalendar({
           const eventLabel = [programName, info.event.title, sessionTypeName, timeRange].filter(Boolean).join(', ');
           const actionLabel = info.event.title || programName || 'session';
           return (
-            <div className="programming-calendar-event">
+            <div
+              className="programming-calendar-event"
+              onClick={() => onEventSelect?.(info.event.id)}
+            >
               <span className="programming-calendar-event__program-line">
                 {programName && <span className="programming-calendar-event__program">{programName}</span>}
                 {(onEventEdit || onEventDelete) && (
@@ -126,7 +129,10 @@ export default function ProgrammingCalendar({
                       <button
                         type="button"
                         aria-label={`Edit ${actionLabel}`}
-                        onClick={() => onEventEdit(info.event.id)}
+                        onClick={event => {
+                          event.stopPropagation();
+                          onEventEdit(info.event.id);
+                        }}
                       >
                         <FontAwesomeIcon icon={faPen} />
                       </button>
@@ -136,7 +142,10 @@ export default function ProgrammingCalendar({
                         type="button"
                         className="programming-calendar-event__delete"
                         aria-label={`Delete ${actionLabel}`}
-                        onClick={() => onEventDelete(info.event.id)}
+                        onClick={event => {
+                          event.stopPropagation();
+                          onEventDelete(info.event.id);
+                        }}
                       >
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
@@ -149,7 +158,10 @@ export default function ProgrammingCalendar({
                   type="button"
                   className="programming-calendar-event__select"
                   aria-label={eventLabel}
-                  onClick={() => onEventSelect?.(info.event.id)}
+                  onClick={event => {
+                    event.stopPropagation();
+                    onEventSelect?.(info.event.id);
+                  }}
                 >
                   {info.event.title && (
                     <span className="programming-calendar-event__session">{info.event.title}</span>
