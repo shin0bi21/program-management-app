@@ -1,6 +1,6 @@
 ---
 name: split-uncommitted-work
-description: Review a mixed Git working tree, separate changes into issue-scoped branches and commits, and preserve every remaining change through a safety-stash workflow. Use when this repository has accumulated work for multiple features or fixes, especially when the user asks to review uncommitted changes, identify separate issues, stash selectively, prepare pull requests, or repeat the issue → branch → commit → merge workflow.
+description: Review a mixed Git working tree, create GitHub Issues, separate changes into issue-numbered branches and commits, open linked pull requests, and preserve every remaining change through a safety-stash workflow. Use when this repository has accumulated work for multiple features or fixes, especially when the user asks to review uncommitted changes, identify separate issues, stash selectively, prepare pull requests, or repeat the issue → branch → pull request → merge workflow.
 ---
 
 # Split Uncommitted Work
@@ -29,10 +29,26 @@ For each issue, state:
 - Migration ownership and whether consolidation/reset is required.
 - Expected test command.
 - Proposed commit message.
+- Proposed branch name using `<issue-number>-<short-slug>` once the GitHub Issue exists.
+- Pull request base branch and proposed PR title.
 
 Prefer the smallest coherent issue. Keep implementation, tests, migrations, and matching docs together.
 
-## 3. Protect the complete tree
+Get the user's approval for the split plan before creating GitHub Issues or otherwise changing remote state.
+
+## 3. Create GitHub Issues
+
+After the split plan is approved:
+
+1. Confirm the GitHub remote and repository with `git remote -v` and `gh repo view`.
+2. Search open Issues first so the workflow does not create duplicates.
+3. Create one GitHub Issue for each approved concern. Include the problem, intended outcome, acceptance criteria, tests, dependencies, and migration notes.
+4. Record every Issue number and URL in the working plan.
+5. Name its branch `<issue-number>-<short-slug>`, for example `123-session-attachments`.
+
+Do not use “issue” merely as an internal label once this workflow is approved: every non-trivial split must have a real GitHub Issue. A trivial documentation or typo-only change may skip an Issue only when the user explicitly agrees.
+
+## 4. Protect the complete tree
 
 Before checkout or selective restoration:
 
@@ -44,9 +60,9 @@ Before checkout or selective restoration:
 
 Never use `git reset --hard`, destructive checkout, or broad deletion.
 
-## 4. Commit one issue
+## 5. Commit and open a pull request for one issue
 
-1. Work on the issue branch created from the correct base.
+1. Update the base branch, then create the numbered issue branch from that exact commit.
 2. Restore the current remainder stash.
 3. Stage whole files only when they contain one concern.
 4. Use hunk-level staging for shared files.
@@ -56,18 +72,22 @@ Never use `git reset --hard`, destructive checkout, or broad deletion.
 8. Run `scripts/test-full-stack.sh` on the isolated issue branch. Every issue must pass the full suite before it is committed or merged into the base branch.
 9. Commit only after the user authorizes the commit.
 10. Verify the commit with `git show --stat --oneline HEAD`.
-11. Stash the remaining uncommitted work with `-u` and a new descriptive message before switching branches.
+11. Push the issue branch to `origin`.
+12. Open a pull request into the approved base branch. Include `Closes #<issue-number>` in its description so merging closes the Issue automatically.
+13. Verify the pull request diff, checks, base branch, Issue link, and mergeability.
+14. Merge the pull request only after the user authorizes the merge and all required checks pass.
+15. Stash the remaining uncommitted work with `-u` and a new descriptive message before switching branches.
 
-## 5. Continue the branch sequence
+## 6. Continue the branch sequence
 
-After the previous issue is merged:
+After the previous pull request is merged:
 
-1. Return to and update the base branch.
+1. Return to the base branch and fast-forward it from `origin`.
 2. Create the next issue branch.
 3. Apply the latest remainder stash.
-4. Repeat review, stage, test, and commit.
+4. Repeat review, stage, test, commit, push, pull request, and merge verification.
 
-Never merge an issue branch into the base branch unless `scripts/test-full-stack.sh` passed on that isolated branch.
+Never merge an issue branch directly into the local base branch as a substitute for the pull request. Never merge a pull request unless `scripts/test-full-stack.sh` passed on that isolated branch and required remote checks pass.
 
 Do not reapply the original safety stash after the first issue; it contains already committed changes. Retain it only as disaster recovery. Drop safety/remainder stashes only after all issue branches are verified and the user approves cleanup.
 
@@ -84,8 +104,9 @@ Applied migrations are immutable. Never edit, rename, consolidate, or delete the
 
 Report:
 
-- What was committed on the current branch.
+- GitHub Issue numbers and URLs.
+- Branches, commits, pull requests, and merge status.
 - What remains stashed, using the exact stash message.
 - Tests run and results.
-- Next issue/branch to create.
+- Next Issue, branch, or pull request action.
 - Any safety stash still retained.
