@@ -18,16 +18,19 @@ import type {
   UpdateSessionInput,
 } from '../types/cohort';
 import { apiClient } from './http/client';
+import type { RequestOptions } from './http/client';
 
 export function getCohorts(
   programId?: string,
   { includeAllPrograms = false }: { includeAllPrograms?: boolean } = {},
+  opts?: RequestOptions,
 ) {
   const query = new URLSearchParams();
   if (programId) query.set('programId', programId);
   if (includeAllPrograms) query.set('scope', 'all');
   const suffix = query.toString();
-  return apiClient.get<ProgramCohort[]>(`/cohorts${suffix ? `?${suffix}` : ''}`);
+  const path = `/cohorts${suffix ? `?${suffix}` : ''}`;
+  return opts ? apiClient.get<ProgramCohort[]>(path, opts) : apiClient.get<ProgramCohort[]>(path);
 }
 
 export function createCohort(data: CreateCohortInput) {
@@ -54,11 +57,13 @@ export function generateSessions(cohortId: string, data: GenerateSessionsInput) 
   return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
 }
 
-export function getSessionTypes() {
-  return apiClient.get<SessionType[]>('/cohorts/session-types');
+export function getSessionTypes(opts?: RequestOptions) {
+  return opts
+    ? apiClient.get<SessionType[]>('/cohorts/session-types', opts)
+    : apiClient.get<SessionType[]>('/cohorts/session-types');
 }
 
-export function getSessions(filters: SessionListFilters | SessionCalendarFilters = {}) {
+export function getSessions(filters: SessionListFilters | SessionCalendarFilters = {}, opts?: RequestOptions) {
   const query = new URLSearchParams();
   if ('start' in filters) query.set('start', filters.start);
   if ('end' in filters) query.set('end', filters.end);
@@ -67,11 +72,13 @@ export function getSessions(filters: SessionListFilters | SessionCalendarFilters
   if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
   if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);
-  return apiClient.get<CohortSession[]>(`/cohorts/sessions?${query}`);
+  const path = `/cohorts/sessions?${query}`;
+  return opts ? apiClient.get<CohortSession[]>(path, opts) : apiClient.get<CohortSession[]>(path);
 }
 
-export function getSessionRoster(sessionId: string) {
-  return apiClient.get<SessionRosterMember[]>(`/cohorts/sessions/${sessionId}/roster`);
+export function getSessionRoster(sessionId: string, opts?: RequestOptions) {
+  const path = `/cohorts/sessions/${sessionId}/roster`;
+  return opts ? apiClient.get<SessionRosterMember[]>(path, opts) : apiClient.get<SessionRosterMember[]>(path);
 }
 
 export function saveSessionAttendance(
@@ -81,8 +88,9 @@ export function saveSessionAttendance(
   return apiClient.put<SessionRosterMember[]>(`/cohorts/sessions/${sessionId}/attendance`, { records });
 }
 
-export function getSessionNotes(sessionId: string) {
-  return apiClient.get<SessionNote[]>(`/cohorts/sessions/${sessionId}/notes`);
+export function getSessionNotes(sessionId: string, opts?: RequestOptions) {
+  const path = `/cohorts/sessions/${sessionId}/notes`;
+  return opts ? apiClient.get<SessionNote[]>(path, opts) : apiClient.get<SessionNote[]>(path);
 }
 
 export function createSessionNote(sessionId: string, data: CreateSessionNoteInput) {
@@ -101,8 +109,9 @@ export function deleteSessionNote(sessionId: string, noteId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}/notes/${noteId}`);
 }
 
-export function getSessionAttachments(sessionId: string) {
-  return apiClient.get<SessionAttachment[]>(`/cohorts/sessions/${sessionId}/attachments`);
+export function getSessionAttachments(sessionId: string, opts?: RequestOptions) {
+  const path = `/cohorts/sessions/${sessionId}/attachments`;
+  return opts ? apiClient.get<SessionAttachment[]>(path, opts) : apiClient.get<SessionAttachment[]>(path);
 }
 
 export function createSessionAttachment(sessionId: string, data: {

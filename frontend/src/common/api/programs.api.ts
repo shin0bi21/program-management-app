@@ -1,8 +1,10 @@
 import { apiClient } from './http/client';
+import type { RequestOptions } from './http/client';
 import type { CreateProgramInput, Program } from '../types/program';
 
-export function getPrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}) {
-  return apiClient.get<Program[]>(`/programs${assignedOnly ? '?scope=assigned' : ''}`);
+export function getPrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}, opts?: RequestOptions) {
+  const path = `/programs${assignedOnly ? '?scope=assigned' : ''}`;
+  return opts ? apiClient.get<Program[]>(path, opts) : apiClient.get<Program[]>(path);
 }
 
 export function createProgram(data: CreateProgramInput | string) {

@@ -1,4 +1,5 @@
 import { apiClient } from './http/client';
+import type { RequestOptions } from './http/client';
 
 export interface PreferenceValues {
   'youth-profile-filters': {
@@ -28,8 +29,10 @@ export interface PreferenceValues {
 
 export type PreferenceKey = keyof PreferenceValues;
 
-export function getPreference<K extends PreferenceKey>(key: K) {
-  return apiClient.get<PreferenceValues[K] | null>(`/preferences/${key}`);
+export function getPreference<K extends PreferenceKey>(key: K, opts?: RequestOptions) {
+  return opts
+    ? apiClient.get<PreferenceValues[K] | null>(`/preferences/${key}`, opts)
+    : apiClient.get<PreferenceValues[K] | null>(`/preferences/${key}`);
 }
 
 export function setPreference<K extends PreferenceKey>(key: K, value: PreferenceValues[K]) {
