@@ -4,38 +4,22 @@ import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
 
 const mockUseYouth = vi.fn();
-const cohortsApi = vi.hoisted(() => ({ getCohorts: vi.fn() }));
 const youthApi = vi.hoisted(() => ({ getYouthSessionNotes: vi.fn() }));
-const cohortFixture = {
-  id: 'cohort-1',
-  programId: 'program-1',
-  programName: 'Soft Skills',
-  rosterMode: 'enrolled',
-  name: 'Summer 2026',
-  startsOn: '2026-06-30',
-  endsOn: '2026-08-31',
-  state: 'active',
-  enrolledCount: 1,
-  nextSessionAt: null,
-  nextSessionId: null,
-  averageAttendance: null,
-  attendanceAttendedCount: 0,
-  attendanceRecordedCount: 0,
-  uniqueAttendeeCount: 0,
-};
 
 vi.mock('./hooks/useYouth', () => ({
   useYouth: (...args: unknown[]) => mockUseYouth(...args),
 }));
-vi.mock('../../common/api/cohorts.api', () => cohortsApi);
 vi.mock('../../common/api/youth.api', () => youthApi);
 
 vi.mock('../../common/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
+  usePrograms: (...args: unknown[]) => {
+    expect(args).toEqual([{ assignedOnly: true }]);
+    return { programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
+  },
 }));
 
 vi.mock('../../common/context/AuthContext', () => ({
-  useAuth: () => ({ permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts'] }),
+  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts'] }),
 }));
 
 vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
@@ -45,15 +29,14 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     : null,
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
-  default: ({ items }: { items: { id: string; label: string }[] }) => (
-    <div>{items.map(item => <span key={item.id}>{item.label}</span>)}</div>
-  ),
+  default: ({ ariaLabel, items }: {
+    ariaLabel: string;
+    items: Array<{ id: string; label: string }>;
+  }) => <button aria-label={ariaLabel}>{items[0].label}</button>,
 }));
-
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
-    cohortsApi.getCohorts.mockReturnValue(new Promise(() => {}));
     youthApi.getYouthSessionNotes.mockResolvedValue([]);
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
@@ -68,7 +51,7 @@ describe('Youth', () => {
     render(<Youth />);
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
-    expect(screen.getByText('Edit')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More actions for Jamie Test' })).toBeInTheDocument();
     expect(screen.queryByText('Manage Cohorts')).not.toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate')).not.toBeInTheDocument();
@@ -85,27 +68,30 @@ describe('Youth', () => {
 
     await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
       search: '',
+      statuses: ['active'],
       programIds: ['program-1'],
-      cohortIds: [],
     }));
   });
 
-  it('requests youth filtered by cohort', async () => {
-    cohortsApi.getCohorts.mockResolvedValue([cohortFixture]);
+  it('defaults to active youth and can filter inactive youth', async () => {
     render(<Youth />);
-    await waitFor(() => expect(cohortsApi.getCohorts).toHaveBeenCalled());
+
+    await waitFor(() => expect(mockUseYouth).toHaveBeenCalledWith({
+      search: '',
+      statuses: ['active'],
+      programIds: [],
+    }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Cohort/ }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', {
-      name: 'Soft Skills · Summer 2026',
-    }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Inactive' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
       search: '',
+      statuses: ['inactive'],
       programIds: [],
-      cohortIds: ['cohort-1'],
     }));
   });
 
