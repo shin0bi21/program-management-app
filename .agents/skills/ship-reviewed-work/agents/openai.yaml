@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ship Reviewed Work"
-  short_description: "Review and ship changes through issues and pull requests"
-  default_prompt: "Use $ship-reviewed-work to review this working tree and ship it through issue-scoped branches, tests, pull requests, and merges."
