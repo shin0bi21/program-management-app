@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import './DetailCards.css';
 import { formatShortDate, getDateKeyInTimeZone } from '../../utils/date';
 import type { YouthSessionNote } from '../../types/cohort';
@@ -6,6 +8,7 @@ import type { YouthProfileNote } from '../../types/youth';
 import { ProfileNoteCategoryBadge } from '../ProfileNoteDetails/ProfileNoteDetails';
 import { DashboardCard } from '../DashboardCard/DashboardCard';
 import { SessionNoteCategoryBadge } from '../SessionNoteDetails/SessionNoteDetails';
+import Button from '../Button/Button';
 
 interface PrimaryContactCardProps {
   contact: {
@@ -59,7 +62,13 @@ export function YouthNotesCard({
   sessionNotesLoading = false,
   sessionNotesError,
   onSelectSessionNote,
+  canManageSessionNotes = false,
+  onEditSessionNote,
+  onDeleteSessionNote,
   onSelectProfileNote,
+  canManageProfileNotes = false,
+  onEditProfileNote,
+  onDeleteProfileNote,
   profileNotesLoading = false,
   profileNotesError,
 }: {
@@ -71,7 +80,13 @@ export function YouthNotesCard({
   sessionNotesLoading?: boolean;
   sessionNotesError?: string | null;
   onSelectSessionNote: (note: YouthSessionNote) => void;
+  canManageSessionNotes?: boolean;
+  onEditSessionNote?: (note: YouthSessionNote) => void;
+  onDeleteSessionNote?: (note: YouthSessionNote) => void;
   onSelectProfileNote: (note: YouthProfileNote) => void;
+  canManageProfileNotes?: boolean;
+  onEditProfileNote?: (note: YouthProfileNote) => void;
+  onDeleteProfileNote?: (note: YouthProfileNote) => void;
   profileNotesLoading?: boolean;
   profileNotesError?: string | null;
 }) {
@@ -83,15 +98,26 @@ export function YouthNotesCard({
     else if (profileNotesError) content = <p className="form-error">{profileNotesError}</p>;
     else if (!profileNotes.length) content = <p className="dashboard-card__empty">No profile notes recorded.</p>;
     else content = <div className="profile-session-notes">{profileNotes.map(note => (
-      <button key={note.id} type="button" className="profile-session-note" onClick={() => onSelectProfileNote(note)}>
-        <div className="profile-session-note__row">
-          <span className="profile-session-note__summary">
-            <strong>{note.title}</strong>
-            <span>{formatShortDate(note.createdAt)}</span>
-          </span>
+      <div key={note.id} className="profile-session-note profile-session-note--with-actions">
+        <div className="profile-session-note__profile-summary">
+          <strong>{note.title}</strong>
           <ProfileNoteCategoryBadge category={note.category} />
+          <span className="profile-session-note__date">{formatShortDate(note.createdAt)}</span>
         </div>
-      </button>
+        <div className="profile-session-note__actions">
+          <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`View ${note.title}`} title="View note" onClick={() => onSelectProfileNote(note)}>
+            <FontAwesomeIcon icon={faEye} aria-hidden="true" />
+          </Button>
+          {canManageProfileNotes && onEditProfileNote && onDeleteProfileNote && <>
+            <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`Edit ${note.title}`} title="Edit note" onClick={() => onEditProfileNote(note)}>
+              <FontAwesomeIcon icon={faPen} aria-hidden="true" />
+            </Button>
+            <Button size="sm" variant="ghost" className="profile-session-note__action-button profile-session-note__action-button--danger" aria-label={`Delete ${note.title}`} title="Delete note" onClick={() => onDeleteProfileNote(note)}>
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+            </Button>
+          </>}
+        </div>
+      </div>
     ))}</div>;
   } else if (sessionNotesLoading) {
     content = <p className="dashboard-card__empty">Loading session notes…</p>;
@@ -103,20 +129,26 @@ export function YouthNotesCard({
     content = (
       <div className="profile-session-notes">
         {sessionNotes.map(note => (
-          <button
-            key={note.id}
-            type="button"
-            className="profile-session-note"
-            onClick={() => onSelectSessionNote(note)}
-          >
-            <div className="profile-session-note__row">
-              <span className="profile-session-note__summary">
-                <strong>{note.title}</strong>
-                <span>{formatShortDate(note.startsAt)}</span>
-              </span>
+          <div key={note.id} className="profile-session-note profile-session-note--with-actions">
+            <div className="profile-session-note__profile-summary">
+              <strong>{note.title}</strong>
               <SessionNoteCategoryBadge category={note.category} />
+              <span className="profile-session-note__date">{formatShortDate(note.startsAt)}</span>
             </div>
-          </button>
+            <div className="profile-session-note__actions">
+              <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`View ${note.title}`} title="View note" onClick={() => onSelectSessionNote(note)}>
+                <FontAwesomeIcon icon={faEye} aria-hidden="true" />
+              </Button>
+              {canManageSessionNotes && onEditSessionNote && onDeleteSessionNote && <>
+                <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`Edit ${note.title}`} title="Edit note" onClick={() => onEditSessionNote(note)}>
+                  <FontAwesomeIcon icon={faPen} aria-hidden="true" />
+                </Button>
+                <Button size="sm" variant="ghost" className="profile-session-note__action-button profile-session-note__action-button--danger" aria-label={`Delete ${note.title}`} title="Delete note" onClick={() => onDeleteSessionNote(note)}>
+                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+                </Button>
+              </>}
+            </div>
+          </div>
         ))}
       </div>
     );

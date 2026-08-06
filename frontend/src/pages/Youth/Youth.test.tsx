@@ -251,7 +251,7 @@ describe('Youth', () => {
     render(<Youth />);
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(await screen.findByRole('button', { name: /Family follow-up/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'View Family follow-up' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 

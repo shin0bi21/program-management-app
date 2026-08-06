@@ -135,6 +135,7 @@ export interface YouthSessionNote extends SessionNote {
   cohortName: string;
   programId: string;
   programName: string;
+  rosterMode: 'enrolled' | 'open';
 }
 
 export interface CreateSessionNoteInput {
