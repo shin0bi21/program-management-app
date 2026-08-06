@@ -25,7 +25,6 @@ export interface YouthProfile {
     absentCount: number;
     lastAttendedOn: string | null;
   }>;
-  notes: string | null;
   gradeLevel: number | null;
   ageGroup: 'junior_youth' | 'senior_youth' | null;
   lastAttendedOn: string | null;
@@ -41,6 +40,18 @@ export interface YouthProfile {
   }> | null;
 }
 
+export type YouthProfileNoteCategory = 'general' | 'health' | 'preference';
+export interface YouthProfileNote {
+  id: string;
+  youthId: string;
+  category: YouthProfileNoteCategory;
+  title: string;
+  details: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+}
+
 export interface SetYouthInput {
   id?: string;
   firstName: string;
@@ -48,7 +59,6 @@ export interface SetYouthInput {
   email?: string;
   dateOfBirth?: string;
   schoolId?: string;
-  notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{
     address: string;

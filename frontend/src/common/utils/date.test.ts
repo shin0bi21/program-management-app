@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatShortDate } from './date';
+import { formatShortDate, getDateKeyInTimeZone } from './date';
 
 describe('formatShortDate', () => {
   it('formats timestamps using the shared short-date style', () => {
@@ -12,5 +12,14 @@ describe('formatShortDate', () => {
 
   it('keeps date-only values on their calendar day', () => {
     expect(formatShortDate('2026-07-01')).toBe('Jul 1, 2026');
+  });
+});
+
+describe('getDateKeyInTimeZone', () => {
+  it('uses the Toronto calendar day instead of UTC', () => {
+    expect(getDateKeyInTimeZone(
+      new Date('2026-08-07T02:30:00.000Z'),
+      'America/Toronto',
+    )).toBe('2026-08-06');
   });
 });

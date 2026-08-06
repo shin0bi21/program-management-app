@@ -1,6 +1,6 @@
 import { apiClient } from './http/client';
 import type { RequestOptions } from './http/client';
-import type { YouthFilters, YouthProfile, SetYouthInput } from '../types/youth';
+import type { YouthFilters, YouthProfile, SetYouthInput, YouthProfileNote, YouthProfileNoteCategory } from '../types/youth';
 import type { YouthSessionNote } from '../types/cohort';
 
 export function getYouth(id?: string, filters: YouthFilters = {}, opts?: RequestOptions) {
@@ -26,4 +26,19 @@ export function getYouthSessionNotes(id: string, opts?: RequestOptions) {
 
 export function inviteYouth(id: string, email: string) {
   return apiClient.post<YouthProfile['account']>(`/youth/${id}/invite`, { email });
+}
+
+export interface SetYouthProfileNoteInput { category: YouthProfileNoteCategory; title: string; details: string | null }
+export function getYouthProfileNotes(id: string, opts?: RequestOptions) {
+  const path = `/youth/${id}/notes`;
+  return opts ? apiClient.get<YouthProfileNote[]>(path, opts) : apiClient.get<YouthProfileNote[]>(path);
+}
+export function createYouthProfileNote(id: string, data: SetYouthProfileNoteInput) {
+  return apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
+}
+export function updateYouthProfileNote(id: string, noteId: string, data: SetYouthProfileNoteInput) {
+  return apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data);
+}
+export function deleteYouthProfileNote(id: string, noteId: string) {
+  return apiClient.delete<void>(`/youth/${id}/notes/${noteId}`);
 }

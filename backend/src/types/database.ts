@@ -39,8 +39,6 @@ export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "sign
 
 export type ProgramRosterMode = "enrolled" | "open";
 
-export type SchoolBoard = "catholic" | "public";
-
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Addresses {
@@ -214,13 +212,10 @@ export interface SchemaMigrations {
 }
 
 export interface Schools {
-  address: string | null;
-  board: SchoolBoard | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   id: Generated<string>;
   name: string;
-  postal_code: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -409,6 +404,18 @@ export interface UserTrustedDevices {
   user_id: string;
 }
 
+export interface YouthProfileNotes {
+  category: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string | null;
+  id: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  youth_id: string;
+}
+
 export interface YouthProfiles {
   age_group: AgeGroup | null;
   created_at: Generated<Timestamp>;
@@ -416,7 +423,6 @@ export interface YouthProfiles {
   date_of_birth: Timestamp | null;
   grade_level: number | null;
   id: Generated<string>;
-  notes: string | null;
   school_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -458,5 +464,6 @@ export interface DB {
   user_roles: UserRoles;
   user_trusted_devices: UserTrustedDevices;
   users: Users;
+  youth_profile_notes: YouthProfileNotes;
   youth_profiles: YouthProfiles;
 }

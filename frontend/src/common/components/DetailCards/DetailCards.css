@@ -39,7 +39,7 @@
   color: var(--color-ink);
 }
 
-.notes-card__tabs {
+.dashboard-card__tabs {
   display: inline-flex;
   padding: 2px;
   border: var(--border-line-soft);
@@ -47,7 +47,7 @@
   background: var(--color-surface);
 }
 
-.notes-card__tabs button {
+.dashboard-card__tabs button {
   padding: 4px 7px;
   border: 0;
   border-radius: 5px;
@@ -58,7 +58,7 @@
   font-weight: 650;
 }
 
-.notes-card__tabs button.is-active {
+.dashboard-card__tabs button.is-active {
   background: var(--color-white);
   color: var(--color-ink);
   box-shadow: 0 1px 4px var(--ink-10);
@@ -69,8 +69,7 @@
 }
 
 .profile-session-note {
-  display: grid;
-  gap: var(--space-1);
+  display: block;
   width: 100%;
   padding: 0 0 var(--space-3);
   border: 0;
@@ -89,18 +88,35 @@
   padding-bottom: 0;
 }
 
-.profile-session-note__heading {
+.profile-session-note__row,
+.profile-session-note__summary {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.profile-session-note__heading strong {
-  overflow-wrap: anywhere;
+.profile-session-note__row {
+  min-width: 0;
 }
 
-.profile-session-note > span:last-child {
+.profile-session-note__summary {
+  min-width: 0;
+}
+
+.profile-session-note__summary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-session-note__summary > span {
+  flex: none;
   color: var(--color-muted);
   font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.profile-session-note__row > .session-note-category {
+  flex: none;
+  margin-left: auto;
 }

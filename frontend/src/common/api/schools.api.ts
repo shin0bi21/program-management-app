@@ -13,9 +13,6 @@ export function createSchool(name: string): Promise<School> {
 export interface SetSchoolInput {
   id?: string;
   name: string;
-  board?: 'catholic' | 'public' | null;
-  address?: string | null;
-  postalCode?: string | null;
 }
 
 export function setSchool(school: SetSchoolInput): Promise<School> {

@@ -18,7 +18,6 @@ export default function Header() {
   const canViewSessions = permissions.includes('read:sessions');
   const canViewProgramming = canViewCohorts || canViewSessions;
   const canManageAccounts = permissions.includes('read:accounts');
-  const canViewSchools = permissions.includes('read:schools');
   const [mobileOpen, setMobileOpen] = useState(false);
   const outreachBtnRef = useRef<HTMLButtonElement>(null);
   const programmingBtnRef = useRef<HTMLButtonElement>(null);
@@ -304,15 +303,6 @@ export default function Header() {
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
               Manage Accounts
-            </button>
-          )}
-          {canViewSchools && (
-            <button
-              role="menuitem"
-              onClick={() => go('/settings/schools')}
-              className={`settings-flyout-item${isActive('/settings/schools') ? ' active' : ''}`}
-            >
-              Manage Schools
             </button>
           )}
         </FloatingMenuPanel>
