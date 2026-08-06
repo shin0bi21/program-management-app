@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './common/context/AuthContext';
 import ProtectedRoute from './common/components/ProtectedRoute/ProtectedRoute';
 import ReLoginModal from './common/components/ReLoginModal/ReLoginModal';
+import RouteLoading from './common/components/RouteLoading/RouteLoading';
 import Homepage from './pages/Homepage/Homepage';
 import { HOMEPAGE_ROUTE_PATHS } from './common/utils/homepageSections';
 
@@ -34,7 +35,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ReLoginModal isOpen={reLoginOpen} onClose={() => setReLoginOpen(false)} />
-        <Suspense fallback={<div role="status">Loading page…</div>}>
+        <Suspense fallback={<RouteLoading />}>
           <Routes>
             {HOMEPAGE_ROUTE_PATHS.map((path) => (
               <Route key={path} path={path} element={<Homepage />} />
