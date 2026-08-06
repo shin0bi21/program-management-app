@@ -5,6 +5,7 @@
   },
   "include": [
     "src/**/*",
+    "db/scripts/backfill-homepage-image-variants.ts",
     "db/scripts/migration_status.ts",
     "db/scripts/seed-admin.ts",
     "db/scripts/update_schemas.ts"
