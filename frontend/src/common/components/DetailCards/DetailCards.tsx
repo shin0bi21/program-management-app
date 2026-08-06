@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import './DetailCards.css';
-import { formatShortDate } from '../../utils/date';
+import { formatShortDate, getDateKeyInTimeZone } from '../../utils/date';
 import type { YouthSessionNote } from '../../types/cohort';
+import type { YouthProfileNote } from '../../types/youth';
+import { ProfileNoteCategoryBadge } from '../ProfileNoteDetails/ProfileNoteDetails';
 import { DashboardCard } from '../DashboardCard/DashboardCard';
 import { SessionNoteCategoryBadge } from '../SessionNoteDetails/SessionNoteDetails';
 
@@ -49,7 +51,7 @@ export function NotesCard({ notes, selected }: { notes?: string | null; selected
 export type NotesTab = 'profile' | 'session';
 
 export function YouthNotesCard({
-  notes,
+  profileNotes = [],
   selected,
   activeTab,
   onTabChange,
@@ -57,8 +59,11 @@ export function YouthNotesCard({
   sessionNotesLoading = false,
   sessionNotesError,
   onSelectSessionNote,
+  onSelectProfileNote,
+  profileNotesLoading = false,
+  profileNotesError,
 }: {
-  notes?: string | null;
+  profileNotes?: YouthProfileNote[];
   selected: boolean;
   activeTab: NotesTab;
   onTabChange: (tab: NotesTab) => void;
@@ -66,16 +71,28 @@ export function YouthNotesCard({
   sessionNotesLoading?: boolean;
   sessionNotesError?: string | null;
   onSelectSessionNote: (note: YouthSessionNote) => void;
+  onSelectProfileNote: (note: YouthProfileNote) => void;
+  profileNotesLoading?: boolean;
+  profileNotesError?: string | null;
 }) {
   let content: ReactNode;
   if (!selected) {
     content = <p className="dashboard-card__empty">Select a row to view notes.</p>;
   } else if (activeTab === 'profile') {
-    content = (
-      <p className={!notes?.trim() ? 'dashboard-card__empty' : undefined}>
-        {notes?.trim() || 'No profile notes recorded.'}
-      </p>
-    );
+    if (profileNotesLoading) content = <p className="dashboard-card__empty">Loading profile notes…</p>;
+    else if (profileNotesError) content = <p className="form-error">{profileNotesError}</p>;
+    else if (!profileNotes.length) content = <p className="dashboard-card__empty">No profile notes recorded.</p>;
+    else content = <div className="profile-session-notes">{profileNotes.map(note => (
+      <button key={note.id} type="button" className="profile-session-note" onClick={() => onSelectProfileNote(note)}>
+        <div className="profile-session-note__row">
+          <span className="profile-session-note__summary">
+            <strong>{note.title}</strong>
+            <span>{formatShortDate(note.createdAt)}</span>
+          </span>
+          <ProfileNoteCategoryBadge category={note.category} />
+        </div>
+      </button>
+    ))}</div>;
   } else if (sessionNotesLoading) {
     content = <p className="dashboard-card__empty">Loading session notes…</p>;
   } else if (sessionNotesError) {
@@ -92,13 +109,13 @@ export function YouthNotesCard({
             className="profile-session-note"
             onClick={() => onSelectSessionNote(note)}
           >
-            <span className="profile-session-note__heading">
-              <strong>{note.title}</strong>
+            <div className="profile-session-note__row">
+              <span className="profile-session-note__summary">
+                <strong>{note.title}</strong>
+                <span>{formatShortDate(note.startsAt)}</span>
+              </span>
               <SessionNoteCategoryBadge category={note.category} />
-            </span>
-            <span>
-              {note.programName} · {note.cohortName} · {formatShortDate(note.startsAt)}
-            </span>
+            </div>
           </button>
         ))}
       </div>
@@ -109,7 +126,7 @@ export function YouthNotesCard({
     <DashboardCard
       title="Notes"
       action={(
-        <div className="notes-card__tabs" role="group" aria-label="Notes view">
+        <div className="dashboard-card__tabs" role="group" aria-label="Notes view">
           <button
             type="button"
             className={activeTab === 'profile' ? 'is-active' : ''}
@@ -143,6 +160,9 @@ export function AttendanceCard({
     name: string;
     programName: string;
     rosterMode: 'enrolled' | 'open';
+    startsOn: string;
+    endsOn: string;
+    withdrawnOn: string | null;
     presentCount: number;
     lateCount: number;
     absentCount: number;
@@ -150,18 +170,49 @@ export function AttendanceCard({
   }>;
   selected: boolean;
 }) {
+  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const today = getDateKeyInTimeZone();
+  const visibleCohorts = cohorts?.filter(cohort => {
+    const isActive = cohort.startsOn <= today
+      && cohort.endsOn >= today
+      && cohort.withdrawnOn === null;
+    return activeTab === 'active' ? isActive : !isActive;
+  }) ?? [];
+
   return (
     <DashboardCard
       title="Attendance"
-      emptyMessage={!selected ? 'Select a row to view attendance.' : 'No attendance recorded.'}
+      action={selected ? (
+        <div className="dashboard-card__tabs" role="group" aria-label="Attendance view">
+          <button
+            type="button"
+            className={activeTab === 'active' ? 'is-active' : ''}
+            aria-pressed={activeTab === 'active'}
+            onClick={() => setActiveTab('active')}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'history' ? 'is-active' : ''}
+            aria-pressed={activeTab === 'history'}
+            onClick={() => setActiveTab('history')}
+          >
+            History
+          </button>
+        </div>
+      ) : undefined}
+      emptyMessage={!selected
+        ? 'Select a row to view attendance.'
+        : activeTab === 'active'
+          ? 'No active cohort attendance.'
+          : 'No historical attendance.'}
     >
-      {selected && cohorts?.length ? (
+      {selected && visibleCohorts.length ? (
         <div className="attendance-card__cohorts">
-          {cohorts.map(cohort => (
+          {visibleCohorts.map(cohort => (
             <div className="attendance-card__cohort" key={cohort.id}>
-              <strong>{cohort.rosterMode === 'open'
-                ? `${cohort.programName} · ${cohort.name}`
-                : cohort.name}</strong>
+              <strong>{cohort.programName} · {cohort.name}</strong>
               {cohort.rosterMode === 'open' ? (
                 <p className="attendance-card__breakdown">
                   {cohort.presentCount} {cohort.presentCount === 1 ? 'visit' : 'visits'}
@@ -175,11 +226,6 @@ export function AttendanceCard({
                   Absent {cohort.absentCount}
                 </p>
               )}
-              <p className={!cohort.lastAttendedOn ? 'dashboard-card__empty' : undefined}>
-                Last attended: {cohort.lastAttendedOn
-                  ? formatShortDate(cohort.lastAttendedOn)
-                  : 'Not recorded'}
-              </p>
             </div>
           ))}
         </div>

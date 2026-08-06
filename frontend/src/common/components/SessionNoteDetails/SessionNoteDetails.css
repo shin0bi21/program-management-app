@@ -31,6 +31,16 @@
   color: var(--brand-primary);
 }
 
+.session-note-category--health {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.session-note-category--preference {
+  background: var(--accent-12);
+  color: var(--brand-primary);
+}
+
 .session-note-details {
   display: grid;
   gap: var(--space-5);

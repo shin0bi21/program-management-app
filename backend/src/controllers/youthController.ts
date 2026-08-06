@@ -3,6 +3,8 @@ import type { AuthRequest } from '../middleware/authMiddleware';
 import { getYouth, getYouthSessionNotes, setYouth } from '../services/youthService';
 import { inviteYouthAccount } from '../services/accountService';
 import { youthQuerySchema } from '../validation/youthSchemas';
+import { createYouthProfileNote, deleteYouthProfileNote, getYouthProfileNotes, updateYouthProfileNote } from '../services/youthProfileNoteService';
+import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
   const filters = youthQuerySchema.shape.query.parse(req.query);
@@ -29,4 +31,20 @@ export const handleInviteYouth = async (req: Request, res: Response) => {
   const actorId = (req as AuthRequest).user!.userId;
   const account = await inviteYouthAccount(req.params.id, req.body.email, actorId);
   res.status(201).json(account);
+};
+
+export const handleGetYouthProfileNotes = async (req: Request, res: Response) => {
+  res.json(await getYouthProfileNotes(req.params.id));
+};
+export const handleCreateYouthProfileNote = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.status(201).json(await createYouthProfileNote(req.params.id, req.body as SetYouthProfileNoteInput, actorId));
+};
+export const handleUpdateYouthProfileNote = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.json(await updateYouthProfileNote(req.params.id, req.params.noteId, req.body as SetYouthProfileNoteInput, actorId));
+};
+export const handleDeleteYouthProfileNote = async (req: Request, res: Response) => {
+  await deleteYouthProfileNote(req.params.id, req.params.noteId);
+  res.json({ success: true });
 };

@@ -16,7 +16,6 @@ const defaultValues: YouthFormData = {
   email: '',
   dateOfBirth: '',
   schoolId: '',
-  notes: '',
   gradeLevel: undefined,
 };
 
@@ -43,7 +42,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     defaultValues,
   });
 
-  const { schools, upsertSchool, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const { schools, upsertSchool, removeSchool, loading: schoolsLoading, error: schoolsError } = useSchools();
   const schoolId = watch('schoolId');
 
   const {
@@ -74,7 +73,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
-      notes: youthData.notes || '',
       gradeLevel: youthData.gradeLevel ?? undefined,
     });
 
@@ -120,7 +118,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
         ...(includeLoginEmail && data.email && { email: data.email.trim() }),
         ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
         ...(data.schoolId && { schoolId: data.schoolId }),
-        notes: data.notes.trim() || null,
         ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
         addresses: getAddressPayload(),
         contacts: getContactPayload(),
@@ -149,6 +146,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     // Sub-entity state
     schools,
     upsertSchool,
+    removeSchool,
     schoolsLoading,
     schoolsError,
     schoolId,

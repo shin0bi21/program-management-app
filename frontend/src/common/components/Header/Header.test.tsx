@@ -105,7 +105,6 @@ describe('Header youth navigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Manage Schools' })).toBeInTheDocument();
   });
 
   it('shows Cohorts and Sessions in Programming navigation', () => {

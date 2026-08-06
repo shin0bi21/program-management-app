@@ -13,7 +13,7 @@ import { applyYouthFilters } from './queryFilters/youthFilters';
 
 type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'notes' | 'grade_level' | 'age_group'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
   DbRow<Pick<Schools, 'name'>> & {
     status: 'active' | 'inactive';
     cohorts: Array<{
@@ -65,7 +65,6 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
       yp.date_of_birth,
       yp.school_id,
       s.name as school_name,
-      yp.notes,
       yp.grade_level,
       yp.age_group,
       CASE WHEN uc.user_id IS NULL THEN NULL ELSE json_build_object(
@@ -243,14 +242,13 @@ export interface SetYouthInput {
   email?: string;
   dateOfBirth?: string;
   schoolId?: string;
-  notes?: string | null;
   gradeLevel?: number;
   addresses?: Array<{ id?: string; address: string }>;
   contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
 export async function setYouth(data: SetYouthInput, actorId: string) {
-  const { id, firstName, lastName, dateOfBirth, schoolId, notes, gradeLevel, addresses, contacts } = data;
+  const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, addresses, contacts } = data;
   const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
   const transactionId = crypto.randomUUID();
 
@@ -266,8 +264,8 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
         WHERE id = ${id}
         LIMIT 1
       `;
-      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'notes' | 'grade_level' | 'age_group'>>[]>`
-        SELECT user_id, date_of_birth, school_id, notes, grade_level, age_group
+      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>>[]>`
+        SELECT user_id, date_of_birth, school_id, grade_level, age_group
         FROM youth_profiles
         WHERE user_id = ${id}
         LIMIT 1
@@ -305,12 +303,11 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       );
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, notes, grade_level, age_group, created_at, updated_at)
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at)
         VALUES (
           ${persistedUserId},
           ${dateOfBirth || null},
           ${schoolId || null},
-          ${notes ?? null},
           ${gradeLevel ?? null},
           ${ageGroup},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${persistedUserId}), NOW()),
@@ -319,7 +316,6 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
         ON CONFLICT (user_id) DO UPDATE SET
           date_of_birth = EXCLUDED.date_of_birth,
           school_id = EXCLUDED.school_id,
-          notes = EXCLUDED.notes,
           grade_level = EXCLUDED.grade_level,
           age_group = EXCLUDED.age_group,
           updated_at = EXCLUDED.updated_at
@@ -336,12 +332,11 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
               userId: existingProfiles[0].userId,
               dateOfBirth: existingProfiles[0].dateOfBirth,
               schoolId: existingProfiles[0].schoolId,
-              notes: existingProfiles[0].notes,
               gradeLevel: existingProfiles[0].gradeLevel,
               ageGroup: existingProfiles[0].ageGroup,
             }
           : null,
-        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup },
+        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup },
       );
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
@@ -354,10 +349,10 @@ export async function setYouth(data: SetYouthInput, actorId: string) {
       await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, notes, grade_level, age_group)
-        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${notes ?? null}, ${gradeLevel ?? null}, ${ageGroup})
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)
+        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup})
       `;
-      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, notes: notes ?? null, gradeLevel: gradeLevel ?? null, ageGroup });
+      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup });
     }
 
     if (id) {

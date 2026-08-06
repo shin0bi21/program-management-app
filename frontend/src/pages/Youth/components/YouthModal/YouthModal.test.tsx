@@ -8,8 +8,9 @@ vi.mock('../../../../common/api/youth.api', () => ({
 }));
 
 const schoolState = vi.hoisted(() => ({
-  schools: [] as Array<{ id: string; name: string; board: null; address: null; postalCode: null }>,
+  schools: [] as Array<{ id: string; name: string }>,
   upsertSchool: vi.fn(),
+  removeSchool: vi.fn(),
 }));
 
 const authState = vi.hoisted(() => ({
@@ -20,6 +21,7 @@ vi.mock('../../../../common/hooks/useSchools', () => ({
   useSchools: () => ({
     schools: schoolState.schools,
     upsertSchool: schoolState.upsertSchool,
+    removeSchool: schoolState.removeSchool,
     loading: false,
     error: '',
     refetch: vi.fn(),
@@ -59,6 +61,7 @@ describe('YouthModal', () => {
     mockSetYouth.mockResolvedValue(makeYouthProfile());
     schoolState.schools = [];
     schoolState.upsertSchool.mockReset();
+    schoolState.removeSchool.mockReset();
     authState.permissions = ['write:schools'];
   });
 
@@ -71,7 +74,7 @@ describe('YouthModal', () => {
     it('collects only a street address for youth addresses', () => {
       renderModal();
 
-      expect(screen.getByLabelText('Street Address')).toBeInTheDocument();
+      expect(screen.getByLabelText('Address (optional)')).toBeInTheDocument();
       expect(screen.queryByLabelText('City')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Province')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Postal Code')).not.toBeInTheDocument();
@@ -116,7 +119,7 @@ describe('YouthModal', () => {
       expect(screen.getByLabelText('Login Email')).toBeDisabled();
     });
 
-    it('offers inline school creation only with school write permission', () => {
+    it('offers school creation only with school write permission', () => {
       const { unmount } = renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'School' }));
       expect(screen.getByRole('menuitem', { name: '+ Add school' })).toBeInTheDocument();
@@ -126,6 +129,15 @@ describe('YouthModal', () => {
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'School' }));
       expect(screen.queryByRole('menuitem', { name: '+ Add school' })).not.toBeInTheDocument();
+    });
+
+    it('shows edit and delete actions on each school option for writers', () => {
+      schoolState.schools = [{ id: 'school-1', name: 'Central High' }];
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+
+      expect(screen.getByRole('menuitem', { name: 'Edit Central High' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Delete Central High' })).toBeInTheDocument();
     });
 
     it('does not render when closed', () => {
@@ -169,7 +181,7 @@ describe('YouthModal', () => {
     it('submits a youth address with only the street address', async () => {
       renderModal();
       fillRequiredFields();
-      fireEvent.change(screen.getByLabelText('Street Address'), {
+      fireEvent.change(screen.getByLabelText('Address (optional)'), {
         target: { value: ' 123 Main Street ' },
       });
       submitForm();
@@ -192,7 +204,7 @@ describe('YouthModal', () => {
     });
 
     it('submits the selected school id', async () => {
-      schoolState.schools = [{ id: 'school-1', name: 'Central High', board: null, address: null, postalCode: null }];
+      schoolState.schools = [{ id: 'school-1', name: 'Central High' }];
       renderModal();
       fillRequiredFields();
       fireEvent.click(screen.getByRole('button', { name: 'School' }));
@@ -201,17 +213,6 @@ describe('YouthModal', () => {
 
       await waitFor(() => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-1' }));
-      });
-    });
-
-    it('submits normalized profile notes', async () => {
-      renderModal();
-      fillRequiredFields();
-      fireEvent.change(screen.getByLabelText('Notes'), { target: { value: ' Follow up with family ' } });
-      submitForm();
-
-      await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ notes: 'Follow up with family' }));
       });
     });
 
@@ -240,7 +241,6 @@ describe('YouthModal', () => {
         id: 'youth-99',
         firstName: 'Jordan',
         lastName: 'Smith',
-        notes: 'Existing note',
         contacts: null,
       });
       renderModal({ youthData: profile, mode: 'contact' });
@@ -252,7 +252,6 @@ describe('YouthModal', () => {
           id: 'youth-99',
           firstName: 'Jordan',
           lastName: 'Smith',
-          notes: 'Existing note',
           contacts: [{
             phoneNumber: '519-555-0101',
             type: 'parent',

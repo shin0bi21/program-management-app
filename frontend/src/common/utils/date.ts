@@ -11,3 +11,19 @@ export function formatShortDate(value: string | number | Date): string {
   }
   return shortDateFormatter.format(value instanceof Date ? value : new Date(value));
 }
+
+export function getDateKeyInTimeZone(
+  value: Date = new Date(),
+  timeZone = 'America/Toronto',
+): string {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => (
+    parts.find(item => item.type === type)?.value ?? ''
+  );
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}

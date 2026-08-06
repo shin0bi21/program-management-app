@@ -39,7 +39,6 @@ export const setYouthSchema = z.object({
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
       .optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
-    notes: z.string().trim().max(5000, 'Notes are too long').nullable().optional(),
     gradeLevel: z.number().int().min(0).max(12).optional(),
     addresses: z
       .array(

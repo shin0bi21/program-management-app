@@ -60,6 +60,7 @@ export const signUpLeadSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
   body: z.object({
     cohortId: z.string().uuid('Invalid cohort ID').nullable().optional(),
+    noteCategory: z.enum(['general', 'health', 'preference']).optional().default('general'),
   }),
 });
 

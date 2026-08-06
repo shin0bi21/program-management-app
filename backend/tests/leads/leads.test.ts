@@ -200,7 +200,7 @@ describe('Leads API', () => {
     const res = await request(app)
       .post(`/api/leads/${lead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: softSkillsCohortId });
+      .send({ cohortId: softSkillsCohortId, noteCategory: 'preference' });
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
@@ -210,16 +210,19 @@ describe('Leads API', () => {
     }));
     convertedYouthId = res.body.convertedYouthId;
 
-    const [profile] = await sql<{ firstName: string; notes: string }[]>`
-      SELECT u.first_name, yp.notes
+    const [profile] = await sql<{ firstName: string }[]>`
+      SELECT u.first_name
       FROM youth_profiles yp
       JOIN users u ON u.id = yp.user_id
       WHERE yp.user_id = ${convertedYouthId!}
     `;
     expect(profile).toEqual(expect.objectContaining({
       firstName: payload.youthFirstName,
-      notes: payload.notes,
     }));
+    const [profileNote] = await sql<{ category: string; title: string; details: string | null }[]>`
+      SELECT category, title, details FROM youth_profile_notes WHERE youth_id = ${convertedYouthId!}
+    `;
+    expect(profileNote).toEqual({ category: 'preference', title: payload.notes, details: null });
 
     const [enrollment] = await sql<{ cohortId: string; youthId: string }[]>`
       SELECT cohort_id, youth_id

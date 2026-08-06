@@ -11,7 +11,6 @@ export function makeYouthProfile(overrides: Partial<YouthProfile> = {}): YouthPr
     schoolId: null,
     schoolName: null,
     cohorts: [],
-    notes: null,
     gradeLevel: null,
     ageGroup: null,
     lastAttendedOn: null,

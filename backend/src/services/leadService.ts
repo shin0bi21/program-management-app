@@ -203,17 +203,19 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     const schoolId = schools[0]?.id ?? null;
 
     await trx`
-      INSERT INTO youth_profiles (
-        user_id, school_id, notes, created_by, updated_by
-      ) VALUES (
-        ${youthId}, ${schoolId}, ${lead.notes}, ${actorId}, ${actorId}
-      )
+      INSERT INTO youth_profiles (user_id, school_id, created_by, updated_by)
+      VALUES (${youthId}, ${schoolId}, ${actorId}, ${actorId})
     `;
     await audit(trx, actorId, transactionId, 'youth_profiles', youthId, 'INSERT', null, {
       userId: youthId,
       schoolId,
-      notes: lead.notes,
     });
+    if (lead.notes?.trim()) {
+      await trx`
+        INSERT INTO youth_profile_notes (youth_id, category, title, details, created_by, updated_by)
+        VALUES (${youthId}, ${data.noteCategory}, ${lead.notes.trim()}, NULL, ${actorId}, ${actorId})
+      `;
+    }
 
     if (data.cohortId) {
       const enrollments = await trx<{ id: string; enrolledOn: string }[]>`

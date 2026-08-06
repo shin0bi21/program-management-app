@@ -57,4 +57,15 @@ describe('FloatingSelect', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select an option' }));
     expect(screen.getByRole('menu')).toHaveStyle({ width: '360px' });
   });
+
+  it('runs actions attached to an individual option', () => {
+    const onEdit = vi.fn();
+    render(<FloatingSelect id="school" value="" options={options} onChange={vi.fn()} optionActions={option => [{ label: 'Edit', onSelect: () => onEdit(option.value) }]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select an option' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit School One' }));
+
+    expect(onEdit).toHaveBeenCalledWith('one');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
 });

@@ -5,7 +5,13 @@ import { makeYouthProfile } from '../../tests/factories/youth';
 import render from '../../tests/renderWithQueryClient';
 
 const mockUseYouth = vi.fn();
-const youthApi = vi.hoisted(() => ({ getYouthSessionNotes: vi.fn() }));
+const youthApi = vi.hoisted(() => ({
+  getYouthSessionNotes: vi.fn(),
+  getYouthProfileNotes: vi.fn(),
+  createYouthProfileNote: vi.fn(),
+  updateYouthProfileNote: vi.fn(),
+  deleteYouthProfileNote: vi.fn(),
+}));
 const preferenceHook = vi.hoisted(() => ({
   preference: null as { statuses: Array<'active' | 'inactive'>; programIds: string[] } | null,
   loading: false,
@@ -46,6 +52,8 @@ describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
     youthApi.getYouthSessionNotes.mockResolvedValue([]);
+    youthApi.getYouthProfileNotes.mockResolvedValue([]);
+    youthApi.deleteYouthProfileNote.mockReset();
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
@@ -133,10 +141,13 @@ describe('Youth', () => {
     }));
   });
 
-  it('shows the selected profile contact and notes', () => {
+  it('shows the selected profile contact and profile notes', async () => {
+    youthApi.getYouthProfileNotes.mockResolvedValue([{
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: 'Youth profile note', createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
+    }]);
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({
-        notes: 'Youth profile note',
         lastAttendedOn: '2026-07-21',
         cohorts: [{
           id: 'cohort-1',
@@ -162,10 +173,10 @@ describe('Youth', () => {
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     expect(screen.getByText('416-555-0101')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByText('Summer 2026')).toBeInTheDocument();
+    expect(screen.getByText('Soft Skills · Summer 2026')).toBeInTheDocument();
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
-    expect(screen.getByText('Last attended: Jul 21, 2026')).toBeInTheDocument();
-    expect(screen.getByText('Youth profile note')).toBeInTheDocument();
+    expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
+    expect(await screen.findByText('Family follow-up')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -229,6 +240,24 @@ describe('Youth', () => {
     view.unmount();
     render(<Youth />);
     expect(screen.getByRole('button', { name: 'Session' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps a profile note open and reports a deletion failure', async () => {
+    youthApi.getYouthProfileNotes.mockResolvedValue([{
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
+    }]);
+    youthApi.deleteYouthProfileNote.mockRejectedValue(new Error('Unable to delete note'));
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(await screen.findByRole('button', { name: /Family follow-up/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Unable to delete note')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delete Profile Note' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
 
   it('opens only the contact section from the primary contact card', () => {

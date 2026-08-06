@@ -128,12 +128,10 @@ describe('Youth API', () => {
           firstName: 'Jordan',
           dateOfBirth: '2012-06-15',
           gradeLevel: 7,
-          notes: 'Needs transportation support',
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
       expect(res.body.cohorts).toEqual([]);
-      expect(res.body.notes).toBe('Needs transportation support');
       await sql`
         INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
         VALUES (
@@ -585,6 +583,88 @@ describe('Youth API', () => {
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(getRes.body.addresses).toBeNull();
+    });
+  });
+
+  describe('Youth profile notes', () => {
+    let youthId: string;
+    beforeAll(async () => {
+      const res = await request(app).post('/api/youth').set('Authorization', `Bearer ${adminToken}`).send({ ...baseYouth, firstName: 'Notes' });
+      youthId = res.body.id;
+    });
+    afterAll(async () => { await deleteTestYouth(youthId); });
+
+    it('requires authentication and profile permissions', async () => {
+      const unauthenticated = await request(app).get(`/api/youth/${youthId}/notes`);
+      expect(unauthenticated.status).toBe(401);
+
+      const youthUser = await seedTestUser({ email: `profile-notes-youth-${Date.now()}@test.local`, role: 'youth' });
+      const youthToken = generateToken(youthUser.userId, 'youth', youthUser.email);
+      const forbidden = await request(app)
+        .get(`/api/youth/${youthId}/notes`)
+        .set('Authorization', `Bearer ${youthToken}`);
+      expect(forbidden.status).toBe(403);
+      await deleteTestUser(youthUser.userId);
+    });
+
+    it('rejects invalid note input', async () => {
+      const invalidCategory = await request(app)
+        .post(`/api/youth/${youthId}/notes`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ category: 'private', title: 'Test', details: null });
+      expect(invalidCategory.status).toBe(400);
+
+      const emptyTitle = await request(app)
+        .post(`/api/youth/${youthId}/notes`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ category: 'general', title: '   ', details: null });
+      expect(emptyTitle.status).toBe(400);
+    });
+
+    it('does not allow a note id to be used through another youth profile', async () => {
+      const otherYouth = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, firstName: 'OtherNotes' });
+      const created = await request(app)
+        .post(`/api/youth/${youthId}/notes`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ category: 'general', title: 'Scoped note', details: null });
+
+      const update = await request(app)
+        .put(`/api/youth/${otherYouth.body.id}/notes/${created.body.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ category: 'general', title: 'Moved note', details: null });
+      expect(update.status).toBe(404);
+
+      const remove = await request(app)
+        .delete(`/api/youth/${otherYouth.body.id}/notes/${created.body.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(remove.status).toBe(404);
+
+      await sql`DELETE FROM youth_profile_notes WHERE id = ${created.body.id}`;
+      await deleteTestYouth(otherYouth.body.id);
+    });
+
+    it('creates, lists, updates, and deletes typed notes', async () => {
+      const created = await request(app).post(`/api/youth/${youthId}/notes`).set('Authorization', `Bearer ${adminToken}`).send({
+        category: 'health', title: 'Peanut allergy', details: 'Avoid peanuts',
+      });
+      expect(created.status).toBe(201);
+      expect(created.body).toEqual(expect.objectContaining({ youthId, category: 'health', title: 'Peanut allergy', details: 'Avoid peanuts' }));
+
+      const listed = await request(app).get(`/api/youth/${youthId}/notes`).set('Authorization', `Bearer ${adminToken}`);
+      expect(listed.body).toHaveLength(1);
+
+      const updated = await request(app).put(`/api/youth/${youthId}/notes/${created.body.id}`).set('Authorization', `Bearer ${adminToken}`).send({
+        category: 'preference', title: 'Snack', details: 'Prefers apples',
+      });
+      expect(updated.body).toEqual(expect.objectContaining({ category: 'preference', details: 'Prefers apples' }));
+
+      const deleted = await request(app).delete(`/api/youth/${youthId}/notes/${created.body.id}`).set('Authorization', `Bearer ${adminToken}`);
+      expect(deleted.status).toBe(200);
+      const empty = await request(app).get(`/api/youth/${youthId}/notes`).set('Authorization', `Bearer ${adminToken}`);
+      expect(empty.body).toEqual([]);
     });
   });
 });
