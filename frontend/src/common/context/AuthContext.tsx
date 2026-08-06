@@ -15,6 +15,8 @@ export type Permission =
   | 'write:programs'
   | 'read:cohorts'
   | 'write:cohorts'
+  | 'read:sessions'
+  | 'write:sessions'
   | 'read:attendance'
   | 'write:attendance'
   | 'write:schools'

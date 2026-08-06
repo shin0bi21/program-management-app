@@ -133,6 +133,26 @@ async function execute<T>(
   return res.json() as Promise<T>;
 }
 
+async function download(path: string, opts: RequestOptions = {}): Promise<Blob> {
+  const { auth = true, timeout = DEFAULT_TIMEOUT, signal } = opts;
+  const headers: Record<string, string> = {};
+  if (auth) headers.Authorization = `Bearer ${await getValidToken()}`;
+  let res = await rawFetch(api(path), { method: 'GET', credentials: 'include', headers }, timeout, signal);
+  if (auth && res.status === 401) {
+    await awaitReLogin();
+    res = await rawFetch(api(path), {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${getToken()!}` },
+    }, timeout, signal);
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new ApiError(res.status, err.error || err.message || 'Request failed', err.details, err.requestId);
+  }
+  return res.blob();
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export const apiClient = {
@@ -150,4 +170,6 @@ export const apiClient = {
 
   delete: <T>(path: string, opts?: RequestOptions) =>
     execute<T>('DELETE', path, undefined, opts),
+
+  download,
 };

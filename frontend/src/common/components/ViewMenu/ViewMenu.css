@@ -1,0 +1,25 @@
+.view-menu-trigger {
+  white-space: nowrap;
+}
+
+.view-menu-trigger__chevron {
+  font-size: 0.7em;
+}
+
+.view-menu {
+  padding: 6px;
+}
+
+.view-menu-option {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 1000px) {
+  .view-menu-trigger__label,
+  .view-menu-trigger__chevron {
+    display: none;
+  }
+}

@@ -77,16 +77,8 @@ function App() {
             <Route
               path="/programming/sessions"
               element={
-                <ProtectedRoute requiredPermission="read:attendance">
+                <ProtectedRoute requiredPermission="read:sessions">
                   <Sessions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/programming/calendar"
-              element={
-                <ProtectedRoute requiredPermission="read:attendance">
-                  <Navigate to="/programming/sessions?view=calendar" replace />
                 </ProtectedRoute>
               }
             />

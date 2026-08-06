@@ -66,7 +66,7 @@ export async function getSessionNotes(sessionId: string, actor: AccessTokenPaylo
       ) AS youth
     FROM session_notes sn
     LEFT JOIN users author ON author.id = sn.created_by
-    LEFT JOIN session_note_youth sny ON sny.note_id = sn.id
+    LEFT JOIN session_note_has_youth sny ON sny.note_id = sn.id
     LEFT JOIN users youth ON youth.id = sny.youth_id
     WHERE sn.session_id = ${sessionId}
     GROUP BY sn.id, author.id
@@ -121,7 +121,7 @@ export async function createSessionNote(
 
     if (data.youthIds.length) {
       await trx`
-        INSERT INTO session_note_youth (note_id, youth_id)
+        INSERT INTO session_note_has_youth (note_id, youth_id)
         SELECT ${notes[0].id}, selected.youth_id
         FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
       `;
@@ -172,10 +172,10 @@ export async function updateSessionNote(
           updated_by = ${actor.userId}
       WHERE id = ${noteId}
     `;
-    await trx`DELETE FROM session_note_youth WHERE note_id = ${noteId}`;
+    await trx`DELETE FROM session_note_has_youth WHERE note_id = ${noteId}`;
     if (data.youthIds.length) {
       await trx`
-        INSERT INTO session_note_youth (note_id, youth_id)
+        INSERT INTO session_note_has_youth (note_id, youth_id)
         SELECT ${noteId}, selected.youth_id
         FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
       `;

@@ -24,8 +24,15 @@ import {
   getSessionNotes,
   updateSessionNote,
 } from '../services/sessionNoteService';
+import {
+  createSessionAttachment,
+  deleteSessionAttachment,
+  getSessionAttachmentFile,
+  getSessionAttachments,
+} from '../services/sessionAttachmentService';
 import type {
   CreateCohortInput,
+  CreateSessionAttachmentInput,
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
@@ -119,4 +126,28 @@ export const handleUpdateSessionNote = async (req: Request, res: Response) => {
 export const handleDeleteSessionNote = async (req: Request, res: Response) => {
   await deleteSessionNote(req.params.sessionId, req.params.noteId, actor(req));
   res.json({ id: req.params.noteId });
+};
+
+export const handleGetSessionAttachments = async (req: Request, res: Response) => {
+  res.json(await getSessionAttachments(req.params.sessionId, actor(req)));
+};
+
+export const handleCreateSessionAttachment = async (req: Request, res: Response) => {
+  res.status(201).json(await createSessionAttachment(
+    req.params.sessionId,
+    req.body as CreateSessionAttachmentInput,
+    req.file,
+    actor(req),
+  ));
+};
+
+export const handleDeleteSessionAttachment = async (req: Request, res: Response) => {
+  await deleteSessionAttachment(req.params.sessionId, req.params.attachmentId, actor(req));
+  res.json({ id: req.params.attachmentId });
+};
+
+export const handleGetSessionAttachmentFile = async (req: Request, res: Response) => {
+  const file = await getSessionAttachmentFile(req.params.sessionId, req.params.attachmentId, actor(req));
+  res.type(file.mimeType);
+  res.download(file.path, file.filename);
 };

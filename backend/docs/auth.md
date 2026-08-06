@@ -114,6 +114,12 @@ Route access and mutations are permission-based. Roles group permissions in the 
 | `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
 | `read:programs` | `GET /api/programs` |
 | `write:programs` | `POST /api/programs` (admin only) |
+| `read:cohorts` | Read programming cohorts and enrollments |
+| `write:cohorts` | Create and manage cohorts and enrollments |
+| `read:sessions` | Read sessions, session types, notes, and attachments |
+| `write:sessions` | Generate and manage sessions, notes, and attachments |
+| `read:attendance` | Read a session roster and its attendance records |
+| `write:attendance` | Record and update session attendance |
 | `read:outreach` | Read expressions of interest and leads |
 | `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |

@@ -84,4 +84,4 @@ volumes:
   db_data:  # PostgreSQL database files
   backend_node_modules:  # Node.js dependencies
   frontend_node_modules:  # Frontend dependencies
-  homepage_uploads:  # Staff-uploaded homepage images
+  homepage_uploads:  # Shared app uploads; legacy volume name retained to preserve existing files

@@ -221,14 +221,14 @@ export async function getYouthSessionNotes(
         '[]'::json
       ) AS youth
     FROM session_notes sn
-    INNER JOIN session_note_youth selected_youth
+    INNER JOIN session_note_has_youth selected_youth
       ON selected_youth.note_id = sn.id
       AND selected_youth.youth_id = ${youthId}
     INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN users author ON author.id = sn.created_by
-    LEFT JOIN session_note_youth linked_note ON linked_note.note_id = sn.id
+    LEFT JOIN session_note_has_youth linked_note ON linked_note.note_id = sn.id
     LEFT JOIN users linked_youth ON linked_youth.id = linked_note.youth_id
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
     GROUP BY sn.id, author.id, cs.id, pc.id, p.id

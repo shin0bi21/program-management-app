@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import {
+  deleteSessionAttachment,
   deleteSessionNote,
+  downloadSessionAttachment,
+  getSessionAttachments,
   getSessionNotes,
 } from '../../../../../common/api/cohorts.api';
 import Button from '../../../../../common/components/Button/Button';
@@ -12,15 +15,16 @@ import SessionNoteDetails, {
   SessionNoteCategoryBadge,
 } from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/hooks/useConfirmModal';
-import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionAttachment, SessionNote } from '../../../../../common/types/cohort';
 import { formatShortDate } from '../../../../../common/utils/date';
 import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
+import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';
 import './SessionOverview.css';
 
 interface SessionOverviewProps {
   session: CohortSession | null;
   canWriteAttendance: boolean;
-  canWriteNotes: boolean;
+  canWriteSessions: boolean;
   onAddAttendance: (session: CohortSession) => void;
 }
 
@@ -115,7 +119,7 @@ function SessionNotesContent({
 export default function SessionOverview({
   session,
   canWriteAttendance,
-  canWriteNotes,
+  canWriteSessions,
   onAddAttendance,
 }: SessionOverviewProps) {
   const attendanceSummary = getAttendanceSummary(session);
@@ -124,9 +128,14 @@ export default function SessionOverview({
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [notes, setNotes] = useState<SessionNote[]>([]);
+  const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
+  const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const attachmentRequestIdRef = useRef(0);
   const confirmModal = useConfirmModal({
     action: confirmAction,
     onClose: () => setConfirmAction(null),
@@ -149,21 +158,44 @@ export default function SessionOverview({
     }
   };
 
+  const loadAttachments = async (sessionId: string) => {
+    const requestId = ++attachmentRequestIdRef.current;
+    setAttachmentsLoading(true);
+    setAttachmentsError(null);
+    try {
+      const nextAttachments = await getSessionAttachments(sessionId);
+      if (attachmentRequestIdRef.current === requestId) setAttachments(nextAttachments);
+    } catch (cause) {
+      if (attachmentRequestIdRef.current === requestId) {
+        setAttachments([]);
+        setAttachmentsError(cause instanceof Error ? cause.message : 'Could not load session attachments');
+      }
+    } finally {
+      if (attachmentRequestIdRef.current === requestId) setAttachmentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     setNoteTarget(null);
     setEditNote(null);
     setDetailNote(null);
     setConfirmAction(null);
+    setAttachmentTarget(null);
     if (!session) {
       requestIdRef.current += 1;
+      attachmentRequestIdRef.current += 1;
       setNotes([]);
+      setAttachments([]);
       setError(null);
+      setAttachmentsError(null);
       setLoading(false);
+      setAttachmentsLoading(false);
       return;
     }
-    void loadNotes(session.id);
+    void Promise.all([loadNotes(session.id), loadAttachments(session.id)]);
     return () => {
       requestIdRef.current += 1;
+      attachmentRequestIdRef.current += 1;
     };
   }, [session?.id]);
 
@@ -195,7 +227,7 @@ export default function SessionOverview({
       <DashboardCard
         title="Session notes"
         emptyMessage={session ? 'No notes.' : 'No session selected.'}
-        action={canWriteNotes ? (
+        action={canWriteSessions ? (
           <Button
             size="sm"
             variant="secondary"
@@ -215,7 +247,7 @@ export default function SessionOverview({
                 notes={notes}
                 loading={loading}
                 error={error}
-                canWrite={canWriteNotes}
+                canWrite={canWriteSessions}
                 onView={setDetailNote}
                 onEdit={note => {
                   setEditNote(note);
@@ -238,19 +270,77 @@ export default function SessionOverview({
           : undefined}
       </DashboardCard>
       <DashboardCard
-        title="Worksheets"
-        emptyMessage={session ? 'Not available yet.' : 'No session selected.'}
-        action={(
+        title="Attachments"
+        emptyMessage={session ? 'No attachments.' : 'No session selected.'}
+        action={canWriteSessions ? (
           <Button
             size="sm"
             variant="secondary"
-            disabled
-            aria-label="Add worksheets"
-            title="Worksheet support is not available yet"
+            disabled={!session}
+            aria-label="Add attachments"
+            onClick={() => { if (session) setAttachmentTarget(session); }}
           >
             + Add
           </Button>
-        )}
+        ) : undefined}
+      >
+        {session ? attachmentsLoading ? (
+          <p role="status">Loading attachments…</p>
+        ) : attachmentsError ? (
+          <p role="alert">{attachmentsError}</p>
+        ) : attachments.length ? (
+          <div className="session-notes-list">
+            {attachments.map(attachment => (
+              <article key={attachment.id} className="session-note">
+                <div className="session-note__main">
+                  <strong>{attachment.title}</strong>
+                  <span className="session-note__meta">
+                    {attachment.originalFilename} · {Math.max(1, Math.round(attachment.fileSize / 1024))} KB
+                  </span>
+                </div>
+                <div className="session-note__actions">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="session-note__action-button"
+                    aria-label={`Download ${attachment.title}`}
+                    title="Download attachment"
+                    onClick={() => void downloadSessionAttachment(session.id, attachment)}
+                  >
+                    <FontAwesomeIcon icon={faDownload} aria-hidden="true" />
+                  </Button>
+                  {canWriteSessions && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="session-note__action-button session-note__action-button--danger"
+                      aria-label={`Delete ${attachment.title}`}
+                      title="Delete attachment"
+                      onClick={() => setConfirmAction({
+                        title: 'Delete Attachment',
+                        message: `Delete “${attachment.title}”? This cannot be undone.`,
+                        confirmLabel: 'Delete',
+                        confirmVariant: 'danger',
+                        successMessage: 'Attachment successfully deleted.',
+                        onConfirm: async () => {
+                          await deleteSessionAttachment(session.id, attachment.id);
+                          await loadAttachments(session.id);
+                        },
+                      })}
+                    >
+                      <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : <p className="dashboard-card__empty">No attachments.</p> : undefined}
+      </DashboardCard>
+      <SessionAttachmentModal
+        session={attachmentTarget}
+        onClose={() => setAttachmentTarget(null)}
+        onSaved={async () => { if (attachmentTarget) await loadAttachments(attachmentTarget.id); }}
       />
       <SessionNoteModal
         session={noteTarget}

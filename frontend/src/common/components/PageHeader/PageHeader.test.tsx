@@ -10,17 +10,19 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'Create Lead' })).toBeInTheDocument();
   });
 
-  it('renders filter and search controls inside the same header', () => {
+  it('renders filter, search, and view controls inside the same header', () => {
     const { container } = render(
       <PageHeader
         title="Accounts"
         filters={<button type="button">Filters</button>}
         search={<input aria-label="Search accounts" />}
+        view={<button type="button">View: Cards</button>}
       />,
     );
 
     const header = container.querySelector('header');
     expect(header).toContainElement(screen.getByRole('button', { name: 'Filters' }));
     expect(header).toContainElement(screen.getByRole('textbox', { name: 'Search accounts' }));
+    expect(header).toContainElement(screen.getByRole('button', { name: 'View: Cards' }));
   });
 });

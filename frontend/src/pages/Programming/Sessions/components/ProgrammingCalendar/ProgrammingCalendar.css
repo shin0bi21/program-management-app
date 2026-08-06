@@ -91,16 +91,60 @@
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  padding-block: 2px;
   white-space: normal;
 }
 
-.programming-calendar-event,
-.programming-calendar-event * {
-  pointer-events: none;
+.programming-calendar-event__select {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.programming-calendar-event__select:focus-visible,
+.programming-calendar-event__actions button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.programming-calendar-event__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 1px;
+  padding: 1px;
+}
+
+.programming-calendar-event__actions button {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.62rem;
+}
+
+.programming-calendar-event__actions button:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.programming-calendar-event__actions .programming-calendar-event__delete {
+  color: var(--color-danger-btn);
 }
 
 .programming-calendar-event__program,
+.programming-calendar-event__program-line,
 .programming-calendar-event__session-line,
 .programming-calendar-event__session,
 .programming-calendar-event__time {
@@ -115,6 +159,17 @@
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+}
+
+.programming-calendar-event__program-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.programming-calendar-event__program {
+  flex: 1 1 auto;
 }
 
 .programming-calendar-event__program {
@@ -132,6 +187,7 @@
 
 .programming-calendar-event__type {
   display: inline-flex;
+  justify-self: start;
   padding: 2px 5px;
   border-radius: var(--radius-full);
   font-size: 0.62em;
@@ -161,20 +217,15 @@
 
 @media (max-width: 1000px) {
   .programming-calendar {
+    flex: none;
+    height: 680px;
+    min-height: 0;
     overflow: auto;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
   }
 
   .programming-calendar .fc-dayGridMonth-view {
     min-width: 720px;
-  }
-}
-
-@media (max-width: 768px) {
-  .programming-calendar {
-    flex: none;
-    height: 680px;
-    min-height: 0;
-    padding: var(--space-2);
-    border-radius: var(--radius-md);
   }
 }

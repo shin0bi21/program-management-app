@@ -6,7 +6,7 @@
   flex-direction: column;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
   .sessions-calendar-view {
     flex: none;
   }

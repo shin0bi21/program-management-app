@@ -6,8 +6,9 @@
 }
 
 .search-input input {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 42px;
+  height: 2.25rem;
   padding: 9px 12px;
   border: 1px solid var(--ink-20);
   border-radius: 8px;

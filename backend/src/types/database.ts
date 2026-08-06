@@ -19,6 +19,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Json = JsonValue;
 
 export type JsonArray = JsonValue[];
@@ -223,6 +225,33 @@ export interface Schools {
   updated_by: string | null;
 }
 
+export interface SessionAttachmentHasYouth {
+  attachment_id: string;
+  created_at: Generated<Timestamp>;
+  youth_id: string;
+}
+
+export interface SessionAttachments {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  description: string | null;
+  file_size: Int8;
+  id: Generated<string>;
+  mime_type: string;
+  original_filename: string;
+  session_id: string;
+  storage_key: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface SessionNoteHasYouth {
+  created_at: Generated<Timestamp>;
+  note_id: string;
+  youth_id: string;
+}
+
 export interface SessionNotes {
   category: string;
   created_at: Generated<Timestamp>;
@@ -233,12 +262,6 @@ export interface SessionNotes {
   title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
-}
-
-export interface SessionNoteYouth {
-  created_at: Generated<Timestamp>;
-  note_id: string;
-  youth_id: string;
 }
 
 export interface SessionTypes {
@@ -408,7 +431,9 @@ export interface DB {
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
-  session_note_youth: SessionNoteYouth;
+  session_attachment_has_youth: SessionAttachmentHasYouth;
+  session_attachments: SessionAttachments;
+  session_note_has_youth: SessionNoteHasYouth;
   session_notes: SessionNotes;
   session_types: SessionTypes;
   staff_program_assignments: StaffProgramAssignments;
