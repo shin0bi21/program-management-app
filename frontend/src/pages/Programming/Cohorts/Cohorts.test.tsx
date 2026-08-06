@@ -55,7 +55,7 @@ vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => prefe
 vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,
-    setPrograms: vi.fn(),
+    upsertProgram: vi.fn(),
     loading: false,
     error: null,
   }),

@@ -35,7 +35,7 @@ export default function YouthModal({
     rhfHandleSubmit,
     onValid,
     schools,
-    setSchools,
+    upsertSchool,
     schoolsLoading,
     schoolsError,
     schoolId,
@@ -222,7 +222,7 @@ export default function YouthModal({
           isOpen={addSchoolOpen}
           onClose={() => setAddSchoolOpen(false)}
           onSuccess={school => {
-            setSchools(previous => [...previous.filter(item => item.id !== school.id), school]);
+            upsertSchool(school);
             setSchoolId(school.id);
             setAddSchoolOpen(false);
           }}

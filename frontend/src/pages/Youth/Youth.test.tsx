@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
+import render from '../../tests/renderWithQueryClient';
 
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({ getYouthSessionNotes: vi.fn() }));
@@ -51,7 +52,7 @@ describe('Youth', () => {
     preferenceHook.save.mockReset();
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
-      setYouth: vi.fn(),
+      upsertYouth: vi.fn(),
       loading: false,
       error: null,
       refetch: vi.fn(),
@@ -154,7 +155,7 @@ describe('Youth', () => {
         }],
         contacts: [{ id: 'contact-1', phoneNumber: '416-555-0101', type: 'parent' }],
       })],
-      setYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+      upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
     });
     render(<Youth />);
 
@@ -191,7 +192,7 @@ describe('Youth', () => {
         makeYouthProfile(),
         makeYouthProfile({ id: 'youth-2', firstName: 'Alex', lastName: 'Second' }),
       ],
-      setYouth: vi.fn(),
+      upsertYouth: vi.fn(),
       loading: false,
       error: null,
       refetch: vi.fn(),
@@ -204,7 +205,10 @@ describe('Youth', () => {
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'Session' }));
 
-    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith('youth-1'));
+    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith(
+      'youth-1',
+      { signal: expect.any(AbortSignal) },
+    ));
     expect(localStorage.getItem('youthNotesTab')).toBe('session');
     fireEvent.click(await screen.findByRole('button', { name: /Strong participation/ }));
     expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
@@ -215,7 +219,10 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
     fireEvent.click(screen.getByText('Alex').closest('tr')!);
-    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith('youth-2'));
+    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith(
+      'youth-2',
+      { signal: expect.any(AbortSignal) },
+    ));
     expect(screen.getByRole('button', { name: 'Session' })).toHaveAttribute('aria-pressed', 'true');
     expect(await screen.findByText('No linked session notes.')).toBeInTheDocument();
 

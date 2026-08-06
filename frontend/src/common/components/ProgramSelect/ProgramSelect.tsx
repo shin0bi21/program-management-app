@@ -23,7 +23,7 @@ interface ProgramSelectProps {
 
 export default function ProgramSelect({ id, value, onChange }: ProgramSelectProps) {
   const { permissions } = useAuth();
-  const { programs, setPrograms, loading, error: programsError } = usePrograms();
+  const { programs, upsertProgram, loading, error: programsError } = usePrograms();
   const [addOpen, setAddOpen] = useState(false);
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -48,7 +48,7 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
     setError('');
     try {
       const program = await createProgram(name.trim());
-      setPrograms(current => [...current.filter(item => item.id !== program.id), program].sort((a, b) => a.name.localeCompare(b.name)));
+      upsertProgram(program);
       onChange(program.id);
       setSubmitStatus('success');
       window.setTimeout(close, 500);

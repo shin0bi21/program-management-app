@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPrograms } from '../../../../../common/api/programs.api';
 import { inviteAccount, updateAccount } from '../../../../../common/api/accounts.api';
+import renderWithQueryClient from '../../../../../tests/renderWithQueryClient';
 import AccountModal from './AccountModal';
 
 vi.mock('../../../../../common/api/programs.api', () => ({
@@ -69,7 +70,7 @@ describe('AccountModal program assignments', () => {
 
   it('assigns selected enrollment programs and lists open programs as automatic', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithQueryClient(
       <AccountModal
         isOpen
         onClose={vi.fn()}
@@ -96,7 +97,7 @@ describe('AccountModal program assignments', () => {
 
   it('lets an admin edit an existing staff member program assignments', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithQueryClient(
       <AccountModal
         isOpen
         account={{

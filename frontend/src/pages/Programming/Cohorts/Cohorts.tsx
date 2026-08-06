@@ -35,7 +35,7 @@ export default function Cohorts() {
   const { permissions, role } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
-  const { programs, setPrograms, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
+  const { programs, upsertProgram, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const [selectedProgramId, setSelectedProgramId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [filtersReady, setFiltersReady] = useState(false);
@@ -363,7 +363,7 @@ export default function Cohorts() {
             isOpen={programModalOpen}
             onClose={() => setProgramModalOpen(false)}
             onCreated={(program) => {
-              setPrograms((current) => [...current, program].sort((a, b) => a.name.localeCompare(b.name)));
+              upsertProgram(program);
               selectProgram(program.id);
             }}
           />
