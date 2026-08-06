@@ -1,35 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getYouth } from '../../../common/api/youth.api';
 import { getErrorMessage } from '../../../common/utils/clientErrors';
+import upsertRow from '../../../common/utils/upsertRow';
 import type { YouthProfile } from '../types';
 import type { YouthFilters } from '../../../common/types/youth';
 
 export type { YouthProfile };
 
 export function useYouth(filters: YouthFilters | null = {}) {
-  const [youth, setYouth] = useState<YouthProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const queryKey = ['youth', filters] as const;
+  const query = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => getYouth(undefined, filters ?? {}, { signal }),
+    enabled: filters !== null,
+  });
 
-  const loadYouth = async () => {
-    if (!filters) return;
-    setLoading(true);
-    setError('');
-
-    try {
-      const data = await getYouth(undefined, filters);
-      setYouth(data);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to load youth profiles'));
-    } finally {
-      setLoading(false);
-    }
+  const upsertYouth = (savedYouth: YouthProfile) => {
+    queryClient.setQueryData<YouthProfile[]>(queryKey, current => (
+      upsertRow(current ?? [], savedYouth)
+    ));
   };
 
-  useEffect(() => {
-    if (!filters) return;
-    loadYouth();
-  }, [filters?.search, filters?.statuses, filters?.programIds, filters?.cohortIds]);
+  const removeYouth = (id: string) => {
+    queryClient.setQueryData<YouthProfile[]>(queryKey, current => (
+      current?.filter(youth => youth.id !== id) ?? []
+    ));
+  };
 
-  return { youth, setYouth, loading, error, refetch: loadYouth };
+  const refetch = async () => {
+    await query.refetch();
+  };
+
+  return {
+    youth: query.data ?? [],
+    upsertYouth,
+    removeYouth,
+    loading: query.isLoading,
+    error: query.error ? getErrorMessage(query.error, 'Failed to load youth profiles') : '',
+    refetch,
+  };
 }

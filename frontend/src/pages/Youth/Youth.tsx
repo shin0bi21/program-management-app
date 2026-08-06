@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
@@ -46,9 +47,6 @@ export default function Youth() {
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
-  const [sessionNotes, setSessionNotes] = useState<YouthSessionNote[]>([]);
-  const [sessionNotesLoading, setSessionNotesLoading] = useState(false);
-  const [sessionNotesError, setSessionNotesError] = useState<string | null>(null);
   const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
@@ -58,13 +56,22 @@ export default function Youth() {
     error: preferencesError,
     save: saveFilters,
   } = useUserPreference('youth-profile-filters');
-  const { youth, setYouth, loading, error } = useYouth(queryFilters);
+  const { youth, upsertYouth, loading, error } = useYouth(queryFilters);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
     selectItem: selectProfile,
   } = useTableSelection(youth);
   const canWrite = permissions.includes('write:youth_profiles');
+  const sessionNotesQuery = useQuery({
+    queryKey: ['youth-session-notes', selectedProfileId],
+    queryFn: ({ signal }) => getYouthSessionNotes(selectedProfileId!, { signal }),
+    enabled: notesTab === 'session' && Boolean(selectedProfileId),
+  });
+  const sessionNotes = sessionNotesQuery.data ?? [];
+  const sessionNotesError = sessionNotesQuery.error instanceof Error
+    ? sessionNotesQuery.error.message
+    : sessionNotesQuery.error ? 'Could not load session notes' : null;
 
   useEffect(() => {
     if (filtersReady || preferencesLoading || programsLoading) return;
@@ -89,31 +96,7 @@ export default function Youth() {
   }, [search]);
 
   useEffect(() => {
-    let active = true;
-    setSessionNotes([]);
-    setSessionNotesError(null);
     setSelectedSessionNote(null);
-    if (notesTab !== 'session' || !selectedProfileId) {
-      setSessionNotesLoading(false);
-      return () => { active = false; };
-    }
-
-    setSessionNotesLoading(true);
-    getYouthSessionNotes(selectedProfileId)
-      .then(notes => {
-        if (active) setSessionNotes(notes);
-      })
-      .catch(cause => {
-        if (active) {
-          setSessionNotesError(
-            cause instanceof Error ? cause.message : 'Could not load session notes',
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setSessionNotesLoading(false);
-      });
-    return () => { active = false; };
   }, [notesTab, selectedProfileId]);
 
   const selectNotesTab = (tab: NotesTab) => {
@@ -142,10 +125,7 @@ export default function Youth() {
   const handleSaveYouth = (savedYouth: YouthProfile) => {
     setModalTarget(null);
     setContactTarget(null);
-    setYouth(prev => {
-      const exists = prev.some(y => y.id === savedYouth.id);
-      return exists ? prev.map(y => y.id === savedYouth.id ? savedYouth : y) : [...prev, savedYouth];
-    });
+    upsertYouth(savedYouth);
   };
 
   const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
@@ -271,7 +251,7 @@ export default function Youth() {
               activeTab={notesTab}
               onTabChange={selectNotesTab}
               sessionNotes={sessionNotes}
-              sessionNotesLoading={sessionNotesLoading}
+              sessionNotesLoading={sessionNotesQuery.isLoading}
               sessionNotesError={sessionNotesError}
               onSelectSessionNote={setSelectedSessionNote}
             />

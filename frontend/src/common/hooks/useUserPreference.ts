@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getPreference,
   setPreference,
@@ -7,29 +8,21 @@ import {
 } from '../api/preferences.api';
 
 export default function useUserPreference<K extends PreferenceKey>(key: K) {
-  const [preference, setLocalPreference] = useState<PreferenceValues[K] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ['user-preference', key] as const, [key]);
   const [error, setError] = useState<string | null>(null);
-  const activeRef = useRef(true);
   const debounceRef = useRef<number | null>(null);
   const pendingRef = useRef<PreferenceValues[K] | null>(null);
   const queuedRef = useRef<PreferenceValues[K] | null>(null);
   const savingRef = useRef(false);
 
-  useEffect(() => {
-    let active = true;
-    activeRef.current = true;
-    getPreference(key)
-      .then(value => { if (active) setLocalPreference(value); })
-      .catch(cause => {
-        if (active) setError(cause instanceof Error ? cause.message : 'Could not load saved filters');
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => {
-      active = false;
-      activeRef.current = false;
-    };
-  }, [key]);
+  const query = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => getPreference(key, { signal }),
+  });
+  const { mutateAsync } = useMutation({
+    mutationFn: (value: PreferenceValues[K]) => setPreference(key, value),
+  });
 
   const flushQueue = useCallback(async () => {
     if (savingRef.current) return;
@@ -39,23 +32,23 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
       const value = queuedRef.current;
       queuedRef.current = null;
       try {
-        const persisted = await setPreference(key, value);
-        if (activeRef.current && queuedRef.current === null) {
-          setLocalPreference(persisted);
+        const persisted = await mutateAsync(value);
+        if (queuedRef.current === null) {
+          queryClient.setQueryData(queryKey, persisted);
           setError(null);
         }
       } catch (cause) {
-        if (activeRef.current && queuedRef.current === null) {
+        if (queuedRef.current === null) {
           setError(cause instanceof Error ? cause.message : 'Could not save filters');
         }
       }
     }
 
     savingRef.current = false;
-  }, [key]);
+  }, [mutateAsync, queryClient, queryKey]);
 
   const save = useCallback((value: PreferenceValues[K]) => {
-    setLocalPreference(value);
+    queryClient.setQueryData(queryKey, value);
     setError(null);
     pendingRef.current = value;
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
@@ -65,7 +58,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
       pendingRef.current = null;
       void flushQueue();
     }, 250);
-  }, [flushQueue]);
+  }, [flushQueue, queryClient, queryKey]);
 
   useEffect(() => () => {
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
@@ -76,5 +69,14 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     void flushQueue();
   }, [flushQueue]);
 
-  return { preference, loading, error, save };
+  const queryError = query.error instanceof Error
+    ? query.error.message
+    : query.error ? 'Could not load saved filters' : null;
+
+  return {
+    preference: query.data ?? null,
+    loading: query.isLoading,
+    error: error ?? queryError,
+    save,
+  };
 }

@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceValues } from '../../../common/api/preferences.api';
 import type { Program } from '../../../common/types/program';
 import Sessions from './Sessions';
+import render from '../../../tests/renderWithQueryClient';
 
 function LocationProbe() {
   const location = useLocation();

@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPreference, setPreference } from '../api/preferences.api';
 import useUserPreference from './useUserPreference';
@@ -11,6 +13,12 @@ vi.mock('../api/preferences.api', () => ({
 const getPreferenceMock = vi.mocked(getPreference);
 const setPreferenceMock = vi.mocked(setPreference);
 const filters = (statuses: Array<'active' | 'inactive'>) => ({ statuses, programIds: [] });
+const createWrapper = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 describe('useUserPreference', () => {
   beforeEach(() => {
@@ -23,7 +31,7 @@ describe('useUserPreference', () => {
 
   it('debounces rapid changes and saves only the newest value', async () => {
     setPreferenceMock.mockImplementation(async (_key, value) => value);
-    const { result } = renderHook(() => useUserPreference('youth-profile-filters'));
+    const { result } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
     await act(async () => Promise.resolve());
 
     await act(async () => {
@@ -41,7 +49,7 @@ describe('useUserPreference', () => {
     setPreferenceMock
       .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
       .mockImplementation(async (_key, value) => value);
-    const { result } = renderHook(() => useUserPreference('youth-profile-filters'));
+    const { result } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
     await act(async () => Promise.resolve());
 
     await act(async () => {
@@ -66,7 +74,7 @@ describe('useUserPreference', () => {
     setPreferenceMock
       .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
       .mockImplementation(async (_key, value) => value);
-    const { result } = renderHook(() => useUserPreference('youth-profile-filters'));
+    const { result } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
     await act(async () => Promise.resolve());
 
     await act(async () => {
@@ -85,7 +93,7 @@ describe('useUserPreference', () => {
 
   it('flushes a pending preference when the page unmounts', async () => {
     setPreferenceMock.mockImplementation(async (_key, value) => value);
-    const { result, unmount } = renderHook(() => useUserPreference('youth-profile-filters'));
+    const { result, unmount } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
     await act(async () => Promise.resolve());
 
     act(() => result.current.save(filters(['inactive'])));

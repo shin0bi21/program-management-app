@@ -43,7 +43,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     defaultValues,
   });
 
-  const { schools, setSchools, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const { schools, upsertSchool, loading: schoolsLoading, error: schoolsError } = useSchools();
   const schoolId = watch('schoolId');
 
   const {
@@ -148,7 +148,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     onValid,
     // Sub-entity state
     schools,
-    setSchools,
+    upsertSchool,
     schoolsLoading,
     schoolsError,
     schoolId,

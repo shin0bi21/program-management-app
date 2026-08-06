@@ -39,7 +39,7 @@ export default function Users() {
     roles: roleFilters,
     statuses: statusFilters,
   }), [debouncedSearch, roleFilters, statusFilters]);
-  const { accounts, setAccounts, loading, error } = useAccounts(queryFilters);
+  const { accounts, upsertAccount, removeAccount, loading, error } = useAccounts(queryFilters);
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -63,10 +63,6 @@ export default function Users() {
     ] }] : []),
   ], [isAdmin]);
 
-  const updateStoredAccount = (updated: Account) => {
-    setAccounts(previous => previous.map(account => account.id === updated.id ? updated : account));
-  };
-
   const requestRevoke = (account: Account) => setConfirmAction({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
@@ -75,7 +71,7 @@ export default function Users() {
     successMessage: 'Invitation revoked',
     onConfirm: async () => {
       await revokeAccountInvite(account.id);
-      setAccounts(previous => previous.filter(item => item.id !== account.id));
+      removeAccount(account.id);
     },
   });
 
@@ -87,7 +83,7 @@ export default function Users() {
       confirmLabel: activating ? 'Activate' : 'Deactivate',
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
-      onConfirm: async () => updateStoredAccount(await toggleAccountStatus(account.id)),
+      onConfirm: async () => upsertAccount(await toggleAccountStatus(account.id)),
     });
   };
 
@@ -194,9 +190,7 @@ export default function Users() {
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
           onSuccess={account => {
-            setAccounts(previous => previous.some(item => item.id === account.id)
-              ? previous.map(item => item.id === account.id ? account : item)
-              : [...previous, account]);
+            upsertAccount(account);
           }}
         />
       )}
@@ -209,7 +203,7 @@ export default function Users() {
           onSuccess={youth => {
             if (youth.account) {
               const account = youth.account;
-              setAccounts(previous => [...previous, {
+              upsertAccount({
                 id: youth.id,
                 firstName: youth.firstName,
                 lastName: youth.lastName,
@@ -217,7 +211,7 @@ export default function Users() {
                 role: 'youth',
                 status: account.status,
                 createdAt: youth.createdAt,
-              }]);
+              });
             }
             setYouthInviteOpen(false);
           }}
