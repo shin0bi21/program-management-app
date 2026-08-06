@@ -1,37 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import useListQuery from '../../../../common/hooks/useListQuery';
 
 export function useCohorts(programId?: string, enabled = true) {
-  const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
+  const query = useListQuery<ProgramCohort>({
+    queryKey: ['cohorts', { programId }],
+    queryFn: ({ signal }) => getCohorts(programId, {}, { signal }),
+    errorMessage: 'Could not load cohorts',
+    enabled,
+  });
 
-  const refresh = useCallback(async () => {
-    if (!enabled) return;
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getCohorts(programId);
-      if (requestIdRef.current === requestId) setCohorts(data);
-    } catch (cause) {
-      if (requestIdRef.current === requestId) {
-        setError(getErrorMessage(cause, 'Could not load cohorts'));
-      }
-    } finally {
-      if (requestIdRef.current === requestId) setLoading(false);
-    }
-  }, [enabled, programId]);
-
-  useEffect(() => {
-    if (enabled) void refresh();
-    return () => {
-      requestIdRef.current += 1;
-    };
-  }, [enabled, refresh]);
-
-  return { cohorts, loading, error, refresh };
+  return { cohorts: query.rows, loading: query.loading, error: query.error, refresh: query.refetch };
 }

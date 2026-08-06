@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
+import render from '../../../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
@@ -157,7 +158,7 @@ describe('EnrollYouthModal', () => {
       'aria-pressed',
       'false',
     );
-    expect(screen.getByRole('checkbox', { name: 'Eligible Youth' })).toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: 'Eligible Youth' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Older Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Unknown Age' })).not.toBeInTheDocument();
 

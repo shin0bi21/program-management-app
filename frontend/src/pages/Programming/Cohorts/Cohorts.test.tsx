@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import render from '../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -262,7 +263,11 @@ describe('Cohorts', () => {
     );
 
     expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
-    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith('program-1'));
+    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith(
+      'program-1',
+      {},
+      { signal: expect.any(AbortSignal) },
+    ));
   });
 
   it('does not default filters when staff has multiple assigned programs', async () => {

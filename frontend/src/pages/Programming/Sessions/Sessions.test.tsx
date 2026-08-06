@@ -306,7 +306,10 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
     await waitFor(() =>
-      expect(getSessions).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] })),
+      expect(getSessions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ statuses: ['completed'] }),
+        { signal: expect.any(AbortSignal) },
+      ),
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
@@ -380,6 +383,7 @@ describe('Sessions', () => {
     );
 
     const addButton = await screen.findByRole('button', { name: '+ Add' });
+    await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
     expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
