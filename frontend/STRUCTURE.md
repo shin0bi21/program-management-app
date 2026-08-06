@@ -41,9 +41,7 @@ Response flows back: DB → controller JSON response → fetch resolves → hook
 
 ```
 src/
-  ErrorBoundary.tsx      ← root render-failure boundary with a dependency-free reload fallback
-  ErrorBoundary.css      ← standalone fallback styles that remain usable if the app tree fails
-  ErrorBoundary.test.tsx ← verifies replacement UI and focus management
+  ErrorBoundary/         ← root render-failure boundary, dependency-free fallback styles, and focused test
   common/
     api/
       client.ts           ← apiClient — all HTTP calls go through here
@@ -203,7 +201,7 @@ export default function MyMenu() {
 
 | File | What it tests |
 |---|---|
-| `src/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
+| `src/ErrorBoundary/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
 | `src/common/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
 | `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
 | `src/pages/Homepage/Homepage.test.tsx` | Page-composition test for the public homepage sections |
