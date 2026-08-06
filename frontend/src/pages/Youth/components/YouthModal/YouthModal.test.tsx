@@ -9,7 +9,7 @@ vi.mock('../../../../common/api/youth.api', () => ({
 
 const schoolState = vi.hoisted(() => ({
   schools: [] as Array<{ id: string; name: string; board: null; address: null; postalCode: null }>,
-  setSchools: vi.fn(),
+  upsertSchool: vi.fn(),
 }));
 
 const authState = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ const authState = vi.hoisted(() => ({
 vi.mock('../../../../common/hooks/useSchools', () => ({
   useSchools: () => ({
     schools: schoolState.schools,
-    setSchools: schoolState.setSchools,
+    upsertSchool: schoolState.upsertSchool,
     loading: false,
     error: '',
     refetch: vi.fn(),
@@ -58,7 +58,7 @@ describe('YouthModal', () => {
   beforeEach(() => {
     mockSetYouth.mockResolvedValue(makeYouthProfile());
     schoolState.schools = [];
-    schoolState.setSchools.mockReset();
+    schoolState.upsertSchool.mockReset();
     authState.permissions = ['write:schools'];
   });
 

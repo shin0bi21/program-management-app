@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import render from '../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,6 +31,12 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as { programId: string | null; status: 'active' | 'upcoming' | 'completed' | null } | null,
+  loading: false,
+  error: null,
+  save: vi.fn(),
+}));
 
 vi.mock('../../../common/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
@@ -44,11 +51,12 @@ vi.mock('../../../common/api/programs.api', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => auth,
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,
-    setPrograms: vi.fn(),
+    upsertProgram: vi.fn(),
     loading: false,
     error: null,
   }),
@@ -57,6 +65,8 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
 describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    preferenceHook.preference = null;
+    preferenceHook.save.mockReset();
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'];
     programState.programs = [{
@@ -252,10 +262,12 @@ describe('Cohorts', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
-      '/programming/cohorts?program=program-1&status=active',
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
+    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith(
+      'program-1',
+      {},
+      { signal: expect.any(AbortSignal) },
     ));
-    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith('program-1'));
   });
 
   it('does not default filters when staff has multiple assigned programs', async () => {
@@ -285,7 +297,7 @@ describe('Cohorts', () => {
     expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
-  it('keeps standard cohort metrics and no enrollment action for an open cohort', async () => {
+  it('shows distinct youth attendance instead of enrollment for an open cohort', async () => {
     const user = userEvent.setup();
     api.getCohorts.mockResolvedValue([{
       id: 'drop-in-cohort',
@@ -314,7 +326,8 @@ describe('Cohorts', () => {
     const cohortRow = (await screen.findByText('Summer 2026')).closest('tr');
     await user.click(cohortRow!);
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    expect(overview).toHaveTextContent('Youth enrolled0');
+    expect(overview).toHaveTextContent('Youth attended8');
+    expect(overview).not.toHaveTextContent('Youth enrolled');
     expect(overview).toHaveTextContent('Average attendance100%');
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');

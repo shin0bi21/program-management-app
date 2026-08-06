@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
@@ -21,9 +22,17 @@ import { HomepageContent as HomepagePreviewContent } from './Homepage';
 import './ManageHomepage.css';
 
 export default function ManageHomepage() {
-  const [images, setImages] = useState<HomepageImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const managedQuery = useQuery({
+    queryKey: ['homepage', 'managed'],
+    queryFn: ({ signal }) => getManagedHomepage({ signal }),
+  });
+  const images = managedQuery.data?.images ?? [];
+  const loading = managedQuery.isLoading;
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error = actionError ?? (managedQuery.error
+    ? getErrorMessage(managedQuery.error, 'Could not load homepage management')
+    : null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState<HomepageContent>({ images: [], sessions: [] });
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -36,21 +45,10 @@ export default function ManageHomepage() {
     onClose: () => setConfirmAction(null),
   });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setImages((await getManagedHomepage()).images);
-    } catch (cause) {
-      setError(getErrorMessage(cause, 'Could not load homepage management'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = async () => {
+    setActionError(null);
+    await managedQuery.refetch();
+  };
 
   const openAddImage = () => {
     setImageTarget(null);
@@ -58,11 +56,15 @@ export default function ManageHomepage() {
   };
 
   const openPreview = async () => {
+    setActionError(null);
     try {
-      setPreviewContent(await getPublicHomepage());
+      setPreviewContent(await queryClient.fetchQuery({
+        queryKey: ['homepage', 'public'],
+        queryFn: ({ signal }) => getPublicHomepage({ signal }),
+      }));
       setPreviewOpen(true);
     } catch (cause) {
-      setError(getErrorMessage(cause, 'Could not load homepage preview'));
+      setActionError(getErrorMessage(cause, 'Could not load homepage preview'));
     }
   };
 
@@ -108,14 +110,15 @@ export default function ManageHomepage() {
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(targetIndex, 0, moved);
     const orderedImages = reordered.map((image, displayOrder) => ({ ...image, displayOrder }));
-    setImages(orderedImages);
+    queryClient.setQueryData(['homepage', 'managed'], { images: orderedImages });
+    setActionError(null);
     setDraggedImageId(null);
     setDragOverImageId(null);
 
     try {
       await reorderHomepageImages(orderedImages.map((image) => image.id));
     } catch (cause) {
-      setError(getErrorMessage(cause, 'Could not save image order'));
+      setActionError(getErrorMessage(cause, 'Could not save image order'));
       await load();
     }
   };

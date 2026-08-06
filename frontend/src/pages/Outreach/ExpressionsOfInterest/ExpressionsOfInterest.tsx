@@ -11,6 +11,7 @@ import FilterCard, { type FilterCardCategory } from '../../../common/components/
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import useTableSelection from '../../../common/hooks/useTableSelection';
+import useUserPreference from '../../../common/hooks/useUserPreference';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters } from './types';
@@ -24,9 +25,13 @@ export default function ExpressionsOfInterest() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<ExpressionOfInterest['status'][]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const queryFilters = useMemo<ExpressionOfInterestFilters>(() => ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters }), [debouncedSearch, statusFilters, programFilters]);
-  const { submissions, setSubmissions, loading, error } = useExpressionsOfInterest(queryFilters);
-  const { programs } = usePrograms();
+  const [filtersReady, setFiltersReady] = useState(false);
+  const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
+    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
+    : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
+  const { submissions, upsertSubmission, loading, error } = useExpressionsOfInterest(queryFilters);
+  const { programs, loading: programsLoading } = usePrograms();
+  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
   const {
@@ -42,16 +47,31 @@ export default function ExpressionsOfInterest() {
     return () => window.clearTimeout(timeout);
   }, [search]);
 
+  useEffect(() => {
+    if (filtersReady || preferenceLoading || programsLoading) return;
+    const availableProgramIds = new Set(programs.map(program => program.id));
+    setStatusFilters(preference?.statuses ?? []);
+    setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
+    setFiltersReady(true);
+  }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
+
+  const persistFilters = (
+    nextStatuses: ExpressionOfInterest['status'][],
+    nextProgramIds: string[],
+  ) => {
+    void save({ statuses: nextStatuses, programIds: nextProgramIds });
+  };
+
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
   const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
+    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
   ], [programs]);
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
     const updated = await updateExpressionOfInterestStatus(item.id, status);
-    setSubmissions(current => current.map(entry => entry.id === updated.id ? { ...entry, ...updated } : entry));
+    upsertSubmission(updated);
   };
 
   const handleConvert = async (item: ExpressionOfInterest) => {
@@ -59,9 +79,7 @@ export default function ExpressionsOfInterest() {
     setConvertingId(item.id);
     try {
       await convertExpressionOfInterest(item.id);
-      setSubmissions(current => current.map(entry => (
-        entry.id === item.id ? { ...entry, status: 'converted' } : entry
-      )));
+      upsertSubmission({ ...item, status: 'converted' });
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
@@ -136,13 +154,21 @@ export default function ExpressionsOfInterest() {
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
           onApply={(category, selected) => {
-            if (category === 'status') setStatusFilters(selected as ExpressionOfInterest['status'][]);
-            if (category === 'program') setProgramFilters(selected);
+            if (category === 'status') {
+              const next = selected as ExpressionOfInterest['status'][];
+              setStatusFilters(next);
+              persistFilters(next, programFilters);
+            }
+            if (category === 'program') {
+              setProgramFilters(selected);
+              persistFilters(statusFilters, selected);
+            }
           }}
-          onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
+          onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
         />}
       />
       <div className="outreach-tab-content data-detail-page-content">
+        {preferenceError && <p role="alert">{preferenceError}</p>}
         {actionError && <p className="page-error">{actionError}</p>}
 
         <TableDetailLayout

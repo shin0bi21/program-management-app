@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { getSessionRoster, saveSessionAttendance } from '../../../../../common/api/cohorts.api';
@@ -24,59 +25,56 @@ interface AttendanceModalProps {
 export default function AttendanceModal({ session, onClose, onSaved }: AttendanceModalProps) {
   const [roster, setRoster] = useState<SessionRosterMember[]>([]);
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
-  const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<YouthProfile[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [creatingYouth, setCreatingYouth] = useState(false);
   const isOpenRoster = session?.rosterMode === 'open';
+  const rosterQuery = useQuery<SessionRosterMember[]>({
+    queryKey: ['sessions', session?.id, 'roster'],
+    queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
+    enabled: session !== null,
+  });
+  const searchQuery = useQuery<YouthProfile[]>({
+    queryKey: ['youth', { search: debouncedSearch }],
+    queryFn: ({ signal }) => getYouth(undefined, { search: debouncedSearch }, { signal }),
+    enabled: Boolean(isOpenRoster && debouncedSearch.length >= 2),
+  });
+  const checkedInYouthIds = new Set(roster.map(member => member.youthId));
+  const searchResults = (searchQuery.data ?? []).filter(
+    profile => !checkedInYouthIds.has(profile.id),
+  );
+  const rosterError = rosterQuery.error instanceof Error
+    ? rosterQuery.error.message
+    : rosterQuery.error ? 'Could not load session roster' : null;
+  const searchError = searchQuery.error instanceof Error
+    ? searchQuery.error.message
+    : searchQuery.error ? 'Could not search youth profiles' : null;
 
   useEffect(() => {
     if (!session) return;
-    let active = true;
-    setLoading(true);
     setSubmitStatus('idle');
     setStatusMessage('');
     setError(null);
     setSearch('');
-    setSearchResults([]);
-    getSessionRoster(session.id)
-      .then(data => {
-        if (!active) return;
-        setRoster(data);
-        setSelections(Object.fromEntries(data.map(member => [member.youthId, member.status ?? ''])));
-      })
-      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load roster'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
   }, [session]);
 
   useEffect(() => {
-    if (!isOpenRoster || search.trim().length < 2) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
-    }
-    let active = true;
-    setSearching(true);
-    const timeout = window.setTimeout(() => {
-      getYouth(undefined, { search: search.trim() })
-        .then(results => {
-          if (!active) return;
-          const checkedIn = new Set(roster.map(member => member.youthId));
-          setSearchResults(results.filter(profile => !checkedIn.has(profile.id)));
-        })
-        .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Could not search youth'); })
-        .finally(() => { if (active) setSearching(false); });
-    }, 250);
+    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => {
-      active = false;
       window.clearTimeout(timeout);
     };
-  }, [isOpenRoster, roster, search]);
+  }, [search]);
+
+  useEffect(() => {
+    if (!rosterQuery.data) return;
+    setRoster(rosterQuery.data);
+    setSelections(Object.fromEntries(
+      rosterQuery.data.map(member => [member.youthId, member.status ?? '']),
+    ));
+  }, [rosterQuery.data]);
 
   const addOpenAttendee = (profile: Pick<YouthProfile, 'id' | 'firstName' | 'lastName'>) => {
     setRoster(current => current.some(member => member.youthId === profile.id)
@@ -89,7 +87,6 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
           notes: null,
         }].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)));
     setSearch('');
-    setSearchResults([]);
   };
 
   const removeOpenAttendee = (youthId: string) => {
@@ -153,7 +150,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
             formId="attendance-form"
             submitLabel="Save Attendance"
             submitStatus={submitStatus}
-            submitDisabled={loading || (!isOpenRoster && !roster.length)}
+            submitDisabled={rosterQuery.isLoading || (!isOpenRoster && !roster.length)}
             onClose={onClose}
           />
         )}
@@ -167,12 +164,14 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
           )}
 
           {error && submitStatus === 'idle' && <p className="form-error">{error}</p>}
+          {rosterError && <p className="form-error" role="alert">{rosterError}</p>}
+          {searchError && <p className="form-error" role="alert">{searchError}</p>}
 
           {isOpenRoster && (
             <OpenAttendancePicker
               search={search}
               searchResults={searchResults}
-              searching={searching}
+              searching={searchQuery.isFetching}
               onSearchChange={setSearch}
               onCreateProfile={() => setCreatingYouth(true)}
               onCheckIn={addOpenAttendee}
@@ -180,7 +179,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
           )}
 
           <AttendanceRoster
-            loading={loading}
+            loading={rosterQuery.isLoading}
             isOpenRoster={isOpenRoster}
             roster={roster}
             selections={selections}

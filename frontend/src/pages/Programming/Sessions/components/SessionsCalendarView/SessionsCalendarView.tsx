@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
 import { getSessions } from '../../../../../common/api/cohorts.api';
 import type { CohortSession } from '../../../../../common/types/cohort';
@@ -39,50 +40,26 @@ export default function SessionsCalendarView({
   onSessionDelete,
 }: SessionsCalendarViewProps) {
   const [range, setRange] = useState<CalendarRange | null>(null);
-  const [sessions, setSessions] = useState<CohortSession[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
-
-  const loadSessions = useCallback(async (currentRange: CalendarRange) => {
-    const requestId = ++requestIdRef.current;
-    setError(null);
-    try {
-      const nextSessions = await getSessions({
-        start: currentRange.start,
-        end: currentRange.end,
+  const filters = range ? {
+        start: range.start,
+        end: range.end,
         programIds: selectedProgramIds,
         cohortId: selectedCohortId || undefined,
         ...(selectedSessionTypeIds.length && { sessionTypeIds: selectedSessionTypeIds }),
         statuses: selectedStatuses,
         search: search || undefined,
-      });
-      if (requestIdRef.current === requestId) {
-        setSessions(nextSessions);
-        onSessionsLoaded?.(nextSessions);
-      }
-    } catch (cause) {
-      if (requestIdRef.current === requestId) {
-        setSessions([]);
-        onSessionsLoaded?.([]);
-        setError(cause instanceof Error ? cause.message : 'Could not load sessions');
-      }
-    }
-  }, [
-    onSessionsLoaded,
-    search,
-    selectedCohortId,
-    selectedProgramIds,
-    selectedSessionTypeIds,
-    selectedStatuses,
-  ]);
-
-  useEffect(() => () => {
-    requestIdRef.current += 1;
-  }, []);
+  } : null;
+  const query = useQuery({
+    queryKey: ['sessions', 'calendar', filters, refreshToken],
+    queryFn: ({ signal }) => getSessions(filters!, { signal }),
+    enabled: filters !== null,
+  });
+  const sessions = query.data ?? [];
 
   useEffect(() => {
-    if (range) void loadSessions(range);
-  }, [loadSessions, range, refreshToken]);
+    if (query.isSuccess) onSessionsLoaded?.(sessions);
+    if (query.isError) onSessionsLoaded?.([]);
+  }, [onSessionsLoaded, query.isError, query.isSuccess, sessions]);
 
   const events = useMemo<EventInput[]>(() => sessions.map(session => ({
     id: session.id,
@@ -107,7 +84,7 @@ export default function SessionsCalendarView({
 
   return (
     <div className="sessions-calendar-view">
-      {error && <p className="form-error">{error}</p>}
+      {query.error && <p className="form-error">{query.error instanceof Error ? query.error.message : 'Could not load sessions'}</p>}
       <ProgrammingCalendar
         events={events}
         onDatesSet={handleDatesSet}

@@ -1,32 +1,21 @@
-import { useState, useEffect } from 'react';
 import { getSchools } from '../api/schools.api';
 import type { School } from '../types/school';
-import { getErrorMessage } from '../utils/clientErrors';
+import useListQuery from './useListQuery';
 
 export type { School };
 
 export function useSchools() {
-  const [schools, setSchools] = useState<School[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const query = useListQuery<School>({
+    queryKey: ['schools'],
+    queryFn: ({ signal }) => getSchools({ signal }),
+    errorMessage: 'Failed to load schools',
+  });
 
-  const loadSchools = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const data = await getSchools();
-      setSchools(data);
-    } catch (cause) {
-      setError(getErrorMessage(cause, 'Failed to load schools'));
-    } finally {
-      setLoading(false);
-    }
+  return {
+    schools: query.rows,
+    upsertSchool: query.upsert,
+    loading: query.loading,
+    error: query.error,
+    refetch: query.refetch,
   };
-
-  useEffect(() => {
-    loadSchools();
-  }, []);
-
-  return { schools, setSchools, loading, error, refetch: loadSchools };
 }

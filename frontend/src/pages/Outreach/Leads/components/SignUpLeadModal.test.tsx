@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import { signUpLead } from '../api/leads.api';
 import type { Lead } from '../types';
 import SignUpLeadModal from './SignUpLeadModal';
+import render from '../../../../tests/renderWithQueryClient';
 
 vi.mock('../../../../common/api/cohorts.api', () => ({
   getCohorts: vi.fn(),
@@ -79,7 +80,11 @@ describe('SignUpLeadModal', () => {
     expect(cohortOption).toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Spring 2026/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Drop In/ })).not.toBeInTheDocument();
-    expect(getCohorts).toHaveBeenCalledWith('program-1');
+    expect(getCohorts).toHaveBeenCalledWith(
+      'program-1',
+      {},
+      { signal: expect.any(AbortSignal) },
+    );
 
     fireEvent.click(cohortOption);
     fireEvent.click(screen.getByRole('button', { name: 'Create Profile' }));

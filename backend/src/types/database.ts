@@ -351,6 +351,14 @@ export interface UserPermissions {
   updated_by: string | null;
 }
 
+export interface UserPreferences {
+  created_at: Generated<Timestamp>;
+  preference_key: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+  value: Json;
+}
+
 export interface UserRefreshTokens {
   created_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
@@ -444,6 +452,7 @@ export interface DB {
   user_has_contacts: UserHasContacts;
   user_password_reset_tokens: UserPasswordResetTokens;
   user_permissions: UserPermissions;
+  user_preferences: UserPreferences;
   user_refresh_tokens: UserRefreshTokens;
   user_role_has_permissions: UserRoleHasPermissions;
   user_roles: UserRoles;

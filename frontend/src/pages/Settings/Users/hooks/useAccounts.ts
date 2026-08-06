@@ -1,33 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAccounts } from '../../../../common/api/accounts.api';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import useListQuery from '../../../../common/hooks/useListQuery';
 import type { Account, AccountFilters } from '../../../../common/types/account';
 
 export function useAccounts(filters: AccountFilters) {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const requestId = useRef(0);
+  const query = useListQuery<Account>({
+    queryKey: ['accounts', filters],
+    queryFn: ({ signal }) => getAccounts(filters, { signal }),
+    errorMessage: 'Failed to fetch accounts',
+  });
 
-  const loadAccounts = useCallback(async () => {
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError('');
-    try {
-      const nextAccounts = await getAccounts(filters);
-      if (currentRequest === requestId.current) setAccounts(nextAccounts);
-    } catch (err) {
-      if (currentRequest === requestId.current) {
-        setError(getErrorMessage(err, 'Failed to fetch accounts'));
-      }
-    } finally {
-      if (currentRequest === requestId.current) setLoading(false);
-    }
-  }, [filters.search, filters.roles, filters.statuses]);
-
-  useEffect(() => {
-    loadAccounts();
-  }, [loadAccounts]);
-
-  return { accounts, setAccounts, loading, error, refetch: loadAccounts };
+  return {
+    accounts: query.rows,
+    upsertAccount: query.upsert,
+    removeAccount: query.remove,
+    loading: query.loading,
+    error: query.error,
+    refetch: query.refetch,
+  };
 }

@@ -1,10 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
+
+const renderPage = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}><Leads /></QueryClientProvider>,
+  );
+};
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
 const signUpLead = vi.fn();
+const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
 
 vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
@@ -17,6 +26,7 @@ vi.mock('./api/leads.api', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
@@ -28,6 +38,8 @@ vi.mock('../../../common/api/cohorts.api', () => ({
 
 describe('Leads', () => {
   beforeEach(() => {
+    preferenceHook.preference = null;
+    preferenceHook.save.mockReset();
     signUpLead.mockResolvedValue({});
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
@@ -40,7 +52,7 @@ describe('Leads', () => {
   });
 
   it('signs up a Lead through the dedicated conversion action', async () => {
-    render(<Leads />);
+    renderPage();
     await screen.findByText('Avery Outreach');
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
@@ -58,7 +70,7 @@ describe('Leads', () => {
   });
 
   it('renders fetched leads and direct-create access', async () => {
-    render(<Leads />);
+    renderPage();
 
     expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
@@ -67,7 +79,7 @@ describe('Leads', () => {
   });
 
   it('shows primary contact details when a lead row is selected', async () => {
-    render(<Leads />);
+    renderPage();
 
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
 
@@ -77,7 +89,7 @@ describe('Leads', () => {
   });
 
   it('requests filtered lead data from the API', async () => {
-    render(<Leads />);
+    renderPage();
     await screen.findByText('Avery Outreach');
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
@@ -85,23 +97,32 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'New' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
-    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith({ search: '', statuses: ['new'], programIds: [] }));
+    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
+      { search: '', statuses: ['new'], programIds: [] },
+      { signal: expect.any(AbortSignal) },
+    ));
   });
 
   it('requests leads filtered by program', async () => {
-    render(<Leads />);
+    renderPage();
     await screen.findByText('Avery Outreach');
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Program/ }));
+    const programFilter = screen.getByRole('menuitem', { name: /Program/ });
+    const statusFilter = screen.getByRole('menuitem', { name: /Status/ });
+    expect(programFilter.compareDocumentPosition(statusFilter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(programFilter);
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
-    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith({ search: '', statuses: [], programIds: ['program-1'] }));
+    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
+      { search: '', statuses: [], programIds: ['program-1'] },
+      { signal: expect.any(AbortSignal) },
+    ));
   });
 
   it('opens the selected Lead for editing from its actions menu', async () => {
-    render(<Leads />);
+    renderPage();
     await screen.findByText('Avery Outreach');
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
@@ -122,7 +143,7 @@ describe('Leads', () => {
       status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);
 
-    render(<Leads />);
+    renderPage();
     await screen.findByText('Avery Outreach');
 
     expect(screen.queryByRole('button', { name: 'More actions for Avery Outreach' })).not.toBeInTheDocument();
