@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import type { Permission } from '../../context/AuthContext';
 import { STORAGE_KEYS } from '../../utils/storage';
+import RouteLoading from '../RouteLoading/RouteLoading';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
@@ -20,7 +21,7 @@ export default function ProtectedRoute({ children, requiredPermission }: Protect
   }, [isAuthenticated, location.pathname]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <RouteLoading />;
   }
 
   if (!isAuthenticated) {
