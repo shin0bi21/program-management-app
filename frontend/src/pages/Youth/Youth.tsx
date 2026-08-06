@@ -19,8 +19,7 @@ import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import useTableSelection from '../../common/hooks/useTableSelection';
 import type { YouthFilters } from '../../common/types/youth';
-import { getCohorts } from '../../common/api/cohorts.api';
-import type { ProgramCohort, YouthSessionNote } from '../../common/types/cohort';
+import type { YouthSessionNote } from '../../common/types/cohort';
 import { getYouthSessionNotes } from '../../common/api/youth.api';
 import { STORAGE_KEYS } from '../../common/utils/storage';
 import Modal from '../../common/components/Modal/Modal';
@@ -35,14 +34,13 @@ const initialNotesTab = (): NotesTab => (
 export default function Youth() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>(['active']);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const [cohortFilters, setCohortFilters] = useState<string[]>([]);
-  const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const queryFilters = useMemo<YouthFilters>(() => ({
     search: debouncedSearch,
+    statuses: statusFilters,
     programIds: programFilters,
-    cohortIds: cohortFilters,
-  }), [cohortFilters, debouncedSearch, programFilters]);
+  }), [debouncedSearch, programFilters, statusFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
@@ -56,18 +54,14 @@ export default function Youth() {
     selectedKey: selectedProfileId,
     selectItem: selectProfile,
   } = useTableSelection(youth);
-  const { programs } = usePrograms();
-  const { permissions } = useAuth();
+  const { permissions, role } = useAuth();
+  const { programs } = usePrograms({ assignedOnly: role === 'staff' });
   const canWrite = permissions.includes('write:youth_profiles');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
-
-  useEffect(() => {
-    getCohorts(undefined, { includeAllPrograms: true }).then(setCohorts).catch(() => setCohorts([]));
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -102,13 +96,6 @@ export default function Youth() {
     localStorage.setItem(STORAGE_KEYS.YOUTH_NOTES_TAB, tab);
   };
 
-  const cohortsForPrograms = useMemo(
-    () => programFilters.length
-      ? cohorts.filter(cohort => programFilters.includes(cohort.programId))
-      : cohorts,
-    [cohorts, programFilters],
-  );
-
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
       id: 'program',
@@ -116,14 +103,14 @@ export default function Youth() {
       options: programs.map(program => ({ value: program.id, label: program.name })),
     },
     {
-      id: 'cohort',
-      label: 'Cohort',
-      options: cohortsForPrograms.map(cohort => ({
-        value: cohort.id,
-        label: `${cohort.programName} · ${cohort.name}`,
-      })),
+      id: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+      ],
     },
-  ], [cohortsForPrograms, programs]);
+  ], [programs]);
 
   const handleEditProfile = (profile: YouthProfile) => setModalTarget(profile);
 
@@ -173,6 +160,16 @@ export default function Youth() {
       },
     },
     {
+      key: 'status',
+      header: 'Status',
+      width: '110px',
+      render: profile => (
+        <span className={`status-badge status-${profile.status}`}>
+          {profile.status === 'active' ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
       key: 'actions',
       header: '',
       className: 'col-actions',
@@ -194,27 +191,21 @@ export default function Youth() {
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
           filters={<FilterCard
             categories={filterCategories}
-            values={{ program: programFilters, cohort: cohortFilters }}
+            values={{ status: statusFilters, program: programFilters }}
             onApply={(category, selected) => {
-              if (category === 'program') {
-                setProgramFilters(selected);
-                const validCohortIds = new Set(cohorts
-                  .filter(cohort => !selected.length || selected.includes(cohort.programId))
-                  .map(cohort => cohort.id));
-                setCohortFilters(current => current.filter(id => validCohortIds.has(id)));
-              }
-              if (category === 'cohort') setCohortFilters(selected);
+              if (category === 'status') setStatusFilters(selected as Array<'active' | 'inactive'>);
+              if (category === 'program') setProgramFilters(selected);
             }}
             onClearAll={() => {
+              setStatusFilters([]);
               setProgramFilters([]);
-              setCohortFilters([]);
             }}
           />}
         />
 
         <TableDetailLayout
           ariaLabel="Youth profiles"
-          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || programFilters.length || cohortFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
+          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
           details={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {
