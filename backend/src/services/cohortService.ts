@@ -69,6 +69,7 @@ export function getCohorts(
         FROM cohort_sessions cs
         INNER JOIN attendance_records ar ON ar.session_id = cs.id
         WHERE cs.cohort_id = pc.id
+          AND ar.status IN ('present', 'late')
       ) AS unique_attendee_count,
       CASE
         WHEN CURRENT_DATE < pc.starts_on THEN 'upcoming'

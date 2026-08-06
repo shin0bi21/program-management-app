@@ -627,6 +627,13 @@ describe('Cohorts and attendance API', () => {
   });
 
   it('reports open-session reach without creating an enrollment', async () => {
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${openSessionId}, ${youthId}, 'absent', ${staffId})
+      ON CONFLICT (session_id, youth_id)
+      DO UPDATE SET status = EXCLUDED.status
+    `;
+
     const enrollments = await sql<{ count: number }[]>`
       SELECT COUNT(*)::int AS count
       FROM cohort_enrollments
@@ -644,9 +651,14 @@ describe('Cohorts and attendance API', () => {
         rosterMode: 'open',
         enrolledCount: 0,
         uniqueAttendeeCount: 1,
-        attendanceRecordedCount: 1,
+        attendanceRecordedCount: 2,
       }),
     ]));
+
+    await sql`
+      DELETE FROM attendance_records
+      WHERE session_id = ${openSessionId} AND youth_id = ${youthId}
+    `;
 
     const profile = await request(app)
       .get(`/api/youth?id=${secondYouthId}`)

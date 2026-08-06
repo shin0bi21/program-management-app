@@ -292,7 +292,7 @@ describe('Cohorts', () => {
     expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
-  it('keeps standard cohort metrics and no enrollment action for an open cohort', async () => {
+  it('shows distinct youth attendance instead of enrollment for an open cohort', async () => {
     const user = userEvent.setup();
     api.getCohorts.mockResolvedValue([{
       id: 'drop-in-cohort',
@@ -321,7 +321,8 @@ describe('Cohorts', () => {
     const cohortRow = (await screen.findByText('Summer 2026')).closest('tr');
     await user.click(cohortRow!);
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    expect(overview).toHaveTextContent('Youth enrolled0');
+    expect(overview).toHaveTextContent('Youth attended8');
+    expect(overview).not.toHaveTextContent('Youth enrolled');
     expect(overview).toHaveTextContent('Average attendance100%');
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');
