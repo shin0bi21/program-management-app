@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { isTokenExpired, decodeToken } from '../utils/jwt';
 import { clearAuthData, getToken, STORAGE_KEYS } from '../utils/storage';
 import { logout as logoutRequest } from '../api/auth.api';
+import queryClient from '../queryClient';
 
 export type UserRole = string;
 export type Permission =
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyToken = (token: string | null) => {
     if (!token || isTokenExpired(token)) {
+      queryClient.clear();
       clearAuthData();
       setIsAuthenticated(false);
       setRole(null);
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole((payload?.role as UserRole) ?? null);
       setPermissions((payload?.permissions as Permission[]) ?? []);
     } catch {
+      queryClient.clear();
       clearAuthData();
       setIsAuthenticated(false);
       setRole(null);
@@ -77,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Sync logout across tabs
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.TOKEN && !e.newValue) {
+        queryClient.clear();
         setIsAuthenticated(false);
         setRole(null);
         setPermissions([]);
@@ -93,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await logoutRequest().catch(() => {});
+    queryClient.clear();
     clearAuthData();
     setIsAuthenticated(false);
     setRole(null);

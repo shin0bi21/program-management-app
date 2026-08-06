@@ -1,4 +1,5 @@
 import { apiClient } from '../../../common/api/http/client';
+import type { RequestOptions } from '../../../common/api/http/client';
 import { api } from '../../../common/api/http/config';
 import type { OutreachFormValues } from '../../../common/components/OutreachForm/outreachFormSchema';
 
@@ -57,12 +58,14 @@ function resolveImages(content: HomepageContent): HomepageContent {
   };
 }
 
-export async function getPublicHomepage() {
-  return resolveImages(await apiClient.get<HomepageContent>('/public/homepage', { auth: false }));
+export async function getPublicHomepage(opts: RequestOptions = {}) {
+  return resolveImages(await apiClient.get<HomepageContent>('/public/homepage', { ...opts, auth: false }));
 }
 
-export async function getManagedHomepage() {
-  const content = await apiClient.get<{ images: HomepageImage[] }>('/homepage');
+export async function getManagedHomepage(opts?: RequestOptions) {
+  const content = opts
+    ? await apiClient.get<{ images: HomepageImage[] }>('/homepage', opts)
+    : await apiClient.get<{ images: HomepageImage[] }>('/homepage');
   return { images: content.images.map(resolveImageUrl) };
 }
 
