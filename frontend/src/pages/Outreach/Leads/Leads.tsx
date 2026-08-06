@@ -68,14 +68,14 @@ export default function Leads() {
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
-      id: 'status',
-      label: 'Status',
-      options: statuses.map(status => ({ value: status, label: title(status) })),
-    },
-    {
       id: 'program',
       label: 'Program',
       options: programs.map(program => ({ value: program.id, label: program.name })),
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      options: statuses.map(status => ({ value: status, label: title(status) })),
     },
   ], [programs]);
 
