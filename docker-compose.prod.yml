@@ -67,4 +67,4 @@ services:
 
 volumes:
   db_data:
-  homepage_uploads:
+  homepage_uploads:  # Shared app uploads; legacy volume name retained to preserve existing files

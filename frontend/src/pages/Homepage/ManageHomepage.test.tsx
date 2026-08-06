@@ -39,6 +39,7 @@ const content = {
     {
       id: 'image-1',
       imageUrl: '/programming/adventure_bay.png',
+      thumbnailUrl: '/programming/adventure_bay.png',
       altText: 'Youth group trip',
       caption: 'Adventure Bay trip.',
       displayOrder: 0,
@@ -83,6 +84,10 @@ describe('ManageHomepage', () => {
     );
 
     expect(await screen.findByText('Adventure Bay trip.')).toBeInTheDocument();
+    expect(document.querySelector('.homepage-image-row__thumbnail')).toHaveAttribute(
+      'src',
+      '/programming/adventure_bay.png',
+    );
     expect(screen.queryByRole('heading', { name: 'Manage Sessions' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview' }));

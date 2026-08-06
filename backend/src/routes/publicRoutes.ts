@@ -4,7 +4,7 @@ import { handleExpressionOfInterest } from '../controllers/publicController';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { generalLimiter, strictLimiter } from '../middleware/rateLimiter';
 import { expressionOfInterestSchema } from '../validation/publicSchemas';
-import { homepageImageParamsSchema } from '../validation/homepageSchemas';
+import { homepageImageFileParamsSchema, homepageImageParamsSchema } from '../validation/homepageSchemas';
 
 const router = Router();
 
@@ -13,6 +13,12 @@ router.get(
   '/homepage/images/:imageId/file',
   generalLimiter,
   validateRequest(homepageImageParamsSchema),
+  asyncHandler(handleGetHomepageImageFile),
+);
+router.get(
+  '/homepage/images/:imageId/:variant',
+  generalLimiter,
+  validateRequest(homepageImageFileParamsSchema),
   asyncHandler(handleGetHomepageImageFile),
 );
 router.post('/expressions-of-interest', strictLimiter, validateRequest(expressionOfInterestSchema), asyncHandler(handleExpressionOfInterest));

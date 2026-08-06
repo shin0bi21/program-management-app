@@ -27,6 +27,7 @@
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
     "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
     "seed:programming-demo": "npx tsx db/scripts/seed-programming-demo.ts",
+    "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -43,6 +44,7 @@
     "multer": "^2.2.0",
     "nodemailer": "^7.0.12",
     "postgres": "^3.4.8",
+    "sharp": "^0.35.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {

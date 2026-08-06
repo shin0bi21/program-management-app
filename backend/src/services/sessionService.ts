@@ -226,6 +226,10 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
   if (notes.length) {
     throw new ConflictError('Session cannot be deleted because session notes have been recorded');
   }
+  const attachments = await sql`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
+  if (attachments.length) {
+    throw new ConflictError('Session cannot be deleted because attachments have been added');
+  }
   const rows = await sql`DELETE FROM cohort_sessions WHERE id = ${id} RETURNING id`;
   if (!rows.length) throw new NotFoundError('Session not found');
 }

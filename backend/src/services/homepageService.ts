@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
-import { mkdir, unlink, writeFile } from 'fs/promises';
+import { access, mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 import { asTransactionSql, sql } from '../db/client';
 import { BadRequestError, ConflictError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
@@ -9,6 +10,11 @@ import type {
   ReorderHomepageImagesInput,
   UpdateHomepageImageInput,
 } from '../validation/homepageSchemas';
+import {
+  finalizeQuarantinedUpload,
+  quarantineUpload,
+  restoreQuarantinedUpload,
+} from './uploadFileService';
 
 const uploadRoot = path.resolve(process.env.UPLOAD_ROOT ?? path.join(process.cwd(), 'uploads'));
 const homepageUploadRoot = path.join(uploadRoot, 'homepage');
@@ -19,11 +25,11 @@ const supportedImageTypes = new Map([
   ['image/webp', '.webp'],
 ]);
 
-function imageUrlSql() {
+function imageVariantUrlSql(variant: 'thumbnail' | 'display') {
   return sql`
     CASE
       WHEN hi.public_path IS NOT NULL THEN hi.public_path
-      ELSE '/public/homepage/images/' || hi.id::text || '/file'
+      ELSE '/public/homepage/images/' || hi.id::text || '/' || ${variant}
     END
   `;
 }
@@ -32,7 +38,8 @@ function homepageImages() {
   return sql`
     SELECT
       hi.id,
-      ${imageUrlSql()} AS image_url,
+      ${imageVariantUrlSql('display')} AS image_url,
+      ${imageVariantUrlSql('thumbnail')} AS thumbnail_url,
       hi.alt_text,
       hi.caption,
       hi.display_order,
@@ -107,11 +114,28 @@ export async function createHomepageImage(
   }
 
   const storageKey = `${randomUUID()}${extension}`;
+  const storageStem = path.parse(storageKey).name;
+  const thumbnailKey = `${storageStem}-thumbnail.webp`;
+  const displayKey = `${storageStem}-display.webp`;
   const filePath = path.join(homepageUploadRoot, storageKey);
+  const thumbnailPath = path.join(homepageUploadRoot, thumbnailKey);
+  const displayPath = path.join(homepageUploadRoot, displayKey);
   await mkdir(homepageUploadRoot, { recursive: true });
-  await writeFile(filePath, file.buffer, { flag: 'wx' });
-
+  let thumbnail: Buffer;
+  let display: Buffer;
   try {
+    const source = sharp(file.buffer, { failOn: 'warning' }).rotate();
+    [thumbnail, display] = await Promise.all([
+      source.clone().resize({ width: 320, withoutEnlargement: true }).webp({ quality: 76 }).toBuffer(),
+      source.clone().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
+    ]);
+  } catch {
+    throw new BadRequestError('Image file is invalid or unsupported');
+  }
+  try {
+    await writeFile(filePath, file.buffer, { flag: 'wx' });
+    await writeFile(thumbnailPath, thumbnail, { flag: 'wx' });
+    await writeFile(displayPath, display, { flag: 'wx' });
     const rows = await sql`
       INSERT INTO homepage_images (
         storage_key, alt_text, caption, display_order, created_by, updated_by
@@ -128,7 +152,7 @@ export async function createHomepageImage(
     `;
     return rows[0];
   } catch (error) {
-    await unlink(filePath).catch(() => {});
+    await Promise.all([filePath, thumbnailPath, displayPath].map(candidate => unlink(candidate).catch(() => {})));
     throw error;
   }
 }
@@ -181,21 +205,40 @@ export async function reorderHomepageImages({ imageIds }: ReorderHomepageImagesI
 }
 
 export async function deleteHomepageImage(imageId: string) {
-  const rows = await sql<{ storageKey: string | null }[]>`
-    DELETE FROM homepage_images
+  const existing = await sql<{ storageKey: string | null }[]>`
+    SELECT storage_key FROM homepage_images
     WHERE id = ${imageId}
-    RETURNING storage_key
   `;
-  if (!rows.length) throw new NotFoundError('Homepage image not found');
+  if (!existing.length) throw new NotFoundError('Homepage image not found');
 
-  if (rows[0].storageKey) {
-    await unlink(path.join(homepageUploadRoot, rows[0].storageKey!)).catch((error) => {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    });
+  const quarantined = [];
+  if (existing[0].storageKey) {
+    const storageKey = existing[0].storageKey;
+    const stem = path.parse(storageKey).name;
+    try {
+      for (const key of [storageKey, `${stem}-thumbnail.webp`, `${stem}-display.webp`]) {
+        quarantined.push(await quarantineUpload(path.join(homepageUploadRoot, key)));
+      }
+    } catch (error) {
+      await Promise.all(quarantined.map(restoreQuarantinedUpload));
+      throw error;
+    }
   }
+
+  try {
+    const rows = await sql`DELETE FROM homepage_images WHERE id = ${imageId} RETURNING id`;
+    if (!rows.length) throw new NotFoundError('Homepage image not found');
+  } catch (error) {
+    await Promise.all(quarantined.map(restoreQuarantinedUpload));
+    throw error;
+  }
+  await Promise.all(quarantined.map(finalizeQuarantinedUpload));
 }
 
-export async function getHomepageImageFile(imageId: string) {
+export async function getHomepageImageFile(
+  imageId: string,
+  variant: 'original' | 'thumbnail' | 'display' = 'original',
+) {
   const rows = await sql<{ storageKey: string | null }[]>`
     SELECT storage_key
     FROM homepage_images
@@ -204,5 +247,16 @@ export async function getHomepageImageFile(imageId: string) {
   if (!rows.length || !rows[0].storageKey) {
     throw new NotFoundError('Homepage image file not found');
   }
-  return path.join(homepageUploadRoot, rows[0].storageKey);
+  const originalPath = path.join(homepageUploadRoot, rows[0].storageKey);
+  if (variant === 'original') return originalPath;
+  const variantPath = path.join(
+    homepageUploadRoot,
+    `${path.parse(rows[0].storageKey).name}-${variant}.webp`,
+  );
+  try {
+    await access(variantPath);
+    return variantPath;
+  } catch {
+    return originalPath;
+  }
 }

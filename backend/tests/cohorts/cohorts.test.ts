@@ -83,7 +83,7 @@ describe('Cohorts and attendance API', () => {
   afterAll(async () => {
     if (openSessionId) {
       await sql`
-        DELETE FROM session_note_youth
+        DELETE FROM session_note_has_youth
         WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${openSessionId})
       `;
       await sql`DELETE FROM session_notes WHERE session_id = ${openSessionId}`;
@@ -94,7 +94,7 @@ describe('Cohorts and attendance API', () => {
     if (sessionId) await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
     if (sessionId) {
       await sql`
-        DELETE FROM session_note_youth
+        DELETE FROM session_note_has_youth
         WHERE note_id IN (SELECT id FROM session_notes WHERE session_id = ${sessionId})
       `;
       await sql`DELETE FROM session_notes WHERE session_id = ${sessionId}`;
@@ -377,6 +377,46 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
     expect(remaining.body).toHaveLength(1);
     expect(remaining.body[0].id).toBe(attached.id);
+  });
+
+  it('uploads, lists, downloads, and deletes session attachments with linked youth', async () => {
+    const uploaded = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/attachments`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .field('title', 'Reflection worksheet')
+      .field('description', 'Completed during the session.')
+      .field('youthIds', JSON.stringify([youthId]))
+      .attach('file', Buffer.from('reflection notes'), {
+        filename: 'reflection.txt',
+        contentType: 'text/plain',
+      });
+
+    expect(uploaded.status).toBe(201);
+    expect(uploaded.body).toEqual(expect.objectContaining({
+      title: 'Reflection worksheet',
+      originalFilename: 'reflection.txt',
+      youth: [expect.objectContaining({ youthId })],
+    }));
+    const attachment = uploaded.body;
+
+    const downloaded = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/attachments/${attachment.id}/file`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(downloaded.status).toBe(200);
+    expect(downloaded.headers['content-disposition']).toContain('reflection.txt');
+
+    const deleted = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/attachments/${attachment.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(deleted.status).toBe(200);
+
+    const listed = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/attachments`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(listed.status).toBe(200);
+    expect(listed.body).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: attachment.id }),
+    ]));
   });
 
   it('returns linked session notes with context on a youth profile', async () => {

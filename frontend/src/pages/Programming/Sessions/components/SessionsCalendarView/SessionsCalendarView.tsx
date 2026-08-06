@@ -21,6 +21,8 @@ interface SessionsCalendarViewProps {
   refreshToken: number;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
+  onSessionEdit?: (session: CohortSession) => void;
+  onSessionDelete?: (session: CohortSession) => void;
 }
 
 export default function SessionsCalendarView({
@@ -33,6 +35,8 @@ export default function SessionsCalendarView({
   refreshToken,
   onSessionsLoaded,
   onSessionSelect,
+  onSessionEdit,
+  onSessionDelete,
 }: SessionsCalendarViewProps) {
   const [range, setRange] = useState<CalendarRange | null>(null);
   const [sessions, setSessions] = useState<CohortSession[]>([]);
@@ -111,6 +115,14 @@ export default function SessionsCalendarView({
           const session = sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionSelect(session);
         }}
+        onEventEdit={onSessionEdit ? sessionId => {
+          const session = sessions.find(candidate => candidate.id === sessionId);
+          if (session) onSessionEdit(session);
+        } : undefined}
+        onEventDelete={onSessionDelete ? sessionId => {
+          const session = sessions.find(candidate => candidate.id === sessionId);
+          if (session) onSessionDelete(session);
+        } : undefined}
       />
     </div>
   );

@@ -41,6 +41,7 @@ Response flows back: DB → controller JSON response → fetch resolves → hook
 
 ```
 src/
+  ErrorBoundary/         ← root render-failure boundary, dependency-free fallback styles, and focused test
   common/
     api/
       client.ts           ← apiClient — all HTTP calls go through here
@@ -52,7 +53,6 @@ src/
       ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
       Button/
-      ErrorBoundary/      ← wraps entire app, catches render errors
       FloatingMenuPanel/  ← shared floating menu portal + keyboard nav
       Footer/
       FormField/          ← shared labelled form field wrapper
@@ -64,6 +64,7 @@ src/
       ReLoginModal/       ← shown when access token expires mid-session
       Table/              ← shared data table
       TableDetailLayout/  ← selected-row cards above table on desktop and below on mobile
+      ViewMenu/           ← reusable floating selector for alternate page views
       DetailCards/        ← shared primary-contact and notes cards
     context/
       AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
@@ -119,7 +120,7 @@ components/
     SignupSection.test.tsx
 ```
 
-The same pattern applies to modal features such as `YouthModal/` and to homepage sections such as `HeroSection/` and `ProgrammingSection/`.
+The same pattern applies to modal features such as `YouthModal/`, `SessionNoteModal/`, and `SessionAttachmentModal/`, and to homepage sections such as `HeroSection/` and `ProgrammingSection/`.
 
 ---
 
@@ -201,6 +202,7 @@ export default function MyMenu() {
 
 | File | What it tests |
 |---|---|
+| `src/ErrorBoundary/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
 | `src/common/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
 | `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
 | `src/pages/Homepage/Homepage.test.tsx` | Page-composition test for the public homepage sections |

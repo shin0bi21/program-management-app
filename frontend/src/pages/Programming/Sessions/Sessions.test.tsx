@@ -13,10 +13,11 @@ const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
 const getCohorts = vi.fn();
 const getSessionNotes = vi.fn();
+const getSessionAttachments = vi.fn();
 const getSessionTypes = vi.fn();
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
-  permissions: ['read:attendance', 'write:attendance', 'write:cohorts'],
+  permissions: ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
 }));
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
@@ -34,6 +35,7 @@ vi.mock('../../../common/api/cohorts.api', () => ({
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
+  getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   createSessionNote: vi.fn(),
   saveSessionAttendance: vi.fn(),
@@ -106,7 +108,7 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 describe('Sessions', () => {
   beforeEach(() => {
     auth.role = 'admin';
-    auth.permissions = ['read:attendance', 'write:attendance', 'write:cohorts'];
+    auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
     programState.programs = [{
       id: 'program-1',
       name: 'Soft Skills',
@@ -169,6 +171,7 @@ describe('Sessions', () => {
       },
     ]);
     getSessionNotes.mockResolvedValue([]);
+    getSessionAttachments.mockResolvedValue([]);
   });
 
   it('shows open attendance as a check-in count', async () => {
@@ -195,18 +198,18 @@ describe('Sessions', () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
         <Sessions />
       </MemoryRouter>,
     );
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Add worksheets' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
     expect(screen.getByText('3 check-ins')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
@@ -219,7 +222,7 @@ describe('Sessions', () => {
 
   it('highlights a linked session and opens attendance from its actions menu', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list&session=session-1']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -228,7 +231,7 @@ describe('Sessions', () => {
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attendance.');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('Not available yet.');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attachments.');
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No notes.');
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
@@ -249,7 +252,7 @@ describe('Sessions', () => {
 
   it('aligns the status filter with session table states', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -271,7 +274,7 @@ describe('Sessions', () => {
 
   it('preserves applied filters when switching session views', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -285,7 +288,8 @@ describe('Sessions', () => {
       expect(getSessions).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] })),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Completed' })).toHaveAttribute('aria-checked', 'true');
   });
@@ -305,14 +309,14 @@ describe('Sessions', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
         <Sessions />
         <LocationProbe />
       </MemoryRouter>,
     );
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
-      '/programming/sessions?program=program-1&cohort=cohort-1',
+      '/programming/sessions?view=list&program=program-1&cohort=cohort-1',
     ));
     await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -337,15 +341,14 @@ describe('Sessions', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
         <Sessions />
         <LocationProbe />
       </MemoryRouter>,
     );
 
     expect(await screen.findByText('Communication')).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
-    expect(screen.getByTestId('location')).not.toHaveTextContent('?');
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions?view=list');
   });
 
   it('opens the add sessions flow from the page header', async () => {
@@ -371,25 +374,27 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
     const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
-    const viewSelector = screen.getByRole('group', { name: 'Session view' });
+    const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
     expect(pageHeader).not.toBeNull();
     expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+    fireEvent.click(viewSelector);
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
-    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('region', { name: 'Sessions calendar and overview' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View: List' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
+    fireEvent.click(await screen.findByText('Communication'));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'List' }));
-    expect((await screen.findByText('Communication')).closest('tr')).toHaveClass('table-row--selected');
+    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
   });
 });

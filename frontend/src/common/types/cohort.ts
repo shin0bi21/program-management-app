@@ -145,3 +145,23 @@ export interface CreateSessionNoteInput {
 }
 
 export type UpdateSessionNoteInput = CreateSessionNoteInput;
+
+export interface SessionAttachmentYouth {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface SessionAttachment {
+  id: string;
+  sessionId: string;
+  title: string;
+  description: string | null;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: SessionAttachmentYouth[];
+}

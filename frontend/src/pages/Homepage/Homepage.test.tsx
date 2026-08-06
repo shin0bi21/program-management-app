@@ -26,6 +26,7 @@ vi.mock('./hooks/useHomepageContent', () => ({
       images: [{
         id: 'image-1',
         imageUrl: '/programming/adventure_bay.png',
+        thumbnailUrl: '/programming/adventure_bay.png',
         altText: 'Youth trip',
         caption: 'Youth trip.',
         displayOrder: 0,

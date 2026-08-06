@@ -11,6 +11,7 @@ export function submitExpressionOfInterest(payload: ExpressionOfInterestPayload)
 export interface HomepageImage {
   id: string;
   imageUrl: string;
+  thumbnailUrl: string;
   altText: string;
   caption: string;
   displayOrder: number;
@@ -41,9 +42,11 @@ export interface HomepageContent {
 }
 
 function resolveImageUrl(image: HomepageImage): HomepageImage {
+  const resolve = (url: string) => url.startsWith('/public/') ? api(url) : url;
   return {
     ...image,
-    imageUrl: image.imageUrl.startsWith('/public/') ? api(image.imageUrl) : image.imageUrl,
+    imageUrl: resolve(image.imageUrl),
+    thumbnailUrl: resolve(image.thumbnailUrl ?? image.imageUrl),
   };
 }
 

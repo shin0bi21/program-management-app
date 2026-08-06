@@ -7,7 +7,7 @@ function escapeLikePattern(value: string) {
 
 /** Builds the parameterized filters for youth profile list queries. */
 export function applyYouthFilters(filters: YouthQuery) {
-  const activeEnrollment = sql`EXISTS (
+  const activeEnrollmentForPrograms = (programIds: string[] = []) => sql`EXISTS (
     SELECT 1
     FROM cohort_enrollments current_enrollment
     INNER JOIN program_cohorts current_cohort
@@ -20,13 +20,19 @@ export function applyYouthFilters(filters: YouthQuery) {
       )
       AND (NOW() AT TIME ZONE 'America/Toronto')::date
         BETWEEN current_cohort.starts_on AND current_cohort.ends_on
+      ${programIds.length
+        ? sql`AND current_cohort.program_id = ANY(${sql.array(programIds)}::uuid[])`
+        : sql``}
   )`;
+  const activeEnrollment = activeEnrollmentForPrograms();
   const statusFilter = filters.statuses.length !== 1
     ? sql`TRUE`
     : filters.statuses[0] === 'active'
       ? activeEnrollment
       : sql`NOT (${activeEnrollment})`;
-  const programFilter = filters.programIds.length
+  const programFilter = filters.programIds.length && filters.statuses.length === 1 && filters.statuses[0] === 'active'
+    ? activeEnrollmentForPrograms(filters.programIds)
+    : filters.programIds.length
     ? sql`(
         EXISTS (
           SELECT 1

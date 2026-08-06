@@ -6,7 +6,7 @@ import './common/styles/brand.css'
 import './common/styles/forms.css'
 import './common/styles/pages.css'
 import './common/components/Button/Button.css'
-import ErrorBoundary from './ErrorBoundary'
+import ErrorBoundary from './ErrorBoundary/ErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

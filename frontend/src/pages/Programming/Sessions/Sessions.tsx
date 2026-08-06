@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -9,6 +9,7 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/api/cohorts.api';
 import { useAuth } from '../../../common/context/AuthContext';
 import { usePrograms } from '../../../common/hooks/usePrograms';
@@ -50,7 +51,7 @@ export default function Sessions() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-  const view: SessionsView = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
+  const view: SessionsView = searchParams.get('view') === 'list' ? 'list' : 'calendar';
   const programFilter = searchParams.get('program') ?? '';
   const selectedProgramIds = useMemo(() => programFilter.split(',').filter(Boolean), [programFilter]);
   const cohortId = searchParams.get('cohort') ?? '';
@@ -64,7 +65,24 @@ export default function Sessions() {
     [statusFilter],
   );
   const canWriteAttendance = permissions.includes('write:attendance');
-  const canWriteCohorts = permissions.includes('write:cohorts');
+  const canWriteSessions = permissions.includes('write:sessions');
+
+  const requestSessionDeletion = useCallback(
+    (session: CohortSession, onDeleted: () => void | Promise<void>) => {
+      setConfirmAction({
+        title: 'Delete Session',
+        message: `Delete the ${session.theme || session.sessionTypeName} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        confirmVariant: 'danger',
+        successMessage: 'Session deleted',
+        onConfirm: async () => {
+          await deleteSession(session.id);
+          await onDeleted();
+        },
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -166,13 +184,12 @@ export default function Sessions() {
 
   const setView = (nextView: SessionsView) => {
     const next = new URLSearchParams(searchParams);
-    if (nextView === 'calendar') next.set('view', 'calendar');
-    else next.delete('view');
+    next.set('view', nextView);
     setSearchParams(next);
   };
 
   const clearFilters = () => {
-    setSearchParams(view === 'calendar' ? { view: 'calendar' } : {});
+    setSearchParams({ view });
   };
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
@@ -210,7 +227,7 @@ export default function Sessions() {
         width: '110px',
         render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
       },
-      ...(canWriteAttendance || canWriteCohorts
+      ...(canWriteAttendance || canWriteSessions
         ? [
             {
               key: 'actions',
@@ -229,25 +246,14 @@ export default function Sessions() {
                           },
                         ]
                       : []),
-                    ...(canWriteCohorts
+                    ...(canWriteSessions
                       ? [
                           { id: 'edit', label: 'Edit Session', onClick: () => setEditTarget(session) },
                           {
                             id: 'delete',
                             label: 'Delete Session',
                             variant: 'danger' as const,
-                            onClick: () =>
-                              setConfirmAction({
-                                title: 'Delete Session',
-                                message: `Delete ${session.theme || `${session.programName} session`}? This cannot be undone.`,
-                                confirmLabel: 'Delete',
-                                confirmVariant: 'danger',
-                                successMessage: 'Session deleted',
-                                onConfirm: async () => {
-                                  await deleteSession(session.id);
-                                  await refreshSessions();
-                                },
-                              }),
+                            onClick: () => requestSessionDeletion(session, refreshSessions),
                           },
                         ]
                       : []),
@@ -258,7 +264,7 @@ export default function Sessions() {
           ]
         : []),
     ],
-    [canWriteAttendance, canWriteCohorts, refreshSessions],
+    [canWriteAttendance, canWriteSessions, refreshSessions, requestSessionDeletion],
   );
 
   const activeSessions = view === 'calendar' ? calendarSessions : sessions;
@@ -285,7 +291,7 @@ export default function Sessions() {
           <PageHeader
             title="Sessions"
             actions={
-              canWriteCohorts ? (
+              canWriteSessions ? (
                 <Button onClick={() => setAddSessionsOpen(true)} disabled={!schedulableCohorts.length}>
                   + Add
                 </Button>
@@ -314,27 +320,17 @@ export default function Sessions() {
                 onClearAll={clearFilters}
               />
             }
+            view={(
+              <ViewMenu
+                value={view}
+                options={[
+                  { value: 'calendar', label: 'Calendar' },
+                  { value: 'list', label: 'List' },
+                ]}
+                onChange={setView}
+              />
+            )}
           />
-          <div className="sessions-view-row">
-            <div className="sessions-view-toggle" role="group" aria-label="Session view">
-              <Button
-                size="sm"
-                variant={view === 'list' ? 'primary' : 'secondary'}
-                aria-pressed={view === 'list'}
-                onClick={() => setView('list')}
-              >
-                List
-              </Button>
-              <Button
-                size="sm"
-                variant={view === 'calendar' ? 'primary' : 'secondary'}
-                aria-pressed={view === 'calendar'}
-                onClick={() => setView('calendar')}
-              >
-                Calendar
-              </Button>
-            </div>
-          </div>
           {view === 'list' ? (
             <TableDetailLayout
               ariaLabel="Sessions and overview"
@@ -364,7 +360,7 @@ export default function Sessions() {
                 <SessionOverview
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
-                  canWriteNotes={canWriteCohorts}
+                  canWriteSessions={canWriteSessions}
                   onAddAttendance={setAttendanceTarget}
                 />
               }
@@ -390,13 +386,20 @@ export default function Sessions() {
                     );
                     selectSession(session);
                   }}
+                  onSessionEdit={canWriteSessions ? setEditTarget : undefined}
+                  onSessionDelete={canWriteSessions
+                    ? session => requestSessionDeletion(
+                        session,
+                        () => setCalendarRefreshToken(current => current + 1),
+                      )
+                    : undefined}
                 />
               }
               details={
                 <SessionOverview
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
-                  canWriteNotes={canWriteCohorts}
+                  canWriteSessions={canWriteSessions}
                   onAddAttendance={setAttendanceTarget}
                 />
               }

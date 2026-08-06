@@ -52,10 +52,11 @@ Never use `git reset --hard`, destructive checkout, or broad deletion.
 4. Use hunk-level staging for shared files.
 5. Inspect `git diff --cached` and confirm it contains a complete, independently buildable issue.
 6. Inspect `git diff` and untracked files to confirm all other work remains.
-7. Run the issue’s focused tests and build; run broader tests when risk warrants.
-8. Commit only after the user authorizes the commit.
-9. Verify the commit with `git show --stat --oneline HEAD`.
-10. Stash the remaining uncommitted work with `-u` and a new descriptive message before switching branches.
+7. Run the issue’s focused tests and build.
+8. Run `scripts/test-full-stack.sh` on the isolated issue branch. Every issue must pass the full suite before it is committed or merged into the base branch.
+9. Commit only after the user authorizes the commit.
+10. Verify the commit with `git show --stat --oneline HEAD`.
+11. Stash the remaining uncommitted work with `-u` and a new descriptive message before switching branches.
 
 ## 5. Continue the branch sequence
 
@@ -65,6 +66,8 @@ After the previous issue is merged:
 2. Create the next issue branch.
 3. Apply the latest remainder stash.
 4. Repeat review, stage, test, and commit.
+
+Never merge an issue branch into the base branch unless `scripts/test-full-stack.sh` passed on that isolated branch.
 
 Do not reapply the original safety stash after the first issue; it contains already committed changes. Retain it only as disaster recovery. Drop safety/remainder stashes only after all issue branches are verified and the user approves cleanup.
 
