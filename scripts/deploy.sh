@@ -227,6 +227,10 @@ else
 fi
 
 echo ""
+echo "Ensuring homepage image variants exist..."
+docker compose exec -T backend node dist/db/scripts/backfill-homepage-image-variants.js
+
+echo ""
 echo "=========================================="
 echo "Deploy complete"
 echo "=========================================="

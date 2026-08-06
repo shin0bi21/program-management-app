@@ -17,6 +17,13 @@ export const homepageImageParamsSchema = z.object({
   params: z.object({ imageId: z.string().uuid('Invalid image ID') }),
 });
 
+export const homepageImageFileParamsSchema = z.object({
+  params: z.object({
+    imageId: z.string().uuid('Invalid image ID'),
+    variant: z.enum(['thumbnail', 'display']),
+  }),
+});
+
 export const reorderHomepageImagesSchema = z.object({
   body: z.object({
     imageIds: z
