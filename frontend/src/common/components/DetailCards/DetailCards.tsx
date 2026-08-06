@@ -7,7 +7,7 @@ import type { YouthSessionNote } from '../../types/cohort';
 import type { YouthProfileNote } from '../../types/youth';
 import { ProfileNoteCategoryBadge } from '../ProfileNoteDetails/ProfileNoteDetails';
 import { DashboardCard } from '../DashboardCard/DashboardCard';
-import { SessionNoteCategoryBadge } from '../SessionNoteDetails/SessionNoteDetails';
+import SessionNoteRow from '../SessionNoteRow/SessionNoteRow';
 import Button from '../Button/Button';
 
 interface PrimaryContactCardProps {
@@ -127,28 +127,16 @@ export function YouthNotesCard({
     content = <p className="dashboard-card__empty">No linked session notes.</p>;
   } else {
     content = (
-      <div className="profile-session-notes">
+      <div className="session-note-list">
         {sessionNotes.map(note => (
-          <div key={note.id} className="profile-session-note profile-session-note--with-actions">
-            <div className="profile-session-note__profile-summary">
-              <strong>{note.title}</strong>
-              <SessionNoteCategoryBadge category={note.category} />
-              <span className="profile-session-note__date">{formatShortDate(note.startsAt)}</span>
-            </div>
-            <div className="profile-session-note__actions">
-              <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`View ${note.title}`} title="View note" onClick={() => onSelectSessionNote(note)}>
-                <FontAwesomeIcon icon={faEye} aria-hidden="true" />
-              </Button>
-              {canManageSessionNotes && onEditSessionNote && onDeleteSessionNote && <>
-                <Button size="sm" variant="ghost" className="profile-session-note__action-button" aria-label={`Edit ${note.title}`} title="Edit note" onClick={() => onEditSessionNote(note)}>
-                  <FontAwesomeIcon icon={faPen} aria-hidden="true" />
-                </Button>
-                <Button size="sm" variant="ghost" className="profile-session-note__action-button profile-session-note__action-button--danger" aria-label={`Delete ${note.title}`} title="Delete note" onClick={() => onDeleteSessionNote(note)}>
-                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-                </Button>
-              </>}
-            </div>
-          </div>
+          <SessionNoteRow
+            key={note.id}
+            note={note}
+            date={note.startsAt}
+            onView={onSelectSessionNote}
+            onEdit={canManageSessionNotes ? onEditSessionNote : undefined}
+            onDelete={canManageSessionNotes ? onDeleteSessionNote : undefined}
+          />
         ))}
       </div>
     );
