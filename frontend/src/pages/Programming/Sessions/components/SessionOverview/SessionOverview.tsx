@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faTrash } from '@fortawesome/free-solid-svg-icons';
 import {
   deleteSessionAttachment,
   deleteSessionNote,
@@ -12,15 +12,12 @@ import {
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
-import SessionNoteDetails, {
-  SessionNoteCategoryBadge,
-} from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
+import SessionNoteDetails from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
+import SessionNoteRow from '../../../../../common/components/SessionNoteRow/SessionNoteRow';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/hooks/useConfirmModal';
 import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
-import { formatShortDate } from '../../../../../common/utils/date';
 import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
 import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';
-import './SessionOverview.css';
 
 interface SessionOverviewProps {
   session: CohortSession | null;
@@ -61,57 +58,16 @@ function SessionNotesContent({
   if (!notes.length) return <p className="dashboard-card__empty">No notes.</p>;
 
   return (
-    <div className="session-notes-list">
+    <div className="session-note-list">
       {notes.map(note => (
-        <article key={note.id} className="session-note">
-          <div className="session-note__main">
-            <span className="session-note__summary">
-              <strong>{note.title}</strong>
-              <SessionNoteCategoryBadge category={note.category} />
-            </span>
-            <div className="session-note__meta">
-              <span>
-                {note.createdByName || 'Staff'} · {formatShortDate(note.createdAt)}
-              </span>
-            </div>
-          </div>
-          <div className="session-note__actions">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="session-note__action-button"
-              aria-label={`View ${note.title}`}
-              title="View note"
-              onClick={() => onView(note)}
-            >
-              <FontAwesomeIcon icon={faEye} aria-hidden="true" />
-            </Button>
-            {canWrite && (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="session-note__action-button"
-                  aria-label={`Edit ${note.title}`}
-                  title="Edit note"
-                  onClick={() => onEdit(note)}
-                >
-                  <FontAwesomeIcon icon={faPen} aria-hidden="true" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="session-note__action-button session-note__action-button--danger"
-                  aria-label={`Delete ${note.title}`}
-                  title="Delete note"
-                  onClick={() => onDelete(note)}
-                >
-                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-                </Button>
-              </>
-            )}
-          </div>
-        </article>
+        <SessionNoteRow
+          key={note.id}
+          note={note}
+          date={note.createdAt}
+          onView={onView}
+          onEdit={canWrite ? onEdit : undefined}
+          onDelete={canWrite ? onDelete : undefined}
+        />
       ))}
     </div>
   );

@@ -26,6 +26,10 @@
   gap: 4px;
 }
 
+.attendance-card__cohort > strong {
+  font-size: 0.875rem;
+}
+
 .attendance-card__cohort + .attendance-card__cohort {
   padding-top: 14px;
   border-top: var(--border-line-soft);
@@ -39,7 +43,7 @@
   color: var(--color-ink);
 }
 
-.notes-card__tabs {
+.dashboard-card__tabs {
   display: inline-flex;
   padding: 2px;
   border: var(--border-line-soft);
@@ -47,7 +51,7 @@
   background: var(--color-surface);
 }
 
-.notes-card__tabs button {
+.dashboard-card__tabs button {
   padding: 4px 7px;
   border: 0;
   border-radius: 5px;
@@ -58,7 +62,7 @@
   font-weight: 650;
 }
 
-.notes-card__tabs button.is-active {
+.dashboard-card__tabs button.is-active {
   background: var(--color-white);
   color: var(--color-ink);
   box-shadow: 0 1px 4px var(--ink-10);
@@ -69,8 +73,7 @@
 }
 
 .profile-session-note {
-  display: grid;
-  gap: var(--space-1);
+  display: block;
   width: 100%;
   padding: 0 0 var(--space-3);
   border: 0;
@@ -89,18 +92,86 @@
   padding-bottom: 0;
 }
 
-.profile-session-note__heading {
+.profile-session-note__row,
+.profile-session-note__summary {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.profile-session-note__heading strong {
-  overflow-wrap: anywhere;
+.profile-session-note__row {
+  min-width: 0;
 }
 
-.profile-session-note > span:last-child {
+.profile-session-note--with-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: default;
+}
+
+.profile-session-note__profile-summary {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  gap: var(--space-2);
+}
+
+.profile-session-note__profile-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-session-note__date {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--ink-04);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.profile-session-note__actions {
+  display: flex;
+  flex: none;
+  gap: 1px;
+  margin-left: auto;
+}
+
+.profile-session-note__action-button.btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.profile-session-note__action-button--danger.btn {
+  color: var(--color-danger-btn);
+}
+
+.profile-session-note__summary {
+  min-width: 0;
+}
+
+.profile-session-note__summary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-session-note__summary > span {
+  flex: none;
   color: var(--color-muted);
   font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.profile-session-note__row > .session-note-category {
+  flex: none;
+  margin-left: auto;
 }

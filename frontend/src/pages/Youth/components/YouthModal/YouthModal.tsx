@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import FormField from '../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
 import { useAuth } from '../../../../common/context/AuthContext';
 import type { YouthProfile } from '../../hooks/useYouth';
-import AddSchoolModal from './AddSchoolModal/AddSchoolModal';
+import SchoolActionModal, { type SchoolAction } from './SchoolActionModal/SchoolActionModal';
 import { useYouthModal } from './useYouthModal';
 import './YouthModal.css';
 
@@ -27,8 +29,8 @@ export default function YouthModal({
   mode = 'full',
 }: YouthModalProps) {
   const { permissions } = useAuth();
-  const canAddSchool = permissions.includes('write:schools');
-  const [addSchoolOpen, setAddSchoolOpen] = useState(false);
+  const canManageSchools = permissions.includes('write:schools');
+  const [schoolAction, setSchoolAction] = useState<SchoolAction | null>(null);
   const {
     register,
     errors,
@@ -36,6 +38,7 @@ export default function YouthModal({
     onValid,
     schools,
     upsertSchool,
+    removeSchool,
     schoolsLoading,
     schoolsError,
     schoolId,
@@ -79,7 +82,7 @@ export default function YouthModal({
     modalStatusMessage = error;
   }
   const closeYouthModal = () => {
-    setAddSchoolOpen(false);
+    setSchoolAction(null);
     handleClose();
   };
 
@@ -147,36 +150,28 @@ export default function YouthModal({
                   onChange={setSchoolId}
                   placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
                   disabled={schoolsLoading}
-                  action={canAddSchool ? { label: '+ Add school', onSelect: () => setAddSchoolOpen(true) } : undefined}
+                  action={canManageSchools ? { label: '+ Add school', onSelect: () => setSchoolAction({ type: 'add' }) } : undefined}
+                  optionActions={canManageSchools ? option => {
+                    const school = schools.find(item => item.id === option.value)!;
+                    return [
+                      { label: 'Edit', icon: <FontAwesomeIcon icon={faPen} />, onSelect: () => setSchoolAction({ type: 'edit', school }) },
+                      { label: 'Delete', icon: <FontAwesomeIcon icon={faTrash} />, variant: 'danger', onSelect: () => setSchoolAction({ type: 'delete', school }) },
+                    ];
+                  } : undefined}
                 />
               </FormField>
 
-              <FormField id="notes" label="Notes" error={errors.notes?.message}>
-                <textarea id="notes" rows={4} {...register('notes')} />
-              </FormField>
-
-              {/* Addresses Section */}
-              <div className="section-divider">
-                <div className="section-header">
-                  <h3>Address <span className="section-optional">(optional)</span></h3>
-                </div>
-
-                <div className="section-content">
-                  {addresses.map((address, index) => (
-                    <div key={index} className="address-form-item">
-                      <FormField id={`address-${index}`} label="Street Address">
-                        <input
-                          id={`address-${index}`}
-                          type="text"
-                          value={address.address}
-                          onChange={event => handleAddressChange(index, 'address', event.target.value)}
-                          placeholder="123 Main Street"
-                        />
-                      </FormField>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {addresses.map((address, index) => (
+                <FormField key={index} id={`address-${index}`} label="Address (optional)">
+                  <input
+                    id={`address-${index}`}
+                    type="text"
+                    value={address.address}
+                    onChange={event => handleAddressChange(index, 'address', event.target.value)}
+                    placeholder="123 Main Street"
+                  />
+                </FormField>
+              ))}
             </>
           )}
 
@@ -218,13 +213,18 @@ export default function YouthModal({
         </form>
       </Modal>
       {!contactOnly && (
-        <AddSchoolModal
-          isOpen={addSchoolOpen}
-          onClose={() => setAddSchoolOpen(false)}
-          onSuccess={school => {
+        <SchoolActionModal
+          action={schoolAction}
+          onClose={() => setSchoolAction(null)}
+          onUpsert={school => {
             upsertSchool(school);
-            setSchoolId(school.id);
-            setAddSchoolOpen(false);
+            if (schoolAction?.type === 'add') setSchoolId(school.id);
+            setSchoolAction(null);
+          }}
+          onDelete={school => {
+            removeSchool(school.id);
+            if (schoolId === school.id) setSchoolId('');
+            setSchoolAction(null);
           }}
         />
       )}

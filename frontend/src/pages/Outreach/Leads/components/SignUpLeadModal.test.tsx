@@ -56,6 +56,7 @@ const cohort = {
 
 describe('SignUpLeadModal', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(getCohorts).mockResolvedValue([
       cohort,
       { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
@@ -116,5 +117,16 @@ describe('SignUpLeadModal', () => {
     expect(screen.queryByRole('menuitemradio', {
       name: /Soft Skills — Summer 2026/,
     })).not.toBeInTheDocument();
+  });
+
+  it('asks for a note type when the lead has notes', async () => {
+    render(<SignUpLeadModal lead={{ ...lead, notes: 'Avoid peanuts' }} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    const noteType = screen.getByRole('button', { name: 'Type of note' });
+    fireEvent.click(noteType);
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Health' }));
+    const createProfile = screen.getByRole('button', { name: 'Create Profile' });
+    await waitFor(() => expect(createProfile).toBeEnabled());
+    fireEvent.click(createProfile);
+    await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'health'));
   });
 });

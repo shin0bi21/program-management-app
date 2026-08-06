@@ -25,6 +25,7 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   onSuccess: () => void | Promise<void>;
 }) {
   const [cohortId, setCohortId] = useState('');
+  const [noteCategory, setNoteCategory] = useState<'general' | 'health' | 'preference'>('general');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -50,6 +51,7 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
     setSubmitStatus('idle');
     setStatusMessage('');
     setCohortId('');
+    setNoteCategory('general');
   }, [lead]);
 
   const visibleCohorts = useMemo(() => {
@@ -69,7 +71,8 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
     setSubmitStatus('submitting');
     setStatusMessage(`Creating youth profile for ${youthName}...`);
     try {
-      await signUpLead(lead.id, cohortId || null);
+      if (lead.notes?.trim()) await signUpLead(lead.id, cohortId || null, noteCategory);
+      else await signUpLead(lead.id, cohortId || null);
       await onSuccess();
       setStatusMessage(selectedCohort
         ? `Youth profile successfully created and added to ${selectedCohort.programName} - ${selectedCohort.name}.`
@@ -156,6 +159,24 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
               </p>
             )}
           </section>
+
+          {lead.notes?.trim() && (
+            <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-note-title">
+              <h3 id="sign-up-lead-note-title">Lead note</h3>
+              <FloatingSelect
+                id="sign-up-note-category"
+                ariaLabel="Type of note"
+                value={noteCategory}
+                onChange={value => setNoteCategory(value as typeof noteCategory)}
+                options={[
+                  { value: 'general', label: 'General' },
+                  { value: 'health', label: 'Health' },
+                  { value: 'preference', label: 'Preference' },
+                ]}
+                disabled={submissionComplete}
+              />
+            </section>
+          )}
         </form>
       )}
     </Modal>

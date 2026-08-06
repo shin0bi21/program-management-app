@@ -105,34 +105,6 @@ describe('Schools API', () => {
       createdIds.push(res.body.id);
     });
 
-    it('should create school with all optional fields (200)', async () => {
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          name: `Full School ${Date.now()}`,
-          board: 'public',
-          address: '100 School Road',
-          postalCode: 'M1A 1A1',
-        });
-      expect(res.status).toBe(200);
-      expect(res.body.id).toBeDefined();
-      expect(res.body.board).toBe('public');
-      expect(res.body.address).toBe('100 School Road');
-      expect(res.body.postalCode).toBe('M1A 1A1');
-      createdIds.push(res.body.id);
-    });
-
-    it('should create school with catholic board (200)', async () => {
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: `Catholic School ${Date.now()}`, board: 'catholic' });
-      expect(res.status).toBe(200);
-      expect(res.body.board).toBe('catholic');
-      createdIds.push(res.body.id);
-    });
-
     it('should allow staff with write:schools to create (200)', async () => {
       const staff = await seedTestUser({ email: `schools-staff-create-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staff.userId, 'staff', staff.email);
@@ -152,7 +124,7 @@ describe('Schools API', () => {
       const res = await request(app)
         .post('/api/schools')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ board: 'public' });
+        .send({});
       expect(res.status).toBe(400);
     });
 
@@ -169,14 +141,6 @@ describe('Schools API', () => {
         .post('/api/schools')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'A'.repeat(201) });
-      expect(res.status).toBe(400);
-    });
-
-    it('should reject invalid board value (400)', async () => {
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'Test School', board: 'private' });
       expect(res.status).toBe(400);
     });
 
@@ -245,34 +209,6 @@ describe('Schools API', () => {
         .send({ id: schoolId, name: 'Updated Name' });
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Updated Name');
-    });
-
-    it('should update optional fields (200)', async () => {
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: schoolId, name: 'Updated Fields', board: 'catholic', address: '55 Oak Ave', postalCode: 'K1A 0A9' });
-      expect(res.status).toBe(200);
-      expect(res.body.board).toBe('catholic');
-      expect(res.body.address).toBe('55 Oak Ave');
-      expect(res.body.postalCode).toBe('K1A 0A9');
-    });
-
-    it('should clear optional fields when set to null (200)', async () => {
-      // First set them
-      await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: schoolId, name: 'With Fields', board: 'public', address: '1 Main St' });
-
-      // Then clear them
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: schoolId, name: 'With Fields', board: null, address: null });
-      expect(res.status).toBe(200);
-      expect(res.body.board).toBeNull();
-      expect(res.body.address).toBeNull();
     });
 
     it('should reject update with nonexistent id (404)', async () => {

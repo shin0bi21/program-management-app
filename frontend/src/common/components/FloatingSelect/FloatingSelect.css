@@ -51,9 +51,34 @@
   padding: 9px 12px;
 }
 
+.floating-select-option-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.floating-select-option-row .floating-select-option {
+  flex: 1;
+  min-width: 0;
+}
+
 .floating-menu-panel .floating-select-option[aria-checked="true"] {
   background: var(--accent-10);
   color: var(--brand-primary);
+}
+
+.floating-menu-panel .floating-select-option-action {
+  flex: 0 0 2rem;
+  padding: 0.5rem;
+  color: var(--color-muted);
+}
+
+.floating-menu-panel .floating-select-option-action:hover {
+  color: var(--brand-primary);
+}
+
+.floating-menu-panel .floating-select-option-action--danger:hover {
+  color: var(--color-danger-btn);
 }
 
 .floating-menu-panel .floating-select-action {

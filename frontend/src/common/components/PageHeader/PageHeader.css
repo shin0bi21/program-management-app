@@ -1,7 +1,7 @@
 .page-header {
   display: flex;
   align-items: flex-end;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.25rem;
 }
 
 .page-header--with-controls {
@@ -14,20 +14,21 @@
 }
 
 .page-header .btn {
-  padding: 0.4rem 0.8rem;
+  padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
 }
 
 .page-header .btn,
-.page-header .filter-card-trigger {
+.page-header .filter-card-trigger,
+.page-header .search-input input {
   box-sizing: border-box;
-  height: 2.25rem;
-  min-height: 2.25rem;
+  height: 2rem;
+  min-height: 2rem;
 }
 
 .page-header .search-input input {
-  padding-block: 7px;
-  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
 }
 
 .page-header--with-controls .page-title-row {
