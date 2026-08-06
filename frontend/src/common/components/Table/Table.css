@@ -39,7 +39,7 @@
 }
 
 .table td {
-  padding: 0.9375rem 1rem;
+  padding: 12px;
   border-bottom: 1px solid var(--ink-08);
   color: var(--color-ink);
 }
