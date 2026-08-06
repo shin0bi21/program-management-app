@@ -6,12 +6,13 @@ import type { YouthFilters } from '../../../common/types/youth';
 
 export type { YouthProfile };
 
-export function useYouth(filters: YouthFilters = {}) {
+export function useYouth(filters: YouthFilters | null = {}) {
   const [youth, setYouth] = useState<YouthProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadYouth = async () => {
+    if (!filters) return;
     setLoading(true);
     setError('');
 
@@ -26,8 +27,9 @@ export function useYouth(filters: YouthFilters = {}) {
   };
 
   useEffect(() => {
+    if (!filters) return;
     loadYouth();
-  }, [filters.search, filters.statuses, filters.programIds, filters.cohortIds]);
+  }, [filters?.search, filters?.statuses, filters?.programIds, filters?.cohortIds]);
 
   return { youth, setYouth, loading, error, refetch: loadYouth };
 }

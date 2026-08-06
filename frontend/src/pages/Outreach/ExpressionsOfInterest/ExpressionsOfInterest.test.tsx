@@ -5,6 +5,7 @@ import ExpressionsOfInterest from './ExpressionsOfInterest';
 
 const getExpressions = vi.fn();
 const convertExpression = vi.fn();
+const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
 
 vi.mock('./api/expressionsOfInterest.api', () => ({
   getExpressionsOfInterest: (...args: unknown[]) => getExpressions(...args),
@@ -19,9 +20,12 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 describe('ExpressionsOfInterest', () => {
   beforeEach(() => {
+    preferenceHook.preference = null;
+    preferenceHook.save.mockReset();
     convertExpression.mockReset();
     convertExpression.mockResolvedValue({ id: 'lead-1' });
     getExpressions.mockResolvedValue([{

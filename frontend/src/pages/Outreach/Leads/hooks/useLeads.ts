@@ -3,13 +3,14 @@ import { getErrorMessage } from '../../../../common/utils/clientErrors';
 import { getLeads } from '../api/leads.api';
 import type { Lead, LeadFilters } from '../types';
 
-export function useLeads(filters: LeadFilters) {
+export function useLeads(filters: LeadFilters | null) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    if (!filters) return;
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError(null);
@@ -21,8 +22,8 @@ export function useLeads(filters: LeadFilters) {
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [filters.search, filters.statuses, filters.programIds]);
+  }, [filters?.search, filters?.statuses, filters?.programIds]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (filters) void load(); }, [filters, load]);
   return { leads, setLeads, loading, error, reload: load };
 }

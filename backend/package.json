@@ -15,6 +15,7 @@
     "test:programs": "jest --testPathPatterns=tests/programs",
     "test:cohorts": "jest --testPathPatterns=tests/cohorts",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
+    "test:preferences": "jest --testPathPatterns=tests/preferences",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
     "db:migrate:test": "sh -c 'set -a && . ./.env.test && set +a && npx tsx db/scripts/update_schemas.ts'",
     "test:watch": "jest --watch",

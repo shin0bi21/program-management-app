@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -14,6 +14,7 @@ import { deleteSession } from '../../../common/api/cohorts.api';
 import { useAuth } from '../../../common/context/AuthContext';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import useUserPreference from '../../../common/hooks/useUserPreference';
 import type { CohortSession } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
@@ -41,7 +42,6 @@ export default function Sessions() {
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, refresh: refreshCohorts } = useCohorts();
   const sessionTypes = useSessionTypes();
-  const staffDefaultsApplied = useRef(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -51,19 +51,14 @@ export default function Sessions() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-  const view: SessionsView = searchParams.get('view') === 'list' ? 'list' : 'calendar';
-  const programFilter = searchParams.get('program') ?? '';
-  const selectedProgramIds = useMemo(() => programFilter.split(',').filter(Boolean), [programFilter]);
-  const cohortId = searchParams.get('cohort') ?? '';
+  const [view, setViewState] = useState<SessionsView>('calendar');
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+  const [cohortId, setCohortId] = useState('');
+  const [selectedSessionTypeIds, setSelectedSessionTypeIds] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([]);
+  const [filtersReady, setFiltersReady] = useState(false);
   const selectedSessionId = searchParams.get('session') ?? '';
-  const statusFilter = searchParams.get('status') ?? '';
-  const sessionTypeFilter = searchParams.get('type') ?? '';
-  const selectedSessionTypeIds = useMemo(() => sessionTypeFilter.split(',').filter(Boolean), [sessionTypeFilter]);
-  const statusFilters = useMemo(
-    () =>
-      statusFilter.split(',').filter((value): value is StatusFilter => value === 'upcoming' || value === 'completed'),
-    [statusFilter],
-  );
+  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('session-filters');
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
 
@@ -90,29 +85,30 @@ export default function Sessions() {
   }, [search]);
 
   useEffect(() => {
-    if (staffDefaultsApplied.current || programsLoading || cohortsLoading || role === null) return;
-    staffDefaultsApplied.current = true;
-    if (searchParams.has('session')) return;
-
-    const assignedProgram = getSingleAssignedProgram(role, programs);
-    if (!assignedProgram) return;
-
+    const legacyKeys = ['view', 'program', 'cohort', 'status', 'type'];
+    if (!legacyKeys.some(key => searchParams.has(key))) return;
     const next = new URLSearchParams(searchParams);
-    let changed = false;
-    const requestedProgramId = next.get('program');
-    if (!requestedProgramId) {
-      next.set('program', assignedProgram.id);
-      changed = true;
+    legacyKeys.forEach(key => next.delete(key));
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (filtersReady || preferenceLoading || programsLoading || cohortsLoading || role === null) return;
+    const availableProgramIds = new Set(programs.map(program => program.id));
+    if (preference) {
+      const programIds = preference.programIds.filter(id => availableProgramIds.has(id));
+      setViewState(preference.view);
+      setSelectedProgramIds(programIds);
+      setCohortId(cohorts.some(cohort => cohort.id === preference.cohortId) ? preference.cohortId ?? '' : '');
+      setSelectedSessionTypeIds(preference.sessionTypeIds);
+      setStatusFilters(preference.statuses);
+    } else {
+      const assignedProgram = getSingleAssignedProgram(role, programs);
+      setSelectedProgramIds(assignedProgram ? [assignedProgram.id] : []);
+      setCohortId(assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '');
     }
-    if (!next.has('cohort') && (!requestedProgramId || requestedProgramId === assignedProgram.id)) {
-      const activeCohort = getSingleActiveCohort(cohorts, assignedProgram.id);
-      if (activeCohort) {
-        next.set('cohort', activeCohort.id);
-        changed = true;
-      }
-    }
-    if (changed) setSearchParams(next, { replace: true });
-  }, [cohorts, cohortsLoading, programs, programsLoading, role, searchParams, setSearchParams]);
+    setFiltersReady(true);
+  }, [cohorts, cohortsLoading, filtersReady, preference, preferenceLoading, programs, programsLoading, role]);
 
   const {
     sessions,
@@ -127,7 +123,7 @@ export default function Sessions() {
       statuses: statusFilters,
       search: debouncedSearch || undefined,
     },
-    view === 'list',
+    filtersReady && view === 'list',
   );
 
   const filteredCohorts = useMemo(
@@ -174,22 +170,46 @@ export default function Sessions() {
   );
 
   const setFilter = (key: string, values: string[]) => {
+    const nextProgramIds = key === 'program' ? values : selectedProgramIds;
+    const nextCohortId = key === 'program' ? '' : key === 'cohort' ? values[0] ?? '' : cohortId;
+    const nextSessionTypeIds = key === 'type' ? values : selectedSessionTypeIds;
+    const nextStatuses = key === 'status' ? values as StatusFilter[] : statusFilters;
+    setSelectedProgramIds(nextProgramIds);
+    setCohortId(nextCohortId);
+    setSelectedSessionTypeIds(nextSessionTypeIds);
+    setStatusFilters(nextStatuses);
+    void save({
+      view,
+      programIds: nextProgramIds,
+      cohortId: nextCohortId || null,
+      sessionTypeIds: nextSessionTypeIds,
+      statuses: nextStatuses,
+    });
     const next = new URLSearchParams(searchParams);
-    if (values.length) next.set(key, values.join(','));
-    else next.delete(key);
-    if (key === 'program') next.delete('cohort');
     next.delete('session');
     setSearchParams(next);
   };
 
   const setView = (nextView: SessionsView) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('view', nextView);
-    setSearchParams(next);
+    setViewState(nextView);
+    void save({
+      view: nextView,
+      programIds: selectedProgramIds,
+      cohortId: cohortId || null,
+      sessionTypeIds: selectedSessionTypeIds,
+      statuses: statusFilters,
+    });
   };
 
   const clearFilters = () => {
-    setSearchParams({ view });
+    setSelectedProgramIds([]);
+    setCohortId('');
+    setSelectedSessionTypeIds([]);
+    setStatusFilters([]);
+    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] });
+    const next = new URLSearchParams(searchParams);
+    next.delete('session');
+    setSearchParams(next);
   };
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
@@ -331,7 +351,10 @@ export default function Sessions() {
               />
             )}
           />
-          {view === 'list' ? (
+          {preferenceError && <p role="alert">{preferenceError}</p>}
+          {!filtersReady ? (
+            <p role="status">Loading saved filters…</p>
+          ) : view === 'list' ? (
             <TableDetailLayout
               ariaLabel="Sessions and overview"
               table={

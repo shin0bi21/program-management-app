@@ -25,6 +25,7 @@ import { STORAGE_KEYS } from '../../common/utils/storage';
 import Modal from '../../common/components/Modal/Modal';
 import SessionNoteDetails from '../../common/components/SessionNoteDetails/SessionNoteDetails';
 import { formatShortDate } from '../../common/utils/date';
+import useUserPreference from '../../common/hooks/useUserPreference';
 import './Youth.css';
 
 const initialNotesTab = (): NotesTab => (
@@ -34,13 +35,14 @@ const initialNotesTab = (): NotesTab => (
 export default function Youth() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>(['active']);
+  const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const queryFilters = useMemo<YouthFilters>(() => ({
+  const [filtersReady, setFiltersReady] = useState(false);
+  const queryFilters = useMemo<YouthFilters | null>(() => filtersReady ? ({
     search: debouncedSearch,
     statuses: statusFilters,
     programIds: programFilters,
-  }), [debouncedSearch, programFilters, statusFilters]);
+  }) : null, [debouncedSearch, filtersReady, programFilters, statusFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
@@ -48,15 +50,38 @@ export default function Youth() {
   const [sessionNotesLoading, setSessionNotesLoading] = useState(false);
   const [sessionNotesError, setSessionNotesError] = useState<string | null>(null);
   const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
+  const { permissions, role } = useAuth();
+  const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
+  const {
+    preference: savedFilters,
+    loading: preferencesLoading,
+    error: preferencesError,
+    save: saveFilters,
+  } = useUserPreference('youth-profile-filters');
   const { youth, setYouth, loading, error } = useYouth(queryFilters);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
     selectItem: selectProfile,
   } = useTableSelection(youth);
-  const { permissions, role } = useAuth();
-  const { programs } = usePrograms({ assignedOnly: role === 'staff' });
   const canWrite = permissions.includes('write:youth_profiles');
+
+  useEffect(() => {
+    if (filtersReady || preferencesLoading || programsLoading) return;
+    const availableProgramIds = new Set(programs.map(program => program.id));
+    setStatusFilters(savedFilters?.statuses ?? ['active']);
+    setProgramFilters(savedFilters
+      ? savedFilters.programIds.filter(programId => availableProgramIds.has(programId))
+      : role === 'staff' ? programs.map(program => program.id) : []);
+    setFiltersReady(true);
+  }, [filtersReady, preferencesLoading, programs, programsLoading, role, savedFilters]);
+
+  const persistFilters = (
+    statuses: Array<'active' | 'inactive'>,
+    programIds: string[],
+  ) => {
+    void saveFilters({ statuses, programIds });
+  };
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -193,15 +218,24 @@ export default function Youth() {
             categories={filterCategories}
             values={{ status: statusFilters, program: programFilters }}
             onApply={(category, selected) => {
-              if (category === 'status') setStatusFilters(selected as Array<'active' | 'inactive'>);
-              if (category === 'program') setProgramFilters(selected);
+              if (category === 'status') {
+                const statuses = selected as Array<'active' | 'inactive'>;
+                setStatusFilters(statuses);
+                persistFilters(statuses, programFilters);
+              }
+              if (category === 'program') {
+                setProgramFilters(selected);
+                persistFilters(statusFilters, selected);
+              }
             }}
             onClearAll={() => {
               setStatusFilters([]);
               setProgramFilters([]);
+              persistFilters([], []);
             }}
           />}
         />
+        {preferencesError && <p role="alert">{preferencesError}</p>}
 
         <TableDetailLayout
           ariaLabel="Youth profiles"
