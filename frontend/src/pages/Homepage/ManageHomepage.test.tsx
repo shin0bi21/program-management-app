@@ -2,7 +2,17 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ManageHomepage from './ManageHomepage';
+
+const renderPage = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter><ManageHomepage /></MemoryRouter>
+    </QueryClientProvider>,
+  );
+};
 
 const api = vi.hoisted(() => ({
   getManagedHomepage: vi.fn(),
@@ -77,11 +87,7 @@ describe('ManageHomepage', () => {
   });
 
   it('shows managed images and the homepage preview', async () => {
-    render(
-      <MemoryRouter>
-        <ManageHomepage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     expect(await screen.findByText('Adventure Bay trip.')).toBeInTheDocument();
     expect(document.querySelector('.homepage-image-row__thumbnail')).toHaveAttribute(
@@ -97,11 +103,7 @@ describe('ManageHomepage', () => {
 
   it('uploads a new hero image', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <ManageHomepage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     await screen.findByText('Adventure Bay trip.');
     const imagesSection = screen.getByRole('heading', { name: 'Manage Images' }).closest('section')!;
@@ -132,11 +134,7 @@ describe('ManageHomepage', () => {
         },
       ],
     });
-    render(
-      <MemoryRouter>
-        <ManageHomepage />
-      </MemoryRouter>,
-    );
+    renderPage();
 
     const dataTransfer = {
       effectAllowed: '',

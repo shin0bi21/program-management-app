@@ -29,7 +29,7 @@ export default function ExpressionsOfInterest() {
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, setSubmissions, loading, error } = useExpressionsOfInterest(queryFilters);
+  const { submissions, upsertSubmission, loading, error } = useExpressionsOfInterest(queryFilters);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
@@ -71,7 +71,7 @@ export default function ExpressionsOfInterest() {
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
     const updated = await updateExpressionOfInterestStatus(item.id, status);
-    setSubmissions(current => current.map(entry => entry.id === updated.id ? { ...entry, ...updated } : entry));
+    upsertSubmission(updated);
   };
 
   const handleConvert = async (item: ExpressionOfInterest) => {
@@ -79,9 +79,7 @@ export default function ExpressionsOfInterest() {
     setConvertingId(item.id);
     try {
       await convertExpressionOfInterest(item.id);
-      setSubmissions(current => current.map(entry => (
-        entry.id === item.id ? { ...entry, status: 'converted' } : entry
-      )));
+      upsertSubmission({ ...item, status: 'converted' });
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
