@@ -288,7 +288,7 @@ export default function Cohorts() {
             details={
               <>
                 <DashboardCard
-                  title="Youth enrolled"
+                  title={!selectedCohort || selectedCohort.rosterMode === 'enrolled' ? 'Youth enrolled' : 'Youth attended'}
                   emptyMessage="No cohort selected."
                   action={
                     !selectedCohort || selectedCohort.rosterMode === 'enrolled' ? (
@@ -320,7 +320,11 @@ export default function Cohorts() {
                   }
                 >
                   {selectedCohort ? (
-                    <strong className="dashboard-card__metric">{selectedCohort.enrolledCount}</strong>
+                    <strong className="dashboard-card__metric">
+                      {selectedCohort.rosterMode === 'enrolled'
+                        ? selectedCohort.enrolledCount
+                        : selectedCohort.uniqueAttendeeCount}
+                    </strong>
                   ) : undefined}
                 </DashboardCard>
                 <DashboardCard
