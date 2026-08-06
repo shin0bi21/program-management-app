@@ -5,6 +5,7 @@ import Leads from './Leads';
 const getLeads = vi.fn();
 const updateLead = vi.fn();
 const signUpLead = vi.fn();
+const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
 
 vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
@@ -17,6 +18,7 @@ vi.mock('./api/leads.api', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
@@ -28,6 +30,8 @@ vi.mock('../../../common/api/cohorts.api', () => ({
 
 describe('Leads', () => {
   beforeEach(() => {
+    preferenceHook.preference = null;
+    preferenceHook.save.mockReset();
     signUpLead.mockResolvedValue({});
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,

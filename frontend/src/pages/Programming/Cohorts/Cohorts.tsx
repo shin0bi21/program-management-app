@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
@@ -17,6 +17,7 @@ import { useFloatingMenu } from '../../../common/hooks/useFloatingMenu';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import useTableSelection from '../../../common/hooks/useTableSelection';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import useUserPreference from '../../../common/hooks/useUserPreference';
 import type { ProgramCohort } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
@@ -31,20 +32,20 @@ import './Cohorts.css';
 
 export default function Cohorts() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { permissions, role } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
   const { programs, setPrograms, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const staffDefaultsApplied = useRef(false);
-  const selectedProgramId = searchParams.get('program') ?? '';
-  const selectedStatus = searchParams.get('status') ?? '';
+  const [selectedProgramId, setSelectedProgramId] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [filtersReady, setFiltersReady] = useState(false);
+  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('cohort-filters');
   const {
     cohorts,
     loading: cohortsLoading,
     error,
     refresh: refreshCohorts,
-  } = useCohorts(selectedProgramId || undefined);
+  } = useCohorts(selectedProgramId || undefined, filtersReady);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [programModalOpen, setProgramModalOpen] = useState(false);
@@ -70,23 +71,17 @@ export default function Cohorts() {
   }, [search]);
 
   useEffect(() => {
-    if (staffDefaultsApplied.current || programsLoading || role === null) return;
-    staffDefaultsApplied.current = true;
-    const assignedProgram = getSingleAssignedProgram(role, programs);
-    if (!assignedProgram) return;
-
-    const next = new URLSearchParams(searchParams);
-    let changed = false;
-    if (!next.has('program')) {
-      next.set('program', assignedProgram.id);
-      changed = true;
-    }
-    if (!next.has('status')) {
-      next.set('status', 'active');
-      changed = true;
-    }
-    if (changed) setSearchParams(next, { replace: true });
-  }, [programs, programsLoading, role, searchParams, setSearchParams]);
+    if (filtersReady || preferenceLoading || programsLoading || role === null) return;
+    const availableProgramIds = new Set(programs.map(program => program.id));
+    const defaultProgram = getSingleAssignedProgram(role, programs)?.id ?? '';
+    setSelectedProgramId(
+      preference?.programId && availableProgramIds.has(preference.programId)
+        ? preference.programId
+        : preference ? '' : defaultProgram,
+    );
+    setSelectedStatus(preference?.status ?? (role === 'staff' ? 'active' : ''));
+    setFiltersReady(true);
+  }, [filtersReady, preference, preferenceLoading, programs, programsLoading, role]);
 
   const visibleCohorts = useMemo(
     () =>
@@ -180,17 +175,19 @@ export default function Cohorts() {
   );
 
   const selectProgram = (programId: string) => {
-    const next = new URLSearchParams(searchParams);
-    if (programId) next.set('program', programId);
-    else next.delete('program');
-    setSearchParams(next);
+    setSelectedProgramId(programId);
+    void save({
+      programId: programId || null,
+      status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null,
+    });
   };
 
   const selectStatus = (status: string) => {
-    const next = new URLSearchParams(searchParams);
-    if (status) next.set('status', status);
-    else next.delete('status');
-    setSearchParams(next);
+    setSelectedStatus(status);
+    void save({
+      programId: selectedProgramId || null,
+      status: (status || null) as 'active' | 'upcoming' | 'completed' | null,
+    });
   };
 
   const openProgramModal = () => {
@@ -258,12 +255,17 @@ export default function Cohorts() {
                   if (category === 'program') selectProgram(selected[0] ?? '');
                   if (category === 'status') selectStatus(selected[0] ?? '');
                 }}
-                onClearAll={() => setSearchParams({})}
+                onClearAll={() => {
+                  setSelectedProgramId('');
+                  setSelectedStatus('');
+                  void save({ programId: null, status: null });
+                }}
               />
             }
           />
 
           {programsError && <p className="form-error">{programsError}</p>}
+          {preferenceError && <p role="alert">{preferenceError}</p>}
           <TableDetailLayout
             ariaLabel="Programming cohorts and overview"
             table={

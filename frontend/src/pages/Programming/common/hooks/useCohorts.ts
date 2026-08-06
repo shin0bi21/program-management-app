@@ -3,13 +3,14 @@ import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';
 
-export function useCohorts(programId?: string) {
+export function useCohorts(programId?: string, enabled = true) {
   const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
@@ -23,14 +24,14 @@ export function useCohorts(programId?: string) {
     } finally {
       if (requestIdRef.current === requestId) setLoading(false);
     }
-  }, [programId]);
+  }, [enabled, programId]);
 
   useEffect(() => {
-    void refresh();
+    if (enabled) void refresh();
     return () => {
       requestIdRef.current += 1;
     };
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   return { cohorts, loading, error, refresh };
 }

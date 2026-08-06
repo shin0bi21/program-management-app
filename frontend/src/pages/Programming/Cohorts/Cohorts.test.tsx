@@ -30,6 +30,12 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as { programId: string | null; status: 'active' | 'upcoming' | 'completed' | null } | null,
+  loading: false,
+  error: null,
+  save: vi.fn(),
+}));
 
 vi.mock('../../../common/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
@@ -44,6 +50,7 @@ vi.mock('../../../common/api/programs.api', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => auth,
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../../common/hooks/usePrograms', () => ({
   usePrograms: () => ({
@@ -57,6 +64,8 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
 describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    preferenceHook.preference = null;
+    preferenceHook.save.mockReset();
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'];
     programState.programs = [{
@@ -252,9 +261,7 @@ describe('Cohorts', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
-      '/programming/cohorts?program=program-1&status=active',
-    ));
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
     await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith('program-1'));
   });
 

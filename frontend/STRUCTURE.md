@@ -49,6 +49,7 @@ src/
       sessionExpired.ts   ← awaitReLogin / resolveReLogin
       tokenRefresh.ts     ← proactive refresh with deduplication
       programs.api.ts     ← canonical program lookup API
+      preferences.api.ts  ← typed per-user page filter and view preferences
     components/
       ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
@@ -75,6 +76,7 @@ src/
       usePrograms.ts      ← program lookup state shared by Lead and Youth workflows
       useSchools.ts       ← school lookup state shared by Youth workflows
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
+      useUserPreference.ts← loads and saves cross-device page preferences
     styles/
       brand.css
       forms.css

@@ -13,6 +13,7 @@ import expressionOfInterestRoutes from './routes/expressionOfInterestRoutes';
 import leadRoutes from './routes/leadRoutes';
 import cohortRoutes from './routes/cohortRoutes';
 import homepageRoutes from './routes/homepageRoutes';
+import preferenceRoutes from './routes/preferenceRoutes';
 import { requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
 import { NotFoundError } from './errors';
@@ -69,6 +70,7 @@ app.use('/api/schools', schoolRoutes);
 app.use('/api/programs', programRoutes);
 app.use('/api/cohorts', cohortRoutes);
 app.use('/api/homepage', homepageRoutes);
+app.use('/api/preferences', preferenceRoutes);
 
 // 404 handler — catches all unmatched routes; forwards to errorHandler
 app.use((_req, _res, next) => {

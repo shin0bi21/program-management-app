@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PreferenceValues } from '../../../common/api/preferences.api';
 import type { Program } from '../../../common/types/program';
 import Sessions from './Sessions';
 
@@ -15,6 +16,7 @@ const getCohorts = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionAttachments = vi.fn();
 const getSessionTypes = vi.fn();
+const renderCalendar = vi.fn();
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
   permissions: ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
@@ -28,6 +30,17 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     minAge: 12,
     maxAge: 15,
   }],
+}));
+const preferenceHook = vi.hoisted<{
+  preference: PreferenceValues['session-filters'] | null;
+  loading: boolean;
+  error: string | null;
+  save: ReturnType<typeof vi.fn>;
+}>(() => ({
+  preference: { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
+  loading: false,
+  error: null,
+  save: vi.fn(),
 }));
 
 vi.mock('../../../common/api/cohorts.api', () => ({
@@ -49,10 +62,12 @@ vi.mock('../../../common/hooks/usePrograms', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => auth,
 }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
   default: ({
     onSessionSelect,
+    ...props
   }: {
     onSessionSelect: (session: {
       id: string;
@@ -73,8 +88,10 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
       attendanceRate: number | null;
       state: 'upcoming';
     }) => void;
+    selectedProgramIds: string[];
+    selectedCohortId: string;
   }) => (
-    <div data-testid="sessions-calendar-view">
+    <div data-testid="sessions-calendar-view" ref={() => { renderCalendar(props); }}>
       <button
         type="button"
         onClick={() =>
@@ -107,6 +124,9 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
+    preferenceHook.preference = { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceHook.save.mockReset();
+    renderCalendar.mockReset();
     auth.role = 'admin';
     auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
     programState.programs = [{
@@ -203,7 +223,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
@@ -295,6 +315,7 @@ describe('Sessions', () => {
   });
 
   it('defaults staff with one assigned program to its active cohort', async () => {
+    preferenceHook.preference = null;
     auth.role = 'staff';
     programState.programs = [
       ...programState.programs,
@@ -315,18 +336,17 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
-      '/programming/sessions?view=list&program=program-1&cohort=cohort-1',
-    ));
-    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
+    await waitFor(() => expect(renderCalendar).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        programIds: ['program-1'],
-        cohortId: 'cohort-1',
+        selectedProgramIds: ['program-1'],
+        selectedCohortId: 'cohort-1',
       }),
     ));
   });
 
   it('does not default session filters when staff has multiple assigned programs', async () => {
+    preferenceHook.preference = null;
     auth.role = 'staff';
     programState.programs = [
       ...programState.programs,
@@ -347,8 +367,8 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Communication')).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions?view=list');
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
   });
 
   it('opens the add sessions flow from the page header', async () => {
@@ -368,13 +388,14 @@ describe('Sessions', () => {
   });
 
   it('switches between list and calendar views on the same page', async () => {
+    preferenceHook.preference = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     render(
       <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
     const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
     const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
@@ -383,6 +404,8 @@ describe('Sessions', () => {
 
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
+
+    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list' }));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: List' })).toBeInTheDocument();

@@ -5,11 +5,18 @@ import { makeYouthProfile } from '../../tests/factories/youth';
 
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({ getYouthSessionNotes: vi.fn() }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as { statuses: Array<'active' | 'inactive'>; programIds: string[] } | null,
+  loading: false,
+  error: null as string | null,
+  save: vi.fn(),
+}));
 
 vi.mock('./hooks/useYouth', () => ({
   useYouth: (...args: unknown[]) => mockUseYouth(...args),
 }));
 vi.mock('../../common/api/youth.api', () => youthApi);
+vi.mock('../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../common/hooks/usePrograms', () => ({
   usePrograms: (...args: unknown[]) => {
@@ -38,6 +45,10 @@ describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
     youthApi.getYouthSessionNotes.mockResolvedValue([]);
+    preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
+    preferenceHook.save.mockReset();
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
       setYouth: vi.fn(),
@@ -58,8 +69,14 @@ describe('Youth', () => {
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
   });
 
-  it('requests youth filtered by program', async () => {
+  it('defaults staff to active youth in their assigned programs and persists changes', async () => {
     render(<Youth />);
+
+    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+      search: '',
+      statuses: ['active'],
+      programIds: ['program-1'],
+    }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /Program/ }));
@@ -69,17 +86,21 @@ describe('Youth', () => {
     await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['active'],
-      programIds: ['program-1'],
+      programIds: [],
     }));
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: ['active'],
+      programIds: [],
+    });
   });
 
-  it('defaults to active youth and can filter inactive youth', async () => {
+  it('can filter inactive youth and restore the saved filters on another visit', async () => {
     render(<Youth />);
 
     await waitFor(() => expect(mockUseYouth).toHaveBeenCalledWith({
       search: '',
       statuses: ['active'],
-      programIds: [],
+      programIds: ['program-1'],
     }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
@@ -88,6 +109,22 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Inactive' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
+    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+      search: '',
+      statuses: ['inactive'],
+      programIds: ['program-1'],
+    }));
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: ['inactive'],
+      programIds: ['program-1'],
+    });
+
+    preferenceHook.preference = {
+      statuses: ['inactive'],
+      programIds: [],
+    };
+    mockUseYouth.mockClear();
+    render(<Youth />);
     await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['inactive'],

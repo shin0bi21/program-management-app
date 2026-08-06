@@ -13,6 +13,7 @@ import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useCo
 import { formatShortDate } from '../../../common/utils/date';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import useTableSelection from '../../../common/hooks/useTableSelection';
+import useUserPreference from '../../../common/hooks/useUserPreference';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal';
@@ -31,9 +32,13 @@ export default function Leads() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const queryFilters = useMemo<LeadFilters>(() => ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters }), [debouncedSearch, statusFilters, programFilters]);
+  const [filtersReady, setFiltersReady] = useState(false);
+  const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
+    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
+    : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
   const { leads, loading, error, reload } = useLeads(queryFilters);
-  const { programs } = usePrograms();
+  const { programs, loading: programsLoading } = usePrograms();
+  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
   const {
     selectedItem: selectedLead,
@@ -48,6 +53,18 @@ export default function Leads() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (filtersReady || preferenceLoading || programsLoading) return;
+    const availableProgramIds = new Set(programs.map(program => program.id));
+    setStatusFilters(preference?.statuses ?? []);
+    setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
+    setFiltersReady(true);
+  }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
+
+  const persistFilters = (nextStatuses: LeadStatus[], nextProgramIds: string[]) => {
+    void save({ statuses: nextStatuses, programIds: nextProgramIds });
+  };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -101,12 +118,20 @@ export default function Leads() {
         categories={filterCategories}
         values={{ status: statusFilters, program: programFilters }}
         onApply={(category, selected) => {
-          if (category === 'status') setStatusFilters(selected as LeadStatus[]);
-          if (category === 'program') setProgramFilters(selected);
+          if (category === 'status') {
+            const next = selected as LeadStatus[];
+            setStatusFilters(next);
+            persistFilters(next, programFilters);
+          }
+          if (category === 'program') {
+            setProgramFilters(selected);
+            persistFilters(statusFilters, selected);
+          }
         }}
-        onClearAll={() => { setStatusFilters([]); setProgramFilters([]); }}
+        onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
       />}
     />
+    {preferenceError && <p role="alert">{preferenceError}</p>}
     <TableDetailLayout
       ariaLabel="Leads"
       table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} />}
