@@ -208,6 +208,7 @@ export async function getYouthSessionNotes(
       pc.name AS cohort_name,
       p.id AS program_id,
       p.name AS program_name,
+      p.roster_mode,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(

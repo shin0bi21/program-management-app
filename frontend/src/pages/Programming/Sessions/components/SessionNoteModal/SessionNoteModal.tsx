@@ -25,7 +25,7 @@ export default function SessionNoteModal({
   onClose,
   onSaved,
 }: {
-  session: CohortSession | null;
+  session: Pick<CohortSession, 'id' | 'rosterMode'> | null;
   note?: SessionNote | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;

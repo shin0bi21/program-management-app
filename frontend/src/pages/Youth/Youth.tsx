@@ -31,6 +31,8 @@ import './Youth.css';
 import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
 import ProfileNoteDetails from '../../common/components/ProfileNoteDetails/ProfileNoteDetails';
 import { getErrorMessage } from '../../common/utils/clientErrors';
+import SessionNoteModal from '../Programming/Sessions/components/SessionNoteModal/SessionNoteModal';
+import { deleteSessionNote } from '../../common/api/cohorts.api';
 
 const initialNotesTab = (): NotesTab => (
   localStorage.getItem(STORAGE_KEYS.YOUTH_NOTES_TAB) === 'session' ? 'session' : 'profile'
@@ -51,6 +53,10 @@ export default function Youth() {
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [notesTab, setNotesTab] = useState<NotesTab>(initialNotesTab);
   const [selectedSessionNote, setSelectedSessionNote] = useState<YouthSessionNote | null>(null);
+  const [sessionNoteEditTarget, setSessionNoteEditTarget] = useState<YouthSessionNote | null>(null);
+  const [sessionNoteDeleteTarget, setSessionNoteDeleteTarget] = useState<YouthSessionNote | null>(null);
+  const [deletingSessionNote, setDeletingSessionNote] = useState(false);
+  const [sessionNoteDeleteError, setSessionNoteDeleteError] = useState('');
   const [profileNoteTarget, setProfileNoteTarget] = useState<YouthProfileNote | 'new' | null>(null);
   const [selectedProfileNote, setSelectedProfileNote] = useState<YouthProfileNote | null>(null);
   const [confirmingProfileNoteDelete, setConfirmingProfileNoteDelete] = useState(false);
@@ -72,6 +78,7 @@ export default function Youth() {
     selectItem: selectProfile,
   } = useTableSelection(youth);
   const canWrite = permissions.includes('write:youth_profiles');
+  const canManageSessionNotes = permissions.includes('write:sessions');
   const sessionNotesQuery = useQuery({
     queryKey: ['youth-session-notes', selectedProfileId],
     queryFn: ({ signal }) => getYouthSessionNotes(selectedProfileId!, { signal }),
@@ -112,6 +119,10 @@ export default function Youth() {
 
   useEffect(() => {
     setSelectedSessionNote(null);
+    setSessionNoteEditTarget(null);
+    setSessionNoteDeleteTarget(null);
+    setDeletingSessionNote(false);
+    setSessionNoteDeleteError('');
     setSelectedProfileNote(null);
     setConfirmingProfileNoteDelete(false);
     setDeletingProfileNote(false);
@@ -276,7 +287,20 @@ export default function Youth() {
               sessionNotesLoading={sessionNotesQuery.isLoading}
               sessionNotesError={sessionNotesError}
               onSelectSessionNote={setSelectedSessionNote}
+              canManageSessionNotes={canManageSessionNotes}
+              onEditSessionNote={setSessionNoteEditTarget}
+              onDeleteSessionNote={note => {
+                setSessionNoteDeleteTarget(note);
+                setSessionNoteDeleteError('');
+              }}
               onSelectProfileNote={setSelectedProfileNote}
+              canManageProfileNotes={canWrite}
+              onEditProfileNote={note => setProfileNoteTarget(note)}
+              onDeleteProfileNote={note => {
+                setSelectedProfileNote(note);
+                setConfirmingProfileNoteDelete(true);
+                setProfileNoteDeleteError('');
+              }}
               profileNotesLoading={profileNotesQuery.isLoading}
               profileNotesError={profileNotesQuery.error ? 'Could not load profile notes' : null}
             />
@@ -319,6 +343,48 @@ export default function Youth() {
             ].filter(Boolean).join(' · ')}
           />
         )}
+      </Modal>
+      <SessionNoteModal
+        session={sessionNoteEditTarget ? {
+          id: sessionNoteEditTarget.sessionId,
+          rosterMode: sessionNoteEditTarget.rosterMode,
+        } : null}
+        note={sessionNoteEditTarget}
+        onClose={() => setSessionNoteEditTarget(null)}
+        onSaved={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['youth-session-notes', selectedProfileId] });
+        }}
+      />
+      <Modal
+        isOpen={sessionNoteDeleteTarget !== null}
+        onClose={() => {
+          if (deletingSessionNote) return;
+          setSessionNoteDeleteTarget(null);
+          setSessionNoteDeleteError('');
+        }}
+        title="Delete Session Note"
+        status={sessionNoteDeleteError ? 'error' : deletingSessionNote ? 'submitting' : 'idle'}
+        statusMessage={sessionNoteDeleteError || (deletingSessionNote ? 'Deleting session note...' : undefined)}
+        disableClose={deletingSessionNote}
+        footer={<>
+          <Button variant="secondary" disabled={deletingSessionNote} onClick={() => setSessionNoteDeleteTarget(null)}>Cancel</Button>
+          <Button variant="danger" disabled={deletingSessionNote} onClick={async () => {
+            if (!sessionNoteDeleteTarget) return;
+            setDeletingSessionNote(true);
+            setSessionNoteDeleteError('');
+            try {
+              await deleteSessionNote(sessionNoteDeleteTarget.sessionId, sessionNoteDeleteTarget.id);
+              queryClient.setQueryData<YouthSessionNote[]>(['youth-session-notes', selectedProfileId], current => current?.filter(note => note.id !== sessionNoteDeleteTarget.id) ?? []);
+              setSessionNoteDeleteTarget(null);
+            } catch (error) {
+              setSessionNoteDeleteError(getErrorMessage(error, 'Failed to delete session note'));
+            } finally {
+              setDeletingSessionNote(false);
+            }
+          }}>Delete</Button>
+        </>}
+      >
+        {sessionNoteDeleteTarget && <p>Delete {sessionNoteDeleteTarget.title}? This cannot be undone.</p>}
       </Modal>
       {profileNoteTarget && selectedProfileId && (
         <ProfileNoteModal
@@ -365,8 +431,8 @@ export default function Youth() {
               }
             }} disabled={deletingProfileNote}>Delete</Button>
         </> : <>
-          <Button variant="danger" onClick={() => setConfirmingProfileNoteDelete(true)}>Delete</Button>
           <Button onClick={() => { setProfileNoteTarget(selectedProfileNote); setSelectedProfileNote(null); }}>Edit</Button>
+          <Button variant="danger" onClick={() => setConfirmingProfileNoteDelete(true)}>Delete</Button>
         </> : <Button variant="secondary" onClick={() => setSelectedProfileNote(null)}>Close</Button>}
       >
         {selectedProfileNote && (confirmingProfileNoteDelete
