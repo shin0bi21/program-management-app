@@ -1,29 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import useListQuery from '../../../../common/hooks/useListQuery';
 import { getLeads } from '../api/leads.api';
 import type { Lead, LeadFilters } from '../types';
 
 export function useLeads(filters: LeadFilters | null) {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const requestId = useRef(0);
+  const query = useListQuery<Lead>({
+    queryKey: ['leads', filters],
+    queryFn: ({ signal }) => getLeads(filters ?? {}, { signal }),
+    errorMessage: 'Failed to load leads',
+    enabled: filters !== null,
+  });
 
-  const load = useCallback(async () => {
-    if (!filters) return;
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const nextLeads = await getLeads(filters);
-      if (currentRequest === requestId.current) setLeads(nextLeads);
-    } catch (err) {
-      if (currentRequest === requestId.current) setError(getErrorMessage(err, 'Failed to load leads'));
-    } finally {
-      if (currentRequest === requestId.current) setLoading(false);
-    }
-  }, [filters?.search, filters?.statuses, filters?.programIds]);
-
-  useEffect(() => { if (filters) void load(); }, [filters, load]);
-  return { leads, setLeads, loading, error, reload: load };
+  return {
+    leads: query.rows,
+    upsertLead: query.upsert,
+    removeLead: query.remove,
+    loading: query.loading,
+    error: query.error,
+    reload: query.refetch,
+  };
 }

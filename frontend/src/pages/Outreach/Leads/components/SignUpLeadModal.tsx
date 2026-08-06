@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
@@ -23,39 +24,32 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }) {
-  const [cohorts, setCohorts] = useState<ProgramCohort[]>([]);
   const [cohortId, setCohortId] = useState('');
-  const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
+  const cohortsQuery = useQuery({
+    queryKey: ['lead-signup-cohorts', lead?.programOfInterestId],
+    queryFn: ({ signal }) => getCohorts(
+      lead?.programOfInterestId ?? undefined,
+      {},
+      { signal },
+    ),
+    enabled: Boolean(lead),
+    select: rows => rows.filter(cohort => (
+      cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
+    )),
+  });
+  const cohorts: ProgramCohort[] = cohortsQuery.data ?? [];
+  const loading = cohortsQuery.isLoading;
+  const loadError = cohortsQuery.error
+    ? getErrorMessage(cohortsQuery.error, 'Unable to load cohorts')
+    : '';
+
   useEffect(() => {
-    if (!lead) return;
-    let active = true;
-    setLoading(true);
     setSubmitStatus('idle');
     setStatusMessage('');
     setCohortId('');
-    getCohorts(lead.programOfInterestId ?? undefined)
-      .then(rows => {
-        if (!active) return;
-        setCohorts(rows.filter(cohort => (
-          cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
-        )));
-      })
-      .catch(err => {
-        if (!active) return;
-        const message = getErrorMessage(err, 'Unable to load cohorts');
-        setStatusMessage(message);
-        setSubmitStatus('error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
   }, [lead]);
 
   const visibleCohorts = useMemo(() => {
@@ -102,8 +96,8 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       isOpen={lead !== null}
       onClose={onClose}
       title="Sign Up Lead"
-      status={submitStatus}
-      statusMessage={statusMessage || undefined}
+      status={loadError ? 'error' : submitStatus}
+      statusMessage={loadError || statusMessage || undefined}
       successDelay={1400}
       disableClose={submitStatus === 'submitting'}
       maxWidth="600px"
