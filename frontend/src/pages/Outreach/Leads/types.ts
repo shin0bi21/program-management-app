@@ -42,3 +42,5 @@ export interface LeadFilters {
   statuses?: LeadStatus[];
   programIds?: string[];
 }
+
+export type LeadSortKey = 'name' | 'school' | 'program' | 'status' | 'createdAt';

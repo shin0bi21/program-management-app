@@ -19,7 +19,8 @@ import { useAuth } from '../../common/context/AuthContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/hooks/usePrograms';
 import useTableSelection from '../../common/hooks/useTableSelection';
-import type { YouthFilters, YouthProfileNote } from '../../common/types/youth';
+import type { YouthFilters, YouthProfileNote, YouthSortKey } from '../../common/types/youth';
+import type { ListSort } from '../../common/types/pagination';
 import type { YouthSessionNote } from '../../common/types/cohort';
 import { deleteYouthProfileNote, getYouthProfileNotes, getYouthSessionNotes } from '../../common/api/youth.api';
 import { STORAGE_KEYS } from '../../common/utils/storage';
@@ -44,6 +45,7 @@ export default function Youth() {
   const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [sorting, setSorting] = useState<ListSort<YouthSortKey>>({ key: 'firstName', direction: 'asc' });
   const queryFilters = useMemo<YouthFilters | null>(() => filtersReady ? ({
     search: debouncedSearch,
     statuses: statusFilters,
@@ -71,7 +73,7 @@ export default function Youth() {
     error: preferencesError,
     save: saveFilters,
   } = useUserPreference('youth-profile-filters');
-  const { youth, upsertYouth, loading, error } = useYouth(queryFilters);
+  const { youth, upsertYouth, loading, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
@@ -102,6 +104,7 @@ export default function Youth() {
     setProgramFilters(savedFilters
       ? savedFilters.programIds.filter(programId => availableProgramIds.has(programId))
       : role === 'staff' ? programs.map(program => program.id) : []);
+    setSorting(savedFilters?.sorting ?? { key: 'firstName', direction: 'asc' });
     setFiltersReady(true);
   }, [filtersReady, preferencesLoading, programs, programsLoading, role, savedFilters]);
 
@@ -109,7 +112,7 @@ export default function Youth() {
     statuses: Array<'active' | 'inactive'>,
     programIds: string[],
   ) => {
-    void saveFilters({ statuses, programIds });
+    void saveFilters({ statuses, programIds, sorting });
   };
 
   useEffect(() => {
@@ -161,33 +164,39 @@ export default function Youth() {
   const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
     {
       key: 'firstName',
+      sortKey: 'firstName',
       header: 'First Name',
       render: (profile) => profile.firstName,
     },
     {
       key: 'lastName',
+      sortKey: 'lastName',
       header: 'Last Name',
       render: (profile) => profile.lastName,
     },
     {
       key: 'age',
+      sortKey: 'age',
       header: 'Age',
       render: (profile) => calculateAge(profile.dateOfBirth),
       width: '80px',
     },
     {
       key: 'school',
+      sortKey: 'school',
       header: 'School',
       render: (profile) => profile.schoolName ?? '—',
     },
     {
       key: 'grade',
+      sortKey: 'grade',
       header: 'Grade',
       render: (profile) => profile.gradeLevel ?? '—',
       width: '100px',
     },
     {
       key: 'program',
+      sortKey: 'program',
       header: 'Program',
       render: (profile) => {
         const names = [...new Set(profile.cohorts.filter(cohort => cohort.withdrawnOn === null).map(cohort => cohort.programName))];
@@ -196,6 +205,7 @@ export default function Youth() {
     },
     {
       key: 'status',
+      sortKey: 'status',
       header: 'Status',
       width: '110px',
       render: profile => (
@@ -252,7 +262,7 @@ export default function Youth() {
 
         <TableDetailLayout
           ariaLabel="Youth profiles"
-          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} />}
+          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
           details={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {

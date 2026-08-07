@@ -75,3 +75,4 @@ export interface YouthFilters {
   programIds?: string[];
   cohortIds?: string[];
 }
+export type YouthSortKey = 'firstName' | 'lastName' | 'age' | 'school' | 'grade' | 'program' | 'status';

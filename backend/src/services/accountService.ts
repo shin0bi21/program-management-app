@@ -10,6 +10,7 @@ import { sendStaffInvite, sendYouthInvite, sendInviteEmailChanged, sendEmailChan
 import { ConflictError, NotFoundError, BadRequestError } from '../errors';
 import { assertCanCreateAccount, assertCanManageAccount } from '../policies/accountPolicy';
 import { applyAccountFilters } from './queryFilters/accountFilters';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 export type AccountRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
@@ -21,7 +22,12 @@ export type AccountRow =
 
 export async function getAccounts(actor: AccessTokenPayload, filters: AccountQuery) {
   const where = applyAccountFilters(actor, filters);
-  return sql<AccountRow[]>`
+  const cursor = decodeCursor(filters.cursor);
+  const sortValue = {
+    name: sql`LOWER(u.first_name || ' ' || u.last_name)`, email: sql`LOWER(uc.email)`,
+    role: sql`ur.name::text`, status: sql`uc.status::text`, createdAt: sql`u.created_at::text`,
+  }[filters.sort]!;
+  const rows = await sql<Array<AccountRow & { cursorValue: string }>>`
     SELECT
       u.id,
       u.first_name,
@@ -30,6 +36,7 @@ export async function getAccounts(actor: AccessTokenPayload, filters: AccountQue
       u.created_at,
       uc.email,
       ur.name AS role,
+      ${sortValue} AS cursor_value,
       ARRAY(
         SELECT assignment.program_id
         FROM staff_program_assignments assignment
@@ -40,8 +47,13 @@ export async function getAccounts(actor: AccessTokenPayload, filters: AccountQue
     INNER JOIN user_credentials uc ON uc.user_id = u.id
     INNER JOIN user_roles ur ON ur.id = u.role_id
     WHERE ${where}
-    ORDER BY u.first_name ASC, u.last_name ASC
+      AND ${cursor ? (filters.direction === 'asc'
+        ? sql`(${sortValue}, u.id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, u.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
+    ORDER BY ${sortValue} ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}, u.id ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}
+    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
   `;
+  return filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row);
 }
 
 async function getAccountRole(userId: string): Promise<UserRole> {

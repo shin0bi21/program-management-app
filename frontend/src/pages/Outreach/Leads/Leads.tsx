@@ -18,7 +18,8 @@ import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal';
 import { useLeads } from './hooks/useLeads';
-import type { Lead, LeadFilters, LeadStatus } from './types';
+import type { Lead, LeadFilters, LeadSortKey, LeadStatus } from './types';
+import type { ListSort } from '../../../common/types/pagination';
 import './Leads.css';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
@@ -33,10 +34,11 @@ export default function Leads() {
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [sorting, setSorting] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
   const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { leads, loading, error, reload } = useLeads(queryFilters);
+  const { leads, loading, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
@@ -59,11 +61,12 @@ export default function Leads() {
     const availableProgramIds = new Set(programs.map(program => program.id));
     setStatusFilters(preference?.statuses ?? []);
     setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
+    setSorting(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
     setFiltersReady(true);
   }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
 
   const persistFilters = (nextStatuses: LeadStatus[], nextProgramIds: string[]) => {
-    void save({ statuses: nextStatuses, programIds: nextProgramIds });
+    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting });
   };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
@@ -87,11 +90,11 @@ export default function Leads() {
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
   const columns: TableColumn<Lead>[] = [
-    { key: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
-    { key: 'school', header: 'School', render: lead => lead.school },
-    { key: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
-    { key: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
-    { key: 'created', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
+    { key: 'name', sortKey: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
+    { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
+    { key: 'program', sortKey: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
+    { key: 'status', sortKey: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
+    { key: 'created', sortKey: 'createdAt', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
       key: 'actions' as const,
       header: '',
@@ -134,7 +137,7 @@ export default function Leads() {
     {preferenceError && <p role="alert">{preferenceError}</p>}
     <TableDetailLayout
       ariaLabel="Leads"
-      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} />}
+      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
       details={<>
         <PrimaryContactCard contact={selectedLead ? {
           phoneNumber: selectedLead.contactPhoneNumber,

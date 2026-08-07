@@ -99,6 +99,7 @@ describe('Leads', () => {
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       { search: '', statuses: ['new'], programIds: [] },
+      expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });
@@ -117,6 +118,7 @@ describe('Leads', () => {
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       { search: '', statuses: [], programIds: ['program-1'] },
+      expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });

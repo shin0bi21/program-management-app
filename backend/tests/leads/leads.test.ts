@@ -111,6 +111,36 @@ describe('Leads API', () => {
     ]));
   });
 
+  it('sorts and cursor-paginates lead batches without a total count', async () => {
+    const marker = `Cursor${Date.now()}`;
+    for (const youthFirstName of [`${marker}B`, `${marker}A`]) {
+      const created = await request(app)
+        .post('/api/leads')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ ...payload, youthFirstName });
+      expect(created.status).toBe(201);
+    }
+
+    const first = await request(app)
+      .get(`/api/leads?search=${marker}&sort=name&direction=asc&limit=1`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({
+      rows: [expect.objectContaining({ youthFirstName: `${marker}A` })],
+      nextCursor: expect.any(String),
+    });
+    expect(first.body).not.toHaveProperty('totalRows');
+
+    const second = await request(app)
+      .get(`/api/leads?search=${marker}&sort=name&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual({
+      rows: [expect.objectContaining({ youthFirstName: `${marker}B` })],
+      nextCursor: null,
+    });
+  });
+
   it('filters leads by status and youth or school search', async () => {
     const res = await request(app)
       .get('/api/leads?statuses=new&search=Event%20Prospect')

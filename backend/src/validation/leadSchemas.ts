@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 export const leadStatusSchema = z.enum([
   'new',
@@ -27,6 +28,7 @@ export const leadQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparatedStatuses,
     programIds: commaSeparatedProgramIds,
+    ...cursorListFields(['name', 'school', 'program', 'status', 'createdAt'], 'createdAt', 'desc'),
   }),
 });
 

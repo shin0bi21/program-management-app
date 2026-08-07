@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceValues } from '../../../common/api/preferences.api';
@@ -309,6 +309,7 @@ describe('Sessions', () => {
       expect(getSessions).toHaveBeenLastCalledWith(
         expect.objectContaining({ statuses: ['completed'] }),
         { signal: expect.any(AbortSignal) },
+        expect.objectContaining({ key: 'date', direction: 'desc', limit: 25 }),
       ),
     );
 
@@ -386,8 +387,9 @@ describe('Sessions', () => {
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
-    expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cohort' })).toHaveTextContent('Soft Skills · Summer 2026');
+    const addSessionsHeading = screen.getByRole('heading', { name: 'Add sessions' });
+    expect(addSessionsHeading).toBeInTheDocument();
+    expect(within(addSessionsHeading.closest('.modal-container') as HTMLElement).getByRole('button', { name: 'Cohort' })).toHaveTextContent('Soft Skills · Summer 2026');
     expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Sessions' })).toBeInTheDocument();
   });

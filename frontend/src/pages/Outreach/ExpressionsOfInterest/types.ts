@@ -20,3 +20,4 @@ export interface ExpressionOfInterestFilters {
   statuses?: ExpressionOfInterest['status'][];
   programIds?: string[];
 }
+export type ExpressionOfInterestSortKey = 'name' | 'age' | 'school' | 'program' | 'createdAt' | 'status';

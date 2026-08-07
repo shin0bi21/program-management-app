@@ -20,7 +20,7 @@ const preferenceHook = vi.hoisted(() => ({
 }));
 
 vi.mock('./hooks/useYouth', () => ({
-  useYouth: (...args: unknown[]) => mockUseYouth(...args),
+  useYouth: (filters: unknown) => mockUseYouth(filters),
 }));
 vi.mock('../../common/api/youth.api', () => youthApi);
 vi.mock('../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
@@ -97,10 +97,10 @@ describe('Youth', () => {
       statuses: ['active'],
       programIds: [],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
       statuses: ['active'],
       programIds: [],
-    });
+    }));
   });
 
   it('can filter inactive youth and restore the saved filters on another visit', async () => {
@@ -123,10 +123,10 @@ describe('Youth', () => {
       statuses: ['inactive'],
       programIds: ['program-1'],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
       statuses: ['inactive'],
       programIds: ['program-1'],
-    });
+    }));
 
     preferenceHook.preference = {
       statuses: ['inactive'],

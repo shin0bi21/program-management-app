@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 const commaSeparated = (schema: z.ZodType<string>) => z.preprocess(value => {
   if (value === undefined) return [];
@@ -13,6 +14,7 @@ export const youthQuerySchema = z.object({
     statuses: commaSeparated(z.enum(['active', 'inactive'])),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cohortIds: commaSeparated(z.string().uuid('Invalid cohort ID')),
+    ...cursorListFields(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'], 'firstName', 'asc'),
   }),
 });
 

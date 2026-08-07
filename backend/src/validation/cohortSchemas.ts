@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
 const timeSchema = z.string().regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format');
@@ -21,6 +22,9 @@ export const cohortQuerySchema = z.object({
   query: z.object({
     programId: z.string().uuid('Invalid program ID').optional(),
     scope: z.enum(['all']).optional(),
+    search: z.string().trim().max(120).optional().default(''),
+    status: z.enum(['active', 'upcoming', 'completed']).optional(),
+    ...cursorListFields(['program', 'cohort', 'start', 'end', 'status'], 'start', 'desc'),
   }),
 });
 
@@ -108,6 +112,7 @@ export const sessionListQuerySchema = z.object({
     sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
+    ...cursorListFields(['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'], 'date', 'desc'),
   }).superRefine((data, context) => {
     if (Boolean(data.start) !== Boolean(data.end)) {
       context.addIssue({
@@ -222,6 +227,7 @@ export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
+export type CohortQuery = z.infer<typeof cohortQuerySchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;

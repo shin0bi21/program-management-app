@@ -2,10 +2,21 @@ import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
 import type { ExpressionOfInterestQuery, UpdateExpressionOfInterestStatusInput } from '../validation/expressionOfInterestSchemas';
 import { applyExpressionOfInterestFilters } from './queryFilters/expressionOfInterestFilters';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuery) {
   const where = applyExpressionOfInterestFilters(filters);
-  return sql`
+  const cursor = decodeCursor(filters.cursor);
+  const suggestedProgram = sql`CASE WHEN e.age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN e.age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE '' END`;
+  const sortValue = {
+    name: sql`LOWER(e.youth_first_name || ' ' || e.youth_last_name)`,
+    age: sql`LPAD(e.age::text, 4, '0')`,
+    school: sql`LOWER(e.school)`,
+    program: sql`LOWER(${suggestedProgram})`,
+    createdAt: sql`e.created_at::text`,
+    status: sql`e.status::text`,
+  }[filters.sort]!;
+  const rows = await sql<Array<{ id: string; cursorValue: string }>>`
     SELECT
       e.id,
       e.youth_first_name,
@@ -20,7 +31,8 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
       e.created_at,
       e.status_updated_at,
       p.id AS suggested_program_id,
-      p.name AS suggested_program_name
+      p.name AS suggested_program_name,
+      ${sortValue} AS cursor_value
     FROM expressions_of_interest e
     LEFT JOIN programs p ON p.name = CASE
       WHEN e.age BETWEEN 12 AND 15 THEN 'Soft Skills'
@@ -28,8 +40,13 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
       ELSE NULL
     END
     WHERE ${where}
-    ORDER BY e.created_at DESC
+      AND ${cursor ? (filters.direction === 'asc'
+        ? sql`(${sortValue}, e.id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, e.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
+    ORDER BY ${sortValue} ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}, e.id ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}
+    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
   `;
+  return filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row);
 }
 
 export async function updateExpressionOfInterestStatus(id: string, data: UpdateExpressionOfInterestStatusInput) {
