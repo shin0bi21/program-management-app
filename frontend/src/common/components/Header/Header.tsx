@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './Header.css';
 
 export default function Header() {

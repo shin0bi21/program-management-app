@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { createSessionAttachment, getSessionRoster } from '../../../../../common/api/cohorts.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { CohortSession, SessionRosterMember } from '../../../../../common/types/cohort';
-import '../SessionNoteModal/SessionNoteModal.css';
+import './SessionAttachmentModal.css';
 
 export default function SessionAttachmentModal({
   session,
@@ -87,7 +87,7 @@ export default function SessionAttachmentModal({
         <FormField id="session-attachment-description" label="Description (optional)">
           <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} />
         </FormField>
-        <fieldset className="session-note-youth" disabled={complete}>
+        <fieldset className="session-attachment-youth" disabled={complete}>
           <legend>Link youth</legend>
           {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
             <p className="form-error" role="alert">
@@ -96,7 +96,7 @@ export default function SessionAttachmentModal({
                 : 'Could not load session roster'}
             </p>
           ) : roster.length ? (
-            <div className="session-note-youth__checklist">
+            <div className="session-attachment-youth__checklist">
               {roster.map(youth => (
                 <label key={youth.youthId}>
                   <input

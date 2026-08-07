@@ -19,7 +19,7 @@ vi.mock('../../context/AuthContext', () => ({
   }),
 }));
 
-vi.mock('../../hooks/useFloatingMenu', () => ({
+vi.mock('../FloatingMenu/hooks/useFloatingMenu', () => ({
   useFloatingMenu: () => ({
     isOpen: true,
     toggle: vi.fn(),

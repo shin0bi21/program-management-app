@@ -12,11 +12,11 @@ import {
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
-import SessionNoteDetails from '../../../../../common/components/SessionNoteDetails/SessionNoteDetails';
-import SessionNoteRow from '../../../../../common/components/SessionNoteRow/SessionNoteRow';
-import { useConfirmModal, type ConfirmAction } from '../../../../../common/hooks/useConfirmModal';
+import SessionNoteDetails from '../../../../../features/notes/components/SessionNoteDetails/SessionNoteDetails';
+import SessionNoteModal from '../../../../../features/notes/components/SessionNoteModal/SessionNoteModal';
+import SessionNoteRow from '../../../../../features/notes/components/SessionNoteRow/SessionNoteRow';
+import { useConfirmModal, type ConfirmAction } from '../../../../../common/components/Modal/hooks/useConfirmModal';
 import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
-import SessionNoteModal from '../SessionNoteModal/SessionNoteModal';
 import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';
 
 interface SessionOverviewProps {
@@ -58,7 +58,7 @@ function SessionNotesContent({
   if (!notes.length) return <p className="dashboard-card__empty">No notes.</p>;
 
   return (
-    <div className="session-note-list">
+    <div className="note-list">
       {notes.map(note => (
         <SessionNoteRow
           key={note.id}

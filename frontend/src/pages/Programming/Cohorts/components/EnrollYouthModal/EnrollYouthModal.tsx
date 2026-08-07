@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 import { enrollYouth } from '../../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';

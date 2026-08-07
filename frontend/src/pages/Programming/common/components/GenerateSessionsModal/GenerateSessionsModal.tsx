@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import { generateSessions } from '../../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import {

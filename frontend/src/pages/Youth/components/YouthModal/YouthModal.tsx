@@ -4,7 +4,7 @@ import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import FormField from '../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
 import { useAuth } from '../../../../common/context/AuthContext';
 import type { YouthProfile } from '../../hooks/useYouth';
 import SchoolActionModal, { type SchoolAction } from './SchoolActionModal/SchoolActionModal';

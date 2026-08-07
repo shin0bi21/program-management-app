@@ -1,5 +1,5 @@
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar';
-import Footer from '../../common/components/Footer/Footer';
+import SiteFooter from './components/SiteFooter/SiteFooter';
 import HeroSection from './components/HeroSection/HeroSection';
 import { heroSectionPhotos } from './components/HeroSection/heroSectionData';
 import type { HeroPhoto } from './components/HeroSection/heroSectionSchema';
@@ -154,7 +154,7 @@ export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; ses
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </main>
   );
 }

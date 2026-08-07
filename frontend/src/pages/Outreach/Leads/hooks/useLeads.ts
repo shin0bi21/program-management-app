@@ -1,4 +1,4 @@
-import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
 import { getLeads } from '../api/leads.api';
 import type { Lead, LeadFilters, LeadSortKey } from '../types';
 import type { ListSort } from '../../../../common/types/pagination';

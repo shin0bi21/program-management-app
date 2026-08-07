@@ -1,10 +1,10 @@
 # Frontend Structure
 
-This project uses page-scoped organization with a small `common/` area for shared code.
+This project uses page-scoped organization, cross-page business features, and a small `common/` area for domain-agnostic code.
 
 ## Goals
 - Keep page logic co-located (UI + hooks + API + validation).
-- Promote shared code only when reused by 2+ pages.
+- Promote code according to ownership: cross-page business behavior goes to `features/`, while only domain-agnostic primitives and infrastructure go to `common/`.
 - Make imports predictable and reduce cross-folder hopping.
 
 ## Data Flow
@@ -37,7 +37,7 @@ Response flows back: DB → controller JSON response → fetch resolves → hook
 
 ## Layout
 
-`common/` contains all shared code — annotated below. `pages/` follows the page-scoped pattern described in the rules below; each page is self-contained.
+`common/` contains domain-agnostic primitives and infrastructure. `features/` contains business capabilities shared across pages. `pages/` owns route-family UI and page-specific behavior.
 
 ```
 src/
@@ -48,66 +48,59 @@ src/
       config.ts           ← api() URL helper
       sessionExpired.ts   ← awaitReLogin / resolveReLogin
       tokenRefresh.ts     ← proactive refresh with deduplication
-      programs.api.ts     ← canonical program lookup API
       preferences.api.ts  ← typed per-user page filter and view preferences
     components/
       ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
       Button/
-      FloatingMenuPanel/  ← shared floating menu portal + keyboard nav
-      Footer/
+      FloatingMenu/       ← portal, positioning utilities, and interaction hook
       FormField/          ← shared labelled form field wrapper
       Header/             ← sidebar + settings flyout (uses FloatingMenuPanel)
-      Modal/
-      ModalFormFooter/    ← shared save/cancel footer for modal forms
+      Modal/              ← modal shell, form footer component, and confirmation hook
       ProtectedRoute/     ← redirects unauthenticated users
       PublicTopBar/       ← public top bar + mobile menu (uses FloatingMenuPanel)
       ReLoginModal/       ← shown when access token expires mid-session
-      Table/              ← shared data table
+      Table/              ← shared data table shell with internal components, hooks, sizing utilities, and integration tests
       TableDetailLayout/  ← selected-row cards above table on desktop and below on mobile
       ViewMenu/           ← reusable floating selector for alternate page views
-      DetailCards/        ← shared primary-contact and notes cards
     context/
       AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
     hooks/
-      useAddresses.ts     ← entity-agnostic address array state
-      useConfirmModal.tsx ← reusable confirm/delete modal state
-      useContacts.ts      ← entity-agnostic contact array state
-      usePrograms.ts      ← program lookup state shared by Lead and Youth workflows
-      useSchools.ts       ← school lookup state shared by Youth workflows
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
       useUserPreference.ts← loads and saves cross-device page preferences
+    query/
+      hooks/              ← reusable TanStack list and infinite-list cache adapters
+      utils/              ← immutable cached-collection update helpers
     styles/
       brand.css
       forms.css
       pages.css
-    types/
-      school.ts           ← cross-page domain types
-    hooks/
-      useFloatingMenu.ts  ← shared hook: open/close/position state, dismiss, keyboard, focus management
     utils/
       clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
-      floatingPosition.ts ← pure position calculator: calculateFloatingPosition(anchor, placement, options)
-      floatingMenuUtils.ts← getMenuItems(el) — shared helper used by FloatingMenuPanel + useFloatingMenu
       jwt.ts              ← decodeToken, isTokenExpired, getTokenExpiry, getTimeUntilExpiry (client-side decode only)
       storage.ts          ← STORAGE_KEYS, setAuthData, clearAuthData, getToken, getUser, hasAuthToken
       deviceFingerprint.ts
       time.ts
+  features/
+    contacts/             ← cross-page contact presentation and contact-array behavior
+    notes/                ← cross-page note rows, details, categories, and session-note management
+    programs/             ← program API, types, lookup hook, and reusable program selector
   pages/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
-    Homepage/             ← Homepage.tsx + hooks/useSectionRouting.ts + section feature folders
+    Homepage/             ← Homepage.tsx + SiteFooter + hooks/useSectionRouting.ts + section feature folders
     Outreach/             ← expression review + lead management feature folders
     Settings/             ← account settings + Users account management
-    Youth/                ← Youth.tsx + types.ts + api/ + hooks/ + components/YouthModal/
+    Youth/                ← Youth.tsx + page APIs/hooks and YouthModal-owned address/school behavior
 ```
 
 ## Rules of Thumb
 - Page-specific API, hooks, and components live under that page.
-- Shared utilities live in `common/utils`.
-- Shared UI components live in `common/components`.
+- Domain-agnostic utilities and UI primitives live in `common/`.
+- Business capabilities reused across pages live in `features/<domain>/`.
 - Shared app state lives in `common/context`.
 - API config lives in `common/api`.
-- `common/` never imports from `pages/`. Dependencies flow one way: `pages/ → common/`.
+- Dependencies flow one way: `pages → features → common`. `common/` never imports features or pages, and features never import pages.
+- Reuse count does not determine ownership: generic primitives are common; business-aware components are features.
 
 ### Feature-folder pattern
 
@@ -122,7 +115,9 @@ components/
     SignupSection.test.tsx
 ```
 
-The same pattern applies to modal features such as `YouthModal/`, `SessionNoteModal/`, and `SessionAttachmentModal/`, and to homepage sections such as `HeroSection/` and `ProgrammingSection/`.
+The same pattern applies to page-owned modal features such as `YouthModal/` and `SessionAttachmentModal/`, cross-page capabilities such as `features/notes/`, and homepage sections such as `HeroSection/` and `ProgrammingSection/`.
+
+Shared components follow the same rule when they contain multiple meaningful behaviors. For example, `common/components/Table/` keeps its shell in `Table.tsx`, rendering units in `components/`, Table interaction/navigation/observer behavior in `hooks/`, and pure sizing helpers in `table.utils.ts`. Data fetching remains separate under `common/query/`.
 
 ---
 
@@ -134,9 +129,9 @@ All dropdown/flyout menus use a shared 3-piece system instead of bespoke per-com
 
 | File | Role |
 |---|---|
-| `common/utils/floatingPosition.ts` | Pure position calculator — no React, independently testable. Takes anchor `HTMLElement` + `placement` + `options`, returns `{ top, left }` in viewport coords for `position: fixed`. Handles collision detection and axis flipping. |
-| `common/hooks/useFloatingMenu.ts` | All behavior — open/close state, position calculation, `pointerdown` dismiss, `scroll`/`resize` close, focus-first-item on open, return-focus-to-trigger on close. |
-| `common/components/FloatingMenuPanel/` | Portal renderer. Renders a `role="menu"` div via `createPortal` at the calculated position. Handles `Escape`/`Tab`/Arrow keyboard navigation. |
+| `common/components/FloatingMenu/utils/floatingPosition.ts` | Pure position calculator — no React, independently testable. Takes anchor `HTMLElement` + `placement` + `options`, returns `{ top, left }` in viewport coords for `position: fixed`. Handles collision detection and axis flipping. |
+| `common/components/FloatingMenu/hooks/useFloatingMenu.ts` | All behavior — open/close state, position calculation, `pointerdown` dismiss, `scroll`/`resize` close, focus-first-item on open, return-focus-to-trigger on close. |
+| `common/components/FloatingMenu/FloatingMenuPanel.tsx` | Portal renderer. Renders a `role="menu"` div via `createPortal` at the calculated position. Handles `Escape`/`Tab`/Arrow keyboard navigation. |
 
 ### Placement model
 
@@ -153,8 +148,8 @@ Collision detection flips side/alignment automatically if the preferred position
 
 ```tsx
 import { useRef } from 'react';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 
 export default function MyMenu() {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -194,7 +189,7 @@ export default function MyMenu() {
 
 **Run:** `npm test` (single run, used by Vitest directly) · `npm run test:watch` (dev watch mode).
 
-**Repo-level runners:** use `../scripts/frontend/test-ui.sh` for the full frontend suite, or the page/path-based runners in `../scripts/frontend/` such as `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`.
+**Repo-level runners:** use `../scripts/frontend/test-ui.sh` for the full frontend suite, or the ownership/path-based runners in `../scripts/frontend/` such as `run-features-tests.sh`, `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`.
 
 **Setup file:** `src/tests/setup.ts` — imports `@testing-library/jest-dom` to extend `expect`.
 
@@ -205,8 +200,14 @@ export default function MyMenu() {
 | File | What it tests |
 |---|---|
 | `src/ErrorBoundary/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
-| `src/common/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
+| `src/common/components/FloatingMenu/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
 | `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
+| `src/common/components/Modal/components/ModalFormFooter.test.tsx` | Shared modal form actions and submission-state behavior |
+| `src/common/components/Table/hooks/useTableSelection.test.ts` | Selection synchronization across refreshed and filtered table rows |
+| `src/common/query/hooks/useInfiniteListQuery.test.tsx` | Infinite-query row preservation while query keys refresh |
+| `src/features/contacts/components/PrimaryContactCard/PrimaryContactCard.test.tsx` | Shared contact presentation behavior |
+| `src/features/notes/components/NoteRow/NoteRow.test.tsx` | Shared note-row metadata, permissions, and action callbacks |
+| `src/features/notes/components/SessionNoteModal/SessionNoteModal.test.tsx` | Cross-page session-note creation and editing behavior |
 | `src/pages/Homepage/Homepage.test.tsx` | Page-composition test for the public homepage sections |
 | `src/pages/Homepage/components/HeroSection/HeroSection.test.tsx` | Hero carousel rendering and photo navigation |
 | `src/pages/Homepage/components/ProgrammingSection/ProgrammingSection.test.tsx` | Programming section composition |
@@ -216,6 +217,7 @@ export default function MyMenu() {
 | `src/pages/Outreach/Leads/Leads.test.tsx` | Lead list, filtering, and actions |
 | `src/pages/Settings/Users/Users.test.tsx` | Role-scoped account management behavior |
 | `src/pages/Youth/Youth.test.tsx` | Youth profile page behavior |
+| `src/pages/Youth/components/AttendanceCard/AttendanceCard.test.tsx` | Youth attendance summary rendering |
 | `src/pages/Youth/components/YouthModal/YouthModal.test.tsx` | Youth modal rendering, validation, and submit payload behavior |
 
 ### Key patterns
@@ -226,7 +228,7 @@ export default function MyMenu() {
 
 ### Type Ownership
 
-Each page owns a `types.ts` that declares its page-specific domain interfaces (e.g. `Lead`, `SetLeadInput`). Truly shared types live in `common/types/` (e.g. `Account`, `School`, and `YouthProfile`).
+Each page or cross-page feature owns the domain interfaces for its workflow (for example, `Lead` remains under Outreach while `Program` belongs to `features/programs/types.ts`). `common/types/` is reserved for contracts that are genuinely infrastructure-level or span otherwise independent domains.
 
 Dependency direction within a page:
 
@@ -246,9 +248,11 @@ components/     ← imports types + hooks
 - A page never imports another page's `types.ts`. If two pages need the same type, promote it to `common/types/`.
 
 ## Promotion Criteria
-Move code to `common/` when:
-- It is used by 2+ pages, and
-- The behavior is stable and not page-specific.
+
+- Keep code under a page while it expresses behavior owned by that route family alone.
+- Move stable business behavior used by multiple page families to `features/<domain>/`.
+- Move code to `common/` only when it is domain-agnostic and reusable without knowing about business entities such as youth, sessions, notes, or contacts.
+- Reuse by two or more pages is evidence that code may need promotion, but it does not decide whether the destination is `features/` or `common/`.
 
 ## Naming
 - Pages use PascalCase folders (e.g., `Auth`, `Users`).
@@ -267,7 +271,7 @@ State is split by concern and lives as close to where it is used as possible. Th
 |---|---|---|
 | Page state | Master list of records | `pages/X/hooks/useX.ts` |
 | Modal state | Form fields, submit status | `pages/X/components/XModal/useXModal.ts` |
-| Sub-entity state | Dynamic arrays (contacts, addresses) | `common/hooks/` |
+| Sub-entity state | Dynamic arrays owned by a feature or page workflow | owning `features/` or `pages/` folder |
 
 ---
 
@@ -369,12 +373,11 @@ flowchart TD
 
 ### Sub-Entity Hooks (useContacts, useAddresses)
 
-These hooks are entity-agnostic. They manage an array without knowing what the parent entity is.
+These hooks live with the domain or page workflow that owns their validation and payload rules. `useContacts` belongs to the contacts feature; the currently Youth-specific address workflow remains colocated with `YouthModal`.
 
 ```ts
-// Same hook, any entity
-const contacts = useContacts();   // youth, staff, school, partner — doesn't matter
-const addresses = useAddresses();
+const contacts = useContacts();   // features/contacts/hooks
+const addresses = useAddresses(); // pages/Youth/components/YouthModal/hooks
 ```
 
 Standard interface every sub-entity hook exposes:
