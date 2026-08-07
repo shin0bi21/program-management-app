@@ -83,7 +83,8 @@ const teamResources = [
     badge: undefined,
     education: undefined,
     school: undefined,
-    bio: 'Supports participants with day-to-day program engagement and helps coordinate services with families and partners.',
+    imageSrc: '/team/elijah.png',
+    bio: "I serve my community willingly with the utmost humility. Within that community, I have taken on many roles—a student, a teacher, and a role model—all of which I don't take for granted. Being apart of BeOriginal has allowed me to embody all three of these wonderful roles and use them to embrace and empower the next generation. I will use whatever gifts I have received to serve gracefully in all of their various forms.",
   },
 ];
 

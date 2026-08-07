@@ -119,7 +119,16 @@ Require tests proportionate to the behavior changed. Verify as applicable:
 - page integration tests prove the shared component is wired into each consumer;
 - API and service changes cover validation, permissions, success, not-found, and conflict paths;
 - database changes cover constraints, migration behavior, and backward compatibility;
-- async tests wait for observable completion instead of relying on timing or test order;
+- async tests wait for observable completion instead of relying on timing, machine speed,
+  immediately resolved mocks, or test order;
+- assertions for data rendered by promises, effects, TanStack Query, or another async state
+  source use `findBy*` or `waitFor`; reserve synchronous `getBy*` assertions for initial UI
+  or for state whose own completion has already been observed;
+- tests with multiple independent requests await the outcome of each request they assert
+  against. Do not treat one loaded row, heading, or query result as proof that sibling
+  notes, attachments, preferences, or other queries have also settled;
+- negative async assertions first await a positive completion marker for the same state
+  source so a loading state cannot produce a false pass;
 - update and delete flows verify both server effects and local cache or row updates;
 - bug fixes include a regression test that fails without the fix;
 - tests assert user-visible behavior rather than private implementation details.

@@ -74,6 +74,8 @@ describe('Homepage', () => {
     );
     expect(teamCards[1]).toHaveTextContent('Hi, my name is Amanat!');
     expect(teamCards[1].querySelector('img')).toHaveAttribute('src', '/team/amanat.png');
+    expect(teamCards[4]).toHaveTextContent('I serve my community willingly with the utmost humility.');
+    expect(teamCards[4].querySelector('img')).toHaveAttribute('src', '/team/elijah.png');
   });
 
   it('defers direct section routing until managed content has loaded', () => {
