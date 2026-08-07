@@ -1,6 +1,6 @@
 import { getSessions } from '../../../../common/api/cohorts.api';
 import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../common/types/cohort';
-import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../common/types/pagination';
 
 export function useSessions({

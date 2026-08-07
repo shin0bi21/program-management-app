@@ -3,12 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
-import {
-  AttendanceCard,
-  PrimaryContactCard,
-  type NotesTab,
-  YouthNotesCard,
-} from '../../common/components/DetailCards/DetailCards';
+import PrimaryContactCard from '../../features/contacts/components/PrimaryContactCard/PrimaryContactCard';
+import AttendanceCard from './components/AttendanceCard/AttendanceCard';
+import YouthNotesCard, { type NotesTab } from './components/YouthNotesCard/YouthNotesCard';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
@@ -17,22 +14,22 @@ import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
 import { useAuth } from '../../common/context/AuthContext';
 import { calculateAge } from '../../common/utils/time';
-import { usePrograms } from '../../common/hooks/usePrograms';
-import useTableSelection from '../../common/hooks/useTableSelection';
+import { usePrograms } from '../../features/programs/hooks/usePrograms';
+import useTableSelection from '../../common/components/Table/hooks/useTableSelection';
 import type { YouthFilters, YouthProfileNote, YouthSortKey } from '../../common/types/youth';
 import type { ListSort } from '../../common/types/pagination';
 import type { YouthSessionNote } from '../../common/types/cohort';
 import { deleteYouthProfileNote, getYouthProfileNotes, getYouthSessionNotes } from '../../common/api/youth.api';
 import { STORAGE_KEYS } from '../../common/utils/storage';
 import Modal from '../../common/components/Modal/Modal';
-import SessionNoteDetails from '../../common/components/SessionNoteDetails/SessionNoteDetails';
+import SessionNoteDetails from '../../features/notes/components/SessionNoteDetails/SessionNoteDetails';
 import { formatShortDate } from '../../common/utils/date';
 import useUserPreference from '../../common/hooks/useUserPreference';
 import './Youth.css';
 import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
-import ProfileNoteDetails from '../../common/components/ProfileNoteDetails/ProfileNoteDetails';
+import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetails';
 import { getErrorMessage } from '../../common/utils/clientErrors';
-import SessionNoteModal from '../Programming/Sessions/components/SessionNoteModal/SessionNoteModal';
+import SessionNoteModal from '../../features/notes/components/SessionNoteModal/SessionNoteModal';
 import { deleteSessionNote } from '../../common/api/cohorts.api';
 
 const initialNotesTab = (): NotesTab => (

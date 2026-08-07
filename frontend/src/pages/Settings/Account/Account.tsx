@@ -2,7 +2,7 @@ import Header from '../../../common/components/Header/Header';
 import { getUser } from '../../../common/utils/storage';
 import { useAuth } from '../../../common/context/AuthContext';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import { usePrograms } from '../../../common/hooks/usePrograms';
+import { usePrograms } from '../../../features/programs/hooks/usePrograms';
 import './Account.css';
 
 export default function Account() {

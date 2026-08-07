@@ -25,7 +25,7 @@ vi.mock('./hooks/useYouth', () => ({
 vi.mock('../../common/api/youth.api', () => youthApi);
 vi.mock('../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../common/hooks/usePrograms', () => ({
+vi.mock('../../features/programs/hooks/usePrograms', () => ({
   usePrograms: (...args: unknown[]) => {
     expect(args).toEqual([{ assignedOnly: true }]);
     return { programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };

@@ -1,4 +1,4 @@
-import useInfiniteListQuery from '../../../common/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../common/query/hooks/useInfiniteListQuery';
 import { getYouth } from '../../../common/api/youth.api';
 import type { YouthProfile } from '../types';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';

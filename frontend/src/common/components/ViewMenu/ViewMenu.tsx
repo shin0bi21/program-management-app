@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faChevronDown, faEye } from '@fortawesome/free-solid-svg-icons';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
 import Button from '../Button/Button';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './ViewMenu.css';
 
 export interface ViewMenuOption<T extends string> {

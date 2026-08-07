@@ -8,7 +8,7 @@ import FilterCard, { type FilterCardCategory } from '../../../common/components/
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import { useAuth } from '../../../common/context/AuthContext';
-import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import { revokeAccountInvite, toggleAccountStatus } from '../../../common/api/accounts.api';
 import type { Account, AccountRole, AccountSortKey, AccountStatus } from '../../../common/types/account';
 import type { ListSort } from '../../../common/types/pagination';

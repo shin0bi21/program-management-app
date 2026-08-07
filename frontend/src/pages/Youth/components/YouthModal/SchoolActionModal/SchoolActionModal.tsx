@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
-import { createSchool, deleteSchool, setSchool } from '../../../../../common/api/schools.api';
-import type { School } from '../../../../../common/types/school';
+import { createSchool, deleteSchool, setSchool } from '../schools/api/schools.api';
+import type { School } from '../schools/types';
 import { getErrorMessage } from '../../../../../common/utils/clientErrors';
 
 export type SchoolAction =

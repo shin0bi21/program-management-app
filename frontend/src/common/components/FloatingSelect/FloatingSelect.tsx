@@ -1,8 +1,8 @@
 import { useRef, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './FloatingSelect.css';
 
 export interface FloatingSelectOption {

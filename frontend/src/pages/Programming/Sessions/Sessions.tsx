@@ -12,8 +12,8 @@ import TableDetailLayout from '../../../common/components/TableDetailLayout/Tabl
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/api/cohorts.api';
 import { useAuth } from '../../../common/context/AuthContext';
-import { usePrograms } from '../../../common/hooks/usePrograms';
-import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import { usePrograms } from '../../../features/programs/hooks/usePrograms';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import useUserPreference from '../../../common/hooks/useUserPreference';
 import type { CohortSession, SessionSortKey } from '../../../common/types/cohort';
 import type { ListSort } from '../../../common/types/pagination';
