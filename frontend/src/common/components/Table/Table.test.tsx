@@ -27,6 +27,48 @@ describe('Table', () => {
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'name', direction: 'desc' });
   });
 
+  it('resizes data columns by keyboard while leaving action columns fixed', () => {
+    const onColumnWidthsChange = vi.fn();
+    const resizableColumns: TableColumn<Row>[] = [
+      { key: 'name', header: 'Name', render: row => row.name },
+      { key: 'actions', header: '', render: () => null, width: 40, resizable: false },
+    ];
+    render(<Table
+      ariaLabel="Accounts"
+      columns={resizableColumns}
+      data={[]}
+      keyExtractor={row => row.id}
+      columnWidths={{ name: 150 }}
+      onColumnWidthsChange={onColumnWidthsChange}
+    />);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Name column' }), { key: 'ArrowRight' });
+    expect(onColumnWidthsChange).toHaveBeenCalledWith({ name: 160 });
+    expect(screen.queryByRole('button', { name: 'Resize  column' })).not.toBeInTheDocument();
+  });
+
+  it('clamps transient drag widths before exposing them to preference persistence', () => {
+    const onColumnWidthsChange = vi.fn();
+    const dragColumns: TableColumn<Row>[] = [
+      { key: 'name', header: 'Name', render: row => row.name },
+    ];
+    render(<Table
+      ariaLabel="Accounts"
+      columns={dragColumns}
+      data={[]}
+      keyExtractor={row => row.id}
+      columnWidths={{ name: 150 }}
+      onColumnWidthsChange={onColumnWidthsChange}
+    />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Name column' }), { clientX: 150 });
+    fireEvent.mouseMove(document, { clientX: 0 });
+    fireEvent.mouseUp(document);
+
+    expect(onColumnWidthsChange).toHaveBeenCalled();
+    expect(onColumnWidthsChange.mock.calls.every(([widths]) => widths.name >= 100)).toBe(true);
+  });
+
   it('loads the next batch when the scroll sentinel intersects', () => {
     let notify: IntersectionObserverCallback | undefined;
     const disconnect = vi.fn();
@@ -67,6 +109,22 @@ describe('Table', () => {
     const loadingCell = screen.getByRole('cell', { name: 'Loading...' });
     expect(loadingCell).toHaveAttribute('colspan', '2');
     expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
+  });
+
+  it('keeps existing rows mounted and shows a sorting spinner while refreshing', () => {
+    render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[{ id: '1', name: 'Jamie' }]}
+      refreshing
+      keyExtractor={row => row.id}
+    />);
+
+    const existingRow = screen.getByRole('row', { name: /Jamie Active/ });
+    expect(existingRow).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Updating rows' })).toBeInTheDocument();
+    expect(existingRow.closest('tbody')).toHaveAttribute('inert');
+    expect(screen.queryByRole('cell', { name: 'Loading...' })).not.toBeInTheDocument();
   });
 
   it('supports mouse and keyboard row selection', () => {

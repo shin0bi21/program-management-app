@@ -9,6 +9,7 @@ interface TableRowProps<T> {
   rowIndex: number;
   onSelect?: (item: T) => void;
   onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
+  columnWidths: Record<string, number>;
 }
 
 function TableRowComponent<T>({
@@ -19,6 +20,7 @@ function TableRowComponent<T>({
   rowIndex,
   onSelect,
   onNavigate,
+  columnWidths,
 }: TableRowProps<T>) {
   const select = () => onSelect?.(item);
   const isInteractiveTarget = (target: HTMLElement) => Boolean(
@@ -58,7 +60,9 @@ function TableRowComponent<T>({
       onKeyDown={handleKeyDown}
     >
       {columns.map(column => (
-        <td key={column.key} className={column.className}>{column.render(item)}</td>
+        <td key={column.key} className={column.className} style={{ width: columnWidths[column.key] }}>
+          {column.render(item)}
+        </td>
       ))}
     </tr>
   );

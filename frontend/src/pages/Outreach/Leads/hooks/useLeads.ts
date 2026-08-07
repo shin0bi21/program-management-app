@@ -16,6 +16,7 @@ export function useLeads(filters: LeadFilters | null, sorting: ListSort<LeadSort
     upsertLead: query.upsert,
     removeLead: query.remove,
     loading: query.loading,
+    refreshing: query.refreshing,
     error: query.error,
     reload: query.refetch,
     hasNextPage: query.hasNextPage,

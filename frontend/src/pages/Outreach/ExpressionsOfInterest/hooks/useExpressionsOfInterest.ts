@@ -15,6 +15,7 @@ export function useExpressionsOfInterest(filters: ExpressionOfInterestFilters | 
     submissions: query.rows,
     upsertSubmission: query.upsert,
     loading: query.loading,
+    refreshing: query.refreshing,
     error: query.error,
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,

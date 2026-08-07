@@ -38,13 +38,14 @@ export default function Users() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filtersReady, setFiltersReady] = useState(false);
   const [sorting, setSorting] = useState<ListSort<AccountSortKey>>({ key: 'name', direction: 'asc' });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('account-filters');
   const queryFilters = useMemo(() => filtersReady ? ({
     search: debouncedSearch,
     roles: roleFilters,
     statuses: statusFilters,
   }) : null, [debouncedSearch, filtersReady, roleFilters, statusFilters]);
-  const { accounts, upsertAccount, removeAccount, loading, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
+  const { accounts, upsertAccount, removeAccount, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -60,6 +61,7 @@ export default function Users() {
     setStatusFilters(preference?.statuses ?? []);
     setRoleFilters(preference?.roles ?? []);
     setSorting(preference?.sorting ?? { key: 'name', direction: 'asc' });
+    setColumnWidths(preference?.columnWidths ?? {});
     setFiltersReady(true);
   }, [filtersReady, preference, preferenceLoading]);
 
@@ -109,13 +111,13 @@ export default function Users() {
         render: account => `${account.firstName} ${account.lastName}`,
       },
       { key: 'email', sortKey: 'email', header: 'Email', render: account => account.email },
-      { key: 'role', sortKey: 'role', header: 'Role', width: '110px', render: account => titleCase(account.role) },
-      { key: 'status', sortKey: 'status', header: 'Status', width: '120px', render: account => statusBadge(account.status) },
+      { key: 'role', sortKey: 'role', header: 'Role', width: 110, render: account => titleCase(account.role) },
+      { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: account => statusBadge(account.status) },
       {
         key: 'createdAt',
         sortKey: 'createdAt',
         header: 'Created',
-        width: '150px',
+        width: 150,
         render: account => formatShortDate(account.createdAt),
       },
     ];
@@ -124,6 +126,8 @@ export default function Users() {
 
     return [...accountColumns, {
       key: 'actions',
+      width: 40,
+      resizable: false,
       header: '',
       className: 'col-actions',
       render: account => (
@@ -180,16 +184,16 @@ export default function Users() {
               const roles = categoryId === 'role' ? selected as AccountRole[] : roleFilters;
               setStatusFilters(statuses);
               setRoleFilters(roles);
-              void save({ statuses, roles, sorting });
+              void save({ statuses, roles, sorting, columnWidths });
             }}
             onClearAll={() => {
               setStatusFilters([]);
               setRoleFilters([]);
-              void save({ statuses: [], roles: [], sorting });
+              void save({ statuses: [], roles: [], sorting, columnWidths });
             }}
           />}
         />
-        {preferenceError && <p role="alert">{preferenceError}</p>}
+        {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
 
         <section className="accounts-panel" aria-label="Accounts">
           <Table
@@ -197,11 +201,14 @@ export default function Users() {
             columns={columns}
             data={accounts}
             loading={loading}
+            refreshing={refreshing}
             error={error}
             emptyMessage={search || statusFilters.length || roleFilters.length ? 'No accounts match these filters' : 'No accounts found'}
             keyExtractor={account => account.id}
             sorting={sorting}
-            onSortingChange={next => { const value = next as ListSort<AccountSortKey>; setSorting(value); void save({ statuses: statusFilters, roles: roleFilters, sorting: value }); }}
+            onSortingChange={next => { const value = next as ListSort<AccountSortKey>; setSorting(value); void save({ statuses: statusFilters, roles: roleFilters, sorting: value, columnWidths }); }}
+            columnWidths={columnWidths}
+            onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, roles: roleFilters, sorting, columnWidths: next }); }}
             hasNextPage={hasNextPage}
             loadingNextPage={loadingNextPage}
             onLoadNextPage={loadNextPage}

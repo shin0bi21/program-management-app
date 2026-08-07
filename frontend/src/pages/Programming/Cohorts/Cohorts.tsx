@@ -41,6 +41,7 @@ export default function Cohorts() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [filtersReady, setFiltersReady] = useState(false);
   const [sorting, setSorting] = useState<ListSort<CohortSortKey>>({ key: 'start', direction: 'desc' });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('cohort-filters');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -83,6 +84,7 @@ export default function Cohorts() {
     );
     setSelectedStatus(preference?.status ?? (role === 'staff' ? 'active' : ''));
     setSorting(preference?.sorting ?? { key: 'start', direction: 'desc' });
+    setColumnWidths(preference?.columnWidths ?? {});
     setFiltersReady(true);
   }, [filtersReady, preference, preferenceLoading, programs, programsLoading, role]);
 
@@ -118,19 +120,21 @@ export default function Cohorts() {
     () => [
       { key: 'program', sortKey: 'program', header: 'Program', render: (cohort) => cohort.programName },
       { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (cohort) => cohort.name },
-      { key: 'start', sortKey: 'start', header: 'Start', width: '140px', render: (cohort) => formatShortDate(cohort.startsOn) },
-      { key: 'end', sortKey: 'end', header: 'End', width: '140px', render: (cohort) => formatShortDate(cohort.endsOn) },
+      { key: 'start', sortKey: 'start', header: 'Start', width: 140, render: (cohort) => formatShortDate(cohort.startsOn) },
+      { key: 'end', sortKey: 'end', header: 'End', width: 140, render: (cohort) => formatShortDate(cohort.endsOn) },
       {
         key: 'status',
         sortKey: 'status',
         header: 'Status',
-        width: '120px',
+        width: 120,
         render: (cohort) => <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>,
       },
       ...(canWriteCohorts
         ? [
             {
               key: 'actions',
+              width: 40,
+              resizable: false,
               header: '',
               className: 'col-actions',
               render: (cohort: ProgramCohort) => (
@@ -170,7 +174,7 @@ export default function Cohorts() {
     setSelectedProgramId(programId);
     void save({
       programId: programId || null,
-      status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting,
+      status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths,
     });
   };
 
@@ -178,7 +182,7 @@ export default function Cohorts() {
     setSelectedStatus(status);
     void save({
       programId: selectedProgramId || null,
-      status: (status || null) as 'active' | 'upcoming' | 'completed' | null, sorting,
+      status: (status || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths,
     });
   };
 
@@ -250,14 +254,14 @@ export default function Cohorts() {
                 onClearAll={() => {
                   setSelectedProgramId('');
                   setSelectedStatus('');
-                  void save({ programId: null, status: null, sorting });
+                  void save({ programId: null, status: null, sorting, columnWidths });
                 }}
               />
             }
           />
 
           {programsError && <p className="form-error">{programsError}</p>}
-          {preferenceError && <p role="alert">{preferenceError}</p>}
+          {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
           <TableDetailLayout
             ariaLabel="Programming cohorts and overview"
             table={
@@ -266,12 +270,15 @@ export default function Cohorts() {
                 columns={columns}
                 data={cohorts}
                 loading={cohortsLoading}
+                refreshing={cohortTable.refreshing}
                 error={error ?? undefined}
                 keyExtractor={(cohort) => cohort.id}
                 selectedKey={selectedCohortId}
                 onRowSelect={selectCohort}
                 sorting={sorting}
-                onSortingChange={next => { const value = next as ListSort<CohortSortKey>; setSorting(value); void save({ programId: selectedProgramId || null, status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting: value }); }}
+                onSortingChange={next => { const value = next as ListSort<CohortSortKey>; setSorting(value); void save({ programId: selectedProgramId || null, status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting: value, columnWidths }); }}
+                columnWidths={columnWidths}
+                onColumnWidthsChange={next => { setColumnWidths(next); void save({ programId: selectedProgramId || null, status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths: next }); }}
                 hasNextPage={cohortTable.hasNextPage}
                 loadingNextPage={cohortTable.loadingNextPage}
                 onLoadNextPage={cohortTable.loadNextPage}

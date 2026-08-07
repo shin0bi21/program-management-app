@@ -16,6 +16,7 @@ export function useAccounts(filters: AccountFilters | null, sorting: ListSort<Ac
     upsertAccount: query.upsert,
     removeAccount: query.remove,
     loading: query.loading,
+    refreshing: query.refreshing,
     error: query.error,
     refetch: query.refetch,
     hasNextPage: query.hasNextPage,
