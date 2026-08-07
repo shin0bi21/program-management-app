@@ -252,8 +252,8 @@ describe('Sessions', () => {
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attendance.');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attachments.');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No notes.');
+    expect(await screen.findByText('No attachments.')).toBeInTheDocument();
+    expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();
