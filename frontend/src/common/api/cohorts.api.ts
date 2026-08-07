@@ -16,7 +16,10 @@ import type {
   UpdateCohortInput,
   UpdateSessionNoteInput,
   UpdateSessionInput,
+  CohortSortKey,
+  SessionSortKey,
 } from '../types/cohort';
+import type { CursorPage, CursorRequest } from '../types/pagination';
 import { apiClient } from './http/client';
 import type { RequestOptions } from './http/client';
 
@@ -31,6 +34,19 @@ export function getCohorts(
   const suffix = query.toString();
   const path = `/cohorts${suffix ? `?${suffix}` : ''}`;
   return opts ? apiClient.get<ProgramCohort[]>(path, opts) : apiClient.get<ProgramCohort[]>(path);
+}
+
+export function getCohortPage(filters: { programId?: string; search?: string; status?: string }, pagination: CursorRequest<CohortSortKey>, opts?: RequestOptions) {
+  const query = new URLSearchParams();
+  if (filters.programId) query.set('programId', filters.programId);
+  if (filters.search) query.set('search', filters.search);
+  if (filters.status) query.set('status', filters.status);
+  query.set('sort', pagination.key);
+  query.set('direction', pagination.direction);
+  query.set('limit', String(pagination.limit ?? 25));
+  if (pagination.cursor) query.set('cursor', pagination.cursor);
+  const path = `/cohorts?${query}`;
+  return opts ? apiClient.get<CursorPage<ProgramCohort>>(path, opts) : apiClient.get<CursorPage<ProgramCohort>>(path);
 }
 
 export function createCohort(data: CreateCohortInput) {
@@ -63,7 +79,9 @@ export function getSessionTypes(opts?: RequestOptions) {
     : apiClient.get<SessionType[]>('/cohorts/session-types');
 }
 
-export function getSessions(filters: SessionListFilters | SessionCalendarFilters = {}, opts?: RequestOptions) {
+export function getSessions(filters: SessionCalendarFilters, opts?: RequestOptions): Promise<CohortSession[]>;
+export function getSessions(filters: SessionListFilters, opts: RequestOptions | undefined, pagination: CursorRequest<SessionSortKey>): Promise<CursorPage<CohortSession>>;
+export function getSessions(filters: SessionListFilters | SessionCalendarFilters = {}, opts?: RequestOptions, pagination?: CursorRequest<SessionSortKey>) {
   const query = new URLSearchParams();
   if ('start' in filters) query.set('start', filters.start);
   if ('end' in filters) query.set('end', filters.end);
@@ -72,8 +90,14 @@ export function getSessions(filters: SessionListFilters | SessionCalendarFilters
   if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
   if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);
+  if (pagination) {
+    query.set('sort', pagination.key);
+    query.set('direction', pagination.direction);
+    query.set('limit', String(pagination.limit ?? 25));
+    if (pagination.cursor) query.set('cursor', pagination.cursor);
+  }
   const path = `/cohorts/sessions?${query}`;
-  return opts ? apiClient.get<CohortSession[]>(path, opts) : apiClient.get<CohortSession[]>(path);
+  return opts ? apiClient.get<CohortSession[] | CursorPage<CohortSession>>(path, opts) : apiClient.get<CohortSession[] | CursorPage<CohortSession>>(path);
 }
 
 export function getSessionRoster(sessionId: string, opts?: RequestOptions) {

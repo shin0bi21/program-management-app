@@ -92,6 +92,7 @@ describe('ExpressionsOfInterest', () => {
 
     await waitFor(() => expect(getExpressions).toHaveBeenLastCalledWith(
       { search: '', statuses: [], programIds: ['program-1'] },
+      expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });

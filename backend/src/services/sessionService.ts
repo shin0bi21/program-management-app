@@ -7,6 +7,7 @@ import type {
   SessionListQuery,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 const intervalFor = {
   weekly: '1 week',
@@ -141,7 +142,14 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
   const search = filters.search ? `%${filters.search}%` : null;
   const completedOnly = filters.statuses.length === 1 && filters.statuses[0] === 'completed';
 
-  return sql`
+  const cursor = decodeCursor(filters.cursor);
+  const direction = filters.limit ? filters.direction : filters.start ? 'asc' : filters.direction;
+  const state = sql`CASE WHEN cs.cancelled_at IS NOT NULL THEN 'cancelled' WHEN cs.ends_at < NOW() THEN 'completed' ELSE 'upcoming' END`;
+  const sortValue = {
+    program: sql`LOWER(p.name)`, cohort: sql`LOWER(pc.name)`, theme: sql`LOWER(COALESCE(cs.theme, ''))`,
+    date: sql`cs.starts_at::text`, time: sql`cs.starts_at::text`, type: sql`LOWER(st.name)`, status: state,
+  }[filters.sort]!;
+  return sql<Array<{ id: string; cursorValue: string }>>`
     SELECT
       cs.id,
       cs.cohort_id,
@@ -167,7 +175,8 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
         WHEN cs.cancelled_at IS NOT NULL THEN 'cancelled'
         WHEN cs.ends_at < NOW() THEN 'completed'
         ELSE 'upcoming'
-      END AS state
+      END AS state,
+      ${sortValue} AS cursor_value
     FROM cohort_sessions cs
     INNER JOIN session_types st ON st.id = cs.session_type_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
@@ -196,9 +205,13 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
       )`
           : sql`TRUE`
       }
+      AND ${cursor ? (direction === 'asc'
+        ? sql`(${sortValue}, cs.id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, cs.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
     GROUP BY cs.id, pc.id, p.id, st.id
-    ORDER BY cs.starts_at ${filters.start ? sql`ASC` : sql`DESC`}
-  `;
+    ORDER BY ${sortValue} ${direction === 'asc' ? sql`ASC` : sql`DESC`}, cs.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
+    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
+  `.then(rows => filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row));
 }
 
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {

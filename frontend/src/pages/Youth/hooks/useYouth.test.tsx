@@ -40,6 +40,7 @@ describe('useYouth', () => {
       undefined,
       { statuses: ['active'] },
       { signal: expect.any(AbortSignal) },
+      expect.objectContaining({ key: 'firstName', direction: 'asc', limit: 25 }),
     );
   });
 

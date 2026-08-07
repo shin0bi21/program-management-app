@@ -8,6 +8,9 @@ const mockUseAccounts = vi.fn();
 vi.mock('../../../common/components/Header/Header', () => ({ default: () => <div>Header</div> }));
 vi.mock('../../../common/context/AuthContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./hooks/useAccounts', () => ({ useAccounts: (filters: unknown) => mockUseAccounts(filters) }));
+vi.mock('../../../common/hooks/useUserPreference', () => ({
+  default: () => ({ preference: null, loading: false, error: null, save: vi.fn() }),
+}));
 
 const accounts = [
   {

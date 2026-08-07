@@ -17,6 +17,7 @@ export interface ProgramCohort {
   attendanceRecordedCount: number;
   uniqueAttendeeCount: number;
 }
+export type CohortSortKey = 'program' | 'cohort' | 'start' | 'end' | 'status';
 
 export interface CohortSession {
   id: string;
@@ -80,6 +81,7 @@ export interface SessionListFilters {
   statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
 }
+export type SessionSortKey = 'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status';
 
 export interface SessionCalendarFilters extends SessionListFilters {
   start: string;

@@ -15,7 +15,8 @@ import { useAuth } from '../../../common/context/AuthContext';
 import { usePrograms } from '../../../common/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import useUserPreference from '../../../common/hooks/useUserPreference';
-import type { CohortSession } from '../../../common/types/cohort';
+import type { CohortSession, SessionSortKey } from '../../../common/types/cohort';
+import type { ListSort } from '../../../common/types/pagination';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
@@ -57,6 +58,7 @@ export default function Sessions() {
   const [selectedSessionTypeIds, setSelectedSessionTypeIds] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [sorting, setSorting] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
   const selectedSessionId = searchParams.get('session') ?? '';
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('session-filters');
   const canWriteAttendance = permissions.includes('write:attendance');
@@ -102,6 +104,7 @@ export default function Sessions() {
       setCohortId(cohorts.some(cohort => cohort.id === preference.cohortId) ? preference.cohortId ?? '' : '');
       setSelectedSessionTypeIds(preference.sessionTypeIds);
       setStatusFilters(preference.statuses);
+      setSorting(preference.sorting ?? { key: 'date', direction: 'desc' });
     } else {
       const assignedProgram = getSingleAssignedProgram(role, programs);
       setSelectedProgramIds(assignedProgram ? [assignedProgram.id] : []);
@@ -115,6 +118,9 @@ export default function Sessions() {
     loading,
     error,
     refresh: refreshSessions,
+    hasNextPage,
+    loadingNextPage,
+    loadNextPage,
   } = useSessions(
     {
       programIds: selectedProgramIds,
@@ -123,6 +129,7 @@ export default function Sessions() {
       statuses: statusFilters,
       search: debouncedSearch || undefined,
     },
+    sorting,
     filtersReady && view === 'list',
   );
 
@@ -184,6 +191,7 @@ export default function Sessions() {
       cohortId: nextCohortId || null,
       sessionTypeIds: nextSessionTypeIds,
       statuses: nextStatuses,
+      sorting,
     });
     const next = new URLSearchParams(searchParams);
     next.delete('session');
@@ -198,6 +206,7 @@ export default function Sessions() {
       cohortId: cohortId || null,
       sessionTypeIds: selectedSessionTypeIds,
       statuses: statusFilters,
+      sorting,
     });
   };
 
@@ -206,7 +215,7 @@ export default function Sessions() {
     setCohortId('');
     setSelectedSessionTypeIds([]);
     setStatusFilters([]);
-    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] });
+    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [], sorting });
     const next = new URLSearchParams(searchParams);
     next.delete('session');
     setSearchParams(next);
@@ -220,12 +229,13 @@ export default function Sessions() {
 
   const columns = useMemo<TableColumn<CohortSession>[]>(
     () => [
-      { key: 'program', header: 'Program', render: (session) => session.programName },
-      { key: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
-      { key: 'theme', header: 'Theme', render: (session) => session.theme || '—' },
-      { key: 'date', header: 'Date', width: '135px', render: (session) => formatShortDate(session.startsAt) },
+      { key: 'program', sortKey: 'program', header: 'Program', render: (session) => session.programName },
+      { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
+      { key: 'theme', sortKey: 'theme', header: 'Theme', render: (session) => session.theme || '—' },
+      { key: 'date', sortKey: 'date', header: 'Date', width: '135px', render: (session) => formatShortDate(session.startsAt) },
       {
         key: 'time',
+        sortKey: 'time',
         header: 'Time',
         width: '165px',
         render: (session) =>
@@ -233,6 +243,7 @@ export default function Sessions() {
       },
       {
         key: 'type',
+        sortKey: 'type',
         header: 'Type',
         width: '135px',
         render: (session) => (
@@ -243,6 +254,7 @@ export default function Sessions() {
       },
       {
         key: 'status',
+        sortKey: 'status',
         header: 'Status',
         width: '110px',
         render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
@@ -368,6 +380,11 @@ export default function Sessions() {
                   selectedKey={selectedSessionId || null}
                   scrollToSelected={Boolean(selectedSessionId)}
                   onRowSelect={selectSession}
+                  sorting={sorting}
+                  onSortingChange={next => { const value = next as ListSort<SessionSortKey>; setSorting(value); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting: value }); }}
+                  hasNextPage={hasNextPage}
+                  loadingNextPage={loadingNextPage}
+                  onLoadNextPage={loadNextPage}
                   emptyMessage={
                     search ||
                     selectedProgramIds.length ||

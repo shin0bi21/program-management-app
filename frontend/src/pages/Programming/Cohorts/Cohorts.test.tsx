@@ -40,6 +40,7 @@ const preferenceHook = vi.hoisted(() => ({
 
 vi.mock('../../../common/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
+  getCohortPage: api.getCohorts,
   getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
 }));
@@ -263,9 +264,9 @@ describe('Cohorts', () => {
     );
 
     expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
-    await waitFor(() => expect(api.getCohorts).toHaveBeenLastCalledWith(
-      'program-1',
-      {},
+    await waitFor(() => expect(api.getCohorts).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: 'program-1', status: 'active' }),
+      expect.objectContaining({ key: 'start', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });

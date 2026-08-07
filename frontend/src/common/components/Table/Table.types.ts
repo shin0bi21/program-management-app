@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { SortDirection } from '../../types/pagination';
 
 export interface TableColumn<T> {
   key: string;
@@ -6,6 +7,12 @@ export interface TableColumn<T> {
   render: (item: T) => ReactNode;
   width?: string;
   className?: string;
+  sortKey?: string;
+}
+
+export interface TableSorting {
+  key: string;
+  direction: SortDirection;
 }
 
 export type TableNavigationKey = 'ArrowUp' | 'ArrowDown' | 'Home' | 'End';

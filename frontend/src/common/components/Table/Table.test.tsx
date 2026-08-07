@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Table, { type TableColumn } from './Table';
 
 interface Row {
@@ -13,6 +13,36 @@ const columns: TableColumn<Row>[] = [
 ];
 
 describe('Table', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('emits controlled backend sorting from sortable headers', () => {
+    const onSortingChange = vi.fn();
+    const sortableColumns: TableColumn<Row>[] = [
+      { key: 'name', sortKey: 'name', header: 'Name', render: row => row.name },
+    ];
+    render(<Table ariaLabel="Accounts" columns={sortableColumns} data={[]} keyExtractor={row => row.id} sorting={{ key: 'name', direction: 'asc' }} onSortingChange={onSortingChange} />);
+
+    expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveAttribute('aria-sort', 'ascending');
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }));
+    expect(onSortingChange).toHaveBeenCalledWith({ key: 'name', direction: 'desc' });
+  });
+
+  it('loads the next batch when the scroll sentinel intersects', () => {
+    let notify: IntersectionObserverCallback | undefined;
+    const disconnect = vi.fn();
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
+      notify = callback;
+      return { observe: vi.fn(), disconnect, unobserve: vi.fn(), takeRecords: vi.fn(), root: null, rootMargin: '', thresholds: [] };
+    }));
+    const onLoadNextPage = vi.fn();
+    const { unmount } = render(<Table ariaLabel="Accounts" columns={columns} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} hasNextPage onLoadNextPage={onLoadNextPage} />);
+
+    notify?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    expect(onLoadNextPage).toHaveBeenCalledOnce();
+    unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
+
   it('keeps the header and renders a full-width row when data is empty', () => {
     render(<Table ariaLabel="Accounts" columns={columns} data={[]} keyExtractor={row => row.id} emptyMessage="No accounts found" />);
 
@@ -48,6 +78,32 @@ describe('Table', () => {
     fireEvent.click(row);
     fireEvent.keyDown(row, { key: 'Enter' });
     expect(onSelect).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not scroll back to the selected row when another page is appended', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const firstPage = [{ id: '1', name: 'First' }];
+    const { rerender } = render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={firstPage}
+      keyExtractor={row => row.id}
+      selectedKey="1"
+      scrollToSelected
+    />);
+
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    rerender(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[...firstPage, { id: '2', name: 'Second' }]}
+      keyExtractor={row => row.id}
+      selectedKey="1"
+      scrollToSelected
+    />);
+
+    expect(scrollIntoView).toHaveBeenCalledOnce();
   });
 
   it('moves row focus and selection with arrow, Home, and End keys', () => {

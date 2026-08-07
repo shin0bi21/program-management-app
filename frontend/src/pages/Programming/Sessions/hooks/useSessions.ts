@@ -1,6 +1,7 @@
 import { getSessions } from '../../../../common/api/cohorts.api';
-import type { CohortSession, SessionListFilters } from '../../../../common/types/cohort';
-import useListQuery from '../../../../common/hooks/useListQuery';
+import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../common/types/cohort';
+import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
+import type { ListSort } from '../../../../common/types/pagination';
 
 export function useSessions({
   programIds = [],
@@ -8,7 +9,7 @@ export function useSessions({
   sessionTypeIds = [],
   statuses = [],
   search,
-}: SessionListFilters, enabled = true) {
+}: SessionListFilters, sorting: ListSort<SessionSortKey>, enabled = true) {
   const filters = {
         programIds,
         cohortId,
@@ -16,12 +17,12 @@ export function useSessions({
         statuses,
         search,
   };
-  const query = useListQuery<CohortSession>({
-    queryKey: ['sessions', filters],
-    queryFn: ({ signal }) => getSessions(filters, { signal }),
+  const query = useInfiniteListQuery<CohortSession>({
+    queryKey: ['sessions', filters, sorting],
+    queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: 25 }),
     errorMessage: 'Could not load sessions',
     enabled,
   });
 
-  return { sessions: query.rows, loading: query.loading, error: query.error, refresh: query.refetch };
+  return { sessions: query.rows, loading: query.loading, error: query.error, refresh: query.refetch, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
 }

@@ -1,11 +1,12 @@
-import useListQuery from '../../../../common/hooks/useListQuery';
+import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
 import { getLeads } from '../api/leads.api';
-import type { Lead, LeadFilters } from '../types';
+import type { Lead, LeadFilters, LeadSortKey } from '../types';
+import type { ListSort } from '../../../../common/types/pagination';
 
-export function useLeads(filters: LeadFilters | null) {
-  const query = useListQuery<Lead>({
-    queryKey: ['leads', filters],
-    queryFn: ({ signal }) => getLeads(filters ?? {}, { signal }),
+export function useLeads(filters: LeadFilters | null, sorting: ListSort<LeadSortKey>) {
+  const query = useInfiniteListQuery<Lead>({
+    queryKey: ['leads', filters, sorting],
+    queryFn: ({ signal, pageParam }) => getLeads(filters ?? {}, { ...sorting, cursor: pageParam ?? undefined, limit: 25 }, { signal }),
     errorMessage: 'Failed to load leads',
     enabled: filters !== null,
   });
@@ -17,5 +18,8 @@ export function useLeads(filters: LeadFilters | null) {
     loading: query.loading,
     error: query.error,
     reload: query.refetch,
+    hasNextPage: query.hasNextPage,
+    loadingNextPage: query.loadingNextPage,
+    loadNextPage: query.loadNextPage,
   };
 }

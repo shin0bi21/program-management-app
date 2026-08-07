@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 const expressionStatusSchema = z.enum(['new', 'reviewed', 'converted', 'spam', 'contacted', 'signed_up', 'lost']);
 const commaSeparated = (schema: z.ZodType<string>) => z.preprocess(value => {
@@ -12,6 +13,7 @@ export const expressionOfInterestQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparated(expressionStatusSchema),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+    ...cursorListFields(['name', 'age', 'school', 'program', 'createdAt', 'status'], 'createdAt', 'desc'),
   }),
 });
 
