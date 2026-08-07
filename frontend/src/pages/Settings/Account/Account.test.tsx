@@ -17,7 +17,7 @@ vi.mock('../../../common/utils/storage', () => ({
 vi.mock('../../../common/context/AuthContext', () => ({
   useAuth: () => ({ role: 'staff' }),
 }));
-vi.mock('../../../common/hooks/usePrograms', () => ({
+vi.mock('../../../features/programs/hooks/usePrograms', () => ({
   usePrograms: (options: unknown) => mockUsePrograms(options),
 }));
 

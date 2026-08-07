@@ -1,0 +1,42 @@
+.note-details {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.note-details__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.note-details__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.note-details__meta svg {
+  color: var(--ink-40);
+}
+
+.note-details__context {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.note-details__body {
+  padding: var(--space-4);
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.note-details__body p {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

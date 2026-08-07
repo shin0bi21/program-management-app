@@ -6,11 +6,12 @@ import { getErrorMessage } from '../../../common/utils/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
-import { NotesCard, PrimaryContactCard } from '../../../common/components/DetailCards/DetailCards';
+import PrimaryContactCard from '../../../features/contacts/components/PrimaryContactCard/PrimaryContactCard';
+import NotesCard from '../common/components/NotesCard/NotesCard';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import { usePrograms } from '../../../common/hooks/usePrograms';
-import useTableSelection from '../../../common/hooks/useTableSelection';
+import { usePrograms } from '../../../features/programs/hooks/usePrograms';
+import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import useUserPreference from '../../../common/hooks/useUserPreference';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
@@ -28,10 +29,11 @@ export default function ExpressionsOfInterest() {
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
   const [sorting, setSorting] = useState<ListSort<ExpressionOfInterestSortKey>>({ key: 'createdAt', direction: 'desc' });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, upsertSubmission, loading, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
+  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
@@ -55,6 +57,7 @@ export default function ExpressionsOfInterest() {
     setStatusFilters(preference?.statuses ?? []);
     setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
     setSorting(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
+    setColumnWidths(preference?.columnWidths ?? {});
     setFiltersReady(true);
   }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
 
@@ -62,7 +65,7 @@ export default function ExpressionsOfInterest() {
     nextStatuses: ExpressionOfInterest['status'][],
     nextProgramIds: string[],
   ) => {
-    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting });
+    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting, columnWidths });
   };
 
   const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
@@ -125,13 +128,15 @@ export default function ExpressionsOfInterest() {
 
   const columns: TableColumn<ExpressionOfInterest>[] = [
     { key: 'youthName', sortKey: 'name', header: 'Youth Name', render: submissionYouthName },
-    { key: 'age', sortKey: 'age', header: 'Age', width: '70px', render: item => item.age },
+    { key: 'age', sortKey: 'age', header: 'Age', width: 100, render: item => item.age },
     { key: 'school', sortKey: 'school', header: 'School', render: item => item.school },
     { key: 'program', sortKey: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },
-    { key: 'submittedAt', sortKey: 'createdAt', header: 'Date', width: '130px', render: item => formatShortDate(item.createdAt) },
-    { key: 'status', sortKey: 'status', header: 'Status', width: '120px', render: item => statusBadge(item.status) },
+    { key: 'submittedAt', sortKey: 'createdAt', header: 'Date', width: 130, render: item => formatShortDate(item.createdAt) },
+    { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: item => statusBadge(item.status) },
     ...(canWrite ? [{
       key: 'actions' as const,
+      width: 40,
+      resizable: false,
       header: '',
       className: 'col-actions',
       render: (item: ExpressionOfInterest) => item.status === 'converted' ? null : (
@@ -171,12 +176,12 @@ export default function ExpressionsOfInterest() {
         />}
       />
       <div className="outreach-tab-content data-detail-page-content">
-        {preferenceError && <p role="alert">{preferenceError}</p>}
+        {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
         {actionError && <p className="page-error">{actionError}</p>}
 
         <TableDetailLayout
           ariaLabel="Expressions of interest"
-          table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+          table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
           details={<>
             <PrimaryContactCard contact={selectedSubmission ? {
               phoneNumber: selectedSubmission.contactPhoneNumber,

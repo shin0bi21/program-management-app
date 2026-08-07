@@ -28,7 +28,7 @@ vi.mock('../../../common/context/AuthContext', () => ({
 }));
 vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../../common/hooks/usePrograms', () => ({
+vi.mock('../../../features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
 }));
 

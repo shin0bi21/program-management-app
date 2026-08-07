@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { createProgram } from '../../../../../common/api/programs.api';
+import { createProgram } from '../../../../../features/programs/api/programs.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import type { Program } from '../../../../../common/types/program';
+import type { Program } from '../../../../../features/programs/types';
 import { getErrorMessage } from '../../../../../common/utils/clientErrors';
 
 interface AddProgramModalProps {

@@ -1,0 +1,23 @@
+.attendance-card__cohorts {
+  display: grid;
+  gap: 14px;
+}
+
+.attendance-card__cohort {
+  display: grid;
+  gap: 4px;
+}
+
+.attendance-card__cohort > strong,
+.attendance-card__cohort p {
+  font-size: 0.875rem;
+}
+
+.attendance-card__cohort + .attendance-card__cohort {
+  padding-top: 14px;
+  border-top: var(--border-line-soft);
+}
+
+.attendance-card__breakdown {
+  color: var(--color-ink);
+}

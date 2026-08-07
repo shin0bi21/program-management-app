@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceValues } from '../../../common/api/preferences.api';
-import type { Program } from '../../../common/types/program';
+import type { Program } from '../../../features/programs/types';
 import Sessions from './Sessions';
 import render from '../../../tests/renderWithQueryClient';
 
@@ -56,7 +56,7 @@ vi.mock('../../../common/api/cohorts.api', () => ({
   generateSessions: vi.fn(),
 }));
 
-vi.mock('../../../common/hooks/usePrograms', () => ({
+vi.mock('../../../features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: programState.programs, loading: false }),
 }));
 
@@ -252,8 +252,8 @@ describe('Sessions', () => {
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attendance.');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attachments.');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No notes.');
+    expect(await screen.findByText('No attachments.')).toBeInTheDocument();
+    expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();

@@ -12,8 +12,8 @@ import TableDetailLayout from '../../../common/components/TableDetailLayout/Tabl
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/api/cohorts.api';
 import { useAuth } from '../../../common/context/AuthContext';
-import { usePrograms } from '../../../common/hooks/usePrograms';
-import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import { usePrograms } from '../../../features/programs/hooks/usePrograms';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import useUserPreference from '../../../common/hooks/useUserPreference';
 import type { CohortSession, SessionSortKey } from '../../../common/types/cohort';
 import type { ListSort } from '../../../common/types/pagination';
@@ -59,6 +59,7 @@ export default function Sessions() {
   const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
   const [sorting, setSorting] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const selectedSessionId = searchParams.get('session') ?? '';
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('session-filters');
   const canWriteAttendance = permissions.includes('write:attendance');
@@ -105,6 +106,7 @@ export default function Sessions() {
       setSelectedSessionTypeIds(preference.sessionTypeIds);
       setStatusFilters(preference.statuses);
       setSorting(preference.sorting ?? { key: 'date', direction: 'desc' });
+      setColumnWidths(preference.columnWidths ?? {});
     } else {
       const assignedProgram = getSingleAssignedProgram(role, programs);
       setSelectedProgramIds(assignedProgram ? [assignedProgram.id] : []);
@@ -116,6 +118,7 @@ export default function Sessions() {
   const {
     sessions,
     loading,
+    refreshing,
     error,
     refresh: refreshSessions,
     hasNextPage,
@@ -192,6 +195,7 @@ export default function Sessions() {
       sessionTypeIds: nextSessionTypeIds,
       statuses: nextStatuses,
       sorting,
+      columnWidths,
     });
     const next = new URLSearchParams(searchParams);
     next.delete('session');
@@ -207,6 +211,7 @@ export default function Sessions() {
       sessionTypeIds: selectedSessionTypeIds,
       statuses: statusFilters,
       sorting,
+      columnWidths,
     });
   };
 
@@ -215,7 +220,7 @@ export default function Sessions() {
     setCohortId('');
     setSelectedSessionTypeIds([]);
     setStatusFilters([]);
-    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [], sorting });
+    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [], sorting, columnWidths });
     const next = new URLSearchParams(searchParams);
     next.delete('session');
     setSearchParams(next);
@@ -232,12 +237,12 @@ export default function Sessions() {
       { key: 'program', sortKey: 'program', header: 'Program', render: (session) => session.programName },
       { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
       { key: 'theme', sortKey: 'theme', header: 'Theme', render: (session) => session.theme || '—' },
-      { key: 'date', sortKey: 'date', header: 'Date', width: '135px', render: (session) => formatShortDate(session.startsAt) },
+      { key: 'date', sortKey: 'date', header: 'Date', width: 135, render: (session) => formatShortDate(session.startsAt) },
       {
         key: 'time',
         sortKey: 'time',
         header: 'Time',
-        width: '165px',
+        width: 165,
         render: (session) =>
           `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
       },
@@ -245,7 +250,7 @@ export default function Sessions() {
         key: 'type',
         sortKey: 'type',
         header: 'Type',
-        width: '135px',
+        width: 135,
         render: (session) => (
           <span className={`session-type session-type--${sessionTypeModifier(session.sessionTypeName)}`}>
             {session.sessionTypeName}
@@ -256,13 +261,15 @@ export default function Sessions() {
         key: 'status',
         sortKey: 'status',
         header: 'Status',
-        width: '110px',
+        width: 110,
         render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
       },
       ...(canWriteAttendance || canWriteSessions
         ? [
             {
               key: 'actions',
+              width: 40,
+              resizable: false,
               header: '',
               className: 'col-actions',
               render: (session: CohortSession) => (
@@ -363,7 +370,7 @@ export default function Sessions() {
               />
             )}
           />
-          {preferenceError && <p role="alert">{preferenceError}</p>}
+          {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (
@@ -375,13 +382,16 @@ export default function Sessions() {
                   columns={columns}
                   data={sessions}
                   loading={loading}
+                  refreshing={refreshing}
                   error={error ?? undefined}
                   keyExtractor={(session) => session.id}
                   selectedKey={selectedSessionId || null}
                   scrollToSelected={Boolean(selectedSessionId)}
                   onRowSelect={selectSession}
                   sorting={sorting}
-                  onSortingChange={next => { const value = next as ListSort<SessionSortKey>; setSorting(value); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting: value }); }}
+                  onSortingChange={next => { const value = next as ListSort<SessionSortKey>; setSorting(value); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting: value, columnWidths }); }}
+                  columnWidths={columnWidths}
+                  onColumnWidthsChange={next => { setColumnWidths(next); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting, columnWidths: next }); }}
                   hasNextPage={hasNextPage}
                   loadingNextPage={loadingNextPage}
                   onLoadNextPage={loadNextPage}

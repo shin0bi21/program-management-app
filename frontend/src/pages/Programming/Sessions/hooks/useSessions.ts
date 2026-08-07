@@ -1,6 +1,6 @@
 import { getSessions } from '../../../../common/api/cohorts.api';
 import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../common/types/cohort';
-import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../common/types/pagination';
 
 export function useSessions({
@@ -24,5 +24,5 @@ export function useSessions({
     enabled,
   });
 
-  return { sessions: query.rows, loading: query.loading, error: query.error, refresh: query.refetch, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
+  return { sessions: query.rows, loading: query.loading, refreshing: query.refreshing, error: query.error, refresh: query.refetch, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
 }

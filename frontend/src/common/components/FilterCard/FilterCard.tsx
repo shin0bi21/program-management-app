@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCheck, faChevronRight, faFilter } from '@fortawesome/free-solid-svg-icons';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
-import { getMenuItems } from '../../utils/floatingMenuUtils';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
+import { getMenuItems } from '../FloatingMenu/utils/floatingMenuUtils';
 import Button from '../Button/Button';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './FilterCard.css';
 
 export interface FilterCardOption {

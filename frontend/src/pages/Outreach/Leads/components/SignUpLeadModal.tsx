@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/ModalFormFooter/ModalFormFooter';
+import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
 import { getCohorts } from '../../../../common/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../common/utils/clientErrors';

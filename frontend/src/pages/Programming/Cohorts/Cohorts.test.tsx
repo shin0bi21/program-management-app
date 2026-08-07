@@ -3,7 +3,7 @@ import render from '../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../common/types/program';
+import type { Program } from '../../../features/programs/types';
 import Cohorts from './Cohorts';
 
 function LocationProbe() {
@@ -45,7 +45,7 @@ vi.mock('../../../common/api/cohorts.api', () => ({
   createCohort: api.createCohort,
 }));
 
-vi.mock('../../../common/api/programs.api', () => ({
+vi.mock('../../../features/programs/api/programs.api', () => ({
   createProgram: api.createProgram,
 }));
 
@@ -54,7 +54,7 @@ vi.mock('../../../common/context/AuthContext', () => ({
 }));
 vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../../common/hooks/usePrograms', () => ({
+vi.mock('../../../features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,
     upsertProgram: vi.fn(),

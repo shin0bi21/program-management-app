@@ -17,7 +17,7 @@ const authState = vi.hoisted(() => ({
   permissions: ['write:schools'] as string[],
 }));
 
-vi.mock('../../../../common/hooks/useSchools', () => ({
+vi.mock('./schools/hooks/useSchools', () => ({
   useSchools: () => ({
     schools: schoolState.schools,
     upsertSchool: schoolState.upsertSchool,

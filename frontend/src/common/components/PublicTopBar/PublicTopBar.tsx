@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useFloatingMenu } from '../../hooks/useFloatingMenu';
-import FloatingMenuPanel from '../FloatingMenuPanel/FloatingMenuPanel';
+import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
+import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import { HOMEPAGE_NAV_SECTIONS } from '../../utils/homepageSections';
 import './PublicTopBar.css';
 

@@ -10,7 +10,7 @@ vi.mock('../api/leads.api', () => ({
   updateLead: (...args: unknown[]) => updateLead(...args),
 }));
 
-vi.mock('../../../../common/hooks/usePrograms', () => ({
+vi.mock('../../../../features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], setPrograms: vi.fn(), loading: false, error: '' }),
 }));
 

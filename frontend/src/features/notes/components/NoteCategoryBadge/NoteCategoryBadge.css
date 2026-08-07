@@ -1,0 +1,34 @@
+.note-category {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: var(--radius-full);
+  background: var(--ink-05);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.note-category--attendance {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.note-category--behaviour,
+.note-category--health {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.note-category--achievement {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.note-category--follow_up,
+.note-category--preference {
+  background: var(--accent-12);
+  color: var(--brand-primary);
+}

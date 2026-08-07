@@ -1,4 +1,4 @@
-import useInfiniteListQuery from '../../../../common/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
 import { getExpressionsOfInterest } from '../api/expressionsOfInterest.api';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from '../types';
 import type { ListSort } from '../../../../common/types/pagination';
@@ -15,6 +15,7 @@ export function useExpressionsOfInterest(filters: ExpressionOfInterestFilters | 
     submissions: query.rows,
     upsertSubmission: query.upsert,
     loading: query.loading,
+    refreshing: query.refreshing,
     error: query.error,
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,

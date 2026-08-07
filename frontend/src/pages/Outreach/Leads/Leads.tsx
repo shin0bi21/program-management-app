@@ -7,12 +7,13 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
-import { NotesCard, PrimaryContactCard } from '../../../common/components/DetailCards/DetailCards';
+import PrimaryContactCard from '../../../features/contacts/components/PrimaryContactCard/PrimaryContactCard';
+import NotesCard from '../common/components/NotesCard/NotesCard';
 import { useAuth } from '../../../common/context/AuthContext';
-import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
-import { usePrograms } from '../../../common/hooks/usePrograms';
-import useTableSelection from '../../../common/hooks/useTableSelection';
+import { usePrograms } from '../../../features/programs/hooks/usePrograms';
+import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import useUserPreference from '../../../common/hooks/useUserPreference';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
@@ -35,10 +36,11 @@ export default function Leads() {
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [filtersReady, setFiltersReady] = useState(false);
   const [sorting, setSorting] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { leads, loading, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
+  const { leads, loading, refreshing, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
@@ -62,11 +64,12 @@ export default function Leads() {
     setStatusFilters(preference?.statuses ?? []);
     setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
     setSorting(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
+    setColumnWidths(preference?.columnWidths ?? {});
     setFiltersReady(true);
   }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
 
   const persistFilters = (nextStatuses: LeadStatus[], nextProgramIds: string[]) => {
-    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting });
+    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting, columnWidths });
   };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
@@ -93,10 +96,12 @@ export default function Leads() {
     { key: 'name', sortKey: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
     { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
     { key: 'program', sortKey: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
-    { key: 'status', sortKey: 'status', header: 'Status', width: '120px', render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
-    { key: 'created', sortKey: 'createdAt', header: 'Created', width: '130px', render: lead => formatShortDate(lead.createdAt) },
+    { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
+    { key: 'created', sortKey: 'createdAt', header: 'Created', width: 130, render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
       key: 'actions' as const,
+      width: 40,
+      resizable: false,
       header: '',
       className: 'col-actions',
       render: (lead: Lead) => lead.status === 'signed_up'
@@ -134,10 +139,10 @@ export default function Leads() {
         onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
       />}
     />
-    {preferenceError && <p role="alert">{preferenceError}</p>}
+    {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
     <TableDetailLayout
       ariaLabel="Leads"
-      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
       details={<>
         <PrimaryContactCard contact={selectedLead ? {
           phoneNumber: selectedLead.contactPhoneNumber,
