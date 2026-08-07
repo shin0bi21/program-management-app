@@ -10,6 +10,7 @@ import { audit } from './auditService';
 import { setAddresses } from './addressService';
 import { setContacts } from './contactService';
 import { applyYouthFilters } from './queryFilters/youthFilters';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
@@ -40,28 +41,34 @@ type YouthRow =
 // ============================================================================
 
 export function getYouth(id: string): Promise<YouthRow | null>;
-export function getYouth(id?: undefined, filters?: YouthQuery): Promise<YouthRow[]>;
-export async function getYouth(id?: string, filters?: YouthQuery): Promise<YouthRow[] | YouthRow | null> {
+export function getYouth(id?: undefined, filters?: YouthQuery): Promise<YouthRow[] | { rows: Omit<YouthRow & { cursorValue: string }, 'cursorValue'>[]; nextCursor: string | null }>;
+export async function getYouth(id?: string, filters?: YouthQuery): Promise<YouthRow[] | YouthRow | null | { rows: Omit<YouthRow & { cursorValue: string }, 'cursorValue'>[]; nextCursor: string | null }> {
   const where = filters ? applyYouthFilters(filters) : sql`TRUE`;
-  const youth = await sql<YouthRow[]>`
+  const cursor = decodeCursor(filters?.cursor);
+  const activeStatus = sql`CASE WHEN EXISTS (
+    SELECT 1 FROM cohort_enrollments current_enrollment
+    INNER JOIN program_cohorts current_cohort ON current_cohort.id = current_enrollment.cohort_id
+    WHERE current_enrollment.youth_id = u.id
+      AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+      AND (current_enrollment.withdrawn_on IS NULL OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
+      AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN current_cohort.starts_on AND current_cohort.ends_on
+  ) THEN 'active' ELSE 'inactive' END`;
+  const sortValue = filters ? ({
+    firstName: sql`LOWER(u.first_name)`,
+    lastName: sql`LOWER(u.last_name)`,
+    age: sql`COALESCE(LPAD(EXTRACT(YEAR FROM AGE(CURRENT_DATE, yp.date_of_birth))::int::text, 4, '0'), '')`,
+    school: sql`LOWER(COALESCE(s.name, ''))`,
+    grade: sql`COALESCE(LPAD(yp.grade_level::text, 4, '0'), '')`,
+    program: sql`LOWER(COALESCE((SELECT MIN(p_sort.name) FROM cohort_enrollments ce_sort INNER JOIN program_cohorts pc_sort ON pc_sort.id = ce_sort.cohort_id INNER JOIN programs p_sort ON p_sort.id = pc_sort.program_id WHERE ce_sort.youth_id = u.id AND ce_sort.withdrawn_on IS NULL), ''))`,
+    status: activeStatus,
+  }[filters.sort]!) : sql`LOWER(u.first_name)`;
+  const youth = await sql<Array<YouthRow & { cursorValue: string }>>`
     SELECT
       u.id,
       u.first_name,
       u.last_name,
-      CASE WHEN EXISTS (
-        SELECT 1
-        FROM cohort_enrollments current_enrollment
-        INNER JOIN program_cohorts current_cohort
-          ON current_cohort.id = current_enrollment.cohort_id
-        WHERE current_enrollment.youth_id = u.id
-          AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
-          AND (
-            current_enrollment.withdrawn_on IS NULL
-            OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date
-          )
-          AND (NOW() AT TIME ZONE 'America/Toronto')::date
-            BETWEEN current_cohort.starts_on AND current_cohort.ends_on
-      ) THEN 'active' ELSE 'inactive' END AS status,
+      ${activeStatus} AS status,
+      ${sortValue} AS cursor_value,
       yp.date_of_birth,
       yp.school_id,
       s.name as school_name,
@@ -175,9 +182,14 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
     WHERE ur.name = 'youth'
       ${id ? sql`AND u.id = ${id}` : sql``}
       AND ${where}
-    ORDER BY u.first_name ASC, u.last_name ASC
+      AND ${cursor && filters ? (filters.direction === 'asc'
+        ? sql`(${sortValue}, u.id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, u.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
+    ORDER BY ${sortValue} ${filters?.direction === 'desc' ? sql`DESC` : sql`ASC`}, u.id ${filters?.direction === 'desc' ? sql`DESC` : sql`ASC`}
+    ${filters?.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
   `;
-  return id ? youth[0] || null : youth;
+  if (id) return youth[0] || null;
+  return filters?.limit ? cursorPage(youth, filters.limit) : youth.map(({ cursorValue: _cursorValue, ...row }) => row) as YouthRow[];
 }
 
 export async function getYouthSessionNotes(

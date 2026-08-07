@@ -36,20 +36,20 @@ import type {
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
-  SessionListQuery,
   SaveAttendanceInput,
   UpdateCohortInput,
   UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
+import { cohortQuerySchema, sessionListQuerySchema } from '../validation/cohortSchemas';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetCohorts = async (req: Request, res: Response) => {
+  const query = cohortQuerySchema.shape.query.parse(req.query);
   res.json(await getCohorts(
     actor(req),
-    req.query.programId as string | undefined,
-    req.query.scope === 'all',
+    query,
   ));
 };
 
@@ -81,7 +81,7 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
-  res.json(await getSessionList(actor(req), req.query as SessionListQuery));
+  res.json(await getSessionList(actor(req), sessionListQuerySchema.shape.query.parse(req.query)));
 };
 export const handleGetSessionTypes = async (_req: Request, res: Response) => {
   res.json(await getSessionTypes());

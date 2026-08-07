@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 const accountRoleSchema = z.enum(['admin', 'staff', 'youth']);
 const accountStatusSchema = z.enum(['active', 'invited', 'inactive']);
@@ -16,6 +17,7 @@ export const accountQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     roles: commaSeparatedValues(accountRoleSchema),
     statuses: commaSeparatedValues(accountStatusSchema),
+    ...cursorListFields(['name', 'email', 'role', 'status', 'createdAt'], 'name', 'asc'),
   }),
 });
 

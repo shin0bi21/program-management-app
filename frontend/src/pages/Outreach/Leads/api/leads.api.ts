@@ -1,15 +1,23 @@
 import { apiClient } from '../../../../common/api/http/client';
 import type { RequestOptions } from '../../../../common/api/http/client';
 import type { CreateLeadInput, Lead, LeadFilters, LeadStatus, UpdateLeadInput } from '../types';
+import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
+import type { LeadSortKey } from '../types';
 
-export const getLeads = (filters: LeadFilters = {}, opts?: RequestOptions) => {
+export const getLeads = (filters: LeadFilters = {}, pagination?: CursorRequest<LeadSortKey>, opts?: RequestOptions) => {
   const params = new URLSearchParams();
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  if (pagination) {
+    params.set('sort', pagination.key);
+    params.set('direction', pagination.direction);
+    params.set('limit', String(pagination.limit ?? 25));
+    if (pagination.cursor) params.set('cursor', pagination.cursor);
+  }
   const query = params.toString();
   const path = `/leads${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<Lead[]>(path, opts) : apiClient.get<Lead[]>(path);
+  return opts ? apiClient.get<CursorPage<Lead>>(path, opts) : apiClient.get<CursorPage<Lead>>(path);
 };
 export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/leads', data);
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);

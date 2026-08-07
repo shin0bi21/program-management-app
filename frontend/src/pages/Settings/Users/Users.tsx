@@ -10,7 +10,9 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import { useAuth } from '../../../common/context/AuthContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/hooks/useConfirmModal';
 import { revokeAccountInvite, toggleAccountStatus } from '../../../common/api/accounts.api';
-import type { Account, AccountRole, AccountStatus } from '../../../common/types/account';
+import type { Account, AccountRole, AccountSortKey, AccountStatus } from '../../../common/types/account';
+import type { ListSort } from '../../../common/types/pagination';
+import useUserPreference from '../../../common/hooks/useUserPreference';
 import { formatShortDate } from '../../../common/utils/date';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
 import AccountModal from './components/AccountModal/AccountModal';
@@ -34,12 +36,15 @@ export default function Users() {
   const [statusFilters, setStatusFilters] = useState<AccountStatus[]>([]);
   const [roleFilters, setRoleFilters] = useState<AccountRole[]>([]);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const queryFilters = useMemo(() => ({
+  const [filtersReady, setFiltersReady] = useState(false);
+  const [sorting, setSorting] = useState<ListSort<AccountSortKey>>({ key: 'name', direction: 'asc' });
+  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('account-filters');
+  const queryFilters = useMemo(() => filtersReady ? ({
     search: debouncedSearch,
     roles: roleFilters,
     statuses: statusFilters,
-  }), [debouncedSearch, roleFilters, statusFilters]);
-  const { accounts, upsertAccount, removeAccount, loading, error } = useAccounts(queryFilters);
+  }) : null, [debouncedSearch, filtersReady, roleFilters, statusFilters]);
+  const { accounts, upsertAccount, removeAccount, loading, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -49,6 +54,14 @@ export default function Users() {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timeout);
   }, [search]);
+
+  useEffect(() => {
+    if (filtersReady || preferenceLoading) return;
+    setStatusFilters(preference?.statuses ?? []);
+    setRoleFilters(preference?.roles ?? []);
+    setSorting(preference?.sorting ?? { key: 'name', direction: 'asc' });
+    setFiltersReady(true);
+  }, [filtersReady, preference, preferenceLoading]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'status', label: 'Status', options: [
@@ -91,14 +104,16 @@ export default function Users() {
     const accountColumns: TableColumn<Account>[] = [
       {
         key: 'name',
+        sortKey: 'name',
         header: 'Name',
         render: account => `${account.firstName} ${account.lastName}`,
       },
-      { key: 'email', header: 'Email', render: account => account.email },
-      { key: 'role', header: 'Role', width: '110px', render: account => titleCase(account.role) },
-      { key: 'status', header: 'Status', width: '120px', render: account => statusBadge(account.status) },
+      { key: 'email', sortKey: 'email', header: 'Email', render: account => account.email },
+      { key: 'role', sortKey: 'role', header: 'Role', width: '110px', render: account => titleCase(account.role) },
+      { key: 'status', sortKey: 'status', header: 'Status', width: '120px', render: account => statusBadge(account.status) },
       {
         key: 'createdAt',
+        sortKey: 'createdAt',
         header: 'Created',
         width: '150px',
         render: account => formatShortDate(account.createdAt),
@@ -161,15 +176,20 @@ export default function Users() {
             categories={filterCategories}
             values={{ status: statusFilters, role: roleFilters }}
             onApply={(categoryId, selected) => {
-              if (categoryId === 'status') setStatusFilters(selected as AccountStatus[]);
-              if (categoryId === 'role') setRoleFilters(selected as AccountRole[]);
+              const statuses = categoryId === 'status' ? selected as AccountStatus[] : statusFilters;
+              const roles = categoryId === 'role' ? selected as AccountRole[] : roleFilters;
+              setStatusFilters(statuses);
+              setRoleFilters(roles);
+              void save({ statuses, roles, sorting });
             }}
             onClearAll={() => {
               setStatusFilters([]);
               setRoleFilters([]);
+              void save({ statuses: [], roles: [], sorting });
             }}
           />}
         />
+        {preferenceError && <p role="alert">{preferenceError}</p>}
 
         <section className="accounts-panel" aria-label="Accounts">
           <Table
@@ -180,6 +200,11 @@ export default function Users() {
             error={error}
             emptyMessage={search || statusFilters.length || roleFilters.length ? 'No accounts match these filters' : 'No accounts found'}
             keyExtractor={account => account.id}
+            sorting={sorting}
+            onSortingChange={next => { const value = next as ListSort<AccountSortKey>; setSorting(value); void save({ statuses: statusFilters, roles: roleFilters, sorting: value }); }}
+            hasNextPage={hasNextPage}
+            loadingNextPage={loadingNextPage}
+            onLoadNextPage={loadNextPage}
           />
         </section>
       </main>

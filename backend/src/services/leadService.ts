@@ -5,6 +5,7 @@ import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, Upda
 import { applyLeadFilters } from './queryFilters/leadFilters';
 import { audit } from './auditService';
 import { setContacts } from './contactService';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 const leadColumns = sql`
   id,
@@ -31,12 +32,25 @@ const leadColumns = sql`
 
 export async function getLeads(filters: LeadQuery) {
   const where = applyLeadFilters(filters);
-  return sql`
-    SELECT ${leadColumns}
+  const cursor = decodeCursor(filters.cursor);
+  const sortValue = {
+    name: sql`LOWER(youth_first_name || ' ' || youth_last_name)`,
+    school: sql`LOWER(school)`,
+    program: sql`LOWER(COALESCE((SELECT name FROM programs WHERE id = program_of_interest_id), ''))`,
+    status: sql`status::text`,
+    createdAt: sql`created_at::text`,
+  }[filters.sort]!;
+  const rows = await sql<Array<{ id: string; cursorValue: string }>>`
+    SELECT ${leadColumns}, ${sortValue} AS cursor_value
     FROM leads
     WHERE ${where}
-    ORDER BY created_at DESC
+      AND ${cursor ? (filters.direction === 'asc'
+        ? sql`(${sortValue}, id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
+    ORDER BY ${sortValue} ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}, id ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}
+    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
   `;
+  return filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row);
 }
 
 export async function createLead(data: CreateLeadInput, actorId: string) {

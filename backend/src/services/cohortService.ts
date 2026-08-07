@@ -2,14 +2,21 @@ import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError } from '../errors';
 import { assertCohortAccess, assertProgramAccess, programAccessPredicate } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
-import type { CreateCohortInput, UpdateCohortInput } from '../validation/cohortSchemas';
+import type { CohortQuery, CreateCohortInput, UpdateCohortInput } from '../validation/cohortSchemas';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 export function getCohorts(
   actor: AccessTokenPayload,
-  programId?: string,
-  includeAllPrograms = false,
+  query: CohortQuery,
 ) {
-  return sql`
+  const cursor = decodeCursor(query.cursor);
+  const state = sql`CASE WHEN CURRENT_DATE < pc.starts_on THEN 'upcoming' WHEN CURRENT_DATE > pc.ends_on THEN 'completed' ELSE 'active' END`;
+  const sortValue = {
+    program: sql`LOWER(p.name)`, cohort: sql`LOWER(pc.name)`, start: sql`pc.starts_on::text`,
+    end: sql`pc.ends_on::text`, status: state,
+  }[query.sort]!;
+  const search = query.search ? `%${query.search}%` : null;
+  return sql<Array<{ id: string; cursorValue: string }>>`
     SELECT
       pc.id,
       pc.program_id,
@@ -75,15 +82,22 @@ export function getCohorts(
         WHEN CURRENT_DATE < pc.starts_on THEN 'upcoming'
         WHEN CURRENT_DATE > pc.ends_on THEN 'completed'
         ELSE 'active'
-      END AS state
+      END AS state,
+      ${sortValue} AS cursor_value
     FROM program_cohorts pc
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN cohort_enrollments ce ON ce.cohort_id = pc.id
-    WHERE ${programId ? sql`pc.program_id = ${programId}` : sql`TRUE`}
-      AND ${includeAllPrograms ? sql`TRUE` : programAccessPredicate(actor, sql`pc.program_id`)}
+    WHERE ${query.programId ? sql`pc.program_id = ${query.programId}` : sql`TRUE`}
+      AND ${query.scope === 'all' ? sql`TRUE` : programAccessPredicate(actor, sql`pc.program_id`)}
+      AND ${search ? sql`(pc.name ILIKE ${search} OR p.name ILIKE ${search})` : sql`TRUE`}
+      AND ${query.status ? sql`${state} = ${query.status}` : sql`TRUE`}
+      AND ${cursor ? (query.direction === 'asc'
+        ? sql`(${sortValue}, pc.id) > (${cursor.value}, ${cursor.id}::uuid)`
+        : sql`(${sortValue}, pc.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
     GROUP BY pc.id, p.id
-    ORDER BY pc.starts_on DESC, pc.name
-  `;
+    ORDER BY ${sortValue} ${query.direction === 'asc' ? sql`ASC` : sql`DESC`}, pc.id ${query.direction === 'asc' ? sql`ASC` : sql`DESC`}
+    ${query.limit ? sql`LIMIT ${query.limit + 1}` : sql``}
+  `.then(rows => query.limit ? cursorPage(rows, query.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row));
 }
 
 export async function createCohort(data: CreateCohortInput, actor: AccessTokenPayload) {
