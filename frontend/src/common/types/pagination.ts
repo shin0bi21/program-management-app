@@ -1,4 +1,5 @@
 export type SortDirection = 'asc' | 'desc';
+export type ColumnWidths<TKey extends string = string> = Partial<Record<TKey, number>>;
 
 export interface ListSort<TKey extends string = string> {
   key: TKey;

@@ -80,6 +80,28 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
+  it('persists bounded column widths and rejects unsupported columns', async () => {
+    const value = {
+      statuses: [],
+      roles: [],
+      columnWidths: { name: 180, email: 320 },
+    };
+    const saved = await request(app)
+      .put('/api/preferences/account-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(value);
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual(value);
+
+    for (const columnWidths of [{ actions: 120 }, { name: 99 }, { name: 501 }, { name: 120.5 }]) {
+      const rejected = await request(app)
+        .put('/api/preferences/account-filters')
+        .set('Authorization', `Bearer ${firstToken}`)
+        .send({ statuses: [], roles: [], columnWidths });
+      expect(rejected.status).toBe(400);
+    }
+  });
+
   it('rejects unknown preference keys and malformed filter values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')

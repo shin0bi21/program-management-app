@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQueryClient,
   type InfiniteData,
@@ -30,6 +31,7 @@ export default function useInfiniteListQuery<T extends { id: string }>({
       return Array.isArray(result) ? { rows: result, nextCursor: null } : result;
     },
     enabled,
+    placeholderData: keepPreviousData,
     initialPageParam: null as string | null,
     getNextPageParam: page => page.nextCursor ?? undefined,
   });
@@ -47,6 +49,7 @@ export default function useInfiniteListQuery<T extends { id: string }>({
   return {
     rows,
     loading: query.isLoading,
+    refreshing: query.isFetching && !query.isFetchingNextPage && !query.isLoading,
     loadingNextPage: query.isFetchingNextPage,
     hasNextPage: Boolean(query.hasNextPage),
     loadNextPage: () => { void query.fetchNextPage(); },

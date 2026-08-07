@@ -5,9 +5,10 @@ export interface TableColumn<T> {
   key: string;
   header: string;
   render: (item: T) => ReactNode;
-  width?: string;
+  width?: number;
   className?: string;
   sortKey?: string;
+  resizable?: boolean;
 }
 
 export interface TableSorting {

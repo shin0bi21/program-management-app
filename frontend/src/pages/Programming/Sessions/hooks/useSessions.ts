@@ -24,5 +24,5 @@ export function useSessions({
     enabled,
   });
 
-  return { sessions: query.rows, loading: query.loading, error: query.error, refresh: query.refetch, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
+  return { sessions: query.rows, loading: query.loading, refreshing: query.refreshing, error: query.error, refresh: query.refetch, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
 }

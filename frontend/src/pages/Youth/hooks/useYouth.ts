@@ -26,6 +26,7 @@ export function useYouth(filters: YouthFilters | null = {}, sorting: ListSort<Yo
     upsertYouth: query.upsert,
     removeYouth: query.remove,
     loading: query.loading,
+    refreshing: query.refreshing,
     error: query.error,
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
