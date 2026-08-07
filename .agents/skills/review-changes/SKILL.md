@@ -10,6 +10,9 @@ Review the current working tree without creating issues, branches, commits, pull
 ## 1. Establish scope
 
 1. Read repository instructions and relevant structure documentation.
+   For dependency, environment, migration, or container changes, also read
+   `docs/local-development.md` and verify that the required local refresh or
+   migration step is documented in the review results.
 2. Inspect branch state and the complete tracked and untracked diff.
 3. Distinguish user changes from generated artifacts and unrelated pre-existing work.
 4. Identify the features and execution paths affected by the diff.
