@@ -3,7 +3,7 @@
 Express + TypeScript + PostgreSQL backend for a youth services management system.
 
 For the full-stack overview and request flow diagram see the [root README](../README.md).
-For backend conventions (SQL patterns, route structure, error throwing) see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
+Repository-wide invariants begin in [`AGENTS.md`](../AGENTS.md); detailed backend behavior lives in the architecture docs linked below.
 
 ---
 
@@ -151,7 +151,7 @@ backend/
     └── public/         # Public intake tests
 ```
 
-For middleware order, route patterns, error throwing, and "adding a new domain" see [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
+For middleware and error flow, see [`docs/errors.md`](docs/errors.md). For transaction and migration rules, see [`docs/db.md`](docs/db.md).
 
 ---
 
@@ -382,6 +382,15 @@ The backend container runs with the Node.js inspector on port 9229.
 
 > **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, breakpoints in service files will be silently skipped. After a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
 
+### Adding a Backend Domain
+
+1. Add Zod request schemas under `src/validation/`.
+2. Add database and business behavior under `src/services/`.
+3. Add thin request handlers under `src/controllers/`.
+4. Add permission, rate-limit, validation, and `asyncHandler` wiring under `src/routes/`.
+5. Mount the routes in both `src/index.ts` and `tests/shared/app.ts`.
+6. Add a focused backend test directory and register its runner with the backend test scripts.
+
 ---
 
 ## 8. Deployment
@@ -562,4 +571,4 @@ All `npm run` commands execute inside the Docker container via `docker compose e
 | [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, audit log, auth log, safety guarantees |
 | [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
 | [docs/google-sheets.md](docs/google-sheets.md) | Service account setup, `readSheet` / `writeSheet` / `appendToSheet` API, smoke test, script pattern |
-| [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | File locations, route patterns, conventions, "adding a new domain" checklist |
+| [`../AGENTS.md`](../AGENTS.md) | Repository entry point, stable invariants, and test-runner routing |
