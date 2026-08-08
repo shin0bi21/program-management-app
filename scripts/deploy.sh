@@ -83,14 +83,10 @@ echo "Deploying commit: $(git log -1 --oneline)"
 
 echo ""
 echo "Building frontend..."
-[ -f "frontend/.env.production" ] || {
-  echo "ERROR: frontend/.env.production not found — create it on the server before deploying."
-  echo "  echo 'VITE_API_URL=https://be-original.ca/api' > frontend/.env.production"
-  exit 1
-}
 docker run --rm \
   -v "$(pwd)/frontend:/app" \
   -w /app \
+  -e VITE_API_URL=/api \
   node:20-alpine \
   sh -c "npm ci && npm run build"
 

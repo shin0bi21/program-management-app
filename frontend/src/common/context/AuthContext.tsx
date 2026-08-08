@@ -48,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyToken = (token: string | null) => {
     if (!token || isTokenExpired(token)) {
-      queryClient.clear();
       clearAuthData();
       setIsAuthenticated(false);
       setRole(null);
@@ -61,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole((payload?.role as UserRole) ?? null);
       setPermissions((payload?.permissions as Permission[]) ?? []);
     } catch {
-      queryClient.clear();
       clearAuthData();
       setIsAuthenticated(false);
       setRole(null);
