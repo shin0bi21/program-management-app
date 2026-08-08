@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import TableBody from './components/TableBody';
 import TableHeader from './components/TableHeader';
 import useTableInfiniteScroll from './hooks/useTableInfiniteScroll';
@@ -125,7 +126,7 @@ export default function Table<T>({
       </table>
       {refreshing && data.length > 0 && (
         <div className="table-refresh-status" role="status" aria-label="Updating rows">
-          <span className="table-refresh-spinner" aria-hidden="true" />
+          <LoadingSpinner />
           <span className="sr-only">Updating rows…</span>
         </div>
       )}

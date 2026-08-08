@@ -56,6 +56,7 @@ src/
       FloatingMenu/       ← portal, positioning utilities, and interaction hook
       FormField/          ← shared labelled form field wrapper
       Header/             ← sidebar + settings flyout (uses FloatingMenuPanel)
+      LoadingSpinner/     ← shared orange loading indicator with consistent sizing and reduced-motion behavior
       Modal/              ← modal shell, form footer component, and confirmation hook
       ProtectedRoute/     ← redirects unauthenticated users
       PublicTopBar/       ← public top bar + mobile menu (uses FloatingMenuPanel)

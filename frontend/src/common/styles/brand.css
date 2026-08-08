@@ -8,6 +8,7 @@
   --color-ink:          #12161f;
   --color-white:         #ffffff;
   --color-accent:       #3b5ccc;
+  --color-brand-orange: #ffb52e;
   --color-muted:        #6b7280;
   --color-page-surface: #f6f7f9;
   --color-card-surface: var(--color-white);
@@ -52,6 +53,9 @@
   --accent-10: rgba(59, 92, 204, 0.10);
   --accent-08: rgba(59, 92, 204, 0.08);
   --accent-06: rgba(59, 92, 204, 0.06);
+
+  /* ── Be Original orange at standard opacities ──────────── */
+  --brand-orange-25: rgba(255, 181, 46, 0.25);
 
   /* ── White at standard opacities (dark sections) ───────── */
   --white-88: rgba(255, 255, 255, 0.88);

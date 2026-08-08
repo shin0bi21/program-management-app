@@ -7,4 +7,7 @@ export type HeroPhoto = {
 
 export type HeroSectionProps = {
   photos: HeroPhoto[]
+  loading?: boolean
+  error?: string | null
+  onRetry?: () => void
 }

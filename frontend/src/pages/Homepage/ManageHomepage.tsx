@@ -12,7 +12,8 @@ import { getErrorMessage } from '../../common/utils/clientErrors';
 import {
   deleteHomepageImage,
   getManagedHomepage,
-  getPublicHomepage,
+  getPublicHomepageImages,
+  getPublicHomepageSessions,
   reorderHomepageImages,
   type HomepageContent,
   type HomepageImage,
@@ -58,10 +59,17 @@ export default function ManageHomepage() {
   const openPreview = async () => {
     setActionError(null);
     try {
-      setPreviewContent(await queryClient.fetchQuery({
-        queryKey: ['homepage', 'public'],
-        queryFn: ({ signal }) => getPublicHomepage({ signal }),
-      }));
+      const [imageContent, sessionContent] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: ['homepage', 'public', 'images'],
+          queryFn: ({ signal }) => getPublicHomepageImages({ signal }),
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['homepage', 'public', 'sessions'],
+          queryFn: ({ signal }) => getPublicHomepageSessions({ signal }),
+        }),
+      ]);
+      setPreviewContent({ ...imageContent, ...sessionContent });
       setPreviewOpen(true);
     } catch (cause) {
       setActionError(getErrorMessage(cause, 'Could not load homepage preview'));

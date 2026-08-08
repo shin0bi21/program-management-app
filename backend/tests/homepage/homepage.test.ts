@@ -67,7 +67,7 @@ describe('Homepage management API', () => {
   });
 
   it('returns seeded hero images publicly without authentication', async () => {
-    const response = await request(app).get('/api/public/homepage');
+    const response = await request(app).get('/api/public/homepage/images');
 
     expect(response.status).toBe(200);
     expect(response.body.images).toEqual(
@@ -82,7 +82,7 @@ describe('Homepage management API', () => {
   });
 
   it('allows staff to upload, edit, serve, and delete a homepage image', async () => {
-    const originalImageIds = (await request(app).get('/api/public/homepage')).body.images.map(
+    const originalImageIds = (await request(app).get('/api/public/homepage/images')).body.images.map(
       (image: { id: string }) => image.id,
     );
     const created = await request(app)
@@ -105,7 +105,7 @@ describe('Homepage management API', () => {
       });
     expect(updated.status).toBe(200);
 
-    const publicContent = await request(app).get('/api/public/homepage');
+    const publicContent = await request(app).get('/api/public/homepage/images');
     expect(publicContent.body.images).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -126,7 +126,7 @@ describe('Homepage management API', () => {
       .send({ imageIds: reversedImageIds });
     expect(reordered.status).toBe(200);
     expect(reordered.body.imageIds).toEqual(reversedImageIds);
-    expect((await request(app).get('/api/public/homepage')).body.images[0].id).toBe(reversedImageIds[0]);
+    expect((await request(app).get('/api/public/homepage/images')).body.images[0].id).toBe(reversedImageIds[0]);
 
     const file = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/file`);
     expect(file.status).toBe(200);
@@ -158,7 +158,7 @@ describe('Homepage management API', () => {
   });
 
   it('automatically returns the next three sessions for each homepage program', async () => {
-    const publicContent = await request(app).get('/api/public/homepage');
+    const publicContent = await request(app).get('/api/public/homepage/sessions');
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     const expected = await sql<{ id: string }[]>`
       SELECT cs.id

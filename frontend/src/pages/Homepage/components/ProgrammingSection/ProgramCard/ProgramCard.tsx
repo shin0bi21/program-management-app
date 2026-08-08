@@ -13,7 +13,20 @@ function daysUntil(startsAt: string) {
   return Math.round((sessionDate.getTime() - today.getTime()) / millisecondsPerDay);
 }
 
-function UpcomingSessions({ sessions, dropIn }: { sessions: HomepageSession[]; dropIn?: boolean }) {
+type SessionsState = 'ready' | 'loading' | 'error';
+
+function UpcomingSessions({
+  sessions,
+  dropIn,
+  state,
+}: {
+  sessions: HomepageSession[];
+  dropIn?: boolean;
+  state: SessionsState;
+}) {
+  if (state === 'loading') return <p className="program-empty">Loading schedule…</p>;
+  if (state === 'error') return <p className="program-empty">Schedule unavailable.</p>;
+
   const [next, ...following] = sessions;
 
   if (!next) {
@@ -68,9 +81,10 @@ function UpcomingSessions({ sessions, dropIn }: { sessions: HomepageSession[]; d
 interface ProgramCardProps {
   program: Program;
   sessions: HomepageSession[];
+  sessionsState?: SessionsState;
 }
 
-export default function ProgramCard({ program, sessions }: ProgramCardProps) {
+export default function ProgramCard({ program, sessions, sessionsState = 'ready' }: ProgramCardProps) {
   return (
     <article className="program-card">
       <header className="program-card-head">
@@ -83,7 +97,7 @@ export default function ProgramCard({ program, sessions }: ProgramCardProps) {
       </div>
       <div className="program-sessions">
         <p className="program-sessions-label">Upcoming</p>
-        <UpcomingSessions sessions={sessions} dropIn={program.dropIn} />
+        <UpcomingSessions sessions={sessions} dropIn={program.dropIn} state={sessionsState} />
       </div>
     </article>
   );

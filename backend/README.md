@@ -216,6 +216,8 @@ Unauthenticated homepage intake endpoints.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `GET` | `/homepage/images` | Return the staff-managed hero-image manifest independently of programming data. |
+| `GET` | `/homepage/sessions` | Return upcoming homepage programming sessions independently of hero images. |
 | `POST` | `/expressions-of-interest` | Store a normalized public expression of interest with youth, school/source, primary contact, and notes. |
 
 ### Expressions of Interest — `/api/expressions-of-interest`

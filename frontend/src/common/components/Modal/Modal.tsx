@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react';
+import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import './Modal.css';
 
 interface ModalProps {
@@ -57,10 +58,10 @@ export default function Modal({
         </div>
 
         {status !== 'idle' && (
-          <div className={`modal-status modal-status-${status}`}>
+          <div className={`modal-status modal-status-${status}`} role={status === 'error' ? 'alert' : 'status'}>
             {status === 'submitting' && (
               <div className="modal-status-content">
-                <span className="modal-spinner"></span>
+                <LoadingSpinner size="sm" />
                 <span>{statusMessage || 'Submitting...'}</span>
               </div>
             )}

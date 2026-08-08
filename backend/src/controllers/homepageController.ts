@@ -5,7 +5,8 @@ import {
   deleteHomepageImage,
   getHomepageImageFile,
   getManagedHomepage,
-  getPublicHomepage,
+  getPublicHomepageImages,
+  getPublicHomepageSessions,
   reorderHomepageImages,
   updateHomepageImage,
 } from '../services/homepageService';
@@ -17,8 +18,12 @@ import type {
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
-export const handleGetPublicHomepage = async (_req: Request, res: Response) => {
-  res.json(await getPublicHomepage());
+export const handleGetPublicHomepageImages = async (_req: Request, res: Response) => {
+  res.json(await getPublicHomepageImages());
+};
+
+export const handleGetPublicHomepageSessions = async (_req: Request, res: Response) => {
+  res.json(await getPublicHomepageSessions());
 };
 
 export const handleGetManagedHomepage = async (_req: Request, res: Response) => {

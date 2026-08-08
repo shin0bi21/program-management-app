@@ -1,13 +1,13 @@
 import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar';
 import SiteFooter from './components/SiteFooter/SiteFooter';
 import HeroSection from './components/HeroSection/HeroSection';
-import { heroSectionPhotos } from './components/HeroSection/heroSectionData';
 import type { HeroPhoto } from './components/HeroSection/heroSectionSchema';
 import ProgrammingSection from './components/ProgrammingSection/ProgrammingSection';
 import ResourceCard from './components/ResourceCard';
 import SignupSection from './components/SignupSection/SignupSection';
 import { useSectionRouting } from './hooks/useSectionRouting';
-import { useHomepageContent } from './hooks/useHomepageContent';
+import { useHomepageImages } from './hooks/useHomepageImages';
+import { useHomepageSessions } from './hooks/useHomepageSessions';
 import type { HomepageSession } from './api/homepage.api';
 
 import './Homepage.css';
@@ -93,11 +93,36 @@ const teamResources = [
 
 // ── Component ───────────────────────────────────────────────────────────────────────────────
 
-export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; sessions: HomepageSession[] }) {
+type HomepageContentProps = {
+  photos: HeroPhoto[];
+  sessions: HomepageSession[];
+  heroLoading?: boolean;
+  heroError?: string | null;
+  onHeroRetry?: () => void;
+  sessionsLoading?: boolean;
+  sessionsError?: string | null;
+  onSessionsRetry?: () => void;
+};
+
+export function HomepageContent({
+  photos,
+  sessions,
+  heroLoading = false,
+  heroError = null,
+  onHeroRetry,
+  sessionsLoading = false,
+  sessionsError = null,
+  onSessionsRetry,
+}: HomepageContentProps) {
   return (
     <main className="homepage-container homepage-theme">
-      <HeroSection photos={photos} />
-      <ProgrammingSection sessions={sessions} />
+      <HeroSection photos={photos} loading={heroLoading} error={heroError} onRetry={onHeroRetry} />
+      <ProgrammingSection
+        sessions={sessions}
+        loading={sessionsLoading}
+        error={sessionsError}
+        onRetry={onSessionsRetry}
+      />
 
       <SignupSection />
 
@@ -164,22 +189,30 @@ export function HomepageContent({ photos, sessions }: { photos: HeroPhoto[]; ses
 }
 
 export default function Homepage() {
-  const { content, error, loading } = useHomepageContent();
-  useSectionRouting({ disabled: loading });
+  const imageQuery = useHomepageImages();
+  const sessionQuery = useHomepageSessions();
+  useSectionRouting({ disabled: imageQuery.loading || sessionQuery.loading });
 
-  const photos = error
-    ? heroSectionPhotos
-    : content.images.map((image) => ({
-        src: image.imageUrl,
-        mobileSrc: image.mobileUrl,
-        alt: image.altText,
-        caption: image.caption,
-      }));
+  const managedPhotos = imageQuery.images.map((image) => ({
+    src: image.imageUrl,
+    mobileSrc: image.mobileUrl,
+    alt: image.altText,
+    caption: image.caption,
+  }));
 
   return (
     <div className="homepage-theme">
       <PublicTopBar />
-      <HomepageContent photos={photos} sessions={content.sessions} />
+      <HomepageContent
+        photos={managedPhotos}
+        sessions={sessionQuery.sessions}
+        heroLoading={imageQuery.loading}
+        heroError={imageQuery.error}
+        onHeroRetry={() => void imageQuery.refresh()}
+        sessionsLoading={sessionQuery.loading}
+        sessionsError={sessionQuery.error}
+        onSessionsRetry={() => void sessionQuery.refresh()}
+      />
     </div>
   );
 }
