@@ -9,7 +9,9 @@
   --color-white:         #ffffff;
   --color-accent:       #3b5ccc;
   --color-muted:        #6b7280;
-  --color-surface:      #f7f6f2;
+  --color-page-surface: #f6f7f9;
+  --color-card-surface: var(--color-white);
+  --color-surface:      var(--color-page-surface);
   --color-surface-warm: #f8fafc;
   --color-accent-soft:  #eef2ff;
   --color-accent-selected: #dfe7ff;
@@ -121,7 +123,7 @@
   --brand-accent:         var(--color-accent);
   --brand-primary:        var(--color-accent);
   --brand-muted:          var(--color-muted);
-  --homepage-bg:          var(--color-surface);
+  --homepage-bg:          var(--color-page-surface);
   --homepage-card-radius: var(--radius-xl);
   --homepage-line:        var(--ink-12);
   --homepage-line-soft:   var(--ink-06);
