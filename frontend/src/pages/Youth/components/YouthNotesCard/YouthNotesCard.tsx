@@ -39,6 +39,9 @@ export default function YouthNotesCard({
   onDeleteSessionNote, onSelectProfileNote, canManageProfileNotes = false, onEditProfileNote,
   onDeleteProfileNote, profileNotesLoading = false, profileNotesError,
 }: YouthNotesCardProps) {
+  const notes = activeTab === 'profile' ? profileNotes : sessionNotes;
+  const notesLoading = activeTab === 'profile' ? profileNotesLoading : sessionNotesLoading;
+  const title = selected && !notesLoading ? `Notes (${notes.length})` : 'Notes';
   let content: ReactNode;
   if (!selected) content = <p className="dashboard-card__empty">Select a row to view notes.</p>;
   else if (activeTab === 'profile') {
@@ -70,7 +73,7 @@ export default function YouthNotesCard({
 
   return (
     <DashboardCard
-      title="Notes"
+      title={title}
       action={<YouthDashboardTabs activeTab={activeTab} ariaLabel="Notes view" onChange={onTabChange} options={notesTabs} />}
     >
       {content}

@@ -182,6 +182,7 @@ describe('Youth', () => {
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
     expect(await screen.findByText('Family follow-up')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes (1)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -244,6 +245,7 @@ describe('Youth', () => {
       'youth-1',
       { signal: expect.any(AbortSignal) },
     ));
+    expect(await screen.findByRole('heading', { name: 'Notes (1)' })).toBeInTheDocument();
     expect(localStorage.getItem('youthNotesTab')).toBe('session');
     fireEvent.click(await screen.findByRole('button', { name: /Strong participation/ }));
     expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
