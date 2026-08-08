@@ -100,9 +100,12 @@ function homepageSessions() {
   `;
 }
 
-export async function getPublicHomepage() {
-  const [images, sessions] = await Promise.all([homepageImages(), homepageSessions()]);
-  return { images, sessions };
+export async function getPublicHomepageImages() {
+  return { images: await homepageImages() };
+}
+
+export async function getPublicHomepageSessions() {
+  return { sessions: await homepageSessions() };
 }
 
 export async function getManagedHomepage() {

@@ -16,7 +16,8 @@ const renderPage = () => {
 
 const api = vi.hoisted(() => ({
   getManagedHomepage: vi.fn(),
-  getPublicHomepage: vi.fn(),
+  getPublicHomepageImages: vi.fn(),
+  getPublicHomepageSessions: vi.fn(),
   createHomepageImage: vi.fn(),
   updateHomepageImage: vi.fn(),
   deleteHomepageImage: vi.fn(),
@@ -25,7 +26,8 @@ const api = vi.hoisted(() => ({
 
 vi.mock('./api/homepage.api', () => ({
   getManagedHomepage: api.getManagedHomepage,
-  getPublicHomepage: api.getPublicHomepage,
+  getPublicHomepageImages: api.getPublicHomepageImages,
+  getPublicHomepageSessions: api.getPublicHomepageSessions,
   createHomepageImage: api.createHomepageImage,
   updateHomepageImage: api.updateHomepageImage,
   deleteHomepageImage: api.deleteHomepageImage,
@@ -82,7 +84,8 @@ describe('ManageHomepage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getManagedHomepage.mockResolvedValue({ images: content.images });
-    api.getPublicHomepage.mockResolvedValue(content);
+    api.getPublicHomepageImages.mockResolvedValue({ images: content.images });
+    api.getPublicHomepageSessions.mockResolvedValue({ sessions: content.sessions });
     api.createHomepageImage.mockResolvedValue({ id: 'image-2' });
     api.reorderHomepageImages.mockResolvedValue({ imageIds: [] });
   });

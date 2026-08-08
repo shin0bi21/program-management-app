@@ -215,21 +215,6 @@
   z-index: 9;
 }
 
-.table-refresh-spinner {
-  animation: table-refresh-spin 0.7s linear infinite;
-  border: 2px solid var(--ink-20);
-  border-radius: 50%;
-  border-top-color: var(--brand-primary);
-  height: 1.25rem;
-  width: 1.25rem;
-}
-
-@keyframes table-refresh-spin { to { transform: rotate(360deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .table-refresh-spinner { animation: none; }
-}
-
 .table-scroll-sentinel {
   height: 1px;
 }
