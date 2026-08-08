@@ -88,6 +88,57 @@ describe('Leads API', () => {
     }));
   });
 
+  it('records an authored chronological follow-up log for a lead', async () => {
+    const lead = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'Followup' });
+    expect(lead.status).toBe(201);
+
+    const created = await request(app)
+      .post(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ details: 'Called and left a message.' });
+    expect(created.status).toBe(201);
+    expect(created.body).toEqual(expect.objectContaining({
+      leadId: lead.body.id,
+      details: 'Called and left a message.',
+      createdByName: expect.any(String),
+      createdAt: expect.any(String),
+    }));
+
+    const updated = await request(app)
+      .put(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ details: 'Called and left a voicemail.' });
+    expect(updated.status).toBe(200);
+    expect(updated.body.details).toBe('Called and left a voicemail.');
+
+    const listed = await request(app)
+      .get(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(listed.status).toBe(200);
+    expect(listed.body).toEqual([
+      expect.objectContaining({ id: created.body.id, details: 'Called and left a voicemail.' }),
+    ]);
+
+    const removed = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(removed.status).toBe(200);
+
+    const missing = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(missing.status).toBe(404);
+
+    const invalid = await request(app)
+      .post(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ details: '   ' });
+    expect(invalid.status).toBe(400);
+  });
+
   it('rejects emergency as a Lead relationship', async () => {
     const res = await request(app)
       .post('/api/leads')
@@ -365,10 +416,14 @@ describe('Leads API', () => {
       .put('/api/leads/00000000-0000-4000-8000-000000000000')
       .set('Authorization', `Bearer ${youthToken}`)
       .send(payload);
+    const notes = await request(app)
+      .get('/api/leads/00000000-0000-4000-8000-000000000000/notes')
+      .set('Authorization', `Bearer ${youthToken}`);
 
     expect(list.status).toBe(403);
     expect(create.status).toBe(403);
     expect(update.status).toBe(403);
+    expect(notes.status).toBe(403);
   });
 
   it('returns 404 when updating an unknown lead', async () => {

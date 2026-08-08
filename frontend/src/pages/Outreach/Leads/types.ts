@@ -23,6 +23,15 @@ export interface Lead {
   createdAt: string;
 }
 
+export interface LeadNote {
+  id: string;
+  leadId: string;
+  details: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+}
+
 export interface CreateLeadInput {
   youthFirstName: string;
   youthLastName: string;
