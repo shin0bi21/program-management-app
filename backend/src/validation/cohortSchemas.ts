@@ -188,6 +188,13 @@ export const deleteSessionNoteSchema = z.object({
     noteId: z.string().uuid('Invalid note ID'),
   }),
 });
+export const unlinkSessionNoteYouthSchema = z.object({
+  params: z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+    noteId: z.string().uuid('Invalid note ID'),
+    youthId: z.string().uuid('Invalid youth ID'),
+  }),
+});
 
 const multipartYouthIds = z.preprocess(value => {
   if (value === undefined || value === '') return [];

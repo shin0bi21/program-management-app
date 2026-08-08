@@ -5,16 +5,31 @@ import { MemoryRouter } from 'react-router-dom';
 import queryClient from '../queryClient';
 import { AuthProvider } from './AuthContext';
 
+function resolveAfterDelay<T>(value: T, delayMs: number, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const handleAbort = () => {
+      window.clearTimeout(timeoutId);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      signal.removeEventListener('abort', handleAbort);
+      resolve(value);
+    }, delayMs);
+
+    signal.addEventListener('abort', handleAbort, { once: true });
+  });
+}
+
 function PublicQueryProbe() {
   const query = useQuery({
     queryKey: ['public-query-probe'],
-    queryFn: ({ signal }) => new Promise<string>((resolve, reject) => {
-      const timeoutId = window.setTimeout(() => resolve('Public content loaded'), 25);
-      signal.addEventListener('abort', () => {
-        window.clearTimeout(timeoutId);
-        reject(new DOMException('Aborted', 'AbortError'));
-      }, { once: true });
-    }),
+    queryFn: ({ signal }) => resolveAfterDelay('Public content loaded', 25, signal),
   });
 
   return <p>{query.data ?? 'Loading public content'}</p>;

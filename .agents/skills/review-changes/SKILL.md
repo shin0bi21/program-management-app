@@ -27,6 +27,10 @@ Do not review the diff in isolation. Inspect the closest existing examples and d
 - shared versus page-specific components;
 - API, service, hook, schema, type, and validation boundaries;
 - state updates, TanStack Query keys, cache updates, and loading/error flows;
+- query-function boundaries: keep query definitions declarative and do not register
+  event listeners inline. Move custom cancellation or subscription lifecycles into a
+  named API utility, helper, or hook; pass `AbortSignal` through and remove listeners
+  on every completion path;
 - database migrations, constraints, backward compatibility, and deploy scripts;
 - permissions, authentication, destructive actions, and accessibility;
 - test placement, fixtures, isolation, and async assertions;

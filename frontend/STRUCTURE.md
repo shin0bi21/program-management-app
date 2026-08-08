@@ -83,6 +83,7 @@ src/
       deviceFingerprint.ts
       time.ts
   features/
+    attendance/           ← cross-page attendance status controls shared by session and youth flows
     contacts/             ← cross-page contact presentation and contact-array behavior
     notes/                ← cross-page note rows, details, categories, and session-note management
     programs/             ← program API, types, lookup hook, and reusable program selector
@@ -92,7 +93,7 @@ src/
     Outreach/             ← expression review + lead management feature folders
       Leads/components/   ← page-owned lead forms, signup flow, and follow-up note UI
     Settings/             ← account settings + Users account management
-    Youth/                ← Youth.tsx + page APIs/hooks and YouthModal-owned address/school behavior
+    Youth/                ← Youth.tsx + page APIs/hooks, profile editing/profile notes, and youth-centric session attendance/note management
 ```
 
 ## Rules of Thumb
@@ -221,6 +222,7 @@ export default function MyMenu() {
 | `src/pages/Settings/Users/Users.test.tsx` | Role-scoped account management behavior |
 | `src/pages/Youth/Youth.test.tsx` | Youth profile page behavior |
 | `src/pages/Youth/components/AttendanceCard/AttendanceCard.test.tsx` | Youth attendance summary rendering |
+| `src/pages/Youth/components/YouthAttendanceModal/YouthAttendanceModal.test.tsx` | Youth-centric session attendance and session-note management |
 | `src/pages/Youth/components/YouthModal/YouthModal.test.tsx` | Youth modal rendering, validation, and submit payload behavior |
 
 ### Key patterns

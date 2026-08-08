@@ -133,6 +133,10 @@ export function deleteSessionNote(sessionId: string, noteId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}/notes/${noteId}`);
 }
 
+export function unlinkSessionNoteYouth(sessionId: string, noteId: string, youthId: string) {
+  return apiClient.delete(`/cohorts/sessions/${sessionId}/notes/${noteId}/youth/${youthId}`);
+}
+
 export function getSessionAttachments(sessionId: string, opts?: RequestOptions) {
   const path = `/cohorts/sessions/${sessionId}/attachments`;
   return opts ? apiClient.get<SessionAttachment[]>(path, opts) : apiClient.get<SessionAttachment[]>(path);
