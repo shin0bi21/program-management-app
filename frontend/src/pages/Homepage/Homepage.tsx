@@ -69,6 +69,8 @@ const teamResources = [
     badge: 'Treasurer',
     education: 'Computer Science',
     school: 'University of Windsor',
+    imageSrc: '/team/bilal-display.webp',
+    imageMobileSrc: '/team/bilal-mobile.webp',
     bio: "Hi, I'm Bilal! I've been a part of Be Original since 2022. Over the years, I've worked directly with the youth. I originally ran our healthy activity/ eating days, and I now run the Job Readiness program with Elijah. On the backend, I also do our accounting and build out website, including the page you see now, and our backend management system! I hope to connect with all the youth that walk through our doors and serve as a positive force in their life as they grow up.",
   },
   {
