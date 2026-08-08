@@ -83,12 +83,28 @@ export default function YouthAttendanceModal({
         )}
       >
         <form id="youth-attendance-form" onSubmit={submit}>
-          {youth && cohort && (
-            <p className="youth-attendance-modal__context">
-              {youth.firstName} {youth.lastName}<span aria-hidden="true"> · </span>
-              {cohort.programName}<span aria-hidden="true"> · </span>{cohort.name}
-            </p>
-          )}
+          <div className="youth-attendance-modal__summary">
+            {youth && cohort && (
+              <p className="youth-attendance-modal__context">
+                {youth.firstName} {youth.lastName}<span aria-hidden="true"> · </span>
+                {cohort.programName}<span aria-hidden="true"> · </span>{cohort.name}
+              </p>
+            )}
+            {sessionNotes.sessionsWithNotes.length > 0 && (
+              <div className="youth-attendance-modal__toolbar">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="youth-attendance-modal__all-notes-toggle"
+                  aria-pressed={sessionNotes.allExpanded}
+                  onClick={sessionNotes.toggleAll}
+                >
+                  <span>{sessionNotes.allExpanded ? 'Hide all notes' : 'Show all notes'}</span>
+                  <FontAwesomeIcon icon={sessionNotes.allExpanded ? faToggleOn : faToggleOff} aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+          </div>
 
           {loading && (
             <div className="youth-attendance-modal__loading" role="status">
@@ -102,39 +118,23 @@ export default function YouthAttendanceModal({
           )}
 
           {attendance?.sessions.length ? (
-            <>
-              {sessionNotes.sessionsWithNotes.length > 0 && (
-                <div className="youth-attendance-modal__toolbar">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="youth-attendance-modal__all-notes-toggle"
-                    aria-pressed={sessionNotes.allExpanded}
-                    onClick={sessionNotes.toggleAll}
-                  >
-                    <span>{sessionNotes.allExpanded ? 'Hide all notes' : 'Show all notes'}</span>
-                    <FontAwesomeIcon icon={sessionNotes.allExpanded ? faToggleOn : faToggleOff} aria-hidden="true" />
-                  </Button>
-                </div>
-              )}
-              <div className="youth-attendance-modal__sessions">
-                {attendance.sessions.map(session => (
-                  <SessionAttendanceItem
-                    key={session.id}
-                    session={session}
-                    rosterMode={attendance.cohort.rosterMode}
-                    status={selections[session.id] ?? ''}
-                    canManageSessionNotes={canManageSessionNotes}
-                    notesExpanded={sessionNotes.isExpanded(session.id)}
-                    onStatusChange={value => updateStatus(session.id, value)}
-                    onToggleNotes={() => sessionNotes.toggleSession(session.id)}
-                    onAddNote={() => sessionNotes.addNote(session)}
-                    onEditNote={note => sessionNotes.editNote(session, note)}
-                    onUnlinkNote={note => sessionNotes.requestUnlink(session, note)}
-                  />
-                ))}
-              </div>
-            </>
+            <div className="youth-attendance-modal__sessions">
+              {attendance.sessions.map(session => (
+                <SessionAttendanceItem
+                  key={session.id}
+                  session={session}
+                  rosterMode={attendance.cohort.rosterMode}
+                  status={selections[session.id] ?? ''}
+                  canManageSessionNotes={canManageSessionNotes}
+                  notesExpanded={sessionNotes.isExpanded(session.id)}
+                  onStatusChange={value => updateStatus(session.id, value)}
+                  onToggleNotes={() => sessionNotes.toggleSession(session.id)}
+                  onAddNote={() => sessionNotes.addNote(session)}
+                  onEditNote={note => sessionNotes.editNote(session, note)}
+                  onUnlinkNote={note => sessionNotes.requestUnlink(session, note)}
+                />
+              ))}
+            </div>
           ) : null}
         </form>
       </Modal>

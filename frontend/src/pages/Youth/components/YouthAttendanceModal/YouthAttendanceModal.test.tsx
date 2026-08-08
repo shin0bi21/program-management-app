@@ -86,18 +86,18 @@ describe('YouthAttendanceModal', () => {
       />,
     );
 
-    expect(await screen.findByText('Session Notes (1)')).toBeInTheDocument();
+    expect(await screen.findByText('Notes (1)')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
     expect(screen.getByText('Achievement')).toBeInTheDocument();
     expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
     expect(screen.queryByText('Bilal Khan')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'View Strong participation' })).not.toBeInTheDocument();
-    expect(screen.getByText('Session Notes (0)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Session Notes (0)' })).not.toBeInTheDocument();
+    expect(screen.getByText('Notes (0)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Notes (0)' })).not.toBeInTheDocument();
     expect(screen.queryByText('No session notes linked to this youth.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hide all notes' })).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Session Notes (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Notes (1)' }));
     expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show all notes' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Show all notes' }));
@@ -117,7 +117,7 @@ describe('YouthAttendanceModal', () => {
       />,
     );
 
-    const teamworkNotes = await screen.findByRole('region', { name: 'Session notes for Teamwork' });
+    const teamworkNotes = await screen.findByRole('region', { name: 'Notes for Teamwork' });
     fireEvent.click(within(teamworkNotes).getByRole('button', { name: '+ Add Note' }));
     expect(await screen.findByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Link youth' })).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../../common/components/Button/Button';
 import type { SessionNote } from '../../../../../common/types/cohort';
@@ -37,7 +37,7 @@ export default function SessionNoteCard({
               title="Unlink note from youth"
               onClick={onUnlink}
             >
-              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+              <FontAwesomeIcon icon={faLinkSlash} aria-hidden="true" />
             </Button>
           </div>
         )}

@@ -54,7 +54,7 @@ export default function SessionAttendanceItem({
         />
       </section>
 
-      <section className="youth-attendance-modal__notes" aria-label={`Session notes for ${sessionLabel}`}>
+      <section className="youth-attendance-modal__notes" aria-label={`Notes for ${sessionLabel}`}>
         <div className="youth-attendance-modal__notes-header">
           {session.sessionNotes.length > 0 ? (
             <Button
@@ -64,11 +64,11 @@ export default function SessionAttendanceItem({
               aria-expanded={notesExpanded}
               onClick={onToggleNotes}
             >
-              <span>Session Notes ({session.sessionNotes.length})</span>
+              <span>Notes ({session.sessionNotes.length})</span>
               <FontAwesomeIcon icon={notesExpanded ? faChevronUp : faChevronDown} aria-hidden="true" />
             </Button>
           ) : (
-            <strong className="youth-attendance-modal__notes-label">Session Notes (0)</strong>
+            <strong className="youth-attendance-modal__notes-label">Notes (0)</strong>
           )}
           {canManageSessionNotes && (
             <Button
