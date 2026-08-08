@@ -202,3 +202,22 @@ export async function deleteSessionNote(
   `;
   if (!deleted.length) throw new NotFoundError('Session note not found');
 }
+
+export async function unlinkYouthFromSessionNote(
+  sessionId: string,
+  noteId: string,
+  youthId: string,
+  actor: AccessTokenPayload,
+) {
+  await assertSessionAccess(actor, sessionId);
+  const unlinked = await sql`
+    DELETE FROM session_note_has_youth sny
+    USING session_notes sn
+    WHERE sny.note_id = sn.id
+      AND sn.id = ${noteId}
+      AND sn.session_id = ${sessionId}
+      AND sny.youth_id = ${youthId}
+    RETURNING sny.note_id
+  `;
+  if (!unlinked.length) throw new NotFoundError('Session note youth link not found');
+}

@@ -22,6 +22,7 @@ import {
   createSessionNote,
   deleteSessionNote,
   getSessionNotes,
+  unlinkYouthFromSessionNote,
   updateSessionNote,
 } from '../services/sessionNoteService';
 import {
@@ -126,6 +127,16 @@ export const handleUpdateSessionNote = async (req: Request, res: Response) => {
 export const handleDeleteSessionNote = async (req: Request, res: Response) => {
   await deleteSessionNote(req.params.sessionId, req.params.noteId, actor(req));
   res.json({ id: req.params.noteId });
+};
+
+export const handleUnlinkSessionNoteYouth = async (req: Request, res: Response) => {
+  await unlinkYouthFromSessionNote(
+    req.params.sessionId,
+    req.params.noteId,
+    req.params.youthId,
+    actor(req),
+  );
+  res.json({ noteId: req.params.noteId, youthId: req.params.youthId });
 };
 
 export const handleGetSessionAttachments = async (req: Request, res: Response) => {

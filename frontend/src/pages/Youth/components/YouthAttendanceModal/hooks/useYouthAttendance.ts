@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AttendanceStatus } from '../../../../common/types/cohort';
-import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import { getYouthCohortAttendance, setYouthCohortAttendance } from './youthAttendance.api';
-import type { YouthCohortAttendance } from './types';
+import type { AttendanceStatus } from '../../../../../common/types/cohort';
+import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getYouthCohortAttendance, setYouthCohortAttendance } from '../youthAttendance.api';
+import type { YouthCohortAttendance } from '../types';
 
 export default function useYouthAttendance({
   youthId,
@@ -68,6 +68,7 @@ export default function useYouthAttendance({
     attendance: query.data,
     loading: query.isLoading,
     loadError: query.error ? getErrorMessage(query.error, 'Could not load youth attendance') : '',
+    refresh: query.refetch,
     selections,
     updateStatus,
     save,

@@ -331,6 +331,49 @@ describe('Cohorts and attendance API', () => {
     expect(notes.status).toBe(200);
     expect(notes.body).toHaveLength(2);
 
+    const unlinkedYouth = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${attached.body.id}/youth/${youthId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(unlinkedYouth.status).toBe(200);
+    expect(unlinkedYouth.body).toEqual({ noteId: attached.body.id, youthId });
+
+    const notesAfterUnlink = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(notesAfterUnlink.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: attached.body.id,
+        youth: [expect.objectContaining({ youthId: secondYouthId })],
+      }),
+    ]));
+
+    const unlinkedLastYouth = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${attached.body.id}/youth/${secondYouthId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(unlinkedLastYouth.status).toBe(200);
+
+    const notesWithoutYouthLinks = await request(app)
+      .get(`/api/cohorts/sessions/${sessionId}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(notesWithoutYouthLinks.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: attached.body.id, youth: [] }),
+    ]));
+
+    const missingLink = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${attached.body.id}/youth/${secondYouthId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(missingLink.status).toBe(404);
+
+    const invalidYouthId = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${attached.body.id}/youth/not-a-uuid`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(invalidYouthId.status).toBe(400);
+
+    const forbidden = await request(app)
+      .delete(`/api/cohorts/sessions/${sessionId}/notes/${attached.body.id}/youth/${youthId}`)
+      .set('Authorization', `Bearer ${generateToken(youthId, 'youth', 'youth@example.com')}`);
+    expect(forbidden.status).toBe(403);
+
     const [session] = await sql<{ description: string | null }[]>`
       SELECT description FROM cohort_sessions WHERE id = ${sessionId}
     `;

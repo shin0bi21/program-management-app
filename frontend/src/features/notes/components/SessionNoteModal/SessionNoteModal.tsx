@@ -13,11 +13,17 @@ import './SessionNoteModal.css';
 export default function SessionNoteModal({
   session,
   note = null,
+  initialYouthId,
+  hideYouthSelection = false,
+  closeOnSuccess = false,
   onClose,
   onSaved,
 }: {
   session: Pick<CohortSession, 'id' | 'rosterMode'> | null;
   note?: SessionNote | null;
+  initialYouthId?: string;
+  hideYouthSelection?: boolean;
+  closeOnSuccess?: boolean;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
@@ -28,17 +34,17 @@ export default function SessionNoteModal({
   const rosterQuery = useQuery<SessionRosterMember[]>({
     queryKey: ['sessions', session?.id, 'roster'],
     queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
-    enabled: session !== null,
+    enabled: session !== null && !hideYouthSelection,
   });
   const roster = rosterQuery.data ?? [];
 
   useEffect(() => {
     if (!session) return;
-    setSelectedYouthIds(note?.youth.map(youth => youth.youthId) ?? []);
+    setSelectedYouthIds(note?.youth.map(youth => youth.youthId) ?? (initialYouthId ? [initialYouthId] : []));
     setCategory(note?.category ?? 'general');
     setSubmitStatus('idle');
     setStatusMessage('');
-  }, [session, note]);
+  }, [initialYouthId, session, note]);
 
   const toggleYouth = (youthId: string) => {
     setSelectedYouthIds(current => current.includes(youthId)
@@ -63,6 +69,10 @@ export default function SessionNoteModal({
       if (note) await updateSessionNote(session.id, note.id, data);
       else await createSessionNote(session.id, data);
       await onSaved();
+      if (closeOnSuccess) {
+        onClose();
+        return;
+      }
       setStatusMessage(note ? 'Session note successfully updated.' : 'Session note successfully added.');
       setSubmitStatus('success');
     } catch (cause) {
@@ -94,7 +104,7 @@ export default function SessionNoteModal({
         <FormField id="session-note-details" label="Details (optional)">
           <textarea key={`${note?.id ?? 'new'}-details`} id="session-note-details" name="details" rows={5} maxLength={5000} defaultValue={note?.details ?? ''} />
         </FormField>
-        {session && (
+        {session && !hideYouthSelection && (
           <fieldset className="session-note-youth" disabled={complete}>
             <legend>Link youth</legend>
             {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (

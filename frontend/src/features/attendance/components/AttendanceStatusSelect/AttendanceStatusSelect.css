@@ -1,0 +1,48 @@
+.attendance-status--unmarked {
+  --attendance-status-bg: var(--color-danger-bg);
+  --attendance-status-border: var(--color-danger-border);
+  --attendance-status-text: var(--color-danger-dark);
+}
+
+.attendance-status--present {
+  --attendance-status-bg: var(--color-success-bg);
+  --attendance-status-border: var(--color-success-border);
+  --attendance-status-text: var(--color-success);
+}
+
+.attendance-status--late {
+  --attendance-status-bg: #fef9c3;
+  --attendance-status-border: #fde047;
+  --attendance-status-text: #854d0e;
+}
+
+.attendance-status--absent {
+  --attendance-status-bg: #ffedd5;
+  --attendance-status-border: #fdba74;
+  --attendance-status-text: #9a3412;
+}
+
+.attendance-status--excused {
+  --attendance-status-bg: var(--color-info-bg);
+  --attendance-status-border: #93c5fd;
+  --attendance-status-text: var(--color-info);
+}
+
+.floating-select-trigger.attendance-status,
+.floating-menu-panel .floating-select-option.attendance-status,
+.floating-menu-panel .floating-select-option.attendance-status[aria-checked="true"] {
+  background: var(--attendance-status-bg);
+  border-color: var(--attendance-status-border);
+  color: var(--attendance-status-text);
+  font-weight: 600;
+}
+
+.floating-menu-panel .floating-select-option.attendance-status:hover {
+  background: var(--attendance-status-bg);
+  box-shadow: inset 0 0 0 1px var(--attendance-status-border);
+  filter: brightness(0.97);
+}
+
+.floating-menu-panel .floating-select-option.attendance-status[aria-checked="true"] {
+  box-shadow: inset 0 0 0 2px var(--attendance-status-border);
+}

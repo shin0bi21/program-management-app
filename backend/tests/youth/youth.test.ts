@@ -673,6 +673,7 @@ describe('Youth API', () => {
     let otherYouthId: string;
     let firstSessionId: string;
     let secondSessionId: string;
+    let linkedSessionNoteId: string;
     let openCohortId: string;
     let openSessionId: string;
 
@@ -713,6 +714,22 @@ describe('Youth API', () => {
           (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
       `;
 
+      const [linkedSessionNote] = await sql<{ id: string }[]>`
+        INSERT INTO session_notes (
+          session_id, category, title, details, created_by, updated_by
+        )
+        VALUES (
+          ${firstSessionId}, 'achievement', 'Strong participation',
+          'Led the opening activity', ${adminUserId}, ${adminUserId}
+        )
+        RETURNING id
+      `;
+      linkedSessionNoteId = linkedSessionNote.id;
+      await sql`
+        INSERT INTO session_note_has_youth (note_id, youth_id)
+        VALUES (${linkedSessionNoteId}, ${youthId})
+      `;
+
       const [openProgram] = await sql<{ id: string }[]>`
         SELECT id FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
       `;
@@ -734,6 +751,7 @@ describe('Youth API', () => {
 
     afterAll(async () => {
       await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
+      await sql`DELETE FROM session_notes WHERE id = ${linkedSessionNoteId}`;
       await sql`DELETE FROM cohort_sessions WHERE id IN (${firstSessionId}, ${secondSessionId}, ${openSessionId})`;
       await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
       await deleteTestYouth(youthId);
@@ -783,8 +801,15 @@ describe('Youth API', () => {
       }));
       expect(response.body.sessions).toHaveLength(2);
       expect(response.body.sessions).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: firstSessionId, status: 'present' }),
-        expect.objectContaining({ id: secondSessionId, status: null }),
+        expect.objectContaining({
+          id: firstSessionId,
+          status: 'present',
+          sessionNotes: [expect.objectContaining({
+            id: linkedSessionNoteId,
+            title: 'Strong participation',
+          })],
+        }),
+        expect.objectContaining({ id: secondSessionId, status: null, sessionNotes: [] }),
       ]));
     });
 

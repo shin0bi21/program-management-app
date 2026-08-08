@@ -19,6 +19,7 @@ import {
   handleSaveAttendance,
   handleUpdateCohort,
   handleUpdateSessionNote,
+  handleUnlinkSessionNoteYouth,
   handleUpdateSession,
   handleWithdrawYouth,
 } from '../controllers/cohortController';
@@ -43,6 +44,7 @@ import {
   updateCohortSchema,
   updateSessionNoteSchema,
   updateSessionSchema,
+  unlinkSessionNoteYouthSchema,
   withdrawYouthSchema,
 } from '../validation/cohortSchemas';
 import { uploadSessionAttachment } from '../middleware/sessionAttachmentUpload';
@@ -63,6 +65,7 @@ router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermissi
 router.get('/sessions/:sessionId/notes', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionNotesSchema), asyncHandler(handleGetSessionNotes));
 router.post('/sessions/:sessionId/notes', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createSessionNoteSchema), asyncHandler(handleCreateSessionNote));
 router.put('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(updateSessionNoteSchema), asyncHandler(handleUpdateSessionNote));
+router.delete('/sessions/:sessionId/notes/:noteId/youth/:youthId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(unlinkSessionNoteYouthSchema), asyncHandler(handleUnlinkSessionNoteYouth));
 router.delete('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(deleteSessionNoteSchema), asyncHandler(handleDeleteSessionNote));
 router.get('/sessions/:sessionId/attachments', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionAttachmentsSchema), asyncHandler(handleGetSessionAttachments));
 router.post('/sessions/:sessionId/attachments', authenticateToken, requirePermission('write:sessions'), generalLimiter, uploadSessionAttachment, validateRequest(createSessionAttachmentSchema), asyncHandler(handleCreateSessionAttachment));

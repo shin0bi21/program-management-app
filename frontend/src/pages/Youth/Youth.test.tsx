@@ -6,7 +6,6 @@ import render from '../../tests/renderWithQueryClient';
 
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({
-  getYouthSessionNotes: vi.fn(),
   getYouthProfileNotes: vi.fn(),
   createYouthProfileNote: vi.fn(),
   updateYouthProfileNote: vi.fn(),
@@ -33,7 +32,7 @@ vi.mock('../../features/programs/hooks/usePrograms', () => ({
 }));
 
 vi.mock('../../common/context/AuthContext', () => ({
-  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance'] }),
+  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
 }));
 
 vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
@@ -56,7 +55,6 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
-    youthApi.getYouthSessionNotes.mockResolvedValue([]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     youthApi.deleteYouthProfileNote.mockReset();
     preferenceHook.preference = null;
@@ -182,8 +180,7 @@ describe('Youth', () => {
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
     expect(await screen.findByText('Family follow-up')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Notes (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Profile Notes (1)' })).toBeInTheDocument();
   });
 
   it('opens youth-centric attendance management from a cohort summary', () => {
@@ -203,69 +200,6 @@ describe('Youth', () => {
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
     expect(screen.getByTestId('youth-attendance-modal')).toHaveTextContent('Summer 2026');
-  });
-
-  it('persists the Session notes tab while switching profiles and page visits', async () => {
-    const sessionNote = {
-      id: 'note-1',
-      sessionId: 'session-1',
-      category: 'achievement',
-      title: 'Strong participation',
-      details: 'Jamie led the opening activity.',
-      createdAt: '2026-07-21T23:00:00.000Z',
-      updatedAt: '2026-07-21T23:00:00.000Z',
-      createdByName: 'Bilal Khan',
-      youth: [{ youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test' }],
-      sessionTheme: 'Communication',
-      startsAt: '2026-07-21T21:00:00.000Z',
-      cohortId: 'cohort-1',
-      cohortName: 'Summer 2026',
-      programId: 'program-1',
-      programName: 'Soft Skills',
-    };
-    mockUseYouth.mockReturnValue({
-      youth: [
-        makeYouthProfile(),
-        makeYouthProfile({ id: 'youth-2', firstName: 'Alex', lastName: 'Second' }),
-      ],
-      upsertYouth: vi.fn(),
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-    youthApi.getYouthSessionNotes.mockImplementation((youthId: string) => (
-      Promise.resolve(youthId === 'youth-1' ? [sessionNote] : [])
-    ));
-
-    const view = render(<Youth />);
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
-
-    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith(
-      'youth-1',
-      { signal: expect.any(AbortSignal) },
-    ));
-    expect(await screen.findByRole('heading', { name: 'Notes (1)' })).toBeInTheDocument();
-    expect(localStorage.getItem('youthNotesTab')).toBe('session');
-    fireEvent.click(await screen.findByRole('button', { name: /Strong participation/ }));
-    expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
-    expect(screen.getByText('Jamie led the opening activity.')).toBeInTheDocument();
-    expect(screen.getByText(
-      'Soft Skills · Summer 2026 · Communication · Jul 21, 2026',
-    )).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-
-    fireEvent.click(screen.getByText('Alex').closest('tr')!);
-    await waitFor(() => expect(youthApi.getYouthSessionNotes).toHaveBeenCalledWith(
-      'youth-2',
-      { signal: expect.any(AbortSignal) },
-    ));
-    expect(screen.getByRole('button', { name: 'Session' })).toHaveAttribute('aria-pressed', 'true');
-    expect(await screen.findByText('No linked session notes.')).toBeInTheDocument();
-
-    view.unmount();
-    render(<Youth />);
-    expect(screen.getByRole('button', { name: 'Session' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('keeps a profile note open and reports a deletion failure', async () => {
