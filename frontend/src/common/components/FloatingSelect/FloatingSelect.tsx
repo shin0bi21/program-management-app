@@ -20,7 +20,7 @@ export interface FloatingSelectOptionAction {
 interface FloatingSelectProps {
   id: string;
   value: string;
-  options: FloatingSelectOption[];
+  options: readonly FloatingSelectOption[];
   onChange: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;

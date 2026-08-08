@@ -39,8 +39,8 @@ export interface PreferenceValues {
   'expression-interest-filters': {
     statuses: Array<'new' | 'reviewed' | 'contacted' | 'converted' | 'signed_up' | 'lost' | 'spam'>;
     programIds: string[];
-    sorting?: { key: 'name' | 'age' | 'school' | 'program' | 'createdAt' | 'status'; direction: 'asc' | 'desc' };
-    columnWidths?: ColumnWidths<'youthName' | 'age' | 'school' | 'program' | 'submittedAt' | 'status'>;
+    sorting?: { key: 'name' | 'age' | 'school' | 'program' | 'submittedByRole' | 'createdAt' | 'status'; direction: 'asc' | 'desc' };
+    columnWidths?: ColumnWidths<'youthName' | 'age' | 'school' | 'program' | 'submittedByRole' | 'submittedAt' | 'status'>;
   };
 }
 

@@ -9,6 +9,9 @@ export const expressionOfInterestSchema = z.object({
     youthLastName: z.string().trim().min(1, 'Youth last name is required').max(120, 'Youth last name is too long'),
     age: z.coerce.number().int('Age must be a whole number').min(5, 'Age must be 5 or higher').max(24, 'Age must be 24 or lower'),
     school: z.string().trim().min(1, 'School is required').max(255, 'School is too long'),
+    submittedByRole: z.enum(['youth', 'parent', 'guardian'], {
+      error: 'Select who is filling out the form',
+    }),
     discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], {
       error: 'Discovery source is required',
     }),

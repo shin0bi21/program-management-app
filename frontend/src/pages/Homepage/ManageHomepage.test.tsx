@@ -49,6 +49,7 @@ const content = {
     {
       id: 'image-1',
       imageUrl: '/programming/adventure_bay.png',
+      mobileUrl: '/programming/adventure_bay-mobile.webp',
       thumbnailUrl: '/programming/adventure_bay.png',
       altText: 'Youth group trip',
       caption: 'Adventure Bay trip.',

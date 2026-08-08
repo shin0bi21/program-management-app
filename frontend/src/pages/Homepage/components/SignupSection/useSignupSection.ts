@@ -1,16 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { outreachFormDefaultValues, outreachFormSchema, type OutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
+import { publicOutreachFormDefaultValues, publicOutreachFormSchema, type PublicOutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors';
 import { submitExpressionOfInterest } from '../../api/homepage.api';
 
 export function useSignupSection() {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-  const { register, handleSubmit, reset, setError: setFieldError, formState: { errors } } = useForm<OutreachFormValues>({
-    resolver: zodResolver(outreachFormSchema),
-    defaultValues: outreachFormDefaultValues,
+  const { register, control, handleSubmit, reset, setError: setFieldError, formState: { errors } } = useForm<PublicOutreachFormValues>({
+    resolver: zodResolver(publicOutreachFormSchema),
+    defaultValues: publicOutreachFormDefaultValues,
   });
   const isFormLocked = submitStatus === 'submitting' || submitStatus === 'success';
 
@@ -20,7 +20,7 @@ export function useSignupSection() {
     return () => window.clearTimeout(timeoutId);
   }, [submitStatus, resetStatus]);
 
-  const onValid = async (data: OutreachFormValues) => {
+  const onValid = async (data: PublicOutreachFormValues) => {
     setError('');
     setSubmitStatus('submitting');
     try {
@@ -29,17 +29,18 @@ export function useSignupSection() {
         youthLastName: data.youthLastName.trim(),
         age: data.age,
         school: data.school.trim(),
+        submittedByRole: data.submittedByRole,
         contactPhoneNumber: data.contactPhoneNumber.trim(),
         contactRelationship: data.contactRelationship,
         discoverySource: data.discoverySource,
         notes: data.notes.trim() || undefined,
       });
-      reset(outreachFormDefaultValues);
+      reset(publicOutreachFormDefaultValues);
       setSubmitStatus('success');
     } catch (err) {
       if (err instanceof ApiError) {
         for (const detail of err.details ?? []) {
-          const field = detail.field.replace(/^body\./, '') as keyof OutreachFormValues;
+          const field = detail.field.replace(/^body\./, '') as keyof PublicOutreachFormValues;
           setFieldError(field, { message: detail.message });
         }
       }
@@ -48,5 +49,5 @@ export function useSignupSection() {
     }
   };
 
-  return { register, errors, handleSubmit, onValid, submitStatus, error, isFormLocked };
+  return { register, control, errors, handleSubmit, onValid, submitStatus, error, isFormLocked };
 }

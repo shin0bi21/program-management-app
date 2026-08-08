@@ -1,10 +1,20 @@
+import { Controller } from 'react-hook-form'
 import Button from '../../../../common/components/Button/Button'
+import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect'
+import FormField from '../../../../common/components/FormField/FormField'
 import OutreachFormFields from '../../../../common/components/OutreachForm/OutreachFormFields'
 import { useSignupSection } from './useSignupSection'
+
+const submitterOptions = [
+  { value: 'youth', label: 'Youth' },
+  { value: 'parent', label: 'Parent' },
+  { value: 'guardian', label: 'Guardian' },
+]
 
 export default function SignupSection() {
   const {
     register,
+    control,
     errors,
     handleSubmit,
     onValid,
@@ -34,7 +44,28 @@ export default function SignupSection() {
               {submitStatus === 'error' && error && (
                 <div className="form-error">{error}</div>
               )}
-              <OutreachFormFields idPrefix="cohort" register={register} errors={errors} />
+              <div className="outreach-form-section">
+                <FormField
+                  id="cohort-submittedByRole"
+                  label="Who is filling out this form? *"
+                  error={errors.submittedByRole?.message}
+                >
+                  <Controller
+                    name="submittedByRole"
+                    control={control}
+                    render={({ field }) => (
+                      <FloatingSelect
+                        id="cohort-submittedByRole"
+                        ariaLabel="Who is filling out this form?"
+                        value={field.value}
+                        options={submitterOptions}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </FormField>
+              </div>
+              <OutreachFormFields idPrefix="cohort" register={register} control={control} errors={errors} />
               <div className="cohort-inline-form-actions">
                 <Button type="submit" disabled={submitStatus === 'submitting'}>
                   {submitStatus === 'submitting' ? 'Submitting...' : 'Submit'}

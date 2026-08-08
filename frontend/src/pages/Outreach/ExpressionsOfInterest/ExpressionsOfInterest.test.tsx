@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +41,7 @@ describe('ExpressionsOfInterest', () => {
     getExpressions.mockResolvedValue([{
       id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
       school: 'Test School',
+      submittedByRole: 'parent',
       contactPhoneNumber: '416-555-0100', contactRelationship: 'parent', discoverySource: 'online',
       notes: 'Follow up next week', status: 'new', createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
       suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
@@ -50,8 +51,11 @@ describe('ExpressionsOfInterest', () => {
   it('shows contact and notes when a row is selected without View buttons', async () => {
     renderPage();
     const youthName = await screen.findByText('Avery Interest');
+    const table = screen.getByRole('table', { name: 'Expressions of interest' });
 
     expect(screen.queryByRole('button', { name: 'View' })).not.toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Filled Out By/ })).toBeInTheDocument();
+    expect(within(table).getByText('Parent')).toBeInTheDocument();
     fireEvent.click(youthName.closest('tr')!);
     expect(screen.getByText('416-555-0100')).toBeInTheDocument();
     expect(screen.getByText('Follow up next week')).toBeInTheDocument();

@@ -6,6 +6,7 @@ import type { HeroPhoto } from './heroSectionSchema'
 const photos: HeroPhoto[] = [
   {
     src: '/programming/photo-1.png',
+    mobileSrc: '/programming/photo-1-mobile.webp',
     alt: 'First hero photo',
     caption: 'First caption.',
   },
@@ -21,6 +22,7 @@ describe('HeroSection', () => {
     render(<HeroSection photos={photos} />)
 
     expect(screen.getByAltText('First hero photo')).toBeInTheDocument()
+    expect(document.querySelector('source')).toHaveAttribute('srcset', '/programming/photo-1-mobile.webp')
     expect(screen.getByText('First caption.')).toBeInTheDocument()
   })
 

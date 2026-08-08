@@ -6,6 +6,7 @@ export interface ExpressionOfInterest {
   contactRelationship: 'parent' | 'sibling' | 'guardian' | null;
   age: number;
   school: string;
+  submittedByRole: 'youth' | 'parent' | 'guardian' | null;
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
   notes: string | null;
   status: 'new' | 'reviewed' | 'converted' | 'spam' | 'contacted' | 'signed_up' | 'lost';
@@ -20,4 +21,4 @@ export interface ExpressionOfInterestFilters {
   statuses?: ExpressionOfInterest['status'][];
   programIds?: string[];
 }
-export type ExpressionOfInterestSortKey = 'name' | 'age' | 'school' | 'program' | 'createdAt' | 'status';
+export type ExpressionOfInterestSortKey = 'name' | 'age' | 'school' | 'program' | 'submittedByRole' | 'createdAt' | 'status';

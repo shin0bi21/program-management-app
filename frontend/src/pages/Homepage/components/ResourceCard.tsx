@@ -6,6 +6,7 @@ type ResourceCardProps = {
   education?: string
   school?: string
   imageSrc?: string
+  imageMobileSrc?: string
   imageAlt?: string
 }
 
@@ -17,6 +18,7 @@ export default function ResourceCard({
   education,
   school,
   imageSrc,
+  imageMobileSrc,
   imageAlt,
 }: ResourceCardProps) {
   const initial = name.charAt(0).toUpperCase();
@@ -26,13 +28,16 @@ export default function ResourceCard({
       <header className="resource-header">
         <div className="resource-photo-panel">
           {imageSrc ? (
-            <img
-              className="resource-photo"
-              src={imageSrc}
-              alt={imageAlt ?? ''}
-              loading="lazy"
-              decoding="async"
-            />
+            <picture>
+              {imageMobileSrc && <source media="(max-width: 820px)" srcSet={imageMobileSrc} />}
+              <img
+                className="resource-photo"
+                src={imageSrc}
+                alt={imageAlt ?? ''}
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
           ) : (
             <div
               className="resource-photo resource-photo-placeholder"

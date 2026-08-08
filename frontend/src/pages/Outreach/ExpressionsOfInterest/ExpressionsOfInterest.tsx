@@ -22,6 +22,10 @@ import './ExpressionsOfInterest.css';
 const submissionYouthName = (submission: ExpressionOfInterest) =>
   [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
 
+const submitterRoleLabel = (role: ExpressionOfInterest['submittedByRole']) => role
+  ? role[0].toUpperCase() + role.slice(1)
+  : 'Not recorded';
+
 export default function ExpressionsOfInterest() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -131,6 +135,7 @@ export default function ExpressionsOfInterest() {
     { key: 'age', sortKey: 'age', header: 'Age', width: 100, render: item => item.age },
     { key: 'school', sortKey: 'school', header: 'School', render: item => item.school },
     { key: 'program', sortKey: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },
+    { key: 'submittedByRole', sortKey: 'submittedByRole', header: 'Filled Out By', width: 130, render: item => submitterRoleLabel(item.submittedByRole) },
     { key: 'submittedAt', sortKey: 'createdAt', header: 'Date', width: 130, render: item => formatShortDate(item.createdAt) },
     { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: item => statusBadge(item.status) },
     ...(canWrite ? [{
