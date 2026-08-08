@@ -28,7 +28,7 @@
   --home-section-y: 80px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
-  --home-surface-alt: #f6f7f9;
+  --home-surface-alt: var(--color-page-surface);
   min-height: 100vh;
   color: var(--color-ink);
   background: var(--color-white);

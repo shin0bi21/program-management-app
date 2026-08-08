@@ -5,7 +5,7 @@
   left: 0;
   width: 166px;
   height: 100dvh;
-  background: var(--color-surface);
+  background: var(--color-page-surface);
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -145,7 +145,7 @@
     right: 0;
     height: 52px;
     padding: 0 14px;
-    background: var(--color-surface);
+    background: var(--color-page-surface);
     box-shadow: 0 1px 0 var(--ink-12);
     z-index: 1001;
   }
@@ -194,4 +194,3 @@
     z-index: 999;
   }
 }
-
