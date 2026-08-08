@@ -33,13 +33,18 @@ vi.mock('../../features/programs/hooks/usePrograms', () => ({
 }));
 
 vi.mock('../../common/context/AuthContext', () => ({
-  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts'] }),
+  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance'] }),
 }));
 
 vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
 vi.mock('./components/YouthModal/YouthModal', () => ({
   default: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) => isOpen
     ? <div data-testid="youth-modal">{mode ?? 'full'}</div>
+    : null,
+}));
+vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
+  default: ({ cohort }: { cohort: { name: string } | null }) => cohort
+    ? <div data-testid="youth-attendance-modal">{cohort.name}</div>
     : null,
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
@@ -178,6 +183,25 @@ describe('Youth', () => {
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
     expect(await screen.findByText('Family follow-up')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('opens youth-centric attendance management from a cohort summary', () => {
+    const profile = makeYouthProfile({
+      cohorts: [{
+        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2026-08-31',
+        enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
+        absentCount: 0, lastAttendedOn: '2026-07-21',
+      }],
+    });
+    mockUseYouth.mockReturnValue({
+      youth: [profile], upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+    });
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
+    expect(screen.getByTestId('youth-attendance-modal')).toHaveTextContent('Summer 2026');
   });
 
   it('persists the Session notes tab while switching profiles and page visits', async () => {

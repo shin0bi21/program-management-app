@@ -1,0 +1,70 @@
+.youth-attendance-modal__context {
+  margin: 0 0 var(--space-4);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.youth-attendance-modal__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 120px;
+  color: var(--color-muted);
+}
+
+.youth-attendance-modal__sessions {
+  overflow: hidden;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+}
+
+.youth-attendance-modal__session {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 12px 14px;
+  border-bottom: var(--border-line-soft);
+}
+
+.youth-attendance-modal__session:last-child {
+  border-bottom: 0;
+}
+
+.youth-attendance-modal__session-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.youth-attendance-modal__session-details strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youth-attendance-modal__session-details > span:not(.status-badge) {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.youth-attendance-modal__cancelled {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-dark);
+}
+
+.youth-attendance-modal__session .floating-select-trigger {
+  width: 100%;
+  min-height: 36px;
+}
+
+@media (max-width: 560px) {
+  .youth-attendance-modal__session {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+}

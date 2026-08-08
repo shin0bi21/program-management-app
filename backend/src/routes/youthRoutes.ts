@@ -8,6 +8,8 @@ import {
   handleCreateYouthProfileNote,
   handleUpdateYouthProfileNote,
   handleDeleteYouthProfileNote,
+  handleGetYouthCohortAttendance,
+  handleSetYouthCohortAttendance,
 } from '../controllers/youthController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
@@ -17,6 +19,8 @@ import {
   setYouthSchema,
   youthQuerySchema,
   youthSessionNotesSchema,
+  youthCohortAttendanceSchema,
+  setYouthCohortAttendanceSchema,
 } from '../validation/youthSchemas';
 import { createYouthProfileNoteSchema, deleteYouthProfileNoteSchema, updateYouthProfileNoteSchema, youthProfileNotesSchema } from '../validation/youthProfileNoteSchemas';
 
@@ -24,6 +28,8 @@ const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthQuerySchema), asyncHandler(handleGetYouth));
 router.get('/:id/session-notes', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), generalLimiter, validateRequest(youthSessionNotesSchema), asyncHandler(handleGetYouthSessionNotes));
+router.get('/:id/cohorts/:cohortId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), generalLimiter, validateRequest(youthCohortAttendanceSchema), asyncHandler(handleGetYouthCohortAttendance));
+router.put('/:id/cohorts/:cohortId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('write:attendance'), generalLimiter, validateRequest(setYouthCohortAttendanceSchema), asyncHandler(handleSetYouthCohortAttendance));
 router.get('/:id/notes', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthProfileNotesSchema), asyncHandler(handleGetYouthProfileNotes));
 router.post('/:id/notes', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(createYouthProfileNoteSchema), asyncHandler(handleCreateYouthProfileNote));
 router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(updateYouthProfileNoteSchema), asyncHandler(handleUpdateYouthProfileNote));

@@ -1,11 +1,9 @@
 import Button from '../../../../../common/components/Button/Button';
-import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
+import AttendanceStatusSelect from '../../../../../features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
 import type {
   AttendanceStatus,
   SessionRosterMember,
 } from '../../../../../common/types/cohort';
-
-const attendanceStatuses: AttendanceStatus[] = ['present', 'absent', 'late', 'excused'];
 
 interface AttendanceRosterProps {
   loading: boolean;
@@ -52,21 +50,12 @@ export default function AttendanceRoster({
               Remove
             </Button>
           ) : (
-            <FloatingSelect
+            <AttendanceStatusSelect
               id={`attendance-${member.youthId}`}
               ariaLabel={`Attendance for ${member.firstName} ${member.lastName}`}
+              rosterMode="enrolled"
               value={selections[member.youthId] ?? ''}
-              onChange={(value) => onStatusChange(
-                member.youthId,
-                value as AttendanceStatus | '',
-              )}
-              options={[
-                { value: '', label: 'Not marked' },
-                ...attendanceStatuses.map(status => ({
-                  value: status,
-                  label: status[0].toUpperCase() + status.slice(1),
-                })),
-              ]}
+              onChange={value => onStatusChange(member.youthId, value)}
             />
           )}
         </div>

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import AttendanceCard from './AttendanceCard';
 
 describe('AttendanceCard', () => {
@@ -12,13 +12,13 @@ describe('AttendanceCard', () => {
   it('separates active and historical attendance by program and cohort', () => {
     render(<AttendanceCard selected cohorts={[
       {
-        id: 'active-cohort', name: 'Summer 2026', programName: 'Soft Skills', rosterMode: 'enrolled',
-        startsOn: '2000-01-01', endsOn: '2999-12-31', withdrawnOn: null,
+        id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
+        startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
         presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
       },
       {
-        id: 'historic-cohort', name: 'Spring 2025', programName: 'Drop In', rosterMode: 'open',
-        startsOn: '2025-01-01', endsOn: '2025-06-30', withdrawnOn: null,
+        id: 'historic-cohort', name: 'Spring 2025', programId: 'program-2', programName: 'Drop In', rosterMode: 'open',
+        startsOn: '2025-01-01', endsOn: '2025-06-30', enrolledOn: null, withdrawnOn: null,
         presentCount: 3, lateCount: 0, absentCount: 0, lastAttendedOn: '2025-05-10',
       },
     ]} />);
@@ -27,5 +27,18 @@ describe('AttendanceCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'History' }));
     expect(screen.getByText('Drop In · Spring 2025')).toBeInTheDocument();
     expect(screen.queryByText('Soft Skills · Summer 2026')).not.toBeInTheDocument();
+  });
+
+  it('opens youth attendance management for the selected cohort', () => {
+    const onManage = vi.fn();
+    const cohort = {
+      id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled' as const,
+      startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
+      presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
+    };
+    render(<AttendanceCard selected cohorts={[cohort]} canManage onManage={onManage} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
+    expect(onManage).toHaveBeenCalledWith(cohort);
   });
 });
