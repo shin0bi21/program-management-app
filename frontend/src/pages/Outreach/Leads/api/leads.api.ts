@@ -1,6 +1,6 @@
 import { apiClient } from '../../../../common/api/http/client';
 import type { RequestOptions } from '../../../../common/api/http/client';
-import type { CreateLeadInput, Lead, LeadFilters, LeadStatus, UpdateLeadInput } from '../types';
+import type { CreateLeadInput, Lead, LeadFilters, LeadNote, LeadStatus, UpdateLeadInput } from '../types';
 import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
 import type { LeadSortKey } from '../types';
 
@@ -25,3 +25,13 @@ export const updateLeadStatus = (id: string, status: LeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
 export const signUpLead = (id: string, cohortId: string | null, noteCategory?: 'general' | 'health' | 'preference') =>
   apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }) });
+export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
+  opts
+    ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)
+    : apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`);
+export const createLeadNote = (leadId: string, details: string) =>
+  apiClient.post<LeadNote>(`/leads/${leadId}/notes`, { details });
+export const updateLeadNote = (leadId: string, noteId: string, details: string) =>
+  apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details });
+export const deleteLeadNote = (leadId: string, noteId: string) =>
+  apiClient.delete(`/leads/${leadId}/notes/${noteId}`);

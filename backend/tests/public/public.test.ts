@@ -20,6 +20,7 @@ describe('Public expression of interest API', () => {
         youthLastName,
         age: 14,
         school: 'Test Secondary',
+        submittedByRole: 'guardian',
         discoverySource: 'school',
         contactPhoneNumber: '416-555-0199',
         contactRelationship: 'parent',
@@ -37,6 +38,7 @@ describe('Public expression of interest API', () => {
       age: number;
       school: string | null;
       discoverySource: string | null;
+      submittedByRole: string | null;
     }[]>`
       SELECT
         youth_first_name as "youthFirstName",
@@ -46,6 +48,7 @@ describe('Public expression of interest API', () => {
         age,
         school,
         discovery_source as "discoverySource"
+        , submitted_by_role as "submittedByRole"
       FROM expressions_of_interest
       WHERE youth_last_name = ${youthLastName}
       LIMIT 1
@@ -60,6 +63,7 @@ describe('Public expression of interest API', () => {
       age: 14,
       school: 'Test Secondary',
       discoverySource: 'school',
+      submittedByRole: 'guardian',
     });
   });
 
@@ -71,6 +75,7 @@ describe('Public expression of interest API', () => {
         youthLastName: 'Contact',
         age: 15,
         school: 'Test Secondary',
+        submittedByRole: 'parent',
         discoverySource: 'online',
       });
 
@@ -89,6 +94,7 @@ describe('Public expression of interest API', () => {
         youthLastName: 'Test',
         age: 14,
         school: 'Test Secondary',
+        submittedByRole: 'parent',
         discoverySource: 'online',
         contactPhoneNumber: '416-555-0199',
         contactRelationship: 'emergency',

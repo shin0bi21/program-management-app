@@ -37,6 +37,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
+
 export type ProgramRosterMode = "enrolled" | "open";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -141,6 +143,10 @@ export interface ExpressionsOfInterest {
   school: string;
   status: Generated<string>;
   status_updated_at: Generated<Timestamp>;
+  /**
+   * Who completed the public expression-of-interest form; null only for legacy records.
+   */
+  submitted_by_role: OutreachSubmitterRole;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   youth_first_name: string;
@@ -156,6 +162,16 @@ export interface HomepageImages {
   id: Generated<string>;
   public_path: string | null;
   storage_key: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface LeadNotes {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string;
+  id: Generated<string>;
+  lead_id: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -440,6 +456,7 @@ export interface DB {
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   homepage_images: HomepageImages;
+  lead_notes: LeadNotes;
   leads: Leads;
   program_cohorts: ProgramCohorts;
   programs: Programs;

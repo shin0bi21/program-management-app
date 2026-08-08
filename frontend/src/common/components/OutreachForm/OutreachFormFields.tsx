@@ -1,5 +1,6 @@
-import type { FieldErrors, UseFormRegister } from 'react-hook-form';
+import { Controller, type Control, type FieldErrors, type FieldValues, type Path, type UseFormRegister } from 'react-hook-form';
 import type { ReactNode } from 'react';
+import FloatingSelect from '../FloatingSelect/FloatingSelect';
 import FormField from '../FormField/FormField';
 import type { OutreachFormValues } from './outreachFormSchema';
 import './OutreachForm.css';
@@ -18,24 +19,26 @@ const discoverySourceOptions = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-export default function OutreachFormFields({ idPrefix, register, errors, programField }: {
+export default function OutreachFormFields<T extends OutreachFormValues & FieldValues>({ idPrefix, register, control, errors, programField }: {
   idPrefix: string;
-  register: UseFormRegister<OutreachFormValues>;
-  errors: FieldErrors<OutreachFormValues>;
+  register: UseFormRegister<T>;
+  control: Control<T>;
+  errors: FieldErrors<T>;
   programField?: ReactNode;
 }) {
   const id = (field: keyof OutreachFormValues) => `${idPrefix}-${field}`;
+  const field = (name: keyof OutreachFormValues) => name as Path<T>;
 
   return <>
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-youth-title`}>
       <h3 id={`${idPrefix}-youth-title`} className="outreach-form-section-title">Youth Information</h3>
       <div className="form-row">
-        <FormField id={id('youthFirstName')} label="First Name *" error={errors.youthFirstName?.message}><input id={id('youthFirstName')} autoComplete="given-name" {...register('youthFirstName')} /></FormField>
-        <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message}><input id={id('youthLastName')} autoComplete="family-name" {...register('youthLastName')} /></FormField>
+        <FormField id={id('youthFirstName')} label="First Name *" error={errors.youthFirstName?.message as string | undefined}><input id={id('youthFirstName')} autoComplete="given-name" {...register(field('youthFirstName'))} /></FormField>
+        <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message as string | undefined}><input id={id('youthLastName')} autoComplete="family-name" {...register(field('youthLastName'))} /></FormField>
       </div>
       <div className="form-row">
-        <FormField id={id('age')} label="Age *" error={errors.age?.message}><input id={id('age')} type="number" min="5" max="24" {...register('age', { valueAsNumber: true })} /></FormField>
-        <FormField id={id('school')} label="School *" error={errors.school?.message}><input id={id('school')} {...register('school')} /></FormField>
+        <FormField id={id('age')} label="Age *" error={errors.age?.message as string | undefined}><input id={id('age')} type="number" min="5" max="24" {...register(field('age'), { valueAsNumber: true })} /></FormField>
+        <FormField id={id('school')} label="School *" error={errors.school?.message as string | undefined}><input id={id('school')} {...register(field('school'))} /></FormField>
       </div>
       {programField && <div className="form-row">{programField}</div>}
     </section>
@@ -43,25 +46,45 @@ export default function OutreachFormFields({ idPrefix, register, errors, program
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-contact-title`}>
       <h3 id={`${idPrefix}-contact-title`} className="outreach-form-section-title">Primary Contact</h3>
       <div className="form-row">
-        <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message}><input id={id('contactPhoneNumber')} type="tel" {...register('contactPhoneNumber')} /></FormField>
-        <FormField id={id('contactRelationship')} label="Relationship *" error={errors.contactRelationship?.message}>
-          <select id={id('contactRelationship')} {...register('contactRelationship')}>
-            {contactRelationshipOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+        <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message as string | undefined}><input id={id('contactPhoneNumber')} type="tel" {...register(field('contactPhoneNumber'))} /></FormField>
+        <FormField id={id('contactRelationship')} label="Relationship *" error={errors.contactRelationship?.message as string | undefined}>
+          <Controller
+            name={field('contactRelationship')}
+            control={control}
+            render={({ field: relationshipField }) => (
+              <FloatingSelect
+                id={id('contactRelationship')}
+                ariaLabel="Relationship"
+                value={String(relationshipField.value ?? '')}
+                options={contactRelationshipOptions}
+                onChange={relationshipField.onChange}
+              />
+            )}
+          />
         </FormField>
       </div>
     </section>
 
     <div className="outreach-form-section">
-      <FormField id={id('discoverySource')} label="How Did You Hear About Us? *" error={errors.discoverySource?.message}>
-        <select id={id('discoverySource')} {...register('discoverySource')}>
-          {discoverySourceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
+      <FormField id={id('discoverySource')} label="How Did You Hear About Us? *" error={errors.discoverySource?.message as string | undefined}>
+        <Controller
+          name={field('discoverySource')}
+          control={control}
+          render={({ field: discoveryField }) => (
+            <FloatingSelect
+              id={id('discoverySource')}
+              ariaLabel="How Did You Hear About Us?"
+              value={String(discoveryField.value ?? '')}
+              options={discoverySourceOptions}
+              onChange={discoveryField.onChange}
+            />
+          )}
+        />
       </FormField>
     </div>
 
     <div className="outreach-form-section outreach-form-section--continuation">
-      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message}><textarea id={id('notes')} rows={5} {...register('notes')} /></FormField>
+      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message as string | undefined}><textarea id={id('notes')} rows={5} {...register(field('notes'))} /></FormField>
     </div>
   </>;
 }

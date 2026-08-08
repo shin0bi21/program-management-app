@@ -33,7 +33,8 @@ describe('LeadModal', () => {
     expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Follow-up Information' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }));
+    expect(screen.queryByRole('menuitemradio', { name: 'Emergency Contact' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 

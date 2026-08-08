@@ -13,7 +13,7 @@ export const expressionOfInterestQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparated(expressionStatusSchema),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
-    ...cursorListFields(['name', 'age', 'school', 'program', 'createdAt', 'status'], 'createdAt', 'desc'),
+    ...cursorListFields(['name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status'], 'createdAt', 'desc'),
   }),
 });
 

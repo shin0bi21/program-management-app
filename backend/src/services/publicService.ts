@@ -7,6 +7,7 @@ type ExpressionOfInterestInput = {
   youthLastName: string;
   age: number;
   school: string;
+  submittedByRole: 'youth' | 'parent' | 'guardian';
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
   contactPhoneNumber: string;
   contactRelationship: 'parent' | 'sibling' | 'guardian' | 'emergency';
@@ -26,6 +27,7 @@ export async function submitExpressionOfInterest(data: ExpressionOfInterestInput
       youth_last_name,
       age,
       school,
+      submitted_by_role,
       discovery_source,
       contact_phone_number,
       contact_relationship,
@@ -36,6 +38,7 @@ export async function submitExpressionOfInterest(data: ExpressionOfInterestInput
       ${data.youthLastName.trim()},
       ${data.age},
       ${school},
+      ${data.submittedByRole}::outreach_submitter_role,
       ${discoverySource},
       ${contactPhoneNumber},
       ${contactRelationship}::contact_type,

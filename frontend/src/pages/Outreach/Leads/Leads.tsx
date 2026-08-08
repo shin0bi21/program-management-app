@@ -17,6 +17,7 @@ import useTableSelection from '../../../common/components/Table/hooks/useTableSe
 import useUserPreference from '../../../common/hooks/useUserPreference';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
+import LeadNotesCard from './components/LeadNotesCard/LeadNotesCard';
 import SignUpLeadModal from './components/SignUpLeadModal';
 import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadFilters, LeadSortKey, LeadStatus } from './types';
@@ -149,6 +150,7 @@ export default function Leads() {
           relationship: selectedLead.contactRelationship,
         } : null} selected={selectedLead !== null} />
         <NotesCard notes={selectedLead?.notes} selected={selectedLead !== null} />
+        <LeadNotesCard lead={selectedLead} canWrite={canWrite} />
       </>}
     />
     <LeadModal

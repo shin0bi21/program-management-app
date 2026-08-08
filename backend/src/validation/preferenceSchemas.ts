@@ -49,8 +49,8 @@ const valuesByKey = {
   'expression-interest-filters': z.object({
     statuses: unique(z.enum(['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam']), 'Statuses'),
     programIds: uuidList,
-    sorting: sorting(['name', 'age', 'school', 'program', 'createdAt', 'status']).optional(),
-    columnWidths: columnWidths(['youthName', 'age', 'school', 'program', 'submittedAt', 'status']).optional(),
+    sorting: sorting(['name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status']).optional(),
+    columnWidths: columnWidths(['youthName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status']).optional(),
   }),
 } as const;
 

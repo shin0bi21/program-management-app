@@ -49,7 +49,8 @@ const teamResources = [
     badge: 'Co-founder',
     education: 'Child and Youth Care',
     school: 'Mohawk College',
-    imageSrc: '/team/quinton.png',
+    imageSrc: '/team/quinton-display.webp',
+    imageMobileSrc: '/team/quinton-mobile.webp',
     bio: 'Quinton is the Co-Founder of Be Original Youth Group, where he is committed to creating a safe, welcoming space for youth to be themselves while developing important life skills. A graduate of Mohawk College’s Child and Youth Care program, Quinton has worked with youth and adults since 2017 through organizations including the Boys & Girls Club of Hamilton, the Downtown Mission, and the Salvation Army. Drawing from both his professional experience and his lived experience as a former Crown ward, he is passionate about helping young people build confidence, strengthen their life skills, and discover their potential.',
   },
   {
@@ -58,7 +59,8 @@ const teamResources = [
     badge: 'Co-founder',
     education: 'Master of Social Work',
     school: 'University of Windsor',
-    imageSrc: '/team/amanat.png',
+    imageSrc: '/team/amanat-display.webp',
+    imageMobileSrc: '/team/amanat-mobile.webp',
     bio: 'Hi, my name is Amanat! I was born in India and immigrated to Canada when I was 5 years old. I didn’t have any older siblings, so growing up that sometimes that left me without someone I could share problems with or get advice from. I also let anxiety and anger get in the way of many things I wanted to do. I am hoping this mentorship program can save you some of the trouble I experienced and help you succeed! I am so excited to work with you all :)',
   },
   {
@@ -67,7 +69,7 @@ const teamResources = [
     badge: 'Treasurer',
     education: 'Computer Science',
     school: 'University of Windsor',
-    bio: 'Works directly with caregivers to improve communication, trust, and access to support programs.',
+    bio: "Hi, I'm Bilal! I've been a part of Be Original since 2022. Over the years, I've worked directly with the youth. I originally ran our healthy activity/ eating days, and I now run the Job Readiness program with Elijah. On the backend, I also do our accounting and build out website, including the page you see now, and our backend management system! I hope to connect with all the youth that walk through our doors and serve as a positive force in their life as they grow up.",
   },
   {
     name: 'Jomariel',
@@ -83,7 +85,8 @@ const teamResources = [
     badge: undefined,
     education: undefined,
     school: undefined,
-    imageSrc: '/team/elijah.png',
+    imageSrc: '/team/elijah-display.webp',
+    imageMobileSrc: '/team/elijah-mobile.webp',
     bio: "I serve my community willingly with the utmost humility. Within that community, I have taken on many roles—a student, a teacher, and a role model—all of which I don't take for granted. Being apart of BeOriginal has allowed me to embody all three of these wonderful roles and use them to embrace and empower the next generation. I will use whatever gifts I have received to serve gracefully in all of their various forms.",
   },
 ];
@@ -168,6 +171,7 @@ export default function Homepage() {
     ? heroSectionPhotos
     : content.images.map((image) => ({
         src: image.imageUrl,
+        mobileSrc: image.mobileUrl,
         alt: image.altText,
         caption: image.caption,
       }));

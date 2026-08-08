@@ -26,6 +26,7 @@ vi.mock('./hooks/useHomepageContent', () => ({
       images: [{
         id: 'image-1',
         imageUrl: '/programming/adventure_bay.png',
+        mobileUrl: '/programming/adventure_bay-mobile.webp',
         thumbnailUrl: '/programming/adventure_bay.png',
         altText: 'Youth trip',
         caption: 'Youth trip.',
@@ -73,9 +74,10 @@ describe('Homepage', () => {
       'Drawing from both his professional experience and his lived experience as a former Crown ward',
     );
     expect(teamCards[1]).toHaveTextContent('Hi, my name is Amanat!');
-    expect(teamCards[1].querySelector('img')).toHaveAttribute('src', '/team/amanat.png');
+    expect(teamCards[1].querySelector('img')).toHaveAttribute('src', '/team/amanat-display.webp');
+    expect(teamCards[2]).toHaveTextContent("Hi, I'm Bilal! I've been a part of Be Original since 2022.");
     expect(teamCards[4]).toHaveTextContent('I serve my community willingly with the utmost humility.');
-    expect(teamCards[4].querySelector('img')).toHaveAttribute('src', '/team/elijah.png');
+    expect(teamCards[4].querySelector('img')).toHaveAttribute('src', '/team/elijah-display.webp');
   });
 
   it('defers direct section routing until managed content has loaded', () => {
