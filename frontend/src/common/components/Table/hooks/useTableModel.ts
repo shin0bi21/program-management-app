@@ -91,11 +91,17 @@ export default function useTableModel<T>({
     });
   }, [onSortingChange, sorting]);
 
-  const nudgeColumnWidth = useCallback((columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight') => {
+  const nudgeColumnWidth = useCallback((
+    columnId: string,
+    currentWidth: number,
+    direction: 'ArrowLeft' | 'ArrowRight',
+    lockedWidths?: ColumnSizingState,
+  ) => {
     if (!onColumnWidthsChange) return;
     const delta = direction === 'ArrowLeft' ? -RESIZE_KEYBOARD_STEP : RESIZE_KEYBOARD_STEP;
     onColumnWidthsChange({
       ...columnWidths,
+      ...lockedWidths,
       [columnId]: clampColumnWidth(currentWidth + delta),
     });
   }, [columnWidths, onColumnWidthsChange]);

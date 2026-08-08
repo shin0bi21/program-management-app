@@ -1,13 +1,16 @@
 import { flexRender, type Header } from '@tanstack/react-table';
 import type { KeyboardEvent } from 'react';
+import { flushSync } from 'react-dom';
+import type { ColumnSizingState } from '@tanstack/react-table';
 import type { TableColumn } from '../Table.types';
 import { ariaSortFor } from '../table.utils';
 
 interface TableHeaderProps<T> {
   headers: Header<T, unknown>[];
   canResize: boolean;
+  onResizeStart: () => ColumnSizingState | undefined;
   onToggleSort: (column: TableColumn<T>) => void;
-  onNudgeWidth: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight') => void;
+  onNudgeWidth: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight', lockedWidths?: ColumnSizingState) => void;
 }
 
 interface TableHeaderCellProps<T> extends Omit<TableHeaderProps<T>, 'headers'> {
@@ -17,6 +20,7 @@ interface TableHeaderCellProps<T> extends Omit<TableHeaderProps<T>, 'headers'> {
 function TableHeaderCell<T>({
   header,
   canResize,
+  onResizeStart,
   onToggleSort,
   onNudgeWidth,
 }: TableHeaderCellProps<T>) {
@@ -27,7 +31,19 @@ function TableHeaderCell<T>({
   const handleResizeKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    onNudgeWidth(header.column.id, header.getSize(), event.key);
+    let lockedWidths: ColumnSizingState | undefined;
+    flushSync(() => { lockedWidths = onResizeStart(); });
+    onNudgeWidth(
+      header.column.id,
+      lockedWidths?.[header.column.id] ?? header.getSize(),
+      event.key,
+      lockedWidths,
+    );
+  };
+
+  const handleResizeStart = (event: Parameters<ReturnType<typeof header.getResizeHandler>>[0]) => {
+    flushSync(onResizeStart);
+    header.getResizeHandler()(event);
   };
 
   return (
@@ -47,8 +63,8 @@ function TableHeaderCell<T>({
           type="button"
           className={`table-resize-handle${header.column.getIsResizing() ? ' table-resize-handle--active' : ''}`}
           aria-label={`Resize ${String(column.header)} column`}
-          onMouseDown={header.getResizeHandler()}
-          onTouchStart={header.getResizeHandler()}
+          onMouseDown={handleResizeStart}
+          onTouchStart={handleResizeStart}
           onDoubleClick={() => header.column.resetSize()}
           onKeyDown={handleResizeKeyDown}
         />
@@ -60,6 +76,7 @@ function TableHeaderCell<T>({
 export default function TableHeader<T>({
   headers,
   canResize,
+  onResizeStart,
   onToggleSort,
   onNudgeWidth,
 }: TableHeaderProps<T>) {
@@ -71,6 +88,7 @@ export default function TableHeader<T>({
             key={header.id}
             header={header}
             canResize={canResize}
+            onResizeStart={onResizeStart}
             onToggleSort={onToggleSort}
             onNudgeWidth={onNudgeWidth}
           />
