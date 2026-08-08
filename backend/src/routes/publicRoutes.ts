@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { handleGetHomepageImageFile, handleGetPublicHomepage } from '../controllers/homepageController';
+import {
+  handleGetHomepageImageFile,
+  handleGetPublicHomepageImages,
+  handleGetPublicHomepageSessions,
+} from '../controllers/homepageController';
 import { handleExpressionOfInterest } from '../controllers/publicController';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { generalLimiter, strictLimiter } from '../middleware/rateLimiter';
@@ -8,7 +12,8 @@ import { homepageImageFileParamsSchema, homepageImageParamsSchema } from '../val
 
 const router = Router();
 
-router.get('/homepage', generalLimiter, asyncHandler(handleGetPublicHomepage));
+router.get('/homepage/images', generalLimiter, asyncHandler(handleGetPublicHomepageImages));
+router.get('/homepage/sessions', generalLimiter, asyncHandler(handleGetPublicHomepageSessions));
 router.get(
   '/homepage/images/:imageId/file',
   generalLimiter,

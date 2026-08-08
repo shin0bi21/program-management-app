@@ -53,15 +53,26 @@ function resolveImageUrl(image: HomepageImage): HomepageImage {
   };
 }
 
-function resolveImages(content: HomepageContent): HomepageContent {
+function resolveImages<T extends { images: HomepageImage[] }>(content: T): T {
   return {
     ...content,
     images: content.images.map(resolveImageUrl),
   };
 }
 
-export async function getPublicHomepage(opts: RequestOptions = {}) {
-  return resolveImages(await apiClient.get<HomepageContent>('/public/homepage', { ...opts, auth: false }));
+export async function getPublicHomepageImages(opts: RequestOptions = {}) {
+  const content = await apiClient.get<{ images: HomepageImage[] }>('/public/homepage/images', {
+    ...opts,
+    auth: false,
+  });
+  return resolveImages(content);
+}
+
+export function getPublicHomepageSessions(opts: RequestOptions = {}) {
+  return apiClient.get<{ sessions: HomepageSession[] }>('/public/homepage/sessions', {
+    ...opts,
+    auth: false,
+  });
 }
 
 export async function getManagedHomepage(opts?: RequestOptions) {
