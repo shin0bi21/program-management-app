@@ -44,6 +44,11 @@ For every isolated branch:
 3. Review `git diff --check`, the final diff, and `git status`.
 4. Commit with a concise message referencing the issue.
 5. Push the branch and open a pull request.
+   For multiline Markdown, write the pull-request description to a temporary file
+   and pass it with `gh pr create --body-file <path>`. Never embed a multiline body,
+   Markdown backticks, `$()`, or other shell-sensitive text directly in a shell
+   `--body` argument; the shell can execute command substitutions before `gh` runs.
+   Remove only the known temporary body file after the pull request is created.
 
 ## 5. Wait for GitHub checks and merge
 
