@@ -8,6 +8,7 @@ import './FloatingSelect.css';
 export interface FloatingSelectOption {
   value: string;
   label: string;
+  className?: string;
 }
 
 export interface FloatingSelectOptionAction {
@@ -25,6 +26,7 @@ interface FloatingSelectProps {
   placeholder?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  className?: string;
   action?: {
     label: string;
     onSelect: () => void;
@@ -40,6 +42,7 @@ export default function FloatingSelect({
   placeholder = 'Select an option',
   ariaLabel,
   disabled = false,
+  className,
   action,
   optionActions,
 }: FloatingSelectProps) {
@@ -63,7 +66,7 @@ export default function FloatingSelect({
         ref={triggerRef}
         id={id}
         type="button"
-        className="floating-select-trigger"
+        className={`floating-select-trigger${className ? ` ${className}` : ''}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
@@ -104,7 +107,7 @@ export default function FloatingSelect({
                   type="button"
                   role="menuitemradio"
                   aria-checked={option.value === value}
-                  className="floating-select-option"
+                  className={`floating-select-option${option.className ? ` ${option.className}` : ''}`}
                   onClick={() => select(option.value)}
                 >
                   {option.label}

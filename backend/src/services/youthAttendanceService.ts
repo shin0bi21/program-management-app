@@ -3,6 +3,7 @@ import { ConflictError, NotFoundError } from '../errors';
 import { assertCohortAccess } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
 import type { SetYouthCohortAttendanceInput } from '../validation/youthSchemas';
+import { getYouthSessionNotes } from './youthService';
 
 interface YouthCohortContext {
   id: string;
@@ -105,8 +106,22 @@ export async function getYouthCohortAttendance(
 ) {
   await assertCohortAccess(actor, cohortId);
   const cohort = await getYouthCohortContext(sql, youthId, cohortId);
-  const sessions = await getYouthAttendanceSessions(sql, youthId, cohortId);
-  return { cohort, sessions };
+  const [sessions, sessionNotes] = await Promise.all([
+    getYouthAttendanceSessions(sql, youthId, cohortId),
+    getYouthSessionNotes(youthId, actor, cohortId),
+  ]);
+  const notesBySession = new Map<string, Array<(typeof sessionNotes)[number]>>();
+  for (const note of sessionNotes) {
+    const sessionId = note.sessionId as string;
+    notesBySession.set(sessionId, [...(notesBySession.get(sessionId) ?? []), note]);
+  }
+  return {
+    cohort,
+    sessions: sessions.map(session => ({
+      ...session,
+      sessionNotes: notesBySession.get(session.id) ?? [],
+    })),
+  };
 }
 
 export async function setYouthCohortAttendance(

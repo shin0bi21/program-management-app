@@ -1,4 +1,4 @@
-import type { AttendanceStatus } from '../../../../common/types/cohort';
+import type { AttendanceStatus, SessionNote } from '../../../../common/types/cohort';
 
 export interface YouthAttendanceSession {
   id: string;
@@ -9,6 +9,7 @@ export interface YouthAttendanceSession {
   cancelledAt: string | null;
   status: AttendanceStatus | null;
   notes: string | null;
+  sessionNotes: SessionNote[];
 }
 
 export interface YouthCohortAttendance {
@@ -25,4 +26,14 @@ export interface SetYouthAttendanceRecord {
   sessionId: string;
   status: AttendanceStatus | null;
   notes: string | null;
+}
+
+export interface SessionNoteTarget {
+  session: YouthAttendanceSession;
+  note: SessionNote | null;
+}
+
+export interface SessionNoteUnlinkTarget {
+  session: YouthAttendanceSession;
+  note: SessionNote;
 }

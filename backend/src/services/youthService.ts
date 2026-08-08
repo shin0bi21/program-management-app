@@ -195,6 +195,7 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
 export async function getYouthSessionNotes(
   youthId: string,
   actor: AccessTokenPayload,
+  cohortId?: string,
 ) {
   const profiles = await sql`
     SELECT 1
@@ -243,6 +244,7 @@ export async function getYouthSessionNotes(
     LEFT JOIN session_note_has_youth linked_note ON linked_note.note_id = sn.id
     LEFT JOIN users linked_youth ON linked_youth.id = linked_note.youth_id
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
+      AND ${cohortId ? sql`cs.cohort_id = ${cohortId}` : sql`TRUE`}
     GROUP BY sn.id, author.id, cs.id, pc.id, p.id
     ORDER BY cs.starts_at DESC, sn.created_at DESC
   `;

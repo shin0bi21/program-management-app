@@ -9,7 +9,6 @@ export const STORAGE_KEYS = {
   TOKEN: 'token',
   USER: 'user',
   LAST_AUTH_PATH: 'lastAuthPath',
-  YOUTH_NOTES_TAB: 'youthNotesTab',
 } as const;
 
 /**

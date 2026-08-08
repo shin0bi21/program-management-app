@@ -14,22 +14,35 @@
 }
 
 .youth-attendance-modal__sessions {
-  overflow: hidden;
-  border: var(--border-line);
-  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.youth-attendance-modal__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+.youth-attendance-modal__toolbar .btn,
+.youth-attendance-modal__notes-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.youth-attendance-modal__all-notes-toggle svg {
+  width: 1.4em;
+  color: var(--color-accent);
 }
 
 .youth-attendance-modal__session {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 12px 14px;
-  border-bottom: var(--border-line-soft);
-}
-
-.youth-attendance-modal__session:last-child {
-  border-bottom: 0;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-warm);
 }
 
 .youth-attendance-modal__session-details {
@@ -57,14 +70,120 @@
   color: var(--color-danger-dark);
 }
 
-.youth-attendance-modal__session .floating-select-trigger {
+.youth-attendance-modal__attendance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-card-surface);
+}
+
+.youth-attendance-modal__attendance > strong {
+  font-size: 0.82rem;
+}
+
+.youth-attendance-modal__attendance .floating-select-trigger {
   width: 100%;
   min-height: 36px;
 }
 
+.youth-attendance-modal__notes {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-card-surface);
+}
+
+.youth-attendance-modal__notes-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.youth-attendance-modal__notes-header .btn {
+  min-height: 28px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.youth-attendance-modal__notes-header .btn:not(.youth-attendance-modal__notes-toggle) {
+  margin-left: auto;
+}
+
+.youth-attendance-modal__notes-toggle {
+  padding-left: 0;
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.youth-attendance-modal__notes-label {
+  font-size: 0.75rem;
+}
+
+.youth-attendance-modal__note-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.youth-attendance-modal__note-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-warm);
+}
+
+.youth-attendance-modal__note-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.youth-attendance-modal__note-heading h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.youth-attendance-modal__note-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.youth-attendance-modal__note-actions .btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0.25rem;
+}
+
+.youth-attendance-modal__note-unlink {
+  color: var(--color-danger);
+}
+
+.youth-attendance-modal__note-body {
+  margin: 0;
+  color: var(--color-body);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 560px) {
   .youth-attendance-modal__session {
-    grid-template-columns: 1fr;
     gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .youth-attendance-modal__attendance {
+    grid-template-columns: 1fr;
   }
 }

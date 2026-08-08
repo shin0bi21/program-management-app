@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import render from '../../../../tests/renderWithQueryClient';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
@@ -8,8 +8,15 @@ const api = vi.hoisted(() => ({
   getYouthCohortAttendance: vi.fn(),
   setYouthCohortAttendance: vi.fn(),
 }));
+const sessionNoteApi = vi.hoisted(() => ({
+  createSessionNote: vi.fn(),
+  getSessionRoster: vi.fn(),
+  unlinkSessionNoteYouth: vi.fn(),
+  updateSessionNote: vi.fn(),
+}));
 
 vi.mock('./youthAttendance.api', () => api);
+vi.mock('../../../../common/api/cohorts.api', () => sessionNoteApi);
 
 const cohort = {
   id: 'cohort-1',
@@ -38,20 +45,132 @@ const attendance = {
     {
       id: 'session-2', sessionTypeName: 'Workshop', theme: 'Teamwork',
       startsAt: '2026-07-21T21:00:00.000Z', endsAt: '2026-07-21T22:00:00.000Z',
-      cancelledAt: null, status: null, notes: null,
+      cancelledAt: null, status: null, notes: null, sessionNotes: [],
     },
     {
       id: 'session-1', sessionTypeName: 'Workshop', theme: 'Communication',
       startsAt: '2026-07-14T21:00:00.000Z', endsAt: '2026-07-14T22:00:00.000Z',
       cancelledAt: null, status: 'present' as const, notes: 'Participated fully',
+      sessionNotes: [{
+        id: 'note-1', sessionId: 'session-1', category: 'achievement' as const,
+        title: 'Strong participation', details: 'Led the opening activity.',
+        createdAt: '2026-07-14T22:00:00.000Z', updatedAt: '2026-07-14T22:00:00.000Z',
+        createdByName: 'Bilal Khan',
+        youth: [{ youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test' }],
+      }],
     },
   ],
 };
 
 describe('YouthAttendanceModal', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     api.getYouthCohortAttendance.mockResolvedValue(attendance);
     api.setYouthCohortAttendance.mockResolvedValue(attendance);
+    sessionNoteApi.createSessionNote.mockResolvedValue({});
+    sessionNoteApi.unlinkSessionNoteYouth.mockResolvedValue(undefined);
+    sessionNoteApi.getSessionRoster.mockResolvedValue([
+      { youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test', status: 'present', notes: null },
+    ]);
+    sessionNoteApi.updateSessionNote.mockResolvedValue({});
+  });
+
+  it('shows each linked session note with its full details inline', async () => {
+    render(
+      <YouthAttendanceModal
+        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
+        cohort={cohort}
+        canManageSessionNotes
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Session Notes (1)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
+    expect(screen.getByText('Achievement')).toBeInTheDocument();
+    expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
+    expect(screen.queryByText('Bilal Khan')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View Strong participation' })).not.toBeInTheDocument();
+    expect(screen.getByText('Session Notes (0)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Session Notes (0)' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No session notes linked to this youth.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide all notes' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Session Notes (1)' }));
+    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show all notes' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Show all notes' }));
+    expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide all notes' }));
+    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
+  });
+
+  it('adds a prelinked youth note without showing link controls and returns to attendance', async () => {
+    render(
+      <YouthAttendanceModal
+        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
+        cohort={cohort}
+        canManageSessionNotes
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    const teamworkNotes = await screen.findByRole('region', { name: 'Session notes for Teamwork' });
+    fireEvent.click(within(teamworkNotes).getByRole('button', { name: '+ Add Note' }));
+    expect(await screen.findByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Link youth' })).not.toBeInTheDocument();
+    expect(sessionNoteApi.getSessionRoster).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Good teamwork' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+
+    await waitFor(() => expect(sessionNoteApi.createSessionNote).toHaveBeenCalledWith(
+      'session-2',
+      expect.objectContaining({ title: 'Good teamwork', youthIds: ['youth-1'] }),
+    ));
+    expect(await screen.findByRole('heading', { name: 'Manage Attendance' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Add Note' })).not.toBeInTheDocument();
+  });
+
+  it('edits and unlinks session notes without deleting them', async () => {
+    const view = render(
+      <YouthAttendanceModal
+        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
+        cohort={cohort}
+        canManageSessionNotes
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Strong participation' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Updated participation' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(sessionNoteApi.updateSessionNote).toHaveBeenCalledWith(
+      'session-1',
+      'note-1',
+      expect.objectContaining({ title: 'Updated participation', youthIds: ['youth-1'] }),
+    ));
+
+    view.unmount();
+    render(
+      <YouthAttendanceModal
+        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
+        cohort={cohort}
+        canManageSessionNotes
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlink Strong participation' }));
+    expect(screen.getByText(/The session note will remain available/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink' }));
+    await waitFor(() => expect(sessionNoteApi.unlinkSessionNoteYouth).toHaveBeenCalledWith(
+      'session-1',
+      'note-1',
+      'youth-1',
+    ));
   });
 
   it('loads every cohort session and saves statuses for only the selected youth', async () => {

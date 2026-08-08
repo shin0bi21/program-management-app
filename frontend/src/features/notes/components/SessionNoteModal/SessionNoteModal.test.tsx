@@ -53,6 +53,19 @@ describe('SessionNoteModal', () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
+  it('preselects a youth for a youth-centric new note', async () => {
+    render(
+      <SessionNoteModal
+        session={session}
+        initialYouthId="youth-1"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('checkbox', { name: 'Maya Thompson' })).toBeChecked();
+  });
+
   it('keeps submission available while the optional roster loads', () => {
     api.getSessionRoster.mockReturnValue(new Promise(() => {}));
     render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);

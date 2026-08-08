@@ -15,7 +15,16 @@ describe('AttendanceStatusSelect', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Attendance status' }));
+    const trigger = screen.getByRole('button', { name: 'Attendance status' });
+    expect(trigger).toHaveClass('attendance-status--unmarked');
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menuitemradio', { name: 'Present' })).toHaveClass('attendance-status--present');
+    expect(screen.getByRole('menuitemradio', { name: 'Absent' })).toHaveClass('attendance-status--absent');
+    expect(screen.getByRole('menuitemradio', { name: 'Late' })).toHaveClass('attendance-status--late');
+    expect(screen.getByRole('menuitemradio', { name: 'Excused' })).toHaveClass('attendance-status--excused');
+    expect(screen.getAllByRole('menuitemradio').map(option => option.textContent)).toEqual([
+      'Present', 'Absent', 'Late', 'Excused', 'Not marked',
+    ]);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Late' }));
     expect(onChange).toHaveBeenCalledWith('late');
   });
@@ -34,6 +43,9 @@ describe('AttendanceStatusSelect', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open attendance status' }));
     expect(screen.getByRole('menuitemradio', { name: 'Attended' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'Not attended' })).toBeInTheDocument();
+    expect(screen.getAllByRole('menuitemradio').map(option => option.textContent)).toEqual([
+      'Attended', 'Not attended',
+    ]);
     expect(screen.queryByRole('menuitemradio', { name: 'Late' })).not.toBeInTheDocument();
   });
 });

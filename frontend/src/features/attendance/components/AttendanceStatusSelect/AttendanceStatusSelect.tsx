@@ -1,17 +1,22 @@
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import type { AttendanceStatus } from '../../../../common/types/cohort';
+import './AttendanceStatusSelect.css';
+
+const statusClassName = (status: AttendanceStatus | '') => (
+  `attendance-status attendance-status--${status || 'unmarked'}`
+);
 
 const enrolledOptions = [
-  { value: '', label: 'Not marked' },
-  { value: 'present', label: 'Present' },
-  { value: 'absent', label: 'Absent' },
-  { value: 'late', label: 'Late' },
-  { value: 'excused', label: 'Excused' },
+  { value: 'present', label: 'Present', className: statusClassName('present') },
+  { value: 'absent', label: 'Absent', className: statusClassName('absent') },
+  { value: 'late', label: 'Late', className: statusClassName('late') },
+  { value: 'excused', label: 'Excused', className: statusClassName('excused') },
+  { value: '', label: 'Not marked', className: statusClassName('') },
 ] as const;
 
 const openOptions = [
-  { value: '', label: 'Not attended' },
-  { value: 'present', label: 'Attended' },
+  { value: 'present', label: 'Attended', className: statusClassName('present') },
+  { value: '', label: 'Not attended', className: statusClassName('') },
 ] as const;
 
 export default function AttendanceStatusSelect({
@@ -35,6 +40,7 @@ export default function AttendanceStatusSelect({
       ariaLabel={ariaLabel}
       value={value}
       disabled={disabled}
+      className={statusClassName(value)}
       onChange={nextValue => onChange(nextValue as AttendanceStatus | '')}
       options={rosterMode === 'open' ? openOptions : enrolledOptions}
     />
