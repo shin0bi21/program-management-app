@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import TableBody from './components/TableBody';
 import TableHeader from './components/TableHeader';
 import useTableInfiniteScroll from './hooks/useTableInfiniteScroll';
 import useTableModel from './hooks/useTableModel';
 import useTableNavigation from './hooks/useTableNavigation';
 import type { TableProps } from './Table.types';
+import { clampColumnWidth } from './table.utils';
 import './Table.css';
 
 export type { TableColumn } from './Table.types';
@@ -54,6 +55,23 @@ export default function Table<T>({
     columnWidths,
     onColumnWidthsChange,
   });
+  const lockRenderedColumnWidths = useCallback(() => {
+    if (!onColumnWidthsChange) return undefined;
+    const headerCells = wrapperRef.current?.querySelectorAll<HTMLTableCellElement>('thead th');
+    if (!headerCells) return undefined;
+
+    const lockedWidths = Object.fromEntries(columns.flatMap((column, index) => {
+      if (column.resizable === false) return [];
+      const renderedWidth = headerCells[index]?.getBoundingClientRect().width;
+      return [[
+        column.key,
+        clampColumnWidth(renderedWidth && renderedWidth > 0 ? renderedWidth : resolvedColumnWidths[column.key]),
+      ]];
+    }));
+
+    onColumnWidthsChange(lockedWidths);
+    return lockedWidths;
+  }, [columns, onColumnWidthsChange, resolvedColumnWidths]);
   const sentinelRef = useTableInfiniteScroll({
     rootRef: wrapperRef,
     dataLength: data.length,
@@ -75,9 +93,18 @@ export default function Table<T>({
         aria-busy={refreshing || undefined}
         style={{ width: '100%', minWidth: totalWidth }}
       >
+        <colgroup>
+          {columns.map(column => (
+            <col
+              key={column.key}
+              style={{ width: resolvedColumnWidths[column.key] }}
+            />
+          ))}
+        </colgroup>
         <TableHeader
           headers={headers}
           canResize={Boolean(onColumnWidthsChange)}
+          onResizeStart={lockRenderedColumnWidths}
           onToggleSort={toggleSort}
           onNudgeWidth={nudgeColumnWidth}
         />

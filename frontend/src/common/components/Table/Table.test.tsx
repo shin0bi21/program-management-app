@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Table, { type TableColumn } from './Table';
@@ -45,6 +46,75 @@ describe('Table', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Name column' }), { key: 'ArrowRight' });
     expect(onColumnWidthsChange).toHaveBeenCalledWith({ name: 160 });
     expect(screen.queryByRole('button', { name: 'Resize  column' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Accounts' })).toHaveStyle({ width: '100%', minWidth: '190px' });
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toHaveStyle({ width: '150px' });
+    expect(screen.getAllByRole('columnheader')[1]).toHaveStyle({ width: '40px' });
+    const tracks = screen.getByRole('table', { name: 'Accounts' }).querySelectorAll('col');
+    expect(tracks[0]).toHaveStyle({ width: '150px' });
+    expect(tracks[1]).toHaveStyle({ width: '40px' });
+  });
+
+  it('locks sibling pixel widths while the active column grows from its right edge', () => {
+    const onWidthsChange = vi.fn();
+    const resizeColumns: TableColumn<Row>[] = [
+      { key: 'name', header: 'Name', render: row => row.name },
+      { key: 'status', header: 'Status', render: () => 'Active' },
+      { key: 'actions', header: '', render: () => null, width: 40, resizable: false },
+    ];
+
+    function ControlledTable() {
+      const [widths, setWidths] = useState({ name: 150, status: 150 });
+      return (
+        <Table
+          ariaLabel="Accounts"
+          columns={resizeColumns}
+          data={[]}
+          keyExtractor={row => row.id}
+          columnWidths={widths}
+          onColumnWidthsChange={next => {
+            onWidthsChange(next);
+            setWidths(next as typeof widths);
+          }}
+        />
+      );
+    }
+
+    render(<ControlledTable />);
+    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
+    const statusHeader = screen.getByRole('columnheader', { name: 'Status' });
+    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 320 } as DOMRect);
+    vi.spyOn(statusHeader, 'getBoundingClientRect').mockReturnValue({ width: 280 } as DOMRect);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Status column' }), { clientX: 600 });
+    fireEvent.mouseMove(document, { clientX: 650 });
+    fireEvent.mouseUp(document);
+
+    expect(onWidthsChange).toHaveBeenNthCalledWith(1, { name: 320, status: 280 });
+    expect(onWidthsChange).toHaveBeenLastCalledWith({ name: 320, status: 330 });
+    expect(nameHeader).toHaveStyle({ width: '320px' });
+    expect(statusHeader).toHaveStyle({ width: '330px' });
+    expect(screen.getAllByRole('columnheader')[2]).toHaveStyle({ width: '40px' });
+  });
+
+  it('preserves captured sibling widths during keyboard resizing', () => {
+    const onColumnWidthsChange = vi.fn();
+    render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[]}
+      keyExtractor={row => row.id}
+      columnWidths={{ name: 150, status: 150 }}
+      onColumnWidthsChange={onColumnWidthsChange}
+    />);
+    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
+    const statusHeader = screen.getByRole('columnheader', { name: 'Status' });
+    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 320 } as DOMRect);
+    vi.spyOn(statusHeader, 'getBoundingClientRect').mockReturnValue({ width: 280 } as DOMRect);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Status column' }), { key: 'ArrowRight' });
+
+    expect(onColumnWidthsChange).toHaveBeenNthCalledWith(1, { name: 320, status: 280 });
+    expect(onColumnWidthsChange).toHaveBeenLastCalledWith({ name: 320, status: 290 });
   });
 
   it('clamps transient drag widths before exposing them to preference persistence', () => {
