@@ -1,5 +1,13 @@
+.youth-attendance-modal__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
 .youth-attendance-modal__context {
-  margin: 0 0 var(--space-4);
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.875rem;
 }
@@ -20,8 +28,7 @@
 
 .youth-attendance-modal__toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--space-2);
+  margin-left: auto;
 }
 
 .youth-attendance-modal__toolbar .btn,
@@ -38,18 +45,24 @@
 
 .youth-attendance-modal__session {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: var(--border-line);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-warm);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-surface);
+}
+
+.youth-attendance-modal__session-overview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
 }
 
 .youth-attendance-modal__session-details {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -62,7 +75,7 @@
 
 .youth-attendance-modal__session-details > span:not(.status-badge) {
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .youth-attendance-modal__cancelled {
@@ -71,18 +84,9 @@
 }
 
 .youth-attendance-modal__attendance {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: var(--border-line-soft);
-  border-radius: var(--radius-sm);
-  background: var(--color-card-surface);
-}
-
-.youth-attendance-modal__attendance > strong {
-  font-size: 0.82rem;
+  flex: 0 0 180px;
+  margin-left: auto;
+  min-width: 0;
 }
 
 .youth-attendance-modal__attendance .floating-select-trigger {
@@ -91,18 +95,17 @@
 }
 
 .youth-attendance-modal__notes {
+  display: grid;
+  gap: var(--space-2);
   min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  border: var(--border-line-soft);
-  border-radius: var(--radius-sm);
-  background: var(--color-card-surface);
+  padding-top: var(--space-3);
+  border-top: var(--border-line-soft);
 }
 
 .youth-attendance-modal__notes-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
 }
 
 .youth-attendance-modal__notes-header .btn {
@@ -183,7 +186,12 @@
     padding: var(--space-3);
   }
 
+  .youth-attendance-modal__session-details {
+    flex-wrap: wrap;
+  }
+
   .youth-attendance-modal__attendance {
-    grid-template-columns: 1fr;
+    flex-basis: 100%;
+    margin-left: 0;
   }
 }

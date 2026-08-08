@@ -35,26 +35,27 @@ export default function SessionAttendanceItem({
 
   return (
     <article className="youth-attendance-modal__session">
-      <div className="youth-attendance-modal__session-details">
-        <strong>{sessionLabel}</strong>
-        <span>{formatShortDate(session.startsAt)}</span>
-        {session.cancelledAt && (
-          <span className="status-badge youth-attendance-modal__cancelled">Cancelled</span>
-        )}
+      <div className="youth-attendance-modal__session-overview">
+        <div className="youth-attendance-modal__session-details">
+          <strong>{sessionLabel}</strong>
+          <span>{formatShortDate(session.startsAt)}</span>
+          {session.cancelledAt && (
+            <span className="status-badge youth-attendance-modal__cancelled">Cancelled</span>
+          )}
+        </div>
+        <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionLabel}`}>
+          <AttendanceStatusSelect
+            id={`youth-attendance-${session.id}`}
+            ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.startsAt)}`}
+            rosterMode={rosterMode}
+            value={status}
+            disabled={Boolean(session.cancelledAt)}
+            onChange={onStatusChange}
+          />
+        </section>
       </div>
-      <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionLabel}`}>
-        <strong>Attendance</strong>
-        <AttendanceStatusSelect
-          id={`youth-attendance-${session.id}`}
-          ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.startsAt)}`}
-          rosterMode={rosterMode}
-          value={status}
-          disabled={Boolean(session.cancelledAt)}
-          onChange={onStatusChange}
-        />
-      </section>
 
-      <section className="youth-attendance-modal__notes" aria-label={`Session notes for ${sessionLabel}`}>
+      <section className="youth-attendance-modal__notes" aria-label={`Notes for ${sessionLabel}`}>
         <div className="youth-attendance-modal__notes-header">
           {session.sessionNotes.length > 0 ? (
             <Button
@@ -64,11 +65,11 @@ export default function SessionAttendanceItem({
               aria-expanded={notesExpanded}
               onClick={onToggleNotes}
             >
-              <span>Session Notes ({session.sessionNotes.length})</span>
+              <span>Notes ({session.sessionNotes.length})</span>
               <FontAwesomeIcon icon={notesExpanded ? faChevronUp : faChevronDown} aria-hidden="true" />
             </Button>
           ) : (
-            <strong className="youth-attendance-modal__notes-label">Session Notes (0)</strong>
+            <strong className="youth-attendance-modal__notes-label">Notes (0)</strong>
           )}
           {canManageSessionNotes && (
             <Button
