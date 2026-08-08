@@ -1,5 +1,13 @@
+.youth-attendance-modal__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
 .youth-attendance-modal__context {
-  margin: 0 0 var(--space-4);
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.875rem;
 }
@@ -20,8 +28,7 @@
 
 .youth-attendance-modal__toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--space-2);
+  margin-left: auto;
 }
 
 .youth-attendance-modal__toolbar .btn,
@@ -91,6 +98,8 @@
 }
 
 .youth-attendance-modal__notes {
+  display: grid;
+  gap: var(--space-2);
   min-width: 0;
   padding: var(--space-2) var(--space-3);
   border: var(--border-line-soft);
@@ -102,7 +111,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
 }
 
 .youth-attendance-modal__notes-header .btn {
