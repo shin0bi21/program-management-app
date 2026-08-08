@@ -667,4 +667,178 @@ describe('Youth API', () => {
       expect(empty.body).toEqual([]);
     });
   });
+
+  describe('Youth cohort attendance', () => {
+    let youthId: string;
+    let otherYouthId: string;
+    let firstSessionId: string;
+    let secondSessionId: string;
+    let openCohortId: string;
+    let openSessionId: string;
+
+    beforeAll(async () => {
+      const youth = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, firstName: 'Attendance' });
+      const otherYouth = await request(app)
+        .post('/api/youth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...baseYouth, firstName: 'OtherAttendance' });
+      youthId = youth.body.id;
+      otherYouthId = otherYouth.body.id;
+
+      await sql`
+        INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+        VALUES
+          (${softSkillsCohortId}, ${youthId}, CURRENT_DATE - 30),
+          (${softSkillsCohortId}, ${otherYouthId}, CURRENT_DATE - 30)
+      `;
+      const [sessionType] = await sql<{ id: string }[]>`SELECT id FROM session_types ORDER BY name LIMIT 1`;
+      const sessions = await sql<{ id: string }[]>`
+        INSERT INTO cohort_sessions (
+          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        )
+        VALUES
+          (${softSkillsCohortId}, ${sessionType.id}, ${`Youth Attendance A ${Date.now()}`}, CURRENT_DATE - 2 + TIME '17:00', CURRENT_DATE - 2 + TIME '18:00', ${adminUserId}, ${adminUserId}),
+          (${softSkillsCohortId}, ${sessionType.id}, ${`Youth Attendance B ${Date.now()}`}, CURRENT_DATE - 1 + TIME '17:00', CURRENT_DATE - 1 + TIME '18:00', ${adminUserId}, ${adminUserId})
+        RETURNING id
+      `;
+      [firstSessionId, secondSessionId] = sessions.map(session => session.id);
+
+      await sql`
+        INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+        VALUES
+          (${firstSessionId}, ${youthId}, 'present', ${adminUserId}),
+          (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
+      `;
+
+      const [openProgram] = await sql<{ id: string }[]>`
+        SELECT id FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
+      `;
+      const [openCohort] = await sql<{ id: string }[]>`
+        INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
+        VALUES (${openProgram.id}, ${`Youth Open Attendance ${Date.now()}`}, CURRENT_DATE - 30, CURRENT_DATE + 30)
+        RETURNING id
+      `;
+      openCohortId = openCohort.id;
+      const [openSession] = await sql<{ id: string }[]>`
+        INSERT INTO cohort_sessions (
+          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        )
+        VALUES (${openCohortId}, ${sessionType.id}, 'Open attendance', CURRENT_DATE - 1 + TIME '19:00', CURRENT_DATE - 1 + TIME '20:00', ${adminUserId}, ${adminUserId})
+        RETURNING id
+      `;
+      openSessionId = openSession.id;
+    });
+
+    afterAll(async () => {
+      await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
+      await sql`DELETE FROM cohort_sessions WHERE id IN (${firstSessionId}, ${secondSessionId}, ${openSessionId})`;
+      await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
+      await deleteTestYouth(youthId);
+      await deleteTestYouth(otherYouthId);
+    });
+
+    it('requires authentication', async () => {
+      const response = await request(app)
+        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`);
+      expect(response.status).toBe(401);
+    });
+
+    it('requires attendance permissions', async () => {
+      const response = await request(app)
+        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${generateToken(youthId, 'youth')}`);
+      expect(response.status).toBe(403);
+    });
+
+    it('validates identifiers, reports missing youth, and hides unavailable cohorts', async () => {
+      const invalid = await request(app)
+        .get(`/api/youth/not-a-uuid/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(invalid.status).toBe(400);
+
+      const missingYouth = await request(app)
+        .get(`/api/youth/00000000-0000-4000-8000-000000000000/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(missingYouth.status).toBe(404);
+
+      const missingCohort = await request(app)
+        .get(`/api/youth/${youthId}/cohorts/00000000-0000-4000-8000-000000000000/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(missingCohort.status).toBe(403);
+    });
+
+    it('lists every eligible cohort session with this youth attendance only', async () => {
+      const response = await request(app)
+        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.cohort).toEqual(expect.objectContaining({
+        id: softSkillsCohortId,
+        programName: 'Soft Skills',
+        rosterMode: 'enrolled',
+      }));
+      expect(response.body.sessions).toHaveLength(2);
+      expect(response.body.sessions).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: firstSessionId, status: 'present' }),
+        expect.objectContaining({ id: secondSessionId, status: null }),
+      ]));
+    });
+
+    it('atomically replaces one youth attendance without changing another youth', async () => {
+      const response = await request(app)
+        .put(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ records: [
+          { sessionId: firstSessionId, status: 'late', notes: 'Arrived after kickoff' },
+          { sessionId: secondSessionId, status: null },
+        ] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.sessions).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: firstSessionId, status: 'late', notes: 'Arrived after kickoff' }),
+        expect.objectContaining({ id: secondSessionId, status: null }),
+      ]));
+      const otherAttendance = await sql<{ status: string }[]>`
+        SELECT status FROM attendance_records
+        WHERE session_id = ${firstSessionId} AND youth_id = ${otherYouthId}
+      `;
+      expect(otherAttendance).toEqual([{ status: 'present' }]);
+    });
+
+    it('rejects stale partial cohort replacements without deleting saved attendance', async () => {
+      const response = await request(app)
+        .put(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ records: [{ sessionId: firstSessionId, status: 'absent' }] });
+
+      expect(response.status).toBe(409);
+      const attendance = await sql<{ status: string }[]>`
+        SELECT status FROM attendance_records
+        WHERE session_id = ${firstSessionId} AND youth_id = ${youthId}
+      `;
+      expect(attendance).toEqual([{ status: 'late' }]);
+    });
+
+    it('limits open-program youth attendance to attended or unmarked', async () => {
+      const rejected = await request(app)
+        .put(`/api/youth/${youthId}/cohorts/${openCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ records: [{ sessionId: openSessionId, status: 'late' }] });
+      expect(rejected.status).toBe(409);
+
+      const saved = await request(app)
+        .put(`/api/youth/${youthId}/cohorts/${openCohortId}/attendance`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ records: [{ sessionId: openSessionId, status: 'present' }] });
+      expect(saved.status).toBe(200);
+      expect(saved.body.sessions[0]).toEqual(expect.objectContaining({
+        id: openSessionId,
+        status: 'present',
+      }));
+    });
+  });
 });

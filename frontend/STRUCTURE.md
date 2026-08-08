@@ -83,6 +83,7 @@ src/
       deviceFingerprint.ts
       time.ts
   features/
+    attendance/           ← cross-page attendance status controls shared by session and youth flows
     contacts/             ← cross-page contact presentation and contact-array behavior
     notes/                ← cross-page note rows, details, categories, and session-note management
     programs/             ← program API, types, lookup hook, and reusable program selector
@@ -92,7 +93,7 @@ src/
     Outreach/             ← expression review + lead management feature folders
       Leads/components/   ← page-owned lead forms, signup flow, and follow-up note UI
     Settings/             ← account settings + Users account management
-    Youth/                ← Youth.tsx + page APIs/hooks and YouthModal-owned address/school behavior
+    Youth/                ← Youth.tsx + page APIs/hooks, profile editing, and youth-centric attendance management
 ```
 
 ## Rules of Thumb

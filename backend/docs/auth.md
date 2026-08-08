@@ -118,8 +118,8 @@ Route access and mutations are permission-based. Roles group permissions in the 
 | `write:cohorts` | Create and manage cohorts and enrollments |
 | `read:sessions` | Read sessions, session types, notes, and attachments |
 | `write:sessions` | Generate and manage sessions, notes, and attachments |
-| `read:attendance` | Read a session roster and its attendance records |
-| `write:attendance` | Record and update session attendance |
+| `read:attendance` | Read session rosters and youth-centric cohort attendance records |
+| `write:attendance` | Record and update attendance through session- or youth-centric workflows |
 | `read:outreach` | Read expressions of interest and leads |
 | `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |

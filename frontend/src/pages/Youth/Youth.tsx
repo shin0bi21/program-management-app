@@ -31,6 +31,7 @@ import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetai
 import { getErrorMessage } from '../../common/utils/clientErrors';
 import SessionNoteModal from '../../features/notes/components/SessionNoteModal/SessionNoteModal';
 import { deleteSessionNote } from '../../common/api/cohorts.api';
+import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 
 const initialNotesTab = (): NotesTab => (
   localStorage.getItem(STORAGE_KEYS.YOUTH_NOTES_TAB) === 'session' ? 'session' : 'profile'
@@ -62,6 +63,7 @@ export default function Youth() {
   const [confirmingProfileNoteDelete, setConfirmingProfileNoteDelete] = useState(false);
   const [deletingProfileNote, setDeletingProfileNote] = useState(false);
   const [profileNoteDeleteError, setProfileNoteDeleteError] = useState('');
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
   const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
@@ -71,7 +73,7 @@ export default function Youth() {
     error: preferencesError,
     save: saveFilters,
   } = useUserPreference('youth-profile-filters');
-  const { youth, upsertYouth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
+  const { youth, upsertYouth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch: refetchYouth } = useYouth(queryFilters, sorting);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
@@ -79,6 +81,8 @@ export default function Youth() {
   } = useTableSelection(youth);
   const canWrite = permissions.includes('write:youth_profiles');
   const canManageSessionNotes = permissions.includes('write:sessions');
+  const canManageAttendance = permissions.includes('read:attendance')
+    && permissions.includes('write:attendance');
   const sessionNotesQuery = useQuery({
     queryKey: ['youth-session-notes', selectedProfileId],
     queryFn: ({ signal }) => getYouthSessionNotes(selectedProfileId!, { signal }),
@@ -129,6 +133,7 @@ export default function Youth() {
     setConfirmingProfileNoteDelete(false);
     setDeletingProfileNote(false);
     setProfileNoteDeleteError('');
+    setAttendanceTarget(null);
   }, [notesTab, selectedProfileId]);
 
   const selectNotesTab = (tab: NotesTab) => {
@@ -288,6 +293,8 @@ export default function Youth() {
             <AttendanceCard
               cohorts={selectedProfile?.cohorts}
               selected={selectedProfile !== null}
+              canManage={canManageAttendance}
+              onManage={setAttendanceTarget}
             />
             <YouthNotesCard
               profileNotes={profileNotes}
@@ -324,6 +331,12 @@ export default function Youth() {
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={() => setModalTarget(null)}
         onSuccess={handleSaveYouth}
+      />
+      <YouthAttendanceModal
+        youth={selectedProfile}
+        cohort={attendanceTarget}
+        onClose={() => setAttendanceTarget(null)}
+        onSaved={refetchYouth}
       />
       <YouthModal
         isOpen={contactTarget !== null}

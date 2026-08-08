@@ -1,22 +1,14 @@
 import { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPen } from '@fortawesome/free-solid-svg-icons';
+import Button from '../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
 import { getDateKeyInTimeZone } from '../../../../common/utils/date';
+import type { YouthProfile } from '../../../../common/types/youth';
 import YouthDashboardTabs from '../YouthDashboardTabs/YouthDashboardTabs';
 import './AttendanceCard.css';
 
-interface AttendanceCohort {
-  id: string;
-  name: string;
-  programName: string;
-  rosterMode: 'enrolled' | 'open';
-  startsOn: string;
-  endsOn: string;
-  withdrawnOn: string | null;
-  presentCount: number;
-  lateCount: number;
-  absentCount: number;
-  lastAttendedOn: string | null;
-}
+type AttendanceCohort = YouthProfile['cohorts'][number];
 
 const attendanceTabs = [
   { value: 'active', label: 'Active' },
@@ -26,9 +18,13 @@ const attendanceTabs = [
 export default function AttendanceCard({
   cohorts,
   selected,
+  canManage = false,
+  onManage,
 }: {
   cohorts?: AttendanceCohort[];
   selected: boolean;
+  canManage?: boolean;
+  onManage?: (cohort: AttendanceCohort) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const today = getDateKeyInTimeZone();
@@ -58,7 +54,21 @@ export default function AttendanceCard({
         <div className="attendance-card__cohorts">
           {visibleCohorts.map(cohort => (
             <div className="attendance-card__cohort" key={cohort.id}>
-              <strong>{cohort.programName} · {cohort.name}</strong>
+              <div className="attendance-card__cohort-header">
+                <strong>{cohort.programName} · {cohort.name}</strong>
+                {canManage && onManage && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="attendance-card__manage"
+                    aria-label={`Manage attendance for ${cohort.programName} · ${cohort.name}`}
+                    title="Manage attendance"
+                    onClick={() => onManage(cohort)}
+                  >
+                    <FontAwesomeIcon icon={faPen} aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
               {cohort.rosterMode === 'open' ? (
                 <p className="attendance-card__breakdown">
                   {cohort.presentCount} {cohort.presentCount === 1 ? 'visit' : 'visits'}

@@ -5,6 +5,8 @@ import { inviteYouthAccount } from '../services/accountService';
 import { youthQuerySchema } from '../validation/youthSchemas';
 import { createYouthProfileNote, deleteYouthProfileNote, getYouthProfileNotes, updateYouthProfileNote } from '../services/youthProfileNoteService';
 import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
+import { getYouthCohortAttendance, setYouthCohortAttendance } from '../services/youthAttendanceService';
+import type { SetYouthCohortAttendanceInput } from '../validation/youthSchemas';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
   const filters = youthQuerySchema.shape.query.parse(req.query);
@@ -25,6 +27,21 @@ export const handleSetYouth = async (req: Request, res: Response) => {
 export const handleGetYouthSessionNotes = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
   res.json(await getYouthSessionNotes(req.params.id, actor));
+};
+
+export const handleGetYouthCohortAttendance = async (req: Request, res: Response) => {
+  const actor = (req as AuthRequest).user!;
+  res.json(await getYouthCohortAttendance(req.params.id, req.params.cohortId, actor));
+};
+
+export const handleSetYouthCohortAttendance = async (req: Request, res: Response) => {
+  const actor = (req as AuthRequest).user!;
+  res.json(await setYouthCohortAttendance(
+    req.params.id,
+    req.params.cohortId,
+    req.body as SetYouthCohortAttendanceInput,
+    actor,
+  ));
 };
 
 export const handleInviteYouth = async (req: Request, res: Response) => {

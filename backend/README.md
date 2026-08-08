@@ -188,6 +188,8 @@ Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for whic
 |--------|------|-------------|------------|
 | `GET` | `/` | List all youth profiles | `read:youth_profiles` |
 | `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts | `read:youth_profiles` |
+| `GET` | `/:id/cohorts/:cohortId/attendance` | List one youth's attendance across a cohort's sessions | `read:youth_profiles` + `read:attendance` |
+| `PUT` | `/:id/cohorts/:cohortId/attendance` | Replace one youth's attendance across a cohort without changing the session roster | `read:youth_profiles` + `write:attendance` |
 | `POST` | `/` | Create or update a youth profile (upsert by `id`) | `write:youth_profiles` |
 | `PATCH` | `/:id` | Toggle youth active status | `write:youth_profiles` |
 
