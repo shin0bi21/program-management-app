@@ -39,4 +39,27 @@ describe('ProgramCard', () => {
     expect(screen.queryByText('Summer 2026')).not.toBeInTheDocument();
     expect(screen.getByText('Guest Speaker')).toBeInTheDocument();
   });
+
+  it('uses the same session structure for every upcoming date', () => {
+    const program: Program = {
+      programName: 'Drop In',
+      age: 'Ages 12–18',
+      day: 'Every Tuesday',
+      title: 'Drop In',
+      copy: 'Join the weekly drop-in.',
+      dropIn: true,
+    };
+    const sessions = [0, 1, 2].map((week) => ({
+      ...session,
+      id: `session-${week}`,
+      startsAt: new Date(Date.now() + (week + 1) * 7 * 86_400_000).toISOString(),
+    }));
+
+    const { container } = render(<ProgramCard program={program} sessions={sessions} />);
+
+    expect(container.querySelectorAll('.next-session')).toHaveLength(3);
+    expect(container.querySelectorAll('.next-session-date')).toHaveLength(3);
+    expect(container.querySelectorAll('.next-session-body')).toHaveLength(3);
+    expect(container.querySelectorAll('.next-session--featured')).toHaveLength(1);
+  });
 });

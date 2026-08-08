@@ -1,7 +1,6 @@
 import type { HomepageSession } from '../../../api/homepage.api';
 import type { Program } from './programCardSchema';
 
-const weekdayFormatter = new Intl.DateTimeFormat('en-CA', { weekday: 'long' });
 const monthFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short' });
 const millisecondsPerDay = 86_400_000;
 
@@ -27,7 +26,7 @@ function UpcomingSessions({
   if (state === 'loading') return <p className="program-empty">Loading schedule…</p>;
   if (state === 'error') return <p className="program-empty">Schedule unavailable.</p>;
 
-  const [next, ...following] = sessions;
+  const [next] = sessions;
 
   if (!next) {
     return (
@@ -37,44 +36,30 @@ function UpcomingSessions({
     );
   }
 
-  const nextDate = new Date(next.startsAt);
-  const nextDays = daysUntil(next.startsAt);
-
   return (
-    <>
-      <div className="next-session" aria-label={dropIn ? 'Next drop-in day' : 'Next session'}>
-        <div className="next-session-date">
-          <span className="next-session-day">{nextDate.getDate()}</span>
-          <span className="next-session-month">{monthFormatter.format(nextDate)}</span>
-        </div>
-        <div className="next-session-body">
-          <span className="next-session-tag">
-            {nextDays === 0 ? 'Today' : nextDays === 1 ? 'Tomorrow' : `In ${nextDays} days`}
-          </span>
-          <p className="next-session-topic">{dropIn ? 'Drop-in Day' : next.theme || next.programName}</p>
-          <p className="next-session-weekday">{weekdayFormatter.format(nextDate)}</p>
-        </div>
-      </div>
-      {following.length > 0 && (
-        <ul className="upcoming-rows">
-          {following.map((session) => {
-            const date = new Date(session.startsAt);
-            return (
-              <li key={session.id} className="upcoming-row">
-                <span className="upcoming-row-date">
-                  <strong>{date.getDate()}</strong>
-                  <span>{monthFormatter.format(date)}</span>
-                </span>
-                <span className="upcoming-row-topic">
-                  {dropIn ? 'Drop-in Day' : session.theme || session.programName}
-                </span>
-                <span className="upcoming-row-weekday">{weekdayFormatter.format(date)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </>
+    <ul className="upcoming-rows" aria-label={dropIn ? 'Upcoming drop-in days' : 'Upcoming sessions'}>
+      {sessions.map((session, index) => {
+        const date = new Date(session.startsAt);
+        const days = daysUntil(session.startsAt);
+        return (
+          <li
+            key={session.id}
+            className={`next-session${index === 0 ? ' next-session--featured' : ''}`}
+          >
+            <time className="next-session-date" dateTime={session.startsAt}>
+              <span className="next-session-day">{date.getDate()}</span>
+              <span className="next-session-month">{monthFormatter.format(date)}</span>
+            </time>
+            <div className="next-session-body">
+              <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.theme || session.programName}</p>
+              <span className="next-session-tag">
+                {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}
+              </span>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
