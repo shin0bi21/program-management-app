@@ -89,6 +89,7 @@ src/
     Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
     Homepage/             ← Homepage.tsx + SiteFooter + hooks/useSectionRouting.ts + section feature folders
     Outreach/             ← expression review + lead management feature folders
+      Leads/components/   ← page-owned lead forms, signup flow, and follow-up note UI
     Settings/             ← account settings + Users account management
     Youth/                ← Youth.tsx + page APIs/hooks and YouthModal-owned address/school behavior
 ```
@@ -215,6 +216,7 @@ export default function MyMenu() {
 | `src/pages/Homepage/components/SignupSection/SignupSection.test.tsx` | Public expression-of-interest submission behavior |
 | `src/pages/Outreach/Outreach.test.tsx` | Outreach navigation and view selection |
 | `src/pages/Outreach/Leads/Leads.test.tsx` | Lead list, filtering, and actions |
+| `src/pages/Outreach/Leads/components/LeadNotesCard/LeadNotesCard.test.tsx` | Follow-up note loading and immutable create/update/delete cache behavior |
 | `src/pages/Settings/Users/Users.test.tsx` | Role-scoped account management behavior |
 | `src/pages/Youth/Youth.test.tsx` | Youth profile page behavior |
 | `src/pages/Youth/components/AttendanceCard/AttendanceCard.test.tsx` | Youth attendance summary rendering |

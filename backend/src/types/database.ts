@@ -160,6 +160,16 @@ export interface HomepageImages {
   updated_by: string | null;
 }
 
+export interface LeadNotes {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string;
+  id: Generated<string>;
+  lead_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface Leads {
   age: number;
   contact_phone_number: string;
@@ -440,6 +450,7 @@ export interface DB {
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   homepage_images: HomepageImages;
+  lead_notes: LeadNotes;
   leads: Leads;
   program_cohorts: ProgramCohorts;
   programs: Programs;

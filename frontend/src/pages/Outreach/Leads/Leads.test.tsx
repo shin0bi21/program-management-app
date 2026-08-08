@@ -13,6 +13,7 @@ const renderPage = () => {
 const getLeads = vi.fn();
 const updateLead = vi.fn();
 const signUpLead = vi.fn();
+const getLeadNotes = vi.fn();
 const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
 
 vi.mock('./api/leads.api', () => ({
@@ -21,6 +22,10 @@ vi.mock('./api/leads.api', () => ({
   updateLead: (...args: unknown[]) => updateLead(...args),
   updateLeadStatus: vi.fn(),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
+  getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
+  createLeadNote: vi.fn(),
+  updateLeadNote: vi.fn(),
+  deleteLeadNote: vi.fn(),
 }));
 
 vi.mock('../../../common/context/AuthContext', () => ({
@@ -41,6 +46,7 @@ describe('Leads', () => {
     preferenceHook.preference = null;
     preferenceHook.save.mockReset();
     signUpLead.mockResolvedValue({});
+    getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
