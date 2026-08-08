@@ -16,6 +16,12 @@ export const outreachFormSchema = z.object({
 
 export type OutreachFormValues = z.infer<typeof outreachFormSchema>;
 
+export const publicOutreachFormSchema = outreachFormSchema.extend({
+  submittedByRole: z.enum(['youth', 'parent', 'guardian'], { error: 'Select who is filling out the form' }),
+});
+
+export type PublicOutreachFormValues = z.infer<typeof publicOutreachFormSchema>;
+
 export const outreachFormDefaultValues: OutreachFormValues = {
   youthFirstName: '',
   youthLastName: '',
@@ -26,4 +32,9 @@ export const outreachFormDefaultValues: OutreachFormValues = {
   contactRelationship: 'parent',
   discoverySource: 'online',
   notes: '',
+};
+
+export const publicOutreachFormDefaultValues: PublicOutreachFormValues = {
+  ...outreachFormDefaultValues,
+  submittedByRole: 'parent',
 };

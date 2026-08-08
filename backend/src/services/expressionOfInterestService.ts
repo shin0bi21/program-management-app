@@ -13,6 +13,7 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
     age: sql`LPAD(e.age::text, 4, '0')`,
     school: sql`LOWER(e.school)`,
     program: sql`LOWER(${suggestedProgram})`,
+    submittedByRole: sql`e.submitted_by_role::text`,
     createdAt: sql`e.created_at::text`,
     status: sql`e.status::text`,
   }[filters.sort]!;
@@ -25,6 +26,7 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
       e.contact_relationship,
       e.age,
       e.school,
+      e.submitted_by_role,
       e.discovery_source,
       e.notes,
       e.status,
@@ -65,6 +67,7 @@ export async function updateExpressionOfInterestStatus(id: string, data: UpdateE
       contact_relationship,
       age,
       school,
+      submitted_by_role,
       discovery_source,
       notes,
       status,

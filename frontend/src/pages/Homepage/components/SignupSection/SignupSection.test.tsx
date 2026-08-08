@@ -19,9 +19,11 @@ describe('SignupSection', () => {
 
     expect(screen.getByText('Youth Information')).toBeInTheDocument()
     expect(screen.getByText('Primary Contact')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Who is filling out this form?' })).toHaveTextContent('Parent')
     expect(screen.queryByText('Follow-up Information')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: 'Emergency Contact' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }))
+    expect(screen.queryByRole('menuitemradio', { name: 'Emergency Contact' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
     expect(document.getElementById('cohort-phoneNumber')).not.toBeInTheDocument()
   })
@@ -33,9 +35,11 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: '  Test  ' } })
     fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: '  Westview  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Who is filling out this form?' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Youth' }))
     fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '  519-555-0199  ' } })
-    fireEvent.change(document.getElementById('cohort-contactRelationship')!, { target: { value: 'guardian' } })
-    fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Guardian' }))
     fireEvent.change(document.getElementById('cohort-notes')!, { target: { value: '  Please follow up.  ' } })
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
@@ -45,6 +49,7 @@ describe('SignupSection', () => {
         youthLastName: 'Test',
         age: 14,
         school: 'Westview',
+        submittedByRole: 'youth',
         contactPhoneNumber: '519-555-0199',
         contactRelationship: 'guardian',
         discoverySource: 'online',
@@ -61,8 +66,6 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: 'Westview' } })
     fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '519-555-0199' } })
-    fireEvent.change(document.getElementById('cohort-contactRelationship')!, { target: { value: 'guardian' } })
-    fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
     await waitFor(() => {
@@ -80,7 +83,6 @@ describe('SignupSection', () => {
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: 'Test' } })
     fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: 'Westview' } })
-    fireEvent.change(document.getElementById('cohort-discoverySource')!, { target: { value: 'online' } })
     fireEvent.submit(screen.getByRole('button', { name: /submit/i }).closest('form')!)
 
     expect(await screen.findByText(/contact phone number is required/i)).toBeInTheDocument()

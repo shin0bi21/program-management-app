@@ -28,7 +28,7 @@
   --home-section-y: 80px;
   --home-line: rgba(18, 22, 31, 0.1);
   --home-line-strong: rgba(18, 22, 31, 0.16);
-  --home-soft: #f4f1ea;
+  --home-surface-alt: #f6f7f9;
   min-height: 100vh;
   color: var(--color-ink);
   background: var(--color-white);
@@ -113,7 +113,7 @@
 }
 
 .cohort-section {
-  background: var(--home-soft);
+  background: var(--color-white);
   color: var(--color-ink);
 }
 
@@ -121,14 +121,12 @@
   color: var(--color-ink);
 }
 
-.timeline-section,
-.partners-section {
-  background: var(--color-white);
+.timeline-section {
+  background: var(--home-surface-alt);
 }
 
 .resources-section {
-  border-top: 1px solid var(--home-line);
-  background: linear-gradient(180deg, rgba(244, 241, 234, 0.7) 0%, rgba(255, 255, 255, 1) 100%);
+  background: var(--color-white);
 }
 
 /* Hero */
@@ -206,6 +204,12 @@
   border-radius: 8px;
   overflow: hidden;
   background: transparent;
+}
+
+.hero-photo-frame picture {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .hero-photo-image {
@@ -314,7 +318,7 @@
   padding: 28px;
   border: 1px solid var(--home-line);
   border-radius: 8px;
-  background: var(--color-white);
+  background: var(--home-surface-alt);
   box-shadow: none;
 }
 
@@ -358,11 +362,12 @@
 }
 
 .cohort-inline-form input,
+.cohort-inline-form .floating-select-trigger,
 .cohort-inline-form select,
 .cohort-inline-form textarea {
   min-height: 42px;
   border-radius: 8px;
-  background: #fbfbf9;
+  background: var(--color-white);
 }
 
 .cohort-inline-form textarea {
@@ -745,6 +750,10 @@
   flex: 0 0 auto;
 }
 
+.resource-photo-panel picture {
+  display: block;
+}
+
 .resource-photo {
   display: block;
   width: 116px;
@@ -835,7 +844,7 @@
 /* Partners */
 .partners-section {
   border-top: 1px solid var(--home-line);
-  background: var(--color-white);
+  background: var(--home-surface-alt);
 }
 
 .partners-section .section-heading {
@@ -949,6 +958,7 @@
   }
 
   .cohort-inline-form input,
+  .cohort-inline-form .floating-select-trigger,
   .cohort-inline-form select,
   .cohort-inline-form textarea {
     min-height: 3.09cqi;

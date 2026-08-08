@@ -29,8 +29,9 @@ async function main() {
     const originalPath = path.join(homepageRoot, image.storageKey);
     const stem = path.parse(image.storageKey).name;
     const thumbnailPath = path.join(homepageRoot, `${stem}-thumbnail.webp`);
+    const mobilePath = path.join(homepageRoot, `${stem}-mobile.webp`);
     const displayPath = path.join(homepageRoot, `${stem}-display.webp`);
-    if (await exists(thumbnailPath) && await exists(displayPath)) {
+    if (await exists(thumbnailPath) && await exists(mobilePath) && await exists(displayPath)) {
       skipped += 1;
       continue;
     }
@@ -40,12 +41,14 @@ async function main() {
       continue;
     }
     const source = sharp(originalPath, { failOn: 'warning' }).rotate();
-    const [thumbnail, display] = await Promise.all([
+    const [thumbnail, mobile, display] = await Promise.all([
       source.clone().resize({ width: 320, withoutEnlargement: true }).webp({ quality: 76 }).toBuffer(),
+      source.clone().resize({ width: 768, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
       source.clone().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
     ]);
     await Promise.all([
       writeFile(thumbnailPath, thumbnail),
+      writeFile(mobilePath, mobile),
       writeFile(displayPath, display),
     ]);
     generated += 1;

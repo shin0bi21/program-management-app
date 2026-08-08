@@ -26,7 +26,10 @@ export default function HeroSection({ photos }: HeroSectionProps) {
           <div className="hero-visual-panel">
             <div className="hero-visual-card">
               <div className="hero-photo-frame">
-                <img src={activePhoto.src} alt={activePhoto.alt} className="hero-photo-image" />
+                <picture>
+                  {activePhoto.mobileSrc && <source media="(max-width: 820px)" srcSet={activePhoto.mobileSrc} />}
+                  <img src={activePhoto.src} alt={activePhoto.alt} className="hero-photo-image" />
+                </picture>
                 {hasMultiplePhotos && (
                   <div className="hero-photo-nav" aria-label="Photo navigation controls">
                     <button

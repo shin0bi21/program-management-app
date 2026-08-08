@@ -20,7 +20,7 @@ export const homepageImageParamsSchema = z.object({
 export const homepageImageFileParamsSchema = z.object({
   params: z.object({
     imageId: z.string().uuid('Invalid image ID'),
-    variant: z.enum(['thumbnail', 'display']),
+    variant: z.enum(['thumbnail', 'mobile', 'display']),
   }),
 });
 

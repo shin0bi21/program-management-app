@@ -25,10 +25,16 @@ const supportedImageTypes = new Map([
   ['image/webp', '.webp'],
 ]);
 
-function imageVariantUrlSql(variant: 'thumbnail' | 'display') {
+type HomepageImageVariant = 'original' | 'thumbnail' | 'mobile' | 'display';
+
+function imageVariantUrlSql(variant: Exclude<HomepageImageVariant, 'original'>) {
   return sql`
     CASE
-      WHEN hi.public_path IS NOT NULL THEN hi.public_path
+      WHEN hi.public_path IS NOT NULL THEN regexp_replace(
+        hi.public_path,
+        '[.][^./]+$',
+        ${`-${variant}.webp`}
+      )
       ELSE '/public/homepage/images/' || hi.id::text || '/' || ${variant}
     END
   `;
@@ -39,6 +45,7 @@ function homepageImages() {
     SELECT
       hi.id,
       ${imageVariantUrlSql('display')} AS image_url,
+      ${imageVariantUrlSql('mobile')} AS mobile_url,
       ${imageVariantUrlSql('thumbnail')} AS thumbnail_url,
       hi.alt_text,
       hi.caption,
@@ -116,17 +123,21 @@ export async function createHomepageImage(
   const storageKey = `${randomUUID()}${extension}`;
   const storageStem = path.parse(storageKey).name;
   const thumbnailKey = `${storageStem}-thumbnail.webp`;
+  const mobileKey = `${storageStem}-mobile.webp`;
   const displayKey = `${storageStem}-display.webp`;
   const filePath = path.join(homepageUploadRoot, storageKey);
   const thumbnailPath = path.join(homepageUploadRoot, thumbnailKey);
+  const mobilePath = path.join(homepageUploadRoot, mobileKey);
   const displayPath = path.join(homepageUploadRoot, displayKey);
   await mkdir(homepageUploadRoot, { recursive: true });
   let thumbnail: Buffer;
+  let mobile: Buffer;
   let display: Buffer;
   try {
     const source = sharp(file.buffer, { failOn: 'warning' }).rotate();
-    [thumbnail, display] = await Promise.all([
+    [thumbnail, mobile, display] = await Promise.all([
       source.clone().resize({ width: 320, withoutEnlargement: true }).webp({ quality: 76 }).toBuffer(),
+      source.clone().resize({ width: 768, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
       source.clone().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
     ]);
   } catch {
@@ -135,6 +146,7 @@ export async function createHomepageImage(
   try {
     await writeFile(filePath, file.buffer, { flag: 'wx' });
     await writeFile(thumbnailPath, thumbnail, { flag: 'wx' });
+    await writeFile(mobilePath, mobile, { flag: 'wx' });
     await writeFile(displayPath, display, { flag: 'wx' });
     const rows = await sql`
       INSERT INTO homepage_images (
@@ -152,7 +164,7 @@ export async function createHomepageImage(
     `;
     return rows[0];
   } catch (error) {
-    await Promise.all([filePath, thumbnailPath, displayPath].map(candidate => unlink(candidate).catch(() => {})));
+    await Promise.all([filePath, thumbnailPath, mobilePath, displayPath].map(candidate => unlink(candidate).catch(() => {})));
     throw error;
   }
 }
@@ -216,7 +228,7 @@ export async function deleteHomepageImage(imageId: string) {
     const storageKey = existing[0].storageKey;
     const stem = path.parse(storageKey).name;
     try {
-      for (const key of [storageKey, `${stem}-thumbnail.webp`, `${stem}-display.webp`]) {
+      for (const key of [storageKey, `${stem}-thumbnail.webp`, `${stem}-mobile.webp`, `${stem}-display.webp`]) {
         quarantined.push(await quarantineUpload(path.join(homepageUploadRoot, key)));
       }
     } catch (error) {
@@ -237,7 +249,7 @@ export async function deleteHomepageImage(imageId: string) {
 
 export async function getHomepageImageFile(
   imageId: string,
-  variant: 'original' | 'thumbnail' | 'display' = 'original',
+  variant: HomepageImageVariant = 'original',
 ) {
   const rows = await sql<{ storageKey: string | null }[]>`
     SELECT storage_key

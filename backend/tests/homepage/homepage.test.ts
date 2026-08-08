@@ -73,7 +73,9 @@ describe('Homepage management API', () => {
     expect(response.body.images).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          imageUrl: '/programming/adventure_bay.png',
+          imageUrl: '/programming/adventure_bay-display.webp',
+          mobileUrl: '/programming/adventure_bay-mobile.webp',
+          thumbnailUrl: '/programming/adventure_bay-thumbnail.webp',
         }),
       ]),
     );
@@ -109,6 +111,7 @@ describe('Homepage management API', () => {
         expect.objectContaining({
           id: uploadedImageId,
           imageUrl: `/public/homepage/images/${uploadedImageId}/display`,
+          mobileUrl: `/public/homepage/images/${uploadedImageId}/mobile`,
           thumbnailUrl: `/public/homepage/images/${uploadedImageId}/thumbnail`,
           caption: 'Youth workshop updated.',
           altText: 'Youth workshop updated.',
@@ -128,10 +131,13 @@ describe('Homepage management API', () => {
     const file = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/file`);
     expect(file.status).toBe(200);
     const thumbnail = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/thumbnail`);
+    const mobile = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/mobile`);
     const display = await request(app).get(`/api/public/homepage/images/${uploadedImageId}/display`);
     expect(thumbnail.status).toBe(200);
+    expect(mobile.status).toBe(200);
     expect(display.status).toBe(200);
     expect(thumbnail.headers['content-type']).toBe('image/webp');
+    expect(mobile.headers['content-type']).toBe('image/webp');
     expect(display.headers['content-type']).toBe('image/webp');
 
     const deleted = await request(app)

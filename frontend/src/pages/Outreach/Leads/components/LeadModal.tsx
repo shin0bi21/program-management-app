@@ -24,6 +24,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
         <OutreachFormFields
           idPrefix="lead"
           register={register}
+          control={control}
           errors={errors}
           programField={
             <FormField id="lead-programId" label="Program of Interest" error={errors.programId?.message}>

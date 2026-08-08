@@ -24,6 +24,7 @@ describe('Expression of interest API', () => {
         contact_relationship,
         age,
         school,
+        submitted_by_role,
         discovery_source,
         notes
       )
@@ -34,6 +35,7 @@ describe('Expression of interest API', () => {
         ${'parent'},
         ${15},
         ${'Test School'},
+        ${'parent'},
         ${'online'},
         ${'Needs follow-up'}
       )
@@ -41,10 +43,10 @@ describe('Expression of interest API', () => {
     await sql`
       INSERT INTO expressions_of_interest (
         youth_first_name, youth_last_name,
-        contact_phone_number, contact_relationship, age, school, discovery_source
+        contact_phone_number, contact_relationship, age, school, submitted_by_role, discovery_source
       ) VALUES (
         'Older', ${jobReadinessYouthLastName}, '416-555-0189',
-        'parent', 17, 'Test School', 'online'
+        'parent', 17, 'Test School', 'parent', 'online'
       )
     `;
   });
@@ -75,6 +77,7 @@ describe('Expression of interest API', () => {
       youthFirstName: 'Dashboard',
       youthLastName: fixtureYouthLastName,
       contactPhoneNumber: '416-555-0188',
+      submittedByRole: 'parent',
       age: expect.any(Number),
       status: expect.any(String),
       statusUpdatedAt: expect.any(String),

@@ -37,6 +37,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
+
 export type ProgramRosterMode = "enrolled" | "open";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -141,6 +143,10 @@ export interface ExpressionsOfInterest {
   school: string;
   status: Generated<string>;
   status_updated_at: Generated<Timestamp>;
+  /**
+   * Who completed the public expression-of-interest form; null only for legacy records.
+   */
+  submitted_by_role: OutreachSubmitterRole;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   youth_first_name: string;

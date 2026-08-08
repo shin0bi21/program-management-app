@@ -1,9 +1,9 @@
 import { apiClient } from '../../../common/api/http/client';
 import type { RequestOptions } from '../../../common/api/http/client';
 import { api } from '../../../common/api/http/config';
-import type { OutreachFormValues } from '../../../common/components/OutreachForm/outreachFormSchema';
+import type { PublicOutreachFormValues } from '../../../common/components/OutreachForm/outreachFormSchema';
 
-export type ExpressionOfInterestPayload = Omit<OutreachFormValues, 'notes'> & { notes?: string };
+export type ExpressionOfInterestPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
 
 export function submitExpressionOfInterest(payload: ExpressionOfInterestPayload) {
   return apiClient.post<{ message: string }>('/public/expressions-of-interest', payload, { auth: false });
@@ -12,6 +12,7 @@ export function submitExpressionOfInterest(payload: ExpressionOfInterestPayload)
 export interface HomepageImage {
   id: string;
   imageUrl: string;
+  mobileUrl: string;
   thumbnailUrl: string;
   altText: string;
   caption: string;
@@ -47,6 +48,7 @@ function resolveImageUrl(image: HomepageImage): HomepageImage {
   return {
     ...image,
     imageUrl: resolve(image.imageUrl),
+    mobileUrl: resolve(image.mobileUrl ?? image.imageUrl),
     thumbnailUrl: resolve(image.thumbnailUrl ?? image.imageUrl),
   };
 }
