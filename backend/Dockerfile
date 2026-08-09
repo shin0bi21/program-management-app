@@ -1,5 +1,5 @@
 # ── Shared base ──────────────────────────────────────────────────────────────
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 # postgresql18-client: psql used by update_schemas.ts migrations
 # Pinned to major version 18 to match postgres:18-alpine server image.
 # Bump this only when the server image is also bumped.
