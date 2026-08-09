@@ -64,60 +64,15 @@ Youth profiles are program records managed by staff. A youth profile may optiona
 
 ## 2. Get Running
 
-### Environment Variables
+Use the repository-level guides as the source of truth for operating the local
+stack:
 
-```bash
-cp .env.example .env
-```
+- [First-time local environment setup](../docs/local-setup.md)
+- [Day-to-day local development commands](../docs/local-development.md)
 
-Required:
-
-```bash
-# Database
-DATABASE_URL=postgresql://user:pass@db:5432/dbname
-
-# JWT
-JWT_SECRET=your-secret-key-here
-REFRESH_SECRET=your-refresh-secret-here
-
-# Email (Gmail)
-EMAIL_USER=your-email@example.com
-EMAIL_PASS=your-app-password
-EMAIL_FROM=noreply@example.com
-
-# App
-PORT=5001
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-
-# Admin seed (first-time only)
-ADMIN_EMAIL=you@yourdomain.com
-ADMIN_PASSWORD=StrongPasswordHere!
-ADMIN_FIRST_NAME=Your
-ADMIN_LAST_NAME=Name
-
-# Security (optional — defaults to JWT_SECRET if not set)
-LOG_HMAC_SECRET=your-independent-hmac-secret
-
-# Google Sheets integration (optional — only needed for import/export scripts)
-GOOGLE_SERVICE_ACCOUNT_JSON=<base64-encoded-service-account-json>
-```
-
-### First-Time Setup
-
-```bash
-docker compose up -d
-docker compose exec backend npm run db:migrate
-docker compose exec backend npm run seed:admin   # idempotent
-```
-
-### Daily Start
-
-```bash
-docker compose up -d
-```
-
-The dev server starts automatically inside the container.
+Backend environment variables and their maintained examples are defined in
+`.env.example`. Backend architecture, database behavior, debugging, and command
+reference remain documented below.
 
 ---
 
@@ -374,14 +329,10 @@ describe('Feature Tests', () => {
 
 ### Daily Loop
 
-```bash
-docker compose up -d                              # 1. start containers
-# 2. edit code in src/, tests/, db/migrations/
-docker compose exec backend npm run typecheck    # 3. type-check
-bash scripts/test-full-stack.sh                  # 4. run backend + frontend tests
-docker compose exec backend npm run db:migrate   # 5. apply any new migrations
-git add . && git commit -m "Description" && git push
-```
+Use [Local Development Commands](../docs/local-development.md) for starting,
+restarting, recreating, migrating, and testing the Docker stack. During backend
+work, `docker compose exec backend npm run typecheck` provides a focused
+TypeScript check before the full repository test suite.
 
 ### Debugging
 

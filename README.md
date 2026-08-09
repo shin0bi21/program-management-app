@@ -24,5 +24,6 @@ Full-stack youth services management system — React + TypeScript frontend, Exp
 | Backend auth | [backend/docs/auth.md](backend/docs/auth.md) |
 | Backend errors | [backend/docs/errors.md](backend/docs/errors.md) |
 | Database | [backend/docs/db.md](backend/docs/db.md) |
-| Local development & Docker refresh guide | [docs/local-development.md](docs/local-development.md) |
+| First-time local environment setup | [docs/local-setup.md](docs/local-setup.md) |
+| Local development commands | [docs/local-development.md](docs/local-development.md) |
 | Production deployment and GitHub Actions setup | [docs/deployment.md](docs/deployment.md) |
