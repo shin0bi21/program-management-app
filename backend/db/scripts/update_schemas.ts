@@ -249,7 +249,7 @@ function regenerateDatabaseTypes(): void {
   } catch (error) {
     console.error('  Failed to generate types');
     console.error(error);
-    throw new Error('Type generation failed — run `npm run db:types` manually to retry.');
+    throw new Error('Type generation failed — run `npm run db:types` manually to retry.', { cause: error });
   }
 }
 
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
     if (!result.completed) {
       console.log(`\nPartial apply (${result.appliedFiles.length}/${plan.pendingFiles.length}) — skipping type generation.`);
       console.log(`Fix the failing migration, then run db:migrate again.\n`);
-      return;
+      throw new Error(`Migration apply incomplete (${result.appliedFiles.length}/${plan.pendingFiles.length})`);
     }
 
     if (process.env.NODE_ENV === 'production') {
@@ -374,4 +374,3 @@ main().catch(error => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
-
