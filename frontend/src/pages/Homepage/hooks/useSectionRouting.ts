@@ -10,7 +10,7 @@ type UseSectionRoutingOptions = {
   disabled?: boolean
 }
 
-function scrollToHomepageSection(sectionId: string, behavior: ScrollBehavior = 'smooth') {
+export function scrollToHomepageSection(sectionId: string, behavior: ScrollBehavior = 'smooth') {
   const el = document.getElementById(sectionId)
   if (!el) return
 
