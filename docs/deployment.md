@@ -51,19 +51,20 @@ Create a GitHub environment named `production`. The deployment workflow uses
 this environment so production secrets and optional approval rules can be
 scoped independently from pull-request CI.
 
-After the new workflow jobs have run once, configure repository rulesets:
+Repository rulesets enforce the following merge requirements:
 
 - `develop`: require a pull request and require `Lint & Shell Analysis`,
   `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`.
-- `main`: require a pull request, restrict its source to `develop` through the
-  merge-path job, require the three standard checks above, and also require
+- `main`: require a pull request, require the merge-path job that rejects
+  sources other than `develop`, require the three standard checks above, and
+  also require
   `Production Compose Validation`, `Backend Production Image`, and
   `Frontend Production Image`.
 
-The production image jobs are always present on pull requests to `main`. They
-are conditional on relevant package, container, nginx, Compose, or deployment
-changes for pull requests to `develop` and therefore should not be required by
-the `develop` ruleset.
+The production validation jobs are always present on pull requests to `main`.
+They are conditional on relevant package, container, nginx, Compose, or
+deployment changes for pull requests to `develop`, so the `develop` ruleset
+requires only the three standard checks.
 
 ## CI and automatic deployment
 
