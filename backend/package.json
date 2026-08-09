@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@types/cookie-parser": "^1.4.10",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "2.8.5",
     "dotenv": "^17.2.3",
@@ -49,7 +49,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
+    "@types/bcryptjs": "^3.0.0",
     "@types/cors": "2.8.19",
     "@types/escape-html": "^1.0.4",
     "@types/express": "5.0.6",
