@@ -2,7 +2,7 @@
 set -euo pipefail
 #
 # Shared Docker health-check logic.
-# Source this from any backend test runner script:  source scripts/backend/_docker-health.sh
+# Source this from any backend test runner script:  source scripts/tests/backend/_docker-health.sh
 #
 # Expects: working directory is the project root.
 # Provides: running containers with DB + backend ready.

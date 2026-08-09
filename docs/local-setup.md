@@ -111,7 +111,7 @@ Sign in with the configured admin credentials. Then run the full repository
 test suite:
 
 ```bash
-bash scripts/test-full-stack.sh
+bash scripts/tests/test-app.sh
 ```
 
 ## Troubleshooting initial setup

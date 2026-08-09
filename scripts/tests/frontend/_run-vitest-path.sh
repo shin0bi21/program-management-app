@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/../.." || exit
+cd "$(dirname "$0")/../../.." || exit
 
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 <label> <frontend-path>" >&2

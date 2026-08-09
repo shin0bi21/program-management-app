@@ -37,11 +37,11 @@ For the full-stack overview (frontend → backend → DB), see the [root README]
 ## Testing
 Frontend tests are configured with Vitest.
 
-- Full frontend suite: [`../scripts/frontend/test-ui.sh`](../scripts/frontend/test-ui.sh)
-- Path-based frontend runners: [`../scripts/frontend/`](../scripts/frontend/) such as `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`
+- Full frontend suite: [`../scripts/tests/frontend/test-ui.sh`](../scripts/tests/frontend/test-ui.sh)
+- Path-based frontend runners: [`../scripts/tests/frontend/`](../scripts/tests/frontend/) such as `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`
 - Direct Vitest run inside `frontend/`: `npm test`
 
-The frontend umbrella runner composes the path-based runners and will skip page folders that do not have tests yet. Backend integration tests (auth, staff, youth, schools) are run separately via [`../scripts/backend/`](../scripts/backend/) — for example `run-auth-tests.sh` and `test-apis.sh`.
+The frontend umbrella runner composes the path-based runners and will skip page folders that do not have tests yet. Backend integration tests (auth, staff, youth, schools) are run separately via [`../scripts/tests/backend/`](../scripts/tests/backend/) — for example `run-auth-tests.sh` and `test-apis.sh`.
 
 ## Notes
 - When adding new pages, keep API, hooks, and UI co‑located under `src/pages/<PageName>`.

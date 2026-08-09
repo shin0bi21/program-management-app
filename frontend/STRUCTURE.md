@@ -200,7 +200,7 @@ export default function MyMenu() {
 
 **Run:** `npm test` (single run, used by Vitest directly) · `npm run test:watch` (dev watch mode).
 
-**Repo-level runners:** use `../scripts/frontend/test-ui.sh` for the full frontend suite, or the ownership/path-based runners in `../scripts/frontend/` such as `run-platform-tests.sh`, `run-features-tests.sh`, `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`. The platform runner covers `app/`, `auth/`, `http/`, and `query/`. The common runner includes `common/features`; the feature runner is a narrower standalone option and is not repeated by `test-ui.sh`.
+**Repo-level runners:** use `../scripts/tests/frontend/test-ui.sh` for the full frontend suite, or the ownership/path-based runners in `../scripts/tests/frontend/` such as `run-platform-tests.sh`, `run-features-tests.sh`, `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`. The platform runner covers `app/`, `auth/`, `http/`, and `query/`. The common runner includes `common/features`; the feature runner is a narrower standalone option and is not repeated by `test-ui.sh`.
 
 **Setup file:** `src/tests/setup.ts` — imports `@testing-library/jest-dom` to extend `expect`.
 
