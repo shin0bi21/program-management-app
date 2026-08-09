@@ -1,3 +1,6 @@
+# Default local-development and test stack.
+# Production deployments use docker-compose.prod.yml explicitly.
+
 services:
   frontend:
     image: node:20-alpine

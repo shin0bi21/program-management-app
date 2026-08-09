@@ -37,3 +37,5 @@ logs/
 vulnerabilities.md
 /docs/*
 !/docs/deployment.md
+!/docs/local-development.md
+!/docs/local-setup.md
