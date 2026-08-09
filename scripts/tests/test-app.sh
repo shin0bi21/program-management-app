@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.." || exit
+cd "$(dirname "$0")/../.." || exit
 
 echo ""
 echo "=========================================="
 echo "Running FULL test suite"
 echo "=========================================="
 
-bash scripts/test-deployment.sh
-bash scripts/backend/test-apis.sh
-bash scripts/frontend/test-ui.sh
+bash scripts/tests/test-deploy.sh
+bash scripts/tests/backend/test-apis.sh
+bash scripts/tests/frontend/test-ui.sh
 
 echo ""
 echo "=========================================="

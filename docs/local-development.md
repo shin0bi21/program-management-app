@@ -41,7 +41,7 @@ docker compose down
 | Add a database migration | `docker compose exec backend npm run db:migrate` |
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
-| Run the full repository test suite | `bash scripts/test-full-stack.sh` |
+| Run the full repository test suite | `bash scripts/tests/test-app.sh` |
 
 Never edit an applied migration. Add a new migration instead.
 
@@ -74,9 +74,9 @@ docker compose exec backend npm run db:status
 ## Tests
 
 ```bash
-bash scripts/test-full-stack.sh       # deployment checks, backend APIs, frontend UI
-bash scripts/backend/test-apis.sh     # backend API suites only
-bash scripts/frontend/test-ui.sh      # frontend UI suites only
+bash scripts/tests/test-app.sh             # deployment checks, backend APIs, frontend UI
+bash scripts/tests/backend/test-apis.sh    # backend API suites only
+bash scripts/tests/frontend/test-ui.sh     # frontend UI suites only
 ```
 
 The backend runners start and prepare the Docker-backed test database as
@@ -102,7 +102,7 @@ When local database or dependency volumes are intentionally disposable, reset
 the complete development stack with:
 
 ```bash
-bash scripts/reset-dev-stack.sh
+bash scripts/reset-app.sh
 ```
 
 This runs `docker compose down -v`, deleting the local development database,

@@ -52,7 +52,7 @@ echo ""
 echo "Seeding programming demo data..."
 docker compose exec -T backend npm run seed:programming-demo
 
-# Step 6: Regenerate TypeScript types from live DB (includes backup tables)
+# Step 6: Regenerate TypeScript types from the live development schema
 echo ""
 echo "Regenerating database types..."
 docker compose exec -T backend npm run db:types 2>&1 && echo "  Types regenerated" || echo "  Warning: db:types failed - check kysely-codegen config"

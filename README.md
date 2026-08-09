@@ -1,6 +1,6 @@
 # Youth Services Application
 
-Full-stack youth services management system — React + TypeScript frontend, Express + TypeScript backend, PostgreSQL. Manages Staff, Youth, and Schools.
+Full-stack youth services management system.
 
 ## Stack
 
@@ -9,7 +9,9 @@ Full-stack youth services management system — React + TypeScript frontend, Exp
 | Frontend | React 18, TypeScript, Vite |
 | Backend | Express 4, TypeScript, postgres.js |
 | Database | PostgreSQL |
-| Auth | JWT access token (1h) + refresh token (8h httpOnly cookie) + 2FA via email |
+| Reverse proxy | Nginx |
+| CI/CD | GitHub Actions |
+| Deployment | Docker Compose on AWS Lightsail |
 
 ---
 

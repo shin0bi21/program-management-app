@@ -236,20 +236,20 @@ From the project root (`my-webapp/`):
 
 ```bash
 # All backend API suites
-bash scripts/backend/test-apis.sh
+bash scripts/tests/backend/test-apis.sh
 
-# This boots the backend test environment once, then composes the
-# auth, accounts, youth, schools, and outreach runners.
+# This boots the backend test environment once, then composes every
+# path-specific backend runner.
 
-# Full-stack suite (backend API + frontend UI)
-bash scripts/test-full-stack.sh
+# Full application suite (deploy checks + backend API + frontend UI)
+bash scripts/tests/test-app.sh
 
 # Individual suites
-bash scripts/backend/run-auth-tests.sh    # 44 tests
-bash scripts/backend/run-accounts-tests.sh
-bash scripts/backend/run-youth-tests.sh   # 25 tests
-bash scripts/backend/run-schools-tests.sh  # 28 tests
-bash scripts/backend/run-outreach-tests.sh
+bash scripts/tests/backend/run-auth-tests.sh
+bash scripts/tests/backend/run-accounts-tests.sh
+bash scripts/tests/backend/run-youth-tests.sh
+bash scripts/tests/backend/run-schools-tests.sh
+bash scripts/tests/backend/run-outreach-tests.sh
 
 # Or directly
 docker compose exec backend npm run test:auth
@@ -516,7 +516,7 @@ The server's GitHub HTTPS credential is stale or invalid. Follow [Server GitHub 
 The test DB is in a bad state. Reset it:
 
 ```bash
-bash scripts/reset-dev-stack.sh
+bash scripts/reset-app.sh
 ```
 
 ---
