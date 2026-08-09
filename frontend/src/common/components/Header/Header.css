@@ -22,6 +22,20 @@
   align-items: center;
 }
 
+.header-logo-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.header-logo-button:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+}
+
 .sidebar-logo {
   width: 100%;
   height: 44px;
@@ -151,10 +165,16 @@
   }
 
   .mobile-topbar-logo {
-    flex: 1;
+    width: 100%;
     height: 44px;
     object-fit: contain;
     object-position: left center;
+    display: block;
+  }
+
+  .mobile-topbar-logo-button {
+    flex: 1;
+    text-align: left;
   }
 
   .mobile-topbar-toggle {

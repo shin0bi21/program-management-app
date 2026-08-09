@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { clearAuthData, getToken, getUser, setAuthData, STORAGE_KEYS } from './storage';
+import {
+  clearAuthData,
+  DEFAULT_AUTH_PATH,
+  getLastAuthPath,
+  getToken,
+  getUser,
+  rememberAuthPath,
+  setAuthData,
+  STORAGE_KEYS,
+} from './storage';
 
 const user = {
   id: 'user-1',
@@ -32,5 +41,23 @@ describe('auth storage', () => {
   it('returns null for malformed stored user data', () => {
     localStorage.setItem(STORAGE_KEYS.USER, '{invalid');
     expect(getUser()).toBeNull();
+  });
+
+  it('stores the last authenticated path independently for each user', () => {
+    rememberAuthPath('user-1', '/programming/sessions?session=session-1');
+    rememberAuthPath('user-2', '/settings/account');
+
+    expect(getLastAuthPath('user-1')).toBe('/programming/sessions?session=session-1');
+    expect(getLastAuthPath('user-2')).toBe('/settings/account');
+  });
+
+  it('falls back when a saved destination is missing or unsafe', () => {
+    expect(getLastAuthPath('user-1')).toBe(DEFAULT_AUTH_PATH);
+
+    localStorage.setItem('lastAuthPath:user-1', 'https://example.com/steal');
+    expect(getLastAuthPath('user-1')).toBe(DEFAULT_AUTH_PATH);
+
+    localStorage.setItem('lastAuthPath:user-1', '/login');
+    expect(getLastAuthPath('user-1')).toBe(DEFAULT_AUTH_PATH);
   });
 });

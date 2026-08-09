@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Login from './Login';
+import { rememberAuthPath, setAuthData } from '../../../auth/storage';
 
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({ isAuthenticated: true, loading: false }),
@@ -20,7 +21,10 @@ vi.mock('./hooks/useLogin', () => ({
 }));
 
 describe('Login', () => {
-  it('sends an authenticated user to My Account', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('sends an authenticated user to My Account by default', () => {
+    setAuthData('token', { id: 'user-1', firstName: 'Test', lastName: 'User', email: 'test@example.com' });
     render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
@@ -31,5 +35,21 @@ describe('Login', () => {
     );
 
     expect(screen.getByText('Account page')).toBeInTheDocument();
+  });
+
+  it('returns an authenticated user to their last visited page', () => {
+    setAuthData('token', { id: 'user-1', firstName: 'Test', lastName: 'User', email: 'test@example.com' });
+    rememberAuthPath('user-1', '/programming/sessions?session=session-1');
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/programming/sessions" element={<div>Sessions page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Sessions page')).toBeInTheDocument();
   });
 });
