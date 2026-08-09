@@ -211,6 +211,7 @@ jobs:
 
       - name: Validate production Compose configuration
         env:
+          BACKEND_ENV_FILE: backend/.env.test
           DB_USER: test
           DB_PASSWORD: test
           DB_NAME: myapp_test

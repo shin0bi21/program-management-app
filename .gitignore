@@ -1,10 +1,8 @@
-# Environment variables - NEVER commit
+# Runtime environment files - never commit
 .env
 .env.local
 .env.production
 .env.*.local
-.env.test
-backend/.env.test
 
 # Node
 node_modules/
