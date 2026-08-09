@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
+import logoUrl from '../../../assets/logo.webp';
 import { useAuth } from '../../../auth/authContext';
 import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
@@ -122,7 +123,7 @@ export default function Header() {
     <>
       {/* Mobile top bar */}
       <div className="mobile-topbar">
-        <img src="/logo.jpg" alt="Be Original" className="mobile-topbar-logo" />
+        <img src={logoUrl} alt="Be Original" className="mobile-topbar-logo" />
         <button
           className="mobile-topbar-toggle"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
@@ -140,7 +141,7 @@ export default function Header() {
 
       <aside className={`sidebar${mobileOpen ? ' sidebar--open' : ''}`}>
         <div className="sidebar-brand">
-          <img src="/logo.jpg" alt="Be Original Youth Group" className="sidebar-logo" />
+          <img src={logoUrl} alt="Be Original Youth Group" className="sidebar-logo" />
         </div>
         <nav className="sidebar-nav">
           {isAuthenticated && (

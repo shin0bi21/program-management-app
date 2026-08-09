@@ -1,0 +1,63 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Lightsail
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        env:
+          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          LIGHTSAIL_USER: ${{ secrets.LIGHTSAIL_USER }}
+          LIGHTSAIL_APP_PATH: ${{ secrets.LIGHTSAIL_APP_PATH }}
+          LIGHTSAIL_SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          : "${LIGHTSAIL_HOST:?Missing LIGHTSAIL_HOST}"
+          : "${LIGHTSAIL_USER:?Missing LIGHTSAIL_USER}"
+          : "${LIGHTSAIL_APP_PATH:?Missing LIGHTSAIL_APP_PATH}"
+          : "${LIGHTSAIL_SSH_KEY:?Missing LIGHTSAIL_SSH_KEY}"
+
+          deploy_key="$(mktemp)"
+          trap 'rm -f "$deploy_key"' EXIT
+          printf '%s\n' "$LIGHTSAIL_SSH_KEY" > "$deploy_key"
+          chmod 600 "$deploy_key"
+
+          ssh -i "$deploy_key" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "$LIGHTSAIL_USER@$LIGHTSAIL_HOST" \
+            "cd '$LIGHTSAIL_APP_PATH' && \
+              if git status --porcelain | grep -q .; then \
+                echo 'ERROR: Server working tree has uncommitted changes'; \
+                git status --short; \
+                exit 1; \
+              fi; \
+              git fetch origin main && \
+              git reset --hard origin/main && \
+              ./scripts/deploy.sh"
+
+      - name: Verify public production routes
+        env:
+          PRODUCTION_URL: https://be-original.ca
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            --max-time 15 "$PRODUCTION_URL/health" > /dev/null
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            --max-time 15 "$PRODUCTION_URL/" > /dev/null

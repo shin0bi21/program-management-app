@@ -2,10 +2,13 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-// Load backend/.env.test. `override: true` ensures these values win even
-// when the backend container already has DATABASE_URL etc. set from .env via
-// docker-compose `env_file`. This is what isolates tests from the dev DB.
-config({ path: resolve(__dirname, '../.env.test'), override: true });
+// Docker-backed local tests must override the backend container's development
+// env. In CI, workflow-provided values point at the hosted test service and
+// must win over Docker-only hostnames such as `db_test`.
+config({
+  path: resolve(__dirname, '../.env.test'),
+  override: process.env.CI !== 'true',
+});
 
 if (!/_test(\b|$)/.test(process.env.DATABASE_URL ?? '')) {
   // Hard guard: never let tests run against a non-test DB. Catches a missing

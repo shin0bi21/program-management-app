@@ -42,6 +42,7 @@ docker compose down
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
 | Run the full repository test suite | `bash scripts/tests/test-app.sh` |
+| Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
 
 Never edit an applied migration. Add a new migration instead.
 
@@ -75,12 +76,15 @@ docker compose exec backend npm run db:status
 
 ```bash
 bash scripts/tests/test-app.sh             # deployment checks, backend APIs, frontend UI
+bash scripts/tests/test-static.sh          # ESLint, bash syntax, and ShellCheck
 bash scripts/tests/backend/test-apis.sh    # backend API suites only
 bash scripts/tests/frontend/test-ui.sh     # frontend UI suites only
 ```
 
 The backend runners start and prepare the Docker-backed test database as
 needed. Some frontend path runners skip cleanly when a page has no tests.
+The static runner requires the root npm dependencies and `shellcheck` on the
+host; GitHub Actions installs both prerequisites before running it.
 
 ## Logs and diagnostics
 

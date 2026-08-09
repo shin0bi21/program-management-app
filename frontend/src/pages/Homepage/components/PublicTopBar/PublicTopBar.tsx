@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import logoUrl from '../../../../assets/logo.webp';
 import { useAuth } from '../../../../auth/authContext';
 import { useFloatingMenu } from '../../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 import FloatingMenuPanel from '../../../../common/components/FloatingMenu/FloatingMenuPanel';
@@ -42,7 +43,7 @@ export default function PublicTopBar() {
           close();
         }}
       >
-        <img src="/logo.jpg" alt="Be Original Youth Group" className="topbar-logo" />
+        <img src={logoUrl} alt="Be Original Youth Group" className="topbar-logo" />
       </Link>
 
       <nav className="topbar-nav" aria-label="Page sections">
