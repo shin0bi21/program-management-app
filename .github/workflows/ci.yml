@@ -245,4 +245,17 @@ jobs:
           persist-credentials: false
 
       - name: Build frontend/nginx production image
-        run: docker build frontend
+        run: docker build --tag be-original-frontend-ci frontend
+
+      - name: Validate production nginx configuration
+        run: |
+          mkdir -p "$RUNNER_TEMP/letsencrypt/live/be-original.ca"
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -subj /CN=be-original.ca \
+            -keyout "$RUNNER_TEMP/letsencrypt/live/be-original.ca/privkey.pem" \
+            -out "$RUNNER_TEMP/letsencrypt/live/be-original.ca/fullchain.pem"
+          docker run --rm \
+            --add-host backend:127.0.0.1 \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/nginx.conf,target=/etc/nginx/conf.d/default.conf,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/letsencrypt,target=/etc/letsencrypt,readonly" \
+            be-original-frontend-ci nginx -t
