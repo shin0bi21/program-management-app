@@ -4,7 +4,7 @@ import { clearAuthData, getUser, setAuthData, STORAGE_KEYS } from './storage';
 import { refreshToken } from './tokenRefresh';
 
 vi.mock('./storage', () => ({
-  STORAGE_KEYS: { TOKEN: 'token', USER: 'user', LAST_AUTH_PATH: 'lastAuthPath' },
+  STORAGE_KEYS: { TOKEN: 'token', USER: 'user' },
   clearAuthData: vi.fn(),
   getUser: vi.fn(),
   setAuthData: vi.fn(),

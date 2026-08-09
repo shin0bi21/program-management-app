@@ -6,7 +6,7 @@ import { verify2FA, resend2FA } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../auth/deviceFingerprint';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import { setAuthData, STORAGE_KEYS } from '../../../../auth/storage';
+import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import { formatTime } from '../../../../common/utils/time';
 import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';
 
@@ -86,8 +86,7 @@ export const useVerifyPassword = () => {
 
       // Navigate to last visited authenticated page, or settings as default
       // (matches the trusted-device branch in useLogin)
-      const lastPath = localStorage.getItem(STORAGE_KEYS.LAST_AUTH_PATH) || '/settings/account';
-      navigate(lastPath);
+      navigate(getLastAuthPath(response.user.id));
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Verification failed'));
     }
