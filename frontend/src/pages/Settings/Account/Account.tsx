@@ -1,8 +1,8 @@
 import Header from '../../../common/components/Header/Header';
-import { getUser } from '../../../common/utils/storage';
-import { useAuth } from '../../../common/context/AuthContext';
+import { getUser } from '../../../auth/storage';
+import { useAuth } from '../../../auth/authContext';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import { usePrograms } from '../../../features/programs/hooks/usePrograms';
+import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import './Account.css';
 
 export default function Account() {

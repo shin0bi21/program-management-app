@@ -11,7 +11,7 @@ const homepageState = vi.hoisted(() => ({
 }));
 const mockUseSectionRouting = vi.hoisted(() => vi.fn());
 
-vi.mock('../../common/context/AuthContext', () => ({
+vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: false,
     loading: false,

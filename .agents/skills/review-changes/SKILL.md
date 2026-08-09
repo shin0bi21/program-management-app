@@ -63,11 +63,12 @@ Use repository examples as supporting evidence, not as permission to preserve we
 
 Classify every shared extraction by ownership before choosing its directory:
 
-- Put domain-agnostic UI primitives and infrastructure in `common/`. A common unit must not understand business entities, workflows, permissions, or page-specific data.
-- Put business capabilities reused across pages in `features/<domain>/`. A feature may compose common primitives and understand its domain types and rules.
+- Put application composition and root failure handling in `app/`; authentication lifecycle in `auth/`; HTTP transport in `http/`; and TanStack Query client/data adapters in `query/`.
+- Put domain-agnostic reusable UI primitives and small shared helpers in the appropriate `common/` folder. A common component must not understand business entities, workflows, or page-specific data.
+- Put business capabilities reused across pages in `common/features/<domain>/`. A common feature may compose common primitives, consume root technical subsystems, and understand its domain types and rules.
 - Keep UI used by one page or route family inside that page's feature folder, even when it is independently testable.
-- Enforce the dependency direction `pages → features → common`. Do not allow `common` to import a feature or page, or a feature to import a page.
-- Do not use reuse count as the ownership rule. A generic primitive can be common with one consumer; a domain component remains a feature even with many consumers.
+- Enforce ownership direction: pages may consume common features, common primitives, and root technical subsystems; common features must not import pages; common components must not import pages or common features. Treat the authenticated HTTP client and auth subsystem as an explicit integration boundary rather than forcing an artificial one-way folder dependency.
+- Use cross-page ownership to decide between `pages/` and `common/`, then use business awareness to decide whether shared code belongs under `common/features/`. A generic primitive may be common with one consumer; a domain component remains a common feature even with many consumers.
 - Split mixed “shared” files when their exports belong to different domains or ownership layers instead of preserving a grab-bag module for import convenience.
 
 Explicitly answer these questions in the review:
@@ -93,7 +94,7 @@ Use these signals when recommending extraction:
 - the parent coordinates several unrelated sections or has become difficult to reason about;
 - styling and tests target a distinct conceptual unit.
 
-Do not require extraction for trivial one-use markup or split cohesive behavior merely to reduce file length. Prefer a focused component with explicit props over either a monolith or excessive fragmentation. Keep page-specific units in their feature folder and broadly reused units in the common component layer, following repository precedent.
+Do not require extraction for trivial one-use markup or split cohesive behavior merely to reduce file length. Prefer a focused component with explicit props over either a monolith or excessive fragmentation. Keep page-specific units in their page folder, reusable domain units in `common/features/`, and domain-agnostic reusable UI in `common/components/`, following repository precedent.
 
 When recommending extraction, provide a concrete target tree and assign each proposed file one responsibility. Distinguish among:
 

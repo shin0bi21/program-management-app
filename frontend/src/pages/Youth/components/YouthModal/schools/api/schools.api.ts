@@ -1,5 +1,5 @@
-import { apiClient } from '../../../../../../common/api/http/client';
-import type { RequestOptions } from '../../../../../../common/api/http/client';
+import { apiClient } from '../../../../../../http/client';
+import type { RequestOptions } from '../../../../../../http/client';
 import type { School } from '../types';
 
 export function getSchools(opts?: RequestOptions): Promise<School[]> {

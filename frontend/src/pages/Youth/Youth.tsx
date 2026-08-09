@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
-import PrimaryContactCard from '../../features/contacts/components/PrimaryContactCard/PrimaryContactCard';
+import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
 import AttendanceCard from './components/AttendanceCard/AttendanceCard';
 import YouthNotesCard from './components/YouthNotesCard/YouthNotesCard';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
@@ -12,19 +12,19 @@ import FilterCard, { type FilterCardCategory } from '../../common/components/Fil
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
 import YouthModal from './components/YouthModal/YouthModal';
-import { useAuth } from '../../common/context/AuthContext';
+import { useAuth } from '../../auth/authContext';
 import { calculateAge } from '../../common/utils/time';
-import { usePrograms } from '../../features/programs/hooks/usePrograms';
+import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import useTableSelection from '../../common/components/Table/hooks/useTableSelection';
 import type { YouthFilters, YouthProfileNote, YouthSortKey } from '../../common/types/youth';
 import type { ListSort } from '../../common/types/pagination';
-import { deleteYouthProfileNote, getYouthProfileNotes } from '../../common/api/youth.api';
+import { deleteYouthProfileNote, getYouthProfileNotes } from '../../common/features/youth/api/youth.api';
 import Modal from '../../common/components/Modal/Modal';
-import useUserPreference from '../../common/hooks/useUserPreference';
+import useUserPreference from '../../common/features/preferences/hooks/useUserPreference';
 import './Youth.css';
 import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
 import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetails';
-import { getErrorMessage } from '../../common/utils/clientErrors';
+import { getErrorMessage } from '../../http/clientErrors';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 
 export default function Youth() {

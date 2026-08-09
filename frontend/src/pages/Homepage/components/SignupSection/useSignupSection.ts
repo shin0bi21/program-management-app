@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { publicOutreachFormDefaultValues, publicOutreachFormSchema, type PublicOutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
-import { ApiError, getErrorMessage } from '../../../../common/utils/clientErrors';
+import { ApiError, getErrorMessage } from '../../../../http/clientErrors';
 import { submitExpressionOfInterest } from '../../api/homepage.api';
 
 export function useSignupSection() {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProgramCohort } from '../../../../common/types/cohort';
-import type { Program } from '../../../../features/programs/types';
+import type { Program } from '../../../../common/features/programs/types';
 import {
   getSingleActiveCohort,
   getSingleAssignedProgram,

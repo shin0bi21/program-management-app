@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getYouth } from '../../../../common/api/youth.api';
+import { getYouth } from '../../../../common/features/youth/api/youth.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../common/types/youth';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../http/clientErrors';
 
 const belongsToCohort = (profile: YouthProfile, cohortId: string) =>
   profile.cohorts.some((enrollment) => enrollment.id === cohortId && enrollment.withdrawnOn === null);

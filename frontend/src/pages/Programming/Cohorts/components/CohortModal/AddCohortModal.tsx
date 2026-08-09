@@ -1,12 +1,12 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { createCohort } from '../../../../../common/api/cohorts.api';
+import { createCohort } from '../../../../../common/features/programming/api/programming.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import type { Program } from '../../../../../features/programs/types';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import type { Program } from '../../../../../common/features/programs/types';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 
 interface AddCohortModalProps {
   isOpen: boolean;

@@ -10,11 +10,11 @@ vi.mock('../api/leads.api', () => ({
   updateLead: (...args: unknown[]) => updateLead(...args),
 }));
 
-vi.mock('../../../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], setPrograms: vi.fn(), loading: false, error: '' }),
 }));
 
-vi.mock('../../../../common/context/AuthContext', () => ({
+vi.mock('../../../../auth/authContext', () => ({
   useAuth: () => ({ permissions: ['write:programs'] }),
 }));
 

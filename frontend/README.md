@@ -24,7 +24,7 @@ See `STRUCTURE.md` for the page‑scoped layout and conventions.
 The homepage now follows section-level feature folders under `src/pages/Homepage/components/`, with section-specific hooks and tests colocated next to each section.
 
 ## Request / Response Flow
-See [`docs/api-flow.mmd`](docs/api-flow.mmd) for the full frontend request lifecycle — `apiClient`, token validation, proactive refresh, re-login modal, network error handling, and response parsing.
+See [`../docs/architecture/request-flow.mmd`](../docs/architecture/request-flow.mmd) for the full request lifecycle — `apiClient`, token validation, proactive refresh, re-login modal, backend middleware, and response parsing.
 
 For the full-stack overview (frontend → backend → DB), see the [root README](../README.md).
 

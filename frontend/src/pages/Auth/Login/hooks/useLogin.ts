@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { login } from '../../../../common/api/auth.api';
-import { useAuth } from '../../../../common/context/AuthContext';
-import { getDeviceFingerprint } from '../../../../common/utils/deviceFingerprint';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import { setAuthData, STORAGE_KEYS } from '../../../../common/utils/storage';
+import { login } from '../../../../auth/auth.api';
+import { useAuth } from '../../../../auth/authContext';
+import { getDeviceFingerprint } from '../../../../auth/deviceFingerprint';
+import { getErrorMessage } from '../../../../http/clientErrors';
+import { setAuthData, STORAGE_KEYS } from '../../../../auth/storage';
 import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
 
 export const useLogin = () => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AttendanceStatus } from '../../../../../common/types/cohort';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 import { getYouthCohortAttendance, setYouthCohortAttendance } from '../youthAttendance.api';
 import type { YouthCohortAttendance } from '../types';
 

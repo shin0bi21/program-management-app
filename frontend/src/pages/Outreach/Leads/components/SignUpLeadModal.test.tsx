@@ -1,12 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCohorts } from '../../../../common/api/cohorts.api';
+import { getCohorts } from '../../../../common/features/programming/api/programming.api';
 import { signUpLead } from '../api/leads.api';
 import type { Lead } from '../types';
 import SignUpLeadModal from './SignUpLeadModal';
 import render from '../../../../tests/renderWithQueryClient';
 
-vi.mock('../../../../common/api/cohorts.api', () => ({
+vi.mock('../../../../common/features/programming/api/programming.api', () => ({
   getCohorts: vi.fn(),
 }));
 

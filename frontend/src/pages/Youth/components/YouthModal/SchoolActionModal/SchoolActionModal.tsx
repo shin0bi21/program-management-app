@@ -4,7 +4,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { createSchool, deleteSchool, setSchool } from '../schools/api/schools.api';
 import type { School } from '../schools/types';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 
 export type SchoolAction =
   | { type: 'add' }

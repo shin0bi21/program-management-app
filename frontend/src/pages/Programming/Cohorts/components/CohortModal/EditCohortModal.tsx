@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateCohort } from '../../../../../common/api/cohorts.api';
+import { updateCohort } from '../../../../../common/features/programming/api/programming.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 
 interface EditCohortModalProps {
   cohort: ProgramCohort | null;

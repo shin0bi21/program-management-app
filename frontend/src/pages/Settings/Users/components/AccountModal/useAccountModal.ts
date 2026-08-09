@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { inviteAccount, updateAccount } from '../../../../../common/api/accounts.api';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { inviteAccount, updateAccount } from '../../api/accounts.api';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Account } from '../../../../../common/types/account';
 import { accountSchema, type AccountFormData } from './accountSchema';
