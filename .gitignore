@@ -35,4 +35,5 @@ logs/
 
 # Internal notes
 vulnerabilities.md
-docs/
+/docs/*
+!/docs/deployment.md

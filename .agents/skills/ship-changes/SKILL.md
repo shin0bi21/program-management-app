@@ -7,6 +7,15 @@ description: Ship approved repository changes through GitHub Issues, issue-numbe
 
 Turn approved working-tree changes into traceable, tested pull requests without losing unrelated work. Deep code review belongs to `review-changes`; perform only the final shipping audit here.
 
+## Production boundary
+
+This workflow ends after the approved changes are merged and pushed to `develop` and the local repository is returned to a clean, synchronized `develop` branch.
+
+- Never target `main`, merge `develop` into `main`, trigger or rerun a production deployment, or access the live server as part of this skill.
+- Treat requests to "commit," "ship," "push," "merge," or "run the commit flow" as authorization only through `develop`.
+- Production requires a separate, explicit instruction in the current request such as "run the deploy" or "deploy to production." Do not infer production authorization from earlier shipping approval.
+- If production deployment is requested, finish this skill at `develop` and hand off to the separate deployment workflow.
+
 ## 1. Audit the shipping input
 
 1. Confirm the current branch and upstream state with `git status --short --branch`.
@@ -56,7 +65,7 @@ For every isolated branch:
 2. Treat `no checks reported` as pending or blocked, never as success.
 3. Wait for all required checks to complete successfully.
 4. If GitHub Actions is degraded or checks never register, preserve the branch and report the blocker instead of merging.
-5. Merge only after checks pass, delete the remote feature branch, and update the local base branch.
+5. Merge only into `develop` after checks pass, delete the remote feature branch, and update the local `develop` branch.
 
 Repeat from a fresh base branch for the next concern.
 

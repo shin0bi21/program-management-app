@@ -408,6 +408,8 @@ The backend container runs with the Node.js inspector on port 9229.
 ## 8. Deployment
 
 Deployments are triggered automatically via CI on pushes to `main`.
+For the production setup checklist, required GitHub secrets, monitoring, and
+manual fallback commands, see [`docs/deployment.md`](../docs/deployment.md).
 
 ### Automated Flow
 
