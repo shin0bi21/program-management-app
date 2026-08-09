@@ -1,5 +1,5 @@
-import { getAccounts } from '../../../../common/api/accounts.api';
-import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
+import { getAccounts } from '../api/accounts.api';
+import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
 import type { Account, AccountFilters, AccountSortKey } from '../../../../common/types/account';
 import type { ListSort } from '../../../../common/types/pagination';
 

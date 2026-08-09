@@ -3,7 +3,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import { generateSessions } from '../../../../../common/api/cohorts.api';
+import { generateSessions } from '../../../../../common/features/programming/api/programming.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import {
   REGULAR_SESSION_TYPE_ID,

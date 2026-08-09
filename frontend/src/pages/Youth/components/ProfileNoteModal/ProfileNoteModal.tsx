@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import Button from '../../../../common/components/Button/Button';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
-import { createYouthProfileNote, updateYouthProfileNote } from '../../../../common/api/youth.api';
+import { createYouthProfileNote, updateYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
 import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../../common/types/youth';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../http/clientErrors';
 
 export default function ProfileNoteModal({ youthId, note, onClose, onSaved }: { youthId: string; note?: YouthProfileNote | null; onClose: () => void; onSaved: (note: YouthProfileNote) => void }) {
   const [category, setCategory] = useState<YouthProfileNoteCategory>('general');

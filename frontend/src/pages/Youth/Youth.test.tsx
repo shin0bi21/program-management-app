@@ -21,17 +21,17 @@ const preferenceHook = vi.hoisted(() => ({
 vi.mock('./hooks/useYouth', () => ({
   useYouth: (filters: unknown) => mockUseYouth(filters),
 }));
-vi.mock('../../common/api/youth.api', () => youthApi);
-vi.mock('../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../common/features/youth/api/youth.api', () => youthApi);
+vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: (...args: unknown[]) => {
     expect(args).toEqual([{ assignedOnly: true }]);
     return { programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
   },
 }));
 
-vi.mock('../../common/context/AuthContext', () => ({
+vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
 }));
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { calculateAge, getAge } from './time';
+import { calculateAge, formatTime, getAge } from './time';
+
+describe('formatTime', () => {
+  it('formats seconds as minutes and zero-padded seconds', () => {
+    expect(formatTime(0)).toBe('0:00');
+    expect(formatTime(65)).toBe('1:05');
+  });
+});
 
 describe('age utilities', () => {
   const today = new Date(2026, 6, 26);

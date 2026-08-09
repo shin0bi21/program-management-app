@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 
-vi.mock('../../context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     permissions: [],

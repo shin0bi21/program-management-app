@@ -8,13 +8,13 @@ import {
   downloadSessionAttachment,
   getSessionAttachments,
   getSessionNotes,
-} from '../../../../../common/api/cohorts.api';
+} from '../../../../../common/features/programming/api/programming.api';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
-import SessionNoteDetails from '../../../../../features/notes/components/SessionNoteDetails/SessionNoteDetails';
-import SessionNoteModal from '../../../../../features/notes/components/SessionNoteModal/SessionNoteModal';
-import SessionNoteRow from '../../../../../features/notes/components/SessionNoteRow/SessionNoteRow';
+import SessionNoteDetails from '../../../../../common/features/notes/components/SessionNoteDetails/SessionNoteDetails';
+import SessionNoteModal from '../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
+import SessionNoteRow from '../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/components/Modal/hooks/useConfirmModal';
 import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
 import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';

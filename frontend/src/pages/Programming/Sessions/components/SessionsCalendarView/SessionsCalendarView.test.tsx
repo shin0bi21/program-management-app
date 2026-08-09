@@ -36,7 +36,7 @@ interface MockFullCalendarHandle {
   };
 }
 
-vi.mock('../../../../../common/api/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
   getSessions: (...args: unknown[]) => getSessions(...args),
 }));
 

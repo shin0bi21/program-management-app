@@ -1,5 +1,5 @@
-import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
-import { getCohortPage } from '../../../../common/api/cohorts.api';
+import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
+import { getCohortPage } from '../../../../common/features/programming/api/programming.api';
 import type { CohortSortKey, ProgramCohort } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 

@@ -10,10 +10,10 @@ const api = vi.hoisted(() => ({
   withdrawYouth: vi.fn(),
 }));
 
-vi.mock('../../../../../common/api/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
   withdrawYouth: api.withdrawYouth,
 }));
-vi.mock('../../../../../common/api/youth.api', () => ({
+vi.mock('../../../../../common/features/youth/api/youth.api', () => ({
   getYouth: api.getYouth,
 }));
 

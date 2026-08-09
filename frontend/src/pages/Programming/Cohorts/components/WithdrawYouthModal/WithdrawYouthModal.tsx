@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
-import { withdrawYouth } from '../../../../../common/api/cohorts.api';
+import { withdrawYouth } from '../../../../../common/features/programming/api/programming.api';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/components/Modal/hooks/useConfirmModal';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../../common/types/youth';

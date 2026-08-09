@@ -1,10 +1,10 @@
 # Frontend Structure
 
-This project uses page-scoped organization, cross-page business features, and a small `common/` area for domain-agnostic code.
+This project uses page-scoped organization, explicit root technical subsystems, and a `common/` area for reusable UI, cross-page business capabilities, and small helpers.
 
 ## Goals
 - Keep page logic co-located (UI + hooks + API + validation).
-- Promote code according to ownership: cross-page business behavior goes to `features/`, while only domain-agnostic primitives and infrastructure go to `common/`.
+- Promote code according to ownership: cross-page business behavior goes to `common/features/`, generic shared UI and helpers live elsewhere in `common/`, and technical subsystems keep explicit root boundaries.
 - Make imports predictable and reduce cross-folder hopping.
 
 ## Data Flow
@@ -37,18 +37,30 @@ Response flows back: DB → controller JSON response → fetch resolves → hook
 
 ## Layout
 
-`common/` contains domain-agnostic primitives and infrastructure. `features/` contains business capabilities shared across pages. `pages/` owns route-family UI and page-specific behavior.
+Root technical subsystems own application composition, authentication, HTTP transport, and server-state infrastructure. `common/` contains reusable UI, cross-page business features, and small shared helpers. `pages/` owns route-family UI and page-specific behavior.
 
 ```
 src/
-  ErrorBoundary/         ← root render-failure boundary, dependency-free fallback styles, and focused test
+  app/
+    App.tsx              ← routes and root provider composition
+    ErrorBoundary/       ← root render-failure boundary and focused test
+  auth/
+    auth.api.ts          ← login, verification, password reset, and logout endpoints
+    authContext.ts       ← auth state contract and useAuth hook
+    AuthProvider.tsx     ← durable authentication state provider
+    deviceFingerprint.ts ← persistent device identity and display name
+    jwt.ts               ← client-only JWT decoding and expiry calculations
+    reauth/              ← request coordination and React UI bridge for expired-session re-authentication
+    storage.ts           ← durable browser auth token and user storage
+    tokenRefresh.ts      ← proactive refresh with deduplication
+  http/
+    client.ts            ← apiClient — all HTTP calls go through here
+    clientErrors.ts      ← typed transport/auth/network failures + message extraction
+    config.ts            ← api() URL helper
+  query/
+    queryClient.ts       ← application TanStack Query client
+    hooks/               ← reusable list and infinite-list cache adapters
   common/
-    api/
-      client.ts           ← apiClient — all HTTP calls go through here
-      config.ts           ← api() URL helper
-      sessionExpired.ts   ← awaitReLogin / resolveReLogin
-      tokenRefresh.ts     ← proactive refresh with deduplication
-      preferences.api.ts  ← typed per-user page filter and view preferences
     components/
       ActionsMenu/        ← shared row actions dropdown (uses FloatingMenuPanel)
       AuthLayout/         ← shared wrapper for auth pages
@@ -59,51 +71,47 @@ src/
       LoadingSpinner/     ← shared orange loading indicator with consistent sizing and reduced-motion behavior
       Modal/              ← modal shell, form footer component, and confirmation hook
       ProtectedRoute/     ← redirects unauthenticated users
-      PublicTopBar/       ← public top bar + mobile menu (uses FloatingMenuPanel)
       ReLoginModal/       ← shown when access token expires mid-session
       Table/              ← shared data table shell with internal components, hooks, sizing utilities, and integration tests
       TableDetailLayout/  ← selected-row cards above table on desktop and below on mobile
       ViewMenu/           ← reusable floating selector for alternate page views
-    context/
-      AuthContext.tsx     ← isAuthenticated, role, permissions, loading, login, logout
+    features/
+      attendance/         ← cross-page attendance status controls shared by session and youth flows
+      contacts/           ← cross-page contact presentation and contact-array behavior
+      notes/              ← cross-page note rows, details, categories, and session-note management
+      preferences/        ← typed preference API and debounced persistence hook
+      programming/        ← shared cohort and session endpoint adapters
+      programs/           ← program API, types, lookup hook, and reusable program selector
+      youth/              ← shared youth endpoint adapter
     hooks/
       useSubmitStatus.ts  ← SubmitStatus type + state pair for modal hooks
-      useUserPreference.ts← loads and saves cross-device page preferences
-    query/
-      hooks/              ← reusable TanStack list and infinite-list cache adapters
-      utils/              ← immutable cached-collection update helpers
     styles/
       brand.css
       forms.css
       pages.css
     utils/
-      clientErrors.ts     ← ApiError, AuthError, NetworkError, RequestTimeoutError, getErrorMessage
-      jwt.ts              ← decodeToken, isTokenExpired, getTokenExpiry, getTimeUntilExpiry (client-side decode only)
-      storage.ts          ← STORAGE_KEYS, setAuthData, clearAuthData, getToken, getUser, hasAuthToken
-      deviceFingerprint.ts
+      date.ts             ← pure shared date formatting and date-key helpers
       time.ts
-  features/
-    attendance/           ← cross-page attendance status controls shared by session and youth flows
-    contacts/             ← cross-page contact presentation and contact-array behavior
-    notes/                ← cross-page note rows, details, categories, and session-note management
-    programs/             ← program API, types, lookup hook, and reusable program selector
   pages/
-    Auth/                 ← login, verify, forgot, reset — common/api + per-page hooks
-    Homepage/             ← Homepage.tsx + SiteFooter + hooks/useSectionRouting.ts + section feature folders
+    Auth/                 ← login, verify, forgot, reset — root auth subsystem + per-page hooks
+    Homepage/             ← Homepage.tsx + route config + PublicTopBar + SiteFooter + section hooks/components
     Outreach/             ← expression review + lead management feature folders
       Leads/components/   ← page-owned lead forms, signup flow, and follow-up note UI
-    Settings/             ← account settings + Users account management
+    Settings/             ← account settings + page-owned Users account API and management
     Youth/                ← Youth.tsx + page APIs/hooks, profile editing/profile notes, and youth-centric session attendance/note management
 ```
 
 ## Rules of Thumb
+
+Lightweight local guides: [`common/components/README.md`](src/common/components/README.md) covers reusable UI boundaries, and [`common/features/README.md`](src/common/features/README.md) covers shared business capabilities.
+
 - Page-specific API, hooks, and components live under that page.
 - Domain-agnostic utilities and UI primitives live in `common/`.
-- Business capabilities reused across pages live in `features/<domain>/`.
-- Shared app state lives in `common/context`.
-- API config lives in `common/api`.
-- Dependencies flow one way: `pages → features → common`. `common/` never imports features or pages, and features never import pages.
-- Reuse count does not determine ownership: generic primitives are common; business-aware components are features.
+- Business capabilities reused across pages live in `common/features/<domain>/`.
+- Shared state lives with its owning boundary. Durable authentication state and transient re-authentication coordination both live in `auth/`, while remaining separate provider and service layers.
+- HTTP transport and API URL configuration live in `http/`; reusable server-state adapters live in `query/`; endpoint adapters live with their owning page, common feature, or auth boundary.
+- Pages and common features may consume root technical subsystems and generic common code. Common features never import pages. The authenticated HTTP client and auth subsystem are an explicit integration boundary: auth endpoints use the HTTP client, while authenticated requests consume token and re-auth primitives.
+- Reuse determines the top-level ownership boundary: page-specific code stays in `pages/`, while cross-page code lives in `common/`. Business-aware shared code is further grouped under `common/features/`.
 
 ### Feature-folder pattern
 
@@ -118,9 +126,9 @@ components/
     SignupSection.test.tsx
 ```
 
-The same pattern applies to page-owned modal features such as `YouthModal/` and `SessionAttachmentModal/`, cross-page capabilities such as `features/notes/`, and homepage sections such as `HeroSection/` and `ProgrammingSection/`.
+The same pattern applies to page-owned modal features such as `YouthModal/` and `SessionAttachmentModal/`, cross-page capabilities such as `common/features/notes/`, and homepage sections such as `HeroSection/` and `ProgrammingSection/`.
 
-Shared components follow the same rule when they contain multiple meaningful behaviors. For example, `common/components/Table/` keeps its shell in `Table.tsx`, rendering units in `components/`, Table interaction/navigation/observer behavior in `hooks/`, and pure sizing helpers in `table.utils.ts`. Data fetching remains separate under `common/query/`.
+Shared components follow the same rule when they contain multiple meaningful behaviors. For example, `common/components/Table/` keeps its shell in `Table.tsx`, rendering units in `components/`, Table interaction/navigation/observer behavior in `hooks/`, and pure sizing helpers in `table.utils.ts`. Data fetching remains separate under `query/`.
 
 ---
 
@@ -192,7 +200,7 @@ export default function MyMenu() {
 
 **Run:** `npm test` (single run, used by Vitest directly) · `npm run test:watch` (dev watch mode).
 
-**Repo-level runners:** use `../scripts/frontend/test-ui.sh` for the full frontend suite, or the ownership/path-based runners in `../scripts/frontend/` such as `run-features-tests.sh`, `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`.
+**Repo-level runners:** use `../scripts/tests/frontend/test-ui.sh` for the full frontend suite, or the ownership/path-based runners in `../scripts/tests/frontend/` such as `run-platform-tests.sh`, `run-features-tests.sh`, `run-homepage-tests.sh`, `run-youth-tests.sh`, and `run-common-tests.sh`. The platform runner covers `app/`, `auth/`, `http/`, and `query/`. The common runner includes `common/features`; the feature runner is a narrower standalone option and is not repeated by `test-ui.sh`.
 
 **Setup file:** `src/tests/setup.ts` — imports `@testing-library/jest-dom` to extend `expect`.
 
@@ -202,15 +210,15 @@ export default function MyMenu() {
 
 | File | What it tests |
 |---|---|
-| `src/ErrorBoundary/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
+| `src/app/ErrorBoundary/ErrorBoundary.test.tsx` | Root render-failure fallback, accessible naming, and focus management |
 | `src/common/components/FloatingMenu/utils/floatingPosition.test.ts` | Pure unit tests for `calculateFloatingPosition` — placement, side flip, alignment flip, custom offset |
 | `src/common/components/ActionsMenu/ActionsMenu.test.tsx` | Component tests — render, open/close, item handler, Escape, toggle, disabled state |
 | `src/common/components/Modal/components/ModalFormFooter.test.tsx` | Shared modal form actions and submission-state behavior |
 | `src/common/components/Table/hooks/useTableSelection.test.ts` | Selection synchronization across refreshed and filtered table rows |
-| `src/common/query/hooks/useInfiniteListQuery.test.tsx` | Infinite-query row preservation while query keys refresh |
-| `src/features/contacts/components/PrimaryContactCard/PrimaryContactCard.test.tsx` | Shared contact presentation behavior |
-| `src/features/notes/components/NoteRow/NoteRow.test.tsx` | Shared note-row metadata, permissions, and action callbacks |
-| `src/features/notes/components/SessionNoteModal/SessionNoteModal.test.tsx` | Cross-page session-note creation and editing behavior |
+| `src/query/hooks/useInfiniteListQuery.test.tsx` | Infinite-query row preservation while query keys refresh |
+| `src/common/features/contacts/components/PrimaryContactCard/PrimaryContactCard.test.tsx` | Shared contact presentation behavior |
+| `src/common/features/notes/components/NoteRow/NoteRow.test.tsx` | Shared note-row metadata, permissions, and action callbacks |
+| `src/common/features/notes/components/SessionNoteModal/SessionNoteModal.test.tsx` | Cross-page session-note creation and editing behavior |
 | `src/pages/Homepage/Homepage.test.tsx` | Page-composition test for the public homepage sections |
 | `src/pages/Homepage/components/HeroSection/HeroSection.test.tsx` | Hero carousel rendering and photo navigation |
 | `src/pages/Homepage/components/ProgrammingSection/ProgrammingSection.test.tsx` | Programming section composition |
@@ -233,7 +241,7 @@ export default function MyMenu() {
 
 ### Type Ownership
 
-Each page or cross-page feature owns the domain interfaces for its workflow (for example, `Lead` remains under Outreach while `Program` belongs to `features/programs/types.ts`). `common/types/` is reserved for contracts that are genuinely infrastructure-level or span otherwise independent domains.
+Each page or cross-page feature owns the domain interfaces for its workflow (for example, `Lead` remains under Outreach while `Program` belongs to `common/features/programs/types.ts`). `common/types/` is reserved for contracts that span otherwise independent domains.
 
 Dependency direction within a page:
 
@@ -255,9 +263,9 @@ components/     ← imports types + hooks
 ## Promotion Criteria
 
 - Keep code under a page while it expresses behavior owned by that route family alone.
-- Move stable business behavior used by multiple page families to `features/<domain>/`.
-- Move code to `common/` only when it is domain-agnostic and reusable without knowing about business entities such as youth, sessions, notes, or contacts.
-- Reuse by two or more pages is evidence that code may need promotion, but it does not decide whether the destination is `features/` or `common/`.
+- Move stable business behavior used by multiple page families to `common/features/<domain>/`.
+- Move domain-agnostic shared code to the appropriate foundational `common/` folder.
+- Reuse by two or more page families is evidence that code may need promotion from `pages/` to `common/`; business awareness determines whether it belongs under `common/features/`.
 
 ## Naming
 - Pages use PascalCase folders (e.g., `Auth`, `Users`).
@@ -276,7 +284,7 @@ State is split by concern and lives as close to where it is used as possible. Th
 |---|---|---|
 | Page state | Master list of records | `pages/X/hooks/useX.ts` |
 | Modal state | Form fields, submit status | `pages/X/components/XModal/useXModal.ts` |
-| Sub-entity state | Dynamic arrays owned by a feature or page workflow | owning `features/` or `pages/` folder |
+| Sub-entity state | Dynamic arrays owned by a feature or page workflow | owning `common/features/` or `pages/` folder |
 
 ---
 
@@ -381,7 +389,7 @@ flowchart TD
 These hooks live with the domain or page workflow that owns their validation and payload rules. `useContacts` belongs to the contacts feature; the currently Youth-specific address workflow remains colocated with `YouthModal`.
 
 ```ts
-const contacts = useContacts();   // features/contacts/hooks
+const contacts = useContacts();   // common/features/contacts/hooks
 const addresses = useAddresses(); // pages/Youth/components/YouthModal/hooks
 ```
 

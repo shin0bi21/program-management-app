@@ -4,7 +4,7 @@ import {
   HOMEPAGE_SECTIONS,
   getHomepagePathBySectionId,
   getHomepageSectionByPath,
-} from '../../../common/utils/homepageSections'
+} from '../homepageSections'
 
 type UseSectionRoutingOptions = {
   disabled?: boolean

@@ -9,7 +9,7 @@ const getSessionRoster = vi.fn();
 const deleteSessionNote = vi.fn();
 const getSessionAttachments = vi.fn();
 
-vi.mock('../../../../../common/api/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),

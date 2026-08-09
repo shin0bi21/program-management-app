@@ -7,7 +7,7 @@ import GenerateSessionsModal from './GenerateSessionsModal';
 const generateSessions = vi.fn();
 const regularTypeId = '00000000-0000-4000-8000-000000000001';
 
-vi.mock('../../../../../common/api/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
   generateSessions: (...args: unknown[]) => generateSessions(...args),
   getSessionTypes: () => Promise.resolve([
     { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },

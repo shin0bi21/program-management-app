@@ -3,7 +3,7 @@ import render from '../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../features/programs/types';
+import type { Program } from '../../../common/features/programs/types';
 import Cohorts from './Cohorts';
 
 function LocationProbe() {
@@ -38,23 +38,23 @@ const preferenceHook = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/api/cohorts.api', () => ({
+vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohorts: api.getCohorts,
   getCohortPage: api.getCohorts,
   getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
 }));
 
-vi.mock('../../../features/programs/api/programs.api', () => ({
+vi.mock('../../../common/features/programs/api/programs.api', () => ({
   createProgram: api.createProgram,
 }));
 
-vi.mock('../../../common/context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,
     upsertProgram: vi.fn(),

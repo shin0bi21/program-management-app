@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../../common/components/Button/Button';
 import type { AttendanceStatus, SessionNote } from '../../../../../common/types/cohort';
 import { formatShortDate } from '../../../../../common/utils/date';
-import AttendanceStatusSelect from '../../../../../features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
+import AttendanceStatusSelect from '../../../../../common/features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
 import type { YouthAttendanceSession } from '../types';
 import SessionNoteCard from './SessionNoteCard';
 

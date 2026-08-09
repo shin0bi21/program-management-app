@@ -1,4 +1,4 @@
-import PublicTopBar from '../../common/components/PublicTopBar/PublicTopBar';
+import PublicTopBar from './components/PublicTopBar/PublicTopBar';
 import SiteFooter from './components/SiteFooter/SiteFooter';
 import HeroSection from './components/HeroSection/HeroSection';
 import type { HeroPhoto } from './components/HeroSection/heroSectionSchema';

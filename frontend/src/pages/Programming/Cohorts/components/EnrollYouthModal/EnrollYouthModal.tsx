@@ -3,11 +3,11 @@ import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
-import { enrollYouth } from '../../../../../common/api/cohorts.api';
+import { enrollYouth } from '../../../../../common/features/programming/api/programming.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
 import { getAge } from '../../../../../common/utils/time';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 import { useCohortRoster } from '../../hooks/useCohortRoster';
 import './EnrollYouthModal.css';
 

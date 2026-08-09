@@ -7,17 +7,17 @@ const mockUsePrograms = vi.fn();
 vi.mock('../../../common/components/Header/Header', () => ({
   default: () => <div data-testid="header" />,
 }));
-vi.mock('../../../common/utils/storage', () => ({
+vi.mock('../../../auth/storage', () => ({
   getUser: () => ({
     firstName: 'Sofia',
     lastName: 'Soft Skills',
     email: 'softskills.staff@local.test',
   }),
 }));
-vi.mock('../../../common/context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff' }),
 }));
-vi.mock('../../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: (options: unknown) => mockUsePrograms(options),
 }));
 

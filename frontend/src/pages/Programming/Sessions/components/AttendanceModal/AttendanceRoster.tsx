@@ -1,5 +1,5 @@
 import Button from '../../../../../common/components/Button/Button';
-import AttendanceStatusSelect from '../../../../../features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
+import AttendanceStatusSelect from '../../../../../common/features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
 import type {
   AttendanceStatus,
   SessionRosterMember,

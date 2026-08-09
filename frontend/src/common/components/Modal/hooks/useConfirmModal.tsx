@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import Button from '../../Button/Button';
-import { getErrorMessage } from '../../../utils/clientErrors';
+import { getErrorMessage } from '../../../../http/clientErrors';
 
 export interface ConfirmAction {
   title: string;

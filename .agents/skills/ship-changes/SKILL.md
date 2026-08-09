@@ -48,7 +48,7 @@ Use patch-based restoration when concerns overlap in a file. Never bundle an unr
 
 For every isolated branch:
 
-1. Run `scripts/test-full-stack.sh` before committing.
+1. Run `scripts/tests/test-app.sh` before committing.
 2. Fix branch-introduced failures and rerun relevant checks plus the full suite.
 3. Review `git diff --check`, the final diff, and `git status`.
 4. Commit with a concise message referencing the issue.

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { unlinkSessionNoteYouth } from '../../../../../common/api/cohorts.api';
+import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/programming.api';
 import type { SessionNote } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 import type {
   SessionNoteTarget,
   SessionNoteUnlinkTarget,

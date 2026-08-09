@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import type { Permission } from '../../context/AuthContext';
-import { STORAGE_KEYS } from '../../utils/storage';
+import { useAuth, type Permission } from '../../../auth/authContext';
+import { STORAGE_KEYS } from '../../../auth/storage';
 import RouteLoading from '../RouteLoading/RouteLoading';
 
 interface ProtectedRouteProps {

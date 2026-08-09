@@ -2,7 +2,7 @@ import { faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../../common/components/Button/Button';
 import type { SessionNote } from '../../../../../common/types/cohort';
-import { SessionNoteCategoryBadge } from '../../../../../features/notes/components/SessionNoteDetails/SessionNoteDetails';
+import { SessionNoteCategoryBadge } from '../../../../../common/features/notes/components/SessionNoteDetails/SessionNoteDetails';
 
 export default function SessionNoteCard({
   note,

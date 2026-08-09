@@ -14,7 +14,7 @@
 - Use `.agents/skills/review-changes/` for repeatable change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
 - Read `frontend/STRUCTURE.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `backend/README.md` and the relevant file under `backend/docs/` before changing backend architecture, authentication, errors, database behavior, or integrations.
-- Read `docs/local-development.md` for local Docker, dependency, migration, and restart procedures.
+- Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
 
 ## Stable invariants
 
@@ -29,14 +29,14 @@
 
 ## Testing
 
-- In this repo, when the user refers to the "full test suite," default to `scripts/test-full-stack.sh`.
+- In this repo, when the user refers to the "full test suite," default to `scripts/tests/test-app.sh`.
 - Script layout matters here:
-  - `scripts/backend/` contains Docker-backed backend test runners, and `test-apis.sh` composes the individual backend suites.
-  - `scripts/frontend/` contains frontend Vitest runners, and `test-ui.sh` composes the page/path-specific frontend suites.
-  - `scripts/test-full-stack.sh` is the root cross-stack runner and executes backend first, then frontend.
+  - `scripts/tests/backend/` contains Docker-backed backend test runners, and `test-apis.sh` composes the individual backend suites.
+  - `scripts/tests/frontend/` contains frontend Vitest runners, and `test-ui.sh` composes the page/path-specific frontend suites.
+  - `scripts/tests/test-app.sh` is the cross-stack runner and executes deploy checks, backend tests, then frontend tests.
 - Be precise about test coverage:
-  - `scripts/backend/test-apis.sh` runs backend API tests only.
-  - `scripts/frontend/test-ui.sh` runs frontend UI tests only.
+  - `scripts/tests/backend/test-apis.sh` runs backend API tests only.
+  - `scripts/tests/frontend/test-ui.sh` runs frontend UI tests only.
   - Some frontend path runners may skip cleanly when a page folder has no tests yet.
 - Prefer the repo's feature-folder pattern for non-trivial frontend units: colocate UI, hook, schema/types, and tests inside the page component folder when the code is page-specific.
 - For shell-script changes, run `bash -n` and `shellcheck` when available.
