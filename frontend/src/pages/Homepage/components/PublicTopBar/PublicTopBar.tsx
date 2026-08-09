@@ -5,6 +5,7 @@ import { useAuth } from '../../../../auth/authContext';
 import { useFloatingMenu } from '../../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 import FloatingMenuPanel from '../../../../common/components/FloatingMenu/FloatingMenuPanel';
 import { HOMEPAGE_NAV_SECTIONS } from '../../homepageSections';
+import { scrollToHomepageSection } from '../../hooks/useSectionRouting';
 import './PublicTopBar.css';
 
 export default function PublicTopBar() {
@@ -34,14 +35,17 @@ export default function PublicTopBar() {
     close();
   };
 
+  const handleLogoClick = () => {
+    close();
+    scrollToHomepageSection('home');
+  };
+
   return (
     <header className={`public-topbar${scrolled ? ' public-topbar--scrolled' : ''}`}>
       <Link
         to="/"
         className="topbar-logo-btn"
-        onClick={() => {
-          close();
-        }}
+        onClick={handleLogoClick}
       >
         <img src={logoUrl} alt="Be Original Youth Group" className="topbar-logo" />
       </Link>
