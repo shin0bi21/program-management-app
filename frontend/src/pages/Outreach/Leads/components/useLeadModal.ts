@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../http/clientErrors';
 import { outreachFormDefaultValues, outreachFormSchema, type OutreachFormValues } from '../../../../common/components/OutreachForm/outreachFormSchema';
 import { createLead, updateLead } from '../api/leads.api';
 import type { Lead } from '../types';

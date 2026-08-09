@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getErrorMessage } from '../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../http/clientErrors';
 import { getPublicHomepageImages } from '../api/homepage.api';
 
 export function useHomepageImages() {

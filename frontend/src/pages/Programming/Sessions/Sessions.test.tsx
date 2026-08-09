@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../common/api/preferences.api';
-import type { Program } from '../../../features/programs/types';
+import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
+import type { Program } from '../../../common/features/programs/types';
 import Sessions from './Sessions';
 import render from '../../../tests/renderWithQueryClient';
 
@@ -44,7 +44,7 @@ const preferenceHook = vi.hoisted<{
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/api/cohorts.api', () => ({
+vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
@@ -56,14 +56,14 @@ vi.mock('../../../common/api/cohorts.api', () => ({
   generateSessions: vi.fn(),
 }));
 
-vi.mock('../../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: programState.programs, loading: false }),
 }));
 
-vi.mock('../../../common/context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
   default: ({

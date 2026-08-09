@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
-import { getSessions } from '../../../../../common/api/cohorts.api';
+import { getSessions } from '../../../../../common/features/programming/api/programming.api';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import ProgrammingCalendar from '../ProgrammingCalendar/ProgrammingCalendar';
 import './SessionsCalendarView.css';

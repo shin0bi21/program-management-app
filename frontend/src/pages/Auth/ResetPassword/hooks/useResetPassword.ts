@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resetPassword } from '../../../../common/api/auth.api';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
+import { resetPassword } from '../../../../auth/auth.api';
+import { getErrorMessage } from '../../../../http/clientErrors';
 import { resetPasswordSchema, type ResetPasswordFormData } from '../../common/validation/authSchemas';
 
 export const useResetPassword = () => {

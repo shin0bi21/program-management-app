@@ -19,7 +19,7 @@ Full-stack youth services management system — React + TypeScript frontend, Exp
 |---|---|
 | Frontend setup | [frontend/README.md](frontend/README.md) |
 | Frontend structure & conventions | [frontend/STRUCTURE.md](frontend/STRUCTURE.md) |
-| Frontend HTTP pipeline | [frontend/docs/api-flow.mmd](frontend/docs/api-flow.mmd) |
+| Full-stack request pipeline | [docs/architecture/request-flow.mmd](docs/architecture/request-flow.mmd) |
 | Backend setup & API reference | [backend/README.md](backend/README.md) |
 | Backend auth | [backend/docs/auth.md](backend/docs/auth.md) |
 | Backend errors | [backend/docs/errors.md](backend/docs/errors.md) |

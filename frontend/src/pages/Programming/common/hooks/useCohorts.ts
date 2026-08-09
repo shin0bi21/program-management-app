@@ -1,6 +1,6 @@
-import { getCohorts } from '../../../../common/api/cohorts.api';
+import { getCohorts } from '../../../../common/features/programming/api/programming.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
-import useListQuery from '../../../../common/query/hooks/useListQuery';
+import useListQuery from '../../../../query/hooks/useListQuery';
 
 export function useCohorts(programId?: string, enabled = true) {
   const query = useListQuery<ProgramCohort>({

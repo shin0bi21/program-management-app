@@ -39,3 +39,5 @@ vulnerabilities.md
 !/docs/deployment.md
 !/docs/local-development.md
 !/docs/local-setup.md
+!/docs/architecture/
+!/docs/architecture/request-flow.mmd

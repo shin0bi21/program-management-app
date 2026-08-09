@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen } from '@fortawesome/free-solid-svg-icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../auth/authContext';
 import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
 import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './Header.css';

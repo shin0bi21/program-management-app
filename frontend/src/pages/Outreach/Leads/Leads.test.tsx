@@ -28,16 +28,16 @@ vi.mock('./api/leads.api', () => ({
   deleteLeadNote: vi.fn(),
 }));
 
-vi.mock('../../../common/context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
-vi.mock('../../../common/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('../../../features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
 }));
 
-vi.mock('../../../common/api/cohorts.api', () => ({
+vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohorts: vi.fn().mockResolvedValue([]),
 }));
 

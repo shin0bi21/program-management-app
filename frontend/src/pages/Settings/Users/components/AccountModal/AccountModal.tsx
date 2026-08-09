@@ -2,7 +2,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { Account } from '../../../../../common/types/account';
-import { usePrograms } from '../../../../../features/programs/hooks/usePrograms';
+import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
 import { useAccountModal } from './useAccountModal';
 import './AccountModal.css';
 

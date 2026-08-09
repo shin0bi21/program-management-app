@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { createSessionAttachment, getSessionRoster } from '../../../../../common/api/cohorts.api';
+import { createSessionAttachment, getSessionRoster } from '../../../../../common/features/programming/api/programming.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';

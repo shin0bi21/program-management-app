@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { verify2FA, resend2FA } from '../../../../common/api/auth.api';
-import { useAuth } from '../../../../common/context/AuthContext';
-import { getDeviceFingerprint, getDeviceName } from '../../../../common/utils/deviceFingerprint';
-import { getErrorMessage } from '../../../../common/utils/clientErrors';
-import { setAuthData, STORAGE_KEYS } from '../../../../common/utils/storage';
+import { verify2FA, resend2FA } from '../../../../auth/auth.api';
+import { useAuth } from '../../../../auth/authContext';
+import { getDeviceFingerprint, getDeviceName } from '../../../../auth/deviceFingerprint';
+import { getErrorMessage } from '../../../../http/clientErrors';
+import { setAuthData, STORAGE_KEYS } from '../../../../auth/storage';
 import { formatTime } from '../../../../common/utils/time';
 import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';
 

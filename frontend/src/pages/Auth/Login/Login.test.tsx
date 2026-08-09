@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import Login from './Login';
 
-vi.mock('../../../common/context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({ isAuthenticated: true, loading: false }),
 }));
 

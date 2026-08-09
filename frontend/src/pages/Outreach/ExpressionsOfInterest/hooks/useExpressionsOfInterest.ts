@@ -1,4 +1,4 @@
-import useInfiniteListQuery from '../../../../common/query/hooks/useInfiniteListQuery';
+import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
 import { getExpressionsOfInterest } from '../api/expressionsOfInterest.api';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from '../types';
 import type { ListSort } from '../../../../common/types/pagination';

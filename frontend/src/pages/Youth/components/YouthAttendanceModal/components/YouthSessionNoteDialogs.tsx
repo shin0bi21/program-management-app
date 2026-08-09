@@ -1,7 +1,7 @@
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import type { YouthProfile } from '../../../../../common/types/youth';
-import SessionNoteModal from '../../../../../features/notes/components/SessionNoteModal/SessionNoteModal';
+import SessionNoteModal from '../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
 import type { SessionNoteTarget, SessionNoteUnlinkTarget } from '../types';
 
 export default function YouthSessionNoteDialogs({

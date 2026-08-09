@@ -1,5 +1,5 @@
-import { apiClient } from '../../../../common/api/http/client';
-import type { RequestOptions } from '../../../../common/api/http/client';
+import { apiClient } from '../../../../http/client';
+import type { RequestOptions } from '../../../../http/client';
 import type { CreateLeadInput, Lead, LeadFilters, LeadNote, LeadStatus, UpdateLeadInput } from '../types';
 import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
 import type { LeadSortKey } from '../types';

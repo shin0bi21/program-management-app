@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getSessionTypes } from '../../../../common/api/cohorts.api';
+import { getSessionTypes } from '../../../../common/features/programming/api/programming.api';
 import type { SessionType } from '../../../../common/types/cohort';
 
 export function useSessionTypes() {

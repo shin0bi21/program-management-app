@@ -8,7 +8,7 @@ import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import { useConfirmModal, type ConfirmAction } from '../../common/components/Modal/hooks/useConfirmModal';
-import { getErrorMessage } from '../../common/utils/clientErrors';
+import { getErrorMessage } from '../../http/clientErrors';
 import {
   deleteHomepageImage,
   getManagedHomepage,

@@ -1,12 +1,12 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateSession } from '../../../../../common/api/cohorts.api';
+import { updateSession } from '../../../../../common/features/programming/api/programming.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../common/utils/clientErrors';
+import { getErrorMessage } from '../../../../../http/clientErrors';
 import { useSessionTypes } from '../../../common/hooks/useSessionTypes';
 
 const localDateTime = (value: string) => {

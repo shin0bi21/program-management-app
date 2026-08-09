@@ -8,7 +8,7 @@ const authState = vi.hoisted(() => ({
   role: 'youth',
 }));
 
-vi.mock('../../context/AuthContext', () => ({
+vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     permissions: authState.permissions,
