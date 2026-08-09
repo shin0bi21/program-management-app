@@ -40,7 +40,7 @@ Youth profiles are program records managed by staff. A youth profile may optiona
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Node.js 20+ |
+| Runtime | Node.js 24+ |
 | Framework | Express 4.18.2 |
 | Language | TypeScript 5.9.3 |
 | Database | PostgreSQL 18 via postgres.js 3.4.8 |
