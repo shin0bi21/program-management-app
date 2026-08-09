@@ -358,14 +358,17 @@ The backend container runs with the Node.js inspector on port 9229.
 
 ## 8. Deployment
 
-Deployments are triggered automatically via CI on pushes to `main`.
+Deployments are triggered automatically on pushes to `main` after the release
+pull request has passed its required checks.
 For the production setup checklist, required GitHub secrets, monitoring, and
 manual fallback commands, see [`docs/deployment.md`](../docs/deployment.md).
 
 ### Automated Flow
 
 ```
-push to main → CI (typecheck + test + build) → deploy job → SSH into server → ./scripts/deploy.sh
+PR to develop → standard CI
+PR from develop to main → standard CI + production image validation
+push to main → SSH deploy → public HTTPS smoke checks
 ```
 
 `scripts/deploy.sh` (project root) records the last successfully deployed
