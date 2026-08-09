@@ -37,7 +37,8 @@ logs/
 vulnerabilities.md
 /docs/*
 !/docs/deployment.md
-!/docs/local-development.md
-!/docs/local-setup.md
+!/docs/local/
+!/docs/local/development.md
+!/docs/local/setup.md
 !/docs/architecture/
 !/docs/architecture/request-flow.mmd

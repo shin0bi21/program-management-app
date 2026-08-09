@@ -14,7 +14,7 @@
 - Use `.agents/skills/review-changes/` for repeatable change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
 - Read `frontend/STRUCTURE.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `backend/README.md` and the relevant file under `backend/docs/` before changing backend architecture, authentication, errors, database behavior, or integrations.
-- Read `docs/local-development.md` for local Docker, dependency, migration, and restart procedures.
+- Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
 
 ## Stable invariants
 

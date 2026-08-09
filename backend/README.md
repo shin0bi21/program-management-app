@@ -67,8 +67,8 @@ Youth profiles are program records managed by staff. A youth profile may optiona
 Use the repository-level guides as the source of truth for operating the local
 stack:
 
-- [First-time local environment setup](../docs/local-setup.md)
-- [Day-to-day local development commands](../docs/local-development.md)
+- [First-time local environment setup](../docs/local/setup.md)
+- [Day-to-day local development commands](../docs/local/development.md)
 
 Backend environment variables and their maintained examples are defined in
 `.env.example`. Backend architecture, database behavior, debugging, and command
@@ -329,7 +329,7 @@ describe('Feature Tests', () => {
 
 ### Daily Loop
 
-Use [Local Development Commands](../docs/local-development.md) for starting,
+Use [Local Development Commands](../docs/local/development.md) for starting,
 restarting, recreating, migrating, and testing the Docker stack. During backend
 work, `docker compose exec backend npm run typecheck` provides a focused
 TypeScript check before the full repository test suite.
