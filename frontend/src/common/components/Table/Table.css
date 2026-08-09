@@ -57,12 +57,9 @@
   cursor: pointer;
 }
 
-.table tbody tr[tabindex="0"]:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: -2px;
-}
-
+.table tbody tr[tabindex="0"]:focus-visible,
 .table tbody tr.table-row--selected {
+  outline: none;
   background: var(--color-accent-soft);
 }
 
