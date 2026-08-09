@@ -3,6 +3,7 @@ import { useLogin } from './hooks/useLogin';
 import { useAuth } from '../../../auth/authContext';
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 import Button from '../../../common/components/Button/Button';
+import { getLastAuthPath, getUser } from '../../../auth/storage';
 
 export default function Login() {
   const { isAuthenticated, loading } = useAuth();
@@ -12,7 +13,9 @@ export default function Login() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form;
-  if (!loading && isAuthenticated) return <Navigate to="/settings/account" replace />;
+  if (!loading && isAuthenticated) {
+    return <Navigate to={getLastAuthPath(getUser()?.id)} replace />;
+  }
 
   return (
     <AuthLayout>

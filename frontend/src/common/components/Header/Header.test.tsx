@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import Header from './Header';
 
 const authState = vi.hoisted(() => ({
@@ -29,7 +30,27 @@ vi.mock('../FloatingMenu/hooks/useFloatingMenu', () => ({
   }),
 }));
 
+function CurrentPath() {
+  return <span data-testid="current-path">{useLocation().pathname}</span>;
+}
+
 describe('Header youth navigation', () => {
+  it('opens the public homepage when an authenticated user clicks the logo', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/settings/account']}>
+        <Header />
+        <CurrentPath />
+      </MemoryRouter>,
+    );
+
+    const homepageButtons = screen.getAllByRole('button', { name: 'Go to homepage' });
+    await user.click(homepageButtons[1]);
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/');
+  });
+
   it('shows only My Account in application navigation for youth', () => {
     authState.permissions = [];
     authState.role = 'youth';

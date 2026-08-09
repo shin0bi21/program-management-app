@@ -123,7 +123,14 @@ export default function Header() {
     <>
       {/* Mobile top bar */}
       <div className="mobile-topbar">
-        <img src={logoUrl} alt="Be Original" className="mobile-topbar-logo" />
+        <button
+          type="button"
+          className="header-logo-button mobile-topbar-logo-button"
+          onClick={() => go('/')}
+          aria-label="Go to homepage"
+        >
+          <img src={logoUrl} alt="" className="mobile-topbar-logo" />
+        </button>
         <button
           className="mobile-topbar-toggle"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
@@ -141,7 +148,14 @@ export default function Header() {
 
       <aside className={`sidebar${mobileOpen ? ' sidebar--open' : ''}`}>
         <div className="sidebar-brand">
-          <img src={logoUrl} alt="Be Original Youth Group" className="sidebar-logo" />
+          <button
+            type="button"
+            className="header-logo-button"
+            onClick={() => go('/')}
+            aria-label="Go to homepage"
+          >
+            <img src={logoUrl} alt="" className="sidebar-logo" />
+          </button>
         </div>
         <nav className="sidebar-nav">
           {isAuthenticated && (
