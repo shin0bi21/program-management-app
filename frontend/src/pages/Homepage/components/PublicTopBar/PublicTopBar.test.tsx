@@ -22,9 +22,26 @@ function renderTopBar() {
   );
 }
 
-describe('PublicTopBar account link', () => {
+describe('PublicTopBar', () => {
   beforeEach(() => {
     auth.isAuthenticated = false;
+    vi.restoreAllMocks();
+  });
+
+  it('scrolls the existing homepage route back to the hero', async () => {
+    const user = userEvent.setup();
+    const hero = document.createElement('section');
+    hero.id = 'home';
+    vi.spyOn(hero, 'getBoundingClientRect').mockReturnValue({ top: -400 } as DOMRect);
+    document.body.appendChild(hero);
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 });
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+
+    renderTopBar();
+    await user.click(screen.getByRole('link', { name: 'Be Original Youth Group' }));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 100, behavior: 'smooth' });
+    hero.remove();
   });
 
   it('takes signed-out visitors to Login', async () => {
