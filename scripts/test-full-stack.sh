@@ -7,6 +7,7 @@ echo "=========================================="
 echo "Running FULL test suite"
 echo "=========================================="
 
+bash scripts/test-deployment.sh
 bash scripts/backend/test-apis.sh
 bash scripts/frontend/test-ui.sh
 

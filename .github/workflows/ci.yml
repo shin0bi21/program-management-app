@@ -130,5 +130,13 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=30 \
             "${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}" \
-            "cd '${{ secrets.LIGHTSAIL_APP_PATH }}' && ./scripts/deploy.sh"
+            "cd '${{ secrets.LIGHTSAIL_APP_PATH }}' && \
+              if git status --porcelain | grep -q .; then \
+                echo 'ERROR: Server working tree has uncommitted changes'; \
+                git status --short; \
+                exit 1; \
+              fi; \
+              git fetch origin main && \
+              git reset --hard origin/main && \
+              ./scripts/deploy.sh"
           rm -f /tmp/deploy_key

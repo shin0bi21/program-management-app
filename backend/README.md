@@ -415,15 +415,32 @@ Deployments are triggered automatically via CI on pushes to `main`.
 push to main → CI (typecheck + test + build) → deploy job → SSH into server → ./scripts/deploy.sh
 ```
 
-`scripts/deploy.sh` (project root) handles the full deploy:
-1. `git reset --hard origin/main` — pull latest code
-2. Build frontend (`docker run node:20-alpine npm ci && npm run build`)
-3. Take a verified gzipped DB snapshot
-4. Build new backend image (`docker compose -f docker-compose.prod.yml build`)
-5. Run `db:migrate` from the new image
-6. `docker compose -f docker-compose.prod.yml up -d`
-7. Wait for backend healthcheck
-8. On any failure after step 3: automatically restore DB from snapshot
+`scripts/deploy.sh` (project root) records the last successfully deployed
+frontend, backend, and infrastructure revisions, then selects the smallest safe
+deployment flow:
+
+| Detected production changes | Deployment flow |
+|---|---|
+| `frontend/**` only | Build the frontend/nginx image, replace nginx, validate its configuration |
+| `backend/**` without migrations | Build and replace the backend, wait for health, run backend post-deploy work |
+| Backend migration files | Build backend, snapshot the database, migrate with rollback protection, replace backend |
+| Production Compose, Dockerfile, nginx, or deploy-script changes | Conservative full frontend/backend build and guarded migration flow |
+| Documentation and development tooling only | No production containers are rebuilt |
+
+All required images are built before a running service is replaced. When both
+application layers changed, the backend is migrated, deployed, and health-checked
+before nginx exposes the new frontend. Revision markers under `.deploy-state/`
+advance only after the corresponding component succeeds. Missing or invalid
+markers force a full deployment, which initializes the state safely.
+
+The CI SSH entrypoint checks that the server worktree is clean and synchronizes
+it to `origin/main` before invoking the deploy script. Manual runs perform the
+same synchronization internally and re-execute the freshly pulled script when
+necessary. This prevents a deploy-script update from mixing old and new shell
+control flow in one process.
+
+Use `./scripts/deploy.sh --plan` to print the detected flow without building
+images, replacing containers, touching the database, or advancing revision markers.
 
 ### Manual Deployment Flow
 

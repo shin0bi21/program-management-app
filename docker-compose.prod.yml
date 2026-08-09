@@ -1,12 +1,13 @@
 # Production compose — used by deploy.sh via COMPOSE_FILE=docker-compose.prod.yml
 #
-# Services: backend (compiled), nginx (serves built frontend dist), db
+# Services: backend (compiled), nginx (contains the built frontend), db
 # Excluded vs dev: no frontend dev server, no db_test, no code volumes, no debug port
-# The frontend dist is built by deploy.sh before docker compose up -d
+# deploy.sh rebuilds only the images affected by changes since the last deploy
 
 services:
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./frontend
     container_name: myapp_nginx
     restart: always
     ports:
@@ -14,7 +15,6 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./frontend/dist:/usr/share/nginx/html
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
     depends_on:
