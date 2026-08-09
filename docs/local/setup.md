@@ -30,6 +30,21 @@ cd my-webapp
 
 All remaining commands in this guide run from the repository root.
 
+## Environment file ownership
+
+| File | Purpose | Committed |
+|---|---|---|
+| Root `.env` | Backend and database configuration for the current machine; local development on a workstation and real production values on the server | No |
+| `backend/.env.test` | Safe, isolated backend test configuration used locally and in CI | Yes |
+| `backend/.env.example` | Template for creating the root `.env` | Yes |
+| `frontend/.env` | Local Vite configuration | No |
+| `frontend/.env.production` | Production Vite build configuration stored on the server | No |
+| `frontend/.env.example` | Template for creating `frontend/.env` | Yes |
+
+Never put production credentials in a committed file. CI supplies any
+workflow-specific values directly and uses `backend/.env.test` only where a
+Compose service requires an environment file.
+
 ## 2. Create the backend environment
 
 Copy the maintained example to the root `.env` consumed by Compose:

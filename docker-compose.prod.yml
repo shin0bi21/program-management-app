@@ -28,8 +28,9 @@ services:
     restart: always
     # No external port binding — nginx reaches backend via Docker network (backend:5001)
     # Binding 5001 to the host would expose the API directly to the internet
+    # CI selects the backend test env; production defaults to the root .env.
     env_file:
-      - .env
+      - ${BACKEND_ENV_FILE:-.env}
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
