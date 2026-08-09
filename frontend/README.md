@@ -7,8 +7,8 @@ React + Vite frontend for the app.
 The supported full-stack workflow runs through Docker Compose from the
 repository root:
 
-- [First-time local environment setup](../docs/local-setup.md)
-- [Day-to-day local development commands](../docs/local-development.md)
+- [First-time local environment setup](../docs/local/setup.md)
+- [Day-to-day local development commands](../docs/local/development.md)
 
 Direct `npm` commands are still useful inside the frontend container; see the
 command guide for dependency, test, restart, and rebuild instructions.

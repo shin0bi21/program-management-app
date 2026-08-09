@@ -2,7 +2,7 @@
 
 This is the source of truth for day-to-day operation of the local Docker
 stack. For a new machine or a fresh checkout, complete
-[Local Environment Setup](local-setup.md) first.
+[Local Environment Setup](setup.md) first.
 
 Run all commands from the repository root.
 
