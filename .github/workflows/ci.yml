@@ -3,27 +3,103 @@ name: CI
 on:
   pull_request:
     branches: [develop, main]
-  push:
-    branches: [develop, main]
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   enforce-merge-path:
     name: Enforce develop → main only
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Block non-develop PRs targeting main
-        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref != 'develop'
+        if: github.base_ref == 'main' && github.head_ref != 'develop'
         run: |
           echo "PRs to main must come from develop, not '${{ github.head_ref }}'."
           exit 1
 
+  changes:
+    name: Classify production changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend_image: ${{ steps.production.outputs.backend_image }}
+      frontend_image: ${{ steps.production.outputs.frontend_image }}
+      compose: ${{ steps.production.outputs.compose }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect production build inputs
+        id: production
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$BASE_REF" = main ]; then
+            backend_image=true
+            frontend_image=true
+            compose=true
+          else
+            backend_image=false
+            frontend_image=false
+            compose=false
+
+            if ! git diff --quiet "$BASE_SHA" HEAD -- \
+              backend/Dockerfile backend/.dockerignore backend/package.json backend/package-lock.json; then
+              backend_image=true
+            fi
+            if ! git diff --quiet "$BASE_SHA" HEAD -- \
+              frontend/Dockerfile frontend/.dockerignore frontend/package.json frontend/package-lock.json; then
+              frontend_image=true
+            fi
+            if ! git diff --quiet "$BASE_SHA" HEAD -- \
+              docker-compose.prod.yml nginx.conf scripts/deploy.sh; then
+              backend_image=true
+              frontend_image=true
+              compose=true
+            fi
+          fi
+
+          echo "backend_image=$backend_image" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=$frontend_image" >> "$GITHUB_OUTPUT"
+          echo "compose=$compose" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Lint & Shell Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install quality dependencies
+        run: npm ci
+
+      - name: Run static checks
+        run: bash scripts/tests/test-static.sh
+
   backend:
     name: Backend — Typecheck, Migrate & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -43,12 +119,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
@@ -71,6 +149,9 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/myapp_test
         run: npm run db:status
 
+      - name: Verify generated database types are committed
+        run: git diff --exit-code -- backend/src/types/database.ts
+
       - name: Run tests
         working-directory: backend
         env:
@@ -90,16 +171,18 @@ jobs:
   frontend:
     name: Frontend — Typecheck & Build
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
@@ -114,29 +197,51 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-  deploy:
-    name: Deploy to Lightsail
+  production-compose:
+    name: Production Compose Validation
+    needs: [changes, quality]
+    if: needs.changes.outputs.compose == 'true'
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
-    # Only deploy on direct push to main (not on PRs targeting main)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
+    timeout-minutes: 5
     steps:
-      - name: Deploy via SSH
-        run: |
-          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh -i /tmp/deploy_key \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=30 \
-            "${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}" \
-            "cd '${{ secrets.LIGHTSAIL_APP_PATH }}' && \
-              if git status --porcelain | grep -q .; then \
-                echo 'ERROR: Server working tree has uncommitted changes'; \
-                git status --short; \
-                exit 1; \
-              fi; \
-              git fetch origin main && \
-              git reset --hard origin/main && \
-              ./scripts/deploy.sh"
-          rm -f /tmp/deploy_key
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Validate production Compose configuration
+        env:
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_NAME: myapp_test
+        run: docker compose -f docker-compose.prod.yml config --quiet
+
+  production-backend-image:
+    name: Backend Production Image
+    needs: [changes, backend]
+    if: needs.changes.outputs.backend_image == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Build backend production image
+        run: docker build --target prod backend
+
+  production-frontend-image:
+    name: Frontend Production Image
+    needs: [changes, frontend]
+    if: needs.changes.outputs.frontend_image == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Build frontend/nginx production image
+        run: docker build frontend
