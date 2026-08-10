@@ -49,7 +49,7 @@ import type {
   UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
-import { cohortQuerySchema, sessionListQuerySchema } from '../validation/cohortSchemas';
+import { cohortQuerySchema, cohortYouthReportSchema, sessionListQuerySchema } from '../validation/cohortSchemas';
 import { getCohortYouthReport } from '../services/cohortReportService';
 import { generateCohortYouthReportPdf } from '../services/cohortReportPdfService';
 
@@ -87,11 +87,13 @@ export const handleDeleteCohort = async (req: Request, res: Response) => {
 };
 
 export const handleGetCohortYouthReport = async (req: Request, res: Response) => {
-  res.json(await getCohortYouthReport(req.params.cohortId, actor(req)));
+  const { youthId } = cohortYouthReportSchema.shape.query.parse(req.query);
+  res.json(await getCohortYouthReport(req.params.cohortId, actor(req), youthId));
 };
 
 export const handleGetCohortYouthReportPdf = async (req: Request, res: Response) => {
-  const pdf = await generateCohortYouthReportPdf(req.params.cohortId, actor(req));
+  const { youthId } = cohortYouthReportSchema.shape.query.parse(req.query);
+  const pdf = await generateCohortYouthReportPdf(req.params.cohortId, actor(req), youthId);
   const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Youth Report.pdf';
   res.type('application/pdf');
   res.setHeader('Cache-Control', 'private, no-store');

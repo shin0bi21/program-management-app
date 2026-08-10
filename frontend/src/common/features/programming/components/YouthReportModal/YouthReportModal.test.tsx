@@ -1,19 +1,12 @@
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import render from '../../../../../tests/renderWithQueryClient';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
 import YouthReportModal from './YouthReportModal';
 
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
+vi.mock('../../api/programming.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
 
-const cohort: ProgramCohort = {
-  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
-  cycleId: 'cycle-summer-2026', cycleName: 'Summer 2026',
-  name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active', minAge: null, maxAge: null,
-  enrolledCount: 5, nextSessionAt: null, nextSessionId: null, averageAttendance: 80,
-  attendanceAttendedCount: 4, attendanceRecordedCount: 5, uniqueAttendeeCount: 4,
-};
+const cohort = { id: 'cohort-1', programName: 'Soft Skills', name: 'Summer 2026' };
 
 describe('YouthReportModal', () => {
   beforeEach(() => {
@@ -29,13 +22,17 @@ describe('YouthReportModal', () => {
     });
   });
 
-  it('loads and displays the generated report for the selected cohort', async () => {
-    render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
+  it('loads and displays the generated report for the selected cohort and optional youth', async () => {
+    render(<YouthReportModal cohort={cohort} youthId="youth-1" onClose={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
     expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:youth-report');
     expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveAttribute('href', 'blob:youth-report');
-    expect(api.getReportPdf).toHaveBeenCalledWith('cohort-1', { signal: expect.any(AbortSignal) });
+    expect(api.getReportPdf).toHaveBeenCalledWith(
+      'cohort-1',
+      { youthId: 'youth-1' },
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it('shows an error when the report cannot be loaded', async () => {

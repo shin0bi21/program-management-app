@@ -34,6 +34,7 @@ import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   cohortQuerySchema,
+  cohortYouthReportSchema,
   createCohortSchema,
   createCycleSchema,
   createSessionNoteSchema,
@@ -64,8 +65,8 @@ router.get('/', authenticateToken, requirePermission('read:cohorts'), generalLim
 router.get('/cycles', authenticateToken, requirePermission('read:programs'), generalLimiter, asyncHandler(handleGetProgramCycles));
 router.post('/cycles', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(createCycleSchema), asyncHandler(handleCreateProgramCycle));
 router.put('/cycles/:cycleId', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(updateCycleSchema), asyncHandler(handleUpdateProgramCycle));
-router.get('/:cohortId/reports/youth', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleGetCohortYouthReport));
-router.get('/:cohortId/reports/youth.pdf', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleGetCohortYouthReportPdf));
+router.get('/:cohortId/reports/youth', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(cohortYouthReportSchema), asyncHandler(handleGetCohortYouthReport));
+router.get('/:cohortId/reports/youth.pdf', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(cohortYouthReportSchema), asyncHandler(handleGetCohortYouthReportPdf));
 router.post('/', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(createCohortSchema), asyncHandler(handleCreateCohort));
 router.put('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateCohortSchema), asyncHandler(handleUpdateCohort));
 router.delete('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleDeleteCohort));

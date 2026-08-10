@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPen } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faPen } from '@fortawesome/free-solid-svg-icons';
 import Button from '../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
 import { getDateKeyInTimeZone } from '../../../../common/utils/date';
@@ -20,11 +20,15 @@ export default function AttendanceCard({
   selected,
   canManage = false,
   onManage,
+  canViewReport = false,
+  onViewReport,
 }: {
   cohorts?: AttendanceCohort[];
   selected: boolean;
   canManage?: boolean;
   onManage?: (cohort: AttendanceCohort) => void;
+  canViewReport?: boolean;
+  onViewReport?: (cohort: AttendanceCohort) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const today = getDateKeyInTimeZone();
@@ -56,18 +60,33 @@ export default function AttendanceCard({
             <div className="attendance-card__cohort" key={cohort.id}>
               <div className="attendance-card__cohort-header">
                 <strong>{cohort.programName} · {cohort.name}</strong>
-                {canManage && onManage && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="attendance-card__manage"
-                    aria-label={`Manage attendance for ${cohort.programName} · ${cohort.name}`}
-                    title="Manage attendance"
-                    onClick={() => onManage(cohort)}
-                  >
-                    <FontAwesomeIcon icon={faPen} aria-hidden="true" />
-                  </Button>
-                )}
+                <div className="attendance-card__actions">
+                  {canViewReport && onViewReport && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="attendance-card__view"
+                      aria-label={`View attendance report for ${cohort.programName} · ${cohort.name}`}
+                      disabled={cohort.rosterMode === 'open'}
+                      title={cohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : 'View attendance report'}
+                      onClick={() => onViewReport(cohort)}
+                    >
+                      <FontAwesomeIcon icon={faEye} aria-hidden="true" />
+                    </Button>
+                  )}
+                  {canManage && onManage && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="attendance-card__manage"
+                      aria-label={`Manage attendance for ${cohort.programName} · ${cohort.name}`}
+                      title="Manage attendance"
+                      onClick={() => onManage(cohort)}
+                    >
+                      <FontAwesomeIcon icon={faPen} aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
               </div>
               {cohort.rosterMode === 'open' ? (
                 <p className="attendance-card__breakdown">

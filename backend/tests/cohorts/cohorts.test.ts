@@ -1084,6 +1084,18 @@ describe('Cohorts and attendance API', () => {
     ]));
     expect(response.body.youth.find((person: { id: string }) => person.id === youthId).timeline).toHaveLength(1);
 
+    const filteredResponse = await request(app)
+      .get(`/api/cohorts/${cohortId}/reports/youth?youthId=${youthId}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(filteredResponse.status).toBe(200);
+    expect(filteredResponse.body.youth).toHaveLength(1);
+    expect(filteredResponse.body.youth[0]).toEqual(expect.objectContaining({ id: youthId }));
+
+    const invalidFilter = await request(app)
+      .get(`/api/cohorts/${cohortId}/reports/youth?youthId=invalid`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(invalidFilter.status).toBe(400);
+
     const pdfResponse = await request(app)
       .get(`/api/cohorts/${cohortId}/reports/youth.pdf`)
       .set('Authorization', `Bearer ${staffToken}`)

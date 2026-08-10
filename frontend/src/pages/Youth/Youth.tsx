@@ -26,6 +26,7 @@ import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
 import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetails';
 import { getErrorMessage } from '../../http/clientErrors';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
+import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 
 export default function Youth() {
   const [search, setSearch] = useState('');
@@ -48,6 +49,10 @@ export default function Youth() {
   const [deletingProfileNote, setDeletingProfileNote] = useState(false);
   const [profileNoteDeleteError, setProfileNoteDeleteError] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
+    cohort: YouthProfile['cohorts'][number];
+    youthId: string;
+  } | null>(null);
   const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
@@ -67,6 +72,9 @@ export default function Youth() {
   const canManageSessionNotes = permissions.includes('write:sessions');
   const canManageAttendance = permissions.includes('read:attendance')
     && permissions.includes('write:attendance')
+    && permissions.includes('read:sessions');
+  const canViewAttendanceReport = permissions.includes('read:cohorts')
+    && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
   const profileNotesQuery = useQuery({
     queryKey: ['youth-profile-notes', selectedProfileId],
@@ -259,6 +267,10 @@ export default function Youth() {
               selected={selectedProfile !== null}
               canManage={canManageAttendance}
               onManage={setAttendanceTarget}
+              canViewReport={canViewAttendanceReport}
+              onViewReport={cohort => {
+                if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
+              }}
             />
             <YouthNotesCard
               profileNotes={profileNotes}
@@ -291,6 +303,11 @@ export default function Youth() {
         onClose={() => setAttendanceTarget(null)}
         onSaved={refetchYouth}
       />
+      {attendanceReportTarget && <YouthReportModal
+        cohort={attendanceReportTarget.cohort}
+        youthId={attendanceReportTarget.youthId}
+        onClose={() => setAttendanceReportTarget(null)}
+      />}
       <YouthModal
         isOpen={contactTarget !== null}
         youthData={contactTarget ?? undefined}
@@ -305,13 +322,14 @@ export default function Youth() {
           note={profileNoteTarget === 'new' ? undefined : profileNoteTarget}
           onClose={() => setProfileNoteTarget(null)}
           onSaved={note => {
+            const shouldReturnToDetails = profileNoteTarget !== 'new';
             queryClient.setQueryData<YouthProfileNote[]>(['youth-profile-notes', selectedProfileId], current => {
               const rows = current ?? [];
               const index = rows.findIndex(item => item.id === note.id);
               return index === -1 ? [note, ...rows] : rows.map(item => item.id === note.id ? note : item);
             });
             setProfileNoteTarget(null);
-            setSelectedProfileNote(note);
+            if (shouldReturnToDetails) setSelectedProfileNote(note);
           }}
         />
       )}
