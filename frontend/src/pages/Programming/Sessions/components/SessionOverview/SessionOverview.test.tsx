@@ -8,6 +8,24 @@ const getSessionNotes = vi.fn();
 const getSessionRoster = vi.fn();
 const deleteSessionNote = vi.fn();
 const getSessionAttachments = vi.fn();
+const getSessionAttachmentFile = vi.fn();
+const updateSessionAttachment = vi.fn();
+const deleteSessionAttachment = vi.fn();
+const zoomIn = vi.fn();
+const zoomOut = vi.fn();
+const resetZoom = vi.fn();
+const destroyPanzoom = vi.fn();
+const initializePanzoom = vi.fn((_element: unknown, _options?: unknown) => ({
+  destroy: destroyPanzoom,
+  reset: resetZoom,
+  zoomIn,
+  zoomOut,
+  zoomWithWheel: vi.fn(),
+}));
+
+vi.mock('@panzoom/panzoom', () => ({
+  default: (element: unknown, options?: unknown) => initializePanzoom(element, options),
+}));
 
 vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
@@ -17,7 +35,9 @@ vi.mock('../../../../../common/features/programming/api/programming.api', () => 
   deleteSessionNote: (...args: unknown[]) => deleteSessionNote(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   createSessionAttachment: vi.fn(),
-  deleteSessionAttachment: vi.fn(),
+  deleteSessionAttachment: (...args: unknown[]) => deleteSessionAttachment(...args),
+  updateSessionAttachment: (...args: unknown[]) => updateSessionAttachment(...args),
+  getSessionAttachmentFile: (...args: unknown[]) => getSessionAttachmentFile(...args),
   downloadSessionAttachment: vi.fn(),
 }));
 
@@ -47,6 +67,17 @@ describe('SessionOverview', () => {
     getSessionRoster.mockResolvedValue([]);
     deleteSessionNote.mockResolvedValue({});
     getSessionAttachments.mockResolvedValue([]);
+    getSessionAttachmentFile.mockResolvedValue(new Blob(['image'], { type: 'image/png' }));
+    updateSessionAttachment.mockResolvedValue({});
+    deleteSessionAttachment.mockResolvedValue({});
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:attachment-preview'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
   });
 
   it('keeps every card visible before a session is selected', () => {
@@ -160,5 +191,67 @@ describe('SessionOverview', () => {
       expect(deleteSessionNote).toHaveBeenCalledWith(session.id, note.id);
       expect(screen.getByText('Session note successfully deleted.')).toBeInTheDocument();
     });
+  });
+
+  it('shows attachment titles with view, edit, and delete actions', async () => {
+    const attachment = {
+      id: 'attachment-1',
+      sessionId: session.id,
+      title: 'Workshop photo',
+      description: 'Youth presenting their work.',
+      originalFilename: 'IMG_0042.png',
+      mimeType: 'image/png',
+      fileSize: 2048,
+      createdAt: '2026-07-28T23:30:00.000Z',
+      updatedAt: '2026-07-28T23:30:00.000Z',
+      createdByName: 'Programming Demo',
+      youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
+    };
+    getSessionAttachments.mockResolvedValue([attachment]);
+
+    render(
+      <SessionOverview
+        session={session}
+        canWriteAttendance
+        canWriteSessions
+        onAddAttendance={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Workshop photo')).toBeInTheDocument();
+    expect(screen.queryByText(/IMG_0042/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View Workshop photo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Workshop photo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Workshop photo' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View Workshop photo' }));
+    expect(await screen.findByRole('img', { name: 'Workshop photo' })).toHaveAttribute('src', 'blob:attachment-preview');
+    expect(screen.queryByText('Youth presenting their work.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Programming Demo')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 KB')).not.toBeInTheDocument();
+    await waitFor(() => expect(initializePanzoom).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(zoomIn).toHaveBeenCalledWith({ animate: true });
+    expect(zoomOut).toHaveBeenCalledWith({ animate: true });
+    expect(resetZoom).toHaveBeenCalledWith({ animate: true });
+    fireEvent.click(screen.getByText('Close', { selector: 'button' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Workshop photo' }));
+    expect(screen.getByRole('heading', { name: 'Edit Attachment' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toHaveValue('Workshop photo');
+    expect(screen.queryByLabelText('File')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Renamed photo' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(updateSessionAttachment).toHaveBeenCalledWith(
+      session.id,
+      attachment.id,
+      {
+        title: 'Renamed photo',
+        description: attachment.description,
+        youthIds: ['youth-1'],
+      },
+    ));
   });
 });

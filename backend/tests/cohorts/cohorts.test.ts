@@ -36,6 +36,8 @@ function sessionNoteInput(
 describe('Cohorts and attendance API', () => {
   let staffId: string;
   let staffToken: string;
+  let adminId: string;
+  let adminToken: string;
   let youthId: string;
   let secondYouthId: string;
   let programId: string;
@@ -45,6 +47,7 @@ describe('Cohorts and attendance API', () => {
   let openCohortId: string;
   let openSessionId: string;
   let unassignedCohortId: string;
+  let mainCycleId: string;
   let today: string;
   const guestSpeakerTypeId = '00000000-0000-4000-8000-000000000002';
 
@@ -52,6 +55,9 @@ describe('Cohorts and attendance API', () => {
     const staff = await seedTestUser({ role: 'staff' });
     staffId = staff.userId;
     staffToken = generateToken(staff.userId, 'staff', staff.email);
+    const admin = await seedTestUser({ role: 'admin' });
+    adminId = admin.userId;
+    adminToken = generateToken(admin.userId, 'admin', admin.email);
 
     const youth = await seedTestUser({ role: 'youth' });
     youthId = youth.userId;
@@ -78,6 +84,12 @@ describe('Cohorts and attendance API', () => {
       SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date::text AS today
     `;
     today = clock.today;
+    const [cycle] = await sql<{ id: string }[]>`
+      INSERT INTO program_cycles (name, starts_on, ends_on)
+      VALUES (${`Cohort API ${Date.now()}`}, ${addDays(today, -7)}, ${addDays(today, 60)})
+      RETURNING id
+    `;
+    mainCycleId = cycle.id;
   });
 
   afterAll(async () => {
@@ -101,9 +113,35 @@ describe('Cohorts and attendance API', () => {
     }
     if (cohortId) await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
     if (cohortId) await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
+    if (mainCycleId) await sql`DELETE FROM program_cycles WHERE id = ${mainCycleId}`;
     await deleteTestUser(youthId);
     await deleteTestUser(secondYouthId);
     await deleteTestUser(staffId);
+    await deleteTestUser(adminId);
+  });
+
+  it('reserves global cycle management for admins', async () => {
+    const cycleName = `Admin Cycle ${Date.now()}`;
+    const denied = await request(app)
+      .post('/api/cohorts/cycles')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ name: cycleName, startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+    expect(denied.status).toBe(403);
+
+    const created = await request(app)
+      .post('/api/cohorts/cycles')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: cycleName, startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+    expect(created.status).toBe(201);
+
+    const updated = await request(app)
+      .put(`/api/cohorts/cycles/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: `${cycleName} Updated`, startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
+
+    await sql`DELETE FROM program_cycles WHERE id = ${created.body.id}`;
   });
 
   it('creates a dated cohort', async () => {
@@ -112,9 +150,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         programId,
-        name: `Summer Test ${Date.now()}`,
-        startsOn: addDays(today, -7),
-        endsOn: addDays(today, 60),
+        cycleId: mainCycleId,
       });
 
     cohortId = response.body.id;
@@ -135,9 +171,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         programId: jobReadiness.id,
-        name: `Blocked ${Date.now()}`,
-        startsOn: addDays(today, -7),
-        endsOn: addDays(today, 60),
+        cycleId: mainCycleId,
       });
 
     expect(response.status).toBe(403);
@@ -148,13 +182,8 @@ describe('Cohorts and attendance API', () => {
       SELECT id FROM programs WHERE name = 'Job Readiness'
     `;
     const [unassignedCohort] = await sql<{ id: string }[]>`
-      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-      VALUES (
-        ${jobReadiness.id},
-        ${`Profile Filter ${Date.now()}`},
-        ${addDays(today, -7)},
-        ${addDays(today, 60)}
-      )
+      INSERT INTO program_cohorts (program_id, cycle_id)
+      VALUES (${jobReadiness.id}, ${mainCycleId})
       RETURNING id
     `;
     unassignedCohortId = unassignedCohort.id;
@@ -422,7 +451,7 @@ describe('Cohorts and attendance API', () => {
     expect(remaining.body[0].id).toBe(attached.id);
   });
 
-  it('uploads, lists, downloads, and deletes session attachments with linked youth', async () => {
+  it('uploads, edits, downloads by title, and deletes session attachments with linked youth', async () => {
     const uploaded = await request(app)
       .post(`/api/cohorts/sessions/${sessionId}/attachments`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -442,11 +471,27 @@ describe('Cohorts and attendance API', () => {
     }));
     const attachment = uploaded.body;
 
+    const updated = await request(app)
+      .put(`/api/cohorts/sessions/${sessionId}/attachments/${attachment.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        title: 'Updated / worksheet.',
+        description: 'Updated attachment details.',
+        youthIds: [youthId],
+      });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toEqual(expect.objectContaining({
+      id: attachment.id,
+      title: 'Updated / worksheet.',
+      description: 'Updated attachment details.',
+      youth: [expect.objectContaining({ youthId })],
+    }));
+
     const downloaded = await request(app)
       .get(`/api/cohorts/sessions/${sessionId}/attachments/${attachment.id}/file`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(downloaded.status).toBe(200);
-    expect(downloaded.headers['content-disposition']).toContain('reflection.txt');
+    expect(downloaded.headers['content-disposition']).toContain('Updated - worksheet.txt');
 
     const deleted = await request(app)
       .delete(`/api/cohorts/sessions/${sessionId}/attachments/${attachment.id}`)
@@ -460,6 +505,21 @@ describe('Cohorts and attendance API', () => {
     expect(listed.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: attachment.id }),
     ]));
+  });
+
+  it('rejects spreadsheet session attachments', async () => {
+    const response = await request(app)
+      .post(`/api/cohorts/sessions/${sessionId}/attachments`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .field('title', 'Spreadsheet')
+      .field('youthIds', '[]')
+      .attach('file', Buffer.from('spreadsheet'), {
+        filename: 'attendance.xlsx',
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Unsupported attachment file type');
   });
 
   it('returns linked session notes with context on a youth profile', async () => {
@@ -578,9 +638,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         programId: openProgramId,
-        name: `Open Drop In ${Date.now()}`,
-        startsOn: addDays(today, -7),
-        endsOn: addDays(today, 60),
+        cycleId: mainCycleId,
       });
     expect(cohort.status).toBe(201);
     expect(cohort.body.rosterMode).toBe('open');
@@ -870,14 +928,17 @@ describe('Cohorts and attendance API', () => {
   });
 
   it('edits and deletes sessions and cohorts that have no attendance', async () => {
+    const [disposableCycle] = await sql<{ id: string }[]>`
+      INSERT INTO program_cycles (name, starts_on, ends_on)
+      VALUES (${`Disposable ${Date.now()}`}, ${today}, ${addDays(today, 12)})
+      RETURNING id
+    `;
     const cohort = await request(app)
       .post('/api/cohorts')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         programId,
-        name: `Disposable ${Date.now()}`,
-        startsOn: today,
-        endsOn: addDays(today, 10),
+        cycleId: disposableCycle.id,
       });
     const disposableCohortId = cohort.body.id;
     await request(app)
@@ -895,6 +956,18 @@ describe('Cohorts and attendance API', () => {
         endTime: '19:00',
       });
     const disposableSessionId = generated.body.sessions[0].id;
+
+    const [incompatibleCycle] = await sql<{ id: string }[]>`
+      INSERT INTO program_cycles (name, starts_on, ends_on)
+      VALUES (${`Incompatible ${Date.now()}`}, ${addDays(today, 5)}, ${addDays(today, 10)})
+      RETURNING id
+    `;
+    const incompatibleUpdate = await request(app)
+      .put(`/api/cohorts/${disposableCohortId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ cycleId: incompatibleCycle.id });
+    expect(incompatibleUpdate.status).toBe(409);
+    await sql`DELETE FROM program_cycles WHERE id = ${incompatibleCycle.id}`;
 
     const updatedSession = await request(app)
       .put(`/api/cohorts/sessions/${disposableSessionId}`)
@@ -916,7 +989,7 @@ describe('Cohorts and attendance API', () => {
     expect((await request(app)
       .put(`/api/cohorts/${disposableCohortId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: 'Disposable Updated', startsOn: today, endsOn: addDays(today, 12) })).status)
+      .send({ cycleId: disposableCycle.id })).status)
       .toBe(200);
 
     expect((await request(app)
@@ -924,6 +997,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
     expect((await sql`SELECT id FROM cohort_enrollments WHERE cohort_id = ${disposableCohortId}`))
       .toHaveLength(0);
+    await sql`DELETE FROM program_cycles WHERE id = ${disposableCycle.id}`;
   });
 
   it('returns a conflict when deleting a session or cohort with attendance', async () => {
@@ -954,7 +1028,7 @@ describe('Cohorts and attendance API', () => {
   });
 
   it('returns a program-scoped youth report with attendance timelines and note-category counts', async () => {
-    await sql`UPDATE program_cohorts SET starts_on = ${addDays(today, -2)} WHERE id = ${cohortId}`;
+    await sql`UPDATE program_cycles SET starts_on = ${addDays(today, -2)} WHERE id = ${mainCycleId}`;
     await sql`
       UPDATE cohort_sessions
       SET starts_at = ${addDays(today, -1) + 'T17:00:00.000Z'},
@@ -1010,6 +1084,18 @@ describe('Cohorts and attendance API', () => {
     ]));
     expect(response.body.youth.find((person: { id: string }) => person.id === youthId).timeline).toHaveLength(1);
 
+    const pdfResponse = await request(app)
+      .get(`/api/cohorts/${cohortId}/reports/youth.pdf`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .buffer(true);
+    expect(pdfResponse.status).toBe(200);
+    expect(pdfResponse.headers['content-type']).toMatch(/^application\/pdf/);
+    expect(pdfResponse.headers['cache-control']).toBe('private, no-store');
+    expect(pdfResponse.headers['content-disposition']).toContain('inline; filename=');
+    expect(pdfResponse.headers['content-disposition']).toContain("filename*=UTF-8''");
+    expect(Buffer.isBuffer(pdfResponse.body)).toBe(true);
+    expect(pdfResponse.body.subarray(0, 4).toString()).toBe('%PDF');
+
     await sql`UPDATE cohort_sessions SET cancelled_at = NOW() WHERE id = ${sessionId}`;
     const cancelledSessionReport = await request(app)
       .get(`/api/cohorts/${cohortId}/reports/youth`)
@@ -1025,6 +1111,10 @@ describe('Cohorts and attendance API', () => {
       .get(`/api/cohorts/${unassignedCohortId}/reports/youth`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(denied.status).toBe(403);
+    const deniedPdf = await request(app)
+      .get(`/api/cohorts/${unassignedCohortId}/reports/youth.pdf`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(deniedPdf.status).toBe(403);
   });
 
   it('withdraws a youth without deleting their attendance history', async () => {

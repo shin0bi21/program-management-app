@@ -5,7 +5,6 @@ import Users from './Users';
 const mockUseAuth = vi.fn();
 const mockUseAccounts = vi.fn();
 
-vi.mock('../../../common/components/Header/Header', () => ({ default: () => <div>Header</div> }));
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./hooks/useAccounts', () => ({ useAccounts: (filters: unknown) => mockUseAccounts(filters) }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({

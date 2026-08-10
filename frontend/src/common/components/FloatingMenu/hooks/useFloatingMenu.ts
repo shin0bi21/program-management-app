@@ -6,6 +6,7 @@ import {
   type PlacementOptions,
 } from '../utils/floatingPosition';
 import { getMenuItems } from '../utils/floatingMenuUtils';
+import useViewportDismissal from './useViewportDismissal';
 
 export interface UseFloatingMenuOptions extends PlacementOptions {
   /**
@@ -49,6 +50,7 @@ export function useFloatingMenu(
   const close = useCallback(() => {
     setPosition(null);
   }, []);
+  useViewportDismissal(isOpen, close);
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
@@ -62,42 +64,19 @@ export function useFloatingMenu(
     else open();
   }, [close, open]);
 
-  // Dismiss: pointerdown outside, scroll, resize
-  useEffect(() => {
-    if (!isOpen) return;
+  const reposition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return;
 
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (menuRef.current?.contains(target)) return;
-      close();
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('scroll', close, { capture: true, passive: true });
-    window.addEventListener('resize', close, { passive: true });
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('scroll', close, { capture: true });
-      window.removeEventListener('resize', close);
-    };
-  }, [isOpen, close, triggerRef]);
-
-  // Initial placement uses estimates because the portalled menu does not exist
-  // until after open. Recalculate before paint with its rendered dimensions so
-  // flipped menus sit fully above/right/left of their trigger without overlap.
-  useLayoutEffect(() => {
-    if (!isOpen || !triggerRef.current || !menuRef.current) return;
-
-    const menuRect = menuRef.current.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
     const measuredOptions = {
       ...optionsRef.current,
       widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
       heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
     };
     const measuredPosition = calculateFloatingPosition(
-      triggerRef.current,
+      trigger,
       placementRef.current,
       measuredOptions,
     );
@@ -107,16 +86,52 @@ export function useFloatingMenu(
       && current.left === measuredPosition.left
       ? current
       : measuredPosition);
-  });
+  }, [triggerRef]);
+
+  // Dismiss pointer interactions outside. Viewport dismissal is shared by floating UI consumers.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('.floating-menu-panel')) return;
+      close();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [isOpen, close, triggerRef]);
+
+  // Measure once before paint, then respond only when the trigger or portalled
+  // menu changes size instead of measuring after every render.
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined;
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return undefined;
+
+    reposition();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+
+    const observer = new ResizeObserver(reposition);
+    observer.observe(trigger);
+    observer.observe(menu);
+    return () => observer.disconnect();
+  }, [isOpen, reposition, triggerRef]);
 
   // Focus management: first item on open; return focus to trigger on close
   useLayoutEffect(() => {
     if (!isOpen) return;
 
+    const trigger = triggerRef.current;
     getMenuItems(menuRef.current)[0]?.focus();
 
     return () => {
-      const trigger = triggerRef.current;
       if (!trigger) return;
       const { returnFocusSelector } = optionsRef.current;
       const returnTarget = returnFocusSelector

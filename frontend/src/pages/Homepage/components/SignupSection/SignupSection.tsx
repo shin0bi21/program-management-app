@@ -2,7 +2,7 @@ import { Controller } from 'react-hook-form'
 import Button from '../../../../common/components/Button/Button'
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect'
 import FormField from '../../../../common/components/FormField/FormField'
-import OutreachFormFields from '../../../../common/components/OutreachForm/OutreachFormFields'
+import OutreachFormFields from '../../../../common/features/outreach/components/OutreachForm/OutreachFormFields'
 import { useSignupSection } from './useSignupSection'
 
 const submitterOptions = [

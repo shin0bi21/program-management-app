@@ -41,6 +41,8 @@ const cohort = {
   rosterMode: 'enrolled' as const,
   minAge: 12,
   maxAge: 15,
+  cycleId: 'cycle-summer-2026',
+  cycleName: 'Summer 2026',
   name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',

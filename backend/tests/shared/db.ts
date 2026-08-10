@@ -24,6 +24,11 @@ export interface SeedOverrides {
   role?: 'admin' | 'staff' | 'youth';
 }
 
+export interface SeededCohort {
+  cohortId: string;
+  cycleId: string;
+}
+
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 const DEFAULTS = {
@@ -78,6 +83,35 @@ export async function deleteTestUser(userId: string): Promise<void> {
   await sql`DELETE FROM system_revoked_tokens WHERE user_id = ${userId}`;
   await sql`DELETE FROM user_credentials WHERE user_id = ${userId}`;
   await sql`DELETE FROM users WHERE id = ${userId}`;
+}
+
+export async function seedTestCohort(input: {
+  programId: string;
+  name?: string;
+  startsOn?: string;
+  endsOn?: string;
+}): Promise<SeededCohort> {
+  const name = input.name ?? `Test Cycle ${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const [cycle] = await sql<{ id: string }[]>`
+    INSERT INTO program_cycles (name, starts_on, ends_on)
+    VALUES (
+      ${name},
+      ${input.startsOn ?? '2026-01-01'},
+      ${input.endsOn ?? '2026-12-31'}
+    )
+    RETURNING id
+  `;
+  const [cohort] = await sql<{ id: string }[]>`
+    INSERT INTO program_cohorts (program_id, cycle_id)
+    VALUES (${input.programId}, ${cycle.id})
+    RETURNING id
+  `;
+  return { cohortId: cohort.id, cycleId: cycle.id };
+}
+
+export async function deleteTestCohort(cohortId: string, cycleId: string): Promise<void> {
+  await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
+  await sql`DELETE FROM program_cycles WHERE id = ${cycleId}`;
 }
 
 export { sql };

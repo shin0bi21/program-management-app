@@ -1,0 +1,100 @@
+%% Full-stack HTTP lifecycle: browser client → Express → PostgreSQL → client
+flowchart TD
+  %% =================================================================
+  %% CLIENT — apiClient pipeline
+  %% =================================================================
+  subgraph CLIENT["Client — endpoint adapters + root http"]
+    A([UI action / data hook]) --> B{"Endpoint type"}
+
+    B -->|"auth: false"| C["auth/auth.api.ts"]
+    B -->|"auth: true (default)"| F["page/feature API module"]
+    C --> CLIENT_FN["apiClient.method(path, body, opts)"]
+    F --> CLIENT_FN
+
+    CLIENT_FN --> G{"auth: true?"}
+    G -->|No| FETCH
+    G -->|Yes| H["getValidToken()"]
+
+    H --> J{"Token in storage?"}
+    J -->|No| K["throw AuthError"]
+    J -->|Yes| L{"Expired?"}
+
+    L -->|Yes| RELOGIN
+    L -->|No| T{"Near expiry +\nrefresh cooldown ok?"}
+    T -->|Yes| U["refreshToken()\nPOST /auth/refresh\n(httpOnly cookie)"]
+    T -->|No| TOK["Return current token"]
+    U --> W{"Refresh ok?"}
+    W -->|Yes| TOK
+    W -->|No| LOGOUT["clearAuthData()\n→ /login"]
+
+    TOK --> FETCH["rawFetch(url, init, 15s timeout)"]
+
+    FETCH --> NE{"fetch outcome"}
+    NE -->|"TypeError"| AF["throw NetworkError"]
+    NE -->|"AbortController timeout"| AG["throw RequestTimeoutError"]
+    NE -->|"Caller signal aborted"| AH["rethrow AbortError"]
+    NE -->|"HTTP response"| AK[/"Response object"/]
+
+    AK --> AM{"auth: true\n+ status 401?"}
+    AM -->|Yes| RELOGIN["reAuthCoordinator.requestReAuth()\n→ ReAuthProvider + ReLoginModal\n→ user re-auths"]
+    RELOGIN --> FETCH
+    AM -->|No| AU{"response.ok?"}
+
+    AU -->|"2xx"| AV[/"typed data T"/]
+    AU -->|"4xx / 5xx"| AX["throw ApiError\n(status, message, details, requestId)"]
+
+    AV --> BB([Update state /\nnavigate /\nrender data])
+    AF --> ERR
+    AG --> ERR
+    AH --> ERR
+    K --> ERR
+    AX --> ERR
+    ERR["catch block →\ngetErrorMessage(err, fallback)"] --> BA([Render error in UI])
+  end
+
+  %% =================================================================
+  %% SERVER — Express pipeline
+  %% =================================================================
+  FETCH ===>|"HTTPS\nAuthorization: Bearer ..."| SRV_IN
+
+  subgraph SERVER["Server — backend/src"]
+    SRV_IN[/"Request arrives\n(nginx → Express)"/]
+    SRV_IN --> SRV_GLOBAL["Global middleware\nrequestId · helmet · cors\nexpress.json · cookieParser"]
+    SRV_GLOBAL --> SRV_ROUTE{"Route?"}
+
+    SRV_ROUTE -->|"/health"| SRV_OK
+    SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter →\nasyncHandler(handler)"]
+    SRV_AUTH_ROUTE --> SRV_HANDLER
+    SRV_ROUTE -->|"/api/public/*"| SRV_PUBLIC_ROUTE["rate limiter → validation when needed →\nasyncHandler(handler)"]
+    SRV_PUBLIC_ROUTE --> SRV_HANDLER
+    SRV_ROUTE -->|"/api/* (protected)"| SRV_AUTHTOK
+
+    SRV_AUTHTOK["authenticateToken\nverify JWT → req.user"]
+    SRV_AUTHTOK -->|"invalid / missing"| SRV_ERR_HANDLER
+    SRV_AUTHTOK -->|"valid"| SRV_PERM["requirePermission(permission)"]
+    SRV_PERM -->|"missing"| SRV_ERR_HANDLER
+    SRV_PERM -->|"ok"| SRV_RATE["rateLimiter"]
+    SRV_RATE -->|"exceeded"| SRV_ERR_HANDLER
+    SRV_RATE -->|"ok"| SRV_VALIDATE["validateRequest(zodSchema)"]
+    SRV_VALIDATE -->|"invalid body"| SRV_ERR_HANDLER
+    SRV_VALIDATE -->|"valid"| SRV_HANDLER["asyncHandler(controller)"]
+
+    SRV_HANDLER --> SRV_SERVICE["service layer"]
+    SRV_SERVICE --> SRV_DB[("PostgreSQL\nsql`` template")]
+    SRV_DB --> SRV_SERVICE
+    SRV_SERVICE -->|"throw AppError"| SRV_ERR_HANDLER
+    SRV_SERVICE -->|"return"| SRV_OK[/"2xx response\n{ ...data }"/]
+
+    SRV_ERR_HANDLER["handleError\nsendError(res, status, msg, details?)"] --> SRV_ERR_OUT[/"4xx / 5xx response\n{ error, details?, requestId }"/]
+  end
+
+  SRV_OK ===> AK
+  SRV_ERR_OUT ===> AK
+
+  %% =================================================================
+  %% Styling
+  %% =================================================================
+  classDef client fill:#e8f0ff,stroke:#3b6ea8
+  classDef server fill:#fff4e6,stroke:#cc7a00
+  class CLIENT client
+  class SERVER server

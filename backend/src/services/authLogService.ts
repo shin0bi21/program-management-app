@@ -57,7 +57,7 @@ function hashIpSubnet(ip: string): string {
 
 // Auth events mirror the security-relevant taxonomy in the
 // OWASP Authentication Cheat Sheet — "Logging and Monitoring" section.
-// token_reuse_detected: refresh-token rotation threat (see backend/docs/auth.md §5).
+// token_reuse_detected: refresh-token rotation threat (see docs/architecture/auth.md §5).
 export type AuthEvent =
   | 'login_success'
   | 'login_failure'

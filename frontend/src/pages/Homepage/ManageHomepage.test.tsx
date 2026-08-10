@@ -34,10 +34,6 @@ vi.mock('./api/homepage.api', () => ({
   reorderHomepageImages: api.reorderHomepageImages,
 }));
 
-vi.mock('../../common/components/Header/Header', () => ({
-  default: () => <div data-testid="header" />,
-}));
-
 vi.mock('./components/SignupSection/SignupSection', () => ({
   default: () => (
     <section>

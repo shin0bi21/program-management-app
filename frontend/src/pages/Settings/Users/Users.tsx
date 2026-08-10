@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import Header from '../../../common/components/Header/Header';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
@@ -78,7 +77,7 @@ export default function Users() {
     ] }] : []),
   ], [isAdmin]);
 
-  const requestRevoke = (account: Account) => setConfirmAction({
+  const requestRevoke = useCallback((account: Account) => setConfirmAction({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
     confirmLabel: 'Revoke',
@@ -88,9 +87,9 @@ export default function Users() {
       await revokeAccountInvite(account.id);
       removeAccount(account.id);
     },
-  });
+  }), [removeAccount]);
 
-  const requestStatusToggle = (account: Account) => {
+  const requestStatusToggle = useCallback((account: Account) => {
     const activating = account.status === 'inactive';
     setConfirmAction({
       title: activating ? 'Activate Account' : 'Deactivate Account',
@@ -100,7 +99,7 @@ export default function Users() {
       successMessage: activating ? 'Account activated' : 'Account deactivated',
       onConfirm: async () => upsertAccount(await toggleAccountStatus(account.id)),
     });
-  };
+  }, [upsertAccount]);
 
   const columns = useMemo<TableColumn<Account>[]>(() => {
     const accountColumns: TableColumn<Account>[] = [
@@ -150,11 +149,10 @@ export default function Users() {
         />
       ),
     }];
-  }, [canWrite, isAdmin]);
+  }, [canWrite, isAdmin, requestRevoke, requestStatusToggle]);
 
   return (
     <>
-      <Header />
       <main className="page-container manage-accounts-page">
         <PageHeader
           title="Users"
@@ -257,7 +255,6 @@ export default function Users() {
         status={confirmModal.status}
         statusMessage={confirmModal.statusMessage}
         footer={confirmModal.footer}
-        disableClose={confirmModal.disableClose}
         successDelay={confirmModal.successDelay}
       >
         {confirmAction && <p>{confirmAction.message}</p>}

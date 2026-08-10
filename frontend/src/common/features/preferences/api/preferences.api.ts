@@ -24,6 +24,13 @@ export interface PreferenceValues {
     sorting?: { key: 'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status'; direction: 'asc' | 'desc' };
     columnWidths?: ColumnWidths<'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status'>;
   };
+  'timesheet-filters': {
+    view: 'calendar' | 'list';
+    staffIds: string[];
+    programIds: string[];
+    tasks: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    cycleId: string | null;
+  };
   'cohort-filters': {
     programId: string | null;
     status: 'active' | 'upcoming' | 'completed' | null;

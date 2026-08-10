@@ -2,7 +2,7 @@ import { Controller } from 'react-hook-form';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import OutreachFormFields from '../../../../common/components/OutreachForm/OutreachFormFields';
+import OutreachFormFields from '../../../../common/features/outreach/components/OutreachForm/OutreachFormFields';
 import ProgramSelect from '../../../../common/features/programs/components/ProgramSelect/ProgramSelect';
 import type { Lead } from '../types';
 import { useLeadModal } from './useLeadModal';

@@ -51,7 +51,6 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
       upsertProgram(program);
       onChange(program.id);
       setSubmitStatus('success');
-      window.setTimeout(close, 500);
     } catch (err) {
       setError(getErrorMessage(err, 'Unable to add program'));
       setSubmitStatus('error');
@@ -73,6 +72,7 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
       onClose={close}
       title="Add Program"
       status={submitStatus}
+      successDelay={500}
       statusMessage={submitStatus === 'submitting' ? 'Adding program...' : submitStatus === 'success' ? 'Program added!' : submitStatus === 'error' ? error : undefined}
       footer={<ModalFormFooter formId="add-program-form" submitLabel="Add Program" submitStatus={submitStatus} onClose={close} />}
     >

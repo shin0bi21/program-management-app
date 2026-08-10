@@ -16,6 +16,7 @@
     "test:cohorts": "jest --testPathPatterns=tests/cohorts",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
+    "test:timesheets": "jest --testPathPatterns=tests/timesheets",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
     "db:migrate:test": "sh -c 'set -a && . ./.env.test && set +a && npx tsx db/scripts/update_schemas.ts'",
     "test:watch": "jest --watch",
@@ -28,6 +29,7 @@
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
     "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
     "seed:programming-demo": "npx tsx db/scripts/seed-programming-demo.ts",
+    "seed:timesheet-demo": "npx tsx db/scripts/seed-timesheet-demo.ts",
     "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -44,6 +46,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "nodemailer": "^7.0.12",
+    "pdfkit": "^0.19.1",
     "postgres": "^3.4.8",
     "sharp": "^0.35.3",
     "zod": "^4.3.6"
@@ -57,6 +60,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.5",
+    "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.15.6",
     "@types/supertest": "^6.0.3",
     "googleapis": "^172.0.0",

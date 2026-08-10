@@ -8,4 +8,4 @@ Each feature owns its relevant API adapters, hooks, components, types, and tests
 
 Promote code here because ownership became cross-page, not merely to shorten a page file. Prefer the narrowest domain folder that accurately owns the behavior.
 
-See [`../../../STRUCTURE.md`](../../../STRUCTURE.md) for the complete frontend ownership rules.
+See [`../../../../docs/architecture/frontend.md`](../../../../docs/architecture/frontend.md) for the complete frontend ownership rules.

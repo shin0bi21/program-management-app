@@ -14,7 +14,9 @@ bash scripts/tests/frontend/run-homepage-tests.sh
 bash scripts/tests/frontend/run-outreach-tests.sh
 bash scripts/tests/frontend/run-programming-tests.sh
 bash scripts/tests/frontend/run-settings-tests.sh
+bash scripts/tests/frontend/run-staff-tests.sh
 bash scripts/tests/frontend/run-youth-tests.sh
+bash scripts/tests/frontend/run-browser-tests.sh
 
 echo ""
 echo "=========================================="

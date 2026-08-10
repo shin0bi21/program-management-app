@@ -123,8 +123,6 @@ export default function Youth() {
     },
   ], [programs]);
 
-  const handleEditProfile = (profile: YouthProfile) => setModalTarget(profile);
-
   const handleSaveYouth = (savedYouth: YouthProfile) => {
     setModalTarget(null);
     setContactTarget(null);
@@ -194,13 +192,13 @@ export default function Youth() {
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
           items={[
-            { id: 'edit', label: 'Edit Profile', onClick: () => handleEditProfile(profile) },
+            { id: 'edit', label: 'Edit Profile', onClick: () => setModalTarget(profile) },
             { id: 'add-note', label: 'Add Note', onClick: () => { selectProfile(profile); setProfileNoteTarget('new'); } },
           ]}
         />
       ) : null,
     },
-  ], [canWrite]);
+  ], [canWrite, selectProfile]);
 
   return (
     <>
@@ -328,7 +326,6 @@ export default function Youth() {
         title={confirmingProfileNoteDelete ? 'Delete Profile Note' : selectedProfileNote?.title || 'Profile Note'}
         status={profileNoteDeleteError ? 'error' : deletingProfileNote ? 'submitting' : 'idle'}
         statusMessage={profileNoteDeleteError || (deletingProfileNote ? 'Deleting profile note...' : undefined)}
-        disableClose={deletingProfileNote}
         footer={selectedProfileNote && canWrite ? confirmingProfileNoteDelete ? <>
           <Button variant="secondary" disabled={deletingProfileNote} onClick={() => { setConfirmingProfileNoteDelete(false); setProfileNoteDeleteError(''); }}>Cancel</Button>
           <Button variant="danger" onClick={async () => {

@@ -1,7 +1,7 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import { api } from '../../../http/config';
-import type { PublicOutreachFormValues } from '../../../common/components/OutreachForm/outreachFormSchema';
+import type { PublicOutreachFormValues } from '../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
 
 export type ExpressionOfInterestPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
 

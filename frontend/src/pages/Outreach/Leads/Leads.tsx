@@ -171,7 +171,6 @@ export default function Leads() {
       status={confirmModal.status}
       statusMessage={confirmModal.statusMessage}
       footer={confirmModal.footer}
-      disableClose={confirmModal.disableClose}
       successDelay={confirmModal.successDelay}
     >
       {confirmAction && <p>{confirmAction.message}</p>}
