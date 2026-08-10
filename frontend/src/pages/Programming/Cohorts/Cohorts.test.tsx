@@ -50,7 +50,7 @@ vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
-vi.mock('./components/YouthReportModal/YouthReportModal', () => ({
+vi.mock('../../../common/features/programming/components/YouthReportModal/YouthReportModal', () => ({
   default: ({ cohort }: { cohort: { name: string } | null }) => cohort
     ? <div role="dialog" aria-label={`${cohort.name} Youth Report`} />
     : null,

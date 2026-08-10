@@ -33,6 +33,10 @@ function ensureSpace(doc: PDFKit.PDFDocument, height: number) {
   doc.y = margin;
 }
 
+function resetTextFlow(doc: PDFKit.PDFDocument) {
+  doc.x = margin;
+}
+
 function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   const columns = [...youth.attendanceBreakdown.bySessionType, youth.attendanceBreakdown.total];
   const gap = 6;
@@ -57,12 +61,15 @@ function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     doc.moveTo(left, top + 84).lineTo(left + width, top + 84).strokeColor(border).stroke();
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#1f2937').text(attendanceRate(column), left + 3, top + 90, { width: width - 6, align: 'center' });
   });
+  resetTextFlow(doc);
   doc.y = top + height + 14;
 }
 
 function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   if (!youth.timeline.length) {
-    doc.font('Helvetica').fontSize(8).fillColor(muted).text("No sessions in this youth's enrollment period.");
+    resetTextFlow(doc);
+    doc.font('Helvetica').fontSize(8).fillColor(muted)
+      .text("No sessions in this youth's enrollment period.", margin, doc.y, { width: contentWidth });
     return;
   }
 
@@ -102,12 +109,15 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth) {
       doc.font('Helvetica').fontSize(5.5).fillColor(muted).text(label, x - 18, chartBottom + 5, { width: 36, align: 'center' });
     }
   });
+  resetTextFlow(doc);
   doc.y = chartBottom + 25;
 }
 
 function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   if (!youth.notes.length) {
-    doc.font('Helvetica').fontSize(8).fillColor(muted).text('No notes for this youth.');
+    resetTextFlow(doc);
+    doc.font('Helvetica').fontSize(8).fillColor(muted)
+      .text('No notes for this youth.', margin, doc.y, { width: contentWidth });
     return;
   }
   youth.notes.forEach(note => {
@@ -130,15 +140,22 @@ function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
 }
 
 function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
-  doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937').text(`${youth.firstName} ${youth.lastName}`);
-  doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown');
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937')
+    .text(`${youth.firstName} ${youth.lastName}`, margin, doc.y, { width: contentWidth });
+  resetTextFlow(doc);
+  doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
   drawBreakdown(doc, youth);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text('Attendance Timeline');
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
+    .text('Attendance Timeline', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.4);
   drawTimeline(doc, youth);
   ensureSpace(doc, 45);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text('Session Notes');
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
+    .text('Session Notes', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
   drawNotes(doc, youth);
 }
@@ -156,8 +173,8 @@ function safeFilename(value: string) {
     .trim() || 'Youth Report';
 }
 
-export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload) {
-  const report = await getCohortYouthReport(cohortId, actor);
+export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
+  const report = await getCohortYouthReport(cohortId, actor, youthId);
   const title = `${report.cohort.programName} - ${report.cohort.name} Youth Report`;
   const doc = new PDFDocument({ size: 'LETTER', margin, autoFirstPage: true, info: { Title: title } });
   const chunks: Buffer[] = [];

@@ -66,6 +66,11 @@ export const deleteCohortSchema = z.object({
   params: z.object({ cohortId: z.string().uuid() }),
 });
 
+export const cohortYouthReportSchema = z.object({
+  params: z.object({ cohortId: z.string().uuid() }),
+  query: z.object({ youthId: z.string().uuid('Invalid youth ID').optional() }),
+});
+
 export const enrollYouthSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({

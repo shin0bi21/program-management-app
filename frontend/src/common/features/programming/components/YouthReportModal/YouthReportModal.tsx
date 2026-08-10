@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Button from '../../../../../common/components/Button/Button';
-import LoadingSpinner from '../../../../../common/components/LoadingSpinner/LoadingSpinner';
-import Modal from '../../../../../common/components/Modal/Modal';
-import { getCohortYouthReportPdf } from '../../../../../common/features/programming/api/programming.api';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import Button from '../../../../components/Button/Button';
+import LoadingSpinner from '../../../../components/LoadingSpinner/LoadingSpinner';
+import Modal from '../../../../components/Modal/Modal';
+import { getCohortYouthReportPdf } from '../../api/programming.api';
 import './YouthReportModal.css';
 
+interface ReportCohort {
+  id: string;
+  name: string;
+  programName: string;
+}
+
 interface YouthReportModalProps {
-  cohort: ProgramCohort;
+  cohort: ReportCohort;
+  youthId?: string;
   onClose: () => void;
 }
 
-export default function YouthReportModal({ cohort, onClose }: YouthReportModalProps) {
+export default function YouthReportModal({ cohort, youthId, onClose }: YouthReportModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const reportPdf = useQuery({
-    queryKey: ['cohorts', cohort.id, 'reports', 'youth', 'pdf'],
-    queryFn: ({ signal }) => getCohortYouthReportPdf(cohort.id, { signal }),
+    queryKey: ['cohorts', cohort.id, 'reports', 'youth', 'pdf', youthId ?? 'all'],
+    queryFn: ({ signal }) => getCohortYouthReportPdf(cohort.id, { youthId }, { signal }),
     refetchOnMount: 'always',
   });
 

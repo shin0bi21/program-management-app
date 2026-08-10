@@ -50,7 +50,7 @@ function buildAttendanceBreakdown(sessionTypes: SessionTypeRow[], records: Timel
   };
 }
 
-export async function getCohortYouthReport(cohortId: string, actor: AccessTokenPayload) {
+export async function getCohortYouthReport(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
   await assertCohortAccess(actor, cohortId);
   const cohorts = await sql<{ id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' }[]>`
     SELECT cohort.id, cycle.name, program.name AS program_name, program.roster_mode
@@ -78,6 +78,7 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
       INNER JOIN cohort_sessions session ON session.id = attendance.session_id
       WHERE session.cohort_id = ${cohortId}
     )
+      AND (${youthId ?? null}::uuid IS NULL OR person.id = ${youthId ?? null})
     ORDER BY person.first_name, person.last_name
   `;
 
@@ -97,6 +98,7 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
     ) roster ON TRUE
     LEFT JOIN attendance_records attendance ON attendance.session_id = session.id AND attendance.youth_id = roster.youth_id
     WHERE session.cohort_id = ${cohortId}
+      AND (${youthId ?? null}::uuid IS NULL OR roster.youth_id = ${youthId ?? null})
       AND session.cancelled_at IS NULL
       AND session.ends_at <= NOW()
       AND (program.roster_mode = 'enrolled' OR attendance.id IS NOT NULL)
@@ -110,6 +112,7 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
     INNER JOIN session_notes note ON note.id = link.note_id
     INNER JOIN cohort_sessions session ON session.id = note.session_id
     WHERE session.cohort_id = ${cohortId}
+      AND (${youthId ?? null}::uuid IS NULL OR link.youth_id = ${youthId ?? null})
       AND session.cancelled_at IS NULL
       AND session.ends_at <= NOW()
     ORDER BY session.starts_at, note.created_at
