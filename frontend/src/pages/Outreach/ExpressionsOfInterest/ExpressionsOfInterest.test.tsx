@@ -82,6 +82,29 @@ describe('ExpressionsOfInterest', () => {
     expect(screen.getByRole('table', { name: 'Expressions of interest' })).toBeInTheDocument();
   });
 
+  it('reconciles an already-converted submission and shows the conflict as an error', async () => {
+    const baseSubmission = {
+      id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
+      school: 'Test School', submittedByRole: 'parent', contactPhoneNumber: '416-555-0100',
+      contactRelationship: 'parent', discoverySource: 'online', notes: 'Follow up next week',
+      createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
+      suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
+    } as const;
+    getExpressions
+      .mockResolvedValueOnce([{ ...baseSubmission, status: 'reviewed' }])
+      .mockResolvedValueOnce([{ ...baseSubmission, status: 'converted' }]);
+    convertExpression.mockRejectedValueOnce(new Error('This expression of interest has already been converted'));
+    renderPage();
+    await screen.findByText('Avery Interest');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Interest' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Convert to Lead' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('already been converted');
+    expect(await screen.findByText('Converted')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Avery Interest' })).not.toBeInTheDocument();
+  });
+
   it('requests expressions filtered by inferred program', async () => {
     renderPage();
     await screen.findByText('Avery Interest');

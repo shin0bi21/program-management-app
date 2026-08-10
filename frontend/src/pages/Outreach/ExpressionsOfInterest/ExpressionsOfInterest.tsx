@@ -44,7 +44,7 @@ export default function ExpressionsOfInterest() {
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
+  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch } = useExpressionsOfInterest(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
@@ -98,6 +98,7 @@ export default function ExpressionsOfInterest() {
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
+      await refetch();
       setConvertingId(null);
     }
   };
@@ -187,7 +188,7 @@ export default function ExpressionsOfInterest() {
       />
       <div className="outreach-tab-content data-detail-page-content">
         {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
-        {actionError && <p className="page-error">{actionError}</p>}
+        {actionError && <p className="form-error" role="alert">{actionError}</p>}
 
         <TableDetailLayout
           ariaLabel="Expressions of interest"
