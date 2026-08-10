@@ -63,6 +63,8 @@ export interface ResourceCalendarProps<TResource, TItemData> {
   getResourceId: (resource: TResource) => string;
   getItemId: (item: TItemData) => string;
   renderResource: (context: RenderResourceContext<TResource>) => ReactNode;
+  selectedResourceId?: string | null;
+  onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
   buildOverflowItem?: (
     context: BuildItemContext<TResource, TItemData>,
