@@ -6,10 +6,12 @@ cd "$PROJECT_ROOT" || exit 1
 
 warnings=0
 
+# Format check results and track warnings for the final exit status.
 pass() { printf 'PASS  %s\n' "$1"; }
 warn() { printf 'WARN  %s\n' "$1"; warnings=$((warnings + 1)); }
 skip() { printf 'SKIP  %s\n' "$1"; }
 
+# Inspect Compose state and compare service start times with local files.
 service_running() {
   docker compose ps --services --status running 2>/dev/null | grep -qx "$1"
 }
@@ -43,6 +45,7 @@ started_epoch() {
 echo "Development environment doctor (read-only)"
 echo ""
 
+# Verify the local Docker tooling before inspecting the stack.
 if ! command -v docker >/dev/null 2>&1; then
   warn "Docker CLI is not installed."
   exit 1
@@ -61,6 +64,7 @@ pass "Docker daemon is reachable."
 
 echo ""
 echo "Containers"
+# Report the expected development services and their current state.
 docker compose ps
 for service in frontend backend db; do
   if service_running "$service"; then
@@ -72,6 +76,7 @@ done
 
 echo ""
 echo "Connectivity"
+# Check database readiness and the backend health endpoint.
 if service_running db && docker compose exec -T db pg_isready >/dev/null 2>&1; then
   pass "Development database accepts connections."
 elif service_running db; then
@@ -93,6 +98,7 @@ fi
 
 echo ""
 echo "Migrations and dependencies"
+# Validate schema state and installed packages inside running containers.
 if service_running backend; then
   migration_output="$(docker compose exec -T backend npm run db:status 2>&1)"
   migration_summary="$(printf '%s\n' "$migration_output" | sed -n 's/^Summary: /Summary: /p' | tail -n 1)"
@@ -125,6 +131,7 @@ fi
 
 echo ""
 echo "Possible stale services"
+# Flag services started before files that require a restart or rebuild.
 if service_running backend; then
   backend_started="$(started_epoch backend || printf '0')"
   backend_newest="$({ find backend/src backend/db -type f -print0; find backend -maxdepth 1 \( -name 'package*.json' -o -name 'tsconfig*.json' \) -print0; find . -maxdepth 1 -name '.env' -print0; } | newest_mtime)"
@@ -150,6 +157,7 @@ else
 fi
 
 echo ""
+# Return a nonzero status when any check needs attention.
 if [ "$warnings" -eq 0 ]; then
   echo "Doctor found no problems."
   exit 0

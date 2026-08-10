@@ -95,7 +95,7 @@ Run the read-only environment doctor to combine container, health, migration,
 dependency, and likely-staleness checks into one report:
 
 ```bash
-bash scripts/dev/doctor.sh
+bash scripts/dev/check-dev-env.sh
 ```
 
 It exits nonzero when it reports warnings but never restarts containers, applies
@@ -120,7 +120,7 @@ When local database or dependency volumes are intentionally disposable, reset
 the complete development stack with:
 
 ```bash
-bash scripts/reset-app.sh
+bash scripts/dev/reset-dev-env.sh
 ```
 
 This runs `docker compose down -v`, deleting the local development database,
