@@ -7,38 +7,21 @@ import { useConfirmModal, type ConfirmAction } from '../../../../../common/compo
 import type { ProgramCohort } from '../../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../../common/types/youth';
 import { useCohortRoster } from '../../hooks/useCohortRoster';
-import './WithdrawYouthModal.css';
+import EnrollYouthModal from '../EnrollYouthModal/EnrollYouthModal';
+import './ManageRosterModal.css';
 
-interface WithdrawYouthModalProps {
+interface ManageRosterModalProps {
   cohort: ProgramCohort | null;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
 
-export default function WithdrawYouthModal({
-  cohort,
-  onClose,
-  onSuccess,
-}: WithdrawYouthModalProps) {
+export default function ManageRosterModal({ cohort, onClose, onSuccess }: ManageRosterModalProps) {
+  const [addingYouth, setAddingYouth] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const {
-    enrolledYouth,
-    search,
-    setSearch,
-    filterBySearch,
-    loading,
-    error,
-    refresh,
-  } = useCohortRoster(cohort);
-  const confirmModal = useConfirmModal({
-    action: confirmAction,
-    onClose: () => setConfirmAction(null),
-  });
-
-  const visibleYouth = useMemo(
-    () => filterBySearch(enrolledYouth),
-    [enrolledYouth, filterBySearch],
-  );
+  const { enrolledYouth, search, setSearch, filterBySearch, loading, error, refresh } = useCohortRoster(cohort);
+  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+  const visibleYouth = useMemo(() => filterBySearch(enrolledYouth), [enrolledYouth, filterBySearch]);
 
   const requestWithdrawal = (profile: YouthProfile) => {
     if (!cohort) return;
@@ -59,10 +42,15 @@ export default function WithdrawYouthModal({
   return (
     <>
       <Modal
-        isOpen={cohort !== null}
+        isOpen={cohort !== null && !addingYouth}
         onClose={onClose}
-        title={cohort ? `${cohort.programName} - ${cohort.name} Withdrawal` : ''}
-        footer={<Button variant="secondary" onClick={onClose}>Close</Button>}
+        title={cohort ? `${cohort.programName} - ${cohort.name} Roster` : ''}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={onClose}>Close</Button>
+            <Button onClick={() => setAddingYouth(true)}>Add youth</Button>
+          </>
+        )}
       >
         {error && <p className="form-error">{error}</p>}
         <SearchInput
@@ -71,32 +59,29 @@ export default function WithdrawYouthModal({
           onChange={event => setSearch(event.target.value)}
           placeholder="Search by name or school"
         />
-        <div className="withdraw-youth-list" aria-label="Youth available for withdrawal">
+        <div className="manage-roster-list" aria-label="Current cohort roster">
           {loading ? (
             <p className="page-empty">Loading youth…</p>
           ) : visibleYouth.length ? visibleYouth.map(profile => (
-            <div key={profile.id} className="withdraw-youth-list__item">
+            <div key={profile.id} className="manage-roster-list__item">
               <span>
                 <strong>{profile.firstName} {profile.lastName}</strong>
                 {profile.schoolName && <small>{profile.schoolName}</small>}
               </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => requestWithdrawal(profile)}
-              >
-                Withdraw
-              </Button>
+              <Button size="sm" variant="ghost" onClick={() => requestWithdrawal(profile)}>Withdraw</Button>
             </div>
           )) : (
-            <p className="page-empty">
-              {enrolledYouth.length
-                ? 'No enrolled youth match your search.'
-                : 'No youth are currently enrolled.'}
-            </p>
+            <p className="page-empty">{enrolledYouth.length ? 'No enrolled youth match your search.' : 'No youth are currently enrolled.'}</p>
           )}
         </div>
       </Modal>
+
+      <EnrollYouthModal
+        cohort={addingYouth ? cohort : null}
+        onClose={() => setAddingYouth(false)}
+        onSuccess={async () => { await refresh(); await onSuccess(); }}
+      />
+
       <Modal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}

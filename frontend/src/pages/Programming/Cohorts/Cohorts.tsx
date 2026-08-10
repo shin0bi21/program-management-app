@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
@@ -25,17 +24,17 @@ import GenerateSessionsModal from '../common/components/GenerateSessionsModal/Ge
 import { getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaults';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
-import EnrollYouthModal from './components/EnrollYouthModal/EnrollYouthModal';
+import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
 import AddProgramModal from './components/ProgramModal/AddProgramModal';
-import WithdrawYouthModal from './components/WithdrawYouthModal/WithdrawYouthModal';
+import YouthReportModal from './components/YouthReportModal/YouthReportModal';
 import './Cohorts.css';
 import useCohortTable from './hooks/useCohortTable';
 
 export default function Cohorts() {
-  const navigate = useNavigate();
   const { permissions, role } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
+  const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
   const { programs, upsertProgram, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const [selectedProgramId, setSelectedProgramId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -53,8 +52,8 @@ export default function Cohorts() {
   const refreshCohorts = cohortTable.refetch;
   const [programModalOpen, setProgramModalOpen] = useState(false);
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
-  const [enrollTarget, setEnrollTarget] = useState<ProgramCohort | null>(null);
-  const [withdrawTarget, setWithdrawTarget] = useState<ProgramCohort | null>(null);
+  const [rosterTarget, setRosterTarget] = useState<ProgramCohort | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
   const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -141,6 +140,9 @@ export default function Cohorts() {
                 <ActionsMenu
                   ariaLabel={`More actions for ${cohort.name}`}
                   items={[
+                    ...(cohort.rosterMode === 'enrolled'
+                      ? [{ id: 'manage-roster', label: 'Manage Roster', onClick: () => setRosterTarget(cohort) }]
+                      : []),
                     { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
                     { id: 'edit', label: 'Edit Cohort', onClick: () => setEditCohortTarget(cohort) },
                     {
@@ -290,76 +292,24 @@ export default function Cohorts() {
               />
             }
             details={
-              <>
-                <DashboardCard
-                  title={!selectedCohort || selectedCohort.rosterMode === 'enrolled' ? 'Youth enrolled' : 'Youth attended'}
-                  emptyMessage="No cohort selected."
-                  action={
-                    !selectedCohort || selectedCohort.rosterMode === 'enrolled' ? (
-                      <div className="cohort-card-actions">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!selectedCohort}
-                          aria-label="Enroll youth"
-                          onClick={() => {
-                            if (selectedCohort) setEnrollTarget(selectedCohort);
-                          }}
-                        >
-                          Enroll
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!selectedCohort}
-                          aria-label="Withdraw youth"
-                          onClick={() => {
-                            if (selectedCohort) setWithdrawTarget(selectedCohort);
-                          }}
-                        >
-                          Withdraw
-                        </Button>
-                      </div>
-                    ) : undefined
-                  }
-                >
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.rosterMode === 'enrolled'
-                        ? selectedCohort.enrolledCount
-                        : selectedCohort.uniqueAttendeeCount}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-                <DashboardCard
-                  title="Next session"
-                  emptyMessage="No cohort selected."
-                  action={
-                    selectedCohort?.nextSessionId ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => navigate(`/programming/sessions?session=${selectedCohort.nextSessionId}`)}
-                      >
-                        Go to
-                      </Button>
-                    ) : undefined
-                  }
-                >
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.nextSessionAt ? formatShortDate(selectedCohort.nextSessionAt) : 'None'}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-                <DashboardCard title="Average attendance" emptyMessage="No cohort selected.">
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.averageAttendance === null ? '—' : `${selectedCohort.averageAttendance}%`}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-              </>
+              <DashboardCard
+                title="Youth Overview"
+                emptyMessage="No cohort selected."
+                action={selectedCohort ? <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!canViewYouthReport || selectedCohort.rosterMode === 'open'}
+                  title={selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
+                  onClick={() => setReportTarget(selectedCohort)}
+                >View Report</Button> : undefined}
+              >
+                {selectedCohort ? (
+                  <dl className="cohort-overview">
+                    <div><dt>{selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selectedCohort.rosterMode === 'enrolled' ? selectedCohort.enrolledCount : selectedCohort.uniqueAttendeeCount}</dd></div>
+                    <div><dt>Average attendance:</dt><dd>{selectedCohort.averageAttendance === null ? '—' : `${selectedCohort.averageAttendance}%`}</dd></div>
+                  </dl>
+                ) : undefined}
+              </DashboardCard>
             }
           />
 
@@ -379,12 +329,8 @@ export default function Cohorts() {
             onCreated={refreshCohorts}
           />
 
-          <EnrollYouthModal cohort={enrollTarget} onClose={() => setEnrollTarget(null)} onSuccess={refreshCohorts} />
-          <WithdrawYouthModal
-            cohort={withdrawTarget}
-            onClose={() => setWithdrawTarget(null)}
-            onSuccess={refreshCohorts}
-          />
+          <ManageRosterModal cohort={rosterTarget} onClose={() => setRosterTarget(null)} onSuccess={refreshCohorts} />
+          {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
           <EditCohortModal
             cohort={editCohortTarget}
             onClose={() => setEditCohortTarget(null)}

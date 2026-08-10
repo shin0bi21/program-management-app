@@ -43,6 +43,7 @@ import type {
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
 import { cohortQuerySchema, sessionListQuerySchema } from '../validation/cohortSchemas';
+import { getCohortYouthReport } from '../services/cohortReportService';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
@@ -63,6 +64,10 @@ export const handleUpdateCohort = async (req: Request, res: Response) => {
 export const handleDeleteCohort = async (req: Request, res: Response) => {
   await deleteCohort(req.params.cohortId, actor(req));
   res.json({ id: req.params.cohortId });
+};
+
+export const handleGetCohortYouthReport = async (req: Request, res: Response) => {
+  res.json(await getCohortYouthReport(req.params.cohortId, actor(req)));
 };
 
 export const handleEnrollYouth = async (req: Request, res: Response) => {

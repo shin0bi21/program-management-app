@@ -139,7 +139,7 @@ export default function SessionOverview({
         ) : undefined}
       </DashboardCard>
       <DashboardCard
-        title="Session notes"
+        title="Session Notes"
         emptyMessage={session ? 'No notes.' : 'No session selected.'}
         action={canWriteSessions ? (
           <Button

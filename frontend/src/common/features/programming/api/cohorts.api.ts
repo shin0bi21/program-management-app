@@ -2,6 +2,7 @@ import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type {
   CohortSortKey,
+  CohortYouthReport,
   CreateCohortInput,
   EnrollYouthInput,
   ProgramCohort,
@@ -59,4 +60,9 @@ export function enrollYouth(cohortId: string, data: EnrollYouthInput) {
 
 export function withdrawYouth(cohortId: string, youthId: string) {
   return apiClient.patch(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
+}
+
+export function getCohortYouthReport(cohortId: string, opts?: RequestOptions) {
+  const path = `/cohorts/${cohortId}/reports/youth`;
+  return opts ? apiClient.get<CohortYouthReport>(path, opts) : apiClient.get<CohortYouthReport>(path);
 }
