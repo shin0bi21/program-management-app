@@ -8,6 +8,7 @@ import type {
   CalendarPeriod,
   ResourcePeriodData,
 } from '../../../../common/components/ResourceCalendar/types';
+import { getErrorMessage } from '../../../../http/clientErrors';
 import type { TimesheetItem } from '../types';
 
 interface UseTimesheetBufferOptions {
@@ -46,8 +47,10 @@ export function useTimesheetBuffer({ initialData = {}, load, maxRetainedPeriods 
         retryRef.current = null;
         setError(null);
       })
-      .catch(() => {
-        if (operationRevisionRef.current === revision) setError('Unable to load timesheet data');
+      .catch((cause: unknown) => {
+        if (operationRevisionRef.current === revision) {
+          setError(getErrorMessage(cause, 'Unable to load timesheet data'));
+        }
       });
   }, []);
 

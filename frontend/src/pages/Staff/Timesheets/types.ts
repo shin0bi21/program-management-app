@@ -8,8 +8,8 @@ export interface TimesheetItem {
   id: string;
   programId: string | null;
   programName: string | null;
-  cohortId: string | null;
-  cohortName: string | null;
+  cycleId: string;
+  cycleName: string;
   task: TimeEntryTask;
   label: string;
   hours: number;
@@ -21,10 +21,11 @@ export interface TimeEntryProgram {
   name: string;
 }
 
-export type TimeEntryTask = 'programming' | 'planning_prep' | 'meeting' | 'administration' | 'promotion' | 'maintenance' | 'other';
+export type TimeEntryTask = 'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other';
 
 export interface TimeEntryCohort {
   id: string;
+  cycleId: string;
   name: string;
   state: 'active' | 'upcoming' | 'completed';
 }

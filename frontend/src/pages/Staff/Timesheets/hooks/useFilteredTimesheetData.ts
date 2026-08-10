@@ -11,15 +11,16 @@ export function useFilteredTimesheetData(
   data: ResourcePeriodData<TimesheetItem>,
   typeFilters: readonly string[],
   programFilters: readonly string[],
+  cycleId?: string,
 ) {
   const cacheRef = useRef<{ filterKey: string; resources: Map<string, CachedResource> }>({
     filterKey: '',
     resources: new Map(),
   });
-  const filterKey = `${typeFilters.join('\u0000')}\u0001${programFilters.join('\u0000')}`;
+  const filterKey = `${typeFilters.join('\u0000')}\u0001${programFilters.join('\u0000')}\u0001${cycleId ?? ''}`;
 
   return useMemo<ResourcePeriodData<TimesheetItem>>(() => {
-    if (!typeFilters.length && !programFilters.length) return data;
+    if (!typeFilters.length && !programFilters.length && !cycleId) return data;
     const previous = cacheRef.current.filterKey === filterKey
       ? cacheRef.current.resources
       : new Map<string, CachedResource>();
@@ -33,12 +34,13 @@ export function useFilteredTimesheetData(
       const filteredPeriods = Object.fromEntries(Object.entries(periods).map(([periodKey, items]) => [
         periodKey,
         items.filter(item => (!typeFilters.length || typeFilters.includes(item.task))
-          && (!programFilters.length || programFilters.includes(item.programId ?? 'general'))),
+          && (!programFilters.length || programFilters.includes(item.programId ?? 'general'))
+          && (!cycleId || item.cycleId === cycleId)),
       ]));
       next.set(resourceId, { source: periods, filtered: filteredPeriods });
       return [resourceId, filteredPeriods];
     }));
     cacheRef.current = { filterKey, resources: next };
     return filtered;
-  }, [data, filterKey, programFilters, typeFilters]);
+  }, [cycleId, data, filterKey, programFilters, typeFilters]);
 }

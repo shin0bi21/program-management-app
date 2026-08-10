@@ -6,6 +6,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../common/components/ResourceCalendar/periods';
 import { getErrorMessage } from '../../../../../http/clientErrors';
+import type { ProgramCycle } from '../../../../../common/types/cohort';
 import type { StaffResource, TimeEntryProgram, TimeEntryTask, TimesheetItem } from '../../types';
 import { getTimeEntryCohorts } from '../../api/timeEntries.api';
 import { TIME_ENTRY_TASK_OPTIONS } from '../../timeEntryOptions';
@@ -15,8 +16,9 @@ interface TimeEntryModalProps {
   isOpen: boolean;
   resources: readonly StaffResource[];
   programs: readonly TimeEntryProgram[];
+  cycles: readonly ProgramCycle[];
   onClose: () => void;
-  onAdd: (input: { staffId: string; programId: string | null; cohortId: string | null; task: TimeEntryTask; workDate: string; hours: number; note: string }) => Promise<void>;
+  onAdd: (input: { staffId: string; programId: string | null; cycleId: string; task: TimeEntryTask; workDate: string; hours: number; note: string }) => Promise<void>;
   initialResourceId?: string;
   initialDate?: string;
   initialItem?: TimesheetItem;
@@ -26,6 +28,7 @@ export default function TimeEntryModal({
   isOpen,
   resources,
   programs,
+  cycles: allCycles,
   onClose,
   onAdd,
   initialResourceId,
@@ -34,9 +37,9 @@ export default function TimeEntryModal({
 }: TimeEntryModalProps) {
   const [resourceId, setResourceId] = useState(resources[0]?.id ?? '');
   const [programId, setProgramId] = useState('');
-  const [cohortId, setCohortId] = useState('');
+  const [cycleId, setCycleId] = useState('');
   const [date, setDate] = useState(dayKey(new Date()));
-  const [task, setTask] = useState<TimeEntryTask>('programming');
+  const [task, setTask] = useState<TimeEntryTask>('program_delivery');
   const [hours, setHours] = useState('1');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -47,14 +50,26 @@ export default function TimeEntryModal({
     queryFn: ({ signal }) => getTimeEntryCohorts(programId, signal),
     enabled: isOpen && Boolean(programId),
   });
-  const cohorts = cohortQuery.data ?? [];
+  const programCycles = cohortQuery.data ?? [];
+  const cycles = programId
+    ? programCycles.map(cycle => ({ id: cycle.cycleId, name: cycle.name, state: cycle.state }))
+    : allCycles;
   const status = error ? 'error' : submitting ? 'submitting' : 'idle';
   const statusMessage = error
     || (submitting ? (initialItem ? 'Updating time entry...' : 'Adding time entry...') : undefined);
+  const selectProgram = (value: string) => {
+    setProgramId(value);
+    if (value) {
+      setCycleId('');
+      shouldDefaultCohortRef.current = true;
+    } else {
+      shouldDefaultCohortRef.current = false;
+    }
+  };
 
   useEffect(() => {
     if (!shouldDefaultCohortRef.current || !cohortQuery.data) return;
-    setCohortId(cohortQuery.data.find(cohort => cohort.state === 'active')?.id ?? '');
+    setCycleId(cohortQuery.data.find(cycle => cycle.state === 'active')?.cycleId ?? '');
     shouldDefaultCohortRef.current = false;
   }, [cohortQuery.data]);
 
@@ -66,21 +81,24 @@ export default function TimeEntryModal({
     setProgramId(initialItem?.programId && programs.some(program => program.id === initialItem.programId)
       ? initialItem.programId
       : '');
-    setCohortId(initialItem?.cohortId ?? '');
+    setCycleId(initialItem?.cycleId
+      ?? allCycles.find(cycle => cycle.state === 'active')?.id
+      ?? allCycles[0]?.id
+      ?? '');
     shouldDefaultCohortRef.current = false;
     setDate(initialDate ?? dayKey(new Date()));
-    setTask(initialItem?.task ?? 'programming');
+    setTask(initialItem?.task ?? 'program_delivery');
     setHours(initialItem ? String(initialItem.hours) : '1');
     setNote(initialItem?.note ?? '');
     setError('');
-  }, [initialDate, initialItem, initialResourceId, isOpen, programs, resources]);
+  }, [allCycles, initialDate, initialItem, initialResourceId, isOpen, programs, resources]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setError('');
     try {
-      await onAdd({ staffId: resourceId, programId: programId || null, cohortId: cohortId || null, task, workDate: date, hours: Number(hours), note: note.trim() });
+      await onAdd({ staffId: resourceId, programId: programId || null, cycleId, task, workDate: date, hours: Number(hours), note: note.trim() });
       setNote('');
       onClose();
     } catch (cause) {
@@ -101,7 +119,7 @@ export default function TimeEntryModal({
       footer={(
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button type="submit" form="time-entry-form" disabled={submitting || !resources.length}>
+          <Button type="submit" form="time-entry-form" disabled={submitting || !resources.length || !cycleId}>
             {initialItem ? 'Save changes' : 'Add entry'}
           </Button>
         </>
@@ -126,34 +144,29 @@ export default function TimeEntryModal({
           <FloatingSelect
             id="time-entry-program"
             value={programId}
-            options={[{ value: '', label: 'General' }, ...programs.map(program => ({ value: program.id, label: program.name }))]}
-            onChange={value => {
-              setProgramId(value);
-              setCohortId('');
-              shouldDefaultCohortRef.current = Boolean(value);
-            }}
-            placeholder="General"
+            options={programs.map(program => ({ value: program.id, label: program.name }))}
+            onChange={selectProgram}
+            placeholder="Select a program"
             ariaLabel="Program"
             disabled={submitting}
+            action={programId ? { label: 'Clear program', onSelect: () => selectProgram('') } : undefined}
           />
         </FormField>
-        {programId && <FormField
+        <FormField
           id="time-entry-cohort"
-          label="Cohort (optional)"
-          error={cohortQuery.error ? 'Unable to load cohorts' : undefined}
+          label="Cycle *"
+          error={programId && cohortQuery.error ? 'Unable to load cycles' : undefined}
         >
           <FloatingSelect
             id="time-entry-cohort"
-            value={cohortId}
-            options={cohorts.length
-              ? [{ value: '', label: 'No cohort' }, ...cohorts.map(cohort => ({ value: cohort.id, label: cohort.name }))]
-              : []}
-            onChange={setCohortId}
-            placeholder={cohortQuery.isLoading ? 'Loading cohorts…' : cohorts.length ? 'No cohort' : 'No cohorts for this program'}
-            ariaLabel="Cohort"
-            disabled={submitting || cohortQuery.isLoading || cohorts.length === 0}
+            value={cycleId}
+            options={cycles.map(cycle => ({ value: cycle.id, label: cycle.name }))}
+            onChange={setCycleId}
+            placeholder={programId && cohortQuery.isLoading ? 'Loading cycles…' : 'No cycles available'}
+            ariaLabel="Cycle"
+            disabled={submitting || (programId && cohortQuery.isLoading) || cycles.length === 0}
           />
-        </FormField>}
+        </FormField>
         <FormField id="time-entry-task" label="Task">
           <FloatingSelect
             id="time-entry-task"

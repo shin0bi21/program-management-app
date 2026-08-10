@@ -4,11 +4,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RANGE_DAYS = 366;
 
 export const timeEntryTaskSchema = z.enum([
-  'programming',
+  'program_delivery',
   'planning_prep',
   'meeting',
   'administration',
-  'promotion',
+  'outreach',
   'maintenance',
   'other',
 ]);
@@ -29,12 +29,16 @@ export const timeEntryParamsSchema = z.object({
 
 export const timeEntryQuerySchema = z.object({
   query: z.object({
-    start: dateSchema,
-    end: dateSchema,
-  }).refine(({ start, end }) => start <= end, {
+    start: dateSchema.optional(),
+    end: dateSchema.optional(),
+    cycleId: z.string().uuid('Invalid cycle ID').optional(),
+  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+    message: 'Start and end dates must be provided together',
+    path: ['end'],
+  }).refine(({ start, end }) => !start || !end || start <= end, {
     message: 'Start date must be on or before end date',
     path: ['end'],
-  }).refine(({ start, end }) => (
+  }).refine(({ start, end }) => !start || !end || (
     (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS < MAX_RANGE_DAYS
   ), {
     message: `Date range cannot exceed ${MAX_RANGE_DAYS} days`,
@@ -50,7 +54,7 @@ export const setTimeEntrySchema = z.object({
   body: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
     programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
-    cohortId: z.string().uuid('Invalid cohort ID').nullable().optional().transform(value => value ?? null),
+    cycleId: z.string().uuid('Invalid cycle ID'),
     task: timeEntryTaskSchema,
     workDate: dateSchema,
     hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),

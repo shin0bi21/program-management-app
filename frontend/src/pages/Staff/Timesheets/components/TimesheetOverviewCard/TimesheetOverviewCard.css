@@ -1,0 +1,37 @@
+.timesheet-overview-card__metric,
+.timesheet-overview-card__context {
+  display: block;
+}
+
+.timesheet-overview-card__metric {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.timesheet-overview-card__context {
+  margin-top: var(--space-1);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.timesheet-overview-card__modal-summary {
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-line-soft);
+}
+
+.timesheet-overview-card__breakdown {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+}
+
+.timesheet-overview-card__breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.timesheet-overview-card__breakdown dd {
+  margin: 0;
+  font-weight: 700;
+}

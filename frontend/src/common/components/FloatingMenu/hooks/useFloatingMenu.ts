@@ -6,6 +6,7 @@ import {
   type PlacementOptions,
 } from '../utils/floatingPosition';
 import { getMenuItems } from '../utils/floatingMenuUtils';
+import useViewportDismissal from './useViewportDismissal';
 
 export interface UseFloatingMenuOptions extends PlacementOptions {
   /**
@@ -49,6 +50,7 @@ export function useFloatingMenu(
   const close = useCallback(() => {
     setPosition(null);
   }, []);
+  useViewportDismissal(isOpen, close);
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
@@ -86,7 +88,7 @@ export function useFloatingMenu(
       : measuredPosition);
   }, [triggerRef]);
 
-  // Dismiss: pointerdown outside, scroll, resize
+  // Dismiss pointer interactions outside. Viewport dismissal is shared by floating UI consumers.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -99,13 +101,9 @@ export function useFloatingMenu(
     };
 
     document.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('scroll', close, { capture: true, passive: true });
-    window.addEventListener('resize', close, { passive: true });
 
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('scroll', close, { capture: true });
-      window.removeEventListener('resize', close);
     };
   }, [isOpen, close, triggerRef]);
 

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { sql, asTransactionSql } from '../db/client';
 import { audit } from './auditService';
-import { BadRequestError, ForbiddenError, NotFoundError } from '../errors';
+import { ForbiddenError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
 import type { SetTimeEntryInput, TimeEntryQuery } from '../validation/timeEntrySchemas';
 
@@ -10,8 +10,10 @@ interface TimeEntryRow {
   staffId: string;
   programId: string | null;
   programName: string | null;
-  cohortId: string | null;
-  cohortName: string | null;
+  cycleId: string;
+  cycleName: string;
+  cycleStartsOn: string;
+  cycleEndsOn: string;
   task: SetTimeEntryInput['task'];
   workDate: string;
   hours: string;
@@ -44,37 +46,46 @@ async function assertProgramResource(programId: string | null) {
   if (!rows.length) throw new NotFoundError('Program not found');
 }
 
-async function assertCohortProgram(cohortId: string | null, programId: string | null) {
-  if (!cohortId) return;
-  if (!programId) throw new BadRequestError('A program is required when selecting a cohort');
+async function assertCycleResource(cycleId: string, programId: string | null) {
   const rows = await sql<{ id: string }[]>`
-    SELECT id FROM program_cohorts WHERE id = ${cohortId} AND program_id = ${programId} LIMIT 1
+    SELECT cycle.id
+    FROM program_cycles cycle
+    WHERE cycle.id = ${cycleId}
+      AND ${programId ? sql`EXISTS (
+        SELECT 1 FROM program_cohorts cohort
+        WHERE cohort.program_id = ${programId} AND cohort.cycle_id = cycle.id
+      )` : sql`TRUE`}
+    LIMIT 1
   `;
-  if (!rows.length) throw new NotFoundError('Cohort not found for selected program');
+  if (!rows.length) throw new NotFoundError(programId ? 'Cycle not found for selected program' : 'Cycle not found');
 }
 
 export async function getTimeEntryCohorts(programId: string) {
   await assertProgramResource(programId);
-  return sql<Array<{ id: string; name: string; state: 'active' | 'upcoming' | 'completed' }>>`
+  return sql<Array<{ id: string; cycleId: string; name: string; state: 'active' | 'upcoming' | 'completed' }>>`
     SELECT
-      id,
-      name,
+      cohort.id,
+      cycle.id AS cycle_id,
+      cycle.name,
+      cycle.starts_on::text AS starts_on,
+      cycle.ends_on::text AS ends_on,
       CASE
-        WHEN CURRENT_DATE < starts_on THEN 'upcoming'
-        WHEN CURRENT_DATE > ends_on THEN 'completed'
+        WHEN CURRENT_DATE < cycle.starts_on THEN 'upcoming'
+        WHEN CURRENT_DATE > cycle.ends_on THEN 'completed'
         ELSE 'active'
       END AS state
-    FROM program_cohorts
-    WHERE program_id = ${programId}
+    FROM program_cohorts cohort
+    INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
+    WHERE cohort.program_id = ${programId}
     ORDER BY
       CASE
-        WHEN CURRENT_DATE BETWEEN starts_on AND ends_on THEN 0
-        WHEN CURRENT_DATE < starts_on THEN 1
+        WHEN CURRENT_DATE BETWEEN cycle.starts_on AND cycle.ends_on THEN 0
+        WHEN CURRENT_DATE < cycle.starts_on THEN 1
         ELSE 2
       END,
-      starts_on DESC,
-      name,
-      id
+      cycle.starts_on DESC,
+      cycle.name,
+      cohort.id
   `;
 }
 
@@ -98,8 +109,10 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
       entry.staff_id,
       entry.program_id,
       program.name AS program_name,
-      entry.cohort_id,
-      cohort.name AS cohort_name,
+      cycle.id AS cycle_id,
+      cycle.name AS cycle_name,
+      cycle.starts_on::text AS cycle_starts_on,
+      cycle.ends_on::text AS cycle_ends_on,
       entry.task,
       entry.work_date::text,
       entry.hours::text,
@@ -107,22 +120,25 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
     FROM time_entries entry
     INNER JOIN users staff ON staff.id = entry.staff_id
     LEFT JOIN programs program ON program.id = entry.program_id
-    LEFT JOIN program_cohorts cohort ON cohort.id = entry.cohort_id
-    WHERE entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date
+    INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
+    WHERE ${query.start && query.end
+      ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
+      : sql`TRUE`}
+      AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
       AND ${actor.role === 'admin' ? sql`TRUE` : sql`entry.staff_id = ${actor.userId}`}
     ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
 
   const taskLabels: Record<SetTimeEntryInput['task'], string> = {
-    programming: 'Programming',
+    program_delivery: 'Program Delivery',
     planning_prep: 'Planning / Prep',
     meeting: 'Meeting',
     administration: 'Administration',
-    promotion: 'Promotion',
+    outreach: 'Outreach',
     maintenance: 'Maintenance',
     other: 'Other',
   };
-  const data: Record<string, Record<string, Array<{ id: string; programId: string | null; programName: string | null; cohortId: string | null; cohortName: string | null; task: string; label: string; hours: number; note: string }>>> = {};
+  const data: Record<string, Record<string, Array<{ id: string; programId: string | null; programName: string | null; cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string; task: string; label: string; hours: number; note: string }>>> = {};
   rows.forEach(row => {
     data[row.staffId] ??= {};
     data[row.staffId][row.workDate] ??= [];
@@ -130,8 +146,10 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
       id: row.id,
       programId: row.programId,
       programName: row.programName,
-      cohortId: row.cohortId,
-      cohortName: row.cohortName,
+      cycleId: row.cycleId,
+      cycleName: row.cycleName,
+      cycleStartsOn: row.cycleStartsOn,
+      cycleEndsOn: row.cycleEndsOn,
       task: row.task,
       label: taskLabels[row.task],
       hours: Number(row.hours),
@@ -146,16 +164,19 @@ export async function createTimeEntry(input: SetTimeEntryInput, actor: AccessTok
   assertCanManageStaff(actor, input.staffId);
   await assertStaffResource(input.staffId);
   await assertProgramResource(input.programId);
-  await assertCohortProgram(input.cohortId, input.programId);
+  await assertCycleResource(input.cycleId, input.programId);
   const transactionId = crypto.randomUUID();
   let created!: TimeEntryRow;
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const rows = await trx<TimeEntryRow[]>`
-      INSERT INTO time_entries (staff_id, program_id, cohort_id, task, work_date, hours, note, created_by, updated_by)
-      VALUES (${input.staffId}, ${input.programId}, ${input.cohortId}, ${input.task}, ${input.workDate}, ${input.hours}, ${input.note}, ${actor.userId}, ${actor.userId})
+      INSERT INTO time_entries (staff_id, program_id, cycle_id, task, work_date, hours, note, created_by, updated_by)
+      VALUES (${input.staffId}, ${input.programId}, ${input.cycleId}, ${input.task}, ${input.workDate}, ${input.hours}, ${input.note}, ${actor.userId}, ${actor.userId})
       RETURNING id, staff_id, program_id, (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
-        cohort_id, (SELECT name FROM program_cohorts WHERE id = time_entries.cohort_id) AS cohort_name,
+        cycle_id,
+        (SELECT name FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_name,
+        (SELECT starts_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_starts_on,
+        (SELECT ends_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_ends_on,
         task, work_date::text, hours::text, note
     `;
     created = rows[0];
@@ -164,30 +185,44 @@ export async function createTimeEntry(input: SetTimeEntryInput, actor: AccessTok
   return { ...created, hours: Number(created.hours) };
 }
 
-async function getOwnedEntry(id: string, actor: AccessTokenPayload) {
-  const rows = await sql<TimeEntryRow[]>`SELECT * FROM time_entries WHERE id = ${id} LIMIT 1`;
+async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayload) {
+  const rows = await trx<TimeEntryRow[]>`
+    SELECT entry.id, entry.staff_id, entry.program_id, program.name AS program_name,
+      entry.cycle_id, cycle.name AS cycle_name,
+      cycle.starts_on::text AS cycle_starts_on, cycle.ends_on::text AS cycle_ends_on,
+      entry.task, entry.work_date::text, entry.hours::text, entry.note
+    FROM time_entries entry
+    LEFT JOIN programs program ON program.id = entry.program_id
+    INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
+    WHERE entry.id = ${id}
+    LIMIT 1
+    FOR UPDATE OF entry
+  `;
   if (!rows.length) throw new NotFoundError('Time entry not found');
   assertCanManageStaff(actor, rows[0].staffId);
   return rows[0];
 }
 
 export async function updateTimeEntry(id: string, input: SetTimeEntryInput, actor: AccessTokenPayload) {
-  const existing = await getOwnedEntry(id, actor);
   assertCanManageStaff(actor, input.staffId);
   await assertStaffResource(input.staffId);
   await assertProgramResource(input.programId);
-  await assertCohortProgram(input.cohortId, input.programId);
+  await assertCycleResource(input.cycleId, input.programId);
   const transactionId = crypto.randomUUID();
   let updated!: TimeEntryRow;
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+    const existing = await getOwnedEntry(trx, id, actor);
     const rows = await trx<TimeEntryRow[]>`
       UPDATE time_entries
-      SET staff_id = ${input.staffId}, program_id = ${input.programId}, cohort_id = ${input.cohortId}, task = ${input.task}, work_date = ${input.workDate},
+      SET staff_id = ${input.staffId}, program_id = ${input.programId}, cycle_id = ${input.cycleId}, task = ${input.task}, work_date = ${input.workDate},
           hours = ${input.hours}, note = ${input.note}, updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, staff_id, program_id, (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
-        cohort_id, (SELECT name FROM program_cohorts WHERE id = time_entries.cohort_id) AS cohort_name,
+        cycle_id,
+        (SELECT name FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_name,
+        (SELECT starts_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_starts_on,
+        (SELECT ends_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_ends_on,
         task, work_date::text, hours::text, note
     `;
     updated = rows[0];
@@ -197,10 +232,10 @@ export async function updateTimeEntry(id: string, input: SetTimeEntryInput, acto
 }
 
 export async function deleteTimeEntry(id: string, actor: AccessTokenPayload) {
-  const existing = await getOwnedEntry(id, actor);
   const transactionId = crypto.randomUUID();
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+    const existing = await getOwnedEntry(trx, id, actor);
     await trx`DELETE FROM time_entries WHERE id = ${id}`;
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'DELETE', { ...existing }, null);
   });

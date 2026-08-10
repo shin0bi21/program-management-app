@@ -1,4 +1,5 @@
 import { apiClient } from '../../../../http/client';
+import type { RequestOptions } from '../../../../http/client';
 import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
 import type { StaffResource, TimeEntryCohort, TimeEntryProgram, TimeEntryTask, TimesheetItem } from '../types';
 
@@ -7,8 +8,10 @@ export interface TimeEntryResponse {
   staffId: string;
   programId: string | null;
   programName: string | null;
-  cohortId: string | null;
-  cohortName: string | null;
+  cycleId: string;
+  cycleName: string;
+  cycleStartsOn: string;
+  cycleEndsOn: string;
   task: TimeEntryTask;
   workDate: string;
   hours: number;
@@ -18,7 +21,7 @@ export interface TimeEntryResponse {
 export interface SetTimeEntryInput {
   staffId: string;
   programId: string | null;
-  cohortId: string | null;
+  cycleId: string;
   task: TimeEntryTask;
   workDate: string;
   hours: number;
@@ -31,9 +34,21 @@ export interface TimeEntryRangeResponse {
   data: ResourcePeriodData<TimesheetItem>;
 }
 
-export function getTimeEntries(start: string, end: string) {
-  const params = new URLSearchParams({ start, end });
-  return apiClient.get<TimeEntryRangeResponse>(`/time-entries?${params}`);
+export interface TimeEntryFilters {
+  start?: string;
+  end?: string;
+  cycleId?: string;
+}
+
+export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOptions) {
+  const params = new URLSearchParams();
+  if (filters.start && filters.end) {
+    params.set('start', filters.start);
+    params.set('end', filters.end);
+  }
+  if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  const query = params.size ? `?${params}` : '';
+  return apiClient.get<TimeEntryRangeResponse>(`/time-entries${query}`, opts);
 }
 
 export function getTimeEntryCohorts(programId: string, signal?: AbortSignal) {

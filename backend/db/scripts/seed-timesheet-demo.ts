@@ -1,57 +1,128 @@
 #!/usr/bin/env node
 
 import postgres from 'postgres';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { requireEnv } from '../../src/utils/env';
 
 const databaseUrl = requireEnv('DATABASE_URL');
-const fixtureStaffId = '20000000-0000-4000-8000-000000000001';
+const primaryStaffId = '20000000-0000-4000-8000-000000000001';
+const secondStaffId = '20000000-0000-4000-8000-000000000002';
 
 const sql = postgres(databaseUrl);
 
+const entries = [
+  ['30000000-0000-4000-8000-000000000001', primaryStaffId, 'Soft Skills', 'program_delivery', '2026-07-03', 3, 'Delivered the opening Soft Skills workshop.'],
+  ['30000000-0000-4000-8000-000000000002', primaryStaffId, 'Soft Skills', 'planning_prep', '2026-07-08', 1.5, 'Prepared activities and materials for the next session.'],
+  ['30000000-0000-4000-8000-000000000003', primaryStaffId, null, 'meeting', '2026-07-10', 1, 'Weekly staff coordination meeting.'],
+  ['30000000-0000-4000-8000-000000000004', primaryStaffId, 'Soft Skills', 'program_delivery', '2026-07-17', 3.5, 'Facilitated communication and conflict-resolution activities.'],
+  ['30000000-0000-4000-8000-000000000005', primaryStaffId, null, 'administration', '2026-07-22', 1.25, 'Updated attendance records and participant documentation.'],
+  ['30000000-0000-4000-8000-000000000006', primaryStaffId, 'Job Readiness', 'outreach', '2026-07-28', 2, 'Connected with community partners about youth placements.'],
+  ['30000000-0000-4000-8000-000000000007', primaryStaffId, 'Soft Skills', 'planning_prep', '2026-08-03', 1.75, 'Prepared the healthy-relationships workshop.'],
+  ['30000000-0000-4000-8000-000000000008', primaryStaffId, 'Soft Skills', 'program_delivery', '2026-08-04', 3, 'Delivered the healthy-relationships workshop.'],
+  ['30000000-0000-4000-8000-000000000009', primaryStaffId, null, 'maintenance', '2026-08-07', 1, 'Organized shared program supplies and equipment.'],
+  ['30000000-0000-4000-8000-000000000010', primaryStaffId, null, 'meeting', '2026-08-10', 1.5, 'Reviewed cycle progress with the staff team.'],
+  ['30000000-0000-4000-8000-000000000011', secondStaffId, 'Job Readiness', 'planning_prep', '2026-07-02', 2, 'Prepared resume and interview practice materials.'],
+  ['30000000-0000-4000-8000-000000000012', secondStaffId, 'Job Readiness', 'program_delivery', '2026-07-07', 4, 'Facilitated resume-building and workplace communication.'],
+  ['30000000-0000-4000-8000-000000000013', secondStaffId, null, 'administration', '2026-07-15', 1.5, 'Completed participant follow-up and program documentation.'],
+  ['30000000-0000-4000-8000-000000000014', secondStaffId, 'Job Readiness', 'program_delivery', '2026-07-21', 3.5, 'Led mock interviews and provided individual feedback.'],
+  ['30000000-0000-4000-8000-000000000015', secondStaffId, 'Job Readiness', 'outreach', '2026-07-27', 2.25, 'Contacted employers about workplace tours and placements.'],
+  ['30000000-0000-4000-8000-000000000016', secondStaffId, null, 'meeting', '2026-08-03', 1, 'Attended the weekly staff coordination meeting.'],
+  ['30000000-0000-4000-8000-000000000017', secondStaffId, 'Job Readiness', 'planning_prep', '2026-08-06', 2, 'Prepared mock-interview stations and facilitator notes.'],
+  ['30000000-0000-4000-8000-000000000018', secondStaffId, 'Job Readiness', 'program_delivery', '2026-08-10', 4, 'Facilitated mock interviews with the Job Readiness cohort.'],
+] as const;
+
 async function main() {
-  const [fixture] = await sql<Array<{ staffId: string; programId: string; cohortId: string | null }>>`
-    SELECT
-      staff.id AS "staffId",
-      program.id AS "programId",
-      cohort.id AS "cohortId"
-    FROM users staff
-    CROSS JOIN LATERAL (
-      SELECT id FROM programs WHERE name = 'Soft Skills' LIMIT 1
-    ) program
-    LEFT JOIN LATERAL (
-      SELECT id FROM program_cohorts
-      WHERE program_id = program.id
-      ORDER BY starts_on DESC
-      LIMIT 1
-    ) cohort ON TRUE
-    WHERE staff.id = ${fixtureStaffId}
-    LIMIT 1
-  `;
-  if (!fixture) throw new Error('Programming demo staff or Soft Skills demo program is missing');
+  const passwordHash = await bcrypt.hash(crypto.randomUUID(), 10);
+  await sql.begin(async rawTx => {
+    const tx = rawTx as unknown as typeof sql;
+    const [staffRole] = await tx<{ id: string }[]>`SELECT id FROM user_roles WHERE name = 'staff'`;
+    const programs = await tx<Array<{ id: string; name: string }>>`
+      SELECT id, name FROM programs WHERE name IN ('Soft Skills', 'Job Readiness')
+    `;
+    const [cycle] = await tx<{ id: string }[]>`
+      SELECT id FROM program_cycles WHERE name = 'Summer 2026' LIMIT 1
+    `;
+    if (!staffRole || programs.length !== 2 || !cycle) {
+      throw new Error('Programming demo role, programs, or Summer 2026 cycle is missing');
+    }
+    const programIds = new Map(programs.map(program => [program.name, program.id]));
 
-  await sql`
-    INSERT INTO time_entries (
-      id, staff_id, program_id, cohort_id, task, work_date, hours, note, created_by, updated_by
-    )
-    VALUES
-      ('30000000-0000-4000-8000-000000000001', ${fixture.staffId}, ${fixture.programId}, ${fixture.cohortId}, 'programming', CURRENT_DATE, 2.5, 'Delivered the weekly Soft Skills workshop.', ${fixture.staffId}, ${fixture.staffId}),
-      ('30000000-0000-4000-8000-000000000002', ${fixture.staffId}, ${fixture.programId}, ${fixture.cohortId}, 'planning_prep', CURRENT_DATE, 1.25, 'Prepared activities and materials for the next cohort session.', ${fixture.staffId}, ${fixture.staffId}),
-      ('30000000-0000-4000-8000-000000000003', ${fixture.staffId}, NULL, NULL, 'meeting', CURRENT_DATE, 1, 'Weekly staff coordination meeting.', ${fixture.staffId}, ${fixture.staffId}),
-      ('30000000-0000-4000-8000-000000000004', ${fixture.staffId}, NULL, NULL, 'administration', CURRENT_DATE - 1, 1.5, 'Completed general program documentation and follow-up.', ${fixture.staffId}, ${fixture.staffId}),
-      ('30000000-0000-4000-8000-000000000005', ${fixture.staffId}, ${fixture.programId}, NULL, 'promotion', CURRENT_DATE + 1, 1, 'Prepared promotional material for the program.', ${fixture.staffId}, ${fixture.staffId})
-    ON CONFLICT (id) DO UPDATE SET
-      staff_id = EXCLUDED.staff_id,
-      program_id = EXCLUDED.program_id,
-      cohort_id = EXCLUDED.cohort_id,
-      task = EXCLUDED.task,
-      work_date = EXCLUDED.work_date,
-      hours = EXCLUDED.hours,
-      note = EXCLUDED.note,
-      updated_by = EXCLUDED.updated_by,
-      updated_at = NOW()
-  `;
+    await tx`
+      INSERT INTO users (id, role_id, first_name, last_name)
+      VALUES
+        (${primaryStaffId}, ${staffRole.id}, 'Jordan', 'Lee'),
+        (${secondStaffId}, ${staffRole.id}, 'Taylor', 'Brooks')
+      ON CONFLICT (id) DO UPDATE SET
+        role_id = EXCLUDED.role_id,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        updated_at = NOW()
+    `;
 
-  console.log('Timesheet demo ready: 5 entries across 3 days');
+    await tx`
+      INSERT INTO user_credentials (user_id, email, password_hash, email_verified, status)
+      VALUES
+        (${primaryStaffId}, 'jordan.lee@demo.local', ${passwordHash}, true, 'active'),
+        (${secondStaffId}, 'taylor.brooks@demo.local', ${passwordHash}, true, 'active')
+      ON CONFLICT (user_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        password_hash = EXCLUDED.password_hash,
+        email_verified = true,
+        status = 'active',
+        failed_login_attempts = 0,
+        locked_until = NULL,
+        updated_at = NOW()
+    `;
+
+    for (const programId of programIds.values()) {
+      await tx`
+        INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
+        VALUES (${programId}, ${cycle.id}, ${primaryStaffId}, ${primaryStaffId})
+        ON CONFLICT (program_id, cycle_id) DO NOTHING
+      `;
+    }
+
+    for (const staffId of [primaryStaffId, secondStaffId]) {
+      for (const programId of programIds.values()) {
+        await tx`
+          INSERT INTO staff_program_assignments (staff_id, program_id)
+          VALUES (${staffId}, ${programId})
+          ON CONFLICT (staff_id, program_id) DO NOTHING
+        `;
+      }
+    }
+
+    for (const [id, staffId, programName, task, workDate, hours, note] of entries) {
+      let programId: string | null = null;
+      if (programName) {
+        const matchingProgramId = programIds.get(programName);
+        if (!matchingProgramId) throw new Error(`Program fixture not found: ${programName}`);
+        programId = matchingProgramId;
+      }
+      await tx`
+        INSERT INTO time_entries (
+          id, staff_id, program_id, cycle_id, task, work_date, hours, note, created_by, updated_by
+        )
+        VALUES (
+          ${id}, ${staffId}, ${programId}, ${cycle.id},
+          ${task}, ${workDate}, ${hours}, ${note}, ${staffId}, ${staffId}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          staff_id = EXCLUDED.staff_id,
+          program_id = EXCLUDED.program_id,
+          cycle_id = EXCLUDED.cycle_id,
+          task = EXCLUDED.task,
+          work_date = EXCLUDED.work_date,
+          hours = EXCLUDED.hours,
+          note = EXCLUDED.note,
+          updated_by = EXCLUDED.updated_by,
+          updated_at = NOW()
+      `;
+    }
+  });
+
+  console.log(`Timesheet demo ready: ${entries.length} entries across 2 active staff accounts and 3 biweekly periods`);
 }
 
 main()

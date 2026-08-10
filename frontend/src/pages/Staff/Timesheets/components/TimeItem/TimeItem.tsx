@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import FloatingMenuPanel from '../../../../../common/components/FloatingMenu/FloatingMenuPanel';
 import { useFloatingMenu } from '../../../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 import { calculateFloatingPosition, type FloatingPosition } from '../../../../../common/components/FloatingMenu/utils/floatingPosition';
+import useViewportDismissal from '../../../../../common/components/FloatingMenu/hooks/useViewportDismissal';
 import type { TimesheetItem } from '../../types';
 import './TimeItem.css';
 
@@ -20,6 +21,7 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
     { side: 'bottom', align: 'start' },
     { widthEstimate: 150, heightEstimate: 86 },
   );
+  useViewportDismissal(detailPosition !== null, () => setDetailPosition(null));
 
   const runAction = (action: () => void) => {
     close();
@@ -73,7 +75,7 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
           <dl>
             <div><dt>Hours</dt><dd>{item.hours}</dd></div>
             <div><dt>Program</dt><dd>{item.programName ?? 'General'}</dd></div>
-            {item.cohortName && <div><dt>Cohort</dt><dd>{item.cohortName}</dd></div>}
+            {item.cycleName && <div><dt>Cycle</dt><dd>{item.cycleName}</dd></div>}
             <div className="time-item-details__note"><dt>Note</dt><dd>{item.note}</dd></div>
           </dl>
         </div>,

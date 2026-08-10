@@ -8,8 +8,8 @@ const entry = (id: string, task: TimesheetItem['task']): TimesheetItem => ({
   id,
   programId: null,
   programName: null,
-  cohortId: null,
-  cohortName: null,
+  cycleId: 'cycle-1',
+  cycleName: 'Summer 2026',
   task,
   label: task,
   hours: 1,
@@ -31,5 +31,16 @@ describe('useFilteredTimesheetData', () => {
 
     expect(result.current.second).toBe(previousSecond);
     expect(result.current.first['2026-08-09']).toEqual([]);
+  });
+
+  it('filters entries by their stored cycle ID', () => {
+    const otherCycle = { ...entry('entry-2', 'meeting'), cycleId: 'cycle-2', cycleName: 'Fall 2026' };
+    const data: ResourcePeriodData<TimesheetItem> = {
+      first: { '2026-08-09': [entry('entry-1', 'meeting'), otherCycle] },
+    };
+
+    const { result } = renderHook(() => useFilteredTimesheetData(data, [], [], 'cycle-1'));
+
+    expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-1' })]);
   });
 });
