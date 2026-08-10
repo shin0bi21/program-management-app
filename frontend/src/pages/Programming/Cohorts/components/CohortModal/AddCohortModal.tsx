@@ -6,11 +6,13 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Program } from '../../../../../common/features/programs/types';
+import type { ProgramCycle } from '../../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 
 interface AddCohortModalProps {
   isOpen: boolean;
   programs: Program[];
+  cycles: ProgramCycle[];
   initialProgramId: string;
   onClose: () => void;
   onCreated: () => void | Promise<void>;
@@ -19,45 +21,43 @@ interface AddCohortModalProps {
 export default function AddCohortModal({
   isOpen,
   programs,
+  cycles,
   initialProgramId,
   onClose,
   onCreated,
 }: AddCohortModalProps) {
   const [programId, setProgramId] = useState('');
+  const [cycleId, setCycleId] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
     setProgramId(initialProgramId || programs[0]?.id || '');
+    setCycleId(cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? '');
     setStatus('idle');
     setStatusMessage('');
-  }, [initialProgramId, isOpen, programs]);
+  }, [cycles, initialProgramId, isOpen, programs]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get('name'));
+    const cycleName = cycles.find(cycle => cycle.id === cycleId)?.name ?? 'cycle';
     const programName = programs.find((program) => program.id === programId)?.name ?? 'program';
     setStatus('submitting');
-    setStatusMessage(`Adding ${name} to ${programName}...`);
+    setStatusMessage(`Adding ${programName} to ${cycleName}...`);
     try {
       await createCohort({
         programId,
-        name,
-        startsOn: String(form.get('startsOn')),
-        endsOn: String(form.get('endsOn')),
+        cycleId,
       });
       await onCreated();
-      setStatusMessage(`${name} successfully added to ${programName}.`);
+      setStatusMessage(`${programName} successfully added to ${cycleName}.`);
       setStatus('success');
     } catch (cause) {
       setStatusMessage(getErrorMessage(cause, 'Could not create cohort'));
       setStatus('error');
     }
   };
-
-  const complete = status === 'submitting' || status === 'success';
 
   return (
     <Modal
@@ -67,7 +67,6 @@ export default function AddCohortModal({
       status={status}
       statusMessage={statusMessage}
       successDelay={1400}
-      disableClose={complete}
       footer={(
         <ModalFormFooter
           formId="add-cohort-form"
@@ -87,17 +86,15 @@ export default function AddCohortModal({
             placeholder="Choose a program"
           />
         </FormField>
-        <FormField id="cohort-name" label="Cohort name">
-          <input id="cohort-name" name="name" required maxLength={120} placeholder="Fall 2026" />
+        <FormField id="cohort-cycle" label="Cycle">
+          <FloatingSelect
+            id="cohort-cycle"
+            value={cycleId}
+            options={cycles.map((cycle) => ({ value: cycle.id, label: cycle.name }))}
+            onChange={setCycleId}
+            placeholder="Choose a cycle"
+          />
         </FormField>
-        <div className="form-row">
-          <FormField id="cohort-start" label="Starts on">
-            <input id="cohort-start" name="startsOn" type="date" required />
-          </FormField>
-          <FormField id="cohort-end" label="Ends on">
-            <input id="cohort-end" name="endsOn" type="date" required />
-          </FormField>
-        </div>
       </form>
     </Modal>
   );

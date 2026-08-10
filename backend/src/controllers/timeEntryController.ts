@@ -1,0 +1,28 @@
+import type { Request, Response } from 'express';
+import type { AuthRequest } from '../middleware/authMiddleware';
+import { createTimeEntry, deleteTimeEntry, getTimeEntries, getTimeEntryCohorts, updateTimeEntry } from '../services/timeEntryService';
+import { timeEntryCohortQuerySchema, timeEntryQuerySchema } from '../validation/timeEntrySchemas';
+
+export async function handleGetTimeEntries(req: Request, res: Response) {
+  const actor = (req as AuthRequest).user!;
+  const query = timeEntryQuerySchema.shape.query.parse(req.query);
+  res.json(await getTimeEntries(actor, query));
+}
+
+export async function handleGetTimeEntryCohorts(req: Request, res: Response) {
+  const query = timeEntryCohortQuerySchema.shape.query.parse(req.query);
+  res.json(await getTimeEntryCohorts(query.programId));
+}
+
+export async function handleCreateTimeEntry(req: Request, res: Response) {
+  res.status(201).json(await createTimeEntry(req.body, (req as AuthRequest).user!));
+}
+
+export async function handleUpdateTimeEntry(req: Request, res: Response) {
+  res.json(await updateTimeEntry(req.params.id, req.body, (req as AuthRequest).user!));
+}
+
+export async function handleDeleteTimeEntry(req: Request, res: Response) {
+  await deleteTimeEntry(req.params.id, (req as AuthRequest).user!);
+  res.status(200).json({ message: 'Time entry deleted' });
+}

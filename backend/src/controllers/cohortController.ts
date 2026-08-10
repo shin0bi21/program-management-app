@@ -2,8 +2,11 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   createCohort,
+  createProgramCycle,
   deleteCohort,
   getCohorts,
+  getProgramCycles,
+  updateProgramCycle,
   updateCohort,
 } from '../services/cohortService';
 import { enrollYouth, withdrawYouth } from '../services/enrollmentService';
@@ -30,20 +33,25 @@ import {
   deleteSessionAttachment,
   getSessionAttachmentFile,
   getSessionAttachments,
+  updateSessionAttachment,
 } from '../services/sessionAttachmentService';
 import type {
   CreateCohortInput,
+  CreateCycleInput,
   CreateSessionAttachmentInput,
+  UpdateSessionAttachmentInput,
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
   SaveAttendanceInput,
   UpdateCohortInput,
+  UpdateCycleInput,
   UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
 import { cohortQuerySchema, sessionListQuerySchema } from '../validation/cohortSchemas';
 import { getCohortYouthReport } from '../services/cohortReportService';
+import { generateCohortYouthReportPdf } from '../services/cohortReportPdfService';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
@@ -53,6 +61,18 @@ export const handleGetCohorts = async (req: Request, res: Response) => {
     actor(req),
     query,
   ));
+};
+
+export const handleGetProgramCycles = async (_req: Request, res: Response) => {
+  res.json(await getProgramCycles());
+};
+
+export const handleCreateProgramCycle = async (req: Request, res: Response) => {
+  res.status(201).json(await createProgramCycle(req.body as CreateCycleInput, actor(req)));
+};
+
+export const handleUpdateProgramCycle = async (req: Request, res: Response) => {
+  res.json(await updateProgramCycle(req.params.cycleId, req.body as UpdateCycleInput, actor(req)));
 };
 
 export const handleCreateCohort = async (req: Request, res: Response) => {
@@ -68,6 +88,15 @@ export const handleDeleteCohort = async (req: Request, res: Response) => {
 
 export const handleGetCohortYouthReport = async (req: Request, res: Response) => {
   res.json(await getCohortYouthReport(req.params.cohortId, actor(req)));
+};
+
+export const handleGetCohortYouthReportPdf = async (req: Request, res: Response) => {
+  const pdf = await generateCohortYouthReportPdf(req.params.cohortId, actor(req));
+  const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Youth Report.pdf';
+  res.type('application/pdf');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Disposition', `inline; filename="${fallbackFilename}"; filename*=UTF-8''${encodeURIComponent(pdf.filename)}`);
+  res.send(pdf.buffer);
 };
 
 export const handleEnrollYouth = async (req: Request, res: Response) => {
@@ -160,6 +189,15 @@ export const handleCreateSessionAttachment = async (req: Request, res: Response)
 export const handleDeleteSessionAttachment = async (req: Request, res: Response) => {
   await deleteSessionAttachment(req.params.sessionId, req.params.attachmentId, actor(req));
   res.json({ id: req.params.attachmentId });
+};
+
+export const handleUpdateSessionAttachment = async (req: Request, res: Response) => {
+  res.json(await updateSessionAttachment(
+    req.params.sessionId,
+    req.params.attachmentId,
+    req.body as UpdateSessionAttachmentInput,
+    actor(req),
+  ));
 };
 
 export const handleGetSessionAttachmentFile = async (req: Request, res: Response) => {

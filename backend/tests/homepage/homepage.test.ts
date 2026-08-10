@@ -1,7 +1,7 @@
 import request from 'supertest';
 import sharp from 'sharp';
 import { createApp } from '../shared/app';
-import { deleteTestUser, seedTestUser, sql } from '../shared/db';
+import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -13,6 +13,7 @@ describe('Homepage management API', () => {
   let youthId: string;
   let youthToken: string;
   let cohortId: string;
+  let cycleId: string;
   let uploadedImageId: string | undefined;
 
   beforeAll(async () => {
@@ -34,17 +35,10 @@ describe('Homepage management API', () => {
       VALUES (${staffId}, ${program.id})
       ON CONFLICT DO NOTHING
     `;
-    const [cohort] = await sql<{ id: string }[]>`
-      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-      VALUES (
-        ${program.id},
-        ${`Homepage Test ${Date.now()}`},
-        CURRENT_DATE,
-        CURRENT_DATE + 30
-      )
-      RETURNING id
-    `;
-    cohortId = cohort.id;
+    ({ cohortId, cycleId } = await seedTestCohort({
+      programId: program.id,
+      name: `Homepage Test ${Date.now()}`,
+    }));
 
     await sql`
       INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
@@ -61,7 +55,7 @@ describe('Homepage management API', () => {
     if (uploadedImageId) {
       await request(app).delete(`/api/homepage/images/${uploadedImageId}`).set('Authorization', `Bearer ${staffToken}`);
     }
-    await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
+    await deleteTestCohort(cohortId, cycleId);
     await deleteTestUser(youthId);
     await deleteTestUser(staffId);
   });

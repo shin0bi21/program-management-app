@@ -1,13 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../../../../../common/components/Button/Button';
 import LoadingSpinner from '../../../../../common/components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../../../../common/components/Modal/Modal';
-import { getCohortYouthReport } from '../../../../../common/features/programming/api/programming.api';
+import { getCohortYouthReportPdf } from '../../../../../common/features/programming/api/programming.api';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
 import './YouthReportModal.css';
-
-const YouthReportPdf = lazy(() => import('./YouthReportPdf'));
 
 interface YouthReportModalProps {
   cohort: ProgramCohort;
@@ -16,11 +14,24 @@ interface YouthReportModalProps {
 
 export default function YouthReportModal({ cohort, onClose }: YouthReportModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const report = useQuery({
-    queryKey: ['cohorts', cohort?.id, 'reports', 'youth'],
-    queryFn: ({ signal }) => getCohortYouthReport(cohort.id, { signal }),
+  const reportPdf = useQuery({
+    queryKey: ['cohorts', cohort.id, 'reports', 'youth', 'pdf'],
+    queryFn: ({ signal }) => getCohortYouthReportPdf(cohort.id, { signal }),
     refetchOnMount: 'always',
   });
+
+  useEffect(() => {
+    if (!reportPdf.data) {
+      setPdfUrl(null);
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(reportPdf.data);
+    setPdfUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      setPdfUrl(null);
+    };
+  }, [reportPdf.data]);
 
   const filename = `${cohort.programName} - ${cohort.name} Youth Report.pdf`
     .replace(/[\\/:*?"<>|]+/g, '-')
@@ -37,10 +48,12 @@ export default function YouthReportModal({ cohort, onClose }: YouthReportModalPr
       {pdfUrl && <a className="btn youth-report-download" href={pdfUrl} download={filename}>Download PDF</a>}
     </>}
   >
-    {report.isLoading && <div className="youth-report-pdf__loading"><LoadingSpinner /><span>Loading report…</span></div>}
-    {report.error && <p className="form-error" role="alert">Could not load the youth report.</p>}
-    {report.data && <Suspense fallback={<div className="youth-report-pdf__loading"><LoadingSpinner /><span>Generating PDF…</span></div>}>
-      <YouthReportPdf report={report.data} onPdfReady={setPdfUrl} />
-    </Suspense>}
+    {reportPdf.isLoading && <div className="youth-report-pdf__loading"><LoadingSpinner /><span>Generating report…</span></div>}
+    {reportPdf.error && <p className="form-error" role="alert">Could not load the youth report.</p>}
+    {pdfUrl && <div className="youth-report-pdf"><iframe
+      className="youth-report-pdf__viewer"
+      src={pdfUrl}
+      title="Youth report PDF preview"
+    /></div>}
   </Modal>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCheck, faChevronRight, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
@@ -33,7 +33,7 @@ const normalized = (values: string[] = []) => [...values].sort().join('\u0000');
 
 export default function FilterCard({ categories, values, onApply, onClearAll, label = 'Filters' }: FilterCardProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+  const { isOpen, open, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'end' },
     { widthEstimate: 264, heightEstimate: 320 },
@@ -41,11 +41,15 @@ export default function FilterCard({ categories, values, onApply, onClearAll, la
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<FilterCardValues>({});
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const toggle = () => {
+    if (isOpen) {
+      close();
+      return;
+    }
     setActiveCategoryId(null);
     setDrafts(Object.fromEntries(categories.map(category => [category.id, [...(values[category.id] ?? [])]])));
-  }, [isOpen]); // values are intentionally captured only when a session opens
+    open();
+  };
 
   useLayoutEffect(() => {
     if (!isOpen) return;

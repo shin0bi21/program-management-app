@@ -1,6 +1,6 @@
 # Google Sheets Integration
 
-For setup instructions and required env vars see [README.md § 2 Get Running](../README.md#2-get-running).
+Service-account setup and the script-only environment variable are documented below.
 
 ---
 

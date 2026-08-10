@@ -1,11 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Outreach from './Outreach';
-
-vi.mock('../../common/components/Header/Header', () => ({
-  default: () => <div data-testid="header" />,
-}));
 
 describe('Outreach', () => {
   it('renders the selected route without duplicating sidebar navigation', () => {

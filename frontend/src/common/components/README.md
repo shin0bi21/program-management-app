@@ -8,4 +8,6 @@ Common components may use other common UI and helpers as well as the root techni
 
 For non-trivial components, use a component folder and colocate its styles, internal components, hooks, utilities, and tests. Keep data fetching outside presentational components unless fetching is part of the component's explicit infrastructure responsibility.
 
-See [`../../../STRUCTURE.md`](../../../STRUCTURE.md) for the complete frontend ownership rules.
+Read a component folder's `README.md` before adding or changing a consumer. These files define integration requirements that TypeScript cannot enforce, such as async dismissal behavior, table state ownership, and page-control composition. See [`Modal/README.md`](Modal/README.md), [`Table/README.md`](Table/README.md), and [`PageHeader/README.md`](PageHeader/README.md).
+
+See [`../../../../docs/architecture/frontend.md`](../../../../docs/architecture/frontend.md) for the complete frontend ownership rules.

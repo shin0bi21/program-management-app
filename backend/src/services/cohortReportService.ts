@@ -53,8 +53,9 @@ function buildAttendanceBreakdown(sessionTypes: SessionTypeRow[], records: Timel
 export async function getCohortYouthReport(cohortId: string, actor: AccessTokenPayload) {
   await assertCohortAccess(actor, cohortId);
   const cohorts = await sql<{ id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' }[]>`
-    SELECT cohort.id, cohort.name, program.name AS program_name, program.roster_mode
+    SELECT cohort.id, cycle.name, program.name AS program_name, program.roster_mode
     FROM program_cohorts cohort
+    INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
     INNER JOIN programs program ON program.id = cohort.program_id
     WHERE cohort.id = ${cohortId}
   `;

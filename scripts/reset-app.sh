@@ -23,7 +23,7 @@ sleep 5
 
 # Check if backend is ready
 echo "Waiting for backend to be ready..."
-until docker compose exec -T backend npm run db:status > /dev/null 2>&1; do
+until docker compose exec -T backend curl -fsS http://localhost:5001/health > /dev/null 2>&1; do
   echo "   Backend not ready yet, waiting..."
   sleep 2
 done
@@ -51,6 +51,11 @@ fi
 echo ""
 echo "Seeding programming demo data..."
 docker compose exec -T backend npm run seed:programming-demo
+
+# Step 5c: Seed deterministic Timesheet demo data
+echo ""
+echo "Seeding Timesheet demo data..."
+docker compose exec -T backend npm run seed:timesheet-demo
 
 # Step 6: Regenerate TypeScript types from the live development schema
 echo ""

@@ -56,8 +56,6 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
     }
   };
 
-  const complete = status === 'submitting' || status === 'success';
-
   return (
     <Modal
       isOpen={session !== null}
@@ -66,7 +64,6 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}
-      disableClose={complete}
       footer={(
         <ModalFormFooter
           formId="edit-session-form"

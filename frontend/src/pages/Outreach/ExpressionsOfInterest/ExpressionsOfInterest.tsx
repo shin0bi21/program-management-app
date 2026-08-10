@@ -25,6 +25,13 @@ const submissionYouthName = (submission: ExpressionOfInterest) =>
 const submitterRoleLabel = (role: ExpressionOfInterest['submittedByRole']) => role
   ? role[0].toUpperCase() + role.slice(1)
   : 'Not recorded';
+const submissionStatuses: ExpressionOfInterest['status'][] = [
+  'new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam',
+];
+const statusLabel = (value: string) => value
+  .split('_')
+  .map(part => part[0].toUpperCase() + part.slice(1))
+  .join(' ');
 
 export default function ExpressionsOfInterest() {
   const [search, setSearch] = useState('');
@@ -72,11 +79,9 @@ export default function ExpressionsOfInterest() {
     void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting, columnWidths });
   };
 
-  const statuses: ExpressionOfInterest['status'][] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
-  const label = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: label(status) })) },
+    { id: 'status', label: 'Status', options: submissionStatuses.map(status => ({ value: status, label: statusLabel(status) })) },
   ], [programs]);
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {

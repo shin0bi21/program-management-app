@@ -5,6 +5,8 @@ export interface ProgramCohort {
   rosterMode: 'enrolled' | 'open';
   minAge: number | null;
   maxAge: number | null;
+  cycleId: string;
+  cycleName: string;
   name: string;
   startsOn: string;
   endsOn: string;
@@ -16,6 +18,14 @@ export interface ProgramCohort {
   attendanceAttendedCount: number;
   attendanceRecordedCount: number;
   uniqueAttendeeCount: number;
+}
+
+export interface ProgramCycle {
+  id: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  state: 'upcoming' | 'active' | 'completed';
 }
 export type CohortSortKey = 'program' | 'cohort' | 'start' | 'end' | 'status';
 
@@ -41,11 +51,14 @@ export interface CohortSession {
 
 export interface CreateCohortInput {
   programId: string;
+  cycleId: string;
+}
+export type UpdateCohortInput = Pick<CreateCohortInput, 'cycleId'>;
+export interface SetProgramCycleInput {
   name: string;
   startsOn: string;
   endsOn: string;
 }
-export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
 export interface UpdateSessionInput {
   sessionTypeId: string;
   theme: string | null;
@@ -207,4 +220,10 @@ export interface SessionAttachment {
   updatedAt: string;
   createdByName: string | null;
   youth: SessionAttachmentYouth[];
+}
+
+export interface UpdateSessionAttachmentInput {
+  title: string;
+  description: string | null;
+  youthIds: string[];
 }

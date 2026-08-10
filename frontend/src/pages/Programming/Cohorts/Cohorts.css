@@ -48,3 +48,29 @@
   background: var(--ink-08);
   color: var(--color-muted);
 }
+
+.cycle-list {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.cycle-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cycle-list__item div,
+.cycle-list__item span {
+  display: grid;
+  gap: 2px;
+}
+
+.cycle-list__item span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}

@@ -1,3 +1,5 @@
+import { Controller } from 'react-hook-form';
+import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
@@ -16,7 +18,7 @@ interface AccountModalProps {
 export default function AccountModal(props: AccountModalProps) {
   const { account } = props;
   const { programs, loading: programsLoading } = usePrograms();
-  const { register, errors, onSubmit, submitStatus, error, handleClose, selectedRole } = useAccountModal(props);
+  const { register, control, errors, onSubmit, submitStatus, error, handleClose, selectedRole } = useAccountModal(props);
   const isEdit = account !== undefined;
   const assignablePrograms = programs.filter(program => program.rosterMode === 'enrolled');
   const openPrograms = programs.filter(program => program.rosterMode === 'open');
@@ -48,10 +50,23 @@ export default function AccountModal(props: AccountModalProps) {
             <input id="email" type="email" {...register('email')} />
           </FormField>
           <FormField id="role" label="Role" error={errors.role?.message}>
-            <select id="role" {...register('role')}>
-              <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
-            </select>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <FloatingSelect
+                  id="role"
+                  ariaLabel="Role"
+                  value={field.value}
+                  options={[
+                    { value: 'staff', label: 'Staff' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                  onChange={field.onChange}
+                  disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+                />
+              )}
+            />
           </FormField>
         </div>
         {selectedRole === 'staff' && (

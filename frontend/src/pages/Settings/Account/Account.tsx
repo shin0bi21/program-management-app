@@ -1,4 +1,3 @@
-import Header from '../../../common/components/Header/Header';
 import { getUser } from '../../../auth/storage';
 import { useAuth } from '../../../auth/authContext';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -15,7 +14,6 @@ export default function Account() {
 
   return (
     <>
-      <Header />
       <div className="page-container">
         <PageHeader title="My Account" />
 
