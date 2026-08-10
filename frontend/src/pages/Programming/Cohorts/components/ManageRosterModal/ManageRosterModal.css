@@ -1,0 +1,24 @@
+.manage-roster-list {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.manage-roster-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.manage-roster-list__item span {
+  display: grid;
+}
+
+.manage-roster-list__item small {
+  color: var(--color-muted);
+}

@@ -10,6 +10,7 @@ import {
   handleEnrollYouth,
   handleGenerateSessions,
   handleGetCohorts,
+  handleGetCohortYouthReport,
   handleGetSessionList,
   handleGetSessionAttachmentFile,
   handleGetSessionAttachments,
@@ -52,6 +53,7 @@ import { uploadSessionAttachment } from '../middleware/sessionAttachmentUpload';
 const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:cohorts'), generalLimiter, validateRequest(cohortQuerySchema), asyncHandler(handleGetCohorts));
+router.get('/:cohortId/reports/youth', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleGetCohortYouthReport));
 router.post('/', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(createCohortSchema), asyncHandler(handleCreateCohort));
 router.put('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(updateCohortSchema), asyncHandler(handleUpdateCohort));
 router.delete('/:cohortId', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(deleteCohortSchema), asyncHandler(handleDeleteCohort));
