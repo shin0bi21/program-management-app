@@ -11,9 +11,10 @@
 ## Canonical documentation
 
 - Use this file as the single automatic agent entry point.
+- Use `.agents/skills/implement-frontend/` when creating or changing frontend pages, components, hooks, forms, modals, menus, tables, calendars, API adapters, or UI tests.
 - Use `.agents/skills/review-changes/` for repeatable change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
-- Read `frontend/STRUCTURE.md` before changing frontend ownership, component, hook, query, or test structure.
-- Read `backend/README.md` and the relevant file under `backend/docs/` before changing backend architecture, authentication, errors, database behavior, or integrations.
+- Read `docs/architecture/frontend.md` before changing frontend ownership, component, hook, query, or test structure.
+- Read `docs/architecture/backend.md` and the relevant architecture document before changing backend architecture, authentication, errors, or database behavior. Read the relevant file under `backend/docs/` for integrations.
 - Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
 
 ## Stable invariants

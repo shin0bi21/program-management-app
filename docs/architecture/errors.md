@@ -1,5 +1,7 @@
 # Backend Error Handling
 
+Unless stated otherwise, source paths in this document are relative to `backend/`.
+
 ## Overview
 
 1. A service (or middleware) **throws a typed error** — e.g. `throw new NotFoundError('User not found')`
@@ -134,7 +136,7 @@ No `try/catch` needed in controllers — just throw.
 
 ## 5. Request flow
 
-This shows the flow for a **protected route** (`/api/staff`, `/api/youth`, `/api/schools`). Auth routes (`/api/auth/*`) skip `authenticateToken` and `requirePermission` entirely and use a separate `authLimiter`.
+This shows the flow for a **protected route** such as `/api/accounts`, `/api/youth`, or `/api/schools`. Auth routes (`/api/auth/*`) skip `authenticateToken` and `requirePermission` and use a separate `authLimiter`; public routes use their own rate-limit and validation chains.
 
 ```mermaid
 flowchart TD
@@ -177,7 +179,7 @@ Pass `X-Request-ID` in the request to override (useful for cross-service tracing
 
 `ErrorBoundary` wraps the app and catches render-phase errors. Does **not** catch event handler or async errors.
 
-Typed error hierarchy in `src/common/utils/clientErrors.ts`:
+Typed error hierarchy in `frontend/src/http/clientErrors.ts`:
 
 | Class | When |
 |---|---|

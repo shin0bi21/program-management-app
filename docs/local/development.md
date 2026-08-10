@@ -42,6 +42,8 @@ docker compose down
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
 | Run the full repository test suite | `bash scripts/tests/test-app.sh` |
+| Install the Playwright browser | `cd frontend && npm run test:browser:install` |
+| Run browser component tests | `cd frontend && npm run test:browser` |
 | Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
 
 Never edit an applied migration. Add a new migration instead.
@@ -74,17 +76,8 @@ docker compose exec backend npm run db:status
 
 ## Tests
 
-```bash
-bash scripts/tests/test-app.sh             # deployment checks, backend APIs, frontend UI
-bash scripts/tests/test-static.sh          # ESLint, bash syntax, and ShellCheck
-bash scripts/tests/backend/test-apis.sh    # backend API suites only
-bash scripts/tests/frontend/test-ui.sh     # frontend UI suites only
-```
-
-The backend runners start and prepare the Docker-backed test database as
-needed. Some frontend path runners skip cleanly when a page has no tests.
-The static runner requires the root npm dependencies and `shellcheck` on the
-host; GitHub Actions installs both prerequisites before running it.
+See [Testing](../testing.md) for the full application suite, static analysis,
+backend and frontend umbrella runners, focused runners, and test ownership.
 
 ## Logs and diagnostics
 

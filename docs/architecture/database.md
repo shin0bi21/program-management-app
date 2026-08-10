@@ -1,6 +1,7 @@
 # Database & Migrations
 
-For commands and quick reference see [README.md § 5 Database & Migrations](../README.md#5-database--migrations) and [README.md § 10 Commands Reference](../README.md#10-commands-reference).
+For migration and database-type commands, see [Local Development Commands](../local/development.md#migrations-and-database-types).
+Unless stated otherwise, source paths in this document are relative to `backend/`.
 
 ---
 
@@ -113,7 +114,7 @@ docker compose exec backend npm run db:status    # verify
 
 ## 5. Audit Log
 
-All INSERT, UPDATE, and DELETE operations made through the application are recorded in `audit_log` by `src/services/auditService.ts`.
+Services that participate in application audit logging record their mutations in `audit_log` through `src/services/auditService.ts`. The coverage table below is the current source of truth; adding a write service does not make it audited automatically.
 
 ### Table: `audit_log`
 
@@ -158,6 +159,7 @@ Current example:
 | `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
 | `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 | `leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
+| `timeEntryService.ts` | `time_entries` create, update, and delete operations |
 
 ### `transactionId`
 
@@ -264,10 +266,20 @@ erDiagram
         string phone_number
         enum type
     }
+    time_entries {
+        uuid staff_id FK
+        uuid program_id FK
+        uuid cohort_id FK nullable
+        string task
+        date work_date
+        numeric hours
+        string note
+    }
     base_table ||--o{ users : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ youth_profiles : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ addresses : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ contacts : "LIKE base_table INCLUDING ALL"
+    base_table ||--o{ time_entries : "LIKE base_table INCLUDING ALL"
 ```
 
 > Auth security tables (`user_refresh_tokens`, `system_revoked_tokens`, `user_auth_codes`, `user_trusted_devices`, `user_credentials`) and RBAC tables (`user_roles`, `user_permissions`, `user_role_has_permissions`) are also defined in the init migration but are omitted from the diagram for brevity.

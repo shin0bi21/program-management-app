@@ -1,3 +1,4 @@
+%% Full-stack HTTP lifecycle: browser client → Express → PostgreSQL → client
 flowchart TD
   %% =================================================================
   %% CLIENT — apiClient pipeline
@@ -64,11 +65,13 @@ flowchart TD
     SRV_ROUTE -->|"/health"| SRV_OK
     SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter →\nasyncHandler(handler)"]
     SRV_AUTH_ROUTE --> SRV_HANDLER
+    SRV_ROUTE -->|"/api/public/*"| SRV_PUBLIC_ROUTE["rate limiter → validation when needed →\nasyncHandler(handler)"]
+    SRV_PUBLIC_ROUTE --> SRV_HANDLER
     SRV_ROUTE -->|"/api/* (protected)"| SRV_AUTHTOK
 
     SRV_AUTHTOK["authenticateToken\nverify JWT → req.user"]
     SRV_AUTHTOK -->|"invalid / missing"| SRV_ERR_HANDLER
-    SRV_AUTHTOK -->|"valid"| SRV_PERM["requirePermission(role)"]
+    SRV_AUTHTOK -->|"valid"| SRV_PERM["requirePermission(permission)"]
     SRV_PERM -->|"missing"| SRV_ERR_HANDLER
     SRV_PERM -->|"ok"| SRV_RATE["rateLimiter"]
     SRV_RATE -->|"exceeded"| SRV_ERR_HANDLER
@@ -82,7 +85,7 @@ flowchart TD
     SRV_SERVICE -->|"throw AppError"| SRV_ERR_HANDLER
     SRV_SERVICE -->|"return"| SRV_OK[/"2xx response\n{ ...data }"/]
 
-    SRV_ERR_HANDLER["errorHandler\nsendError(res, status, msg, details?)"] --> SRV_ERR_OUT[/"4xx / 5xx response\n{ error, details?, requestId }"/]
+    SRV_ERR_HANDLER["handleError\nsendError(res, status, msg, details?)"] --> SRV_ERR_OUT[/"4xx / 5xx response\n{ error, details?, requestId }"/]
   end
 
   SRV_OK ===> AK

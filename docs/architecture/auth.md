@@ -1,6 +1,7 @@
 # Auth System
 
-For the API endpoint reference see [backend/README.md § 4 API Reference](../README.md#4-api-reference).
+For the API endpoint reference, see the [backend API reference](../../backend/README.md#api-reference).
+Unless stated otherwise, source paths in this document are relative to `backend/`.
 
 ---
 
@@ -40,7 +41,7 @@ flowchart TD
     A2([POST /auth/verify]) --> F[Validate 2FA code + userId\nauthService.ts]
     F --> G{Code valid and not expired?}
     G -->|No| G1([401 Invalid or expired code])
-    G -->|Yes| E[Issue access token — 1h\nJWT_SECRET · tokenType: access]
+    G -->|Yes| E[Issue access token — 4h\nJWT_SECRET · tokenType: access]
     E --> H[Issue refresh token — 8h\nREFRESH_SECRET · tokenType: refresh\nstored in user_refresh_tokens table]
     H --> I([200 — { token, user }\nrefresh token set as httpOnly cookie])
 
@@ -59,7 +60,7 @@ flowchart TD
 ```
 Login flow
   POST /login   →  validates credentials, sends 2FA email, returns { message: '2FA code sent to your email', requires2FA: true, userId: string }
-  POST /verify  →  validates 2FA code, issues access token (1h) + refresh token (8h httpOnly cookie)
+  POST /verify  →  validates 2FA code, issues access token (4h) + refresh token (8h httpOnly cookie)
 
 Session flow
   Every request →  Authorization: Bearer <accessToken>
@@ -82,7 +83,7 @@ After password validation, `loginUser` checks `cred.status !== 'active'` and thr
 | | Access Token | Refresh Token |
 |---|---|---|
 | Secret | `JWT_SECRET` | `REFRESH_SECRET` |
-| TTL | 1 hour | 8 hours |
+| TTL | 4 hours | 8 hours |
 | Sent as | `Authorization: Bearer` header | `httpOnly` cookie (`sameSite: 'strict'`, `secure` in production only) |
 | Contains `role` + `permissions[]` | ✓ | ✗ |
 | `tokenType` claim | `'access'` | `'refresh'` |
@@ -94,12 +95,12 @@ After password validation, `loginUser` checks `cred.status !== 'active'` and thr
 
 Route access and mutations are permission-based. Roles group permissions in the database and may also shape authorized results or presentation—for example, administrators can manage staff and youth accounts while staff can manage youth accounts only. A role check must never replace the route permission check.
 
-### Roles and their permissions (seeded in `init.sql`)
+### Roles and their permissions
 
 | Role | Permissions |
 |------|-------------|
-| `admin` | Account, youth profile, school, outreach, and settings read/write permissions |
-| `staff` | Account, youth profile, school, and outreach read/write permissions; account results are youth-scoped |
+| `admin` | All currently defined permissions, including account, youth, programming, outreach, homepage, settings, and timesheet access |
+| `staff` | Operational permissions assigned by migrations; account results and some workflows remain policy-scoped |
 | `youth` | *(none)* |
 
 ### Permission definitions
@@ -122,8 +123,12 @@ Route access and mutations are permission-based. Roles group permissions in the 
 | `write:attendance` | Record and update attendance through session- or youth-centric workflows |
 | `read:outreach` | Read expressions of interest and leads |
 | `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` |
+| `read:homepage` | Read staff-managed homepage content |
+| `write:homepage` | Manage homepage images and programming content |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
+| `read:timesheets` | Read self-scoped time entries for staff or all entries for administrators |
+| `write:timesheets` | Create, update, and delete self-scoped time entries for staff or all entries for administrators |
 
 ### How permissions flow into a token
 
@@ -134,11 +139,11 @@ Route access and mutations are permission-based. Roles group permissions in the 
 
 ### Where to add a new permission
 
-1. Add the string to the `Permission` union in `src/types/auth.ts`
-2. `INSERT INTO user_permissions (name)` in `init.sql` seed block
-3. `INSERT INTO user_role_has_permissions` for whichever roles should have it
-4. Add `requirePermission('new:permission')` to the relevant route in `src/routes/`
-5. Add the string to the `Permission` union in `frontend/src/common/context/AuthContext.tsx`
+1. Add the string to the `Permission` union in `src/types/auth.ts`.
+2. Add a new forward-only migration that inserts the permission into `user_permissions` and assigns it through `user_role_has_permissions`.
+3. Add `requirePermission('new:permission')` to the relevant route in `src/routes/`.
+4. Add the string to the `Permission` union in `frontend/src/auth/authContext.ts`.
+5. Add permission and policy tests for every affected role.
 
 ---
 
@@ -215,7 +220,7 @@ jwt.verify(token, JWT_SECRET)
 
 `requirePermission(...required: Permission[])` is a separate middleware that runs after `authenticateToken`. It checks that every required permission is present in `req.user.permissions[]` — it never reads `req.user.role`.
 
-**Error responses:** Auth middleware throws `UnauthorizedError` or `ForbiddenError` from `errors.ts`. The thrown errors flow through `asyncHandler` to the global `errorHandler`, which formats the response via `sendError()`. Same path as service-thrown errors \u2014 no inline response. See [errors.md \u00a75](./errors.md#5-how-a-request-flows-through-the-system) for the full middleware flow.
+**Error responses:** Auth middleware throws `UnauthorizedError` or `ForbiddenError` from `errors.ts`. The thrown errors flow through `asyncHandler` to the global `handleError` middleware, which formats the response via `sendError()`. Same path as service-thrown errors — no inline response. See [errors.md § 5](./errors.md#5-request-flow) for the full middleware flow.
 
 ---
 
@@ -282,7 +287,7 @@ Every security-relevant auth event is written to `auth_log` by `src/services/aut
 
 ### IP Privacy
 
-`req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [db.md § 6 Auth Log](./db.md#6-auth-log) for the full privacy design.
+`req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [database.md § 6 Auth Log](./database.md#6-auth-log) for the full privacy design.
 
 The HMAC key defaults to `JWT_SECRET` but can be overridden by setting `LOG_HMAC_SECRET` to an independent secret. Using a separate secret means IP hash correlation cannot be broken even if `JWT_SECRET` is rotated — recommended for production.
 
