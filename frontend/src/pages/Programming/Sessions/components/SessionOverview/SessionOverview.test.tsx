@@ -60,7 +60,7 @@ describe('SessionOverview', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Session notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Attachments' })).toBeInTheDocument();
     expect(screen.getAllByText('No session selected.')).toHaveLength(3);
   });

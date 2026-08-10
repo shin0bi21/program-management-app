@@ -19,7 +19,7 @@ const api = vi.hoisted(() => ({
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
-  permissions: ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'],
+  permissions: ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'],
 }));
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
@@ -53,6 +53,11 @@ vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('./components/YouthReportModal/YouthReportModal', () => ({
+  default: ({ cohort }: { cohort: { name: string } | null }) => cohort
+    ? <div role="dialog" aria-label={`${cohort.name} Youth Report`} />
+    : null,
+}));
 
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
@@ -69,7 +74,7 @@ describe('Cohorts', () => {
     preferenceHook.preference = null;
     preferenceHook.save.mockReset();
     auth.role = 'admin';
-    auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts'];
+    auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
     programState.programs = [{
       id: 'program-1',
       name: 'Soft Skills',
@@ -136,18 +141,16 @@ describe('Cohorts', () => {
     expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
-    expect(screen.getAllByText('No cohort selected.')).toHaveLength(3);
+    expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
     expect(screen.queryAllByText('5')).toHaveLength(0);
     expect(screen.queryByRole('columnheader', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Enrolled' })).not.toBeInTheDocument();
     const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
     expect(headers.slice(2, 5)).toEqual(['Start', 'End', 'Status']);
-    expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeDisabled();
     const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    const firstOverviewCard = screen.getByRole('heading', { name: 'Youth enrolled' }).closest('article');
+    const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
     expect(firstOverviewCard).not.toBeNull();
     expect(cohortTable.compareDocumentPosition(firstOverviewCard!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
@@ -156,21 +159,20 @@ describe('Cohorts', () => {
     await user.click(cohortRow!);
     expect(cohortRow).toHaveClass('table-row--selected');
     expect(cohortRow).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: 'Enroll youth' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Withdraw youth' })).toBeEnabled();
+    expect(overview).toHaveTextContent('Enrollment:5');
     expect(overview).toHaveTextContent('80%');
+    expect(screen.getByRole('button', { name: 'View Report' })).toBeEnabled();
     expect(screen.getAllByText('5')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'View Report' }));
+    expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
-    expect(screen.queryByRole('menuitem', { name: 'Enroll Youth' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Withdraw Youth' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Manage Roster' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Generate Sessions' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Go to' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions?session=session-1');
   });
 
   it('shows success feedback after adding a program', async () => {
@@ -327,17 +329,18 @@ describe('Cohorts', () => {
     const cohortRow = (await screen.findByText('Summer 2026')).closest('tr');
     await user.click(cohortRow!);
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    expect(overview).toHaveTextContent('Youth attended8');
+    expect(overview).toHaveTextContent('Youth attended:8');
     expect(overview).not.toHaveTextContent('Youth enrolled');
-    expect(overview).toHaveTextContent('Average attendance100%');
+    expect(overview).toHaveTextContent('Average attendance:100%');
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');
-    expect(screen.queryByRole('button', { name: 'Enroll youth' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Withdraw youth' })).not.toBeInTheDocument();
-
+    expect(screen.getByRole('button', { name: 'View Report' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'View Report' })).toHaveAttribute(
+      'title',
+      'Drop In reporting is coming soon.',
+    );
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
-    expect(screen.queryByRole('menuitem', { name: 'Enroll Youth' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Withdraw Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Roster' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 });

@@ -1,7 +1,28 @@
-.cohort-card-actions {
+.cohort-overview {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.cohort-overview div {
   display: flex;
+  align-items: baseline;
   gap: var(--space-2);
 }
+
+.cohort-overview dt {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.cohort-overview dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
 
 .cohort-state {
   display: inline-flex;

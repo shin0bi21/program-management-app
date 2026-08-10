@@ -953,6 +953,80 @@ describe('Cohorts and attendance API', () => {
     ]));
   });
 
+  it('returns a program-scoped youth report with attendance timelines and note-category counts', async () => {
+    await sql`UPDATE program_cohorts SET starts_on = ${addDays(today, -2)} WHERE id = ${cohortId}`;
+    await sql`
+      UPDATE cohort_sessions
+      SET starts_at = ${addDays(today, -1) + 'T17:00:00.000Z'},
+          ends_at = ${addDays(today, -1) + 'T18:00:00.000Z'}
+      WHERE id = ${sessionId}
+    `;
+    const response = await request(app)
+      .get(`/api/cohorts/${cohortId}/reports/youth`)
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.cohort).toEqual(expect.objectContaining({ id: cohortId, name: expect.any(String) }));
+    expect(response.body.youth).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: youthId,
+        attendanceBreakdown: {
+          bySessionType: expect.arrayContaining([
+            expect.objectContaining({
+              name: 'Guest Speaker', present: 1, late: 0, absent: 0, excused: 0, unmarked: 0,
+              attendedCount: 1, countedCount: 1, attendanceRate: 100,
+            }),
+            expect.objectContaining({ name: 'Regular', countedCount: 0, attendanceRate: null }),
+            expect.objectContaining({ name: 'Field Trip', countedCount: 0, attendanceRate: null }),
+          ]),
+          total: {
+            name: 'Total', present: 1, late: 0, absent: 0, excused: 0, unmarked: 0,
+            attendedCount: 1, countedCount: 1, attendanceRate: 100,
+          },
+        },
+        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
+      }),
+      expect.objectContaining({
+        id: secondYouthId,
+        attendanceBreakdown: {
+          bySessionType: expect.arrayContaining([
+            expect.objectContaining({
+              name: 'Guest Speaker', present: 0, late: 0, absent: 0, excused: 0, unmarked: 1,
+              attendedCount: 0, countedCount: 1, attendanceRate: 0,
+            }),
+          ]),
+          total: {
+            name: 'Total', present: 0, late: 0, absent: 0, excused: 0, unmarked: 1,
+            attendedCount: 0, countedCount: 1, attendanceRate: 0,
+          },
+        },
+        notes: expect.arrayContaining([
+          expect.objectContaining({ category: 'behaviour', title: 'Updated discussion note', details: 'Updated details.' }),
+        ]),
+        timeline: expect.arrayContaining([
+          expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
+        ]),
+      }),
+    ]));
+    expect(response.body.youth.find((person: { id: string }) => person.id === youthId).timeline).toHaveLength(1);
+
+    await sql`UPDATE cohort_sessions SET cancelled_at = NOW() WHERE id = ${sessionId}`;
+    const cancelledSessionReport = await request(app)
+      .get(`/api/cohorts/${cohortId}/reports/youth`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    const youthWithCancelledSession = cancelledSessionReport.body.youth.find(
+      (person: { id: string }) => person.id === secondYouthId,
+    );
+    expect(youthWithCancelledSession.timeline).toEqual([]);
+    expect(youthWithCancelledSession.notes).toEqual([]);
+    await sql`UPDATE cohort_sessions SET cancelled_at = NULL WHERE id = ${sessionId}`;
+
+    const denied = await request(app)
+      .get(`/api/cohorts/${unassignedCohortId}/reports/youth`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(denied.status).toBe(403);
+  });
+
   it('withdraws a youth without deleting their attendance history', async () => {
     const response = await request(app)
       .patch(`/api/cohorts/${cohortId}/enrollments/${youthId}/withdraw`)
