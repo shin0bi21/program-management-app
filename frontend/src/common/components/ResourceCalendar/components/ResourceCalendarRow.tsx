@@ -19,6 +19,8 @@ interface ResourceCalendarRowProps<TResource, TItemData> {
   getResourceId: (resource: TResource) => string;
   getItemId: (item: TItemData) => string;
   renderResource: (context: { resource: TResource; index: number }) => ReactNode;
+  selected: boolean;
+  onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
   buildOverflowItem?: (context: BuildItemContext<TResource, TItemData>, actions: OverflowItemActions) => ReactNode;
   isItemDraggable?: (context: BuildItemContext<TResource, TItemData>) => boolean;
@@ -28,6 +30,7 @@ interface ResourceCalendarRowProps<TResource, TItemData> {
   renderOverflowSummary?: (context: CellOverflowContext<TResource, TItemData>) => ReactNode;
   beginDrag: (drag: CalendarPointerDrag<TResource, TItemData>) => void;
   suppressClickRef: MutableRefObject<boolean>;
+  today: Date;
 }
 
 function ResourceCalendarRow<TResource, TItemData>({
@@ -40,6 +43,8 @@ function ResourceCalendarRow<TResource, TItemData>({
   getResourceId,
   getItemId,
   renderResource,
+  selected,
+  onResourceSelect,
   buildItem,
   buildOverflowItem,
   isItemDraggable,
@@ -49,11 +54,26 @@ function ResourceCalendarRow<TResource, TItemData>({
   renderOverflowSummary,
   beginDrag,
   suppressClickRef,
+  today,
 }: ResourceCalendarRowProps<TResource, TItemData>) {
   const resourceId = getResourceId(resource);
   return (
-    <div className="resource-calendar__row" style={{ gridTemplateColumns: gridColumns, height: rowHeight }}>
-      <div className="resource-calendar__resource">{renderResource({ resource, index: resourceIndex })}</div>
+    <div
+      className={`resource-calendar__row${selected ? ' resource-calendar__row--selected' : ''}`}
+      style={{ gridTemplateColumns: gridColumns, height: rowHeight }}
+    >
+      <div className="resource-calendar__resource">
+        {onResourceSelect ? (
+          <button
+            type="button"
+            className="resource-calendar__resource-select"
+            aria-pressed={selected}
+            onClick={() => onResourceSelect(resource)}
+          >
+            {renderResource({ resource, index: resourceIndex })}
+          </button>
+        ) : renderResource({ resource, index: resourceIndex })}
+      </div>
       {periods.map(period => {
         const items = resourceData[period.key] ?? [];
         const renderItem = (item: TItemData, onEnd?: () => void, closeOverflow?: () => void) => {
@@ -93,6 +113,7 @@ function ResourceCalendarRow<TResource, TItemData>({
         return (
           <ResourceCalendarCell
             key={period.key}
+            className={today >= period.start && today < period.end ? 'resource-calendar__cell--today' : undefined}
             context={{ resource, resourceIndex, period, items }}
             resourceId={resourceId}
             getItemId={getItemId}

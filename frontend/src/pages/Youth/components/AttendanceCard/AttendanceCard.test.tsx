@@ -41,4 +41,17 @@ describe('AttendanceCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
     expect(onManage).toHaveBeenCalledWith(cohort);
   });
+
+  it('opens the selected youth report for an enrolled cohort', () => {
+    const onViewReport = vi.fn();
+    const cohort = {
+      id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled' as const,
+      startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
+      presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
+    };
+    render(<AttendanceCard selected cohorts={[cohort]} canViewReport onViewReport={onViewReport} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
+    expect(onViewReport).toHaveBeenCalledWith(cohort);
+  });
 });

@@ -5,7 +5,6 @@
 
 .attendance-card__cohort {
   display: grid;
-  gap: 4px;
 }
 
 .attendance-card__cohort-header {
@@ -22,11 +21,18 @@
   white-space: nowrap;
 }
 
+.attendance-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.attendance-card__view.btn,
 .attendance-card__manage.btn {
   flex: none;
   width: 24px;
   height: 24px;
-  margin-left: auto;
   padding: 0;
   font-size: 0.7rem;
 }

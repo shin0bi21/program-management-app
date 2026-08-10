@@ -23,6 +23,8 @@ interface ResourceCalendarGridProps<TResource, TItemData> {
   getResourceId: (resource: TResource) => string;
   getItemId: (item: TItemData) => string;
   renderResource: (context: { resource: TResource; index: number }) => ReactNode;
+  selectedResourceId?: string | null;
+  onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
   buildOverflowItem?: (context: BuildItemContext<TResource, TItemData>, actions: OverflowItemActions) => ReactNode;
   isItemDraggable?: (context: BuildItemContext<TResource, TItemData>) => boolean;
@@ -33,6 +35,7 @@ interface ResourceCalendarGridProps<TResource, TItemData> {
   beginDrag: (drag: CalendarPointerDrag<TResource, TItemData>) => void;
   suppressClickRef: MutableRefObject<boolean>;
   formatPeriodLabel: (period: CalendarPeriod) => string;
+  today: Date;
 }
 
 const EMPTY_RESOURCE_DATA: Record<string, readonly unknown[]> = {};
@@ -50,6 +53,8 @@ function ResourceCalendarGrid<TResource, TItemData>({
   getResourceId,
   getItemId,
   renderResource,
+  selectedResourceId,
+  onResourceSelect,
   buildItem,
   buildOverflowItem,
   isItemDraggable,
@@ -60,6 +65,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
   beginDrag,
   suppressClickRef,
   formatPeriodLabel,
+  today,
 }: ResourceCalendarGridProps<TResource, TItemData>) {
   return (
     <>
@@ -68,7 +74,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
         {periods.map((period, index) => (
           <div
             key={period.key}
-            className="resource-calendar__period"
+            className={`resource-calendar__period${today >= period.start && today < period.end ? ' resource-calendar__period--today' : ''}`}
             data-edge={index === 0 ? 'left' : index === periods.length - 1 ? 'right' : undefined}
           >
             <span>{formatPeriodLabel(period)}</span>
@@ -89,6 +95,8 @@ function ResourceCalendarGrid<TResource, TItemData>({
           getResourceId={getResourceId}
           getItemId={getItemId}
           renderResource={renderResource}
+          selected={selectedResourceId === getResourceId(resource)}
+          onResourceSelect={onResourceSelect}
           buildItem={buildItem}
           buildOverflowItem={buildOverflowItem}
           isItemDraggable={isItemDraggable}
@@ -98,6 +106,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
           renderOverflowSummary={renderOverflowSummary}
           beginDrag={beginDrag}
           suppressClickRef={suppressClickRef}
+          today={today}
         />
       ))}
       <div style={{ height: bottomSpacerHeight }} aria-hidden="true" />

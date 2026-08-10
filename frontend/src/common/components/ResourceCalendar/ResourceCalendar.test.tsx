@@ -89,7 +89,7 @@ describe('ResourceCalendar', () => {
 
   it('resets the rendered window to today from the calendar toolbar', () => {
     const onPeriodsReset = vi.fn();
-    render(
+    const { container } = render(
       <ResourceCalendar
         resources={[{ id: 'staff-1' }]}
         data={{}}
@@ -102,11 +102,17 @@ describe('ResourceCalendar', () => {
       />,
     );
 
+    const viewport = container.querySelector<HTMLElement>('.resource-calendar')!;
+    viewport.scrollLeft = 4000;
+
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
 
     expect(onPeriodsReset).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ key: dayKey(new Date()) }),
     ]));
+    expect(viewport.scrollLeft).toBeLessThan(4000);
+    expect(container.querySelector('.resource-calendar__period--today')).toBeInTheDocument();
+    expect(container.querySelector('.resource-calendar__cell--today')).toBeInTheDocument();
   });
 
   it('navigates the day view backward and forward by one week', () => {
@@ -151,6 +157,31 @@ describe('ResourceCalendar', () => {
     expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
+  it('supports controlled keyboard-accessible resource selection', () => {
+    const onResourceSelect = vi.fn();
+    const { container } = render(
+      <ResourceCalendar
+        resources={[{ id: 'staff-1', name: 'Zoe Wilson' }, { id: 'staff-2', name: 'Alex Morgan' }]}
+        data={{}}
+        getResourceId={resource => resource.id}
+        getItemId={(item: { id: string }) => item.id}
+        renderResource={({ resource }) => resource.name}
+        buildItem={() => null}
+        selectedResourceId="staff-2"
+        onResourceSelect={onResourceSelect}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alex Morgan' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Alex Morgan' }).closest('.resource-calendar__row')).toHaveClass(
+      'resource-calendar__row--selected',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Zoe Wilson' }));
+    expect(onResourceSelect).toHaveBeenCalledWith({ id: 'staff-1', name: 'Zoe Wilson' });
+    expect(container.querySelectorAll('.resource-calendar__resource-select')).toHaveLength(2);
   });
 
   it('does not enqueue the opposite edge until it exits and re-enters', async () => {

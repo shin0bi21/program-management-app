@@ -78,11 +78,15 @@ export function withdrawYouth(cohortId: string, youthId: string) {
   return apiClient.patch(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
 }
 
-export function getCohortYouthReport(cohortId: string, opts?: RequestOptions) {
-  const path = `/cohorts/${cohortId}/reports/youth`;
+export function getCohortYouthReport(cohortId: string, filters: { youthId?: string } = {}, opts?: RequestOptions) {
+  const query = new URLSearchParams();
+  if (filters.youthId) query.set('youthId', filters.youthId);
+  const path = `/cohorts/${cohortId}/reports/youth${query.size ? `?${query}` : ''}`;
   return opts ? apiClient.get<CohortYouthReport>(path, opts) : apiClient.get<CohortYouthReport>(path);
 }
 
-export function getCohortYouthReportPdf(cohortId: string, opts?: RequestOptions) {
-  return apiClient.download(`/cohorts/${cohortId}/reports/youth.pdf`, opts);
+export function getCohortYouthReportPdf(cohortId: string, filters: { youthId?: string } = {}, opts?: RequestOptions) {
+  const query = new URLSearchParams();
+  if (filters.youthId) query.set('youthId', filters.youthId);
+  return apiClient.download(`/cohorts/${cohortId}/reports/youth.pdf${query.size ? `?${query}` : ''}`, opts);
 }

@@ -24,6 +24,8 @@ export default function ResourceCalendar<TResource, TItemData>({
   getResourceId,
   getItemId,
   renderResource,
+  selectedResourceId,
+  onResourceSelect,
   buildItem,
   buildOverflowItem,
   isItemDraggable,
@@ -78,6 +80,7 @@ export default function ResourceCalendar<TResource, TItemData>({
   const visibleRows = useVirtualizedRows(resources, scrollTop, viewport.height, rowHeight, HEADER_HEIGHT, overscanRows);
 
   const gridColumns = `${RESOURCE_WIDTH}px repeat(${periods.length}, ${PERIOD_WIDTH}px)`;
+  const [today] = useState(() => new Date());
 
   const { drag, beginDrag, overlayRef, suppressClickRef } = useCalendarItemDrag({
     viewportRef,
@@ -133,6 +136,8 @@ export default function ResourceCalendar<TResource, TItemData>({
           getResourceId={getResourceId}
           getItemId={getItemId}
           renderResource={renderResource}
+          selectedResourceId={selectedResourceId}
+          onResourceSelect={onResourceSelect}
           buildItem={buildItem}
           buildOverflowItem={buildOverflowItem}
           isItemDraggable={isItemDraggable}
@@ -143,6 +148,7 @@ export default function ResourceCalendar<TResource, TItemData>({
           beginDrag={beginDrag}
           suppressClickRef={suppressClickRef}
           formatPeriodLabel={periodDefinition.formatLabel}
+          today={today}
         />
       </div>
       {drag?.dragging && createPortal(

@@ -22,7 +22,7 @@ import { getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaul
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
-import YouthReportModal from './components/YouthReportModal/YouthReportModal';
+import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import './Cohorts.css';
 import useCohortTable from './hooks/useCohortTable';
 
@@ -264,6 +264,7 @@ export default function Cohorts() {
             details={
               <DashboardCard
                 title="Youth Overview"
+                className="cohort-overview-card"
                 emptyMessage="No cohort selected."
                 action={selectedCohort ? <Button
                   size="sm"
