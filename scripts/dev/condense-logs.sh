@@ -15,6 +15,7 @@ Examples:
 EOF
 }
 
+# Validate help and input modes before handing logs to awk.
 if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
   usage
   exit 0
@@ -25,6 +26,7 @@ if [ "$#" -eq 0 ] && [ -t 0 ]; then
   exit 2
 fi
 
+# Normalize recognized log entries, count duplicates, and print by category.
 awk '
 function remember(kind, value, key) {
   key = kind SUBSEP value
@@ -50,6 +52,7 @@ function normalized_url(line, method, rest, url, status) {
 {
   line = $0
 
+  # Capture HTTP requests with normalized hosts and query strings.
   if (match(line, /(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)[[:space:]]+https?:\/\/[^[:space:]]+[[:space:]]+[1-5][0-9][0-9]/)) {
     matched = substr(line, RSTART, RLENGTH)
     split(matched, parts, /[[:space:]]+/)
@@ -64,6 +67,7 @@ function normalized_url(line, method, rest, url, status) {
     next
   }
 
+  # Group errors and warnings by their trimmed message.
   if (line ~ /(^|[^[:alpha:]])(ERROR|Error:|Unhandled|Uncaught|FATAL)([^[:alpha:]]|$)/) {
     summary = line
     sub(/^[[:space:]]+/, "", summary)
@@ -78,6 +82,7 @@ function normalized_url(line, method, rest, url, status) {
     next
   }
 
+  # Keep application stack frames while excluding dependency noise.
   if (line ~ /\.(ts|tsx|js|jsx):[0-9]+/ && line !~ /node_modules|chunk-[A-Z0-9]+|react-router-dom/) {
     frame = line
     sub(/^[[:space:]]+/, "", frame)
@@ -86,6 +91,7 @@ function normalized_url(line, method, rest, url, status) {
 }
 
 END {
+  # Print stable sections in first-seen order within each category.
   headings[1] = "HTTP failures"
   heading_kinds[1] = "HTTP"
   headings[2] = "Errors"
