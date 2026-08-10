@@ -5,7 +5,10 @@ import { asTransactionSql, sql } from '../db/client';
 import { BadRequestError, ConflictError, NotFoundError } from '../errors';
 import { assertSessionAccess } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
-import type { CreateSessionAttachmentInput } from '../validation/cohortSchemas';
+import type {
+  CreateSessionAttachmentInput,
+  UpdateSessionAttachmentInput,
+} from '../validation/cohortSchemas';
 import {
   finalizeQuarantinedUpload,
   quarantineUpload,
@@ -21,8 +24,15 @@ const supportedTypes = new Map([
   ['image/webp', '.webp'],
   ['text/plain', '.txt'],
   ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx'],
-  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'],
 ]);
+
+const safeDownloadTitle = (title: string) => title
+  .split('')
+  .map(character => character.charCodeAt(0) < 32 ? '-' : character)
+  .join('')
+  .replace(/[<>:"/\\|?*]/g, '-')
+  .replace(/[. ]+$/g, '')
+  .trim() || 'attachment';
 
 async function assertYouthEligibility(
   trx: ReturnType<typeof asTransactionSql>,
@@ -150,20 +160,65 @@ export async function deleteSessionAttachment(
   await finalizeQuarantinedUpload(quarantined);
 }
 
+export async function updateSessionAttachment(
+  sessionId: string,
+  attachmentId: string,
+  data: UpdateSessionAttachmentInput,
+  actor: AccessTokenPayload,
+) {
+  await assertSessionAccess(actor, sessionId);
+  await sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const attachments = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
+      SELECT sa.id, p.roster_mode
+      FROM session_attachments sa
+      INNER JOIN cohort_sessions cs ON cs.id = sa.session_id
+      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+      INNER JOIN programs p ON p.id = pc.program_id
+      WHERE sa.id = ${attachmentId} AND sa.session_id = ${sessionId}
+      FOR UPDATE OF sa
+    `;
+    if (!attachments.length) throw new NotFoundError('Session attachment not found');
+
+    await assertYouthEligibility(trx, sessionId, attachments[0].rosterMode, data.youthIds);
+    await trx`
+      UPDATE session_attachments
+      SET title = ${data.title},
+          description = ${data.description},
+          updated_at = NOW(),
+          updated_by = ${actor.userId}
+      WHERE id = ${attachmentId}
+    `;
+    await trx`DELETE FROM session_attachment_has_youth WHERE attachment_id = ${attachmentId}`;
+    if (data.youthIds.length) {
+      await trx`
+        INSERT INTO session_attachment_has_youth (attachment_id, youth_id)
+        SELECT ${attachmentId}, selected.youth_id
+        FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
+      `;
+    }
+  });
+
+  const attachments = await getSessionAttachments(sessionId, actor);
+  const updated = attachments.find(attachment => attachment.id === attachmentId);
+  if (!updated) throw new NotFoundError('Session attachment not found after update');
+  return updated;
+}
+
 export async function getSessionAttachmentFile(
   sessionId: string,
   attachmentId: string,
   actor: AccessTokenPayload,
 ) {
   await assertSessionAccess(actor, sessionId);
-  const rows = await sql<{ storageKey: string; originalFilename: string; mimeType: string }[]>`
-    SELECT storage_key, original_filename, mime_type FROM session_attachments
+  const rows = await sql<{ storageKey: string; title: string; mimeType: string }[]>`
+    SELECT storage_key, title, mime_type FROM session_attachments
     WHERE id = ${attachmentId} AND session_id = ${sessionId}
   `;
   if (!rows.length) throw new NotFoundError('Session attachment not found');
   return {
     path: path.join(attachmentRoot, rows[0].storageKey),
-    filename: rows[0].originalFilename,
+    filename: `${safeDownloadTitle(rows[0].title)}${supportedTypes.get(rows[0].mimeType) ?? ''}`,
     mimeType: rows[0].mimeType,
   };
 }

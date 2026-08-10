@@ -1,19 +1,29 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { createSessionAttachment, getSessionRoster } from '../../../../../common/features/programming/api/programming.api';
+import {
+  createSessionAttachment,
+  getSessionRoster,
+  updateSessionAttachment,
+} from '../../../../../common/features/programming/api/programming.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import type { CohortSession, SessionRosterMember } from '../../../../../common/types/cohort';
+import type {
+  CohortSession,
+  SessionAttachment,
+  SessionRosterMember,
+} from '../../../../../common/types/cohort';
 import './SessionAttachmentModal.css';
 
 export default function SessionAttachmentModal({
   session,
+  attachment = null,
   onClose,
   onSaved,
 }: {
   session: CohortSession | null;
+  attachment?: SessionAttachment | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
@@ -29,32 +39,33 @@ export default function SessionAttachmentModal({
 
   useEffect(() => {
     if (!session) return;
-    setSelectedYouthIds([]);
+    setSelectedYouthIds(attachment?.youth.map(youth => youth.youthId) ?? []);
     setSubmitStatus('idle');
     setStatusMessage('');
-  }, [session]);
+  }, [attachment, session]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!session) return;
     const form = new FormData(event.currentTarget);
     const file = form.get('file');
-    if (!(file instanceof File) || !file.size) return;
+    if (!attachment && (!(file instanceof File) || !file.size)) return;
     setSubmitStatus('submitting');
-    setStatusMessage('Uploading attachment...');
+    setStatusMessage(attachment ? 'Saving attachment...' : 'Uploading attachment...');
     try {
       const description = String(form.get('description') ?? '').trim();
-      await createSessionAttachment(session.id, {
+      const data = {
         title: String(form.get('title')).trim(),
         description: description || null,
         youthIds: selectedYouthIds,
-        file,
-      });
+      };
+      if (attachment) await updateSessionAttachment(session.id, attachment.id, data);
+      else await createSessionAttachment(session.id, { ...data, file: file as File });
       await onSaved();
-      setStatusMessage('Attachment successfully added.');
+      setStatusMessage(attachment ? 'Attachment successfully updated.' : 'Attachment successfully added.');
       setSubmitStatus('success');
     } catch (cause) {
-      setStatusMessage(cause instanceof Error ? cause.message : 'Could not add attachment');
+      setStatusMessage(cause instanceof Error ? cause.message : `Could not ${attachment ? 'update' : 'add'} attachment`);
       setSubmitStatus('error');
     }
   };
@@ -65,27 +76,27 @@ export default function SessionAttachmentModal({
     <Modal
       isOpen={session !== null}
       onClose={onClose}
-      title="Add Attachment"
+      title={attachment ? 'Edit Attachment' : 'Add Attachment'}
       status={submitStatus}
       statusMessage={statusMessage || undefined}
       successDelay={1200}
-      footer={<ModalFormFooter formId="session-attachment-form" submitLabel="Add Attachment" submitStatus={submitStatus} onClose={onClose} />}
+      footer={<ModalFormFooter formId="session-attachment-form" submitLabel={attachment ? 'Save' : 'Add Attachment'} submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="session-attachment-form" onSubmit={event => void submit(event)}>
         <FormField id="session-attachment-title" label="Title">
-          <input id="session-attachment-title" name="title" maxLength={160} required />
+          <input key={`${attachment?.id ?? 'new'}-title`} id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} required />
         </FormField>
-        <FormField id="session-attachment-file" label="File">
+        {!attachment && <FormField id="session-attachment-file" label="File">
           <input
             id="session-attachment-file"
             name="file"
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.docx,.xlsx"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.docx"
             required
           />
-        </FormField>
+        </FormField>}
         <FormField id="session-attachment-description" label="Description (optional)">
-          <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} />
+          <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} />
         </FormField>
         <fieldset className="session-attachment-youth" disabled={submissionComplete}>
           <legend>Link youth</legend>
