@@ -89,7 +89,7 @@ export default function GenerateSessionsModal({
     if (!selectedCohort) return;
     setStartsOn(selectedCohort.startsOn);
     setEndsOn(selectedCohort.endsOn);
-  }, [selectedCohort?.id]);
+  }, [selectedCohort]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -131,7 +131,6 @@ export default function GenerateSessionsModal({
       status={submitStatus}
       statusMessage={statusMessage}
       successDelay={1400}
-      disableClose={submitStatus === 'submitting'}
       footer={(
         <ModalFormFooter
           formId="generate-sessions-form"

@@ -18,6 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-CA', {
 });
 
 const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));
+const noCohorts: ProgramCohort[] = [];
 
 export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   lead: Lead | null;
@@ -41,7 +42,7 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
     )),
   });
-  const cohorts: ProgramCohort[] = cohortsQuery.data ?? [];
+  const cohorts = cohortsQuery.data ?? noCohorts;
   const loading = cohortsQuery.isLoading;
   const loadError = cohortsQuery.error
     ? getErrorMessage(cohortsQuery.error, 'Unable to load cohorts')
@@ -102,7 +103,6 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
       status={loadError ? 'error' : submitStatus}
       statusMessage={loadError || statusMessage || undefined}
       successDelay={1400}
-      disableClose={submitStatus === 'submitting'}
       maxWidth="600px"
       footer={(
         <ModalFormFooter

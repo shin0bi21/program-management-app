@@ -59,7 +59,8 @@ export default function SessionAttachmentModal({
     }
   };
 
-  const complete = submitStatus === 'submitting' || submitStatus === 'success';
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+
   return (
     <Modal
       isOpen={session !== null}
@@ -68,7 +69,6 @@ export default function SessionAttachmentModal({
       status={submitStatus}
       statusMessage={statusMessage || undefined}
       successDelay={1200}
-      disableClose={submitStatus === 'submitting'}
       footer={<ModalFormFooter formId="session-attachment-form" submitLabel="Add Attachment" submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="session-attachment-form" onSubmit={event => void submit(event)}>
@@ -87,7 +87,7 @@ export default function SessionAttachmentModal({
         <FormField id="session-attachment-description" label="Description (optional)">
           <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} />
         </FormField>
-        <fieldset className="session-attachment-youth" disabled={complete}>
+        <fieldset className="session-attachment-youth" disabled={submissionComplete}>
           <legend>Link youth</legend>
           {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
             <p className="form-error" role="alert">

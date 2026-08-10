@@ -17,7 +17,12 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['frontend/src/**/*.{ts,tsx}', 'frontend/vite.config.ts'],
+    files: [
+      'frontend/src/**/*.{ts,tsx}',
+      'frontend/vite.config.ts',
+      'frontend/playwright.config.ts',
+      'frontend/playwright/**/*.{ts,tsx}',
+    ],
     languageOptions: {
       globals: {
         ...globals.browser,

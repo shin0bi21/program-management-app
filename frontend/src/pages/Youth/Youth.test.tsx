@@ -35,7 +35,6 @@ vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
 }));
 
-vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
 vi.mock('./components/YouthModal/YouthModal', () => ({
   default: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) => isOpen
     ? <div data-testid="youth-modal">{mode ?? 'full'}</div>

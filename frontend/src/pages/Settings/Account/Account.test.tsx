@@ -4,9 +4,6 @@ import Account from './Account';
 
 const mockUsePrograms = vi.fn();
 
-vi.mock('../../../common/components/Header/Header', () => ({
-  default: () => <div data-testid="header" />,
-}));
 vi.mock('../../../auth/storage', () => ({
   getUser: () => ({
     firstName: 'Sofia',

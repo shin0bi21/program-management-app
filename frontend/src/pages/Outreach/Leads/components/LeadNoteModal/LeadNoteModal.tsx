@@ -54,7 +54,6 @@ export default function LeadNoteModal({
       status={status}
       statusMessage={statusMessage}
       successDelay={900}
-      disableClose={status === 'submitting' || status === 'success'}
       footer={<ModalFormFooter formId="lead-note-form" submitLabel={note ? 'Save' : 'Add Note'} submitStatus={status} onClose={onClose} />}
     >
       <form id="lead-note-form" onSubmit={(event) => void submit(event)}>

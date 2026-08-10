@@ -3,7 +3,6 @@ import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import FloatingMenuPanel from '../../../common/components/FloatingMenu/FloatingMenuPanel';
-import Header from '../../../common/components/Header/Header';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -199,7 +198,6 @@ export default function Cohorts() {
 
   return (
     <>
-      <Header />
       <main className="page-container page-container--data">
         <div className="data-detail-page-content">
           <PageHeader
@@ -344,7 +342,6 @@ export default function Cohorts() {
             status={confirmModal.status}
             statusMessage={confirmModal.statusMessage}
             footer={confirmModal.footer}
-            disableClose={confirmModal.disableClose}
             successDelay={confirmModal.successDelay}
           >
             {confirmAction && <p>{confirmAction.message}</p>}

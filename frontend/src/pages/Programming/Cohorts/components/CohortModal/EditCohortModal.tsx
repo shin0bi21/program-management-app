@@ -44,8 +44,6 @@ export default function EditCohortModal({ cohort, onClose, onUpdated }: EditCoho
     }
   };
 
-  const complete = status === 'submitting' || status === 'success';
-
   return (
     <Modal
       isOpen={cohort !== null}
@@ -54,7 +52,6 @@ export default function EditCohortModal({ cohort, onClose, onUpdated }: EditCoho
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}
-      disableClose={complete}
       footer={(
         <ModalFormFooter
           formId="edit-cohort-form"

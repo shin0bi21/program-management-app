@@ -11,6 +11,7 @@ interface CalendarRange {
   end: string;
 }
 const noSessionTypeIds: string[] = [];
+const noSessions: CohortSession[] = [];
 
 interface SessionsCalendarViewProps {
   selectedProgramIds: string[];
@@ -54,7 +55,7 @@ export default function SessionsCalendarView({
     queryFn: ({ signal }) => getSessions(filters!, { signal }),
     enabled: filters !== null,
   });
-  const sessions = query.data ?? [];
+  const sessions = query.data ?? noSessions;
 
   useEffect(() => {
     if (query.isSuccess) onSessionsLoaded?.(sessions);

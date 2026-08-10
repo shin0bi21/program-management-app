@@ -1,7 +1,7 @@
 import { Controller, type Control, type FieldErrors, type FieldValues, type Path, type UseFormRegister } from 'react-hook-form';
 import type { ReactNode } from 'react';
-import FloatingSelect from '../FloatingSelect/FloatingSelect';
-import FormField from '../FormField/FormField';
+import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
+import FormField from '../../../../components/FormField/FormField';
 import type { OutreachFormValues } from './outreachFormSchema';
 import './OutreachForm.css';
 

@@ -57,8 +57,6 @@ export default function AddCohortModal({
     }
   };
 
-  const complete = status === 'submitting' || status === 'success';
-
   return (
     <Modal
       isOpen={isOpen}
@@ -67,7 +65,6 @@ export default function AddCohortModal({
       status={status}
       statusMessage={statusMessage}
       successDelay={1400}
-      disableClose={complete}
       footer={(
         <ModalFormFooter
           formId="add-cohort-form"

@@ -62,6 +62,30 @@ export function useFloatingMenu(
     else open();
   }, [close, open]);
 
+  const reposition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return;
+
+    const menuRect = menu.getBoundingClientRect();
+    const measuredOptions = {
+      ...optionsRef.current,
+      widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
+      heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
+    };
+    const measuredPosition = calculateFloatingPosition(
+      trigger,
+      placementRef.current,
+      measuredOptions,
+    );
+
+    setPosition(current => current
+      && current.top === measuredPosition.top
+      && current.left === measuredPosition.left
+      ? current
+      : measuredPosition);
+  }, [triggerRef]);
+
   // Dismiss: pointerdown outside, scroll, resize
   useEffect(() => {
     if (!isOpen) return;
@@ -70,6 +94,7 @@ export function useFloatingMenu(
       const target = event.target as Node;
       if (triggerRef.current?.contains(target)) return;
       if (menuRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('.floating-menu-panel')) return;
       close();
     };
 
@@ -84,39 +109,31 @@ export function useFloatingMenu(
     };
   }, [isOpen, close, triggerRef]);
 
-  // Initial placement uses estimates because the portalled menu does not exist
-  // until after open. Recalculate before paint with its rendered dimensions so
-  // flipped menus sit fully above/right/left of their trigger without overlap.
+  // Measure once before paint, then respond only when the trigger or portalled
+  // menu changes size instead of measuring after every render.
   useLayoutEffect(() => {
-    if (!isOpen || !triggerRef.current || !menuRef.current) return;
+    if (!isOpen) return undefined;
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return undefined;
 
-    const menuRect = menuRef.current.getBoundingClientRect();
-    const measuredOptions = {
-      ...optionsRef.current,
-      widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
-      heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
-    };
-    const measuredPosition = calculateFloatingPosition(
-      triggerRef.current,
-      placementRef.current,
-      measuredOptions,
-    );
+    reposition();
+    if (typeof ResizeObserver === 'undefined') return undefined;
 
-    setPosition(current => current
-      && current.top === measuredPosition.top
-      && current.left === measuredPosition.left
-      ? current
-      : measuredPosition);
-  });
+    const observer = new ResizeObserver(reposition);
+    observer.observe(trigger);
+    observer.observe(menu);
+    return () => observer.disconnect();
+  }, [isOpen, reposition, triggerRef]);
 
   // Focus management: first item on open; return focus to trigger on close
   useLayoutEffect(() => {
     if (!isOpen) return;
 
+    const trigger = triggerRef.current;
     getMenuItems(menuRef.current)[0]?.focus();
 
     return () => {
-      const trigger = triggerRef.current;
       if (!trigger) return;
       const { returnFocusSelector } = optionsRef.current;
       const returnTarget = returnFocusSelector

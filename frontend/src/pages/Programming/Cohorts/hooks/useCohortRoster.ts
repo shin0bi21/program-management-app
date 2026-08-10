@@ -7,6 +7,7 @@ import { getErrorMessage } from '../../../../http/clientErrors';
 
 const belongsToCohort = (profile: YouthProfile, cohortId: string) =>
   profile.cohorts.some((enrollment) => enrollment.id === cohortId && enrollment.withdrawnOn === null);
+const noYouth: YouthProfile[] = [];
 
 export function useCohortRoster(cohort: ProgramCohort | null) {
   const [search, setSearch] = useState('');
@@ -15,7 +16,7 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
     queryFn: ({ signal }) => getYouth(undefined, {}, { signal }),
     enabled: cohort !== null,
   });
-  const youth = query.data ?? [];
+  const youth = query.data ?? noYouth;
 
   useEffect(() => {
     setSearch('');

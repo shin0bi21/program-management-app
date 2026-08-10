@@ -49,8 +49,6 @@ export default function AddProgramModal({ isOpen, onClose, onCreated }: AddProgr
     }
   };
 
-  const complete = status === 'submitting' || status === 'success';
-
   return (
     <Modal
       isOpen={isOpen}
@@ -59,7 +57,6 @@ export default function AddProgramModal({ isOpen, onClose, onCreated }: AddProgr
       status={status}
       statusMessage={statusMessage}
       successDelay={1400}
-      disableClose={complete}
       footer={(
         <ModalFormFooter
           formId="add-program-form"

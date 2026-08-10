@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import Header from './Header';
+import AppNavigation from './AppNavigation';
 
 const authState = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -20,7 +20,7 @@ vi.mock('../../../auth/authContext', () => ({
   }),
 }));
 
-vi.mock('../FloatingMenu/hooks/useFloatingMenu', () => ({
+vi.mock('../../../common/components/FloatingMenu/hooks/useFloatingMenu', () => ({
   useFloatingMenu: () => ({
     isOpen: true,
     toggle: vi.fn(),
@@ -34,13 +34,13 @@ function CurrentPath() {
   return <span data-testid="current-path">{useLocation().pathname}</span>;
 }
 
-describe('Header youth navigation', () => {
+describe('AppNavigation', () => {
   it('opens the public homepage when an authenticated user clicks the logo', async () => {
     const user = userEvent.setup();
 
     render(
       <MemoryRouter initialEntries={['/settings/account']}>
-        <Header />
+        <AppNavigation />
         <CurrentPath />
       </MemoryRouter>,
     );
@@ -56,7 +56,7 @@ describe('Header youth navigation', () => {
     authState.role = 'youth';
     render(
       <MemoryRouter>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -75,7 +75,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter initialEntries={['/homepage/manage']}>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -90,7 +90,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter initialEntries={['/outreach/expressions-of-interest']}>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -106,7 +106,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter initialEntries={['/youth/profiles']}>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -121,7 +121,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -134,7 +134,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter initialEntries={['/programming/cohorts']}>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -155,7 +155,7 @@ describe('Header youth navigation', () => {
 
     render(
       <MemoryRouter>
-        <Header />
+        <AppNavigation />
       </MemoryRouter>,
     );
 
@@ -164,5 +164,27 @@ describe('Header youth navigation', () => {
     expect(
       programming.compareDocumentPosition(outreach) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('shows Timesheets only when the user can read timesheets', () => {
+    authState.permissions = ['read:timesheets'];
+    authState.role = 'staff';
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Timesheets' })).toBeInTheDocument();
+
+    authState.permissions = [];
+    rerender(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Timesheets' })).not.toBeInTheDocument();
   });
 });

@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import Header from '../../../common/components/Header/Header';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -322,7 +321,6 @@ export default function Sessions() {
 
   return (
     <>
-      <Header />
       <main className="page-container page-container--data">
         <div
           className={`sessions-page data-detail-page-content${view === 'calendar' ? ' sessions-page--calendar' : ''}`}
@@ -468,7 +466,6 @@ export default function Sessions() {
             status={confirmModal.status}
             statusMessage={confirmModal.statusMessage}
             footer={confirmModal.footer}
-            disableClose={confirmModal.disableClose}
             successDelay={confirmModal.successDelay}
           >
             {confirmAction && <p>{confirmAction.message}</p>}

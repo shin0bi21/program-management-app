@@ -287,7 +287,6 @@ export default function SessionOverview({
         status={confirmModal.status}
         statusMessage={confirmModal.statusMessage}
         successDelay={confirmModal.successDelay}
-        disableClose={confirmModal.disableClose}
       >
         <p>{confirmAction?.message}</p>
       </Modal>

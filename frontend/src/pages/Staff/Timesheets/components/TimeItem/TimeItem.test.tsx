@@ -1,0 +1,57 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import TimeItem from './TimeItem';
+
+const item = {
+  id: 'entry-1',
+  programId: 'program-1',
+  programName: 'Soft Skills',
+  cohortId: null,
+  cohortName: null,
+  task: 'programming' as const,
+  label: 'Programming',
+  hours: 2,
+  note: 'Workshop delivery',
+};
+
+describe('TimeItem', () => {
+  it('shows complete entry details on hover', () => {
+    render(<TimeItem item={{ ...item, cohortName: 'Summer 2026' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /programming, 2 hours/i }));
+
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Programming');
+    expect(tooltip).toHaveTextContent('Soft Skills');
+    expect(tooltip).toHaveTextContent('Summer 2026');
+    expect(tooltip).toHaveTextContent('Workshop delivery');
+  });
+
+  it('opens entry actions without invoking either action immediately', () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<TimeItem item={item} onEdit={onEdit} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /programming, 2 hours/i }));
+
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Edit', 'edit'],
+    ['Delete', 'delete'],
+  ] as const)('runs the %s action and closes the menu', (label, action) => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<TimeItem item={item} onEdit={onEdit} onDelete={onDelete} />);
+    fireEvent.click(screen.getByRole('button', { name: /programming, 2 hours/i }));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: label }));
+
+    expect(action === 'edit' ? onEdit : onDelete).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
