@@ -23,7 +23,7 @@ import { createTimeEntry, deleteTimeEntry, getTimeEntries, updateTimeEntry, type
 import { TIME_ENTRY_TASK_OPTIONS } from './timeEntryOptions';
 import { getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import type { ProgramCycle } from '../../../common/types/cohort';
-import { formatShortDate } from '../../../common/utils/date';
+import { formatShortDate, formatShortDateRange } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
 import { summarizeCycleHours } from './timesheetSummary';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
@@ -55,6 +55,7 @@ export default function Timesheets() {
   const [view, setViewState] = useState<TimesheetView>('calendar');
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [listSearch, setListSearch] = useState('');
+  const [selectedDashboardStaffId, setSelectedDashboardStaffId] = useState<string | null>(null);
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesReady, setCyclesReady] = useState(false);
   const [selectedCycleId, setSelectedCycleId] = useState('');
@@ -161,16 +162,9 @@ export default function Timesheets() {
   const cycleRequestRevisionRef = useRef(0);
   const refreshCycleData = useCallback(async (signal?: AbortSignal) => {
     const revision = ++cycleRequestRevisionRef.current;
-    if (view !== 'list') {
-      setCycleLoading(false);
-      return;
-    }
     setCycleLoading(true);
     try {
-      const response = await getTimeEntries(
-        selectedCycle ? { cycleId: selectedCycle.id } : {},
-        { signal },
-      );
+      const response = await getTimeEntries({}, { signal });
       if (signal?.aborted || revision !== cycleRequestRevisionRef.current) return;
       setCycleData(response.data);
       setResources(response.resources);
@@ -182,7 +176,7 @@ export default function Timesheets() {
     } finally {
       if (!signal?.aborted && revision === cycleRequestRevisionRef.current) setCycleLoading(false);
     }
-  }, [selectedCycle, view]);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -216,12 +210,12 @@ export default function Timesheets() {
     ].some(value => value.toLocaleLowerCase().includes(query)));
   }, [listRows, listSearch]);
   const {
-    selectedItem: selectedListRow,
     selectedKey: selectedListRowId,
     selectItem: selectListRow,
   } = useTableSelection(visibleListRows);
   const selectListRowWithContext = useCallback((row: TimesheetListRow) => {
     selectListRow(row);
+    setSelectedDashboardStaffId(row.resourceId);
     if (row.item.cycleId === selectedCycleId) return;
     setSelectedCycleId(row.item.cycleId);
     save({
@@ -235,27 +229,36 @@ export default function Timesheets() {
 
   const dashboardStaff = role === 'staff'
     ? resources[0] ?? null
-    : selectedListRow
-      ? resources.find(resource => resource.id === selectedListRow.resourceId) ?? null
-      : null;
-  const dashboardRows = useMemo(
-    () => dashboardStaff ? listRows.filter(row => row.resourceId === dashboardStaff.id) : [],
-    [dashboardStaff, listRows],
+    : resources.find(resource => resource.id === selectedDashboardStaffId) ?? null;
+  const dashboardRows = useMemo(() => {
+    if (!dashboardStaff) return [];
+    return Object.entries(cycleData[dashboardStaff.id] ?? {}).flatMap(([date, items]) => (
+      items.map(item => ({ id: item.id, resourceId: dashboardStaff.id, date, item, staffName: dashboardStaff.name }))
+    ));
+  }, [cycleData, dashboardStaff]);
+  const overviewCycle = selectedCycle
+    ?? cycles.find(cycle => cycle.state === 'active')
+    ?? cycles[0]
+    ?? null;
+  const overviewCycleRows = useMemo(
+    () => overviewCycle ? dashboardRows.filter(row => row.item.cycleId === overviewCycle.id) : [],
+    [dashboardRows, overviewCycle],
   );
 
   const summary = useMemo(() => {
     const result = summarizeCycleHours(
+      overviewCycleRows.map(row => ({ date: row.date, label: row.item.label, hours: row.item.hours })),
+      overviewCycle,
+      undefined,
       dashboardRows.map(row => ({ date: row.date, label: row.item.label, hours: row.item.hours })),
-      selectedCycle,
     );
     return { ...result, periodLabel: result.periodStart && result.periodEnd
-      ? `${formatShortDate(result.periodStart)} – ${formatShortDate(result.periodEnd)}`
+      ? formatShortDateRange(result.periodStart, result.periodEnd)
       : 'No cycle selected' };
-  }, [dashboardRows, selectedCycle]);
-  const hasOverviewContext = dashboardStaff !== null && selectedCycle !== null;
-  const overviewEmptyMessage = dashboardStaff
-    ? 'Select a cycle to view this staff member’s overview.'
-    : 'Select a time entry to view this staff member’s overview.';
+  }, [dashboardRows, overviewCycle, overviewCycleRows]);
+  const hasStaffOverview = dashboardStaff !== null;
+  const hasCycleOverview = dashboardStaff !== null && overviewCycle !== null;
+  const overviewEmptyMessage = 'Select a staff member to view their time entry overview.';
 
   const applyFilter = (categoryId: string, values: string[]) => {
     const nextStaffIds = categoryId === 'staff' ? values : staffFilters;
@@ -450,24 +453,34 @@ export default function Timesheets() {
             {error && <Button size="sm" variant="secondary" onClick={retry}>Retry</Button>}
           </div>
         )}
-        {!preferencesReady ? <p role="status">Loading saved filters…</p> : view === 'list' && <section className="timesheets-page__overview" aria-label="Timesheet overview">
+        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <section className="timesheets-page__overview" aria-label="Timesheet overview">
           <TimesheetOverviewCard
             title="Hours This Pay Period"
             total={summary.periodTotal}
-            context={`${dashboardStaff?.name ?? ''} · ${summary.periodLabel}`}
+            modalTitle={dashboardStaff?.name ?? ''}
+            modalSubtitle={summary.periodLabel}
             breakdown={summary.periodTaskHours}
             emptyMessage={overviewEmptyMessage}
-            hasStaff={hasOverviewContext}
+            hasStaff={hasStaffOverview}
+            details={[
+              ['Current Pay Period', summary.periodLabel],
+              ['Hours', summary.periodTotal.toFixed(2)],
+            ]}
           />
           <TimesheetOverviewCard
-            title="Average Biweekly Hours This Cycle"
+            title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
             total={summary.average}
-            context={`${dashboardStaff?.name ?? ''} · ${selectedCycle?.name ?? 'No cycle selected'}`}
+            modalTitle={dashboardStaff?.name ?? ''}
+            modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
             breakdown={summary.taskHours.map(
               ([label, hours]): [string, number] => [label, hours / summary.periodCount],
             )}
             emptyMessage={overviewEmptyMessage}
-            hasStaff={hasOverviewContext}
+            hasStaff={hasCycleOverview}
+            details={[
+              ['Cycle', overviewCycle?.name ?? ''],
+              ['Biweekly Average', summary.average.toFixed(2)],
+            ]}
           />
         </section>}
         {preferencesReady && (view === 'calendar' ? <div className="timesheets-page__calendar">
@@ -476,7 +489,7 @@ export default function Timesheets() {
             data={visibleData}
             initialDate={initialDate}
             ariaLabel="Staff timesheet calendar"
-            resourceHeader="Staff member"
+            resourceHeader="Name"
             onPeriodsBuilt={onPeriodsBuilt}
             onInitialPeriods={initialize}
             onPeriodsReset={reset}
@@ -488,6 +501,8 @@ export default function Timesheets() {
             getResourceId={getStaffResourceId}
             getItemId={getTimesheetItemId}
             renderResource={renderCalendarResource}
+            selectedResourceId={role === 'admin' ? selectedDashboardStaffId : resources[0]?.id}
+            onResourceSelect={role === 'admin' ? resource => setSelectedDashboardStaffId(resource.id) : undefined}
             buildItem={buildCalendarItem}
             buildOverflowItem={buildOverflowItem}
           />

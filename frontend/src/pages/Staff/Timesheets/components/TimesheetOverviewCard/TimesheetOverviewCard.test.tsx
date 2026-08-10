@@ -11,7 +11,8 @@ describe('TimesheetOverviewCard', () => {
       <TimesheetOverviewCard
         title="Hours This Pay Period"
         total={7.25}
-        context="Jordan Lee · Jul 29, 2026 – Aug 11, 2026"
+        modalTitle="Jordan Lee"
+        modalSubtitle="Jul 29 – Aug 11, 2026"
         breakdown={[
           ['Program Delivery', 5],
           ['Meeting', 2.25],
@@ -26,17 +27,20 @@ describe('TimesheetOverviewCard', () => {
     const cardQueries = within(card!);
 
     expect(cardQueries.getByText('7.25')).toBeInTheDocument();
-    expect(cardQueries.getByText('Jordan Lee · Jul 29, 2026 – Aug 11, 2026')).toBeInTheDocument();
     expect(cardQueries.queryByText('Program Delivery')).not.toBeInTheDocument();
 
     const toggle = cardQueries.getByRole('button', { name: 'See Breakdown' });
     expect(toggle).toHaveAttribute('aria-haspopup', 'dialog');
     await user.click(toggle);
 
-    const dialog = screen.getByRole('dialog', { name: 'Hours This Pay Period Breakdown' });
+    const dialog = screen.getByRole('dialog', { name: 'Jordan Lee' });
     expect(within(dialog).getByText('Program Delivery')).toBeInTheDocument();
     expect(within(dialog).getByText('5.00')).toBeInTheDocument();
-    expect(within(dialog).getByText('Jordan Lee · Jul 29, 2026 – Aug 11, 2026')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('7.25')).toHaveLength(2);
+    expect(within(dialog).getByText('hrs')).toBeInTheDocument();
+    expect(within(dialog).getByText('Jul 29 – Aug 11, 2026')).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: 'Breakdown of 7.25 hours' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Total').parentElement).toHaveTextContent('7.25');
 
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -47,7 +51,8 @@ describe('TimesheetOverviewCard', () => {
       <TimesheetOverviewCard
         title="Average Biweekly Hours This Cycle"
         total={0}
-        context=""
+        modalTitle=""
+        modalSubtitle=""
         breakdown={[]}
         emptyMessage="Select a time entry."
         hasStaff={false}

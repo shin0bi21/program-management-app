@@ -4,6 +4,7 @@ import { useFloatingMenu } from '../../FloatingMenu/hooks/useFloatingMenu';
 import type { CalendarCellContext, CellOverflowContext } from '../types';
 
 interface ResourceCalendarCellProps<TResource, TItemData> {
+  className?: string;
   context: CalendarCellContext<TResource, TItemData>;
   resourceId: string;
   getItemId: (item: TItemData) => string;
@@ -15,6 +16,7 @@ interface ResourceCalendarCellProps<TResource, TItemData> {
 }
 
 export default function ResourceCalendarCell<TResource, TItemData>({
+  className,
   context,
   resourceId,
   getItemId,
@@ -36,7 +38,7 @@ export default function ResourceCalendarCell<TResource, TItemData>({
 
   return (
     <div
-      className={`resource-calendar__cell${onCellClick ? ' resource-calendar__cell--interactive' : ''}`}
+      className={`resource-calendar__cell${className ? ` ${className}` : ''}${onCellClick ? ' resource-calendar__cell--interactive' : ''}`}
       data-period={context.period.key}
       data-resource-id={resourceId}
       role={onCellClick ? 'gridcell' : undefined}

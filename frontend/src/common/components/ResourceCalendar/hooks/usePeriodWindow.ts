@@ -53,6 +53,7 @@ export function usePeriodWindow({
   const didNotifyInitialPeriods = useRef(false);
   const previousWindowSize = useRef(windowSize);
   const pendingReset = useRef(false);
+  const pendingTargetDate = useRef<Date | null>(null);
 
   useLayoutEffect(() => {
     if (previousWindowSize.current === windowSize) return;
@@ -94,6 +95,7 @@ export function usePeriodWindow({
     pendingSuppressedEdges.current.clear();
     didSetInitialPosition.current = false;
     pendingReset.current = true;
+    pendingTargetDate.current = new Date(date);
     setPeriods(resetPeriods);
   }, [periodDefinition, windowSize]);
 
@@ -138,7 +140,12 @@ export function usePeriodWindow({
     if (!ready || !viewport || periods.length !== windowSize) return;
 
     if (!didSetInitialPosition.current) {
-      viewport.scrollLeft = Math.max(0, initialLeadingPeriodCount * periodWidth);
+      const targetDate = pendingTargetDate.current;
+      const targetIndex = targetDate
+        ? periods.findIndex(period => targetDate >= period.start && targetDate < period.end)
+        : -1;
+      viewport.scrollLeft = Math.max(0, (targetIndex >= 0 ? targetIndex : initialLeadingPeriodCount) * periodWidth);
+      pendingTargetDate.current = null;
       didSetInitialPosition.current = true;
       if (!didNotifyInitialPeriods.current) {
         didNotifyInitialPeriods.current = true;
