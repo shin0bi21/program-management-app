@@ -14,7 +14,7 @@ Implement frontend changes through the repository's established layers and compo
 3. Read the `README.md` in each applicable shared component folder when present.
 4. Read `frontend/src/common/components/README.md` for shared primitive ownership.
 5. Read `frontend/src/app/components/AppNavigation/README.md` when changing authenticated navigation or route-family destinations.
-6. Inspect at least two current consumers when choosing an application-level composition pattern.
+6. Inspect a strong current consumer when choosing an application-level composition pattern. Inspect a second only when the contract is ambiguous or introducing a new pattern.
 
 If required component documentation is missing and the component has non-obvious integration requirements, add a concise README with its public contract as part of the change.
 

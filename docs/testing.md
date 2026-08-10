@@ -7,12 +7,15 @@ Run test commands from the repository root. The supported test workflow uses the
 | Scope | Command |
 |---|---|
 | Full application | `bash scripts/tests/test-app.sh` |
+| Suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
 | Static analysis | `bash scripts/tests/test-static.sh` |
 | Backend APIs | `bash scripts/tests/backend/test-apis.sh` |
 | Frontend UI | `bash scripts/tests/frontend/test-ui.sh` |
 | Playwright browser components | `cd frontend && npm run test:browser` |
 
-The full application runner executes deployment checks, backend API tests, and frontend tests. The backend and frontend umbrella runners compose the focused scripts in their respective directories.
+The full application runner executes deployment checks, backend API tests, and frontend tests. Pass `--changed` to select those suites from committed branch changes plus staged, unstaged, and untracked files. The comparison base defaults to the remote default branch (or `origin/develop`); override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`. Documentation-only changes skip tests, while unrecognized cross-cutting files conservatively run the full suite.
+
+Bare `test-app.sh` and the explicit `--full` option both run the full suite. This keeps CI and existing developer workflows deterministic.
 
 Backend tests run against the Docker-backed test database. The runners prepare it as needed and preserve already-running development containers. Frontend path runners may skip cleanly when their page directory has no tests.
 

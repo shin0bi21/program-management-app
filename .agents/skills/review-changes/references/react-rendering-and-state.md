@@ -23,3 +23,5 @@ Review overlapping loads and mutations, out-of-order responses, repeated same-it
 ## Effects and external lifecycles
 
 Verify complete dependency sets, symmetric setup/cleanup, stable event boundaries, and removal of listeners or observers on every completion path. Keep query definitions declarative; place subscriptions, cancellation bridges, and browser observers in named helpers or hooks when they form a coherent lifecycle.
+
+For browser-global listeners, observers, timers, subscriptions, portalled overlays, and external-library instances, determine how many component instances can own the lifecycle at once. Flag repeated leaf ownership when one ancestor, shared hook, or coordinator can express the same contract more clearly and with bounded registrations. Do not centralize inherently instance-scoped behavior: a listener or observer belongs with the component when it targets that component's unique element or external-library instance and has symmetric cleanup. Require the ownership choice to remain understandable without relying on incidental assumptions such as “only one is usually open.”

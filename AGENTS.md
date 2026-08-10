@@ -12,6 +12,8 @@
 
 - Use this file as the single automatic agent entry point.
 - Use `.agents/skills/implement-frontend/` when creating or changing frontend pages, components, hooks, forms, modals, menus, tables, calendars, API adapters, or UI tests.
+- Also use `.agents/skills/build-list-page/` when creating or materially changing a list/table page, its dashboard or detail composition, search, filters, views, sorting, selection, pagination, preferences, or responsive behavior.
+- Also use `.agents/skills/build-calendar-page/` when creating or materially changing a resource-calendar page, its periods, buffered loading, items, overflow, mutations, drag/drop, preferences, or responsive behavior.
 - Use `.agents/skills/review-changes/` for repeatable change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
 - Read `docs/architecture/frontend.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `docs/architecture/backend.md` and the relevant architecture document before changing backend architecture, authentication, errors, or database behavior. Read the relevant file under `backend/docs/` for integrations.

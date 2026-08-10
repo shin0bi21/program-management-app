@@ -30,6 +30,7 @@ export default class SummaryReporter implements Reporter {
     mkdirSync(dirname(summaryPath), { recursive: true });
     writeFileSync(summaryPath, `${JSON.stringify({
       status: result.status,
+      timestamp: new Date().toISOString(),
       durationMs: Date.now() - this.startedAt,
       tests: {
         total: tests.length,

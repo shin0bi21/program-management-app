@@ -42,6 +42,7 @@ docker compose down
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
 | Run the full repository test suite | `bash scripts/tests/test-app.sh` |
+| Run suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
 | Install the Playwright browser | `cd frontend && npm run test:browser:install` |
 | Run browser component tests | `cd frontend && npm run test:browser` |
 | Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
@@ -89,6 +90,26 @@ docker compose logs --tail=100 db
 docker compose exec frontend npm ls <package-name>
 docker compose exec backend npm ls <package-name>
 ```
+
+Run the read-only environment doctor to combine container, health, migration,
+dependency, and likely-staleness checks into one report:
+
+```bash
+bash scripts/dev/doctor.sh
+```
+
+It exits nonzero when it reports warnings but never restarts containers, applies
+migrations, installs dependencies, or otherwise changes the environment.
+
+Condense repetitive browser or backend logs for manual review:
+
+```bash
+pbpaste | bash scripts/dev/condense-logs.sh
+bash scripts/dev/condense-logs.sh path/to/console.log
+```
+
+The condenser groups repeated HTTP failures, warnings, errors, and application
+stack frames. It organizes evidence without assigning a speculative root cause.
 
 Use logs to identify the failing service before restarting or rebuilding
 unrelated services.
