@@ -144,7 +144,16 @@ function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
 }
 
 function safeFilename(value: string) {
-  return value.replace(/[\u0000-\u001f\u007f\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim() || 'Youth Report';
+  return value
+    .split('')
+    .map(character => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127 ? '-' : character;
+    })
+    .join('')
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim() || 'Youth Report';
 }
 
 export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload) {
