@@ -18,6 +18,7 @@ bash scripts/tests/backend/run-programs-tests.sh
 bash scripts/tests/backend/run-cohorts-tests.sh
 bash scripts/tests/backend/run-homepage-tests.sh
 bash scripts/tests/backend/run-preferences-tests.sh
+bash scripts/tests/backend/run-timesheet-tests.sh
 bash scripts/tests/backend/run-outreach-tests.sh
 
 echo ""

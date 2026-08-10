@@ -37,6 +37,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type Numeric = ColumnType<string, number | string, number | string>;
+
 export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
 
 export type ProgramRosterMode = "enrolled" | "open";
@@ -297,6 +299,21 @@ export interface SystemRevokedTokens {
   user_id: string;
 }
 
+export interface TimeEntries {
+  cohort_id: string | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  hours: Numeric;
+  id: Generated<string>;
+  note: string;
+  program_id: string | null;
+  staff_id: string;
+  task: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  work_date: Timestamp;
+}
+
 export interface UserAuthCodes {
   code: string;
   created_at: Generated<Timestamp | null>;
@@ -469,6 +486,7 @@ export interface DB {
   session_types: SessionTypes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
+  time_entries: TimeEntries;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;
   user_has_addresses: UserHasAddresses;
