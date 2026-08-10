@@ -203,10 +203,19 @@ export interface Leads {
 export interface ProgramCohorts {
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  cycle_id: string;
+  id: Generated<string>;
+  program_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface ProgramCycles {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
   ends_on: Timestamp;
   id: Generated<string>;
   name: string;
-  program_id: string;
   starts_on: Timestamp;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -300,9 +309,9 @@ export interface SystemRevokedTokens {
 }
 
 export interface TimeEntries {
-  cohort_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  cycle_id: string;
   hours: Numeric;
   id: Generated<string>;
   note: string;
@@ -476,6 +485,7 @@ export interface DB {
   lead_notes: LeadNotes;
   leads: Leads;
   program_cohorts: ProgramCohorts;
+  program_cycles: ProgramCycles;
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;

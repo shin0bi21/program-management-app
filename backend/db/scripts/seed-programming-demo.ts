@@ -81,17 +81,21 @@ async function main() {
         max_age = EXCLUDED.max_age
     `;
 
-    const [cohort] = await tx<{ id: string }[]>`
-      INSERT INTO program_cohorts (
-        program_id, name, starts_on, ends_on, created_by, updated_by
-      )
-      VALUES (
-        ${softSkills.id}, 'Summer 2026', '2026-07-01', '2026-09-01',
-        ${fixtureStaffId}, ${fixtureStaffId}
-      )
-      ON CONFLICT (program_id, name) DO UPDATE SET
+    const [cycle] = await tx<{ id: string }[]>`
+      INSERT INTO program_cycles (name, starts_on, ends_on, created_by, updated_by)
+      VALUES ('Summer 2026', '2026-07-01', '2026-09-01', ${fixtureStaffId}, ${fixtureStaffId})
+      ON CONFLICT (name) DO UPDATE SET
         starts_on = EXCLUDED.starts_on,
         ends_on = EXCLUDED.ends_on,
+        updated_at = NOW(),
+        updated_by = EXCLUDED.updated_by
+      RETURNING id
+    `;
+
+    const [cohort] = await tx<{ id: string }[]>`
+      INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
+      VALUES (${softSkills.id}, ${cycle.id}, ${fixtureStaffId}, ${fixtureStaffId})
+      ON CONFLICT (program_id, cycle_id) DO UPDATE SET
         updated_at = NOW(),
         updated_by = EXCLUDED.updated_by
       RETURNING id

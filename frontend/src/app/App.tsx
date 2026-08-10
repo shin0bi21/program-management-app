@@ -13,6 +13,7 @@ const Youth = lazy(() => import('../pages/Youth/Youth'));
 const YouthLayout = lazy(() => import('../pages/Youth/YouthLayout'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
+const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
 const Outreach = lazy(() => import('../pages/Outreach/Outreach'));
 const ExpressionsOfInterest = lazy(() => import('../pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'));
 const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
@@ -68,6 +69,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Account />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings/programming"
+                element={
+                  <ProtectedRoute requiredPermission="write:programs">
+                    <ProgrammingSettings />
                   </ProtectedRoute>
                 }
               />

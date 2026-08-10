@@ -13,7 +13,7 @@ export default function AppNavigation() {
   } = navigation;
   const {
     canManageHomepage, canViewYouth, canViewOutreach, canViewCohorts,
-    canViewSessions, canViewProgramming, canManageAccounts, canViewTimesheets,
+    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming, canViewTimesheets,
   } = permissions;
 
   return (
@@ -209,15 +209,6 @@ export default function AppNavigation() {
           >
             My Account
           </button>
-          {canManageHomepage && (
-            <button
-              role="menuitem"
-              onClick={() => go('/homepage/manage')}
-              className={`settings-flyout-item${isActive('/homepage/manage') ? ' active' : ''}`}
-            >
-              Manage Homepage
-            </button>
-          )}
           {canManageAccounts && (
             <button
               role="menuitem"
@@ -225,6 +216,24 @@ export default function AppNavigation() {
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
               Manage Accounts
+            </button>
+          )}
+          {canManageProgramming && (
+            <button
+              role="menuitem"
+              onClick={() => go('/settings/programming')}
+              className={`settings-flyout-item${isActive('/settings/programming') ? ' active' : ''}`}
+            >
+              Manage Programming
+            </button>
+          )}
+          {canManageHomepage && (
+            <button
+              role="menuitem"
+              onClick={() => go('/homepage/manage')}
+              className={`settings-flyout-item${isActive('/homepage/manage') ? ' active' : ''}`}
+            >
+              Manage Homepage
             </button>
           )}
         </FloatingMenuPanel>

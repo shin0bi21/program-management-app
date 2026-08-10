@@ -13,8 +13,8 @@ function LocationProbe() {
 
 const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
-  createProgram: vi.fn(),
   getCohorts: vi.fn(),
+  getProgramCycles: vi.fn(),
   getSessionTypes: vi.fn(),
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
@@ -43,10 +43,7 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohortPage: api.getCohorts,
   getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
-}));
-
-vi.mock('../../../common/features/programs/api/programs.api', () => ({
-  createProgram: api.createProgram,
+  getProgramCycles: api.getProgramCycles,
 }));
 
 vi.mock('../../../auth/authContext', () => ({
@@ -62,7 +59,6 @@ vi.mock('./components/YouthReportModal/YouthReportModal', () => ({
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,
-    upsertProgram: vi.fn(),
     loading: false,
     error: null,
   }),
@@ -86,11 +82,16 @@ describe('Cohorts', () => {
     api.getSessionTypes.mockResolvedValue([
       { id: 'type-regular', name: 'Regular' },
     ]);
+    api.getProgramCycles.mockResolvedValue([{
+      id: 'cycle-summer-2026', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+    }]);
     api.getCohorts.mockResolvedValue([{
       id: 'cohort-1',
       programId: 'program-1',
       programName: 'Soft Skills',
       rosterMode: 'enrolled',
+      cycleId: 'cycle-summer-2026',
+      cycleName: 'Summer 2026',
       name: 'Summer 2026',
       startsOn: '2026-07-01',
       endsOn: '2026-09-01',
@@ -103,16 +104,13 @@ describe('Cohorts', () => {
       attendanceRecordedCount: 5,
       uniqueAttendeeCount: 4,
     }]);
-    api.createProgram.mockResolvedValue({
-      id: 'program-2',
-      name: 'Job Readiness',
-      description: 'Employment preparation',
-    });
     api.createCohort.mockResolvedValue({
       id: 'cohort-2',
       programId: 'program-1',
       programName: 'Soft Skills',
       rosterMode: 'enrolled',
+      cycleId: 'cycle-fall-2026',
+      cycleName: 'Fall 2026',
       name: 'Fall 2026',
       startsOn: '2026-09-01',
       endsOn: '2026-11-30',
@@ -137,7 +135,7 @@ describe('Cohorts', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
@@ -175,31 +173,6 @@ describe('Cohorts', () => {
 
   });
 
-  it('shows success feedback after adding a program', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
-        <Cohorts />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getByRole('button', { name: '+ Add' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Add Program' }));
-    await user.type(screen.getByRole('textbox', { name: 'Program name' }), 'Job Readiness');
-    await user.type(screen.getByRole('spinbutton', { name: 'Minimum age' }), '16');
-    await user.type(screen.getByRole('spinbutton', { name: 'Maximum age' }), '19');
-    await user.click(screen.getByRole('button', { name: 'Add Program' }));
-
-    expect(api.createProgram).toHaveBeenCalledWith({
-      name: 'Job Readiness',
-      description: null,
-      rosterMode: 'enrolled',
-      minAge: 16,
-      maxAge: 19,
-    });
-    expect(await screen.findByText('Job Readiness successfully added.')).toBeInTheDocument();
-  });
-
   it('shows success feedback after adding a cohort', async () => {
     const user = userEvent.setup();
     render(
@@ -208,25 +181,19 @@ describe('Cohorts', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: '+ Add' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Add Cohort' }));
-    await user.type(screen.getByRole('textbox', { name: 'Cohort name' }), 'Fall 2026');
-    await user.type(screen.getByLabelText('Starts on'), '2026-09-01');
-    await user.type(screen.getByLabelText('Ends on'), '2026-11-30');
+    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
     await user.click(screen.getByRole('button', { name: 'Add Cohort' }));
 
     expect(api.createCohort).toHaveBeenCalledWith({
       programId: 'program-1',
-      name: 'Fall 2026',
-      startsOn: '2026-09-01',
-      endsOn: '2026-11-30',
+      cycleId: 'cycle-summer-2026',
     });
     expect(await screen.findByText(
-      'Fall 2026 successfully added to Soft Skills.',
+      'Soft Skills successfully added to Summer 2026.',
     )).toBeInTheDocument();
   });
 
-  it('opens Add Cohort directly for staff without exposing program creation', async () => {
+  it('opens Add Cohort directly for staff without exposing global programming settings', async () => {
     auth.role = 'staff';
     auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
     const user = userEvent.setup();
@@ -236,11 +203,10 @@ describe('Cohorts', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: '+ Add' }));
-
+    expect(screen.queryByRole('button', { name: 'Add Program' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
     expect(screen.getByRole('heading', { name: 'Add cohort' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Add Program' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Add Cohort' })).not.toBeInTheDocument();
   });
 
   it('defaults staff with one assigned program to that program and active cohorts', async () => {
@@ -307,6 +273,8 @@ describe('Cohorts', () => {
       programId: 'drop-in',
       programName: 'Drop In',
       rosterMode: 'open',
+      cycleId: 'cycle-summer-2026',
+      cycleName: 'Summer 2026',
       name: 'Summer 2026',
       startsOn: '2026-07-01',
       endsOn: '2026-09-01',

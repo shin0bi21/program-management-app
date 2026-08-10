@@ -6,6 +6,8 @@ import type {
   CreateCohortInput,
   EnrollYouthInput,
   ProgramCohort,
+  ProgramCycle,
+  SetProgramCycleInput,
   UpdateCohortInput,
 } from '../../../types/cohort';
 import type { CursorPage, CursorRequest } from '../../../types/pagination';
@@ -50,6 +52,20 @@ export function updateCohort(cohortId: string, data: UpdateCohortInput) {
   return apiClient.put(`/cohorts/${cohortId}`, data);
 }
 
+export function getProgramCycles(opts?: RequestOptions) {
+  return opts
+    ? apiClient.get<ProgramCycle[]>('/cohorts/cycles', opts)
+    : apiClient.get<ProgramCycle[]>('/cohorts/cycles');
+}
+
+export function createProgramCycle(data: SetProgramCycleInput) {
+  return apiClient.post<ProgramCycle>('/cohorts/cycles', data);
+}
+
+export function updateProgramCycle(cycleId: string, data: SetProgramCycleInput) {
+  return apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data);
+}
+
 export function deleteCohort(cohortId: string) {
   return apiClient.delete(`/cohorts/${cohortId}`);
 }
@@ -65,4 +81,8 @@ export function withdrawYouth(cohortId: string, youthId: string) {
 export function getCohortYouthReport(cohortId: string, opts?: RequestOptions) {
   const path = `/cohorts/${cohortId}/reports/youth`;
   return opts ? apiClient.get<CohortYouthReport>(path, opts) : apiClient.get<CohortYouthReport>(path);
+}
+
+export function getCohortYouthReportPdf(cohortId: string, opts?: RequestOptions) {
+  return apiClient.download(`/cohorts/${cohortId}/reports/youth.pdf`, opts);
 }

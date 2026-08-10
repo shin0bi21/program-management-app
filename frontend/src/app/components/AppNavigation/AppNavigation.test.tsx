@@ -82,6 +82,12 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('active');
     expect(screen.getByRole('menuitem', { name: 'Manage Homepage' })).toHaveClass('active');
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+      'My Account',
+      'Manage Homepage',
+    ]);
+    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
   it('shows Outreach as top-level navigation for users with outreach access', () => {
@@ -186,5 +192,42 @@ describe('AppNavigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Timesheets' })).not.toBeInTheDocument();
+  });
+
+  it('shows programming management in Settings only with program write access', () => {
+    authState.permissions = ['write:programs'];
+    authState.role = 'admin';
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/settings/programming']}>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('menuitem', { name: 'Manage Programming' })).toHaveClass('active');
+
+    authState.permissions = ['read:programs'];
+    rerender(
+      <MemoryRouter initialEntries={['/settings/account']}>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
+  });
+
+  it('orders admin Settings destinations by account, programming, then homepage management', () => {
+    authState.permissions = ['read:accounts', 'write:programs', 'read:homepage'];
+    authState.role = 'admin';
+    render(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+      'My Account',
+      'Manage Accounts',
+      'Manage Programming',
+      'Manage Homepage',
+    ]);
   });
 });

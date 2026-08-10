@@ -11,9 +11,10 @@ Unless stated otherwise, source paths in this document are relative to `backend/
 2. [Migration Files](#2-migration-files)
 3. [Creating a Migration](#3-creating-a-migration)
 4. [Safety Features](#4-safety-features)
-5. [Audit Log](#5-audit-log)
-6. [Auth Log](#6-auth-log)
-7. [Base Table Pattern](#7-base-table-pattern)
+5. [Updating Enumerated Fields](#5-updating-enumerated-fields)
+6. [Audit Log](#6-audit-log)
+7. [Auth Log](#7-auth-log)
+8. [Base Table Pattern](#8-base-table-pattern)
 
 ---
 
@@ -112,7 +113,59 @@ docker compose exec backend npm run db:status    # verify
 
 ---
 
-## 5. Audit Log
+## 5. Updating Enumerated Fields
+
+An enumerated application field has one contract spread across the database constraint, backend validation and labels, frontend types and options, tests, and seeds. Update all of those owners together; changing only the displayed label leaves an obsolete value in the API and database.
+
+### Text columns constrained with `CHECK`
+
+Most finite-value fields in this repository use `TEXT` plus a named `CHECK` constraint. Rename a value in one atomic forward migration by temporarily removing the constraint, migrating stored rows, and recreating the complete constraint:
+
+```sql
+ALTER TABLE time_entries DROP CONSTRAINT time_entries_task_check;
+
+UPDATE time_entries
+SET task = 'outreach'
+WHERE task = 'promotion';
+
+ALTER TABLE time_entries
+  ADD CONSTRAINT time_entries_task_check
+  CHECK (task IN ('program_delivery', 'planning_prep', 'outreach'));
+```
+
+Do not support both spellings merely to avoid migrating data. After the migration, backend validation and frontend types should accept only the new value. Verify the actual constraint name in the defining migration or PostgreSQL catalog rather than guessing it.
+
+### Native PostgreSQL enum types
+
+For a true PostgreSQL enum value rename, use PostgreSQL's native operation; existing rows are updated by the type itself:
+
+```sql
+ALTER TYPE attendance_status RENAME VALUE 'old_value' TO 'new_value';
+```
+
+Adding or removing native enum values has different PostgreSQL semantics. Confirm the deployed PostgreSQL version and write a forward migration appropriate to that operation instead of rebuilding a type casually.
+
+### Required application updates
+
+In the same change, search for both the stored value and its user-facing label, then update:
+
+- backend request schemas and typed service mappings;
+- frontend unions, options, filters, and labels;
+- API and UI tests;
+- deterministic seed scripts and fixtures;
+- integration documentation when the value crosses an external boundary.
+
+Run the migration against a fresh test database, regenerate `src/types/database.ts`, run affected backend and frontend tests, and query the database to confirm the old value no longer exists.
+
+### Condensing migrations before shipping
+
+While migrations are still uncommitted and have not been applied to any shared environment, fold corrections into the migration that introduces the feature and reset disposable local/test databases so their recorded checksums match the final files. Keep independent concerns in separate migrations when they may deploy, roll back operationally, or be reviewed independently.
+
+Once a migration has been applied to a shared environment—or committed as migration history—never edit, rename, delete, or squash it. Add a new forward migration instead. Do not use `--no-strict` to conceal checksum drift.
+
+---
+
+## 6. Audit Log
 
 Services that participate in application audit logging record their mutations in `audit_log` through `src/services/auditService.ts`. The coverage table below is the current source of truth; adding a write service does not make it audited automatically.
 
@@ -167,7 +220,7 @@ Each service generates a `crypto.randomUUID()` per API call and passes it to eve
 
 ---
 
-## 6. Auth Log
+## 7. Auth Log
 
 Security events are recorded in `auth_log` by `src/services/authLogService.ts`. The write is fire-and-forget — auth operations never fail because logging failed.
 
@@ -228,7 +281,7 @@ await authLog({
 
 ---
 
-## 7. Base Table Pattern
+## 8. Base Table Pattern
 
 All data tables use `LIKE base_table INCLUDING ALL` to inherit a consistent set of audit columns. `INCLUDING ALL` copies constraints, indexes, defaults, and storage parameters — not just column definitions. There is no `updated_at` auto-update trigger; services manually set `updated_at = NOW()` in every UPDATE query.
 
@@ -268,8 +321,8 @@ erDiagram
     }
     time_entries {
         uuid staff_id FK
-        uuid program_id FK
-        uuid cohort_id FK nullable
+        uuid program_id FK nullable
+        uuid cycle_id FK
         string task
         date work_date
         numeric hours

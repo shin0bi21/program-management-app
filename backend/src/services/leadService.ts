@@ -179,9 +179,10 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       }[]>`
         SELECT pc.id, pc.program_id, p.roster_mode
         FROM program_cohorts pc
+        INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
         WHERE pc.id = ${data.cohortId}
-          AND CURRENT_DATE <= pc.ends_on
+          AND CURRENT_DATE <= cycle.ends_on
         FOR UPDATE OF pc
       `;
       if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');

@@ -1,0 +1,31 @@
+.programming-settings-page .dashboard-card {
+  min-width: 0;
+}
+
+.programming-settings-page .dashboard-card__content {
+  padding: 0;
+}
+
+@media (min-width: 1001px) {
+  .programming-settings-page .dashboard-card-group {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+    margin-bottom: 0;
+  }
+
+  .programming-settings-page .dashboard-card {
+    height: 100%;
+  }
+
+  .programming-settings-page .dashboard-card__content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .programming-settings-page .dashboard-card__content > .table-wrapper {
+    flex: 1;
+    min-height: 0;
+  }
+}
