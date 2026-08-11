@@ -1,26 +1,28 @@
 import { useRef, type ReactNode } from 'react';
 import FloatingMenuPanel from '../../FloatingMenu/FloatingMenuPanel';
 import { useFloatingMenu } from '../../FloatingMenu/hooks/useFloatingMenu';
-import type { CalendarCellContext, CellOverflowContext } from '../types';
+import type { CalendarCellAction, CalendarCellContext, CellOverflowContext } from '../types';
 
 interface ResourceCalendarCellProps<TResource, TItemData> {
+  className?: string;
   context: CalendarCellContext<TResource, TItemData>;
   resourceId: string;
   getItemId: (item: TItemData) => string;
-  renderItem: (item: TItemData) => ReactNode;
   renderOverflowItem: (item: TItemData, onDragEnd: () => void, closeOverflow: () => void) => ReactNode;
   onCellClick?: (context: CalendarCellContext<TResource, TItemData>) => void;
+  getCellActions?: (context: CalendarCellContext<TResource, TItemData>) => readonly CalendarCellAction[];
   maxVisibleItems: number;
   renderOverflowSummary?: (context: CellOverflowContext<TResource, TItemData>) => ReactNode;
 }
 
 export default function ResourceCalendarCell<TResource, TItemData>({
+  className,
   context,
   resourceId,
   getItemId,
-  renderItem,
   renderOverflowItem,
   onCellClick,
+  getCellActions,
   maxVisibleItems,
   renderOverflowSummary,
 }: ResourceCalendarCellProps<TResource, TItemData>) {
@@ -31,26 +33,29 @@ export default function ResourceCalendarCell<TResource, TItemData>({
     { widthEstimate: 230, heightEstimate: 180 },
   );
   const hasOverflow = context.items.length > maxVisibleItems;
-  const visibleItems = hasOverflow ? [] : context.items;
+  const cellActions = getCellActions?.(context) ?? [];
+  const interactive = Boolean(onCellClick || cellActions.length);
+  const cellRef = useRef<HTMLDivElement>(null);
+  const cellMenu = useFloatingMenu(cellRef, { side: 'bottom', align: 'start' }, { widthEstimate: 180, heightEstimate: 90 });
   const overflowContext = { ...context, itemCount: context.items.length };
 
   return (
     <div
-      className={`resource-calendar__cell${onCellClick ? ' resource-calendar__cell--interactive' : ''}`}
+      ref={cellRef}
+      className={`resource-calendar__cell${className ? ` ${className}` : ''}${interactive ? ' resource-calendar__cell--interactive' : ''}`}
       data-period={context.period.key}
       data-resource-id={resourceId}
-      role={onCellClick ? 'gridcell' : undefined}
-      tabIndex={onCellClick ? 0 : undefined}
-      onClick={onCellClick ? () => onCellClick(context) : undefined}
-      onKeyDown={onCellClick ? event => {
+      role={interactive ? 'gridcell' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={onCellClick || cellActions.length ? event => { if (cellActions.length) cellMenu.openAtPoint(event.clientX, event.clientY); else onCellClick?.(context); } : undefined}
+      onKeyDown={interactive ? event => {
         if (event.target !== event.currentTarget) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        onCellClick(context);
+        if (cellActions.length) cellMenu.toggle(); else onCellClick?.(context);
       } : undefined}
-      aria-label={onCellClick ? `Add item for ${context.period.key}` : undefined}
+      aria-label={interactive ? `Add item for ${context.period.key}` : undefined}
     >
-      {visibleItems.map(item => <div key={getItemId(item)}>{renderItem(item)}</div>)}
       {hasOverflow && (
         <button
           ref={triggerRef}
@@ -83,6 +88,9 @@ export default function ResourceCalendarCell<TResource, TItemData>({
           ))}
         </FloatingMenuPanel>
       )}
+      {cellMenu.position && <FloatingMenuPanel menuRef={cellMenu.menuRef} position={cellMenu.position} onClose={cellMenu.close} width={180}>
+        {cellActions.map(action => <button type="button" role="menuitem" key={action.id} onClick={event => { event.stopPropagation(); cellMenu.close(); action.onSelect(); }}>{action.label}</button>)}
+      </FloatingMenuPanel>}
     </div>
   );
 }

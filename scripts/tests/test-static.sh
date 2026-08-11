@@ -26,4 +26,10 @@ shellcheck "${shell_files[@]}"
 echo "Running ESLint..."
 npm run lint
 
+echo "Validating repository skills..."
+node scripts/agents/validate-skills.js
+
+echo "Checking repository patterns..."
+node scripts/agents/check-patterns.js --changed
+
 echo "Static checks passed!"

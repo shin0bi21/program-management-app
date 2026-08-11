@@ -6,7 +6,7 @@ import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
 import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import { useAuth } from '../../../auth/authContext';
@@ -22,7 +22,7 @@ import { getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaul
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
-import YouthReportModal from './components/YouthReportModal/YouthReportModal';
+import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import './Cohorts.css';
 import useCohortTable from './hooks/useCohortTable';
 
@@ -195,7 +195,7 @@ export default function Cohorts() {
   return (
     <>
       <main className="page-container page-container--data">
-        <div className="data-detail-page-content">
+        <div className="data-page">
           <PageHeader
             title="Cohorts"
             actions={
@@ -234,7 +234,7 @@ export default function Cohorts() {
           {programsError && <p className="form-error">{programsError}</p>}
           {cyclesError && <p className="form-error">{cyclesError}</p>}
           {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
-          <TableDetailLayout
+          <PageBody
             ariaLabel="Programming cohorts and overview"
             table={
               <Table
@@ -261,9 +261,10 @@ export default function Cohorts() {
                 }
               />
             }
-            details={
+            dashboard={
               <DashboardCard
                 title="Youth Overview"
+                className="cohort-overview-card"
                 emptyMessage="No cohort selected."
                 action={selectedCohort ? <Button
                   size="sm"

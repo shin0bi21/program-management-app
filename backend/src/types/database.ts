@@ -308,7 +308,26 @@ export interface SystemRevokedTokens {
   user_id: string;
 }
 
+export interface Tasks {
+  category: string;
+  completed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  cycle_id: string;
+  details: string | null;
+  due_date: Timestamp;
+  id: Generated<string>;
+  program_id: string | null;
+  staff_id: string;
+  start_date: Timestamp;
+  status: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface TimeEntries {
+  category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
@@ -317,7 +336,7 @@ export interface TimeEntries {
   note: string;
   program_id: string | null;
   staff_id: string;
-  task: string;
+  task_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   work_date: Timestamp;
@@ -496,6 +515,7 @@ export interface DB {
   session_types: SessionTypes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
+  tasks: Tasks;
   time_entries: TimeEntries;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;

@@ -22,6 +22,45 @@ export interface PeriodDefinition {
 }
 
 export type ResourcePeriodData<TItemData> = Record<string, Record<PeriodKey, readonly TItemData[]>>;
+export type ResourceRangeData<TItemData> = Record<string, readonly TItemData[]>;
+
+export interface ItemRange { start: PeriodKey; end: PeriodKey }
+
+export interface BuildRangeItemContext<TResource, TItemData> {
+  resource: TResource;
+  data: TItemData;
+  range: ItemRange;
+  visibleStart: CalendarPeriod;
+  visibleEnd: CalendarPeriod;
+}
+
+export interface RangeResizeContext<TResource, TItemData> {
+  resource: TResource;
+  item: TItemData;
+  originalRange: ItemRange;
+  nextRange: ItemRange;
+  edge: 'start' | 'end';
+}
+export interface RangeMoveContext<TResource, TItemData> {
+  resource: TResource;
+  destinationResource: TResource;
+  item: TItemData;
+  originalRange: ItemRange;
+  nextRange: ItemRange;
+}
+
+export interface ItemCapabilityContext<TResource, TItemData> {
+  resource: TResource;
+  data: TItemData;
+  period?: CalendarPeriod;
+  range?: ItemRange;
+}
+export type ItemActivateContext<TResource, TItemData> = ItemCapabilityContext<TResource, TItemData>;
+
+export interface CalendarItemCapabilities {
+  draggable?: boolean;
+  resizable?: boolean;
+}
 
 export interface BuildItemContext<TResource, TItemData> {
   resource: TResource;
@@ -52,6 +91,7 @@ export interface CalendarCellContext<TResource, TItemData> {
   period: CalendarPeriod;
   items: readonly TItemData[];
 }
+export interface CalendarCellAction { id: string; label: string; onSelect: () => void }
 
 export interface CellOverflowContext<TResource, TItemData> extends CalendarCellContext<TResource, TItemData> {
   itemCount: number;
@@ -60,24 +100,35 @@ export interface CellOverflowContext<TResource, TItemData> extends CalendarCellC
 export interface ResourceCalendarProps<TResource, TItemData> {
   resources: readonly TResource[];
   data: ResourcePeriodData<TItemData>;
+  rangeData?: ResourceRangeData<TItemData>;
+  getItemRange?: (item: TItemData) => ItemRange;
   getResourceId: (resource: TResource) => string;
   getItemId: (item: TItemData) => string;
   renderResource: (context: RenderResourceContext<TResource>) => ReactNode;
+  selectedResourceId?: string | null;
+  onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
+  buildRangeItem?: (context: BuildRangeItemContext<TResource, TItemData>) => ReactNode;
+  getItemCapabilities?: (context: ItemCapabilityContext<TResource, TItemData>) => CalendarItemCapabilities;
+  onItemActivate?: (context: ItemActivateContext<TResource, TItemData>) => void;
+  onRangeResize?: (context: RangeResizeContext<TResource, TItemData>) => void | Promise<void>;
+  onRangeMove?: (context: RangeMoveContext<TResource, TItemData>) => void | Promise<void>;
+  canRangeMove?: (context: RangeMoveContext<TResource, TItemData>) => boolean;
   buildOverflowItem?: (
     context: BuildItemContext<TResource, TItemData>,
     actions: OverflowItemActions,
   ) => ReactNode;
-  isItemDraggable?: (context: ItemDragContext<TResource, TItemData>) => boolean;
   canDropItem?: (context: ItemDropContext<TResource, TItemData>) => boolean;
   onItemDrop?: (context: ItemDropContext<TResource, TItemData>) => void | Promise<void>;
-  onCellClick?: (context: CalendarCellContext<TResource, TItemData>) => void;
+  onCellActivate?: (context: CalendarCellContext<TResource, TItemData>) => void;
+  getCellActions?: (context: CalendarCellContext<TResource, TItemData>) => readonly CalendarCellAction[];
   maxVisibleItemsPerCell?: number;
   renderOverflowSummary?: (context: CellOverflowContext<TResource, TItemData>) => ReactNode;
   periodDefinition?: PeriodDefinition;
   ariaLabel?: string;
   resourceHeader?: ReactNode;
   initialDate?: Date;
+  positionStorageKey?: string;
   initialVisiblePeriodCount?: number;
   periodBuildSize?: number;
   rowHeight?: number;

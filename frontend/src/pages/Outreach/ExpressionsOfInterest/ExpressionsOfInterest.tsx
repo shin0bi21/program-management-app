@@ -5,7 +5,7 @@ import { useAuth } from '../../../auth/authContext';
 import { getErrorMessage } from '../../../http/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import PrimaryContactCard from '../../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
 import NotesCard from '../common/components/NotesCard/NotesCard';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
@@ -44,7 +44,7 @@ export default function ExpressionsOfInterest() {
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
+  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch } = useExpressionsOfInterest(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
@@ -98,6 +98,7 @@ export default function ExpressionsOfInterest() {
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
+      await refetch();
       setConvertingId(null);
     }
   };
@@ -185,14 +186,14 @@ export default function ExpressionsOfInterest() {
           onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
         />}
       />
-      <div className="outreach-tab-content data-detail-page-content">
+      <div className="outreach-tab-content data-page">
         {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
-        {actionError && <p className="page-error">{actionError}</p>}
+        {actionError && <p className="form-error" role="alert">{actionError}</p>}
 
-        <TableDetailLayout
+        <PageBody
           ariaLabel="Expressions of interest"
           table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-          details={<>
+          dashboard={<>
             <PrimaryContactCard contact={selectedSubmission ? {
               phoneNumber: selectedSubmission.contactPhoneNumber,
               relationship: selectedSubmission.contactRelationship,

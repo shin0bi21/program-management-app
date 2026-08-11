@@ -10,9 +10,16 @@ const pageWidth = 612;
 const pageHeight = 792;
 const margin = 32;
 const contentWidth = pageWidth - (margin * 2);
-const orange = '#d95f02';
 const muted = '#59636e';
 const border = '#d9dee4';
+const totalColor = '#4b5563';
+const timelineLineColor = '#9ca3af';
+const sessionTypeColors = {
+  Regular: '#2563a6',
+  'Guest Speaker': '#eab308',
+  'Field Trip': '#15803d',
+} as const;
+const additionalSessionTypeColors = ['#7e22ce', '#be123c', '#0f766e', '#c2410c', '#4338ca'];
 const statusValues = { unmarked: 1, absent: 2, late: 3, excused: 4, present: 5 } as const;
 const statusLabels = ['Unmarked', 'Absent', 'Late', 'Excused', 'On time'];
 const noteStyles = {
@@ -33,7 +40,21 @@ function ensureSpace(doc: PDFKit.PDFDocument, height: number) {
   doc.y = margin;
 }
 
-function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth) {
+function resetTextFlow(doc: PDFKit.PDFDocument) {
+  doc.x = margin;
+}
+
+function createSessionTypeColorMap(youth: ReportYouth) {
+  const colors = new Map<string, string>();
+  let additionalColorIndex = 0;
+  youth.attendanceBreakdown.bySessionType.forEach(({ name }) => {
+    const presetColor = sessionTypeColors[name as keyof typeof sessionTypeColors];
+    colors.set(name, presetColor ?? additionalSessionTypeColors[additionalColorIndex++ % additionalSessionTypeColors.length]!);
+  });
+  return colors;
+}
+
+function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
   const columns = [...youth.attendanceBreakdown.bySessionType, youth.attendanceBreakdown.total];
   const gap = 6;
   const width = (contentWidth - (gap * (columns.length - 1))) / columns.length;
@@ -42,9 +63,12 @@ function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth) {
 
   columns.forEach((column, index) => {
     const left = margin + (index * (width + gap));
-    doc.roundedRect(left, top, width, height, 3).lineWidth(0.7).strokeColor(border).stroke();
-    doc.rect(left, top, width, 22).fillAndStroke(column.name === 'Total' ? '#e9edf1' : '#f4f6f8', border);
-    doc.fillColor('#1f2937').font('Helvetica-Bold').fontSize(7).text(column.name, left + 3, top + 7, { width: width - 6, align: 'center' });
+    const headerColor = column.name === 'Total' ? totalColor : (colors.get(column.name) ?? muted);
+    doc.roundedRect(left, top, width, 22, 5).fillColor(headerColor).fill();
+    doc.rect(left, top + 12, width, 10).fillColor(headerColor).fill();
+    doc.roundedRect(left, top, width, height, 5).lineWidth(0.7).strokeColor(border).stroke();
+    const headerTextColor = headerColor === sessionTypeColors['Guest Speaker'] ? '#1f2937' : '#ffffff';
+    doc.fillColor(headerTextColor).font('Helvetica-Bold').fontSize(7).text(column.name, left + 3, top + 7, { width: width - 6, align: 'center' });
     const metrics = [
       ['On time', column.present], ['Late', column.late], ['Absent', column.absent],
       ['Excused', column.excused], ['Unmarked', column.unmarked],
@@ -57,20 +81,25 @@ function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     doc.moveTo(left, top + 84).lineTo(left + width, top + 84).strokeColor(border).stroke();
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#1f2937').text(attendanceRate(column), left + 3, top + 90, { width: width - 6, align: 'center' });
   });
+  resetTextFlow(doc);
   doc.y = top + height + 14;
 }
 
-function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth) {
+function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
   if (!youth.timeline.length) {
-    doc.font('Helvetica').fontSize(8).fillColor(muted).text("No sessions in this youth's enrollment period.");
+    resetTextFlow(doc);
+    doc.font('Helvetica').fontSize(8).fillColor(muted)
+      .text("No sessions in this youth's enrollment period.", margin, doc.y, { width: contentWidth });
     return;
   }
 
   const top = doc.y;
   const chartLeft = margin + 58;
   const chartRight = pageWidth - margin - 10;
-  const chartTop = top + 8;
-  const chartBottom = top + 116;
+  // Reserve a band above the highest status row so its note markers remain
+  // distinct instead of stacking over the row or timeline heading.
+  const chartTop = top + 61;
+  const chartBottom = top + 169;
   const plotHeight = chartBottom - chartTop;
   const stepX = youth.timeline.length === 1 ? 0 : (chartRight - chartLeft) / (youth.timeline.length - 1);
   const pointY = (status: keyof typeof statusValues | null) => chartBottom - (((statusValues[status ?? 'unmarked'] - 1) / 4) * plotHeight);
@@ -86,9 +115,9 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     const y = pointY(point.status);
     if (index) {
       const previous = youth.timeline[index - 1]!;
-      doc.moveTo(chartLeft + ((index - 1) * stepX), pointY(previous.status)).lineTo(x, y).lineWidth(1.6).strokeColor(orange).stroke();
+      doc.moveTo(chartLeft + ((index - 1) * stepX), pointY(previous.status)).lineTo(x, y).lineWidth(1.2).strokeColor(timelineLineColor).stroke();
     }
-    doc.circle(x, y, 2.8).fillColor(point.status ? orange : '#7b8794').fill();
+    doc.circle(x, y, 3.2).fillColor(colors.get(point.sessionTypeName) ?? muted).fill();
     point.noteCategories.forEach((category, categoryIndex) => {
       const style = noteStyles[category];
       const markerY = Math.max(chartTop + 5, y - 12 - (categoryIndex * 11));
@@ -102,12 +131,15 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth) {
       doc.font('Helvetica').fontSize(5.5).fillColor(muted).text(label, x - 18, chartBottom + 5, { width: 36, align: 'center' });
     }
   });
+  resetTextFlow(doc);
   doc.y = chartBottom + 25;
 }
 
 function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   if (!youth.notes.length) {
-    doc.font('Helvetica').fontSize(8).fillColor(muted).text('No notes for this youth.');
+    resetTextFlow(doc);
+    doc.font('Helvetica').fontSize(8).fillColor(muted)
+      .text('No notes for this youth.', margin, doc.y, { width: contentWidth });
     return;
   }
   youth.notes.forEach(note => {
@@ -130,15 +162,23 @@ function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
 }
 
 function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
-  doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937').text(`${youth.firstName} ${youth.lastName}`);
-  doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown');
+  const colors = createSessionTypeColorMap(youth);
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937')
+    .text(`${youth.firstName} ${youth.lastName}`, margin, doc.y, { width: contentWidth });
+  resetTextFlow(doc);
+  doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
-  drawBreakdown(doc, youth);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text('Attendance Timeline');
+  drawBreakdown(doc, youth, colors);
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
+    .text('Attendance Timeline', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.4);
-  drawTimeline(doc, youth);
+  drawTimeline(doc, youth, colors);
   ensureSpace(doc, 45);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text('Session Notes');
+  resetTextFlow(doc);
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
+    .text('Session Notes', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
   drawNotes(doc, youth);
 }
@@ -156,8 +196,8 @@ function safeFilename(value: string) {
     .trim() || 'Youth Report';
 }
 
-export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload) {
-  const report = await getCohortYouthReport(cohortId, actor);
+export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
+  const report = await getCohortYouthReport(cohortId, actor, youthId);
   const title = `${report.cohort.programName} - ${report.cohort.name} Youth Report`;
   const doc = new PDFDocument({ size: 'LETTER', margin, autoFirstPage: true, info: { Title: title } });
   const chunks: Buffer[] = [];

@@ -8,8 +8,8 @@ import { requireEnv } from '../../src/utils/env';
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  admin: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance', 'read:outreach', 'write:outreach', 'read:homepage', 'write:homepage', 'read:settings', 'write:settings', 'read:timesheets', 'write:timesheets'],
-  staff: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:programs', 'read:cohorts', 'write:cohorts', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance', 'read:outreach', 'write:outreach', 'read:homepage', 'write:homepage', 'read:settings', 'write:settings', 'read:timesheets', 'write:timesheets'],
+  admin: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance', 'read:outreach', 'write:outreach', 'read:homepage', 'write:homepage', 'read:settings', 'write:settings', 'read:timesheets', 'write:timesheets', 'read:tasks', 'write:tasks'],
+  staff: ['read:accounts', 'write:accounts', 'read:youth_profiles', 'write:youth_profiles', 'read:schools', 'write:schools', 'read:programs', 'read:cohorts', 'write:cohorts', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance', 'read:outreach', 'write:outreach', 'read:homepage', 'write:homepage', 'read:settings', 'write:settings', 'read:timesheets', 'write:timesheets', 'read:tasks', 'write:tasks'],
   youth: [],
 };
 
@@ -17,9 +17,10 @@ export function generateToken(
   userId: string,
   role: string,
   email: string = 'test@test.local',
+  permissions: string[] = ROLE_PERMISSIONS[role] ?? [],
 ) {
   return jwt.sign(
-    { userId, email, role, permissions: ROLE_PERMISSIONS[role] ?? [], jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
+    { userId, email, role, permissions, jti: crypto.randomBytes(16).toString('hex'), tokenType: 'access' },
     JWT_SECRET,
     { expiresIn: 900 },
   );

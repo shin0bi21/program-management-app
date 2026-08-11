@@ -1,0 +1,51 @@
+.task-item__overdue {
+  color: var(--color-danger);
+  font-size: 1rem;
+}
+
+.task-item__detail-title {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.task-item__detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.task-item__status-badge,
+.task-item__overdue-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.task-item__status-badge--todo {
+  background: var(--brand-orange-25);
+  color: var(--color-status-warn);
+}
+
+.task-item__status-badge--in_progress {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.task-item__status-badge--completed {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.task-item__status-badge--cancelled {
+  background: var(--ink-06);
+  color: var(--color-muted);
+}
+
+.task-item__overdue-badge {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}

@@ -9,6 +9,7 @@ For interactive grids, calendars, canvases, large lists, drag/drop surfaces, and
 - whether updates preserve unaffected object and array references;
 - whether independently changing rows, cells, overlays, and controls have focused components or hooks;
 - whether large-fixture or render-count tests demonstrate intended render scope.
+- whether sibling interaction modes inside one public component actually reuse lifecycle primitives. A shared outer API does not prove shared threshold, capture, preview, scrolling, targeting, cancellation, or cleanup behavior; compare their internal paths and browser tests explicitly.
 
 Do not infer performance from functional test success alone. When profiling is unavailable, require structural evidence plus targeted performance-sensitive tests.
 
@@ -23,5 +24,7 @@ Review overlapping loads and mutations, out-of-order responses, repeated same-it
 ## Effects and external lifecycles
 
 Verify complete dependency sets, symmetric setup/cleanup, stable event boundaries, and removal of listeners or observers on every completion path. Keep query definitions declarative; place subscriptions, cancellation bridges, and browser observers in named helpers or hooks when they form a coherent lifecycle.
+
+For ref-driven pointer sessions, verify parent rerenders and virtualization cannot reset the live ref from stale React state. Check `pointerup`, `pointercancel`, lost capture, invalid drop, unmount, and dependency-driven effect restart separately; only a successful release may commit.
 
 For browser-global listeners, observers, timers, subscriptions, portalled overlays, and external-library instances, determine how many component instances can own the lifecycle at once. Flag repeated leaf ownership when one ancestor, shared hook, or coordinator can express the same contract more clearly and with bounded registrations. Do not centralize inherently instance-scoped behavior: a listener or observer belongs with the component when it targets that component's unique element or external-library instance and has symmetric cleanup. Require the ownership choice to remain understandable without relying on incidental assumptions such as “only one is usually open.”

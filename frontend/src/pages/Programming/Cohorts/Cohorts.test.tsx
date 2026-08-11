@@ -50,7 +50,7 @@ vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
-vi.mock('./components/YouthReportModal/YouthReportModal', () => ({
+vi.mock('../../../common/features/programming/components/YouthReportModal/YouthReportModal', () => ({
   default: ({ cohort }: { cohort: { name: string } | null }) => cohort
     ? <div role="dialog" aria-label={`${cohort.name} Youth Report`} />
     : null,
@@ -150,7 +150,7 @@ describe('Cohorts', () => {
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
     const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
     expect(firstOverviewCard).not.toBeNull();
-    expect(cohortTable.compareDocumentPosition(firstOverviewCard!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
     expect(cohortRow).toHaveAttribute('tabindex', '0');
     expect(cohortRow).toHaveClass('table-row--selectable');

@@ -10,12 +10,15 @@ Review the current working tree without creating issues, branches, commits, pull
 ## 1. Establish scope
 
 1. Read repository instructions and relevant architecture documentation.
-2. Inspect branch state and the complete tracked and untracked diff.
-3. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
-4. Identify affected features, ownership layers, and execution paths.
-5. For dependency, environment, migration, or container changes, read `docs/local/development.md` and verify required refresh or migration steps.
+2. Reuse the latest `split-changes` concern map when one exists. If the working tree is large or mixed and no map exists, run the split workflow before deep review.
+3. Inspect branch state and the complete tracked and untracked diff only to verify that the selected concern and map are current.
+4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
+5. Identify affected features, ownership layers, and execution paths.
+6. For dependency, environment, migration, or container changes, read `docs/local/development.md` and verify required refresh or migration steps.
+7. Reuse and refine the selected concern's acceptance ledger. Mark every item implemented, intentionally deferred, contradicted, or unverified.
+8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area. If repository skills changed, also run `node scripts/agents/validate-skills.js` once.
 
-Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and proportionate tests are allowed.
+Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and missing focused tests are allowed; changing from implementation to review is not itself a reason to rerun tests.
 
 ## 2. Load conditional review guidance
 
@@ -25,18 +28,24 @@ Read only the references required by the current diff, and read each selected fi
 - Read [`references/structure-and-ownership.md`](references/structure-and-ownership.md) for non-trivial implementation changes, shared extractions, or directory/ownership changes.
 - Read [`references/react-rendering-and-state.md`](references/react-rendering-and-state.md) for React UI, grids, calendars, drag/drop, optimistic state, realtime state, or render-sensitive work.
 - Read [`references/testing.md`](references/testing.md) whenever behavior, tests, runners, APIs, persistence, or asynchronous flows change.
+- For frontend changes, read the matching implementation contracts directly: [`frontend.md`](../implement-feature/references/frontend.md), plus the applicable React-state, page-shell, form, interaction, list, or calendar reference under `../implement-feature/references/`. Review must enforce the same integration contract implementation was supposed to follow.
+- For backend changes, read [`backend.md`](../implement-feature/references/backend.md) and every applicable service, policy, database, and testing reference under `../implement-feature/references/`.
+- For permissions, ownership, assignments, resource visibility, or writable capabilities, also read [`authorization-and-scope.md`](../implement-feature/references/authorization-and-scope.md).
 
 For a cross-stack or repository-wide review, read all applicable references. Do not skip a reference merely because the diff is large.
 
 ## 3. Review behavior end to end
 
-For each concern group:
+For the selected concern group:
 
 1. Discover the closest strong repository patterns; do not review the diff in isolation.
 2. Trace data and control flow across persistence, API, state, and UI boundaries.
 3. Check success, empty, loading, error, permission, cancellation, destructive, and concurrency paths as applicable.
-4. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
-5. Verify that tests cover public behavior and that composed runners include the changed locations.
+4. Match every user action to its mutation breadth. Focused commands such as status, placement, reorder, assignment, and resize must not replace unrelated fields from a cached record; verify locked authoritative reads and concurrent-change regression tests.
+5. For authorization changes, independently trace route capability, resource discovery, record reads, locked mutations, returned UI capabilities, and every consumer affordance. Test own, shared-readable, unrelated, and administrator cases rather than treating “permission coverage” as one checkbox.
+6. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
+7. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
+8. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
 
 Treat inconsistent nearby code as historical context, not as a pattern to reproduce. Passing tests, lint, or typecheck do not override a correctness or maintainability finding.
 
