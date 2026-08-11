@@ -47,8 +47,15 @@ describe('calculateFloatingPosition', () => {
       // Near top and near bottom: rect.top = 10 (< heightEstimate), rect.bottom = 740 (little below)
       const anchor = makeAnchor({ top: 10, bottom: 740, left: 200, right: 320, width: 120, height: 730 });
       const pos = calculateFloatingPosition(anchor, { side: 'bottom', align: 'start' });
-      // not enough below AND not enough above → stays bottom
-      expect(pos.top).toBe(744); // 740 + 4
+      // not enough below AND not enough above → stays bottom, clamped to the viewport
+      expect(pos.top).toBe(568); // viewport height(768) - menu height(200)
+    });
+
+    it('does not flip when the fallback only fits without the offset', () => {
+      const anchor = makeAnchor({ top: 200, bottom: 700, left: 200, right: 320, width: 120, height: 500 });
+      const pos = calculateFloatingPosition(anchor, { side: 'bottom', align: 'start' });
+
+      expect(pos.top).toBe(568);
     });
   });
 
@@ -106,6 +113,58 @@ describe('calculateFloatingPosition', () => {
         { offset: 12 },
       );
       expect(pos.top).toBe(112); // 100 + 12
+    });
+  });
+
+  describe('viewport clamping', () => {
+    it('clamps start alignment when neither horizontal alignment fits', () => {
+      const anchor = makeAnchor({ top: 50, bottom: 100, left: 900, right: 1100, width: 200, height: 50 });
+      const pos = calculateFloatingPosition(
+        anchor,
+        { side: 'bottom', align: 'start' },
+        { widthEstimate: 1200 },
+      );
+
+      expect(pos.left).toBe(0);
+    });
+
+    it('clamps a preferred primary side when neither side fits', () => {
+      const anchor = makeAnchor({ top: 10, bottom: 740, left: 200, right: 320, width: 120, height: 730 });
+      const pos = calculateFloatingPosition(anchor, { side: 'top', align: 'start' });
+
+      expect(pos.top).toBe(0);
+    });
+
+    it('includes the offset when checking each fallback side', () => {
+      const cases = [
+        {
+          rect: { top: 200, bottom: 700, left: 300, right: 400, width: 100, height: 500 },
+          side: 'bottom' as const,
+          expected: { top: 568, left: 300 },
+        },
+        {
+          rect: { top: 68, bottom: 568, left: 300, right: 400, width: 100, height: 500 },
+          side: 'top' as const,
+          expected: { top: 0, left: 300 },
+        },
+        {
+          rect: { top: 300, bottom: 400, left: 160, right: 900, width: 740, height: 100 },
+          side: 'right' as const,
+          expected: { top: 300, left: 864 },
+        },
+        {
+          rect: { top: 300, bottom: 400, left: 124, right: 864, width: 740, height: 100 },
+          side: 'left' as const,
+          expected: { top: 300, left: 0 },
+        },
+      ];
+
+      for (const testCase of cases) {
+        const anchor = makeAnchor(testCase.rect);
+        const pos = calculateFloatingPosition(anchor, { side: testCase.side, align: 'start' });
+
+        expect(pos).toEqual(testCase.expected);
+      }
     });
   });
 });
