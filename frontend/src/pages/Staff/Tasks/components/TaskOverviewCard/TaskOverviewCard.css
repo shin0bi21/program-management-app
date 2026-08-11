@@ -3,7 +3,7 @@
   margin: 0;
 }
 
-.task-overview-card {
+.dashboard-card.task-overview-card {
   position: relative;
   justify-content: flex-start;
   height: 75px;
@@ -156,7 +156,7 @@
 }
 
 @media (max-width: 520px) {
-  .task-overview-card {
+  .dashboard-card.task-overview-card {
     align-items: stretch;
     height: auto;
     min-height: 75px;

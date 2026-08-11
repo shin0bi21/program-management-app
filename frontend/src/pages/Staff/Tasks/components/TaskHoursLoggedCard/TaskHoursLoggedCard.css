@@ -4,7 +4,7 @@
   color: var(--color-muted);
 }
 
-.task-hours-breakdown-card {
+.dashboard-card.task-hours-breakdown-card {
   position: relative;
   justify-content: flex-start;
   height: 75px;
@@ -105,7 +105,7 @@
 }
 
 @media (max-width: 520px) {
-  .task-hours-breakdown-card {
+  .dashboard-card.task-hours-breakdown-card {
     height: auto;
     min-height: 75px;
   }
