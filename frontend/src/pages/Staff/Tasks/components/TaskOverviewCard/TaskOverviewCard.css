@@ -58,7 +58,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
-  padding: var(--space-2) 0 var(--space-4);
 }
 
 .task-overview-card__report div {

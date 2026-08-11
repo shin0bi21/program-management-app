@@ -36,7 +36,10 @@ describe('TimeItem', () => {
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
     render(<TimeItem item={{ ...item, programId: null, programName: null }} />);
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
+    const timeItem = screen.getByRole('button', { name: /program delivery, 2 hours/i });
+    expect(timeItem).toHaveTextContent('Program Delivery');
+    expect(timeItem).not.toHaveTextContent('General');
+    fireEvent.mouseEnter(timeItem);
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
