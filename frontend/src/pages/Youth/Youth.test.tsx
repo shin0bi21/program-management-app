@@ -269,6 +269,79 @@ describe('Youth', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
 
+  it('returns to profile-note details after saving an edit', async () => {
+    youthApi.getYouthProfileNotes.mockResolvedValue([{
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
+    }]);
+    youthApi.updateYouthProfileNote.mockResolvedValue({
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Updated follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-08-11T12:00:00.000Z', createdByName: 'Bilal Khan',
+    });
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Family follow-up' }));
+    fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Updated follow-up' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Updated follow-up' })).toBeInTheDocument();
+    expect(youthApi.updateYouthProfileNote).toHaveBeenCalledWith('youth-1', 'profile-note-1', expect.objectContaining({
+      title: 'Updated follow-up',
+    }));
+  });
+
+  it('does not reopen stale note details when the selected profile changes during save', async () => {
+    youthApi.getYouthProfileNotes.mockResolvedValue([{
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
+    }]);
+    mockUseYouth.mockReturnValue({
+      youth: [
+        makeYouthProfile({ id: 'youth-1', firstName: 'Jamie', account: null }),
+        makeYouthProfile({ id: 'youth-2', firstName: 'Taylor', account: null }),
+      ],
+      upsertYouth: vi.fn(),
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    let resolveUpdate!: (note: Awaited<ReturnType<typeof youthApi.updateYouthProfileNote>>) => void;
+    youthApi.updateYouthProfileNote.mockReturnValue(new Promise(resolve => {
+      resolveUpdate = resolve;
+    }));
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Family follow-up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(youthApi.updateYouthProfileNote).toHaveBeenCalled());
+    fireEvent.click(screen.getByText('Taylor').closest('tr')!);
+    resolveUpdate({
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-08-11T12:00:00.000Z', createdByName: 'Bilal Khan',
+    });
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Family follow-up' })).not.toBeInTheDocument());
+  });
+
+  it('removes a successfully deleted profile note from the card', async () => {
+    youthApi.getYouthProfileNotes.mockResolvedValue([{
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
+    }]);
+    youthApi.deleteYouthProfileNote.mockResolvedValue(undefined);
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete Family follow-up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(screen.queryByText('Family follow-up')).not.toBeInTheDocument());
+    expect(youthApi.deleteYouthProfileNote).toHaveBeenCalledWith('youth-1', 'profile-note-1');
+    expect(screen.getByText('No profile notes recorded.')).toBeInTheDocument();
+  });
+
   it('opens only the contact section from the primary contact card', () => {
     render(<Youth />);
 
