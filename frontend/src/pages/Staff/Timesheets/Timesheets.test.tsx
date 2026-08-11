@@ -671,12 +671,12 @@ describe('Timesheets', () => {
       hoursLogged: 0,
       loggedHoursByDate: [],
       completedAt: null,
-      assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+      assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     }, {
       id: 'task-complete', title: 'Completed report', details: null, category: 'administration',
       programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'completed',
       startDate: '2026-08-01', dueDate: '2026-08-08', hoursLogged: 1, loggedHoursByDate: [],
-      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     }]);
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-task', staffId: 'staff-1', programId: null, programName: null,

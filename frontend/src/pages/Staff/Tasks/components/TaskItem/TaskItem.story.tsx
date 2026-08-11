@@ -3,13 +3,18 @@ import ResourceCalendar from '../../../../../common/components/ResourceCalendar/
 import type { Task } from '../../../../../common/features/tasks/types';
 import TaskItem from './TaskItem';
 
-const resource = { id: 'staff-1', name: 'Zoe Wilson' };
+const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };
 const initialTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: 'Prepare activities and materials.', category: 'planning_prep',
   programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
-  assignee: { id: resource.id, name: resource.name }, writable: true,
+  assignee: {
+    id: resource.id,
+    firstName: resource.firstName,
+    lastName: resource.lastName,
+    name: resource.name,
+  }, writable: true,
 };
 
 export function InteractiveTaskItem() {

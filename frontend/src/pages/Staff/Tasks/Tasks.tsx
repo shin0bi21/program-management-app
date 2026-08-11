@@ -97,7 +97,8 @@ export default function Tasks() {
     mutations.addTask(task);
   }, [modalTarget, mutations]);
   const columns = useMemo<TableColumn<Task>[]>(() => [
-    { key: 'assignee', header: 'Staff', width: 190, render: task => task.assignee.name },
+    { key: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
+    { key: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
     { key: 'title', header: 'Task', render: task => task.title },
     { key: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
     { key: 'program', header: 'Program', width: 160, render: task => task.programName ?? 'General' },

@@ -12,6 +12,8 @@ interface TaskRow {
   details: string | null;
   category: SetTaskInput['category'];
   staffId: string;
+  staffFirstName: string;
+  staffLastName: string;
   staffName: string;
   programId: string | null;
   programName: string | null;
@@ -86,7 +88,12 @@ function attachDetails(rows: TaskRow[], loggedHours: LoggedHoursRow[], actor: Ac
   return rows.map(row => ({
     ...row,
     loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
-    assignee: { id: row.staffId, name: row.staffName },
+    assignee: {
+      id: row.staffId,
+      firstName: row.staffFirstName,
+      lastName: row.staffLastName,
+      name: row.staffName,
+    },
     writable: canWriteTaskFor(actor, row.staffId),
   }));
 }
@@ -94,7 +101,8 @@ function attachDetails(rows: TaskRow[], loggedHours: LoggedHoursRow[], actor: Ac
 export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
   const rows = await sql<TaskRow[]>`
     SELECT task.id, task.title, task.details, task.category,
-      task.staff_id, CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+      task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
       task.program_id, program.name AS program_name,
       task.cycle_id, cycle.name AS cycle_name,
       task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
@@ -114,8 +122,8 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
 }
 
 export async function getTaskOptions(actor: AccessTokenPayload) {
-  const resources = await sql<{ id: string; name: string; role: string; writable: boolean }[]>`
-    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
+  const resources = await sql<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }[]>`
+    SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
       (${taskWriteScopePredicate(actor, sql`u.id`)}) AS writable
     FROM users u
     INNER JOIN user_roles role ON role.id = u.role_id
@@ -160,6 +168,8 @@ export async function createTask(input: SetTaskInput, actor: AccessTokenPayload)
         ${input.status === 'completed' ? sql`NOW()` : null}, ${actor.userId}, ${actor.userId}
       )
       RETURNING id, title, details, category, staff_id,
+        (SELECT first_name FROM users WHERE id = tasks.staff_id) AS staff_first_name,
+        (SELECT last_name FROM users WHERE id = tasks.staff_id) AS staff_last_name,
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
@@ -181,7 +191,8 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
     await assertTaskResources(input, trx);
     const existingRows = await trx<TaskRow[]>`
       SELECT task.id, task.title, task.details, task.category, task.program_id,
-        task.staff_id, CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+        task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+        CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         program.name AS program_name, task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
@@ -211,6 +222,8 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, title, details, category, staff_id,
+        (SELECT first_name FROM users WHERE id = tasks.staff_id) AS staff_first_name,
+        (SELECT last_name FROM users WHERE id = tasks.staff_id) AS staff_last_name,
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
@@ -239,7 +252,8 @@ export async function updateTaskPlacement(
     const trx = asTransactionSql(tx);
     const existingRows = await trx<TaskRow[]>`
       SELECT task.id, task.title, task.details, task.category,
-        task.staff_id, CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+        task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+        CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
         task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
@@ -270,6 +284,8 @@ export async function updateTaskPlacement(
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, title, details, category, staff_id,
+        (SELECT first_name FROM users WHERE id = tasks.staff_id) AS staff_first_name,
+        (SELECT last_name FROM users WHERE id = tasks.staff_id) AS staff_last_name,
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id, (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
         cycle_id, (SELECT name FROM program_cycles WHERE id = tasks.cycle_id) AS cycle_name,
@@ -296,7 +312,8 @@ export async function updateTaskStatus(id: string, status: SetTaskInput['status'
     const trx = asTransactionSql(tx);
     const existingRows = await trx<TaskRow[]>`
       SELECT task.id, task.title, task.details, task.category,
-        task.staff_id, CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+        task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+        CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
         task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
@@ -319,6 +336,8 @@ export async function updateTaskStatus(id: string, status: SetTaskInput['status'
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, title, details, category, staff_id,
+        (SELECT first_name FROM users WHERE id = tasks.staff_id) AS staff_first_name,
+        (SELECT last_name FROM users WHERE id = tasks.staff_id) AS staff_last_name,
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
@@ -340,7 +359,8 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
     const trx = asTransactionSql(tx);
     const existingRows = await trx<TaskRow[]>`
       SELECT task.id, task.title, task.details, task.category,
-        task.staff_id, CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+        task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+        CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
         task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,

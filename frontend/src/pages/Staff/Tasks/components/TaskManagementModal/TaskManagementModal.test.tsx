@@ -21,7 +21,7 @@ describe('TaskManagementModal', () => {
       id: 'task-1', title: 'Create marketing poster', details: null, category: 'outreach',
       programId: null, programName: null, cycleId: 'cycle-general', cycleName: 'Summer 2026',
       status: 'todo', startDate: '2026-08-10', dueDate: '2026-08-14', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
-      assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+      assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     });
   });
 
@@ -30,7 +30,7 @@ describe('TaskManagementModal', () => {
       <QueryClientProvider client={queryClient}>
         <TaskManagementModal
           isOpen
-          resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+          resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
           programs={[]}
           cycles={[{ id: 'cycle-general', name: 'Summer 2026', programId: 'program-any', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }]}
           onSaved={vi.fn()}
@@ -66,7 +66,7 @@ describe('TaskManagementModal', () => {
       <QueryClientProvider client={queryClient}>
         <TaskManagementModal
           isOpen
-          resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+          resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
           programs={[{ id: 'program-soft', name: 'Soft Skills' }, { id: 'program-other', name: 'Other Program' }]}
           cycles={[
             { id: 'cycle-soft', name: 'Fall 2026', programId: 'program-soft', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
@@ -101,7 +101,7 @@ describe('TaskManagementModal', () => {
       <QueryClientProvider client={queryClient}>
         <TaskManagementModal
           isOpen
-          resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+          resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
           programs={[]}
           cycles={[{ id: 'cycle-general', name: 'Summer 2026', programId: 'program-any', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }]}
           initialStartDate="2026-08-10"
@@ -131,7 +131,7 @@ describe('TaskManagementModal', () => {
       <QueryClientProvider client={queryClient}>
         <TaskManagementModal
           isOpen
-          resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+          resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
           programs={[]}
           cycles={[]}
           initialStartDate="2026-08-10"
@@ -163,9 +163,9 @@ describe('TaskManagementModal', () => {
             id: 'task-1', title: 'Active task', details: null, category: 'outreach',
             programId: null, programName: null, cycleId: 'cycle-general', cycleName: 'Summer 2026',
             status: 'in_progress', startDate: '2026-08-10', dueDate: '2026-08-14',
-            hoursLogged: 1, loggedHoursByDate: [{ date: '2026-08-10', hours: 1 }], completedAt: null, assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+            hoursLogged: 1, loggedHoursByDate: [{ date: '2026-08-10', hours: 1 }], completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
           }}
-          resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+          resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
           programs={[]}
           cycles={[{ id: 'cycle-general', name: 'Summer 2026', programId: 'program-any', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }]}
           onSaved={vi.fn()}

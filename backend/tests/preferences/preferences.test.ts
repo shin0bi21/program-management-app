@@ -145,6 +145,20 @@ describe('User preferences API', () => {
     }
   });
 
+  it('persists separate task assignee first and last name column widths', async () => {
+    const value = {
+      view: 'list', programIds: [], cycleIds: [], categories: [], statuses: [],
+      columnWidths: { firstName: 180, lastName: 200 },
+    };
+    const saved = await request(app)
+      .put('/api/preferences/task-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(value);
+
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual(value);
+  });
+
   it('rejects unknown preference keys and malformed filter values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')
