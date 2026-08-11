@@ -50,6 +50,13 @@ export const timeEntryCohortQuerySchema = z.object({
   query: z.object({ programId: z.string().uuid('Invalid program ID') }),
 });
 
+export const timeEntrySessionQuerySchema = z.object({
+  query: z.object({
+    staffId: z.string().uuid('Invalid staff ID'),
+    workDate: dateSchema,
+  }),
+});
+
 export const timeEntryOverviewQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
@@ -58,25 +65,31 @@ export const timeEntryOverviewQuerySchema = z.object({
 });
 
 const sharedTimeEntryFields = {
-    staffId: z.string().uuid('Invalid staff ID'),
-    workDate: dateSchema,
-    hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),
-    note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
+  staffId: z.string().uuid('Invalid staff ID'),
+  hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),
+  note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
 };
+
+const datedTimeEntryFields = { ...sharedTimeEntryFields, workDate: dateSchema };
 
 export const setTimeEntrySchema = z.object({
   body: z.discriminatedUnion('source', [
     z.object({
-      ...sharedTimeEntryFields,
-      source: z.literal('general'),
+      ...datedTimeEntryFields,
+      source: z.literal('other'),
       programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
       cycleId: z.string().uuid('Invalid cycle ID'),
-      category: timeEntryCategorySchema,
+      category: timeEntryCategorySchema.exclude(['program_delivery']),
+    }),
+    z.object({
+      ...datedTimeEntryFields,
+      source: z.literal('task'),
+      taskId: z.string().uuid('Invalid task ID'),
     }),
     z.object({
       ...sharedTimeEntryFields,
-      source: z.literal('task'),
-      taskId: z.string().uuid('Invalid task ID'),
+      source: z.literal('session'),
+      sessionId: z.string().uuid('Invalid session ID'),
     }),
   ]),
 });
@@ -87,6 +100,7 @@ export const updateTimeEntryPlacementSchema = z.object({
 
 export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema.shape.query>;
 export type TimeEntryOverviewQuery = z.infer<typeof timeEntryOverviewQuerySchema.shape.query>;
+export type TimeEntrySessionQuery = z.infer<typeof timeEntrySessionQuerySchema.shape.query>;
 export type SetTimeEntryInput = z.infer<typeof setTimeEntrySchema.shape.body>;
 export type UpdateTimeEntryPlacementInput = z.infer<typeof updateTimeEntryPlacementSchema.shape.body>;
 export type TimeEntryCategory = z.infer<typeof timeEntryCategorySchema>;

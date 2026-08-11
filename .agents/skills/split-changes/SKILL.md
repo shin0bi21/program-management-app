@@ -7,6 +7,8 @@ description: Make the top-level split decision for a repository working tree bef
 
 Make one read-only split decision before review or shipping. Do not modify implementation, run tests, create stashes, commit, or make remote changes.
 
+The output is a logical concern map, not authorization to materialize every concern at once. Do not create issues, branches, stashes, isolated working trees, commits, or pull requests for multiple concerns during this workflow. Shipping must complete concerns serially from freshly synchronized `develop` states.
+
 ## 1. Inventory the whole change
 
 1. Inspect branch status and every tracked and untracked path.
@@ -48,6 +50,8 @@ Produce the safest sequence for:
 5. separate explicitly authorized deployment.
 
 Shared foundations normally precede dependent consumers. A migration must ship with the code that requires its final schema. Explicitly identify changes that should remain uncommitted.
+
+Order concerns without preparing their branches. The next concern may change after the current concern lands, so its implementation branch must not be created until the current pull request has merged and `develop` is clean and synchronized.
 
 ## 4. Hand off the concern map
 

@@ -55,7 +55,7 @@ describe('Tasks', () => {
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
+      category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
     });
     vi.mocked(updateTaskPlacement).mockResolvedValue(task);
   });

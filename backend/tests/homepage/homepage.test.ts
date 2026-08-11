@@ -31,7 +31,7 @@ describe('Homepage management API', () => {
       SELECT id FROM programs WHERE name = 'Soft Skills'
     `;
     await sql`
-      INSERT INTO staff_program_assignments (staff_id, program_id)
+      INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${staffId}, ${program.id})
       ON CONFLICT DO NOTHING
     `;

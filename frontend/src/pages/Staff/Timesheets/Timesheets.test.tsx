@@ -9,6 +9,7 @@ import {
   getTimeEntryOverview,
   getTimeEntries,
   getTimeEntryCohorts,
+  getTimeEntrySessions,
   updateTimeEntry,
   updateTimeEntryPlacement,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
@@ -40,6 +41,7 @@ vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({
   getTimeEntries: vi.fn(),
   getTimeEntryOverview: vi.fn(),
   getTimeEntryCohorts: vi.fn(),
+  getTimeEntrySessions: vi.fn(),
   createTimeEntry: vi.fn(),
   updateTimeEntry: vi.fn(),
   updateTimeEntryPlacement: vi.fn(),
@@ -115,6 +117,7 @@ describe('Timesheets', () => {
       biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
     });
     vi.mocked(getTimeEntryCohorts).mockResolvedValue([]);
+    vi.mocked(getTimeEntrySessions).mockResolvedValue([]);
     vi.mocked(getTasks).mockResolvedValue([]);
     programmingApi.getProgramCycles.mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
@@ -156,7 +159,7 @@ describe('Timesheets', () => {
         category: 'meeting' as const,
         categoryLabel: `Meeting ${index}`,
         taskId: null,
-        taskTitle: null,
+        taskTitle: null, sessionId: null, sessionLabel: null,
         hours: index,
         note: `Entry ${index}`,
       })) } },
@@ -201,12 +204,12 @@ describe('Timesheets', () => {
         'staff-1': { '2026-08-09': [{
           id: 'entry-own', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-          categoryLabel: 'Meeting', taskId: null, taskTitle: null, hours: 1, note: 'Own meeting',
+          categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Own meeting',
         }] },
         'staff-2': { '2026-08-09': [{
           id: 'entry-coworker', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'administration',
-          categoryLabel: 'Administration', taskId: null, taskTitle: null, hours: 4, note: 'Coworker administration',
+          categoryLabel: 'Administration', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 4, note: 'Coworker administration',
         }] },
       },
     });
@@ -256,7 +259,7 @@ describe('Timesheets', () => {
         data: { 'staff-1': { '2026-08-09': [{
           id: 'all-cycle-entry', programId: 'program-1', programName: 'Soft Skills',
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Entry from another cycle',
+          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Entry from another cycle',
         }] } },
     });
     vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
@@ -300,7 +303,7 @@ describe('Timesheets', () => {
       data: { 'staff-1': { '2026-08-09': [{
         id: 'current-entry', programId: null, programName: null,
         cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-        categoryLabel: 'Meeting', taskId: null, taskTitle: null, hours: 1, note: 'Current response',
+        categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Current response',
       }] } },
     });
     render(
@@ -329,12 +332,12 @@ describe('Timesheets', () => {
         '2026-08-09': [{
           id: 'summer-entry', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-          categoryLabel: 'Meeting', taskId: null, taskTitle: null, hours: 2, note: 'Current pay-period work',
+          categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Current pay-period work',
         }],
         '2026-09-03': [{
           id: 'fall-entry', programId: null, programName: null,
           cycleId: 'cycle-fall', cycleName: 'Fall 2026', category: 'outreach',
-          categoryLabel: 'Outreach', taskId: null, taskTitle: null, hours: 4, note: 'Fall cycle work',
+          categoryLabel: 'Outreach', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 4, note: 'Fall cycle work',
         }],
       } },
     });
@@ -378,7 +381,7 @@ describe('Timesheets', () => {
       data: { 'staff-1': { '2026-08-09': [{
         id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
         cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Youth workshop',
+        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
       }] } },
     });
     vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
@@ -422,12 +425,12 @@ describe('Timesheets', () => {
         'staff-1': { '2026-08-09': [{
           id: 'entry-zoe', programId: 'program-1', programName: 'Soft Skills',
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Zoe workshop',
+          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Zoe workshop',
         }] },
         'staff-2': { '2026-08-09': [{
           id: 'entry-alex', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-          categoryLabel: 'Meeting', taskId: null, taskTitle: null, hours: 7, note: 'Alex planning meeting',
+          categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 7, note: 'Alex planning meeting',
         }] },
       },
     });
@@ -477,7 +480,7 @@ describe('Timesheets', () => {
     await screen.findAllByText('Zoe Wilson');
 
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
 
     expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
@@ -498,7 +501,7 @@ describe('Timesheets', () => {
     expect(screen.getByRole('button', { name: 'Cycle' })).toBeEnabled();
     expect(screen.getByLabelText('Date')).not.toHaveValue('');
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
-    expect(screen.getByRole('menuitemradio', { name: 'Program Delivery' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('menuitemradio', { name: 'Program Delivery' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'Meeting' })).toBeInTheDocument();
     await waitFor(() => expect(getTimeEntries).toHaveBeenCalled());
   });
@@ -512,13 +515,112 @@ describe('Timesheets', () => {
     await screen.findAllByText('Zoe Wilson');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
-    expect(screen.getByRole('menuitem', { name: 'Regular Time' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Other Time' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Task Time' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Session Time' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Task Time' }));
     expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Task' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Program' })).not.toBeInTheDocument();
+  });
+
+  it('loads the selected staff member\'s sessions for the calendar day', async () => {
+    render(
+      <QueryClientProvider client={queryClient}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+    await screen.findAllByText('Zoe Wilson');
+    const cell = screen.getAllByRole('gridcell')[0];
+    const workDate = cell.getAttribute('data-period')!;
+    vi.mocked(getTimeEntrySessions).mockResolvedValue([{
+      id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', workDate, startsAt: `${workDate}T14:00:00.000Z`,
+    }]);
+    vi.mocked(createTimeEntry).mockResolvedValue({
+      id: 'entry-session', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
+      category: 'program_delivery', taskId: null, taskTitle: null, sessionId: 'session-1',
+      sessionLabel: 'Confidence', workDate, hours: 2, note: 'Delivered workshop',
+    });
+    fireEvent.click(cell);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Session Time' }));
+    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith('staff-1', workDate, expect.any(AbortSignal)));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Confidence' }));
+    expect(screen.queryByRole('menuitemradio', { name: 'Leadership' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Date')).toHaveValue(workDate);
+    expect(screen.getByLabelText('Date')).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Category' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Delivered workshop' } });
+    fireEvent.submit(document.getElementById('time-entry-form')!);
+
+    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith({
+      source: 'session', staffId: 'staff-1', sessionId: 'session-1', hours: 2, note: 'Delivered workshop',
+    }));
+  });
+
+  it('filters top-level session choices when its editable date changes', async () => {
+    const today = dayKey(new Date());
+    const sessions = [{
+      id: 'session-today', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', workDate: today, startsAt: `${today}T14:00:00.000Z`,
+    }, {
+      id: 'session-future', label: 'Leadership', programId: 'program-1', programName: 'Soft Skills',
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', workDate: '2099-01-01', startsAt: '2099-01-01T14:00:00.000Z',
+    }];
+    vi.mocked(getTimeEntrySessions).mockImplementation(async (_staffId, workDate) => (
+      sessions.filter(session => session.workDate === workDate)
+    ));
+    render(
+      <QueryClientProvider client={queryClient}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+    await screen.findAllByText('Zoe Wilson');
+    fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Session Time' }));
+
+    expect(screen.getByLabelText('Date')).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Confidence' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitemradio', { name: 'Leadership' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
+
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
+    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith(
+      'staff-1', '2099-01-01', expect.any(AbortSignal),
+    ));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
+    expect(screen.queryByRole('menuitemradio', { name: 'Confidence' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: 'Leadership' })).toBeInTheDocument();
+  });
+
+  it('keeps session time fixed to its scheduled calendar day', async () => {
+    const workDate = dayKey(new Date());
+    vi.mocked(getTimeEntries).mockResolvedValue({
+      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      data: { 'staff-1': { [workDate]: [{
+        id: 'entry-session', programId: 'program-1', programName: 'Soft Skills',
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery', categoryLabel: 'Program Delivery',
+        taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Confidence',
+        hours: 2, note: 'Delivered workshop',
+      }] } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+
+    const entry = await screen.findByRole('button', { name: /Confidence, 2 hours/ });
+    expect(entry.closest('.resource-calendar__item')).not.toHaveClass('draggable');
   });
 
   it('creates general project work in the active cycle without a program', async () => {
@@ -527,7 +629,7 @@ describe('Timesheets', () => {
       id: 'entry-general', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'maintenance', workDate,
       cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      taskId: null, taskTitle: null,
+      taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Cleaned shared equipment',
     });
     render(
@@ -537,7 +639,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Maintenance' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Cleaned shared equipment' } });
@@ -570,11 +672,16 @@ describe('Timesheets', () => {
       loggedHoursByDate: [],
       completedAt: null,
       assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+    }, {
+      id: 'task-complete', title: 'Completed report', details: null, category: 'administration',
+      programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'completed',
+      startDate: '2026-08-01', dueDate: '2026-08-08', hoursLogged: 1, loggedHoursByDate: [],
+      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
     }]);
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-task', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', workDate,
+      category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', sessionId: null, sessionLabel: null, workDate,
       hours: 1, note: 'Drafted poster concepts',
     });
     render(
@@ -586,11 +693,12 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Time' }));
     await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
-      expect.objectContaining({ staffId: 'staff-1', includeClosed: true }),
+      { staffId: 'staff-1' },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     ));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Task' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Task' }));
+    expect(screen.queryByRole('menuitemradio', { name: 'Completed report' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('menuitemradio', { name: /Create marketing poster/ }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Drafted poster concepts' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
@@ -610,7 +718,7 @@ describe('Timesheets', () => {
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-cycle-only', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'meeting', taskId: null, taskTitle: null, workDate, hours: 1, note: 'Organization-wide cycle meeting',
+      category: 'meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, workDate, hours: 1, note: 'Organization-wide cycle meeting',
     });
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
@@ -619,7 +727,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cycle' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Summer 2026' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
@@ -644,7 +752,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
@@ -661,7 +769,7 @@ describe('Timesheets', () => {
       id: 'entry-pending', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery', workDate: dayKey(new Date()),
       cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      taskId: null, taskTitle: null,
+      taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Pending work',
     });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add time entry' })).not.toBeInTheDocument());
@@ -677,7 +785,7 @@ describe('Timesheets', () => {
           [workDate]: [{
             id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
             cycleId: 'cycle-1', cycleName: 'Summer 2026',
-            category: 'program_delivery', categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Workshop',
+            category: 'program_delivery', categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
           }],
         },
       },
@@ -686,7 +794,7 @@ describe('Timesheets', () => {
       id: 'entry-1', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026',
       cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'program_delivery', taskId: null, taskTitle: null, workDate, hours: 3, note: 'Updated workshop',
+      category: 'program_delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, workDate, hours: 3, note: 'Updated workshop',
     });
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
@@ -720,7 +828,7 @@ describe('Timesheets', () => {
       category: 'program_delivery' as const,
       categoryLabel: 'Program Delivery',
       taskId: null,
-      taskTitle: null,
+      taskTitle: null, sessionId: null, sessionLabel: null,
       hours: index + 1,
       note: `Workshop ${index + 1}`,
     }));
@@ -754,7 +862,7 @@ describe('Timesheets', () => {
     const item = {
       id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Workshop',
+      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
@@ -792,7 +900,7 @@ describe('Timesheets', () => {
     const item = {
       id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Workshop',
+      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
     const first = deferred<never>();
     const second = deferred<never>();
@@ -850,7 +958,7 @@ describe('Timesheets', () => {
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
-        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, hours: 1, note: 'Cleaned equipment',
+        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Cleaned equipment',
       }] } },
     });
     render(
@@ -861,7 +969,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    const entry = await screen.findByRole('button', { name: 'Maintenance, 1 hours' });
+    const entry = await screen.findByRole('button', { name: 'Maintenance, 1 hours, Other' });
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
     expect(screen.queryByRole('gridcell')).not.toBeInTheDocument();
     expect(entry.closest('.resource-calendar__item')).not.toHaveClass('draggable');
@@ -876,7 +984,7 @@ describe('Timesheets', () => {
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
-        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, hours: 1, note: 'Cleaned equipment',
+        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Cleaned equipment',
       }] } },
     });
     vi.mocked(deleteTimeEntry).mockResolvedValue({ message: 'Deleted' });

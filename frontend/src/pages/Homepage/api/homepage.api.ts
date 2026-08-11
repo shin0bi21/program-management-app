@@ -24,7 +24,7 @@ export interface HomepageImage {
 export interface HomepageSession {
   id: string;
   cohortId: string;
-  theme: string | null;
+  theme: string;
   description: string | null;
   startsAt: string;
   endsAt: string;

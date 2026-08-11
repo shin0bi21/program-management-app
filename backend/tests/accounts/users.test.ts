@@ -352,7 +352,10 @@ describe('Accounts API', () => {
       if (testStaffId) await deleteTestUser(testStaffId);
     });
 
-    it('should update staff user with valid data', async () => {
+    it('should update an admin account with explicit program assignments', async () => {
+      const [program] = await sql<{ id: string }[]>`
+        SELECT id FROM programs WHERE roster_mode = 'enrolled' ORDER BY name LIMIT 1
+      `;
       const res = await request(app)
         .post('/api/accounts')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -362,12 +365,35 @@ describe('Accounts API', () => {
           lastName: 'Name',
           email: `updated-${Date.now()}@test.local`,
           role: 'admin',
+          programIds: [program.id],
         });
 
       expect(res.status).toBe(201);
       expect(res.body.id).toBe(testStaffId);
       expect(res.body.firstName).toBe('Updated');
       expect(res.body.role).toBe('admin');
+      expect(res.body.programIds).toEqual([program.id]);
+    });
+
+    it('should preserve admin program assignments when an update omits program IDs', async () => {
+      const before = await request(app)
+        .get('/api/accounts')
+        .set('Authorization', `Bearer ${adminToken}`);
+      const account = before.body.find((candidate: { id: string }) => candidate.id === testStaffId);
+
+      const res = await request(app)
+        .post('/api/accounts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: testStaffId,
+          firstName: 'Updated Again',
+          lastName: 'Name',
+          email: account.email,
+          role: 'admin',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.programIds).toEqual(account.programIds);
     });
 
     it('should let admins replace a staff member program assignments', async () => {

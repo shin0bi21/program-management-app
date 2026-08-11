@@ -3,7 +3,7 @@ import type { AttendanceStatus, SessionNote } from '../../../../common/types/coh
 export interface YouthAttendanceSession {
   id: string;
   sessionTypeName: string;
-  theme: string | null;
+  theme: string;
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;

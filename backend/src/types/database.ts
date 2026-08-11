@@ -118,7 +118,7 @@ export interface CohortSessions {
   id: Generated<string>;
   session_type_id: Generated<string>;
   starts_at: Timestamp;
-  theme: string | null;
+  theme: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -291,13 +291,6 @@ export interface SessionTypes {
   name: string;
 }
 
-export interface StaffProgramAssignments {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  program_id: string;
-  staff_id: string;
-}
-
 export interface SystemRevokedTokens {
   blacklisted_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
@@ -335,6 +328,7 @@ export interface TimeEntries {
   id: Generated<string>;
   note: string;
   program_id: string | null;
+  session_id: string | null;
   staff_id: string;
   task_id: string | null;
   updated_at: Generated<Timestamp>;
@@ -413,6 +407,13 @@ export interface UserPreferences {
   updated_at: Generated<Timestamp>;
   user_id: string;
   value: Json;
+}
+
+export interface UserProgramAssignments {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  program_id: string;
+  user_id: string;
 }
 
 export interface UserRefreshTokens {
@@ -513,7 +514,6 @@ export interface DB {
   session_note_has_youth: SessionNoteHasYouth;
   session_notes: SessionNotes;
   session_types: SessionTypes;
-  staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
   tasks: Tasks;
   time_entries: TimeEntries;
@@ -524,6 +524,7 @@ export interface DB {
   user_password_reset_tokens: UserPasswordResetTokens;
   user_permissions: UserPermissions;
   user_preferences: UserPreferences;
+  user_program_assignments: UserProgramAssignments;
   user_refresh_tokens: UserRefreshTokens;
   user_role_has_permissions: UserRoleHasPermissions;
   user_roles: UserRoles;

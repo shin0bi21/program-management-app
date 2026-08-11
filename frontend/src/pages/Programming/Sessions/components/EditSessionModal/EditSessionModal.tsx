@@ -42,7 +42,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
     try {
       await updateSession(session.id, {
         sessionTypeId,
-        theme: String(form.get('theme')).trim() || null,
+        theme: String(form.get('theme')).trim(),
         startsAt: new Date(String(form.get('startsAt'))).toISOString(),
         endsAt: new Date(String(form.get('endsAt'))).toISOString(),
         description: String(form.get('description')).trim() || null,
@@ -84,8 +84,8 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
               options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
             />
           </FormField>
-          <FormField id="edit-session-theme" label="Theme (optional)">
-            <input id="edit-session-theme" name="theme" defaultValue={session.theme ?? ''} maxLength={160} />
+          <FormField id="edit-session-theme" label="Title / Theme">
+            <input id="edit-session-theme" name="theme" required defaultValue={session.theme} maxLength={160} />
           </FormField>
           <div className="form-row edit-session-time-row">
             <FormField id="edit-session-start" label="Starts at">

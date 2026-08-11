@@ -17,8 +17,8 @@ export function programAccessPredicate(
           scoped_program.roster_mode = 'open'
           OR EXISTS (
             SELECT 1
-            FROM staff_program_assignments scoped_assignment
-            WHERE scoped_assignment.staff_id = ${actor.userId}
+            FROM user_program_assignments scoped_assignment
+            WHERE scoped_assignment.user_id = ${actor.userId}
               AND scoped_assignment.program_id = scoped_program.id
           )
         )
