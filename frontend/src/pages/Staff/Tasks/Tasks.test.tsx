@@ -78,6 +78,17 @@ describe('Tasks', () => {
     })));
   });
 
+  it('places dashboard cards directly in the shared page dashboard', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    const overviewCard = await screen.findByRole('heading', { name: 'Task Overview' });
+    const dashboard = overviewCard.closest('.page-dashboard');
+    expect(dashboard).not.toBeNull();
+    expect(dashboard?.querySelector('.dashboard-card-group')).toBeNull();
+    expect(Array.from(dashboard?.children ?? []).filter(child => child.matches('.dashboard-card'))).toHaveLength(2);
+  });
+
   it('shows tasks from a readable coworker resource without exposing write controls', async () => {
     const coworkerTask: Task = {
       ...task,
