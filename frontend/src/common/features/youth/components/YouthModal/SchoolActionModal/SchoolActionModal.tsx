@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import Button from '../../../../../common/components/Button/Button';
-import FormField from '../../../../../common/components/FormField/FormField';
-import Modal from '../../../../../common/components/Modal/Modal';
+import Button from '../../../../../components/Button/Button';
+import FormField from '../../../../../components/FormField/FormField';
+import Modal from '../../../../../components/Modal/Modal';
 import { createSchool, deleteSchool, setSchool } from '../schools/api/schools.api';
 import type { School } from '../schools/types';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/clientErrors';
 
 export type SchoolAction =
   | { type: 'add' }

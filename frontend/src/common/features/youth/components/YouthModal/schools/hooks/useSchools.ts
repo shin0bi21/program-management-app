@@ -1,6 +1,6 @@
 import { getSchools } from '../api/schools.api';
 import type { School } from '../types';
-import useListQuery from '../../../../../../query/hooks/useListQuery';
+import useListQuery from '../../../../../../../query/hooks/useListQuery';
 
 export type { School };
 

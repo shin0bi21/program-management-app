@@ -11,7 +11,7 @@ import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
-import YouthModal from './components/YouthModal/YouthModal';
+import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
 import { useAuth } from '../../auth/authContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';

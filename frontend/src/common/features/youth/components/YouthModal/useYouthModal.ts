@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { setYouth } from '../../../../common/features/youth/api/youth.api';
-import { getErrorMessage } from '../../../../http/clientErrors';
-import { useContacts } from '../../../../common/features/contacts/hooks/useContacts';
+import { setYouth } from '../../api/youth.api';
+import { getErrorMessage } from '../../../../../http/clientErrors';
+import { useContacts } from '../../../contacts/hooks/useContacts';
 import { useAddresses } from './hooks/useAddresses';
 import { useSchools } from './schools/hooks/useSchools';
-import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
+import { useSubmitStatus } from '../../../../hooks/useSubmitStatus';
 import { youthSchema, type YouthFormData } from './youthSchema';
-import type { YouthProfile } from '../../hooks/useYouth';
+import type { YouthProfile } from '../../../../types/youth';
 
 const defaultValues: YouthFormData = {
   firstName: '',

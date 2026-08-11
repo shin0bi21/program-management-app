@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
-import FormField from '../../../../common/components/FormField/FormField';
-import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
-import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import { useAuth } from '../../../../auth/authContext';
-import type { YouthProfile } from '../../hooks/useYouth';
+import FormField from '../../../../components/FormField/FormField';
+import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
+import Modal from '../../../../components/Modal/Modal';
+import ModalFormFooter from '../../../../components/Modal/components/ModalFormFooter';
+import { useAuth } from '../../../../../auth/authContext';
+import type { YouthProfile } from '../../../../types/youth';
 import SchoolActionModal, { type SchoolAction } from './SchoolActionModal/SchoolActionModal';
 import { useYouthModal } from './useYouthModal';
 import './YouthModal.css';

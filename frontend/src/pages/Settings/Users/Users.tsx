@@ -13,7 +13,7 @@ import type { Account, AccountRole, AccountSortKey, AccountStatus } from '../../
 import type { ListSort } from '../../../common/types/pagination';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { formatShortDate } from '../../../common/utils/date';
-import YouthModal from '../../Youth/components/YouthModal/YouthModal';
+import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
 import AccountModal from './components/AccountModal/AccountModal';
 import { useAccounts } from './hooks/useAccounts';
 import './Users.css';
