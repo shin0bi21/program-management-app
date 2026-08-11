@@ -10,16 +10,22 @@ Run test commands from the repository root. The supported test workflow uses the
 | Suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
 | Static analysis | `bash scripts/tests/test-static.sh` |
 | Backend APIs | `bash scripts/tests/backend/test-apis.sh` |
-| Frontend UI | `bash scripts/tests/frontend/test-ui.sh` |
+| Frontend UI (Vitest + jsdom) | `bash scripts/tests/frontend/test-ui.sh` |
 | Playwright browser components | `cd frontend && npm run test:browser` |
 
-The full application runner executes deployment checks, backend API tests, and frontend tests. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, Timesheet, and browser coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
+The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is not part of the standard full runner. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, Timesheet, and browser coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
 
 Preview the same routing without executing tests with `bash scripts/tests/test-app.sh --plan-changed`. This is useful for verifying that a new feature path is registered before relying on `--changed`.
 
-Bare `test-app.sh` and the explicit `--full` option both run the full suite. This keeps CI and existing developer workflows deterministic.
+Bare `test-app.sh` and the explicit `--full` option both run the standard full suite. This keeps CI and existing developer workflows deterministic without requiring a locally installed browser.
 
-Backend tests run against the Docker-backed test database. The runners prepare it as needed and preserve already-running development containers. Frontend path runners may skip cleanly when their page directory has no tests.
+Backend tests run against the Docker-backed test database. The runners prepare it as needed and preserve already-running development containers. The backend and frontend umbrella runners each launch their test framework once; focused path runners remain available during development and may skip cleanly when their directory has no tests.
+
+The frontend layers are:
+
+- Vitest tests that do not need rendered DOM should use the Node environment.
+- UI component and hook tests use Vitest with jsdom.
+- Layout, scrolling, pointer, and real-browser behavior use Playwright.
 
 ## Focused runners
 
