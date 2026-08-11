@@ -29,8 +29,10 @@ export interface PreferenceValues {
     staffIds: string[];
     programIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    types?: Array<'task' | 'session' | 'other'>;
     cycleId: string | null;
-    columnWidths?: ColumnWidths<'date' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
+    sorting?: { key: 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type'; direction: 'asc' | 'desc' };
+    columnWidths?: ColumnWidths<'date' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type'>;
   };
   'task-filters': {
     view?: 'calendar' | 'list';

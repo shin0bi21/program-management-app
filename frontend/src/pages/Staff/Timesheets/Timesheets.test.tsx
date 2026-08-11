@@ -138,9 +138,10 @@ describe('Timesheets', () => {
     expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem').slice(0, 3).map(item => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitem').slice(0, 4).map(item => item.textContent)).toEqual([
       expect.stringContaining('Program'),
       expect.stringContaining('Category'),
+      expect.stringContaining('Type'),
       expect.stringContaining('Cycle'),
     ]);
   });
@@ -173,9 +174,9 @@ describe('Timesheets', () => {
 
     expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
     expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
-    expect(screen.getByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show all 3 items/i })).not.toBeInTheDocument();
   });
 
@@ -251,7 +252,8 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall', columnWidths: {},
+      view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-fall',
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
   });
 
@@ -279,7 +281,8 @@ describe('Timesheets', () => {
 
     expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
     expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], cycleId: null, columnWidths: {},
+      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
     await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
       {},
@@ -293,7 +296,8 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByText('Entry from another cycle').closest('tr')!);
 
     expect(preferenceHook.save).toHaveBeenLastCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1', columnWidths: {},
+      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1',
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
     expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
@@ -462,6 +466,15 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
     await screen.findByText('Alex planning meeting');
+    expect(screen.getByRole('columnheader', { name: 'Session' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
+    await waitFor(() => expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+      sorting: { key: 'firstName', direction: 'asc' },
+    })));
+    const listRows = screen.getAllByRole('row').slice(1);
+    expect(listRows[0]).toHaveTextContent('Alex');
+    expect(listRows[1]).toHaveTextContent('Zoe');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
@@ -472,18 +485,19 @@ describe('Timesheets', () => {
   });
 
   it('opens a prefilled add form when a calendar cell is clicked', async () => {
+    const workDate = dayKey(new Date());
     vi.mocked(getTimeEntryCohorts).mockResolvedValue([
       { id: 'cohort-1', cycleId: 'cycle-fall', name: 'Fall 2026', state: 'active' },
       { id: 'cohort-2', cycleId: 'cycle-spring', name: 'Spring 2026', state: 'completed' },
     ]);
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findAllByText('Zoe Wilson');
 
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
 
     expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
@@ -530,14 +544,14 @@ describe('Timesheets', () => {
   });
 
   it('loads the selected staff member\'s sessions for the calendar day', async () => {
-    render(
+    const workDate = dayKey(new Date());
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findAllByText('Zoe Wilson');
-    const cell = screen.getAllByRole('gridcell')[0];
-    const workDate = cell.getAttribute('data-period')!;
+    const cell = container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!;
     vi.mocked(getTimeEntrySessions).mockResolvedValue([{
       id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', workDate, startsAt: `${workDate}T14:00:00.000Z`,
@@ -636,13 +650,13 @@ describe('Timesheets', () => {
       taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Cleaned shared equipment',
     });
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Maintenance' }));
@@ -688,13 +702,13 @@ describe('Timesheets', () => {
       category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', sessionId: null, sessionLabel: null, workDate,
       hours: 1, note: 'Drafted poster concepts',
     });
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Time' }));
     await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
       { staffId: 'staff-1' },
@@ -747,15 +761,16 @@ describe('Timesheets', () => {
   });
 
   it('prevents Escape and X dismissal while an entry is submitting', async () => {
+    const workDate = dayKey(new Date());
     const pendingCreate = deferred<Awaited<ReturnType<typeof createTimeEntry>>>();
     vi.mocked(createTimeEntry).mockImplementation(() => pendingCreate.promise);
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);

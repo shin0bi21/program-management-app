@@ -5,7 +5,9 @@ import type { TimeEntryCategory, TimeEntryProgram, StaffResource } from '../../.
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../../common/features/timeEntries/timeEntryOptions';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import type { ProgramCycle } from '../../../../common/types/cohort';
+import type { ListSort } from '../../../../common/types/pagination';
 import { getErrorMessage } from '../../../../http/clientErrors';
+import type { TimesheetEntryType, TimesheetSortKey } from './useTimesheetListData';
 
 export type TimesheetView = 'calendar' | 'list';
 
@@ -19,9 +21,11 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   const [staffFilters, setStaffFilters] = useState<string[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<TimeEntryCategory[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
+  const [typeFilters, setTypeFilters] = useState<TimesheetEntryType[]>([]);
   const [view, setViewState] = useState<TimesheetView>('calendar');
   const [ready, setReady] = useState(false);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+  const [sorting, setSortingState] = useState<ListSort<TimesheetSortKey>>({ key: 'date', direction: 'desc' });
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesReady, setCyclesReady] = useState(false);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
@@ -48,7 +52,9 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     setStaffFilters(role === 'admin' ? preference?.staffIds ?? [] : []);
     setCategoryFilters(preference?.categories ?? []);
     setProgramFilters(preference?.programIds ?? []);
+    setTypeFilters(preference?.types ?? []);
     setColumnWidthsState(preference?.columnWidths ?? {});
+    setSortingState(preference?.sorting ?? { key: 'date', direction: 'desc' });
     const savedCycleId = preference?.cycleId ?? '';
     setSelectedCycleId(preference
       ? cycles.some(cycle => cycle.id === savedCycleId) ? savedCycleId : ''
@@ -61,16 +67,20 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     staffIds?: string[];
     programIds?: string[];
     categories?: TimeEntryCategory[];
+    types?: TimesheetEntryType[];
     cycleId?: string;
     columnWidths?: Record<string, number>;
+    sorting?: ListSort<TimesheetSortKey>;
   }) => save({
     view: next.view ?? view,
     staffIds: role === 'admin' ? next.staffIds ?? staffFilters : [],
     programIds: next.programIds ?? programFilters,
     categories: next.categories ?? categoryFilters,
+    types: next.types ?? typeFilters,
     cycleId: (next.cycleId ?? selectedCycleId) || null,
     columnWidths: next.columnWidths ?? columnWidths,
-  }), [categoryFilters, columnWidths, programFilters, role, save, selectedCycleId, staffFilters, view]);
+    sorting: next.sorting ?? sorting,
+  }), [categoryFilters, columnWidths, programFilters, role, save, selectedCycleId, sorting, staffFilters, typeFilters, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     ...(role === 'admin' ? [{
@@ -78,6 +88,11 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     }] : []),
     { id: 'program', label: 'Program', options: [{ value: 'general', label: 'General' }, ...programs.map(program => ({ value: program.id, label: program.name }))] },
     { id: 'entryType', label: 'Category', options: TIME_ENTRY_CATEGORY_OPTIONS },
+    { id: 'type', label: 'Type', options: [
+      { value: 'task', label: 'Task' },
+      { value: 'session', label: 'Session' },
+      { value: 'other', label: 'Other' },
+    ] },
     { id: 'cycle', label: 'Cycle', selectionMode: 'single', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
   ], [cycles, programs, resources, role]);
 
@@ -85,20 +100,23 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     const nextStaffIds = categoryId === 'staff' ? values : staffFilters;
     const nextCategories = categoryId === 'entryType' ? values as TimeEntryCategory[] : categoryFilters;
     const nextProgramIds = categoryId === 'program' ? values : programFilters;
+    const nextTypes = categoryId === 'type' ? values as TimesheetEntryType[] : typeFilters;
     const nextCycleId = categoryId === 'cycle' ? values[0] ?? '' : selectedCycleId;
     setStaffFilters(nextStaffIds);
     setCategoryFilters(nextCategories);
     setProgramFilters(nextProgramIds);
+    setTypeFilters(nextTypes);
     setSelectedCycleId(nextCycleId);
-    persist({ staffIds: nextStaffIds, categories: nextCategories, programIds: nextProgramIds, cycleId: nextCycleId });
-  }, [categoryFilters, persist, programFilters, selectedCycleId, staffFilters]);
+    persist({ staffIds: nextStaffIds, categories: nextCategories, programIds: nextProgramIds, types: nextTypes, cycleId: nextCycleId });
+  }, [categoryFilters, persist, programFilters, selectedCycleId, staffFilters, typeFilters]);
 
   const clearFilters = useCallback(() => {
     setStaffFilters([]);
     setCategoryFilters([]);
     setProgramFilters([]);
+    setTypeFilters([]);
     setSelectedCycleId('');
-    persist({ staffIds: [], categories: [], programIds: [], cycleId: '' });
+    persist({ staffIds: [], categories: [], programIds: [], types: [], cycleId: '' });
   }, [persist]);
 
   const setView = useCallback((nextView: TimesheetView) => {
@@ -111,14 +129,19 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     persist({ columnWidths: next });
   }, [persist]);
 
+  const setSorting = useCallback((next: ListSort<TimesheetSortKey>) => {
+    setSortingState(next);
+    persist({ sorting: next });
+  }, [persist]);
+
   const selectCycle = useCallback((cycleId: string) => {
     setSelectedCycleId(cycleId);
     persist({ cycleId });
   }, [persist]);
 
   return {
-    staffFilters, categoryFilters, programFilters, view, ready, columnWidths,
+    staffFilters, categoryFilters, programFilters, typeFilters, view, ready, columnWidths, sorting,
     cycles, cyclesError, selectedCycleId, preferenceError, filterCategories,
-    applyFilter, clearFilters, setView, setColumnWidths, selectCycle,
+    applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
   };
 }

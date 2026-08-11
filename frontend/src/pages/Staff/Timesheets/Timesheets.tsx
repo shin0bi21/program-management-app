@@ -31,10 +31,11 @@ import {
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
 import { formatShortDate } from '../../../common/utils/date';
+import type { ListSort } from '../../../common/types/pagination';
 import { getErrorMessage } from '../../../http/clientErrors';
 import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
 import { useTimesheetOverview } from './hooks/useTimesheetOverview';
-import { useTimesheetListData, type TimesheetListRow } from './hooks/useTimesheetListData';
+import { timesheetEntryType, useTimesheetListData, type TimesheetListRow, type TimesheetSortKey } from './hooks/useTimesheetListData';
 import { useTimesheetControls } from './hooks/useTimesheetControls';
 import './Timesheets.css';
 
@@ -71,9 +72,9 @@ export default function Timesheets() {
   const [moveError, setMoveError] = useState<string | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const {
-    staffFilters, categoryFilters, programFilters, view, ready: preferencesReady,
-    columnWidths: listColumnWidths, cycles, cyclesError, selectedCycleId, preferenceError,
-    filterCategories, applyFilter, clearFilters, setView, setColumnWidths, selectCycle,
+    staffFilters, categoryFilters, programFilters, typeFilters, view, ready: preferencesReady,
+    columnWidths: listColumnWidths, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
+    filterCategories, applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
   } = useTimesheetControls({ role, resources, programs });
   const { enqueue, isLatest } = useItemMutationQueue();
   const confirmedMoveSourcesRef = useRef(new Map<string, EntryTarget>());
@@ -103,8 +104,8 @@ export default function Timesheets() {
     : resources, [resources, staffFilters]);
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
   const resourceById = useMemo(() => new Map(resources.map(resource => [resource.id, resource])), [resources]);
-  const visibleData = useFilteredTimesheetData(data, categoryFilters, programFilters, selectedCycleId);
-  const filteredCycleData = useFilteredTimesheetData(cycleData, categoryFilters, programFilters, selectedCycleId);
+  const visibleData = useFilteredTimesheetData(data, categoryFilters, programFilters, typeFilters, selectedCycleId);
+  const filteredCycleData = useFilteredTimesheetData(cycleData, categoryFilters, programFilters, typeFilters, selectedCycleId);
   const selectedCycle = cycles.find(cycle => cycle.id === selectedCycleId) ?? null;
 
 
@@ -133,7 +134,7 @@ export default function Timesheets() {
     return () => controller.abort();
   }, [refreshCycleData]);
 
-  const visibleListRows = useTimesheetListData(filteredCycleData, resources, staffFilters, listSearch);
+  const visibleListRows = useTimesheetListData(filteredCycleData, resources, staffFilters, listSearch, sorting);
   const {
     selectedKey: selectedListRowId,
     selectItem: selectListRow,
@@ -181,15 +182,19 @@ export default function Timesheets() {
   }, [refreshCycleData, removeItem]);
 
   const listColumns = useMemo<TableColumn<TimesheetListRow>[]>(() => [
-    { key: 'firstName', header: 'First Name', render: row => row.staffFirstName },
-    { key: 'lastName', header: 'Last Name', render: row => row.staffLastName },
-    { key: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
-    { key: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
-    { key: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
-    { key: 'category', header: 'Category', render: row => row.item.categoryLabel },
-    { key: 'source', header: 'Linked item', render: row => row.item.taskTitle ?? row.item.sessionLabel ?? '—' },
-    { key: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
-    { key: 'note', header: 'Note', render: row => row.item.note },
+    { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: row => row.staffFirstName },
+    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: row => row.staffLastName },
+    { key: 'date', sortKey: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
+    { key: 'program', sortKey: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
+    { key: 'cycle', sortKey: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
+    { key: 'category', sortKey: 'category', header: 'Category', render: row => row.item.categoryLabel },
+    { key: 'session', sortKey: 'session', header: 'Session', render: row => row.item.sessionLabel ?? '—' },
+    { key: 'hours', sortKey: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
+    { key: 'note', sortKey: 'note', header: 'Note', render: row => row.item.note },
+    { key: 'type', sortKey: 'type', header: 'Type', width: 110, render: row => {
+      const type = timesheetEntryType(row.item);
+      return <span className={`time-item__type time-item__type--${type.toLowerCase()}`}>{type}</span>;
+    } },
     ...(canWriteTimesheets ? [{
       key: 'actions', header: '', width: 40, resizable: false, className: 'col-actions',
       render: (row: TimesheetListRow) => resourceById.get(row.resourceId)?.writable ? (
@@ -311,7 +316,7 @@ export default function Timesheets() {
           filters={(
             <FilterCard
               categories={filterCategories}
-              values={{ staff: staffFilters, entryType: categoryFilters, program: programFilters, cycle: selectedCycleId ? [selectedCycleId] : [] }}
+              values={{ staff: staffFilters, entryType: categoryFilters, program: programFilters, type: typeFilters, cycle: selectedCycleId ? [selectedCycleId] : [] }}
               onApply={applyFilter}
               onClearAll={clearFilters}
             />
@@ -381,6 +386,8 @@ export default function Timesheets() {
             keyExtractor={row => row.id}
             selectedKey={selectedListRowId}
             onRowSelect={selectListRowWithContext}
+            sorting={sorting}
+            onSortingChange={next => setSorting(next as ListSort<TimesheetSortKey>)}
             columnWidths={listColumnWidths}
             onColumnWidthsChange={setColumnWidths}
             emptyMessage={listSearch.trim()

@@ -86,8 +86,10 @@ describe('User preferences API', () => {
       staffIds: [],
       programIds: ['general'],
       categories: ['meeting'],
+      types: ['session'],
       cycleId: '00000000-0000-4000-8000-000000000001',
-      columnWidths: { firstName: 180, lastName: 200 },
+      sorting: { key: 'session', direction: 'asc' },
+      columnWidths: { firstName: 180, lastName: 200, session: 220, type: 120 },
     };
     const saved = await request(app)
       .put('/api/preferences/timesheet-filters')
