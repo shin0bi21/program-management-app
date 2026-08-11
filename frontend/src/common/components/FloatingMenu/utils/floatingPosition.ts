@@ -33,19 +33,19 @@ function resolveSide(
 ): Side {
   switch (preferred) {
     case 'bottom':
-      return window.innerHeight - rect.bottom - offset < heightEstimate && rect.top >= heightEstimate
+      return window.innerHeight - rect.bottom - offset < heightEstimate && rect.top - offset >= heightEstimate
         ? 'top'
         : 'bottom';
     case 'top':
-      return rect.top - offset < heightEstimate && window.innerHeight - rect.bottom >= heightEstimate
+      return rect.top - offset < heightEstimate && window.innerHeight - rect.bottom - offset >= heightEstimate
         ? 'bottom'
         : 'top';
     case 'right':
-      return window.innerWidth - rect.right - offset < widthEstimate && rect.left >= widthEstimate
+      return window.innerWidth - rect.right - offset < widthEstimate && rect.left - offset >= widthEstimate
         ? 'left'
         : 'right';
     case 'left':
-      return rect.left - offset < widthEstimate && window.innerWidth - rect.right >= widthEstimate
+      return rect.left - offset < widthEstimate && window.innerWidth - rect.right - offset >= widthEstimate
         ? 'right'
         : 'left';
   }
@@ -127,7 +127,13 @@ function computePosition(
     }
   }
 
-  return { top, left };
+  const maxTop = Math.max(0, window.innerHeight - heightEstimate);
+  const maxLeft = Math.max(0, window.innerWidth - widthEstimate);
+
+  return {
+    top: Math.max(0, Math.min(top, maxTop)),
+    left: Math.max(0, Math.min(left, maxLeft)),
+  };
 }
 
 export function calculateFloatingPosition(
