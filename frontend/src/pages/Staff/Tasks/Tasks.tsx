@@ -20,6 +20,7 @@ import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
 import useTaskViewData, { type TaskSortKey } from './hooks/useTaskViewData';
 import type { ListSort } from '../../../common/types/pagination';
+import { formatCompactPersonName } from '../../../common/utils/name';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
@@ -196,7 +197,9 @@ export default function Tasks() {
           getItemCapabilities={({ data: task, range }) => range
             ? getTaskCalendarCapabilities(task, canWrite && task.writable)
             : { draggable: canWrite && task.writable }}
-          renderResource={({ resource }) => resource.name}
+          renderResource={({ resource }) => (
+            <span aria-label={resource.name}>{formatCompactPersonName(resource.firstName, resource.lastName)}</span>
+          )}
           selectedResourceId={selectedResourceId}
           onResourceSelect={resource => selectResource(resource.id)}
           buildItem={() => null}

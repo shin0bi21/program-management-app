@@ -32,6 +32,7 @@ import {
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
 import { formatShortDate } from '../../../common/utils/date';
 import type { ListSort } from '../../../common/types/pagination';
+import { formatCompactPersonName } from '../../../common/utils/name';
 import { getErrorMessage } from '../../../http/clientErrors';
 import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
 import { useTimesheetOverview } from './hooks/useTimesheetOverview';
@@ -270,7 +271,9 @@ export default function Timesheets() {
     />
   ), [canWriteTimesheets, requestDelete]);
   const renderCalendarResource = useCallback(({ resource }: { resource: StaffResource }) => (
-    <div className="timesheets-resource">{resource.name}</div>
+    <div className="timesheets-resource">
+      <span aria-label={resource.name}>{formatCompactPersonName(resource.firstName, resource.lastName)}</span>
+    </div>
   ), []);
   const buildCalendarItem = useCallback(({ resource, period, data: item }: BuildItemContext<StaffResource, TimesheetItem>) => (
     renderTimeItem(resource, period.key, item)

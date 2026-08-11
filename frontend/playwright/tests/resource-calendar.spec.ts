@@ -6,7 +6,7 @@ const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
 const timeItemStoryId = 'pages/Staff/Timesheets/components/TimeItem/TimeItem/InteractiveTimeItems';
 const taskItemStoryId = 'pages/Staff/Tasks/components/TaskItem/TaskItem/InteractiveTaskItem';
 const periodWidth = 145;
-const resourceWidth = 200;
+const resourceWidth = 125;
 
 async function drag(page: Page, source: Locator, target: Locator) {
   const sourceBox = await source.boundingBox();
