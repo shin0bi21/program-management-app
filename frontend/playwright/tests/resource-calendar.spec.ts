@@ -494,10 +494,23 @@ test('moves a ranged item to another resource without changing its dates', async
 
 test('opens the real task-item floating menu instead of editing directly', async ({ page, mount }) => {
   const component = await mount(taskItemStoryId);
+  const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
+  const itemBox = await item.boundingBox();
+  const row = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
+  if (!itemBox) throw new Error('Task action anchor geometry is unavailable');
+  const pointerX = itemBox.x + itemBox.width * .65;
+  const dayIndex = await row.locator('.resource-calendar__item-slot').evaluateAll((slots, x) => slots.findIndex(slot => {
+    const bounds = slot.getBoundingClientRect();
+    return x >= bounds.left && x < bounds.right;
+  }), pointerX);
+  const dayBox = await row.locator('.resource-calendar__item-slot').nth(dayIndex).boundingBox();
+  if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
-  await component.getByRole('button', { name: /Prepare workshop.*Open actions/ }).click();
+  await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
+    .toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect(component.getByTestId('task-item-action')).toHaveValue('');
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
@@ -597,10 +610,15 @@ test('shows a geometry-only task resize ghost without expanding its text', async
 
 test('opens the real time-item action menu without starting a drag', async ({ page, mount }) => {
   const component = await mount(timeItemStoryId);
+  const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
+  const itemBox = await item.boundingBox();
+  if (!itemBox) throw new Error('Time action anchor geometry is unavailable');
 
-  await component.getByRole('button', { name: /Program Delivery, 2 hours/ }).click();
+  await item.click();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
+    .toBeCloseTo(itemBox.x, 0);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
 
   await expect(component.getByTestId('time-item-action')).toHaveValue('edit:entry-1');

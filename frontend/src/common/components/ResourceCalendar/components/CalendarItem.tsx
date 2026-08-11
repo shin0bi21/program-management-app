@@ -32,7 +32,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   const detailAnchorRef = useRef<DOMRect | null>(null);
   const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
   const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
-  const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+  const { isOpen, openAtPoint, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'start' },
     { widthEstimate: 150, heightEstimate: 86 },
@@ -44,12 +44,12 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     detailAnchorRef.current = null;
     setDetailPosition(null);
   };
-  const showDetails = (clientX?: number) => {
+  const getVisibleItemAnchor = (clientX?: number) => {
     const trigger = triggerRef.current;
-    if (!trigger) return;
+    if (!trigger) return null;
     const daySlots = trigger.closest('.resource-calendar__row')
       ?.querySelectorAll<HTMLElement>('.resource-calendar__item-slot');
-    const hoveredDay = clientX === undefined ? undefined : [...(daySlots ?? [])].find(slot => {
+    const hoveredDay = clientX === undefined || clientX <= 0 ? undefined : [...(daySlots ?? [])].find(slot => {
       const bounds = slot.getBoundingClientRect();
       return clientX >= bounds.left && clientX < bounds.right;
     });
@@ -57,12 +57,16 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     const dayBounds = hoveredDay?.getBoundingClientRect();
     const anchorLeft = dayBounds ? Math.max(dayBounds.left, itemBounds.left) : itemBounds.left;
     const anchorRight = dayBounds ? Math.min(dayBounds.right, itemBounds.right) : itemBounds.right;
-    const anchorBounds = new DOMRect(
+    return new DOMRect(
       anchorLeft,
       itemBounds.top,
       anchorRight - anchorLeft,
       itemBounds.height,
     );
+  };
+  const showDetails = (clientX?: number) => {
+    const anchorBounds = getVisibleItemAnchor(clientX);
+    if (!anchorBounds) return;
     detailAnchorRef.current = anchorBounds;
     const measuredSize = detailSizeRef.current;
     const next = calculateFloatingPositionFromRect(
@@ -115,7 +119,17 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
       onFocus={() => { if (triggerRef.current?.matches(':focus-visible')) showDetails(); }}
       onBlur={hideDetails}
       onPointerDown={hideDetails}
-      onClick={event => { event.stopPropagation(); hideDetails(); onActivate?.(); if (hasActions) toggle(); }}
+      onClick={event => {
+        event.stopPropagation();
+        hideDetails();
+        onActivate?.();
+        if (!hasActions) return;
+        if (isOpen) close();
+        else {
+          const anchor = getVisibleItemAnchor(event.clientX);
+          if (anchor) openAtPoint(anchor.left, anchor.bottom);
+        }
+      }}
     >
       {leading !== undefined && leading !== null && <strong>{leading}</strong>}
       <span className="calendar-item__summary">{summary}</span>

@@ -114,7 +114,13 @@ export default function Tasks() {
   useEffect(() => {
     if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
   }, [selectedResourceId, writableResources]);
-  const taskFilters = useMemo(() => ({ search, programIds, cycleIds, categories, statuses: statusFilters }), [categories, cycleIds, programIds, search, statusFilters]);
+  const taskFilters = useMemo(() => ({
+    search: view === 'list' ? search : '',
+    programIds,
+    cycleIds,
+    categories,
+    statuses: statusFilters,
+  }), [categories, cycleIds, programIds, search, statusFilters, view]);
   const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
     tasksQuery.data ?? [], resources, taskFilters, selectedResourceId,
   );
@@ -248,12 +254,12 @@ export default function Tasks() {
           disabled={optionsQuery.isLoading || Boolean(optionsQuery.error)}
           onClick={openAddTask}
         >+ Add</Button> : undefined}
-        search={<SearchInput
+        search={view === 'list' ? <SearchInput
           label="Search tasks"
           value={search}
           onChange={event => setSearch(event.target.value)}
           placeholder="Search tasks"
-        />}
+        /> : undefined}
         view={<ViewMenu
           value={view}
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
