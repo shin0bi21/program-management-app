@@ -466,6 +466,9 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
     await screen.findByText('Alex planning meeting');
+    expect(screen.getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'First Name', 'Last Name', 'Date', 'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Note', 'Type', '',
+    ]);
     expect(screen.getByRole('columnheader', { name: 'Session' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
