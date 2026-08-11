@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const storyId = 'ResourceCalendar/Interactive';
 const rangeLaneSizingStoryId = 'ResourceCalendar/RangeLaneSizing';
+const itemDensityStoryId = 'ResourceCalendar/ItemDensity';
 const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
 const timeItemStoryId = 'pages/Staff/Timesheets/components/TimeItem/TimeItem/InteractiveTimeItems';
 const taskItemStoryId = 'pages/Staff/Tasks/components/TaskItem/TaskItem/InteractiveTaskItem';
@@ -92,18 +93,29 @@ test('virtualizes a large staff list while preserving sticky headers', async ({ 
   expect((await header.boundingBox())?.y).toBeCloseTo(initialHeaderTop ?? 0, 0);
 });
 
-test('keeps every ranged-item lane the same height', async ({ mount }) => {
+test('keeps each overlap group aligned at its peak density', async ({ mount }) => {
   const component = await mount(rangeLaneSizingStoryId);
-  const first = component.getByRole('button', { name: 'First ranged task' })
+  const row = component.locator('.resource-calendar__row');
+  const longTask = component.getByRole('button', { name: 'First ranged task' });
+  const crowdedGroup = longTask.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
+  const isolatedGroup = component.getByRole('button', { name: 'Isolated ranged task' })
     .locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
-  const second = component.getByRole('button', { name: 'Second ranged task' })
-    .locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
-  const firstBox = await first.boundingBox();
-  const secondBox = await second.boundingBox();
-  if (!firstBox || !secondBox) throw new Error('Range lane geometry is unavailable');
+  const allItems = component.locator('.resource-calendar__range-item');
+  const rowBox = await row.boundingBox();
+  if (!rowBox) throw new Error('Range lane geometry is unavailable');
 
-  expect(secondBox.height).toBeCloseTo(firstBox.height, 0);
-  expect(secondBox.y).toBeGreaterThan(firstBox.y + firstBox.height);
+  await expect(row).toHaveCSS('height', '112px');
+  await expect(longTask).toHaveCount(1);
+  await expect(crowdedGroup).toHaveAttribute('data-range-density', 'dense');
+  await expect(isolatedGroup).toHaveAttribute('data-range-density', 'normal');
+  await expect(longTask).toHaveCSS('font-size', '8.8px');
+  await expect(component.getByRole('button', { name: 'Isolated ranged task' })).toHaveCSS('font-size', '12.4px');
+  for (const item of await allItems.all()) {
+    const box = await item.boundingBox();
+    if (!box) throw new Error('Range item geometry is unavailable');
+    expect(box.y).toBeGreaterThanOrEqual(rowBox.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(rowBox.y + rowBox.height);
+  }
 });
 
 test('keeps the resource column sticky during real horizontal scrolling', async ({ mount }) => {
@@ -589,7 +601,7 @@ test('shows a geometry-only task resize ghost without expanding its text', async
   await viewport.evaluate(element => { element.scrollLeft -= 304; });
   const handle = component.getByRole('button', { name: 'Resize start of task-1' });
   const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
-  const wrapper = item.locator('..');
+  const wrapper = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
   await expect(wrapper).toHaveClass(/resource-calendar__item/);
   await expect(wrapper).toHaveClass(/draggable/);
   await expect(wrapper).toHaveClass(/resizable/);
@@ -785,4 +797,19 @@ test('opens the overflow panel and supports keyboard dismissal', async ({ page, 
   await expect(page.getByRole('button', { name: 'Overflow one' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
+});
+
+test('fits normal, compact, and dense items without changing the virtualized row height', async ({ mount }) => {
+  const component = await mount(itemDensityStoryId);
+  const row = component.locator('.resource-calendar__row');
+  const compactSlot = component.locator('[data-item-period="2026-08-10"]');
+  const denseSlot = component.locator('[data-item-period="2026-08-11"]');
+
+  await expect(row).toHaveCSS('height', '112px');
+  await expect(compactSlot).toHaveClass(/resource-calendar__item-slot--compact/);
+  await expect(denseSlot).toHaveClass(/resource-calendar__item-slot--dense/);
+  await expect(compactSlot.getByRole('button')).toHaveCount(5);
+  await expect(denseSlot.getByRole('button')).toHaveCount(7);
+  await expect(denseSlot.getByRole('button').first()).toHaveCSS('font-size', '8.8px');
+  await expect(component.getByRole('button', { name: /Show all/ })).toHaveCount(0);
 });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import ResourceCalendar from './ResourceCalendar';
+import CalendarItem from './components/CalendarItem';
 import type { ItemDropContext, RangeMoveContext, RangeResizeContext, ResourcePeriodData } from './types';
 
 interface StoryResource {
@@ -148,7 +149,9 @@ export function RangeLaneSizing() {
   const firstResource = resources[0]!;
   const tasks: StoryItem[] = [
     { id: 'range-lane-1', label: 'First ranged task', start: '2026-08-09', end: '2026-08-12' },
-    { id: 'range-lane-2', label: 'Second ranged task', start: '2026-08-09', end: '2026-08-12' },
+    ...Array.from({ length: 4 }, (_, index) => ({ id: `compact-${index + 1}`, label: `Compact task ${index + 1}`, start: '2026-08-10', end: '2026-08-10' })),
+    ...Array.from({ length: 6 }, (_, index) => ({ id: `dense-${index + 1}`, label: `Dense task ${index + 1}`, start: '2026-08-11', end: '2026-08-11' })),
+    { id: 'isolated', label: 'Isolated ranged task', start: '2026-08-14', end: '2026-08-15' },
   ];
 
   return <div style={{ height: '300px', padding: '16px' }}>
@@ -159,11 +162,47 @@ export function RangeLaneSizing() {
       getItemRange={item => ({ start: item.start!, end: item.end! })}
       initialDate={new Date(2026, 7, 9)}
       ariaLabel="Range lane sizing calendar"
+      rowHeight={112}
       getResourceId={resource => resource.id}
       getItemId={item => item.id}
       renderResource={({ resource }) => <span>{resource.name}</span>}
       buildItem={() => null}
-      buildRangeItem={({ data: item }) => <button type="button">{item.label}</button>}
+      buildRangeItem={({ data: item }) => <CalendarItem id={item.id} ariaLabel={item.label} summary={item.label} detailTitle={item.label} details={[]} />}
+    />
+  </div>;
+}
+
+export function ItemDensity() {
+  const firstResource = resources[0]!;
+  const makeItems = (count: number, prefix: string) => Array.from({ length: count }, (_, index) => ({
+    id: `${prefix}-${index + 1}`,
+    label: `${prefix} item ${index + 1}`,
+  }));
+
+  return <div style={{ height: '300px', padding: '16px' }}>
+    <ResourceCalendar<StoryResource, StoryItem>
+      resources={[firstResource]}
+      data={{
+        [firstResource.id]: {
+          '2026-08-09': makeItems(3, 'normal'),
+          '2026-08-10': makeItems(5, 'compact'),
+          '2026-08-11': makeItems(7, 'dense'),
+        },
+      }}
+      initialDate={new Date(2026, 7, 9)}
+      ariaLabel="Item density calendar"
+      rowHeight={112}
+      maxVisibleItemsPerCell={7}
+      getResourceId={resource => resource.id}
+      getItemId={item => item.id}
+      renderResource={({ resource }) => <span>{resource.name}</span>}
+      buildItem={({ data: item }) => <CalendarItem
+        id={item.id}
+        ariaLabel={item.label}
+        summary={item.label}
+        detailTitle={item.label}
+        details={[]}
+      />}
     />
   </div>;
 }

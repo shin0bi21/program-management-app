@@ -147,12 +147,12 @@ describe('Timesheets', () => {
     ]);
   });
 
-  it('matches task calendar row sizing and shows three entries before overflow', async () => {
+  it('keeps a fixed row height and uses dense text for seven entries before overflow', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
-      data: { 'staff-1': { [workDate]: [1, 2, 3].map(index => ({
+      data: { 'staff-1': { [workDate]: [1, 2, 3, 4, 5, 6, 7].map(index => ({
         id: `entry-${index}`,
         programId: null,
         programName: null,
@@ -177,8 +177,9 @@ describe('Timesheets', () => {
     expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
     expect(await screen.findByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /show all 3 items/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 7, 7 hours/i })).toBeInTheDocument();
+    expect(container.querySelector(`[data-item-period="${workDate}"]`)).toHaveClass('resource-calendar__item-slot--dense');
+    expect(screen.queryByRole('button', { name: /show all 7 items/i })).not.toBeInTheDocument();
   });
 
   it('keeps the Staff filter for admins', async () => {
@@ -842,8 +843,8 @@ describe('Timesheets', () => {
 
   it('opens Edit from an entry inside the overflow panel', async () => {
     const workDate = dayKey(new Date());
-    const entries = ['entry-1', 'entry-2', 'entry-3', 'entry-4'].map((id, index) => ({
-      id,
+    const entries = Array.from({ length: 8 }, (_, index) => ({
+      id: `entry-${index + 1}`,
       programId: 'program-1',
       programName: 'Soft Skills',
       cycleId: 'cycle-1',
@@ -867,7 +868,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: `Show all 4 items for ${workDate}` }));
+    fireEvent.click(await screen.findByRole('button', { name: `Show all 8 items for ${workDate}` }));
     fireEvent.click(screen.getByRole('button', { name: /Program Delivery, 1 hours/ }));
     const editAction = screen.getByRole('menuitem', { name: 'Edit' });
     fireEvent.pointerDown(editAction);

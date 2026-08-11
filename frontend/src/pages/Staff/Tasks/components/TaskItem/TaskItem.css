@@ -3,6 +3,11 @@
   font-size: 1rem;
 }
 
+.resource-calendar__range-item--compact .task-item__overdue,
+.resource-calendar__range-item--dense .task-item__overdue {
+  font-size: inherit;
+}
+
 .task-item__detail-title {
   display: flex;
   align-items: flex-start;
