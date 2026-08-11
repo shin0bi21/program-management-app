@@ -26,8 +26,8 @@ describe('TaskItem', () => {
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Summer 2026');
-    expect(tooltip).toHaveTextContent('Hours Logged');
-    expect(tooltip).toHaveTextContent('1.50');
+    expect(tooltip).toHaveTextContent('Logged');
+    expect(tooltip).toHaveTextContent('1.5 hours');
     expect(tooltip).toHaveTextContent('Prepare activities.');
   });
 

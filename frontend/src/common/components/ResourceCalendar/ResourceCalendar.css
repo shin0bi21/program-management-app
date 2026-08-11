@@ -222,7 +222,7 @@
 }
 .resource-calendar__preview-host {
   position: fixed;
-  z-index: 1000;
+  z-index: 2;
   overflow: hidden;
   pointer-events: none;
 }

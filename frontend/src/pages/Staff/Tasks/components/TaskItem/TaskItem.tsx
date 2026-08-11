@@ -7,6 +7,7 @@ import './TaskItem.css';
 export default function TaskItem({ task, onEdit, onDelete, onActivate }: { task: Task; onEdit?: () => void; onDelete?: () => void; onActivate?: () => void }) {
   const category = TASK_CATEGORY_LABELS[task.category];
   const overdue = isTaskOverdue(task, dayKey(new Date()));
+  const loggedHours = `${task.hoursLogged.toLocaleString('en-CA', { maximumFractionDigits: 2 })} ${task.hoursLogged === 1 ? 'hour' : 'hours'}`;
   return <CalendarItem
     id={task.id}
     ariaLabel={`${task.title}, ${task.startDate} to ${task.dueDate}`}
@@ -23,7 +24,7 @@ export default function TaskItem({ task, onEdit, onDelete, onActivate }: { task:
       { label: 'Program', value: task.programName ?? 'General' },
       { label: 'Cycle', value: task.cycleName },
       { label: 'Dates', value: `${task.startDate} – ${task.dueDate}` },
-      { label: 'Hours Logged', value: task.hoursLogged.toFixed(2) },
+      { label: 'Logged', value: loggedHours },
       ...(task.details ? [{ label: 'Details', value: task.details, multiline: true }] : []),
     ]}
     onEdit={onEdit}
