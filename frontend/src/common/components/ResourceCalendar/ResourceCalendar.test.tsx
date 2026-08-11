@@ -4,6 +4,9 @@ import ResourceCalendar from './ResourceCalendar';
 import { dayKey } from './periods';
 import { calculateCalendarAnchorScrollLeft } from './utils/calendarPosition';
 
+const PERIOD_WIDTH = 145;
+const RESOURCE_WIDTH = 200;
+
 class MockIntersectionObserver {
   static instances: MockIntersectionObserver[] = [];
   readonly observed = new Set<Element>();
@@ -38,7 +41,7 @@ describe('ResourceCalendar', () => {
   });
 
   it('sizes the initial day window in full weeks with one group on each side', () => {
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(190 + 10 * 152);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(RESOURCE_WIDTH + 10 * PERIOD_WIDTH);
     const onInitialPeriods = vi.fn();
     const { container } = render(
       <ResourceCalendar
@@ -55,7 +58,7 @@ describe('ResourceCalendar', () => {
 
     const viewport = container.querySelector<HTMLElement>('.resource-calendar')!;
     expect(container.querySelectorAll('.resource-calendar__period')).toHaveLength(28);
-    expect(viewport.scrollLeft).toBe(14 * 152);
+    expect(viewport.scrollLeft).toBe(14 * PERIOD_WIDTH);
     expect(onInitialPeriods).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ key: '2026-08-09' }),
     ]));
@@ -80,7 +83,7 @@ describe('ResourceCalendar', () => {
     const viewport = first.container.querySelector<HTMLElement>('.resource-calendar')!;
     const periods = [...first.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
     const initialScrollLeft = viewport.scrollLeft;
-    const leftAnchorIndex = Math.floor(initialScrollLeft / 152);
+    const leftAnchorIndex = Math.floor(initialScrollLeft / PERIOD_WIDTH);
     const anchorDate = periods[leftAnchorIndex]!.dataset.periodKey!;
 
     viewport.scrollLeft = initialScrollLeft + 37;
@@ -114,7 +117,7 @@ describe('ResourceCalendar', () => {
     expect(restoredViewport.scrollLeft).toBe(calculateCalendarAnchorScrollLeft({
       periodIndex,
       offset: 37,
-      periodWidth: 152,
+      periodWidth: PERIOD_WIDTH,
     }));
   });
 

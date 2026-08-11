@@ -21,9 +21,10 @@ import { loadCalendarPosition } from './utils/calendarPosition';
 import './ResourceCalendar.css';
 import './components/CalendarItem.css';
 
-const PERIOD_WIDTH = 152;
-const RESOURCE_WIDTH = 190;
-const HEADER_HEIGHT = 58;
+const PERIOD_WIDTH = 145;
+const RESOURCE_WIDTH = 200;
+const HEADER_HEIGHT = 40;
+
 export default function ResourceCalendar<TResource, TItemData>({
   resources,
   data,

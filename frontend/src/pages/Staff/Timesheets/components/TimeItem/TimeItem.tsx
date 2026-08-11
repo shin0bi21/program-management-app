@@ -12,7 +12,7 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
     id={item.id}
     ariaLabel={`${item.taskTitle ?? item.categoryLabel}, ${item.hours} hours`}
     leading={`${item.hours}h`}
-    summary={<>{item.taskTitle ?? item.categoryLabel} · {item.programName ?? 'General'}</>}
+    summary={<>{item.taskTitle ?? item.categoryLabel}{item.programName ? ` · ${item.programName}` : ''}</>}
     detailTitle={item.taskTitle ?? item.categoryLabel}
     details={[
       ...(item.programName ? [{ label: 'Program', value: item.programName }] : []),
