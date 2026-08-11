@@ -4,6 +4,13 @@
   color: var(--color-muted);
 }
 
+.task-hours-breakdown__subtitle {
+  font-size: .8rem;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
 .dashboard-card.task-hours-breakdown-card {
   position: relative;
   justify-content: flex-start;
@@ -58,12 +65,19 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .task-hours-breakdown__details dd {
   margin: 3px 0 0;
   font-weight: 750;
+}
+
+.task-hours-breakdown__section {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-warm);
 }
 
 .task-hours-breakdown__list {
@@ -77,6 +91,10 @@
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.task-hours-breakdown__list div {
+  align-items: center;
 }
 
 .task-hours-breakdown__list dd {
