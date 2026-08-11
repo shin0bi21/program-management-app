@@ -6,8 +6,7 @@ export const programQuerySchema = z.object({
   }),
 });
 
-export const createProgramSchema = z.object({
-  body: z.object({
+const programBodySchema = z.object({
     name: z.string().trim().min(1, 'Program name is required').max(120),
     description: z.string().trim().max(2000).nullable().optional(),
     rosterMode: z.enum(['enrolled', 'open']).default('enrolled'),
@@ -29,7 +28,16 @@ export const createProgramSchema = z.object({
         path: ['maxAge'],
       });
     }
-  }),
+  });
+
+export const createProgramSchema = z.object({
+  body: programBodySchema,
+});
+
+export const updateProgramSchema = z.object({
+  params: z.object({ programId: z.string().uuid() }),
+  body: programBodySchema,
 });
 
 export type CreateProgramInput = z.infer<typeof createProgramSchema.shape.body>;
+export type UpdateProgramInput = z.infer<typeof updateProgramSchema.shape.body>;

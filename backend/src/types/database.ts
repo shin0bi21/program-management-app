@@ -37,6 +37,8 @@ export type LeadOrigin = "expression_of_interest" | "staff_created";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
 
+export type Numeric = ColumnType<string, number | string, number | string>;
+
 export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
 
 export type ProgramRosterMode = "enrolled" | "open";
@@ -201,10 +203,19 @@ export interface Leads {
 export interface ProgramCohorts {
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  cycle_id: string;
+  id: Generated<string>;
+  program_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface ProgramCycles {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
   ends_on: Timestamp;
   id: Generated<string>;
   name: string;
-  program_id: string;
   starts_on: Timestamp;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -295,6 +306,40 @@ export interface SystemRevokedTokens {
   reason: string | null;
   token_hash: string;
   user_id: string;
+}
+
+export interface Tasks {
+  category: string;
+  completed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  cycle_id: string;
+  details: string | null;
+  due_date: Timestamp;
+  id: Generated<string>;
+  program_id: string | null;
+  staff_id: string;
+  start_date: Timestamp;
+  status: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface TimeEntries {
+  category: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  cycle_id: string;
+  hours: Numeric;
+  id: Generated<string>;
+  note: string;
+  program_id: string | null;
+  staff_id: string;
+  task_id: string | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  work_date: Timestamp;
 }
 
 export interface UserAuthCodes {
@@ -459,6 +504,7 @@ export interface DB {
   lead_notes: LeadNotes;
   leads: Leads;
   program_cohorts: ProgramCohorts;
+  program_cycles: ProgramCycles;
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;
@@ -469,6 +515,8 @@ export interface DB {
   session_types: SessionTypes;
   staff_program_assignments: StaffProgramAssignments;
   system_revoked_tokens: SystemRevokedTokens;
+  tasks: Tasks;
+  time_entries: TimeEntries;
   user_auth_codes: UserAuthCodes;
   user_credentials: UserCredentials;
   user_has_addresses: UserHasAddresses;

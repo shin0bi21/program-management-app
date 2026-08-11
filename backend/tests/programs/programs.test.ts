@@ -13,6 +13,7 @@ describe('Programs API', () => {
   let adminUserId: string;
   let adminToken: string;
   let softSkillsProgramId: string;
+  let createdProgramId: string;
   const createdName = `Leadership ${Date.now()}`;
 
   beforeAll(async () => {
@@ -37,7 +38,7 @@ describe('Programs API', () => {
   });
 
   afterAll(async () => {
-    await sql`DELETE FROM programs WHERE BTRIM(name) = ${createdName}`;
+    if (createdProgramId) await sql`DELETE FROM programs WHERE id = ${createdProgramId}`;
     await deleteTestUser(adminUserId);
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
@@ -62,6 +63,29 @@ describe('Programs API', () => {
       minAge: 14,
       maxAge: 18,
     }));
+    createdProgramId = res.body.id;
+  });
+
+  it('allows admins to edit a program', async () => {
+    const res = await request(app)
+      .put(`/api/programs/${createdProgramId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: createdName,
+        description: 'Updated program description',
+        rosterMode: 'enrolled',
+        minAge: 15,
+        maxAge: 19,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.objectContaining({
+      id: createdProgramId,
+      description: 'Updated program description',
+      rosterMode: 'enrolled',
+      minAge: 15,
+      maxAge: 19,
+    }));
   });
 
   it('rejects program creation by staff', async () => {
@@ -69,6 +93,15 @@ describe('Programs API', () => {
       .post('/api/programs')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ name: 'Staff Program' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects program edits by staff', async () => {
+    const res = await request(app)
+      .put(`/api/programs/${softSkillsProgramId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ name: 'Staff Program', rosterMode: 'enrolled' });
 
     expect(res.status).toBe(403);
   });

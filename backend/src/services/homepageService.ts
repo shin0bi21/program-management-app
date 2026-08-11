@@ -68,7 +68,7 @@ function homepageSessions() {
         cs.starts_at,
         cs.ends_at,
         cs.created_at AS added_at,
-        pc.name AS cohort_name,
+        cycle.name AS cohort_name,
         p.id AS program_id,
         p.name AS program_name,
         p.description AS program_description,
@@ -81,6 +81,7 @@ function homepageSessions() {
         ) AS program_session_order
       FROM cohort_sessions cs
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+      INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
       INNER JOIN programs p ON p.id = pc.program_id
       WHERE cs.ends_at >= NOW()
         AND cs.cancelled_at IS NULL

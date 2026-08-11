@@ -22,6 +22,8 @@ const cohort: ProgramCohort = {
   rosterMode: 'enrolled',
   minAge: 12,
   maxAge: 15,
+  cycleId: 'cycle-summer-2026',
+  cycleName: 'Summer 2026',
   name: 'Summer 2026',
   startsOn: '2026-07-01',
   endsOn: '2026-08-31',

@@ -80,6 +80,27 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
+  it('persists the Timesheets view with its filters and selected cycle', async () => {
+    const value = {
+      view: 'list',
+      staffIds: [],
+      programIds: ['general'],
+      categories: ['meeting'],
+      cycleId: '00000000-0000-4000-8000-000000000001',
+    };
+    const saved = await request(app)
+      .put('/api/preferences/timesheet-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(value);
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual(value);
+
+    const restored = await request(app)
+      .get('/api/preferences/timesheet-filters')
+      .set('Authorization', `Bearer ${firstToken}`);
+    expect(restored.body).toEqual(value);
+  });
+
   it('persists bounded column widths and rejects unsupported columns', async () => {
     const value = {
       statuses: [],

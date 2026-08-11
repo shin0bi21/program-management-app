@@ -14,3 +14,5 @@ export interface CreateProgramInput {
   minAge?: number | null;
   maxAge?: number | null;
 }
+
+export type UpdateProgramInput = CreateProgramInput;

@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faTrash } from '@fortawesome/free-solid-svg-icons';
 import {
   deleteSessionAttachment,
   deleteSessionNote,
-  downloadSessionAttachment,
   getSessionAttachments,
   getSessionNotes,
 } from '../../../../../common/features/programming/api/programming.api';
@@ -16,8 +13,10 @@ import SessionNoteDetails from '../../../../../common/features/notes/components/
 import SessionNoteModal from '../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
 import SessionNoteRow from '../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
 import { useConfirmModal, type ConfirmAction } from '../../../../../common/components/Modal/hooks/useConfirmModal';
-import type { CohortSession, SessionNote } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionAttachment, SessionNote } from '../../../../../common/types/cohort';
 import SessionAttachmentModal from '../SessionAttachmentModal/SessionAttachmentModal';
+import SessionAttachmentRow from '../SessionAttachmentRow/SessionAttachmentRow';
+import SessionAttachmentViewerModal from '../SessionAttachmentViewerModal/SessionAttachmentViewerModal';
 
 interface SessionOverviewProps {
   session: CohortSession | null;
@@ -85,6 +84,8 @@ export default function SessionOverview({
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
+  const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
+  const [detailAttachment, setDetailAttachment] = useState<SessionAttachment | null>(null);
   const notesQuery = useQuery({
     queryKey: ['sessions', session?.id, 'notes'],
     queryFn: ({ signal }) => getSessionNotes(session!.id, { signal }),
@@ -111,6 +112,8 @@ export default function SessionOverview({
     setDetailNote(null);
     setConfirmAction(null);
     setAttachmentTarget(null);
+    setEditAttachment(null);
+    setDetailAttachment(null);
   }, [session?.id]);
 
   return (
@@ -139,7 +142,7 @@ export default function SessionOverview({
         ) : undefined}
       </DashboardCard>
       <DashboardCard
-        title="Session notes"
+        title="Session Notes"
         emptyMessage={session ? 'No notes.' : 'No session selected.'}
         action={canWriteSessions ? (
           <Button
@@ -203,58 +206,46 @@ export default function SessionOverview({
         ) : attachmentsQuery.error ? (
           <p role="alert">{attachmentsQuery.error instanceof Error ? attachmentsQuery.error.message : 'Could not load session attachments'}</p>
         ) : attachments.length ? (
-          <div className="session-notes-list">
+          <div className="session-attachment-list">
             {attachments.map(attachment => (
-              <article key={attachment.id} className="session-note">
-                <div className="session-note__main">
-                  <strong>{attachment.title}</strong>
-                  <span className="session-note__meta">
-                    {attachment.originalFilename} · {Math.max(1, Math.round(attachment.fileSize / 1024))} KB
-                  </span>
-                </div>
-                <div className="session-note__actions">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="session-note__action-button"
-                    aria-label={`Download ${attachment.title}`}
-                    title="Download attachment"
-                    onClick={() => void downloadSessionAttachment(session.id, attachment)}
-                  >
-                    <FontAwesomeIcon icon={faDownload} aria-hidden="true" />
-                  </Button>
-                  {canWriteSessions && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="session-note__action-button session-note__action-button--danger"
-                      aria-label={`Delete ${attachment.title}`}
-                      title="Delete attachment"
-                      onClick={() => setConfirmAction({
-                        title: 'Delete Attachment',
-                        message: `Delete “${attachment.title}”? This cannot be undone.`,
-                        confirmLabel: 'Delete',
-                        confirmVariant: 'danger',
-                        successMessage: 'Attachment successfully deleted.',
-                        onConfirm: async () => {
-                          await deleteSessionAttachment(session.id, attachment.id);
-                          await loadAttachments();
-                        },
-                      })}
-                    >
-                      <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-                    </Button>
-                  )}
-                </div>
-              </article>
+              <SessionAttachmentRow
+                key={attachment.id}
+                attachment={attachment}
+                onView={() => setDetailAttachment(attachment)}
+                onEdit={canWriteSessions ? () => {
+                  setEditAttachment(attachment);
+                  setAttachmentTarget(session);
+                } : undefined}
+                onDelete={canWriteSessions ? () => setConfirmAction({
+                  title: 'Delete Attachment',
+                  message: `Delete “${attachment.title}”? This cannot be undone.`,
+                  confirmLabel: 'Delete',
+                  confirmVariant: 'danger',
+                  successMessage: 'Attachment successfully deleted.',
+                  onConfirm: async () => {
+                    await deleteSessionAttachment(session.id, attachment.id);
+                    await loadAttachments();
+                    if (detailAttachment?.id === attachment.id) setDetailAttachment(null);
+                  },
+                }) : undefined}
+              />
             ))}
           </div>
         ) : <p className="dashboard-card__empty">No attachments.</p> : undefined}
       </DashboardCard>
       <SessionAttachmentModal
         session={attachmentTarget}
-        onClose={() => setAttachmentTarget(null)}
+        attachment={editAttachment}
+        onClose={() => {
+          setAttachmentTarget(null);
+          setEditAttachment(null);
+        }}
         onSaved={loadAttachments}
+      />
+      <SessionAttachmentViewerModal
+        session={session}
+        attachment={detailAttachment}
+        onClose={() => setDetailAttachment(null)}
       />
       <SessionNoteModal
         session={noteTarget}
@@ -287,7 +278,6 @@ export default function SessionOverview({
         status={confirmModal.status}
         statusMessage={confirmModal.statusMessage}
         successDelay={confirmModal.successDelay}
-        disableClose={confirmModal.disableClose}
       >
         <p>{confirmAction?.message}</p>
       </Modal>

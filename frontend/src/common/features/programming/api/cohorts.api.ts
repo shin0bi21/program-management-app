@@ -2,9 +2,12 @@ import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type {
   CohortSortKey,
+  CohortYouthReport,
   CreateCohortInput,
   EnrollYouthInput,
   ProgramCohort,
+  ProgramCycle,
+  SetProgramCycleInput,
   UpdateCohortInput,
 } from '../../../types/cohort';
 import type { CursorPage, CursorRequest } from '../../../types/pagination';
@@ -49,6 +52,20 @@ export function updateCohort(cohortId: string, data: UpdateCohortInput) {
   return apiClient.put(`/cohorts/${cohortId}`, data);
 }
 
+export function getProgramCycles(opts?: RequestOptions) {
+  return opts
+    ? apiClient.get<ProgramCycle[]>('/cohorts/cycles', opts)
+    : apiClient.get<ProgramCycle[]>('/cohorts/cycles');
+}
+
+export function createProgramCycle(data: SetProgramCycleInput) {
+  return apiClient.post<ProgramCycle>('/cohorts/cycles', data);
+}
+
+export function updateProgramCycle(cycleId: string, data: SetProgramCycleInput) {
+  return apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data);
+}
+
 export function deleteCohort(cohortId: string) {
   return apiClient.delete(`/cohorts/${cohortId}`);
 }
@@ -59,4 +76,17 @@ export function enrollYouth(cohortId: string, data: EnrollYouthInput) {
 
 export function withdrawYouth(cohortId: string, youthId: string) {
   return apiClient.patch(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
+}
+
+export function getCohortYouthReport(cohortId: string, filters: { youthId?: string } = {}, opts?: RequestOptions) {
+  const query = new URLSearchParams();
+  if (filters.youthId) query.set('youthId', filters.youthId);
+  const path = `/cohorts/${cohortId}/reports/youth${query.size ? `?${query}` : ''}`;
+  return opts ? apiClient.get<CohortYouthReport>(path, opts) : apiClient.get<CohortYouthReport>(path);
+}
+
+export function getCohortYouthReportPdf(cohortId: string, filters: { youthId?: string } = {}, opts?: RequestOptions) {
+  const query = new URLSearchParams();
+  if (filters.youthId) query.set('youthId', filters.youthId);
+  return apiClient.download(`/cohorts/${cohortId}/reports/youth.pdf${query.size ? `?${query}` : ''}`, opts);
 }

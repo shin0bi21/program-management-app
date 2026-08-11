@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useId, useRef } from 'react';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
+import useModalFocusTrap from './hooks/useModalFocusTrap';
 import './Modal.css';
 
 interface ModalProps {
@@ -30,10 +31,13 @@ export default function Modal({
   disableClose = false,
 }: ModalProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const titleId = useId();
+  const closeDisabled = disableClose || status === 'submitting' || status === 'success';
   // Keep a ref to onClose so the timer always calls the latest version
   // without needing it as an effect dependency
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const containerRef = useModalFocusTrap({ isOpen, disableClose: closeDisabled, onClose });
 
   useEffect(() => {
     if (status === 'success' && successDelay > 0) {
@@ -49,12 +53,17 @@ export default function Modal({
   return (
     <div className="modal-overlay">
       <div
+        ref={containerRef}
         className="modal-container"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         style={{ maxWidth }}
       >
         <div className="modal-header">
-          <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose} disabled={disableClose}>&times;</button>
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="modal-close" aria-label="Close" onClick={onClose} disabled={closeDisabled}>&times;</button>
         </div>
 
         {status !== 'idle' && (

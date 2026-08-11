@@ -116,7 +116,6 @@ export default function EnrollYouthModal({ cohort, onClose, onSuccess }: EnrollY
       status={submitStatus}
       statusMessage={statusMessage}
       successDelay={1400}
-      disableClose={submitStatus === 'submitting'}
       footer={(
         <ModalFormFooter
           formId="enroll-youth-form"

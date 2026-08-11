@@ -97,7 +97,6 @@ export default function LeadNotesCard({ lead, canWrite }: { lead: Lead | null; c
       status={confirmModal.status}
       statusMessage={confirmModal.statusMessage}
       footer={confirmModal.footer}
-      disableClose={confirmModal.disableClose}
       successDelay={confirmModal.successDelay}
     >
       {confirmAction && <p>{confirmAction.message}</p>}

@@ -8,7 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:browser": "playwright test --project=components",
+    "test:browser:ui": "playwright test --project=components --ui",
+    "test:browser:install": "playwright install chromium"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
@@ -17,11 +20,10 @@
     "@fortawesome/react-fontawesome": "^3.2.0",
     "@fullcalendar/react": "^7.0.1",
     "@hookform/resolvers": "^5.2.2",
+    "@panzoom/panzoom": "^4.6.2",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-table": "^8.21.3",
-    "chart.js": "^4.5.1",
     "react": "^18.3.1",
-    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.71.1",
     "react-router-dom": "^6.22.0",
@@ -29,6 +31,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

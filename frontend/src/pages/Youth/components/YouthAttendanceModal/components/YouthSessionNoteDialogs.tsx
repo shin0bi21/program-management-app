@@ -45,7 +45,6 @@ export default function YouthSessionNoteDialogs({
         title="Unlink Session Note"
         status={unlinkError ? 'error' : unlinking ? 'submitting' : 'idle'}
         statusMessage={unlinkError || (unlinking ? 'Unlinking session note...' : undefined)}
-        disableClose={unlinking}
         footer={<>
           <Button variant="secondary" disabled={unlinking} onClick={onCloseUnlink}>Cancel</Button>
           <Button variant="danger" disabled={unlinking} onClick={() => void onConfirmUnlink()}>Unlink</Button>

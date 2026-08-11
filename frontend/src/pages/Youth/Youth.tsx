@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
-import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../common/components/PageBody/PageBody';
 import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
 import AttendanceCard from './components/AttendanceCard/AttendanceCard';
 import YouthNotesCard from './components/YouthNotesCard/YouthNotesCard';
@@ -26,6 +26,7 @@ import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
 import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetails';
 import { getErrorMessage } from '../../http/clientErrors';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
+import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 
 export default function Youth() {
   const [search, setSearch] = useState('');
@@ -48,6 +49,10 @@ export default function Youth() {
   const [deletingProfileNote, setDeletingProfileNote] = useState(false);
   const [profileNoteDeleteError, setProfileNoteDeleteError] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
+    cohort: YouthProfile['cohorts'][number];
+    youthId: string;
+  } | null>(null);
   const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
@@ -67,6 +72,9 @@ export default function Youth() {
   const canManageSessionNotes = permissions.includes('write:sessions');
   const canManageAttendance = permissions.includes('read:attendance')
     && permissions.includes('write:attendance')
+    && permissions.includes('read:sessions');
+  const canViewAttendanceReport = permissions.includes('read:cohorts')
+    && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
   const profileNotesQuery = useQuery({
     queryKey: ['youth-profile-notes', selectedProfileId],
@@ -122,8 +130,6 @@ export default function Youth() {
       ],
     },
   ], [programs]);
-
-  const handleEditProfile = (profile: YouthProfile) => setModalTarget(profile);
 
   const handleSaveYouth = (savedYouth: YouthProfile) => {
     setModalTarget(null);
@@ -194,17 +200,17 @@ export default function Youth() {
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
           items={[
-            { id: 'edit', label: 'Edit Profile', onClick: () => handleEditProfile(profile) },
+            { id: 'edit', label: 'Edit Profile', onClick: () => setModalTarget(profile) },
             { id: 'add-note', label: 'Add Note', onClick: () => { selectProfile(profile); setProfileNoteTarget('new'); } },
           ]}
         />
       ) : null,
     },
-  ], [canWrite]);
+  ], [canWrite, selectProfile]);
 
   return (
     <>
-      <div className="data-detail-page-content">
+      <div className="data-page">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -232,10 +238,10 @@ export default function Youth() {
         />
         {preferencesError && <p className="form-error" role="alert">{preferencesError}</p>}
 
-        <TableDetailLayout
+        <PageBody
           ariaLabel="Youth profiles"
           table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-          details={<>
+          dashboard={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {
                 phoneNumber: selectedProfile.contacts[0].phoneNumber,
@@ -261,6 +267,10 @@ export default function Youth() {
               selected={selectedProfile !== null}
               canManage={canManageAttendance}
               onManage={setAttendanceTarget}
+              canViewReport={canViewAttendanceReport}
+              onViewReport={cohort => {
+                if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
+              }}
             />
             <YouthNotesCard
               profileNotes={profileNotes}
@@ -293,6 +303,11 @@ export default function Youth() {
         onClose={() => setAttendanceTarget(null)}
         onSaved={refetchYouth}
       />
+      {attendanceReportTarget && <YouthReportModal
+        cohort={attendanceReportTarget.cohort}
+        youthId={attendanceReportTarget.youthId}
+        onClose={() => setAttendanceReportTarget(null)}
+      />}
       <YouthModal
         isOpen={contactTarget !== null}
         youthData={contactTarget ?? undefined}
@@ -307,13 +322,14 @@ export default function Youth() {
           note={profileNoteTarget === 'new' ? undefined : profileNoteTarget}
           onClose={() => setProfileNoteTarget(null)}
           onSaved={note => {
+            const shouldReturnToDetails = profileNoteTarget !== 'new';
             queryClient.setQueryData<YouthProfileNote[]>(['youth-profile-notes', selectedProfileId], current => {
               const rows = current ?? [];
               const index = rows.findIndex(item => item.id === note.id);
               return index === -1 ? [note, ...rows] : rows.map(item => item.id === note.id ? note : item);
             });
             setProfileNoteTarget(null);
-            setSelectedProfileNote(note);
+            if (shouldReturnToDetails) setSelectedProfileNote(note);
           }}
         />
       )}
@@ -328,7 +344,6 @@ export default function Youth() {
         title={confirmingProfileNoteDelete ? 'Delete Profile Note' : selectedProfileNote?.title || 'Profile Note'}
         status={profileNoteDeleteError ? 'error' : deletingProfileNote ? 'submitting' : 'idle'}
         statusMessage={profileNoteDeleteError || (deletingProfileNote ? 'Deleting profile note...' : undefined)}
-        disableClose={deletingProfileNote}
         footer={selectedProfileNote && canWrite ? confirmingProfileNoteDelete ? <>
           <Button variant="secondary" disabled={deletingProfileNote} onClick={() => { setConfirmingProfileNoteDelete(false); setProfileNoteDeleteError(''); }}>Cancel</Button>
           <Button variant="danger" onClick={async () => {

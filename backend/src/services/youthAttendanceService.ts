@@ -32,8 +32,9 @@ async function getYouthCohortContext(
   if (!youth.length) throw new NotFoundError('Youth profile not found');
 
   const cohorts = await database<YouthCohortContext[]>`
-    SELECT pc.id, pc.name, p.name AS program_name, p.roster_mode
+    SELECT pc.id, cycle.name, p.name AS program_name, p.roster_mode
     FROM program_cohorts pc
+    INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id
     WHERE pc.id = ${cohortId}
     LIMIT 1

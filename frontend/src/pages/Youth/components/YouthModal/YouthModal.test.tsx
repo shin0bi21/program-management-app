@@ -260,6 +260,24 @@ describe('YouthModal', () => {
       });
     });
 
+    it('uses the shared relationship selector in contact mode', async () => {
+      const profile = makeYouthProfile({
+        id: 'youth-99',
+        firstName: 'Jordan',
+        lastName: 'Smith',
+        contacts: null,
+      });
+      renderModal({ youthData: profile, mode: 'contact' });
+      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '519-555-0101' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Relationship 1' }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Guardian' }));
+      submitForm();
+
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
+        contacts: [{ phoneNumber: '519-555-0101', type: 'guardian' }],
+      })));
+    });
+
     it('does not submit the cohort-derived status when updating', async () => {
       const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith' });
       renderModal({ youthData: profile });

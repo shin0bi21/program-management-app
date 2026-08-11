@@ -71,7 +71,6 @@ export default function YouthAttendanceModal({
           ? 'Saving youth attendance...'
           : submitStatus === 'success' ? 'Youth attendance saved.' : undefined)}
         successDelay={1000}
-        disableClose={submitStatus === 'submitting'}
         footer={(
           <ModalFormFooter
             formId="youth-attendance-form"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatShortDate, getDateKeyInTimeZone } from './date';
+import { formatShortDate, formatShortDateRange, getDateKeyInTimeZone } from './date';
 
 describe('formatShortDate', () => {
   it('formats timestamps using the shared short-date style', () => {
@@ -12,6 +12,12 @@ describe('formatShortDate', () => {
 
   it('keeps date-only values on their calendar day', () => {
     expect(formatShortDate('2026-07-01')).toBe('Jul 1, 2026');
+  });
+});
+
+describe('formatShortDateRange', () => {
+  it('collapses repeated month and year information', () => {
+    expect(formatShortDateRange('2026-07-29', '2026-08-11')).toBe('Jul 29 – Aug 11, 2026');
   });
 });
 

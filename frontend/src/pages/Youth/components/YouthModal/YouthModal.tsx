@@ -195,15 +195,18 @@ export default function YouthModal({
                       />
                     </FormField>
                     <FormField id={`type-${index}`} label="Relationship *">
-                      <select
+                      <FloatingSelect
                         id={`type-${index}`}
+                        ariaLabel={`Relationship ${index + 1}`}
                         value={contact.type}
-                        onChange={(e) => handleContactChange(index, 'type', e.target.value)}
-                      >
-                        <option value="parent">Parent</option>
-                        <option value="guardian">Guardian</option>
-                        <option value="sibling">Sibling</option>
-                      </select>
+                        options={[
+                          { value: 'parent', label: 'Parent' },
+                          { value: 'guardian', label: 'Guardian' },
+                          { value: 'sibling', label: 'Sibling' },
+                        ]}
+                        onChange={value => handleContactChange(index, 'type', value)}
+                        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+                      />
                     </FormField>
                   </div>
                 </div>

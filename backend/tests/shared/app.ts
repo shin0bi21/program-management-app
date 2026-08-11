@@ -15,6 +15,8 @@ import programRoutes from '../../src/routes/programRoutes';
 import cohortRoutes from '../../src/routes/cohortRoutes';
 import homepageRoutes from '../../src/routes/homepageRoutes';
 import preferenceRoutes from '../../src/routes/preferenceRoutes';
+import timeEntryRoutes from '../../src/routes/timeEntryRoutes';
+import taskRoutes from '../../src/routes/taskRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
@@ -34,6 +36,8 @@ export function createApp() {
   app.use('/api/cohorts', cohortRoutes);
   app.use('/api/homepage', homepageRoutes);
   app.use('/api/preferences', preferenceRoutes);
+  app.use('/api/time-entries', timeEntryRoutes);
+  app.use('/api/tasks', taskRoutes);
   app.use(handleError);
   return app;
 }

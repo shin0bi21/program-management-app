@@ -5,6 +5,8 @@ export interface ProgramCohort {
   rosterMode: 'enrolled' | 'open';
   minAge: number | null;
   maxAge: number | null;
+  cycleId: string;
+  cycleName: string;
   name: string;
   startsOn: string;
   endsOn: string;
@@ -16,6 +18,14 @@ export interface ProgramCohort {
   attendanceAttendedCount: number;
   attendanceRecordedCount: number;
   uniqueAttendeeCount: number;
+}
+
+export interface ProgramCycle {
+  id: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  state: 'upcoming' | 'active' | 'completed';
 }
 export type CohortSortKey = 'program' | 'cohort' | 'start' | 'end' | 'status';
 
@@ -41,11 +51,14 @@ export interface CohortSession {
 
 export interface CreateCohortInput {
   programId: string;
+  cycleId: string;
+}
+export type UpdateCohortInput = Pick<CreateCohortInput, 'cycleId'>;
+export interface SetProgramCycleInput {
   name: string;
   startsOn: string;
   endsOn: string;
 }
-export type UpdateCohortInput = Omit<CreateCohortInput, 'programId'>;
 export interface UpdateSessionInput {
   sessionTypeId: string;
   theme: string | null;
@@ -96,6 +109,46 @@ export interface SessionType {
 export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface AttendanceBreakdown {
+  name: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  unmarked: number;
+  attendedCount: number;
+  countedCount: number;
+  attendanceRate: number | null;
+}
+
+export interface CohortYouthReport {
+  cohort: { id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' };
+  youth: Array<{
+    id: string; firstName: string; lastName: string;
+    attendanceBreakdown: {
+      bySessionType: AttendanceBreakdown[];
+      total: AttendanceBreakdown;
+    };
+    notes: Array<{
+      id: string;
+      sessionId: string;
+      sessionTheme: string | null;
+      startsAt: string;
+      category: SessionNoteCategory;
+      title: string;
+      details: string | null;
+    }>;
+    timeline: Array<{
+      sessionId: string;
+      sessionTypeName: string;
+      sessionTheme: string | null;
+      startsAt: string;
+      status: AttendanceStatus | null;
+      noteCategories: SessionNoteCategory[];
+    }>;
+  }>;
+}
 
 export interface SessionRosterMember {
   youthId: string;
@@ -167,4 +220,10 @@ export interface SessionAttachment {
   updatedAt: string;
   createdByName: string | null;
   youth: SessionAttachmentYouth[];
+}
+
+export interface UpdateSessionAttachmentInput {
+  title: string;
+  description: string | null;
+  youthIds: string[];
 }

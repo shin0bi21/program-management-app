@@ -88,6 +88,7 @@ main() {
   deployment_complete
 }
 
+# Parse CLI options and establish the lock, logging, and cleanup trap.
 parse_arguments() {
   local argument
   for argument in "$@"; do
@@ -120,6 +121,7 @@ initialize_process() {
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Deploy started"
 }
 
+# Update the checkout to origin/main and re-run the freshly pulled script.
 synchronize_repository() {
   if [ "${DEPLOY_BOOTSTRAPPED:-false}" = true ]; then
     TARGET_SHA="${DEPLOY_TARGET_SHA:?Missing bootstrapped target revision}"
@@ -157,6 +159,7 @@ load_environment() {
   mkdir -p "$STATE_DIR"
 }
 
+# Read and write per-component markers for the last successful deployment.
 read_revision() {
   local component="$1"
   local marker="$STATE_DIR/${component}-revision"
@@ -191,6 +194,7 @@ revision_changed() {
   [ -z "$revision" ] || ! git diff --quiet "$revision" "$TARGET_SHA" -- "$@"
 }
 
+# Classify changed paths to select the smallest safe deployment flow.
 classify_infrastructure_changes() {
   if [ -z "$INFRASTRUCTURE_REVISION" ]; then
     INFRASTRUCTURE_CHANGED=true
@@ -209,7 +213,7 @@ classify_infrastructure_changes() {
         ;;
       docker-compose.yml|eslint.config.js|package.json|package-lock.json)
         ;;
-      scripts/tests/*|scripts/loc-breakdown.sh|scripts/reset-app.sh)
+      scripts/tests/*|scripts/dev/*|scripts/loc-breakdown.sh)
         ;;
       "")
         ;;
@@ -257,6 +261,7 @@ print_deployment_plan() {
   echo "Infrastructure: $INFRASTRUCTURE_CHANGED"
 }
 
+# Build production images before replacing any running containers.
 build_frontend_image() {
   echo ""
   echo "Building frontend/nginx image..."
@@ -278,6 +283,7 @@ require_database() {
   fi
 }
 
+# Snapshot the database and apply migrations with rollback protection.
 take_database_snapshot() {
   require_database
   echo ""
@@ -316,6 +322,7 @@ run_migration_flow() {
   ROLLBACK_NEEDED=false
 }
 
+# Replace a service and verify that its new container is usable.
 wait_for_replacement() {
   local service="$1"
   local old_id="$2"
@@ -376,6 +383,7 @@ restart_frontend() {
   echo "Frontend/nginx is running with a valid configuration and built index."
 }
 
+# Execute the component-specific or full-infrastructure deployment flow.
 deploy_backend() {
   require_database
   if [ "$MIGRATIONS_CHANGED" = true ]; then
@@ -404,6 +412,7 @@ deploy_infrastructure() {
   restart_frontend
 }
 
+# Persist success markers and print the deployed revision.
 record_all_revisions() {
   write_revision backend "$TARGET_SHA"
   write_revision frontend "$TARGET_SHA"
@@ -417,6 +426,7 @@ deployment_complete() {
   echo "=========================================="
 }
 
+# Restore the pre-migration snapshot on failure and remove temporary state.
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM

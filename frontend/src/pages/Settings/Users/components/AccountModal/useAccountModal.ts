@@ -26,6 +26,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const {
     register,
+    control,
     handleSubmit,
     reset,
     watch,
@@ -42,7 +43,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();
-  }, [account, isOpen, reset]); // resetStatus is intentionally scoped to modal-open changes
+  }, [account, isOpen, reset, resetStatus]);
 
   const handleClose = () => {
     reset(defaultValues);
@@ -77,6 +78,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
 
   return {
     register,
+    control,
     errors,
     onSubmit: handleSubmit(onValid),
     submitStatus,

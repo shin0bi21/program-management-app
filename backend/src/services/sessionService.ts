@@ -41,10 +41,11 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
     const trx = asTransactionSql(tx);
     const theme = data.theme ?? null;
     const cohorts = await trx<{ startsOn: string; endsOn: string }[]>`
-      SELECT starts_on::text AS starts_on, ends_on::text AS ends_on
-      FROM program_cohorts
-      WHERE id = ${cohortId}
-      FOR UPDATE
+      SELECT cycle.starts_on::text AS starts_on, cycle.ends_on::text AS ends_on
+      FROM program_cohorts cohort
+      INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
+      WHERE cohort.id = ${cohortId}
+      FOR UPDATE OF cohort
     `;
     if (!cohorts.length) throw new NotFoundError('Cohort not found');
 
@@ -146,7 +147,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
   const direction = filters.limit ? filters.direction : filters.start ? 'asc' : filters.direction;
   const state = sql`CASE WHEN cs.cancelled_at IS NOT NULL THEN 'cancelled' WHEN cs.ends_at < NOW() THEN 'completed' ELSE 'upcoming' END`;
   const sortValue = {
-    program: sql`LOWER(p.name)`, cohort: sql`LOWER(pc.name)`, theme: sql`LOWER(COALESCE(cs.theme, ''))`,
+    program: sql`LOWER(p.name)`, cohort: sql`LOWER(cycle.name)`, theme: sql`LOWER(COALESCE(cs.theme, ''))`,
     date: sql`cs.starts_at::text`, time: sql`cs.starts_at::text`, type: sql`LOWER(st.name)`, status: state,
   }[filters.sort]!;
   return sql<Array<{ id: string; cursorValue: string }>>`
@@ -156,7 +157,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
       cs.session_type_id,
       st.name AS session_type_name,
       cs.theme,
-      pc.name AS cohort_name,
+      cycle.name AS cohort_name,
       p.id AS program_id,
       p.name AS program_name,
       p.roster_mode,
@@ -180,6 +181,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
     FROM cohort_sessions cs
     INNER JOIN session_types st ON st.id = cs.session_type_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+    INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN attendance_records ar ON ar.session_id = cs.id
     WHERE ${
@@ -199,7 +201,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
           ? sql`(
         COALESCE(cs.theme, '') ILIKE ${search}
         OR COALESCE(cs.description, '') ILIKE ${search}
-        OR pc.name ILIKE ${search}
+        OR cycle.name ILIKE ${search}
         OR p.name ILIKE ${search}
         OR st.name ILIKE ${search}
       )`
@@ -208,7 +210,7 @@ export function getSessionList(actor: AccessTokenPayload, filters: SessionListQu
       AND ${cursor ? (direction === 'asc'
         ? sql`(${sortValue}, cs.id) > (${cursor.value}, ${cursor.id}::uuid)`
         : sql`(${sortValue}, cs.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
-    GROUP BY cs.id, pc.id, p.id, st.id
+    GROUP BY cs.id, pc.id, p.id, cycle.id, st.id
     ORDER BY ${sortValue} ${direction === 'asc' ? sql`ASC` : sql`DESC`}, cs.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
     ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
   `.then(rows => filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row));

@@ -37,9 +37,8 @@ All remaining commands in this guide run from the repository root.
 | Root `.env` | Backend and database configuration for the current machine; local development on a workstation and real production values on the server | No |
 | `backend/.env.test` | Safe, isolated backend test configuration used locally and in CI | Yes |
 | `backend/.env.example` | Template for creating the root `.env` | Yes |
-| `frontend/.env` | Local Vite configuration | No |
+| `frontend/.env.development` | Local Vite configuration loaded automatically by Vite | Yes |
 | `frontend/.env.production` | Production Vite build configuration stored on the server | No |
-| `frontend/.env.example` | Template for creating `frontend/.env` | Yes |
 
 Never put production credentials in a committed file. CI supplies any
 workflow-specific values directly and uses `backend/.env.test` only where a
@@ -71,16 +70,12 @@ development explicitly disables 2FA in `docker-compose.yml`.
 
 Do not commit `.env`; it is ignored by Git.
 
-## 3. Create the frontend environment
+## 3. Frontend environment
 
-Create the local frontend configuration from its example:
-
-```bash
-cp frontend/.env.example frontend/.env
-```
-
-The example points the browser to `http://localhost:5001/api`, which matches the
-development backend exposed by Compose.
+The committed `frontend/.env.development` points the browser to
+`http://localhost:5001/api`, which matches the development backend exposed by
+Compose. Vite loads this file automatically in development, so no frontend
+environment setup is required.
 
 ## 4. Start the stack
 

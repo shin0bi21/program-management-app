@@ -1,7 +1,43 @@
-.cohort-card-actions {
+.dashboard-card.cohort-overview-card {
+  height: 116px;
+}
+
+.cohort-overview-card .dashboard-card__header {
+  margin-bottom: var(--space-2);
+}
+
+.cohort-overview {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.cohort-overview div {
   display: flex;
+  align-items: baseline;
   gap: var(--space-2);
 }
+
+.cohort-overview dt {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.cohort-overview dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+@media (max-width: 768px) {
+  .dashboard-card.cohort-overview-card {
+    height: auto;
+    min-height: 116px;
+  }
+}
+
 
 .cohort-state {
   display: inline-flex;
@@ -26,4 +62,30 @@
 .cohort-state--completed {
   background: var(--ink-08);
   color: var(--color-muted);
+}
+
+.cycle-list {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.cycle-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cycle-list__item div,
+.cycle-list__item span {
+  display: grid;
+  gap: 2px;
+}
+
+.cycle-list__item span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
 }

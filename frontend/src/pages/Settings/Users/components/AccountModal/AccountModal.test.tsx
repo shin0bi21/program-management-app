@@ -129,4 +129,26 @@ describe('AccountModal program assignments', () => {
       programIds: [softSkillsId, jobReadinessId],
     }));
   });
+
+  it('uses the shared role selector and clears program assignments for admins', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AccountModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await screen.findByText('Automatically available: Drop In');
+    await user.type(screen.getByLabelText('First Name *'), 'Avery');
+    await user.type(screen.getByLabelText('Last Name *'), 'Admin');
+    await user.type(screen.getByLabelText('Email *'), 'avery@example.com');
+    await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
+    await user.click(screen.getByRole('button', { name: 'Role' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Admin' }));
+
+    expect(screen.queryByRole('checkbox', { name: 'Soft Skills' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+    await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'admin',
+      programIds: [],
+    })));
+  });
 });
