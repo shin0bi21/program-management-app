@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import FloatingMenuPanel from '../../FloatingMenu/FloatingMenuPanel';
 import { useFloatingMenu } from '../../FloatingMenu/hooks/useFloatingMenu';
 import useViewportDismissal from '../../FloatingMenu/hooks/useViewportDismissal';
-import { calculateFloatingPosition, type FloatingPosition } from '../../FloatingMenu/utils/floatingPosition';
+import { calculateFloatingPositionFromRect, type FloatingPosition } from '../../FloatingMenu/utils/floatingPosition';
 
 export interface CalendarItemDetail {
   label: string;
@@ -37,9 +37,30 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   const hasActions = Boolean(onEdit && onDelete);
   const detailsId = `calendar-item-details-${id}`;
   const hideDetails = () => setDetailPosition(null);
-  const showDetails = () => {
-    if (!triggerRef.current) return;
-    setDetailPosition(calculateFloatingPosition(triggerRef.current, { side: 'right', align: 'start' }, { widthEstimate: 300, heightEstimate: 190, offset: 8 }));
+  const showDetails = (clientX?: number) => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const daySlots = trigger.closest('.resource-calendar__row')
+      ?.querySelectorAll<HTMLElement>('.resource-calendar__item-slot');
+    const hoveredDay = clientX === undefined ? undefined : [...(daySlots ?? [])].find(slot => {
+      const bounds = slot.getBoundingClientRect();
+      return clientX >= bounds.left && clientX < bounds.right;
+    });
+    const horizontalAnchor = hoveredDay ?? trigger;
+    const horizontalBounds = horizontalAnchor.getBoundingClientRect();
+    const itemBounds = trigger.getBoundingClientRect();
+    const anchorBounds = new DOMRect(
+      horizontalBounds.left,
+      itemBounds.top,
+      horizontalBounds.width,
+      itemBounds.height,
+    );
+    const next = calculateFloatingPositionFromRect(
+      anchorBounds,
+      { side: 'bottom', align: 'start' },
+      { widthEstimate: 300, heightEstimate: 190, offset: 8 },
+    );
+    setDetailPosition(current => current?.top === next.top && current.left === next.left ? current : next);
   };
   const runAction = (action: () => void) => { close(); action(); };
 
@@ -52,7 +73,8 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
       aria-haspopup={hasActions ? 'menu' : undefined}
       aria-expanded={hasActions ? isOpen : undefined}
       aria-describedby={detailPosition ? detailsId : undefined}
-      onMouseEnter={showDetails}
+      onMouseEnter={event => showDetails(event.clientX)}
+      onMouseMove={event => showDetails(event.clientX)}
       onMouseLeave={hideDetails}
       onFocus={() => { if (triggerRef.current?.matches(':focus-visible')) showDetails(); }}
       onBlur={hideDetails}
