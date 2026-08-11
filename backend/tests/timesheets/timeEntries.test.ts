@@ -104,6 +104,91 @@ describe('Time entries API', () => {
     ]);
   });
 
+  it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
+    const [cycle] = await sql<Array<{ id: string; periodStart: string; periodEnd: string }>>`
+      INSERT INTO program_cycles (name, starts_on, ends_on)
+      VALUES (
+        'Timesheet Overview Boundary',
+        (NOW() AT TIME ZONE 'America/Toronto')::date - 15,
+        (NOW() AT TIME ZONE 'America/Toronto')::date + 20
+      )
+      RETURNING id, (starts_on + 14)::text AS period_start, (starts_on + 27)::text AS period_end
+    `;
+    try {
+      await sql`
+        INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
+        VALUES
+          (${firstStaffId}, ${cycle.id}, 'meeting', ${cycle.periodStart}::date - 1, 9, 'Prior period'),
+          (${firstStaffId}, ${cycle.id}, 'meeting', ${cycle.periodStart}::date, 2, 'Current meeting'),
+          (${firstStaffId}, ${cycle.id}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
+      `;
+
+      const overview = await request(app)
+        .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${cycle.id}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+
+      expect(overview.status).toBe(200);
+      expect(overview.body).toEqual({
+        payPeriod: {
+          periodStart: cycle.periodStart,
+          periodEnd: cycle.periodEnd,
+          totalHours: 5,
+          breakdown: [
+            { label: 'Outreach', hours: 3 },
+            { label: 'Meeting', hours: 2 },
+          ],
+        },
+        biweeklyAverage: {
+          periodCount: 2,
+          averageHours: 7,
+          breakdown: [
+            { label: 'Meeting', hours: 5.5 },
+            { label: 'Outreach', hours: 1.5 },
+          ],
+        },
+      });
+    } finally {
+      await sql`DELETE FROM time_entries WHERE cycle_id = ${cycle.id}`;
+      await sql`DELETE FROM program_cycles WHERE id = ${cycle.id}`;
+    }
+  });
+
+  it('conceals dashboard overview data for an unreadable staff resource', async () => {
+    const response = await request(app)
+      .get(`/api/time-entries/overview?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('returns overview data for a shared-readable staff resource without matching entry metadata', async () => {
+    const [entry] = await sql<Array<{ id: string }>>`
+      INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
+      VALUES (${secondStaffId}, ${activeCycleId}, 'meeting', CURRENT_DATE, 2, 'Shared resource overview')
+      RETURNING id
+    `;
+    try {
+      const response = await request(app)
+        .get(`/api/time-entries/overview?staffId=${secondStaffId}&cycleId=${activeCycleId}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.payPeriod.totalHours).toBe(2);
+      expect(response.body.payPeriod.breakdown).toEqual([{ label: 'Meeting', hours: 2 }]);
+    } finally {
+      await sql`DELETE FROM time_entries WHERE id = ${entry.id}`;
+    }
+  });
+
+  it('requires the read timesheets permission for dashboard overview data', async () => {
+    const token = generateToken(firstStaffId, 'staff', 'timesheet-no-read@test.local', []);
+    const response = await request(app)
+      .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+  });
+
   it('returns read-only resource capabilities without writable rows', async () => {
     const readOnlyToken = generateToken(
       adminId,

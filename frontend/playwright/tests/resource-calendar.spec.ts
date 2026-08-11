@@ -5,6 +5,8 @@ const rangeLaneSizingStoryId = 'ResourceCalendar/RangeLaneSizing';
 const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
 const timeItemStoryId = 'pages/Staff/Timesheets/components/TimeItem/TimeItem/InteractiveTimeItems';
 const taskItemStoryId = 'pages/Staff/Tasks/components/TaskItem/TaskItem/InteractiveTaskItem';
+const periodWidth = 145;
+const resourceWidth = 200;
 
 async function drag(page: Page, source: Locator, target: Locator) {
   const sourceBox = await source.boundingBox();
@@ -50,13 +52,16 @@ test('restores the exact left day and offset after scrolling through the right e
   const component = await mount(persistedPositionStoryId);
   const viewport = component.getByLabel('Persisted-position resource calendar');
 
-  await viewport.evaluate(element => { element.scrollLeft += 8 * 152 + 37; });
+  await viewport.evaluate((element, width) => { element.scrollLeft += 8 * width + 37; }, periodWidth);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('resource-calendar:playwright-position'))).not.toBeNull();
-  await page.waitForTimeout(150);
+  await expect.poll(async () => {
+    const stored = await page.evaluate(() => localStorage.getItem('resource-calendar:playwright-position'));
+    return stored ? JSON.parse(stored).offset : null;
+  }).toBe(await viewport.evaluate((element, width) => element.scrollLeft % width, periodWidth));
   const scrollLeftBeforeRemount = await viewport.evaluate(element => element.scrollLeft);
   const storedPosition = await page.evaluate(() => localStorage.getItem('resource-calendar:playwright-position'));
   expect(JSON.parse(storedPosition!)).toEqual(expect.objectContaining({
-    offset: scrollLeftBeforeRemount % 152,
+    offset: scrollLeftBeforeRemount % periodWidth,
   }));
   const visibleBeforeRemount = await fullyVisiblePeriodKeys(component);
 
@@ -68,7 +73,7 @@ test('restores the exact left day and offset after scrolling through the right e
   const scrollLeftAfterRemount = await remountedViewport.evaluate(element => element.scrollLeft);
 
   expect(visibleAfterRemount).toEqual(visibleBeforeRemount);
-  expect(scrollLeftAfterRemount % 152).toBeCloseTo(scrollLeftBeforeRemount % 152, 0);
+  expect(scrollLeftAfterRemount % periodWidth).toBeCloseTo(scrollLeftBeforeRemount % periodWidth, 0);
 });
 
 test('virtualizes a large staff list while preserving sticky headers', async ({ mount }) => {
@@ -238,13 +243,13 @@ test('resizes a ranged item with real pointer geometry', async ({ page, mount })
 
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(handleBox.x + handleBox.width / 2 + 152, handleBox.y + handleBox.height / 2, { steps: 6 });
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + periodWidth - 1, handleBox.y + handleBox.height / 2, { steps: 6 });
   await page.mouse.up();
 
   await expect(component.getByTestId('resize-record')).toHaveValue('end:2026-08-08:2026-08-12->2026-08-08:2026-08-13');
   await expect(component.getByTestId('activation-record')).toHaveValue('');
   const after = await item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]').boundingBox();
-  expect(after?.width ?? 0).toBeGreaterThan(before.width + 130);
+  expect((after?.width ?? 0) - before.width).toBeCloseTo(periodWidth, 0);
 });
 
 test('keeps the opposite ghost edge fixed while resizing from the start', async ({ page, mount }) => {
@@ -342,7 +347,7 @@ test('keeps range movement locked out while a resize pointer owns the calendar',
   await wrapper.dispatchEvent('pointerdown', {
     pointerId: 32, button: 0, clientX: itemBox.x + itemBox.width / 2, clientY: itemBox.y + itemBox.height / 2,
   });
-  await page.mouse.move(handleBox.x + handleBox.width / 2 + 152, handleBox.y + handleBox.height / 2, { steps: 6 });
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + periodWidth, handleBox.y + handleBox.height / 2, { steps: 6 });
   await page.mouse.up();
 
   await expect(component.getByTestId('resize-record')).not.toHaveValue('');
@@ -362,7 +367,7 @@ test('keeps range resize locked out while a move pointer owns the calendar', asy
   await handle.dispatchEvent('pointerdown', {
     pointerId: 42, button: 0, clientX: handleBox.x + handleBox.width / 2, clientY: handleBox.y + handleBox.height / 2,
   });
-  await page.mouse.move(itemBox.x + itemBox.width / 2 + 152, itemBox.y + itemBox.height / 2, { steps: 6 });
+  await page.mouse.move(itemBox.x + itemBox.width / 2 + periodWidth, itemBox.y + itemBox.height / 2, { steps: 6 });
   await page.mouse.up();
 
   await expect(component.getByTestId('range-move-record')).not.toHaveValue('');
@@ -388,7 +393,7 @@ test('cancels ranged movement and resize without committing', async ({ page, mou
 
   await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(itemBox.x + itemBox.width / 2 + 152, itemBox.y + itemBox.height / 2, { steps: 6 });
+  await page.mouse.move(itemBox.x + itemBox.width / 2 + periodWidth, itemBox.y + itemBox.height / 2, { steps: 6 });
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 })));
   await expect(component.getByTestId('range-move-record')).toHaveValue('');
   await expect(page.locator('.resource-calendar__preview-host')).toHaveCount(0);
@@ -398,7 +403,7 @@ test('cancels ranged movement and resize without committing', async ({ page, mou
   if (!handleBox) throw new Error('Range resize cancellation geometry is unavailable');
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(handleBox.x + handleBox.width / 2 + 152, handleBox.y + handleBox.height / 2, { steps: 6 });
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + periodWidth, handleBox.y + handleBox.height / 2, { steps: 6 });
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 })));
   await expect(component.getByTestId('resize-record')).toHaveValue('');
   await expect(page.locator('.resource-calendar__preview-host')).toHaveCount(0);
@@ -447,7 +452,7 @@ test('moves a ranged item while preserving its duration and suppressing activati
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2 + 152, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.move(box.x + box.width / 2 + periodWidth, box.y + box.height / 2, { steps: 6 });
   await expect(page.locator('.resource-calendar__range-preview')).toBeVisible();
   await expectPreviewClippedToCalendar(component, page);
   await page.mouse.up();
@@ -494,10 +499,23 @@ test('moves a ranged item to another resource without changing its dates', async
 
 test('opens the real task-item floating menu instead of editing directly', async ({ page, mount }) => {
   const component = await mount(taskItemStoryId);
+  const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
+  const itemBox = await item.boundingBox();
+  const row = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
+  if (!itemBox) throw new Error('Task action anchor geometry is unavailable');
+  const pointerX = itemBox.x + itemBox.width * .65;
+  const dayIndex = await row.locator('.resource-calendar__item-slot').evaluateAll((slots, x) => slots.findIndex(slot => {
+    const bounds = slot.getBoundingClientRect();
+    return x >= bounds.left && x < bounds.right;
+  }), pointerX);
+  const dayBox = await row.locator('.resource-calendar__item-slot').nth(dayIndex).boundingBox();
+  if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
-  await component.getByRole('button', { name: /Prepare workshop.*Open actions/ }).click();
+  await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
+    .toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect(component.getByTestId('task-item-action')).toHaveValue('');
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
@@ -506,22 +524,11 @@ test('opens the real task-item floating menu instead of editing directly', async
 test('gives a real task item the same hover-details lifecycle as a time item', async ({ page, mount }) => {
   const component = await mount(taskItemStoryId);
   const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
-
-  await item.hover();
-  const tooltip = page.getByRole('tooltip');
-  await expect(tooltip).toContainText('Prepare workshop');
-  await expect(tooltip).toContainText('Planning / Prep');
-  await expect(tooltip).toContainText('Soft Skills');
-  await expect(tooltip).toContainText('Summer 2026');
-  await expect(tooltip).toContainText('Logged');
-  await expect(tooltip).toContainText('1.5 hours');
-  await expect(tooltip).toContainText('Prepare activities and materials.');
-
   const rangeItem = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
   const row = rangeItem.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
   const itemBox = await item.boundingBox();
   if (!itemBox) throw new Error('Task detail anchor geometry is unavailable');
-  const pointerX = itemBox.x + itemBox.width * .65;
+  const pointerX = itemBox.x + itemBox.width * .2;
   const day = row.locator('.resource-calendar__item-slot').evaluateAll((slots, x) => {
     const index = slots.findIndex(slot => {
       const bounds = slot.getBoundingClientRect();
@@ -533,28 +540,47 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
   const hoveredDay = row.locator('.resource-calendar__item-slot').nth(await day);
   const dayBox = await hoveredDay.boundingBox();
   if (!dayBox) throw new Error('Hovered task day geometry is unavailable');
+
   await page.mouse.move(pointerX, itemBox.y + itemBox.height / 2);
-  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(dayBox.x, 0);
+  const tooltip = page.getByRole('tooltip');
+  await expect(tooltip).toContainText('Prepare workshop');
+  await expect(tooltip).toContainText('Planning / Prep');
+  await expect(tooltip).toContainText('Soft Skills');
+  await expect(tooltip).toContainText('Summer 2026');
+  await expect(tooltip).toContainText('Logged');
+  await expect(tooltip).toContainText('1.5 hours');
+  await expect(tooltip).toContainText('Prepare activities and materials.');
+  await expect.poll(async () => {
+    const bounds = await tooltip.boundingBox();
+    return bounds ? bounds.y + bounds.height <= await page.evaluate(() => window.innerHeight) : false;
+  }).toBe(true);
+
+  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(itemBox.y + itemBox.height + 8, 0);
+  const lockedPosition = await tooltip.boundingBox();
+  await page.mouse.move(itemBox.x + itemBox.width * .8, itemBox.y + itemBox.height / 2);
+  await page.waitForTimeout(180);
+  expect((await tooltip.boundingBox())?.x).toBeCloseTo(lockedPosition?.x ?? 0, 0);
 
   const box = await item.boundingBox();
   if (!box) throw new Error('Task item geometry is unavailable');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await expect(tooltip).toBeHidden();
-  await page.mouse.move(box.x + box.width / 2 + 152, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.move(box.x + box.width / 2 + periodWidth, box.y + box.height / 2, { steps: 5 });
   await expect(tooltip).toBeHidden();
   await page.mouse.up();
 });
 
-test('renders real task and time items with the same item-shell height', async ({ mount }) => {
+test('keeps ranged tasks compact enough for three lanes', async ({ mount }) => {
   const timeComponent = await mount(timeItemStoryId);
   const timeBox = await timeComponent.getByRole('button', { name: /Program Delivery, 2 hours/ }).boundingBox();
   const taskComponent = await mount(taskItemStoryId);
   const taskBox = await taskComponent.getByRole('button', { name: /Prepare workshop.*Open actions/ }).boundingBox();
   if (!timeBox || !taskBox) throw new Error('Calendar item geometry is unavailable');
 
-  expect(taskBox.height).toBeCloseTo(timeBox.height, 0);
+  expect(taskBox.height).toBe(26);
+  expect(taskBox.height).toBeLessThan(timeBox.height);
 });
 
 test('shows a geometry-only task resize ghost without expanding its text', async ({ page, mount }) => {
@@ -578,7 +604,7 @@ test('shows a geometry-only task resize ghost without expanding its text', async
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2 - 152, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.move(box.x + box.width / 2 - periodWidth + 1, box.y + box.height / 2, { steps: 5 });
   const preview = page.locator('.resource-calendar__range-preview');
   await expect(preview).toBeVisible();
   await expect(preview.getByText('Prepare workshop')).toBeHidden();
@@ -593,10 +619,15 @@ test('shows a geometry-only task resize ghost without expanding its text', async
 
 test('opens the real time-item action menu without starting a drag', async ({ page, mount }) => {
   const component = await mount(timeItemStoryId);
+  const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
+  const itemBox = await item.boundingBox();
+  if (!itemBox) throw new Error('Time action anchor geometry is unavailable');
 
-  await component.getByRole('button', { name: /Program Delivery, 2 hours/ }).click();
+  await item.click();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
+    .toBeCloseTo(itemBox.x, 0);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
 
   await expect(component.getByTestId('time-item-action')).toHaveValue('edit:entry-1');
@@ -631,7 +662,7 @@ test('suppresses real time-item details from pointer down through drag end', asy
   const dayBox = await source.locator('xpath=ancestor::div[contains(@class, "resource-calendar__item-slot")]').boundingBox();
   const targetBox = await target.boundingBox();
   if (!sourceBox || !dayBox || !targetBox) throw new Error('Time item geometry is unavailable');
-  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(dayBox.x, 0);
+  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(sourceBox.x, 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(sourceBox.y + sourceBox.height + 8, 0);
 
   await page.mouse.down();
@@ -717,7 +748,7 @@ test('uses the period-zone edge for ranged drag autoscroll', async ({ page, moun
   await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
   await page.mouse.down();
   try {
-    await page.mouse.move(viewportBox.x + 190 + 8, itemBox.y + itemBox.height / 2, { steps: 8 });
+    await page.mouse.move(viewportBox.x + resourceWidth + 8, itemBox.y + itemBox.height / 2, { steps: 8 });
     await expect.poll(() => viewport.evaluate(element => element.scrollLeft)).toBeLessThan(initialLeft);
   } finally {
     await page.mouse.up();
@@ -737,7 +768,7 @@ test('auto-scrolls while resizing a ranged task near the horizontal edge', async
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   try {
-    await page.mouse.move(viewportBox.x + 190 + 8, handleBox.y + handleBox.height / 2, { steps: 8 });
+    await page.mouse.move(viewportBox.x + resourceWidth + 8, handleBox.y + handleBox.height / 2, { steps: 8 });
     await expect.poll(() => viewport.evaluate(element => element.scrollLeft)).toBeLessThan(initialLeft);
   } finally {
     await page.mouse.up();

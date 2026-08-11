@@ -24,17 +24,18 @@ import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimesheetItem 
 import {
   createTimeEntry,
   deleteTimeEntry,
+  getTimeEntryOverview,
   getTimeEntries,
   updateTimeEntry,
   updateTimeEntryPlacement,
   type SetTimeEntryInput,
+  type TimeEntryOverviewResponse,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
 import { getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import type { ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate, formatShortDateRange } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
-import { summarizeCycleHours } from './timesheetSummary';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import TimesheetOverviewCard from './components/TimesheetOverviewCard/TimesheetOverviewCard';
 import './Timesheets.css';
@@ -76,6 +77,8 @@ export default function Timesheets() {
   const [cycleData, setCycleData] = useState<Awaited<ReturnType<typeof getTimeEntries>>['data']>({});
   const [cycleLoading, setCycleLoading] = useState(true);
   const [cycleError, setCycleError] = useState<string | null>(null);
+  const [dashboardOverview, setDashboardOverview] = useState<TimeEntryOverviewResponse | null>(null);
+  const [dashboardOverviewError, setDashboardOverviewError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'general' | 'task' }>({});
   const [editTarget, setEditTarget] = useState<EntryTarget | null>(null);
@@ -251,33 +254,36 @@ export default function Timesheets() {
   const currentUserResource = resources.find(resource => resource.id === currentUserId) ?? null;
   const dashboardStaff = resources.find(resource => resource.id === selectedDashboardStaffId)
     ?? currentUserResource;
-  const dashboardRows = useMemo(() => {
-    if (!dashboardStaff) return [];
-    return Object.entries(cycleData[dashboardStaff.id] ?? {}).flatMap(([date, items]) => (
-      items.map(item => ({ id: item.id, resourceId: dashboardStaff.id, date, item, staffName: dashboardStaff.name }))
-    ));
-  }, [cycleData, dashboardStaff]);
   const overviewCycle = selectedCycle
     ?? cycles.find(cycle => cycle.state === 'active')
     ?? cycles[0]
     ?? null;
-  const overviewCycleRows = useMemo(
-    () => overviewCycle ? dashboardRows.filter(row => row.item.cycleId === overviewCycle.id) : [],
-    [dashboardRows, overviewCycle],
-  );
-
-  const summary = useMemo(() => {
-    const result = summarizeCycleHours(
-      overviewCycleRows.map(row => ({ date: row.date, label: row.item.categoryLabel, hours: row.item.hours })),
-      overviewCycle,
-      undefined,
-      dashboardRows.map(row => ({ date: row.date, label: row.item.categoryLabel, hours: row.item.hours })),
-    );
-    return { ...result, periodLabel: result.periodStart && result.periodEnd
-      ? formatShortDateRange(result.periodStart, result.periodEnd)
-      : 'No cycle selected' };
-  }, [dashboardRows, overviewCycle, overviewCycleRows]);
-  const hasStaffOverview = dashboardStaff !== null;
+  const dashboardStaffId = dashboardStaff?.id ?? null;
+  const overviewCycleId = overviewCycle?.id ?? null;
+  useEffect(() => {
+    if (!dashboardStaffId || !overviewCycleId) {
+      setDashboardOverview(null);
+      setDashboardOverviewError(null);
+      return undefined;
+    }
+    const controller = new AbortController();
+    setDashboardOverview(null);
+    void getTimeEntryOverview(dashboardStaffId, overviewCycleId, { signal: controller.signal })
+      .then(overview => {
+        setDashboardOverview(overview);
+        setDashboardOverviewError(null);
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setDashboardOverviewError(getErrorMessage(cause, 'Could not load the timesheet overview.'));
+        }
+      });
+    return () => controller.abort();
+  }, [cycleData, dashboardStaffId, overviewCycleId]);
+  const payPeriodLabel = dashboardOverview
+    ? formatShortDateRange(dashboardOverview.payPeriod.periodStart, dashboardOverview.payPeriod.periodEnd)
+    : 'Loading pay period…';
+  const hasStaffOverview = dashboardStaff !== null && overviewCycle !== null;
   const hasCycleOverview = dashboardStaff !== null && overviewCycle !== null;
   const overviewEmptyMessage = 'Select a staff member to view their time entry overview.';
 
@@ -479,9 +485,9 @@ export default function Timesheets() {
             />
           ) : undefined}
         />
-        {(error || moveError || cycleError || preferenceError) && (
+        {(error || moveError || cycleError || dashboardOverviewError || preferenceError) && (
           <div className="timesheets-page__error" role="alert">
-            <span>{moveError ?? error ?? cycleError ?? preferenceError}</span>
+            <span>{moveError ?? error ?? cycleError ?? dashboardOverviewError ?? preferenceError}</span>
             {error && <Button size="sm" variant="secondary" onClick={retry}>Retry</Button>}
           </div>
         )}
@@ -490,30 +496,28 @@ export default function Timesheets() {
           dashboard={<>
             <TimesheetOverviewCard
               title="Hours This Pay Period"
-              total={summary.periodTotal}
+              total={dashboardOverview?.payPeriod.totalHours ?? 0}
               modalTitle={dashboardStaff?.name ?? ''}
-              modalSubtitle={summary.periodLabel}
-              breakdown={summary.periodTaskHours}
+              modalSubtitle={payPeriodLabel}
+              breakdown={(dashboardOverview?.payPeriod.breakdown ?? []).map(item => [item.label, item.hours])}
               emptyMessage={overviewEmptyMessage}
               hasStaff={hasStaffOverview}
               details={[
-                ['Current Pay Period', summary.periodLabel],
-                ['Hours', summary.periodTotal.toFixed(2)],
+                ['Current Pay Period', payPeriodLabel],
+                ['Hours', (dashboardOverview?.payPeriod.totalHours ?? 0).toFixed(2)],
               ]}
             />
             <TimesheetOverviewCard
               title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
-              total={summary.average}
+              total={dashboardOverview?.biweeklyAverage.averageHours ?? 0}
               modalTitle={dashboardStaff?.name ?? ''}
               modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
-              breakdown={summary.taskHours.map(
-                ([label, hours]): [string, number] => [label, hours / summary.periodCount],
-              )}
+              breakdown={(dashboardOverview?.biweeklyAverage.breakdown ?? []).map(item => [item.label, item.hours])}
               emptyMessage={overviewEmptyMessage}
               hasStaff={hasCycleOverview}
               details={[
                 ['Cycle', overviewCycle?.name ?? ''],
-                ['Biweekly Average', summary.average.toFixed(2)],
+                ['Biweekly Average', (dashboardOverview?.biweeklyAverage.averageHours ?? 0).toFixed(2)],
               ]}
             />
           </>}
@@ -530,7 +534,8 @@ export default function Timesheets() {
             onItemDrop={canWriteTimesheets ? moveTimeEntry : undefined}
             canDropItem={canDropWithinStaff}
             getItemCapabilities={({ resource }) => ({ draggable: canWriteTimesheets && resource.writable })}
-            maxVisibleItemsPerCell={2}
+            maxVisibleItemsPerCell={3}
+            rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
               { id: 'general', label: 'Regular Time', onSelect: () => openCellEntry(context, 'general') },

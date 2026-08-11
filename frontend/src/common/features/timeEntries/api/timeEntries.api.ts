@@ -22,6 +22,20 @@ export interface TimeEntryRangeResponse {
   data: ResourcePeriodData<TimesheetItem>;
 }
 
+export interface TimeEntryOverviewResponse {
+  payPeriod: {
+    periodStart: string;
+    periodEnd: string;
+    totalHours: number;
+    breakdown: Array<{ label: string; hours: number }>;
+  };
+  biweeklyAverage: {
+    periodCount: number;
+    averageHours: number;
+    breakdown: Array<{ label: string; hours: number }>;
+  };
+}
+
 export interface TimeEntryFilters { start?: string; end?: string; cycleId?: string }
 
 export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOptions) {
@@ -30,6 +44,11 @@ export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOpt
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   const query = params.size ? `?${params}` : '';
   return apiClient.get<TimeEntryRangeResponse>(`/time-entries${query}`, opts);
+}
+
+export function getTimeEntryOverview(staffId: string, cycleId: string, opts?: RequestOptions) {
+  const params = new URLSearchParams({ staffId, cycleId });
+  return apiClient.get<TimeEntryOverviewResponse>(`/time-entries/overview?${params}`, opts);
 }
 
 export function getTimeEntryCohorts(programId: string, signal?: AbortSignal) {

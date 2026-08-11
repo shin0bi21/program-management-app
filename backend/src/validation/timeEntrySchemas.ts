@@ -50,6 +50,13 @@ export const timeEntryCohortQuerySchema = z.object({
   query: z.object({ programId: z.string().uuid('Invalid program ID') }),
 });
 
+export const timeEntryOverviewQuerySchema = z.object({
+  query: z.object({
+    staffId: z.string().uuid('Invalid staff ID'),
+    cycleId: z.string().uuid('Invalid cycle ID'),
+  }),
+});
+
 const sharedTimeEntryFields = {
     staffId: z.string().uuid('Invalid staff ID'),
     workDate: dateSchema,
@@ -79,6 +86,7 @@ export const updateTimeEntryPlacementSchema = z.object({
 });
 
 export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema.shape.query>;
+export type TimeEntryOverviewQuery = z.infer<typeof timeEntryOverviewQuerySchema.shape.query>;
 export type SetTimeEntryInput = z.infer<typeof setTimeEntrySchema.shape.body>;
 export type UpdateTimeEntryPlacementInput = z.infer<typeof updateTimeEntryPlacementSchema.shape.body>;
 export type TimeEntryCategory = z.infer<typeof timeEntryCategorySchema>;

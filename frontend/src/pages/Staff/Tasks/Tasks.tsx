@@ -15,7 +15,7 @@ import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { deleteTask, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods';
-import { TASK_CATEGORY_LABELS, TASK_CATEGORY_OPTIONS, type Task, type TaskCategory, type TaskStatus } from '../../../common/features/tasks/types';
+import { TASK_CATEGORY_LABELS, TASK_CATEGORY_OPTIONS, TASK_STATUS_LABELS, type Task, type TaskCategory, type TaskStatus } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
 import TaskManagementModal from './components/TaskManagementModal/TaskManagementModal';
 import TaskItem from './components/TaskItem/TaskItem';
@@ -30,12 +30,6 @@ const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'todo', label: 'To do' }, { value: 'in_progress', label: 'In progress' },
   { value: 'completed', label: 'Completed' }, { value: 'cancelled', label: 'Cancelled' },
 ];
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
 const TASKS_QUERY_KEY = ['tasks'] as const;
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 type TaskModalTarget = Task | { startDate: string; dueDate: string; fixedStaffId?: string };
@@ -50,7 +44,7 @@ function TaskStatusCell({ task, canWrite, onChange }: {
   canWrite: boolean;
   onChange: (task: Task, status: TaskStatus) => void;
 }) {
-  if (!canWrite || !task.writable) return STATUS_LABELS[task.status];
+  if (!canWrite || !task.writable) return TASK_STATUS_LABELS[task.status];
   return <FloatingSelect
     id={`task-status-${task.id}`}
     value={task.status}
@@ -120,7 +114,13 @@ export default function Tasks() {
   useEffect(() => {
     if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
   }, [selectedResourceId, writableResources]);
-  const taskFilters = useMemo(() => ({ search, programIds, cycleIds, categories, statuses: statusFilters }), [categories, cycleIds, programIds, search, statusFilters]);
+  const taskFilters = useMemo(() => ({
+    search: view === 'list' ? search : '',
+    programIds,
+    cycleIds,
+    categories,
+    statuses: statusFilters,
+  }), [categories, cycleIds, programIds, search, statusFilters, view]);
   const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
     tasksQuery.data ?? [], resources, taskFilters, selectedResourceId,
   );
@@ -254,12 +254,12 @@ export default function Tasks() {
           disabled={optionsQuery.isLoading || Boolean(optionsQuery.error)}
           onClick={openAddTask}
         >+ Add</Button> : undefined}
-        search={<SearchInput
+        search={view === 'list' ? <SearchInput
           label="Search tasks"
           value={search}
           onChange={event => setSearch(event.target.value)}
           placeholder="Search tasks"
-        />}
+        /> : undefined}
         view={<ViewMenu
           value={view}
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
