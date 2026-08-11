@@ -123,6 +123,28 @@ describe('User preferences API', () => {
     }
   });
 
+  it('persists separate Outreach first and last name column widths', async () => {
+    const preferences = [
+      {
+        key: 'lead-filters',
+        value: { statuses: [], programIds: [], columnWidths: { firstName: 180, lastName: 200 } },
+      },
+      {
+        key: 'expression-interest-filters',
+        value: { statuses: [], programIds: [], columnWidths: { firstName: 170, lastName: 210 } },
+      },
+    ] as const;
+
+    for (const { key, value } of preferences) {
+      const saved = await request(app)
+        .put(`/api/preferences/${key}`)
+        .set('Authorization', `Bearer ${firstToken}`)
+        .send(value);
+      expect(saved.status).toBe(200);
+      expect(saved.body).toEqual(value);
+    }
+  });
+
   it('rejects unknown preference keys and malformed filter values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')
