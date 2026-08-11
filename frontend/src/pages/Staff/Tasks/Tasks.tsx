@@ -10,6 +10,7 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
@@ -25,7 +26,6 @@ import TimeEntryModal from '../../../common/features/timeEntries/components/Time
 import { createTimeEntry, type SetTimeEntryInput } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
 import useTaskViewData from './hooks/useTaskViewData';
-import './Tasks.css';
 
 const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'todo', label: 'To do' }, { value: 'in_progress', label: 'In progress' },
@@ -248,7 +248,7 @@ export default function Tasks() {
     : undefined;
 
   return <>
-    <main className="page-container page-container--data tasks-page">
+    <main className="page-container page-container--data">
       <PageHeader
         title="Tasks"
         actions={canWrite && writableResources.length ? <Button
@@ -274,32 +274,28 @@ export default function Tasks() {
         />}
       />
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
-      {preferencesReady && selectedResource && <DashboardCardGroup ariaLabel="Task overview">
-        <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
-        <TaskHoursLoggedCard
-          task={selectedTask}
-          onLogHours={logHoursAction}
-        />
-      </DashboardCardGroup>}
-      {preferencesReady && view === 'list' && <Table
-        ariaLabel="Tasks"
-        columns={columns}
-        data={rows}
-        loading={tasksQuery.isLoading}
-        error={tasksQuery.error ? 'Unable to load tasks.' : undefined}
-        emptyMessage={search.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
-        keyExtractor={task => task.id}
-        selectedKey={selectedTaskId}
-        onRowSelect={selectTask}
-        columnWidths={columnWidths}
-        onColumnWidthsChange={next => {
-          setColumnWidths(next);
-          persist(programIds, cycleIds, categories, statusFilters, next);
-        }}
-      />}
-      {preferencesReady && view === 'calendar' && tasksQuery.isLoading && <p>Loading tasks…</p>}
-      {preferencesReady && view === 'calendar' && !tasksQuery.isLoading && !tasksQuery.error && <div className="tasks-calendar">
-        <ResourceCalendar
+      {preferencesReady && <PageBody
+        ariaLabel="Task overview and assignments"
+        dashboard={selectedResource ? <DashboardCardGroup ariaLabel="Task overview">
+          <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
+          <TaskHoursLoggedCard task={selectedTask} onLogHours={logHoursAction} />
+        </DashboardCardGroup> : null}
+        {...(view === 'list' ? { table: <Table
+          ariaLabel="Tasks"
+          columns={columns}
+          data={rows}
+          loading={tasksQuery.isLoading}
+          error={tasksQuery.error ? 'Unable to load tasks.' : undefined}
+          emptyMessage={search.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
+          keyExtractor={task => task.id}
+          selectedKey={selectedTaskId}
+          onRowSelect={selectTask}
+          columnWidths={columnWidths}
+          onColumnWidthsChange={next => {
+            setColumnWidths(next);
+            persist(programIds, cycleIds, categories, statusFilters, next);
+          }}
+        /> } : { calendar: tasksQuery.isLoading ? <p>Loading tasks…</p> : !tasksQuery.error ? <ResourceCalendar
           resources={resources}
           data={{}}
           rangeData={rangeData}
@@ -340,8 +336,8 @@ export default function Tasks() {
           positionStorageKey={TASK_CALENDAR_POSITION_KEY}
           resourceHeader="Staff"
           rowHeight={112}
-        />
-      </div>}
+        /> : null })}
+      />}
     </main>
     {canWrite && modalTarget && <TaskManagementModal
       isOpen

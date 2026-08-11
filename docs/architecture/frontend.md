@@ -88,6 +88,10 @@ Local guides refine the two shared-code boundaries:
 - [`common/components/README.md`](../../frontend/src/common/components/README.md)
 - [`common/features/README.md`](../../frontend/src/common/features/README.md)
 
+Data pages compose one route-level `PageHeader` followed by `PageBody`. `PageBody`
+owns the shared `page-dashboard` region and exactly one `page-table` or
+`page-calendar` region; page-specific wrappers must not recreate that structure.
+
 ## Feature folders
 
 A non-trivial unit owns its UI, stateful behavior, validation, types, and tests together:

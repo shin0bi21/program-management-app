@@ -2,7 +2,7 @@
 
 ## Load contracts and patterns
 
-1. Read the `Table` contract and `TableDetailLayout` contract when applicable.
+1. Read the `Table` and `PageBody` contracts.
 2. Inspect one strong matching list-page consumer.
 3. Audit the user-preference schema before implementing durable controls.
 
