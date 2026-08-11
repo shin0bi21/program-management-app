@@ -141,7 +141,22 @@ describe('Cohorts and attendance API', () => {
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
 
-    await sql`DELETE FROM program_cycles WHERE id = ${created.body.id}`;
+    const deniedDelete = await request(app)
+      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(deniedDelete.status).toBe(403);
+
+    const deleted = await request(app)
+      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ id: created.body.id });
+    expect(await sql`SELECT id FROM program_cycles WHERE id = ${created.body.id}`).toHaveLength(0);
+
+    const missing = await request(app)
+      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(missing.status).toBe(404);
   });
 
   it('creates a dated cohort', async () => {
@@ -160,6 +175,16 @@ describe('Cohorts and attendance API', () => {
       startsOn: addDays(today, -7),
       endsOn: addDays(today, 60),
     }));
+  });
+
+  it('keeps cycles protected while they are assigned to a cohort', async () => {
+    const response = await request(app)
+      .delete(`/api/cohorts/cycles/${mainCycleId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Cycle cannot be deleted because it is still in use');
+    expect(await sql`SELECT id FROM program_cycles WHERE id = ${mainCycleId}`).toHaveLength(1);
   });
 
   it('blocks cohorts outside the staff program scope', async () => {

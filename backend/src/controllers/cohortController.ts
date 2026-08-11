@@ -4,6 +4,7 @@ import {
   createCohort,
   createProgramCycle,
   deleteCohort,
+  deleteProgramCycle,
   getCohorts,
   getProgramCycles,
   updateProgramCycle,
@@ -73,6 +74,11 @@ export const handleCreateProgramCycle = async (req: Request, res: Response) => {
 
 export const handleUpdateProgramCycle = async (req: Request, res: Response) => {
   res.json(await updateProgramCycle(req.params.cycleId, req.body as UpdateCycleInput, actor(req)));
+};
+
+export const handleDeleteProgramCycle = async (req: Request, res: Response) => {
+  await deleteProgramCycle(req.params.cycleId);
+  res.json({ id: req.params.cycleId });
 };
 
 export const handleCreateCohort = async (req: Request, res: Response) => {

@@ -9,6 +9,7 @@ const programmingApi = vi.hoisted(() => ({
   getProgramCycles: vi.fn(),
   createProgramCycle: vi.fn(),
   updateProgramCycle: vi.fn(),
+  deleteProgramCycle: vi.fn(),
 }));
 const programsApi = vi.hoisted(() => ({
   createProgram: vi.fn(),
@@ -78,5 +79,35 @@ describe('Programming settings', () => {
     });
     await waitFor(() => expect(programState.upsertProgram).toHaveBeenCalledWith(created));
     expect(await screen.findByText('Program added successfully.')).toBeInTheDocument();
+  });
+
+  it('deletes an unused cycle after confirmation', async () => {
+    const user = userEvent.setup();
+    programmingApi.deleteProgramCycle.mockResolvedValue({ id: 'cycle-1' });
+    render(<MemoryRouter><Programming /></MemoryRouter>);
+
+    await user.click(await screen.findByRole('button', { name: 'Actions for Fall 2026' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Cycle' }));
+
+    expect(screen.getByRole('heading', { name: 'Delete Cycle' })).toBeInTheDocument();
+    expect(screen.getByText(/Cycles assigned to cohorts, tasks, or time entries cannot be deleted/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(programmingApi.deleteProgramCycle).toHaveBeenCalledWith('cycle-1'));
+    await waitFor(() => expect(screen.queryByText('Fall 2026')).not.toBeInTheDocument());
+    expect(screen.getByText('Cycle deleted')).toBeInTheDocument();
+  });
+
+  it('keeps an assigned cycle visible when deletion is rejected', async () => {
+    const user = userEvent.setup();
+    programmingApi.deleteProgramCycle.mockRejectedValue(new Error('Cycle cannot be deleted because it is still in use'));
+    render(<MemoryRouter><Programming /></MemoryRouter>);
+
+    await user.click(await screen.findByRole('button', { name: 'Actions for Fall 2026' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Cycle' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cycle cannot be deleted because it is still in use');
+    expect(screen.getByText('Fall 2026')).toBeInTheDocument();
   });
 });

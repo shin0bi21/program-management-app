@@ -62,6 +62,9 @@ export const updateCycleSchema = z.object({
     path: ['endsOn'],
   }),
 });
+export const deleteCycleSchema = z.object({
+  params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
+});
 export const deleteCohortSchema = z.object({
   params: z.object({ cohortId: z.string().uuid() }),
 });

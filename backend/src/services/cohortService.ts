@@ -184,6 +184,27 @@ export async function updateProgramCycle(id: string, data: UpdateCycleInput, act
   return rows[0];
 }
 
+export async function deleteProgramCycle(id: string) {
+  await sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const cycles = await trx`SELECT id FROM program_cycles WHERE id = ${id} FOR UPDATE`;
+    if (!cycles.length) throw new NotFoundError('Cycle not found');
+
+    const dependencies = await trx`
+      SELECT
+        EXISTS (SELECT 1 FROM program_cohorts WHERE cycle_id = ${id})
+        OR EXISTS (SELECT 1 FROM tasks WHERE cycle_id = ${id})
+        OR EXISTS (SELECT 1 FROM time_entries WHERE cycle_id = ${id})
+        AS in_use
+    `;
+    if (dependencies[0].inUse) {
+      throw new ConflictError('Cycle cannot be deleted because it is still in use');
+    }
+
+    await trx`DELETE FROM program_cycles WHERE id = ${id}`;
+  });
+}
+
 export async function deleteCohort(id: string, actor: AccessTokenPayload) {
   await assertCohortAccess(actor, id);
   await sql.begin(async tx => {

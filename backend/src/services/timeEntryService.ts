@@ -12,6 +12,7 @@ import type {
   UpdateTimeEntryPlacementInput,
 } from '../validation/timeEntrySchemas';
 import { assertCanWriteTimeFor, timeEntryReadScopePredicate, timeEntryResourceReadScopePredicate, timeEntryWriteScopePredicate } from '../policies/timeEntryPolicy';
+import { getBiweeklyPayPeriod } from './timeEntryPeriods';
 
 interface TimeEntryRow {
   id: string;
@@ -282,16 +283,18 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
     throw new NotFoundError('Timesheet overview not found');
   }
-  const currentCycles = await sql<Array<{ id: string; startsOn: string }>>`
-    SELECT id, starts_on::text AS starts_on
+  const [payPeriodCycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
+    SELECT starts_on::text AS starts_on,
+      (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
     FROM program_cycles
-    WHERE (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN starts_on AND ends_on
-    ORDER BY starts_on, id
+    WHERE starts_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+    ORDER BY starts_on DESC, id
+    LIMIT 1
   `;
-  if (currentCycles.length !== 1) {
-    throw new InternalServerError(`Expected exactly one current program cycle, found ${currentCycles.length}.`);
+  if (!payPeriodCycle) {
+    throw new InternalServerError('Expected a program cycle to have started before the current pay period.');
   }
-  const currentCycle = currentCycles[0];
+  const payPeriod = getBiweeklyPayPeriod(payPeriodCycle.startsOn, payPeriodCycle.currentDate);
 
   const rows = await sql<Array<{
     periodStart: string;
@@ -303,12 +306,8 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
   }>>`
     WITH current_period AS (
       SELECT
-        ${currentCycle.startsOn}::date + (
-          FLOOR(((NOW() AT TIME ZONE 'America/Toronto')::date - ${currentCycle.startsOn}::date) / 14.0)::int * 14
-        ) AS period_start,
-        ${currentCycle.startsOn}::date + (
-          FLOOR(((NOW() AT TIME ZONE 'America/Toronto')::date - ${currentCycle.startsOn}::date) / 14.0)::int * 14
-        ) + 13 AS period_end
+        ${payPeriod.periodStart}::date AS period_start,
+        ${payPeriod.periodEnd}::date AS period_end
     ), selected_cycle AS (
       SELECT id, starts_on, ends_on,
         GREATEST(

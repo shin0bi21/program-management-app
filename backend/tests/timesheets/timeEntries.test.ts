@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
+import { getBiweeklyPayPeriod } from '../../src/services/timeEntryPeriods';
 
 const app = createApp();
 const workDate = '2026-08-09';
@@ -191,18 +192,19 @@ describe('Time entries API', () => {
   });
 
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
-    const [cycle] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+    const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
-        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14))::text AS period_start,
-        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14) + 13)::text AS period_end
+        starts_on::text AS starts_on,
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
+    const payPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
     try {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
         VALUES
-          (${adminId}, ${activeCycleId}, 'meeting', ${cycle.periodStart}::date, 2, 'Current meeting'),
+          (${adminId}, ${activeCycleId}, 'meeting', ${payPeriod.periodStart}::date, 2, 'Current meeting'),
           (${adminId}, ${activeCycleId}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
       `;
 
@@ -213,8 +215,8 @@ describe('Time entries API', () => {
       expect(overview.status).toBe(200);
       expect(overview.body).toEqual({
         payPeriod: {
-          periodStart: cycle.periodStart,
-          periodEnd: cycle.periodEnd,
+          periodStart: payPeriod.periodStart,
+          periodEnd: payPeriod.periodEnd,
           totalHours: 6,
           breakdown: [
             { label: 'Outreach', hours: 3 },
@@ -238,13 +240,14 @@ describe('Time entries API', () => {
   });
 
   it('keeps the current organization pay period independent of an upcoming selected cycle', async () => {
-    const [expected] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+    const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
-        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14))::text AS period_start,
-        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14) + 13)::text AS period_end
+        starts_on::text AS starts_on,
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
+    const expected = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
 
     const response = await request(app)
       .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${upcomingCycleId}`)
@@ -252,6 +255,30 @@ describe('Time entries API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.payPeriod).toEqual(expect.objectContaining(expected));
+  });
+
+  it('keeps the dashboard available when multiple cycles overlap', async () => {
+    const [overlappingCycle] = await sql<Array<{ id: string }>>`
+      INSERT INTO program_cycles (name, starts_on, ends_on)
+      SELECT ${`Overlapping Timesheet ${Date.now()}`}, starts_on, ends_on
+      FROM program_cycles
+      WHERE id = ${activeCycleId}
+      RETURNING id
+    `;
+
+    try {
+      const response = await request(app)
+        .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(expect.objectContaining({
+        payPeriod: expect.any(Object),
+        biweeklyAverage: expect.any(Object),
+      }));
+    } finally {
+      await sql`DELETE FROM program_cycles WHERE id = ${overlappingCycle.id}`;
+    }
   });
 
   it('conceals dashboard overview data for an unreadable staff resource', async () => {
