@@ -7,6 +7,7 @@
   min-height: 100vh;
   padding: 1rem 1.5rem;
   overflow-x: clip;
+  overscroll-behavior: none;
   background: var(--color-white);
 }
 
@@ -34,7 +35,7 @@
     overflow: hidden;
   }
 
-  .page-container--data > .data-detail-page-content {
+  .page-container--data > .data-page {
     flex: 1;
     min-height: 0;
     display: flex;

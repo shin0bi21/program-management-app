@@ -28,8 +28,17 @@ export interface PreferenceValues {
     view: 'calendar' | 'list';
     staffIds: string[];
     programIds: string[];
-    tasks: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     cycleId: string | null;
+    columnWidths?: ColumnWidths<'date' | 'staff' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
+  };
+  'task-filters': {
+    view?: 'calendar' | 'list';
+    programIds: string[];
+    cycleIds: string[];
+    categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;
+    columnWidths?: ColumnWidths<'title' | 'category' | 'assignee' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
   };
   'cohort-filters': {
     programId: string | null;

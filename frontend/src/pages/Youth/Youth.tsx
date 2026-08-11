@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
-import TableDetailLayout from '../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../common/components/PageBody/PageBody';
 import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
 import AttendanceCard from './components/AttendanceCard/AttendanceCard';
 import YouthNotesCard from './components/YouthNotesCard/YouthNotesCard';
@@ -210,7 +210,7 @@ export default function Youth() {
 
   return (
     <>
-      <div className="data-detail-page-content">
+      <div className="data-page">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -238,10 +238,10 @@ export default function Youth() {
         />
         {preferencesError && <p className="form-error" role="alert">{preferencesError}</p>}
 
-        <TableDetailLayout
+        <PageBody
           ariaLabel="Youth profiles"
           table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-          details={<>
+          dashboard={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {
                 phoneNumber: selectedProfile.contacts[0].phoneNumber,

@@ -1,100 +1,85 @@
 %% Full-stack HTTP lifecycle: browser client → Express → PostgreSQL → client
-flowchart TD
-  %% =================================================================
-  %% CLIENT — apiClient pipeline
-  %% =================================================================
-  subgraph CLIENT["Client — endpoint adapters + root http"]
-    A([UI action / data hook]) --> B{"Endpoint type"}
+sequenceDiagram
+  autonumber
 
-    B -->|"auth: false"| C["auth/auth.api.ts"]
-    B -->|"auth: true (default)"| F["page/feature API module"]
-    C --> CLIENT_FN["apiClient.method(path, body, opts)"]
-    F --> CLIENT_FN
+  actor UI as UI / data hook
+  participant API as Endpoint adapter
+  participant HTTP as apiClient
+  participant AUTH as Auth subsystem
+  participant SERVER as Express route
+  participant SERVICE as Service layer
+  participant DB as PostgreSQL
 
-    CLIENT_FN --> G{"auth: true?"}
-    G -->|No| FETCH
-    G -->|Yes| H["getValidToken()"]
+  UI->>API: Call typed endpoint function
+  API->>HTTP: method(path, body, options)
 
-    H --> J{"Token in storage?"}
-    J -->|No| K["throw AuthError"]
-    J -->|Yes| L{"Expired?"}
-
-    L -->|Yes| RELOGIN
-    L -->|No| T{"Near expiry +\nrefresh cooldown ok?"}
-    T -->|Yes| U["refreshToken()\nPOST /auth/refresh\n(httpOnly cookie)"]
-    T -->|No| TOK["Return current token"]
-    U --> W{"Refresh ok?"}
-    W -->|Yes| TOK
-    W -->|No| LOGOUT["clearAuthData()\n→ /login"]
-
-    TOK --> FETCH["rawFetch(url, init, 15s timeout)"]
-
-    FETCH --> NE{"fetch outcome"}
-    NE -->|"TypeError"| AF["throw NetworkError"]
-    NE -->|"AbortController timeout"| AG["throw RequestTimeoutError"]
-    NE -->|"Caller signal aborted"| AH["rethrow AbortError"]
-    NE -->|"HTTP response"| AK[/"Response object"/]
-
-    AK --> AM{"auth: true\n+ status 401?"}
-    AM -->|Yes| RELOGIN["reAuthCoordinator.requestReAuth()\n→ ReAuthProvider + ReLoginModal\n→ user re-auths"]
-    RELOGIN --> FETCH
-    AM -->|No| AU{"response.ok?"}
-
-    AU -->|"2xx"| AV[/"typed data T"/]
-    AU -->|"4xx / 5xx"| AX["throw ApiError\n(status, message, details, requestId)"]
-
-    AV --> BB([Update state /\nnavigate /\nrender data])
-    AF --> ERR
-    AG --> ERR
-    AH --> ERR
-    K --> ERR
-    AX --> ERR
-    ERR["catch block →\ngetErrorMessage(err, fallback)"] --> BA([Render error in UI])
+  opt Authenticated request (default)
+    HTTP->>AUTH: getValidToken()
+    alt Token missing
+      AUTH-->>UI: Throw AuthError
+    else Token expired
+      AUTH-->>UI: Open ReLoginModal
+      UI->>AUTH: Re-authenticate
+      AUTH-->>HTTP: Fresh access token
+    else Token near expiry and cooldown elapsed
+      AUTH->>SERVER: POST /auth/refresh<br/>(httpOnly cookie)
+      alt Refresh succeeds
+        SERVER-->>AUTH: Fresh access token
+      else Refresh fails
+        AUTH-->>UI: Clear auth data and navigate to /login
+      end
+    else Token valid
+      AUTH-->>HTTP: Current access token
+    end
   end
 
-  %% =================================================================
-  %% SERVER — Express pipeline
-  %% =================================================================
-  FETCH ===>|"HTTPS\nAuthorization: Bearer ..."| SRV_IN
+  HTTP->>SERVER: HTTPS request<br/>Authorization: Bearer …
+  Note over HTTP,SERVER: rawFetch applies a 15-second timeout
 
-  subgraph SERVER["Server — backend/src"]
-    SRV_IN[/"Request arrives\n(nginx → Express)"/]
-    SRV_IN --> SRV_GLOBAL["Global middleware\nrequestId · helmet · cors\nexpress.json · cookieParser"]
-    SRV_GLOBAL --> SRV_ROUTE{"Route?"}
+  alt Network failure
+    HTTP-->>UI: Throw NetworkError
+  else Request timeout
+    HTTP-->>UI: Throw RequestTimeoutError
+  else Caller aborts request
+    HTTP-->>UI: Rethrow AbortError
+  else Request reaches Express
+    SERVER->>SERVER: requestId → helmet → cors<br/>json → cookieParser
 
-    SRV_ROUTE -->|"/health"| SRV_OK
-    SRV_ROUTE -->|"/api/auth/*"| SRV_AUTH_ROUTE["authLimiter →\nasyncHandler(handler)"]
-    SRV_AUTH_ROUTE --> SRV_HANDLER
-    SRV_ROUTE -->|"/api/public/*"| SRV_PUBLIC_ROUTE["rate limiter → validation when needed →\nasyncHandler(handler)"]
-    SRV_PUBLIC_ROUTE --> SRV_HANDLER
-    SRV_ROUTE -->|"/api/* (protected)"| SRV_AUTHTOK
+    alt Health route
+      SERVER-->>HTTP: 2xx response
+    else Auth route
+      SERVER->>SERVER: authLimiter → asyncHandler
+    else Public route
+      SERVER->>SERVER: rate limiter → validation → asyncHandler
+    else Protected route
+      SERVER->>SERVER: authenticateToken → requirePermission<br/>rateLimiter → validateRequest → asyncHandler
+    end
 
-    SRV_AUTHTOK["authenticateToken\nverify JWT → req.user"]
-    SRV_AUTHTOK -->|"invalid / missing"| SRV_ERR_HANDLER
-    SRV_AUTHTOK -->|"valid"| SRV_PERM["requirePermission(permission)"]
-    SRV_PERM -->|"missing"| SRV_ERR_HANDLER
-    SRV_PERM -->|"ok"| SRV_RATE["rateLimiter"]
-    SRV_RATE -->|"exceeded"| SRV_ERR_HANDLER
-    SRV_RATE -->|"ok"| SRV_VALIDATE["validateRequest(zodSchema)"]
-    SRV_VALIDATE -->|"invalid body"| SRV_ERR_HANDLER
-    SRV_VALIDATE -->|"valid"| SRV_HANDLER["asyncHandler(controller)"]
+    opt Controller runs
+      SERVER->>SERVICE: Call business operation
+      SERVICE->>DB: Parameterized query / transaction
+      DB-->>SERVICE: Rows or database error
+      SERVICE-->>SERVER: Result or AppError
+    end
 
-    SRV_HANDLER --> SRV_SERVICE["service layer"]
-    SRV_SERVICE --> SRV_DB[("PostgreSQL\nsql`` template")]
-    SRV_DB --> SRV_SERVICE
-    SRV_SERVICE -->|"throw AppError"| SRV_ERR_HANDLER
-    SRV_SERVICE -->|"return"| SRV_OK[/"2xx response\n{ ...data }"/]
-
-    SRV_ERR_HANDLER["handleError\nsendError(res, status, msg, details?)"] --> SRV_ERR_OUT[/"4xx / 5xx response\n{ error, details?, requestId }"/]
+    alt Successful response
+      SERVER-->>HTTP: 2xx typed data
+      Note over HTTP: 204/205 and empty successful bodies resolve as undefined
+      HTTP-->>API: T
+      API-->>UI: Update state / navigate / render
+    else Protected request returns 401
+      SERVER-->>HTTP: 401 error response
+      HTTP->>AUTH: requestReAuth()
+      AUTH-->>UI: Open ReLoginModal
+      UI->>AUTH: Re-authenticate
+      AUTH-->>HTTP: Re-authentication succeeded
+      HTTP->>SERVER: Retry request once
+      Note over HTTP,SERVER: Retry then follows the same success/error handling
+    else Application or middleware error
+      SERVER->>SERVER: handleError → sendError
+      SERVER-->>HTTP: 4xx / 5xx<br/>{ error, details?, requestId }
+      HTTP-->>UI: Throw ApiError
+    end
   end
 
-  SRV_OK ===> AK
-  SRV_ERR_OUT ===> AK
-
-  %% =================================================================
-  %% Styling
-  %% =================================================================
-  classDef client fill:#e8f0ff,stroke:#3b6ea8
-  classDef server fill:#fff4e6,stroke:#cc7a00
-  class CLIENT client
-  class SERVER server
+  Note over UI,HTTP: UI catches errors with getErrorMessage(error, fallback)

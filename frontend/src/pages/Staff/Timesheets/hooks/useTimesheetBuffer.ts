@@ -9,7 +9,7 @@ import type {
   ResourcePeriodData,
 } from '../../../../common/components/ResourceCalendar/types';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import type { TimesheetItem } from '../types';
+import type { TimesheetItem } from '../../../../common/features/timeEntries/types';
 
 interface UseTimesheetBufferOptions {
   initialData?: ResourcePeriodData<TimesheetItem>;

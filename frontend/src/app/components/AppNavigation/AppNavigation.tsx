@@ -1,6 +1,8 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock } from '@fortawesome/free-solid-svg-icons';
 import logoUrl from '../../../assets/logo.webp';
+import logo160Url from '../../../assets/logo-160.webp';
+import logo320Url from '../../../assets/logo-320.webp';
 import FloatingMenuPanel from '../../../common/components/FloatingMenu/FloatingMenuPanel';
 import { useAppNavigation } from './useAppNavigation';
 import './AppNavigation.css';
@@ -13,7 +15,8 @@ export default function AppNavigation() {
   } = navigation;
   const {
     canManageHomepage, canViewYouth, canViewOutreach, canViewCohorts,
-    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming, canViewTimesheets,
+    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming,
+    canViewTasks, canViewTimesheets, canViewStaff,
   } = permissions;
 
   return (
@@ -26,7 +29,15 @@ export default function AppNavigation() {
           onClick={() => go('/')}
           aria-label="Go to homepage"
         >
-          <img src={logoUrl} alt="" className="mobile-topbar-logo" />
+          <img
+            src={logo160Url}
+            srcSet={`${logo160Url} 160w, ${logo320Url} 320w, ${logoUrl} 512w`}
+            sizes="134px"
+            width="160"
+            height="101"
+            alt=""
+            className="mobile-topbar-logo"
+          />
         </button>
         <button
           className="mobile-topbar-toggle"
@@ -51,12 +62,33 @@ export default function AppNavigation() {
             onClick={() => go('/')}
             aria-label="Go to homepage"
           >
-            <img src={logoUrl} alt="" className="sidebar-logo" />
+            <img
+              src={logo160Url}
+              srcSet={`${logo160Url} 160w, ${logo320Url} 320w, ${logoUrl} 512w`}
+              sizes="134px"
+              width="160"
+              height="101"
+              alt=""
+              className="sidebar-logo"
+            />
           </button>
         </div>
         <nav className="sidebar-nav">
           {isAuthenticated && (
             <>
+              {canViewStaff && (
+                <button
+                  ref={refs.staff}
+                  onClick={() => toggleMenu('staff')}
+                  aria-haspopup="menu"
+                  aria-expanded={menus.staff.isOpen}
+                  className={`sidebar-link${active.staff || menus.staff.isOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faClock} /></span>
+                  <span>Staff</span>
+                </button>
+              )}
+
               {canViewYouth && (
                 <button
                   ref={refs.youth}
@@ -80,16 +112,6 @@ export default function AppNavigation() {
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
                   <span>Programming</span>
-                </button>
-              )}
-
-              {canViewTimesheets && (
-                <button
-                  onClick={() => go('/staff/timesheets')}
-                  className={`sidebar-link${active.staff ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faClock} /></span>
-                  <span>Timesheets</span>
                 </button>
               )}
 
@@ -163,6 +185,13 @@ export default function AppNavigation() {
           >
             Leads
           </button>
+        </FloatingMenuPanel>
+      )}
+
+      {canViewStaff && menus.staff.position && (
+        <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
+          {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
+          {canViewTimesheets && <button role="menuitem" onClick={() => go('/staff/timesheets')} className={`settings-flyout-item${isActive('/staff/timesheets') ? ' active' : ''}`}>Timesheets</button>}
         </FloatingMenuPanel>
       )}
 

@@ -172,8 +172,23 @@ describe('AppNavigation', () => {
     ).toBeTruthy();
   });
 
-  it('shows Timesheets only when the user can read timesheets', () => {
-    authState.permissions = ['read:timesheets'];
+  it('places Staff before Youth in application navigation', () => {
+    authState.permissions = ['read:timesheets', 'read:youth_profiles'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    const staff = screen.getByRole('button', { name: 'Staff' });
+    const youth = screen.getByRole('button', { name: 'Youth' });
+    expect(staff.compareDocumentPosition(youth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows each Staff destination only with its read permission', () => {
+    authState.permissions = ['read:tasks'];
     authState.role = 'staff';
 
     const { rerender } = render(
@@ -182,7 +197,18 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Timesheets' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Staff' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Tasks' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Timesheets' })).not.toBeInTheDocument();
+
+    authState.permissions = ['read:timesheets'];
+    rerender(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('menuitem', { name: 'Tasks' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Timesheets' })).toBeInTheDocument();
 
     authState.permissions = [];
     rerender(
@@ -191,7 +217,7 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('button', { name: 'Timesheets' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Staff' })).not.toBeInTheDocument();
   });
 
   it('shows programming management in Settings only with program write access', () => {

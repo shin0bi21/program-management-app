@@ -1,6 +1,7 @@
 import { sql } from '../../db/client';
 import type { AccessTokenPayload } from '../../types/auth';
 import type { AccountQuery } from '../../validation/accountSchemas';
+import { accountAccessPredicate } from '../../policies/accountPolicy';
 
 function escapeLikePattern(value: string) {
   return value.replace(/[\\%_]/g, character => `\\${character}`);
@@ -8,9 +9,7 @@ function escapeLikePattern(value: string) {
 
 /** Builds the complete, parameterized WHERE predicate for the accounts query. */
 export function applyAccountFilters(actor: AccessTokenPayload, filters: AccountQuery) {
-  const accessScope = actor.role === 'admin'
-    ? sql`TRUE`
-    : sql`ur.name = 'youth'`;
+  const accessScope = accountAccessPredicate(actor, sql`ur.name`);
   const roleFilter = filters.roles.length
     ? sql`ur.name = ANY(${sql.array(filters.roles)}::text[])`
     : sql`TRUE`;
