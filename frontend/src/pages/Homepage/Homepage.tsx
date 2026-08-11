@@ -79,7 +79,9 @@ const teamResources = [
     badge: undefined,
     education: 'Psychology',
     school: 'University of Windsor',
-    bio: 'Connects participants with transportation, housing, and educational resources through local community partnerships.',
+    imageSrc: '/team/jomariel-display.webp',
+    imageMobileSrc: '/team/jomariel-mobile.webp',
+    bio: 'Hello everyone! My name is Jomariel, and I am one of the coordinators and facilitators for this youth group! I’m so grateful to be a part of this community and to help create a safe, welcoming space where you can grow, feel supported, and truly be yourselves. I immigrated from the Philippines and moved to Windsor when I was about four years old, and that journey has shaped my love for connection, resilience, and understanding others. My goal is to share meaningful life lessons that aren’t always taught in school such as kindness, empathy, confidence, and real-world skills, while being someone you can trust as both a mentor and friend. I will be working with youth ages 12-15 years old. Outside of the group, I love expressing myself through singing and playing the guitar and piano, staying active with tennis, running, and long walks, and spending quality time with my family and friends. I also enjoy cooking, baking, writing, and reading. I am so excited to meet each of you, learn together, and build something really special as a group!',
   },
   {
     name: 'Elijah',
