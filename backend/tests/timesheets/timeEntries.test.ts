@@ -21,6 +21,7 @@ describe('Time entries API', () => {
   let upcomingCohortId: string;
   let activeCycleId: string;
   let upcomingCycleId: string;
+  let sessionId: string;
   let assignedTaskId: string | null = null;
 
   beforeAll(async () => {
@@ -55,14 +56,25 @@ describe('Time entries API', () => {
     [activeCohortId, upcomingCohortId] = cohorts.map(cohort => cohort.id);
     [activeCycleId, upcomingCycleId] = cohorts.map(cohort => cohort.cycleId);
     await sql`
-      INSERT INTO staff_program_assignments (staff_id, program_id)
-      VALUES (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
+      INSERT INTO user_program_assignments (user_id, program_id)
+      VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
+    const [session] = await sql<Array<{ id: string }>>`
+      INSERT INTO cohort_sessions (cohort_id, session_type_id, theme, starts_at, ends_at)
+      SELECT ${activeCohortId}, type.id, 'Timesheet workshop',
+        ${workDate}::date + TIME '10:00', ${workDate}::date + TIME '12:00'
+      FROM session_types type
+      ORDER BY type.name
+      LIMIT 1
+      RETURNING id
+    `;
+    sessionId = session.id;
   });
 
   afterAll(async () => {
     await sql`DELETE FROM time_entries WHERE staff_id IN (${adminId}, ${firstStaffId}, ${secondStaffId}, ${unrelatedStaffId})`;
     if (assignedTaskId) await sql`DELETE FROM tasks WHERE id = ${assignedTaskId}`;
+    await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
     await sql`DELETE FROM program_cohorts WHERE id IN (${activeCohortId}, ${upcomingCohortId})`;
     await sql`DELETE FROM program_cycles WHERE name LIKE 'Active Timesheet %' OR name LIKE 'Upcoming Timesheet %'`;
     await deleteTestUser(unrelatedStaffId);
@@ -71,14 +83,14 @@ describe('Time entries API', () => {
     await deleteTestUser(adminId);
   });
 
-  it('allows staff to create and read their own required-note entry', async () => {
+  it('allows staff to create and read their own other-time entry', async () => {
     const created = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'program_delivery', workDate, hours: 2.5, note: 'Delivered workshop' });
+      .send({ source: 'other', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 2.5, note: 'Program meeting' });
 
     expect(created.status).toBe(201);
-    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'program_delivery', taskId: null, hours: 2.5 }));
+    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', taskId: null, sessionId: null, hours: 2.5 }));
 
     const listed = await request(app)
       .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
@@ -99,9 +111,73 @@ describe('Time entries API', () => {
         id: created.body.id,
         programId,
         programName,
-        note: 'Delivered workshop',
+        note: 'Program meeting',
       }),
     ]);
+  });
+
+  it('lists assigned sessions and derives session time metadata', async () => {
+    const sessions = await request(app)
+      .get(`/api/time-entries/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(sessions.status).toBe(200);
+    expect(sessions.body).toEqual([
+      expect.objectContaining({
+        id: sessionId, label: 'Timesheet workshop', programId, cycleId: activeCycleId, workDate,
+      }),
+    ]);
+
+    const created = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({ source: 'session', staffId: firstStaffId, sessionId, hours: 2, note: 'Delivered workshop' });
+
+    expect(created.status).toBe(201);
+    expect(created.body).toEqual(expect.objectContaining({
+      staffId: firstStaffId,
+      sessionId,
+      category: 'program_delivery',
+      programId,
+      cycleId: activeCycleId,
+      workDate,
+    }));
+
+    const adminSessions = await request(app)
+      .get(`/api/time-entries/sessions?staffId=${adminId}&workDate=${workDate}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(adminSessions.status).toBe(200);
+    expect(adminSessions.body).toEqual([
+      expect.objectContaining({ id: sessionId, label: 'Timesheet workshop', workDate }),
+    ]);
+
+    const adminEntry = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ source: 'session', staffId: adminId, sessionId, hours: 1, note: 'Admin delivered workshop' });
+    expect(adminEntry.status).toBe(201);
+    expect(adminEntry.body).toEqual(expect.objectContaining({
+      staffId: adminId, sessionId, category: 'program_delivery', workDate,
+    }));
+  });
+
+  it('rejects Program Delivery through the Other workflow', async () => {
+    const response = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({ source: 'other', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'program_delivery', workDate, hours: 1, note: 'Wrong workflow' });
+    expect(response.status).toBe(400);
+  });
+
+  it('enforces a linked source for Program Delivery at the database boundary', async () => {
+    await expect(sql`
+      INSERT INTO time_entries (
+        staff_id, program_id, cycle_id, category, work_date, hours, note
+      )
+      VALUES (
+        ${firstStaffId}, ${programId}, ${activeCycleId}, 'program_delivery',
+        ${workDate}, 1, 'Unlinked delivery'
+      )
+    `).rejects.toMatchObject({ code: '23514' });
   });
 
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
@@ -210,7 +286,7 @@ describe('Time entries API', () => {
     const response = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: firstStaffId, category: 'maintenance', workDate, hours: 1, note: 'Office maintenance' });
+      .send({ source: 'other', staffId: firstStaffId, category: 'maintenance', workDate, hours: 1, note: 'Office maintenance' });
 
     expect(response.status).toBe(400);
   });
@@ -220,7 +296,7 @@ describe('Time entries API', () => {
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'general',
+        source: 'other',
         staffId: firstStaffId,
         cycleId: activeCycleId,
         category: 'planning_prep',
@@ -252,7 +328,7 @@ describe('Time entries API', () => {
     const response = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: ' ' });
+      .send({ source: 'other', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: ' ' });
     expect(response.status).toBe(400);
   });
 
@@ -260,7 +336,7 @@ describe('Time entries API', () => {
     const response = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: 'Team meeting' });
+      .send({ source: 'other', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: 'Team meeting' });
     expect(response.status).toBe(403);
   });
 
@@ -268,7 +344,7 @@ describe('Time entries API', () => {
     const created = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ source: 'general', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'outreach', workDate, hours: 1, note: 'Created campaign materials' });
+      .send({ source: 'other', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'outreach', workDate, hours: 1, note: 'Created campaign materials' });
     expect(created.status).toBe(201);
     expect(created.body.category).toBe('outreach');
 
@@ -301,7 +377,7 @@ describe('Time entries API', () => {
     const coworkerUpdate = await request(app)
       .put(`/api/time-entries/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'outreach', workDate, hours: 2, note: 'Unauthorized edit' });
+      .send({ source: 'other', staffId: secondStaffId, programId, cycleId: activeCycleId, category: 'outreach', workDate, hours: 2, note: 'Unauthorized edit' });
     expect(coworkerUpdate.status).toBe(403);
 
     const coworkerDelete = await request(app)
@@ -401,7 +477,7 @@ describe('Time entries API', () => {
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'general',
+        source: 'other',
         staffId: firstStaffId,
         programId: null,
         cycleId: activeCycleId,
@@ -435,7 +511,7 @@ describe('Time entries API', () => {
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'general', staffId: firstStaffId, programId, cycleId: activeCycleId,
+        source: 'other', staffId: firstStaffId, programId, cycleId: activeCycleId,
         category: 'meeting', workDate, hours: 1, note: 'Original note',
       });
     expect(created.status).toBe(201);
@@ -444,7 +520,7 @@ describe('Time entries API', () => {
       .put(`/api/time-entries/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'general', staffId: firstStaffId, programId: null, cycleId: activeCycleId,
+        source: 'other', staffId: firstStaffId, programId: null, cycleId: activeCycleId,
         category: 'planning_prep', workDate, hours: 2.5, note: 'Newer saved note',
       });
     expect(contentUpdate.status).toBe(200);
@@ -470,12 +546,12 @@ describe('Time entries API', () => {
     const created = await request(app)
       .post('/api/time-entries')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: 'Initial note' });
+      .send({ source: 'other', staffId: firstStaffId, programId, cycleId: activeCycleId, category: 'meeting', workDate, hours: 1, note: 'Initial note' });
 
     const updated = await request(app)
       .put(`/api/time-entries/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'general', staffId: firstStaffId, programId: null, cycleId: activeCycleId, category: 'planning_prep', workDate, hours: 1.5, note: 'Updated note' });
+      .send({ source: 'other', staffId: firstStaffId, programId: null, cycleId: activeCycleId, category: 'planning_prep', workDate, hours: 1.5, note: 'Updated note' });
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(expect.objectContaining({ programId: null, category: 'planning_prep', hours: 1.5, note: 'Updated note' }));
 

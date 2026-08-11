@@ -39,8 +39,8 @@ export async function getAccounts(actor: AccessTokenPayload, filters: AccountQue
       ${sortValue} AS cursor_value,
       ARRAY(
         SELECT assignment.program_id
-        FROM staff_program_assignments assignment
-        WHERE assignment.staff_id = u.id
+        FROM user_program_assignments assignment
+        WHERE assignment.user_id = u.id
         ORDER BY assignment.program_id
       ) AS program_ids
     FROM users u
@@ -71,15 +71,14 @@ async function getAccountRole(userId: string): Promise<UserRole> {
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-async function replaceStaffProgramAssignments(
+async function replaceUserProgramAssignments(
   trx: typeof sql,
   staffId: string,
-  role: 'staff' | 'admin',
   programIds: string[],
   actorId: string,
 ) {
-  await trx`DELETE FROM staff_program_assignments WHERE staff_id = ${staffId}`;
-  if (role !== 'staff' || !programIds.length) return;
+  await trx`DELETE FROM user_program_assignments WHERE user_id = ${staffId}`;
+  if (!programIds.length) return;
 
   const assignablePrograms = await trx<{ id: string }[]>`
     SELECT id
@@ -92,7 +91,7 @@ async function replaceStaffProgramAssignments(
   }
 
   await trx`
-    INSERT INTO staff_program_assignments (staff_id, program_id, created_by)
+    INSERT INTO user_program_assignments (user_id, program_id, created_by)
     SELECT ${staffId}, selected.program_id, ${actorId}
     FROM UNNEST(${sql.array(programIds)}::uuid[]) AS selected(program_id)
   `;
@@ -235,8 +234,8 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         newInviteToken = rawToken;
       }
 
-      if (role === 'admin' || programIds !== undefined) {
-        await replaceStaffProgramAssignments(trx, userId, role, programIds ?? [], actorId);
+      if (programIds !== undefined) {
+        await replaceUserProgramAssignments(trx, userId, programIds, actorId);
       }
     });
 
@@ -286,7 +285,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         VALUES (${userId}, ${tokenHash}, ${expiresAt})
       `;
 
-      await replaceStaffProgramAssignments(trx, userId, role, programIds ?? [], actorId);
+      await replaceUserProgramAssignments(trx, userId, programIds ?? [], actorId);
     });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -306,8 +305,8 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       ur.name AS role,
       ARRAY(
         SELECT assignment.program_id
-        FROM staff_program_assignments assignment
-        WHERE assignment.staff_id = u.id
+        FROM user_program_assignments assignment
+        WHERE assignment.user_id = u.id
         ORDER BY assignment.program_id
       ) AS program_ids
     FROM users u
@@ -405,8 +404,8 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
         uc.email, ur.name AS role,
         ARRAY(
           SELECT assignment.program_id
-          FROM staff_program_assignments assignment
-          WHERE assignment.staff_id = u.id
+          FROM user_program_assignments assignment
+          WHERE assignment.user_id = u.id
           ORDER BY assignment.program_id
         ) AS program_ids
       FROM users u

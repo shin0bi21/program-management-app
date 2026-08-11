@@ -13,7 +13,7 @@ const entry = (id: string, category: TimesheetItem['category']): TimesheetItem =
   category,
   categoryLabel: category,
   taskId: null,
-  taskTitle: null,
+  taskTitle: null, sessionId: null, sessionLabel: null,
   hours: 1,
   note: id,
 });

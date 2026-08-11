@@ -9,3 +9,7 @@ export const TIME_ENTRY_CATEGORY_OPTIONS: Array<{ value: TimeEntryCategory; labe
   { value: 'maintenance', label: 'Maintenance' },
   { value: 'other', label: 'Other' },
 ];
+
+export const OTHER_TIME_ENTRY_CATEGORY_OPTIONS = TIME_ENTRY_CATEGORY_OPTIONS.filter(
+  option => option.value !== 'program_delivery',
+);

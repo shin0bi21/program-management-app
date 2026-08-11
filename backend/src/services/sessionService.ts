@@ -39,7 +39,7 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
   await assertCohortAccess(actor, cohortId);
   return sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
-    const theme = data.theme ?? null;
+    const theme = data.theme;
     const cohorts = await trx<{ startsOn: string; endsOn: string }[]>`
       SELECT cycle.starts_on::text AS starts_on, cycle.ends_on::text AS ends_on
       FROM program_cohorts cohort
@@ -126,7 +126,7 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
       INNER JOIN session_types st ON st.id = cs.session_type_id
       WHERE cs.cohort_id = ${cohortId}
         AND cs.session_type_id = ${data.sessionTypeId}
-        AND cs.theme IS NOT DISTINCT FROM ${theme}
+        AND cs.theme = ${theme}
         AND cs.starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
         AND cs.starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE 'America/Toronto'
       ORDER BY cs.starts_at
@@ -221,7 +221,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
   const rows = await sql`
     UPDATE cohort_sessions
     SET session_type_id = COALESCE(${data.sessionTypeId ?? null}, session_type_id),
-        theme = ${data.theme ?? null},
+        theme = ${data.theme},
         starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
         description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actor.userId}
     WHERE id = ${id}

@@ -1,19 +1,21 @@
 import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type { ResourcePeriodData } from '../../../components/ResourceCalendar/types';
-import type { StaffResource, TimeEntryCategory, TimeEntryCohort, TimeEntryProgram, TimesheetItem } from '../types';
+import type { StaffResource, TimeEntryCategory, TimeEntryCohort, TimeEntryProgram, TimeEntrySession, TimesheetItem } from '../types';
 
 export interface TimeEntryResponse {
   id: string; staffId: string; programId: string | null; programName: string | null;
   cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string;
   category: TimeEntryCategory; taskId: string | null; taskTitle: string | null;
+  sessionId: string | null; sessionLabel: string | null;
   workDate: string; hours: number; note: string;
 }
 
-interface SharedTimeEntryInput { staffId: string; workDate: string; hours: number; note: string }
+interface SharedTimeEntryInput { staffId: string; hours: number; note: string }
 export type SetTimeEntryInput = SharedTimeEntryInput & ({
-  source: 'general'; programId: string | null; cycleId: string; category: TimeEntryCategory;
-} | { source: 'task'; taskId: string });
+  source: 'other'; workDate: string; programId: string | null; cycleId: string; category: Exclude<TimeEntryCategory, 'program_delivery'>;
+} | { source: 'task'; workDate: string; taskId: string }
+  | { source: 'session'; sessionId: string });
 export interface UpdateTimeEntryPlacementInput { workDate: string }
 
 export interface TimeEntryRangeResponse {
@@ -54,6 +56,10 @@ export function getTimeEntryOverview(staffId: string, cycleId: string, opts?: Re
 export function getTimeEntryCohorts(programId: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ programId });
   return apiClient.get<TimeEntryCohort[]>(`/time-entries/cohorts?${params}`, { signal });
+}
+export function getTimeEntrySessions(staffId: string, workDate: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ staffId, workDate });
+  return apiClient.get<TimeEntrySession[]>(`/time-entries/sessions?${params}`, { signal });
 }
 export function createTimeEntry(input: SetTimeEntryInput) { return apiClient.post<TimeEntryResponse>('/time-entries', input); }
 export function updateTimeEntry(id: string, input: SetTimeEntryInput) { return apiClient.put<TimeEntryResponse>(`/time-entries/${id}`, input); }

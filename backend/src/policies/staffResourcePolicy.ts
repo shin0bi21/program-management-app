@@ -10,11 +10,11 @@ export function sharedStaffResourceReadPredicate(
     ${staffId} = ${actor.userId}
     OR EXISTS (
       SELECT 1
-      FROM staff_program_assignments actor_program
-      INNER JOIN staff_program_assignments resource_program
+      FROM user_program_assignments actor_program
+      INNER JOIN user_program_assignments resource_program
         ON resource_program.program_id = actor_program.program_id
-      WHERE actor_program.staff_id = ${actor.userId}
-        AND resource_program.staff_id = ${staffId}
+      WHERE actor_program.user_id = ${actor.userId}
+        AND resource_program.user_id = ${staffId}
     )
   `;
 }

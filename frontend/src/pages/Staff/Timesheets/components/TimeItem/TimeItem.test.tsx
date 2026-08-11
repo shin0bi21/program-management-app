@@ -11,12 +11,25 @@ const item = {
   category: 'program_delivery' as const,
   categoryLabel: 'Program Delivery',
   taskId: null,
-  taskTitle: null,
+  taskTitle: null, sessionId: null, sessionLabel: null,
   hours: 2,
   note: 'Workshop delivery',
 };
 
 describe('TimeItem', () => {
+  it.each([
+    ['Task', { taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null }],
+    ['Session', { taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Healthy Relationships' }],
+    ['Other', { taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
+  ])('shows hours and the %s entry type', (type, source) => {
+    render(<TimeItem item={{ ...item, ...source }} />);
+
+    const entry = screen.getByRole('button');
+    expect(entry).toHaveTextContent('2h');
+    expect(entry).toHaveTextContent(type);
+    expect(entry.querySelector('.time-item__type')).toHaveClass(`time-item__type--${type.toLowerCase()}`);
+  });
+
   it('shows complete entry details on hover', async () => {
     render(<TimeItem item={{ ...item, cycleName: 'Summer 2026' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
@@ -37,15 +50,30 @@ describe('TimeItem', () => {
     render(<TimeItem item={{ ...item, programId: null, programName: null }} />);
 
     const timeItem = screen.getByRole('button', { name: /program delivery, 2 hours/i });
-    expect(timeItem).toHaveTextContent('Program Delivery');
     expect(timeItem).not.toHaveTextContent('General');
     fireEvent.mouseEnter(timeItem);
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Category', 'Hours', 'Notes',
+      'Program', 'Cycle', 'Category', 'Hours', 'Notes',
     ]);
+    expect(tooltip.querySelector('dd')).toHaveTextContent('—');
+  });
+
+  it('omits the redundant Program Delivery category for session time', async () => {
+    render(<TimeItem item={{
+      ...item,
+      sessionId: 'session-1',
+      sessionLabel: 'Healthy Relationships',
+    }} />);
+    fireEvent.mouseEnter(screen.getByRole('button'));
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
+      'Program', 'Cycle', 'Session', 'Hours', 'Notes',
+    ]);
+    expect(tooltip).not.toHaveTextContent('Program Delivery');
   });
 
   it('dismisses hover details when a scroll container moves', async () => {

@@ -51,7 +51,8 @@ describe('GenerateSessionsModal', () => {
     expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
-    fireEvent.change(screen.getByLabelText('Theme (optional)'), { target: { value: 'Communication' } });
+    expect(screen.getByLabelText('Title / Theme')).toBeRequired();
+    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({
@@ -82,6 +83,7 @@ describe('GenerateSessionsModal', () => {
       'Soft Skills · Summer 2026',
     );
     expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Communication' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith(
@@ -98,7 +100,7 @@ describe('GenerateSessionsModal', () => {
     expect(screen.getByRole('button', { name: 'Day of month' })).toHaveTextContent('1st');
     fireEvent.click(screen.getByRole('button', { name: 'Day of month' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: '15th' }));
-    fireEvent.change(screen.getByLabelText('Theme (optional)'), { target: { value: 'Monthly Workshop' } });
+    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Monthly Workshop' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
     await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({

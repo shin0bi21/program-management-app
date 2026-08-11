@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { requireEnv } from '../../src/utils/env';
 
 const databaseUrl = requireEnv('DATABASE_URL');
+const adminEmail = requireEnv('ADMIN_EMAIL');
 const primaryStaffId = '20000000-0000-4000-8000-000000000001';
 const secondStaffId = '20000000-0000-4000-8000-000000000002';
 const primaryDeliveryTaskId = '40000000-0000-4000-8000-000000000001';
@@ -23,7 +24,7 @@ const entries = [
   ['30000000-0000-4000-8000-000000000005', primaryStaffId, null, 'administration', '2026-07-22', 1.25, 'Updated attendance records and participant documentation.'],
   ['30000000-0000-4000-8000-000000000006', primaryStaffId, 'Job Readiness', 'outreach', '2026-07-28', 2, 'Connected with community partners about youth placements.'],
   ['30000000-0000-4000-8000-000000000007', primaryStaffId, 'Soft Skills', 'planning_prep', '2026-08-03', 1.75, 'Prepared the healthy-relationships workshop.'],
-  ['30000000-0000-4000-8000-000000000008', primaryStaffId, 'Soft Skills', 'program_delivery', '2026-08-04', 3, 'Delivered the healthy-relationships workshop.'],
+  ['30000000-0000-4000-8000-000000000008', primaryStaffId, 'Soft Skills', 'program_delivery', '2026-08-04', 3, 'Delivered the decision-making workshop.'],
   ['30000000-0000-4000-8000-000000000009', primaryStaffId, null, 'maintenance', '2026-08-07', 1, 'Organized shared program supplies and equipment.'],
   ['30000000-0000-4000-8000-000000000010', primaryStaffId, null, 'meeting', '2026-08-10', 1.5, 'Reviewed cycle progress with the staff team.'],
   ['30000000-0000-4000-8000-000000000011', secondStaffId, 'Job Readiness', 'planning_prep', '2026-07-02', 2, 'Prepared resume and interview practice materials.'],
@@ -51,6 +52,16 @@ async function main() {
       throw new Error('Programming demo role, programs, or Summer 2026 cycle is missing');
     }
     const programIds = new Map(programs.map(program => [program.name, program.id]));
+    const [admin] = await tx<{ id: string }[]>`
+      SELECT users.id
+      FROM users
+      INNER JOIN user_credentials credentials ON credentials.user_id = users.id
+      INNER JOIN user_roles role ON role.id = users.role_id
+      WHERE LOWER(credentials.email) = LOWER(${adminEmail})
+        AND role.name = 'admin'
+      LIMIT 1
+    `;
+    if (!admin) throw new Error('Configured admin account is missing');
 
     await tx`
       INSERT INTO users (id, role_id, first_name, last_name)
@@ -87,18 +98,28 @@ async function main() {
       `;
     }
 
-    for (const staffId of [primaryStaffId, secondStaffId]) {
+    for (const staffId of [admin.id, primaryStaffId, secondStaffId]) {
       for (const programId of programIds.values()) {
         await tx`
-          INSERT INTO staff_program_assignments (staff_id, program_id)
+          INSERT INTO user_program_assignments (user_id, program_id)
           VALUES (${staffId}, ${programId})
-          ON CONFLICT (staff_id, program_id) DO NOTHING
+          ON CONFLICT (user_id, program_id) DO NOTHING
         `;
       }
     }
 
     const softSkillsId = programIds.get('Soft Skills')!;
     const jobReadinessId = programIds.get('Job Readiness')!;
+    const [decisionMakingSession] = await tx<{ id: string }[]>`
+      SELECT session.id
+      FROM cohort_sessions session
+      INNER JOIN program_cohorts cohort ON cohort.id = session.cohort_id
+      WHERE cohort.program_id = ${softSkillsId}
+        AND session.theme = 'Decision Making'
+        AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = DATE '2026-08-04'
+      LIMIT 1
+    `;
+    if (!decisionMakingSession) throw new Error('Decision Making session fixture is missing');
     await tx`
       INSERT INTO tasks (
         id, title, details, category, staff_id, program_id, cycle_id, status,
@@ -129,19 +150,28 @@ async function main() {
         if (!matchingProgramId) throw new Error(`Program fixture not found: ${programName}`);
         programId = matchingProgramId;
       }
+      const sessionId = id === '30000000-0000-4000-8000-000000000008'
+        ? decisionMakingSession.id
+        : null;
+      const taskId = category === 'program_delivery' && !sessionId
+        ? (staffId === primaryStaffId ? primaryDeliveryTaskId : secondDeliveryTaskId)
+        : null;
       await tx`
         INSERT INTO time_entries (
-          id, staff_id, program_id, cycle_id, category, work_date, hours, note, created_by, updated_by
+          id, staff_id, program_id, cycle_id, category, task_id, session_id,
+          work_date, hours, note, created_by, updated_by
         )
         VALUES (
           ${id}, ${staffId}, ${programId}, ${cycle.id},
-          ${category}, ${workDate}, ${hours}, ${note}, ${staffId}, ${staffId}
+          ${category}, ${taskId}, ${sessionId}, ${workDate}, ${hours}, ${note}, ${staffId}, ${staffId}
         )
         ON CONFLICT (id) DO UPDATE SET
           staff_id = EXCLUDED.staff_id,
           program_id = EXCLUDED.program_id,
           cycle_id = EXCLUDED.cycle_id,
           category = EXCLUDED.category,
+          task_id = EXCLUDED.task_id,
+          session_id = EXCLUDED.session_id,
           work_date = EXCLUDED.work_date,
           hours = EXCLUDED.hours,
           note = EXCLUDED.note,
@@ -149,20 +179,6 @@ async function main() {
           updated_at = NOW()
       `;
     }
-
-    await tx`
-      UPDATE time_entries
-      SET task_id = CASE id
-        WHEN '30000000-0000-4000-8000-000000000008'::uuid THEN ${primaryDeliveryTaskId}::uuid
-        WHEN '30000000-0000-4000-8000-000000000018'::uuid THEN ${secondDeliveryTaskId}::uuid
-        ELSE task_id
-      END,
-      updated_at = NOW()
-      WHERE id IN (
-        '30000000-0000-4000-8000-000000000008'::uuid,
-        '30000000-0000-4000-8000-000000000018'::uuid
-      )
-    `;
   });
 
   console.log(`Staff demo ready: ${entries.length} time entries and 4 tasks across 2 active staff accounts`);
