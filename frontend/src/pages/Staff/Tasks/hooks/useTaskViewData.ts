@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
+import type { ListSort } from '../../../../common/types/pagination';
 import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../common/features/tasks/types';
+
+export type TaskSortKey = 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status';
 
 interface TaskViewFilters {
   search: string;
@@ -43,15 +46,40 @@ function buildRangeData(tasks: readonly Task[], resources: readonly TaskResource
   ]));
 }
 
+function taskSortValue(task: Task, key: TaskSortKey) {
+  const values: Record<TaskSortKey, string> = {
+    firstName: task.assignee.firstName,
+    lastName: task.assignee.lastName,
+    title: task.title,
+    category: task.category,
+    program: task.programName ?? 'General',
+    cycle: task.cycleName,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    status: task.status,
+  };
+  return values[key];
+}
+
+export function sortTasks(tasks: readonly Task[], sorting: ListSort<TaskSortKey>) {
+  const direction = sorting.direction === 'asc' ? 1 : -1;
+  return [...tasks].sort((left, right) => (
+    direction * taskSortValue(left, sorting.key).localeCompare(taskSortValue(right, sorting.key), undefined, { numeric: true })
+    || left.id.localeCompare(right.id)
+  ));
+}
+
 export default function useTaskViewData(
   tasks: readonly Task[],
   resources: readonly TaskResource[],
   filters: TaskViewFilters,
   selectedResourceId: string | null,
+  sorting: ListSort<TaskSortKey>,
 ) {
   return useMemo(() => {
-    const rows = tasks.filter(task => matchesTask(task, filters));
-    const rangeData = buildRangeData(rows, resources);
+    const filteredTasks = tasks.filter(task => matchesTask(task, filters));
+    const rows = sortTasks(filteredTasks, sorting);
+    const rangeData = buildRangeData(filteredTasks, resources);
     const resourceTasks = selectedResourceId
       ? tasks.filter(task => task.assignee.id === selectedResourceId)
       : [];
@@ -61,5 +89,5 @@ export default function useTaskViewData(
       dashboardTasks: selectedResourceId ? rangeData[selectedResourceId] ?? [] : rows,
       resourceTasks,
     };
-  }, [filters, resources, selectedResourceId, tasks]);
+  }, [filters, resources, selectedResourceId, sorting, tasks]);
 }

@@ -38,6 +38,7 @@ export interface PreferenceValues {
     cycleIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;
+    sorting?: { key: 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'; direction: 'asc' | 'desc' };
     columnWidths?: ColumnWidths<'title' | 'category' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
   };
   'cohort-filters': {

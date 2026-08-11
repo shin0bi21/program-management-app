@@ -28,7 +28,7 @@ describe('useTaskViewData', () => {
     const { result } = renderHook(() => useTaskViewData(tasks, resources, {
       search: 'soft skills', programIds: ['program-1'], cycleIds: ['cycle-1'],
       categories: ['planning_prep'], statuses: ['todo'],
-    }, 'staff-1'));
+    }, 'staff-1', { key: 'startDate', direction: 'asc' }));
 
     expect(result.current.rows.map(task => task.id)).toEqual(['task-1']);
     expect(result.current.rangeData['staff-1']).toEqual(result.current.rows);
@@ -39,9 +39,19 @@ describe('useTaskViewData', () => {
   it('keeps the resource overview independent from task display filters', () => {
     const { result } = renderHook(() => useTaskViewData(tasks, resources, {
       search: '', programIds: ['program-1'], cycleIds: [], categories: [], statuses: [],
-    }, 'staff-2'));
+    }, 'staff-2', { key: 'startDate', direction: 'asc' }));
 
     expect(result.current.dashboardTasks).toEqual([]);
     expect(result.current.resourceTasks.map(task => task.id)).toEqual(['task-2']);
+  });
+
+  it('sorts list rows without changing calendar resource order', () => {
+    const { result } = renderHook(() => useTaskViewData(tasks, resources, {
+      search: '', programIds: [], cycleIds: [], categories: [], statuses: [],
+    }, null, { key: 'firstName', direction: 'asc' }));
+
+    expect(result.current.rows.map(task => task.id)).toEqual(['task-2', 'task-1']);
+    expect(result.current.rangeData['staff-1'].map(task => task.id)).toEqual(['task-1']);
+    expect(result.current.rangeData['staff-2'].map(task => task.id)).toEqual(['task-2']);
   });
 });
