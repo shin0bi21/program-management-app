@@ -1,6 +1,6 @@
 import CalendarItem from '../../../../../common/components/ResourceCalendar/components/CalendarItem';
 import { dayKey } from '../../../../../common/components/ResourceCalendar/periods';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../../../common/features/tasks/types';
+import { TASK_CATEGORY_LABELS, TASK_STATUS_LABELS, type Task } from '../../../../../common/features/tasks/types';
 import { isTaskOverdue } from '../../taskOverview';
 import './TaskItem.css';
 
@@ -16,16 +16,22 @@ export default function TaskItem({ task, onEdit, onDelete, onActivate }: { task:
     detailTitle={(
       <span className="task-item__detail-title">
         <span>{task.title}</span>
-        {overdue && <span className="task-item__overdue-badge">Overdue</span>}
+        <span className="task-item__detail-badges">
+          <span className={`task-item__status-badge task-item__status-badge--${task.status}`}>
+            {TASK_STATUS_LABELS[task.status]}
+          </span>
+          {overdue && <span className="task-item__overdue-badge">Overdue</span>}
+        </span>
       </span>
     )}
     details={[
-      { label: 'Category', value: category },
       { label: 'Program', value: task.programName ?? 'General' },
       { label: 'Cycle', value: task.cycleName },
-      { label: 'Dates', value: `${task.startDate} – ${task.dueDate}` },
+      { label: 'Category', value: category },
+      { label: 'Start', value: task.startDate, sectionStart: true },
+      { label: 'End', value: task.dueDate },
       { label: 'Logged', value: loggedHours },
-      ...(task.details ? [{ label: 'Details', value: task.details, multiline: true }] : []),
+      ...(task.details ? [{ label: 'Notes', value: task.details, multiline: true }] : []),
     ]}
     onEdit={onEdit}
     onDelete={onDelete}

@@ -27,6 +27,22 @@ describe('TimeItem', () => {
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Summer 2026');
     expect(tooltip).toHaveTextContent('Workshop delivery');
+
+    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
+      'Program', 'Cycle', 'Category', 'Hours', 'Notes',
+    ]);
+  });
+
+  it('omits the program detail instead of labeling an unspecified program as General', () => {
+    render(<TimeItem item={{ ...item, programId: null, programName: null }} />);
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
+
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).not.toHaveTextContent('General');
+    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
+      'Cycle', 'Category', 'Hours', 'Notes',
+    ]);
   });
 
   it('dismisses hover details when a scroll container moves', () => {

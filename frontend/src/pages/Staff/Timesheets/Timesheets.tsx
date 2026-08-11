@@ -530,7 +530,8 @@ export default function Timesheets() {
             onItemDrop={canWriteTimesheets ? moveTimeEntry : undefined}
             canDropItem={canDropWithinStaff}
             getItemCapabilities={({ resource }) => ({ draggable: canWriteTimesheets && resource.writable })}
-            maxVisibleItemsPerCell={2}
+            maxVisibleItemsPerCell={3}
+            rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
               { id: 'general', label: 'Regular Time', onSelect: () => openCellEntry(context, 'general') },

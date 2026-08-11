@@ -516,6 +516,10 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
   await expect(tooltip).toContainText('Logged');
   await expect(tooltip).toContainText('1.5 hours');
   await expect(tooltip).toContainText('Prepare activities and materials.');
+  await expect.poll(async () => {
+    const bounds = await tooltip.boundingBox();
+    return bounds ? bounds.y + bounds.height <= await page.evaluate(() => window.innerHeight) : false;
+  }).toBe(true);
 
   const rangeItem = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
   const row = rangeItem.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
@@ -534,7 +538,7 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
   const dayBox = await hoveredDay.boundingBox();
   if (!dayBox) throw new Error('Hovered task day geometry is unavailable');
   await page.mouse.move(pointerX, itemBox.y + itemBox.height / 2);
-  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(dayBox.x, 0);
+  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(itemBox.y + itemBox.height + 8, 0);
 
   const box = await item.boundingBox();
@@ -631,7 +635,7 @@ test('suppresses real time-item details from pointer down through drag end', asy
   const dayBox = await source.locator('xpath=ancestor::div[contains(@class, "resource-calendar__item-slot")]').boundingBox();
   const targetBox = await target.boundingBox();
   if (!sourceBox || !dayBox || !targetBox) throw new Error('Time item geometry is unavailable');
-  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(dayBox.x, 0);
+  await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(sourceBox.x, 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(sourceBox.y + sourceBox.height + 8, 0);
 
   await page.mouse.down();
