@@ -23,12 +23,17 @@ describe('TaskItem', () => {
 
     const tooltip = screen.getByRole('tooltip');
     expect(tooltip).toHaveTextContent('Prepare workshop');
+    expect(tooltip).toHaveTextContent('To do');
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Summer 2026');
     expect(tooltip).toHaveTextContent('Logged');
     expect(tooltip).toHaveTextContent('1.5 hours');
     expect(tooltip).toHaveTextContent('Prepare activities.');
+    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
+      'Program', 'Cycle', 'Category', 'Start', 'End', 'Logged', 'Notes',
+    ]);
+    expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('calendar-item-details__section-start');
   });
 
   it('opens the floating action menu before invoking edit or delete', () => {
@@ -66,5 +71,36 @@ describe('TaskItem', () => {
     const tooltip = screen.getByRole('tooltip');
     expect(tooltip).toHaveTextContent('Prepare workshop');
     expect(tooltip.querySelector('.task-item__overdue-badge')).toHaveTextContent('Overdue');
+    expect([...tooltip.querySelectorAll('.task-item__detail-badges > span')].map(badge => badge.textContent)).toEqual([
+      'To do', 'Overdue',
+    ]);
+  });
+
+  it('shows completed status without marking the task overdue', () => {
+    render(<TaskItem task={{
+      ...task,
+      status: 'completed',
+      dueDate: '2000-01-01',
+      completedAt: '2000-01-02T12:00:00.000Z',
+    }} />);
+
+    expect(screen.queryByLabelText('Overdue')).not.toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Completed');
+    expect(tooltip).not.toHaveTextContent('Overdue');
+  });
+
+  it.each([
+    ['todo', 'To do'],
+    ['in_progress', 'In progress'],
+    ['completed', 'Completed'],
+    ['cancelled', 'Cancelled'],
+  ] as const)('styles the %s status as a title badge', (status, label) => {
+    render(<TaskItem task={{ ...task, status }} />);
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+
+    const badge = screen.getByText(label, { selector: '.task-item__status-badge' });
+    expect(badge).toHaveClass(`task-item__status-badge--${status}`);
   });
 });

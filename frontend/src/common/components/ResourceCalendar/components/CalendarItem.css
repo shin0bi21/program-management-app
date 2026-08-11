@@ -42,5 +42,10 @@
 .calendar-item-details dl, .calendar-item-details dd { margin: 0; }
 .calendar-item-details dl { display: grid; gap: 5px; }
 .calendar-item-details dl > div { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; }
+.calendar-item-details dl > .calendar-item-details__section-start {
+  margin-top: 4px;
+  padding-top: 9px;
+  border-top: 1px solid var(--ink-12);
+}
 .calendar-item-details dt { color: var(--color-muted); font-weight: 650; }
 .calendar-item-details__multiline dd { overflow-wrap: anywhere; white-space: pre-wrap; }

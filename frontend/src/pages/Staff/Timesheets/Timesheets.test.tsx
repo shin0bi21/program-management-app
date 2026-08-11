@@ -75,6 +75,7 @@ function deferred<T>() {
 describe('Timesheets', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
     vi.clearAllMocks();
     auth.role = 'staff';
     auth.permissions = ['read:timesheets', 'write:timesheets'];
@@ -121,6 +122,40 @@ describe('Timesheets', () => {
       expect.stringContaining('Category'),
       expect.stringContaining('Cycle'),
     ]);
+  });
+
+  it('matches task calendar row sizing and shows three entries before overflow', async () => {
+    const workDate = dayKey(new Date());
+    vi.mocked(getTimeEntries).mockResolvedValue({
+      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      programs: [],
+      data: { 'staff-1': { [workDate]: [1, 2, 3].map(index => ({
+        id: `entry-${index}`,
+        programId: null,
+        programName: null,
+        cycleId: 'cycle-1',
+        cycleName: 'Summer 2026',
+        category: 'meeting' as const,
+        categoryLabel: `Meeting ${index}`,
+        taskId: null,
+        taskTitle: null,
+        hours: index,
+        note: `Entry ${index}`,
+      })) } },
+    });
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+
+    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
+    expect(screen.getByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /show all 3 items/i })).not.toBeInTheDocument();
   });
 
   it('keeps the Staff filter for admins', async () => {
@@ -635,7 +670,7 @@ describe('Timesheets', () => {
 
   it('opens Edit from an entry inside the overflow panel', async () => {
     const workDate = dayKey(new Date());
-    const entries = ['entry-1', 'entry-2', 'entry-3'].map((id, index) => ({
+    const entries = ['entry-1', 'entry-2', 'entry-3', 'entry-4'].map((id, index) => ({
       id,
       programId: 'program-1',
       programName: 'Soft Skills',
@@ -660,7 +695,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: `Show all 3 items for ${workDate}` }));
+    fireEvent.click(await screen.findByRole('button', { name: `Show all 4 items for ${workDate}` }));
     fireEvent.click(screen.getByRole('button', { name: /Program Delivery, 1 hours/ }));
     const editAction = screen.getByRole('menuitem', { name: 'Edit' });
     fireEvent.pointerDown(editAction);
