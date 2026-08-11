@@ -12,7 +12,7 @@ import type {
 } from '../../../../../common/types/cohort';
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { YouthProfile } from '../../../../../common/types/youth';
-import YouthModal from '../../../../Youth/components/YouthModal/YouthModal';
+import YouthModal from '../../../../../common/features/youth/components/YouthModal/YouthModal';
 import AttendanceRoster from './AttendanceRoster';
 import OpenAttendancePicker from './OpenAttendancePicker';
 
