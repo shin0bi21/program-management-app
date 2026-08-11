@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const storyId = 'ResourceCalendar/Interactive';
 const rangeLaneSizingStoryId = 'ResourceCalendar/RangeLaneSizing';
+const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
 const timeItemStoryId = 'pages/Staff/Timesheets/components/TimeItem/TimeItem/InteractiveTimeItems';
 const taskItemStoryId = 'pages/Staff/Tasks/components/TaskItem/TaskItem/InteractiveTaskItem';
 
@@ -28,6 +29,47 @@ async function expectPreviewClippedToCalendar(component: Locator, page: Page) {
   expect(hostBox.width).toBeCloseTo(viewportBox.width, 0);
   expect(hostBox.height).toBeCloseTo(viewportBox.height, 0);
 }
+
+async function fullyVisiblePeriodKeys(component: Locator) {
+  const viewport = component.getByLabel('Persisted-position resource calendar');
+  return viewport.evaluate(calendar => {
+    const viewportBounds = calendar.getBoundingClientRect();
+    const resourceBounds = calendar.querySelector('.resource-calendar__corner')?.getBoundingClientRect();
+    if (!resourceBounds) throw new Error('Calendar resource boundary is unavailable');
+    return [...calendar.querySelectorAll<HTMLElement>('.resource-calendar__period')].filter(period => {
+      const bounds = period.getBoundingClientRect();
+      return bounds.left >= resourceBounds.right - 1 && bounds.right <= viewportBounds.right + 1;
+    }).map(period => period.dataset.periodKey!);
+  });
+}
+
+test('restores the exact left day and offset after scrolling through the right edge', async ({ page, mount }) => {
+  await mount(persistedPositionStoryId);
+  await page.evaluate(() => localStorage.removeItem('resource-calendar:playwright-position'));
+  await page.evaluate(() => window.unmount());
+  const component = await mount(persistedPositionStoryId);
+  const viewport = component.getByLabel('Persisted-position resource calendar');
+
+  await viewport.evaluate(element => { element.scrollLeft += 8 * 152 + 37; });
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('resource-calendar:playwright-position'))).not.toBeNull();
+  await page.waitForTimeout(150);
+  const scrollLeftBeforeRemount = await viewport.evaluate(element => element.scrollLeft);
+  const storedPosition = await page.evaluate(() => localStorage.getItem('resource-calendar:playwright-position'));
+  expect(JSON.parse(storedPosition!)).toEqual(expect.objectContaining({
+    offset: scrollLeftBeforeRemount % 152,
+  }));
+  const visibleBeforeRemount = await fullyVisiblePeriodKeys(component);
+
+  await page.evaluate(() => window.unmount());
+  const remounted = await mount(persistedPositionStoryId);
+  const remountedViewport = remounted.getByLabel('Persisted-position resource calendar');
+  await expect(remountedViewport).toBeVisible();
+  const visibleAfterRemount = await fullyVisiblePeriodKeys(remounted);
+  const scrollLeftAfterRemount = await remountedViewport.evaluate(element => element.scrollLeft);
+
+  expect(visibleAfterRemount).toEqual(visibleBeforeRemount);
+  expect(scrollLeftAfterRemount % 152).toBeCloseTo(scrollLeftBeforeRemount % 152, 0);
+});
 
 test('virtualizes a large staff list while preserving sticky headers', async ({ mount }) => {
   const component = await mount(storyId);

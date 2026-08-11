@@ -78,7 +78,7 @@ export default function ResourceCalendar<TResource, TItemData>({
   const { periods, viewportRef, goToDate } = usePeriodWindow({
     periodDefinition,
     initialDate: initialPosition.date,
-    initialEdge: initialPosition.edge,
+    initialOffset: initialPosition.offset,
     positionStorageKey,
     initialPeriodCount: calculatedInitialPeriodCount,
     periodBuildSize: effectivePeriodBuildSize,

@@ -1,8 +1,6 @@
-export type CalendarPositionEdge = 'left' | 'right';
-
 export interface CalendarPosition {
   date: Date;
-  edge: CalendarPositionEdge;
+  offset: number;
 }
 
 function parseCalendarDate(value: string) {
@@ -16,41 +14,41 @@ function parseCalendarDate(value: string) {
 }
 
 export function loadCalendarPosition(storageKey: string | undefined, fallbackDate: Date): CalendarPosition {
-  if (!storageKey) return { date: fallbackDate, edge: 'left' };
+  if (!storageKey) return { date: fallbackDate, offset: 0 };
   const stored = localStorage.getItem(storageKey);
-  if (!stored) return { date: fallbackDate, edge: 'left' };
+  if (!stored) return { date: fallbackDate, offset: 0 };
 
-  const [dateKey, edge, extra] = stored.split('|');
-  const date = parseCalendarDate(dateKey);
-  if (!date || (edge !== 'left' && edge !== 'right') || extra !== undefined) {
-    localStorage.removeItem(storageKey);
-    return { date: fallbackDate, edge: 'left' };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    parsed = null;
   }
-  return { date, edge };
+  const candidate = parsed as { date?: unknown; offset?: unknown } | null;
+  const date = typeof candidate?.date === 'string' ? parseCalendarDate(candidate.date) : null;
+  if (!date || typeof candidate?.offset !== 'number' || !Number.isFinite(candidate.offset) || candidate.offset < 0) {
+    localStorage.removeItem(storageKey);
+    return { date: fallbackDate, offset: 0 };
+  }
+  return { date, offset: candidate.offset };
 }
 
 export function saveCalendarPosition(
   storageKey: string | undefined,
   dateKey: string,
-  edge: CalendarPositionEdge,
+  offset: number,
 ) {
-  if (storageKey) localStorage.setItem(storageKey, `${dateKey}|${edge}`);
+  if (storageKey) localStorage.setItem(storageKey, JSON.stringify({ date: dateKey, offset }));
 }
 
 export function calculateCalendarAnchorScrollLeft({
   periodIndex,
-  edge,
+  offset,
   periodWidth,
-  viewportWidth,
-  coveredLeftWidth,
 }: {
   periodIndex: number;
-  edge: CalendarPositionEdge;
+  offset: number;
   periodWidth: number;
-  viewportWidth: number;
-  coveredLeftWidth: number;
 }) {
-  if (edge === 'left') return periodIndex * periodWidth;
-  const visiblePeriodWidth = viewportWidth - coveredLeftWidth;
-  return Math.max(0, (periodIndex + 1) * periodWidth - visiblePeriodWidth);
+  return Math.max(0, periodIndex * periodWidth + offset);
 }
