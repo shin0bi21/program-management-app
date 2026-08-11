@@ -12,7 +12,6 @@ import Table, { type TableColumn } from '../../../common/components/Table/Table'
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { deleteTask, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods';
@@ -276,10 +275,10 @@ export default function Tasks() {
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
       {preferencesReady && <PageBody
         ariaLabel="Task overview and assignments"
-        dashboard={selectedResource ? <DashboardCardGroup ariaLabel="Task overview">
+        dashboard={selectedResource ? <>
           <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
           <TaskHoursLoggedCard task={selectedTask} onLogHours={logHoursAction} />
-        </DashboardCardGroup> : null}
+        </> : null}
         {...(view === 'list' ? { table: <Table
           ariaLabel="Tasks"
           columns={columns}
