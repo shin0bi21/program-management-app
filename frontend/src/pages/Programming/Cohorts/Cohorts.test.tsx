@@ -150,7 +150,7 @@ describe('Cohorts', () => {
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
     const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
     expect(firstOverviewCard).not.toBeNull();
-    expect(cohortTable.compareDocumentPosition(firstOverviewCard!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
     expect(cohortRow).toHaveAttribute('tabindex', '0');
     expect(cohortRow).toHaveClass('table-row--selectable');

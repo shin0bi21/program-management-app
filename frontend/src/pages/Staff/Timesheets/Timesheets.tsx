@@ -11,6 +11,7 @@ import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../common/components/ResourceCalendar/types';
 import type { PeriodRange } from '../../../common/components/ResourceCalendar/PeriodDataBuffer';
 import TimeItem from './components/TimeItem/TimeItem';
@@ -482,38 +483,39 @@ export default function Timesheets() {
             {error && <Button size="sm" variant="secondary" onClick={retry}>Retry</Button>}
           </div>
         )}
-        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <section className="timesheets-page__overview" aria-label="Timesheet overview">
-          <TimesheetOverviewCard
-            title="Hours This Pay Period"
-            total={summary.periodTotal}
-            modalTitle={dashboardStaff?.name ?? ''}
-            modalSubtitle={summary.periodLabel}
-            breakdown={summary.periodTaskHours}
-            emptyMessage={overviewEmptyMessage}
-            hasStaff={hasStaffOverview}
-            details={[
-              ['Current Pay Period', summary.periodLabel],
-              ['Hours', summary.periodTotal.toFixed(2)],
-            ]}
-          />
-          <TimesheetOverviewCard
-            title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
-            total={summary.average}
-            modalTitle={dashboardStaff?.name ?? ''}
-            modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
-            breakdown={summary.taskHours.map(
-              ([label, hours]): [string, number] => [label, hours / summary.periodCount],
-            )}
-            emptyMessage={overviewEmptyMessage}
-            hasStaff={hasCycleOverview}
-            details={[
-              ['Cycle', overviewCycle?.name ?? ''],
-              ['Biweekly Average', summary.average.toFixed(2)],
-            ]}
-          />
-        </section>}
-        {preferencesReady && (view === 'calendar' ? <div className="timesheets-page__calendar">
-          <ResourceCalendar
+        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <PageBody
+          ariaLabel="Timesheet overview and entries"
+          dashboard={<>
+            <TimesheetOverviewCard
+              title="Hours This Pay Period"
+              total={summary.periodTotal}
+              modalTitle={dashboardStaff?.name ?? ''}
+              modalSubtitle={summary.periodLabel}
+              breakdown={summary.periodTaskHours}
+              emptyMessage={overviewEmptyMessage}
+              hasStaff={hasStaffOverview}
+              details={[
+                ['Current Pay Period', summary.periodLabel],
+                ['Hours', summary.periodTotal.toFixed(2)],
+              ]}
+            />
+            <TimesheetOverviewCard
+              title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
+              total={summary.average}
+              modalTitle={dashboardStaff?.name ?? ''}
+              modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
+              breakdown={summary.taskHours.map(
+                ([label, hours]): [string, number] => [label, hours / summary.periodCount],
+              )}
+              emptyMessage={overviewEmptyMessage}
+              hasStaff={hasCycleOverview}
+              details={[
+                ['Cycle', overviewCycle?.name ?? ''],
+                ['Biweekly Average', summary.average.toFixed(2)],
+              ]}
+            />
+          </>}
+          {...(view === 'calendar' ? { calendar: <ResourceCalendar
             resources={visibleResources}
             data={visibleData}
             initialDate={initialDate}
@@ -539,9 +541,7 @@ export default function Timesheets() {
             onResourceSelect={resource => setSelectedDashboardStaffId(resource.id)}
             buildItem={buildCalendarItem}
             buildOverflowItem={buildOverflowItem}
-          />
-        </div> : (
-          <Table
+          /> } : { table: <Table
             ariaLabel="Timesheet entries"
             columns={listColumns}
             data={visibleListRows}
@@ -565,8 +565,8 @@ export default function Timesheets() {
             emptyMessage={listSearch.trim()
               ? 'No time entries match your search'
               : selectedCycle ? 'No time entries for this cycle' : 'No time entries found'}
-          />
-        ))}
+          /> })}
+        />}
       </main>
       <TimeEntryModal
         isOpen={addOpen}
