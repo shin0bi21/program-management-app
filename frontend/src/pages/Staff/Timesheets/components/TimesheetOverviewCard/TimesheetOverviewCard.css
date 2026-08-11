@@ -1,5 +1,6 @@
 .dashboard-card.timesheet-overview-card {
   height: 75px;
+  min-height: 75px;
 }
 
 .timesheet-overview-card .dashboard-card__header {
