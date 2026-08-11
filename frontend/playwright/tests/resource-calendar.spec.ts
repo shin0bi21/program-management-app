@@ -519,8 +519,24 @@ test('opens the real task-item floating menu instead of editing directly', async
 test('gives a real task item the same hover-details lifecycle as a time item', async ({ page, mount }) => {
   const component = await mount(taskItemStoryId);
   const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
+  const rangeItem = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
+  const row = rangeItem.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
+  const itemBox = await item.boundingBox();
+  if (!itemBox) throw new Error('Task detail anchor geometry is unavailable');
+  const pointerX = itemBox.x + itemBox.width * .2;
+  const day = row.locator('.resource-calendar__item-slot').evaluateAll((slots, x) => {
+    const index = slots.findIndex(slot => {
+      const bounds = slot.getBoundingClientRect();
+      return x >= bounds.left && x < bounds.right;
+    });
+    if (index < 0) throw new Error('Hovered task day is unavailable');
+    return index;
+  }, pointerX);
+  const hoveredDay = row.locator('.resource-calendar__item-slot').nth(await day);
+  const dayBox = await hoveredDay.boundingBox();
+  if (!dayBox) throw new Error('Hovered task day geometry is unavailable');
 
-  await item.hover();
+  await page.mouse.move(pointerX, itemBox.y + itemBox.height / 2);
   const tooltip = page.getByRole('tooltip');
   await expect(tooltip).toContainText('Prepare workshop');
   await expect(tooltip).toContainText('Planning / Prep');
@@ -534,25 +550,12 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
     return bounds ? bounds.y + bounds.height <= await page.evaluate(() => window.innerHeight) : false;
   }).toBe(true);
 
-  const rangeItem = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
-  const row = rangeItem.locator('xpath=ancestor::div[contains(@class, "resource-calendar__row")]');
-  const itemBox = await item.boundingBox();
-  if (!itemBox) throw new Error('Task detail anchor geometry is unavailable');
-  const pointerX = itemBox.x + itemBox.width * .65;
-  const day = row.locator('.resource-calendar__item-slot').evaluateAll((slots, x) => {
-    const index = slots.findIndex(slot => {
-      const bounds = slot.getBoundingClientRect();
-      return x >= bounds.left && x < bounds.right;
-    });
-    if (index < 0) throw new Error('Hovered task day is unavailable');
-    return index;
-  }, pointerX);
-  const hoveredDay = row.locator('.resource-calendar__item-slot').nth(await day);
-  const dayBox = await hoveredDay.boundingBox();
-  if (!dayBox) throw new Error('Hovered task day geometry is unavailable');
-  await page.mouse.move(pointerX, itemBox.y + itemBox.height / 2);
   await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(itemBox.y + itemBox.height + 8, 0);
+  const lockedPosition = await tooltip.boundingBox();
+  await page.mouse.move(itemBox.x + itemBox.width * .8, itemBox.y + itemBox.height / 2);
+  await page.waitForTimeout(180);
+  expect((await tooltip.boundingBox())?.x).toBeCloseTo(lockedPosition?.x ?? 0, 0);
 
   const box = await item.boundingBox();
   if (!box) throw new Error('Task item geometry is unavailable');

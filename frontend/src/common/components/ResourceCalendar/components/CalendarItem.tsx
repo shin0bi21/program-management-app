@@ -12,6 +12,8 @@ export interface CalendarItemDetail {
   sectionStart?: boolean;
 }
 
+const HOVER_DETAILS_DELAY_MS = 120;
+
 interface CalendarItemProps {
   id: string;
   ariaLabel: string;
@@ -31,6 +33,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   const detailRef = useRef<HTMLDivElement>(null);
   const detailAnchorRef = useRef<DOMRect | null>(null);
   const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const detailOpenTimerRef = useRef<number | null>(null);
   const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
   const { isOpen, openAtPoint, close, position, menuRef } = useFloatingMenu(
     triggerRef,
@@ -40,7 +43,13 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   useViewportDismissal(detailPosition !== null, () => setDetailPosition(null));
   const hasActions = Boolean(onEdit && onDelete);
   const detailsId = `calendar-item-details-${id}`;
+  const cancelPendingDetails = () => {
+    if (detailOpenTimerRef.current === null) return;
+    window.clearTimeout(detailOpenTimerRef.current);
+    detailOpenTimerRef.current = null;
+  };
   const hideDetails = () => {
+    cancelPendingDetails();
     detailAnchorRef.current = null;
     setDetailPosition(null);
   };
@@ -80,7 +89,17 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     );
     setDetailPosition(current => current?.top === next.top && current.left === next.left ? current : next);
   };
+  const scheduleDetails = (clientX: number) => {
+    cancelPendingDetails();
+    detailOpenTimerRef.current = window.setTimeout(() => {
+      detailOpenTimerRef.current = null;
+      showDetails(clientX);
+    }, HOVER_DETAILS_DELAY_MS);
+  };
   const detailsOpen = detailPosition !== null;
+  useLayoutEffect(() => () => {
+    if (detailOpenTimerRef.current !== null) window.clearTimeout(detailOpenTimerRef.current);
+  }, []);
   useLayoutEffect(() => {
     const detail = detailRef.current;
     if (!detailsOpen || !detail) return undefined;
@@ -113,8 +132,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
       aria-haspopup={hasActions ? 'menu' : undefined}
       aria-expanded={hasActions ? isOpen : undefined}
       aria-describedby={detailPosition ? detailsId : undefined}
-      onMouseEnter={event => showDetails(event.clientX)}
-      onMouseMove={event => showDetails(event.clientX)}
+      onMouseEnter={event => scheduleDetails(event.clientX)}
       onMouseLeave={hideDetails}
       onFocus={() => { if (triggerRef.current?.matches(':focus-visible')) showDetails(); }}
       onBlur={hideDetails}
