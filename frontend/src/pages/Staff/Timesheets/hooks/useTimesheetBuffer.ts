@@ -37,6 +37,11 @@ export function useTimesheetBuffer({ initialData = {}, load, maxRetainedPeriods 
     });
   }
 
+  const getBuffer = useCallback(() => {
+    if (!bufferRef.current) throw new Error('Timesheet buffer was not initialized.');
+    return bufferRef.current;
+  }, []);
+
   const run = useCallback(function runOperation(operation: () => Promise<void>) {
     const revision = operationRevisionRef.current + 1;
     operationRevisionRef.current = revision;
@@ -55,24 +60,24 @@ export function useTimesheetBuffer({ initialData = {}, load, maxRetainedPeriods 
   }, []);
 
   const initialize = useCallback((periods: readonly CalendarPeriod[]) => {
-    run(() => bufferRef.current?.initialize(periods) ?? Promise.resolve());
-  }, [run]);
+    run(() => getBuffer().initialize(periods));
+  }, [getBuffer, run]);
 
   const onPeriodsBuilt = useCallback((periods: readonly CalendarPeriod[], direction: 'left' | 'right') => {
-    run(() => bufferRef.current?.periodsBuilt(periods, direction) ?? Promise.resolve());
-  }, [run]);
+    run(() => getBuffer().periodsBuilt(periods, direction));
+  }, [getBuffer, run]);
 
   const reset = useCallback((periods: readonly CalendarPeriod[]) => {
-    run(() => bufferRef.current?.reset(periods) ?? Promise.resolve());
-  }, [run]);
+    run(() => getBuffer().reset(periods));
+  }, [getBuffer, run]);
 
   const upsertItem = useCallback((resourceId: string, periodKey: string, item: TimesheetItem) => {
-    bufferRef.current?.upsertItem(resourceId, periodKey, item);
-  }, []);
+    getBuffer().upsertItem(resourceId, periodKey, item);
+  }, [getBuffer]);
 
   const removeItem = useCallback((itemId: string) => {
-    bufferRef.current?.removeItem(itemId);
-  }, []);
+    getBuffer().removeItem(itemId);
+  }, [getBuffer]);
 
   const retry = useCallback(() => {
     retryRef.current?.();

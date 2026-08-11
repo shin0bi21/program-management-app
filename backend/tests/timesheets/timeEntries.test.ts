@@ -181,52 +181,67 @@ describe('Time entries API', () => {
   });
 
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
-    const [cycle] = await sql<Array<{ id: string; periodStart: string; periodEnd: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
-      VALUES (
-        'Timesheet Overview Boundary',
-        (NOW() AT TIME ZONE 'America/Toronto')::date - 15,
-        (NOW() AT TIME ZONE 'America/Toronto')::date + 20
-      )
-      RETURNING id, (starts_on + 14)::text AS period_start, (starts_on + 27)::text AS period_end
+    const [cycle] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT
+        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14))::text AS period_start,
+        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14) + 13)::text AS period_end
+      FROM program_cycles
+      WHERE id = ${activeCycleId}
     `;
     try {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
         VALUES
-          (${firstStaffId}, ${cycle.id}, 'meeting', ${cycle.periodStart}::date - 1, 9, 'Prior period'),
-          (${firstStaffId}, ${cycle.id}, 'meeting', ${cycle.periodStart}::date, 2, 'Current meeting'),
-          (${firstStaffId}, ${cycle.id}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
+          (${adminId}, ${activeCycleId}, 'meeting', ${cycle.periodStart}::date, 2, 'Current meeting'),
+          (${adminId}, ${activeCycleId}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
       `;
 
       const overview = await request(app)
-        .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${cycle.id}`)
-        .set('Authorization', `Bearer ${firstStaffToken}`);
+        .get(`/api/time-entries/overview?staffId=${adminId}&cycleId=${activeCycleId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(overview.status).toBe(200);
       expect(overview.body).toEqual({
         payPeriod: {
           periodStart: cycle.periodStart,
           periodEnd: cycle.periodEnd,
-          totalHours: 5,
+          totalHours: 6,
           breakdown: [
             { label: 'Outreach', hours: 3 },
             { label: 'Meeting', hours: 2 },
+            { label: 'Program Delivery', hours: 1 },
           ],
         },
         biweeklyAverage: {
-          periodCount: 2,
-          averageHours: 7,
+          periodCount: 1,
+          averageHours: 6,
           breakdown: [
-            { label: 'Meeting', hours: 5.5 },
-            { label: 'Outreach', hours: 1.5 },
+            { label: 'Outreach', hours: 3 },
+            { label: 'Meeting', hours: 2 },
+            { label: 'Program Delivery', hours: 1 },
           ],
         },
       });
     } finally {
-      await sql`DELETE FROM time_entries WHERE cycle_id = ${cycle.id}`;
-      await sql`DELETE FROM program_cycles WHERE id = ${cycle.id}`;
+      await sql`DELETE FROM time_entries WHERE staff_id = ${adminId} AND note IN ('Current meeting', 'Current outreach')`;
     }
+  });
+
+  it('keeps the current organization pay period independent of an upcoming selected cycle', async () => {
+    const [expected] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT
+        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14))::text AS period_start,
+        (starts_on + (FLOOR((CURRENT_DATE - starts_on) / 14.0)::int * 14) + 13)::text AS period_end
+      FROM program_cycles
+      WHERE id = ${activeCycleId}
+    `;
+
+    const response = await request(app)
+      .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${upcomingCycleId}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.payPeriod).toEqual(expect.objectContaining(expected));
   });
 
   it('conceals dashboard overview data for an unreadable staff resource', async () => {

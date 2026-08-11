@@ -4,31 +4,33 @@ import { DashboardCard } from '../../../../../common/components/DashboardCard/Da
 import Modal from '../../../../../common/components/Modal/Modal';
 import './TimesheetOverviewCard.css';
 
-interface TimesheetOverviewCardProps {
+interface EmptyTimesheetOverviewCardProps {
   title: string;
+  emptyMessage: string;
+}
+
+interface ReadyTimesheetOverviewCardProps extends EmptyTimesheetOverviewCardProps {
   total: number;
   modalTitle: string;
   modalSubtitle: string;
   breakdown: Array<[string, number]>;
-  emptyMessage: string;
-  hasStaff: boolean;
   details?: Array<[string, string]>;
 }
 
+type TimesheetOverviewCardProps = EmptyTimesheetOverviewCardProps | ReadyTimesheetOverviewCardProps;
+
 const compactDetailLabels = new Set(['Current Pay Period', 'Cycle']);
 
-export default function TimesheetOverviewCard({
-  title,
-  total,
-  modalTitle,
-  modalSubtitle,
-  breakdown,
-  emptyMessage,
-  hasStaff,
-  details,
-}: TimesheetOverviewCardProps) {
+export default function TimesheetOverviewCard(props: TimesheetOverviewCardProps) {
   const [breakdownOpen, setBreakdownOpen] = useState(false);
-  const breakdownAction = hasStaff ? (
+  const hasData = 'total' in props;
+  const { title, emptyMessage } = props;
+  const total = hasData ? props.total : 0;
+  const modalTitle = hasData ? props.modalTitle : '';
+  const modalSubtitle = hasData ? props.modalSubtitle : '';
+  const breakdown = hasData ? props.breakdown : [];
+  const details = hasData ? props.details : undefined;
+  const breakdownAction = hasData ? (
     <Button
       size="sm"
       variant="secondary"
@@ -44,7 +46,7 @@ export default function TimesheetOverviewCard({
       {details ? (
         <article className="dashboard-card timesheet-overview-card timesheet-overview-card--details">
           <h2 className="timesheet-overview-card__accessible-title">{title}</h2>
-          {hasStaff ? (
+          {hasData ? (
             <div className="dashboard-card__compact-layout timesheet-overview-card__layout">
               <dl className="timesheet-overview-card__details">
                 {details.map(([label, value]) => (
@@ -65,7 +67,7 @@ export default function TimesheetOverviewCard({
           emptyMessage={emptyMessage}
           action={breakdownAction}
         >
-          {hasStaff ? (
+          {hasData ? (
             <>
               <strong className="timesheet-overview-card__metric">{total.toFixed(2)}</strong>
               <span className="timesheet-overview-card__context">{modalSubtitle}</span>
@@ -80,7 +82,7 @@ export default function TimesheetOverviewCard({
         maxWidth="440px"
       >
         <p className="timesheet-overview-card__modal-subtitle">{modalSubtitle}</p>
-        {breakdown.length ? (
+        {hasData && breakdown.length ? (
           <>
             <div
               className="timesheet-overview-card__segments"
@@ -106,7 +108,7 @@ export default function TimesheetOverviewCard({
             </dl>
           </>
         ) : <p className="timesheet-overview-card__no-breakdown">No hours recorded.</p>}
-        <div className="timesheet-overview-card__total"><span>Total</span><strong>{total.toFixed(2)}</strong></div>
+        {hasData && <div className="timesheet-overview-card__total"><span>Total</span><strong>{total.toFixed(2)}</strong></div>}
       </Modal>
     </>
   );
