@@ -357,9 +357,9 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    const payPeriodCard = await screen.findByRole('heading', { name: 'Hours This Pay Period' });
-    await waitFor(() => expect(payPeriodCard.closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
-    expect(payPeriodCard.closest('article')).toHaveTextContent('4.00');
+    await screen.findByRole('heading', { name: 'Hours This Pay Period' });
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00');
     const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
     expect(averageCard.closest('article')).toHaveTextContent('4.00');
     expect(averageCard.closest('article')).toHaveTextContent('CycleFall 2026');
@@ -444,14 +444,14 @@ describe('Timesheets', () => {
     );
 
     expect((await screen.findAllByText('Alex Morgan')).length).toBeGreaterThan(0);
-    const periodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
-    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
+    const getPeriodCard = () => screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(await screen.findByRole('button', { name: /Meeting, 7 hours/ }));
-    await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
-    expect(periodCard).toHaveTextContent('Current Pay Period');
-    expect(periodCard).toHaveTextContent('Hours');
-    expect(periodCard).not.toHaveTextContent('Alex Morgan');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    expect(getPeriodCard()).toHaveTextContent('Current Pay Period');
+    expect(getPeriodCard()).toHaveTextContent('Hours');
+    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
@@ -459,12 +459,12 @@ describe('Timesheets', () => {
 
     await screen.findByText('Alex planning meeting');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
-    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
-    expect(periodCard).not.toHaveTextContent('Zoe Wilson');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
+    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
     fireEvent.click(screen.getByText('Alex planning meeting').closest('tr')!);
-    await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
-    expect(periodCard).not.toHaveTextContent('Alex Morgan');
-    expect(periodCard).not.toHaveTextContent('Zoe Wilson');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
+    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
   });
 
   it('opens a prefilled add form when a calendar cell is clicked', async () => {

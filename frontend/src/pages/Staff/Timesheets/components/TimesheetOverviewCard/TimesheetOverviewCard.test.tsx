@@ -18,7 +18,6 @@ describe('TimesheetOverviewCard', () => {
           ['Meeting', 2.25],
         ]}
         emptyMessage="Select a time entry."
-        hasStaff
       />,
     );
 
@@ -50,12 +49,7 @@ describe('TimesheetOverviewCard', () => {
     render(
       <TimesheetOverviewCard
         title="Average Biweekly Hours This Cycle"
-        total={0}
-        modalTitle=""
-        modalSubtitle=""
-        breakdown={[]}
         emptyMessage="Select a time entry."
-        hasStaff={false}
       />,
     );
 
@@ -72,7 +66,6 @@ describe('TimesheetOverviewCard', () => {
         modalSubtitle="Jul 29 – Aug 11, 2026"
         breakdown={[]}
         emptyMessage="Select a time entry."
-        hasStaff
         details={[
           ['Current Pay Period', 'Jul 29 – Aug 11, 2026'],
           ['Hours', '7.25'],
@@ -96,7 +89,6 @@ describe('TimesheetOverviewCard', () => {
         modalSubtitle="Summer 2026"
         breakdown={[]}
         emptyMessage="Select a time entry."
-        hasStaff
         details={[
           ['Cycle', 'Summer 2026'],
           ['Biweekly Average', '0.33'],
