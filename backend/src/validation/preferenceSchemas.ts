@@ -40,7 +40,7 @@ const valuesByKey = {
     programIds: unique(z.union([z.string().uuid('Invalid program ID'), z.literal('general')]), 'Programs'),
     categories: unique(z.enum(['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other']), 'Categories'),
     cycleId: z.string().uuid('Invalid cycle ID').nullable(),
-    columnWidths: columnWidths(['date', 'staff', 'program', 'cycle', 'category', 'task', 'hours', 'note']).optional(),
+    columnWidths: columnWidths(['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'task', 'hours', 'note']).optional(),
   }),
   'task-filters': z.object({
     view: z.enum(['calendar', 'list']).optional(),

@@ -20,9 +20,28 @@ describe('useTimesheetListData', () => {
   it('searches session labels alongside the established entry fields', () => {
     const { result } = renderHook(() => useTimesheetListData(
       { 'staff-1': { '2026-08-11': [{ ...item, sessionId: 'session-1', sessionLabel: 'Robotics lab' }] } },
-      [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       [],
       'robotics',
+    ));
+    expect(result.current).toHaveLength(1);
+  });
+
+  it('keeps separate staff names for list columns and a combined name for search', () => {
+    const rows = buildTimesheetListRows(
+      { 'staff-1': { '2026-08-11': [item] } },
+      [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      [],
+    );
+
+    expect(rows[0]).toEqual(expect.objectContaining({
+      staffFirstName: 'Zoe', staffLastName: 'Wilson', staffName: 'Zoe Wilson',
+    }));
+    const { result } = renderHook(() => useTimesheetListData(
+      { 'staff-1': { '2026-08-11': [item] } },
+      [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      [],
+      'zoe wilson',
     ));
     expect(result.current).toHaveLength(1);
   });

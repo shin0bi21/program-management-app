@@ -17,7 +17,7 @@ describe('TimeEntryModal', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><TimeEntryModal
       isOpen
-      resources={[{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }]}
+      resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[]}
       cycles={[{ id: 'cycle-1', name: 'Summer 2026' }]}
       initialTask={task}

@@ -106,7 +106,7 @@ describe('Timesheets', () => {
     vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {},
     });
@@ -148,7 +148,7 @@ describe('Timesheets', () => {
   it('matches task calendar row sizing and shows three entries before overflow', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [1, 2, 3].map(index => ({
         id: `entry-${index}`,
@@ -196,8 +196,8 @@ describe('Timesheets', () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
-        { id: 'staff-2', name: 'Alex Morgan', role: 'staff', writable: false },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
@@ -224,6 +224,10 @@ describe('Timesheets', () => {
     );
 
     expect(await screen.findByText('Coworker administration')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Morgan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Actions for Meeting on 2026-08-09' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Actions for Administration on 2026-08-09' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Coworker administration').closest('tr')!);
@@ -254,7 +258,7 @@ describe('Timesheets', () => {
   it('clears the persisted cycle with the other Timesheets filters', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
         programs: [{ id: 'program-1', name: 'Soft Skills' }],
         data: { 'staff-1': { '2026-08-09': [{
           id: 'all-cycle-entry', programId: 'program-1', programName: 'Soft Skills',
@@ -298,7 +302,7 @@ describe('Timesheets', () => {
   it('does not reload overview data when only the cycle filter changes', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { '2026-08-09': [{
         id: 'current-entry', programId: null, programName: null,
@@ -326,7 +330,7 @@ describe('Timesheets', () => {
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': {
         '2026-08-09': [{
@@ -376,7 +380,7 @@ describe('Timesheets', () => {
 
   it('always shows searchable list overview cards for staff', async () => {
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { '2026-08-09': [{
         id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
@@ -417,8 +421,8 @@ describe('Timesheets', () => {
     auth.role = 'admin';
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [
-        { id: 'staff-2', name: 'Alex Morgan', role: 'staff', writable: true },
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
@@ -604,7 +608,7 @@ describe('Timesheets', () => {
   it('keeps session time fixed to its scheduled calendar day', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-session', programId: 'program-1', programName: 'Soft Skills',
@@ -778,7 +782,7 @@ describe('Timesheets', () => {
   it('updates an existing entry without triggering the cell add flow', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
         'staff-1': {
@@ -833,7 +837,7 @@ describe('Timesheets', () => {
       note: `Workshop ${index + 1}`,
     }));
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: entries } },
     });
@@ -865,7 +869,7 @@ describe('Timesheets', () => {
       categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [item] } },
     });
@@ -905,7 +909,7 @@ describe('Timesheets', () => {
     const first = deferred<never>();
     const second = deferred<never>();
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [item] } },
     });
@@ -954,7 +958,7 @@ describe('Timesheets', () => {
   it('renders a read-only calendar without mutation controls', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
@@ -980,7 +984,7 @@ describe('Timesheets', () => {
   it('deletes an entry and removes it from the buffered calendar data', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',

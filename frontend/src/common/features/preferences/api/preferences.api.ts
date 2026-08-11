@@ -30,7 +30,7 @@ export interface PreferenceValues {
     programIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     cycleId: string | null;
-    columnWidths?: ColumnWidths<'date' | 'staff' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
+    columnWidths?: ColumnWidths<'date' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
   };
   'task-filters': {
     view?: 'calendar' | 'list';
