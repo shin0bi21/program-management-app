@@ -23,7 +23,7 @@ const noCohorts: ProgramCohort[] = [];
 export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   lead: Lead | null;
   onClose: () => void;
-  onSuccess: () => void | Promise<void>;
+  onSuccess: (lead: Lead) => void | Promise<void>;
 }) {
   const [cohortId, setCohortId] = useState('');
   const [noteCategory, setNoteCategory] = useState<'general' | 'health' | 'preference'>('general');
@@ -72,9 +72,10 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
     setSubmitStatus('submitting');
     setStatusMessage(`Creating youth profile for ${youthName}...`);
     try {
-      if (lead.notes?.trim()) await signUpLead(lead.id, cohortId || null, noteCategory);
-      else await signUpLead(lead.id, cohortId || null);
-      await onSuccess();
+      const updatedLead = lead.notes?.trim()
+        ? await signUpLead(lead.id, cohortId || null, noteCategory)
+        : await signUpLead(lead.id, cohortId || null);
+      await onSuccess(updatedLead);
       setStatusMessage(selectedCohort
         ? `Youth profile successfully created and added to ${selectedCohort.programName} - ${selectedCohort.name}.`
         : `Youth profile successfully created for ${youthName}.`);

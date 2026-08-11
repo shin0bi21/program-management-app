@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
@@ -17,6 +18,7 @@ const getCohorts = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionAttachments = vi.fn();
 const getSessionTypes = vi.fn();
+const deleteSession = vi.fn();
 const renderCalendar = vi.fn();
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
@@ -54,6 +56,7 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
   createSessionNote: vi.fn(),
   saveSessionAttendance: vi.fn(),
   generateSessions: vi.fn(),
+  deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));
 
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
@@ -193,6 +196,8 @@ describe('Sessions', () => {
     ]);
     getSessionNotes.mockResolvedValue([]);
     getSessionAttachments.mockResolvedValue([]);
+    deleteSession.mockReset();
+    deleteSession.mockResolvedValue({ id: 'session-1' });
   });
 
   it('shows open attendance as a check-in count', async () => {
@@ -269,6 +274,26 @@ describe('Sessions', () => {
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
+  });
+
+  it('removes a deleted session without refetching the table', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Communication');
+    const initialRequestCount = getSessions.mock.calls.length;
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Session' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
+    await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
+    expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
+    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
   it('aligns the status filter with session table states', async () => {

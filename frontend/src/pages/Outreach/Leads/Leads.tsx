@@ -41,7 +41,7 @@ export default function Leads() {
   const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { leads, loading, refreshing, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
+  const { leads, upsertLead, removeLead, loading, refreshing, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
@@ -87,8 +87,20 @@ export default function Leads() {
   ], [programs]);
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
-    await updateLeadStatus(lead.id, status);
-    await reload();
+    const updated = await updateLeadStatus(lead.id, status);
+    if (statusFilters.length > 0 && !statusFilters.includes(updated.status)) {
+      removeLead(updated.id);
+      return;
+    }
+    upsertLead(updated);
+  };
+
+  const reconcileSignUp = (lead: Lead) => {
+    if (statusFilters.length > 0 && !statusFilters.includes(lead.status)) {
+      removeLead(lead.id);
+      return;
+    }
+    upsertLead(lead);
   };
 
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
@@ -163,7 +175,7 @@ export default function Leads() {
     <SignUpLeadModal
       lead={signUpTarget}
       onClose={() => setSignUpTarget(null)}
-      onSuccess={reload}
+      onSuccess={reconcileSignUp}
     />
     <Modal
       isOpen={!!confirmAction}
