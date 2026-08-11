@@ -3,8 +3,15 @@
   font-size: 1rem;
 }
 
+.task-item__completed {
+  color: var(--color-success);
+  font-size: 1rem;
+}
+
 .resource-calendar__range-item--compact .task-item__overdue,
-.resource-calendar__range-item--dense .task-item__overdue {
+.resource-calendar__range-item--compact .task-item__completed,
+.resource-calendar__range-item--dense .task-item__overdue,
+.resource-calendar__range-item--dense .task-item__completed {
   font-size: inherit;
 }
 

@@ -524,6 +524,7 @@ test('opens the real task-item floating menu instead of editing directly', async
   if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
   await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
+  await expect(page.getByRole('menuitem', { name: 'Mark complete' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
