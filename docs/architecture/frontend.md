@@ -138,6 +138,8 @@ types ← endpoint adapter ← query/workflow hook ← component
 
 Query keys remain stable and domain-specific. Cache writes preserve unaffected object references where practical, and mutation flows define how stale or overlapping responses are prevented from overwriting newer state.
 
+Focused mutation hooks present their public workflows in domain order: create/add, edit/update, delete, then other actions. When several workflows reconcile the same query cache, they share one helper that owns the cache-missing fallback and each workflow supplies only its validity check and transformation.
+
 ## Naming
 
 - Page and component folders use PascalCase.
