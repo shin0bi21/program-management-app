@@ -85,7 +85,7 @@ describe('User preferences API', () => {
       view: 'list',
       staffIds: [],
       programIds: ['general'],
-      tasks: ['meeting'],
+      categories: ['meeting'],
       cycleId: '00000000-0000-4000-8000-000000000001',
     };
     const saved = await request(app)

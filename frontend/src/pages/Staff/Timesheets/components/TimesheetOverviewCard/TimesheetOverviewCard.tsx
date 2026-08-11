@@ -74,10 +74,6 @@ export default function TimesheetOverviewCard({
         title={modalTitle}
         maxWidth="440px"
       >
-        <div className="timesheet-overview-card__modal-metric">
-          <strong>{total.toFixed(2)}</strong>
-          <span>hrs</span>
-        </div>
         <p className="timesheet-overview-card__modal-subtitle">{modalSubtitle}</p>
         {breakdown.length ? (
           <>

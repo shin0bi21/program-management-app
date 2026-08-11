@@ -1,0 +1,85 @@
+.task-hours-breakdown__subtitle,
+.task-hours-breakdown__empty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.task-hours-breakdown__summary,
+.task-hours-breakdown__details {
+  margin: 0;
+}
+
+.task-hours-breakdown__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.task-hours-breakdown__summary dt,
+.task-hours-breakdown__details dt {
+  color: var(--color-muted);
+  font-size: .76rem;
+}
+
+.task-hours-breakdown__summary dd {
+  margin: 3px 0 0;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.task-hours-breakdown__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.task-hours-breakdown__details dd {
+  margin: 3px 0 0;
+  font-weight: 750;
+}
+
+.task-hours-breakdown__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+}
+
+.task-hours-breakdown__list div,
+.task-hours-breakdown__total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.task-hours-breakdown__list dd {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-weight: 700;
+}
+
+.task-hours-breakdown__list progress {
+  width: 100%;
+  accent-color: var(--brand-accent);
+}
+
+.task-hours-breakdown__total {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+.task-hours-breakdown__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 520px) {
+  .task-hours-breakdown__summary,
+  .task-hours-breakdown__details {
+    grid-template-columns: 1fr;
+  }
+}

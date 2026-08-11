@@ -83,4 +83,12 @@ describe('apiClient re-authentication', () => {
     await expect(Promise.all([first, second])).resolves.toEqual([{ ok: true }, { ok: true }]);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('accepts an empty successful delete response', async () => {
+    const token = tokenWithExpiry(Date.now() + 60 * 60_000);
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(apiClient.delete<void>('/tasks/task-1')).resolves.toBeUndefined();
+  });
 });

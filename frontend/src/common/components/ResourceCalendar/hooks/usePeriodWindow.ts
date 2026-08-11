@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CalendarPeriod, PeriodDefinition } from '../types';
+import {
+  calculateCalendarAnchorScrollLeft,
+  saveCalendarPosition,
+  type CalendarPosition,
+  type CalendarPositionEdge,
+} from '../utils/calendarPosition';
 
 type Direction = 'left' | 'right';
 
@@ -12,7 +18,8 @@ interface UsePeriodWindowOptions {
   coveredLeftWidth: number;
   onPeriodsBuilt?: (periods: readonly CalendarPeriod[], direction: Direction) => void;
   onInitialPeriods?: (periods: readonly CalendarPeriod[]) => void;
-  initialLeadingPeriodCount: number;
+  initialEdge: CalendarPositionEdge;
+  positionStorageKey?: string;
   ready: boolean;
   onPeriodsReset?: (periods: readonly CalendarPeriod[]) => void;
 }
@@ -32,7 +39,8 @@ export function usePeriodWindow({
   coveredLeftWidth,
   onPeriodsBuilt,
   onInitialPeriods,
-  initialLeadingPeriodCount,
+  initialEdge,
+  positionStorageKey,
   ready,
   onPeriodsReset,
 }: UsePeriodWindowOptions) {
@@ -53,7 +61,7 @@ export function usePeriodWindow({
   const didNotifyInitialPeriods = useRef(false);
   const previousWindowSize = useRef(windowSize);
   const pendingReset = useRef(false);
-  const pendingTargetDate = useRef<Date | null>(null);
+  const pendingTarget = useRef<CalendarPosition>({ date: new Date(initialDate), edge: initialEdge });
 
   useLayoutEffect(() => {
     if (previousWindowSize.current === windowSize) return;
@@ -80,12 +88,15 @@ export function usePeriodWindow({
   }, [buildSize, periodDefinition, periodWidth, windowSize]);
 
   const observeEdge = useCallback((element: HTMLElement, direction: Direction) => {
+    const periodKey = element.dataset.periodKey;
+    if (!periodKey) throw new Error('Observed calendar edge is missing its period key');
+    saveCalendarPosition(positionStorageKey, periodKey, direction);
     if (element.classList.contains('resource-calendar__period--observed')
       && element.dataset.observedEdge === direction) return;
     element.classList.add('resource-calendar__period--observed');
     element.dataset.observedEdge = direction;
     enqueueEdge(direction);
-  }, [enqueueEdge]);
+  }, [enqueueEdge, positionStorageKey]);
 
   const goToDate = useCallback((date: Date) => {
     const resetPeriods = periodDefinition.buildInitial(date, windowSize);
@@ -95,9 +106,12 @@ export function usePeriodWindow({
     pendingSuppressedEdges.current.clear();
     didSetInitialPosition.current = false;
     pendingReset.current = true;
-    pendingTargetDate.current = new Date(date);
+    const targetPeriod = resetPeriods.find(period => date >= period.start && date < period.end);
+    if (!targetPeriod) throw new Error('Calendar target date is outside its rebuilt period window');
+    pendingTarget.current = { date: new Date(date), edge: 'left' };
+    saveCalendarPosition(positionStorageKey, targetPeriod.key, 'left');
     setPeriods(resetPeriods);
-  }, [periodDefinition, windowSize]);
+  }, [periodDefinition, positionStorageKey, windowSize]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -140,12 +154,16 @@ export function usePeriodWindow({
     if (!ready || !viewport || periods.length !== windowSize) return;
 
     if (!didSetInitialPosition.current) {
-      const targetDate = pendingTargetDate.current;
-      const targetIndex = targetDate
-        ? periods.findIndex(period => targetDate >= period.start && targetDate < period.end)
-        : -1;
-      viewport.scrollLeft = Math.max(0, (targetIndex >= 0 ? targetIndex : initialLeadingPeriodCount) * periodWidth);
-      pendingTargetDate.current = null;
+      const target = pendingTarget.current;
+      const targetIndex = periods.findIndex(period => target.date >= period.start && target.date < period.end);
+      if (targetIndex < 0) throw new Error('Calendar anchor date is outside its rendered period window');
+      viewport.scrollLeft = calculateCalendarAnchorScrollLeft({
+        periodIndex: targetIndex,
+        edge: target.edge,
+        periodWidth,
+        viewportWidth: viewport.clientWidth,
+        coveredLeftWidth,
+      });
       didSetInitialPosition.current = true;
       if (!didNotifyInitialPeriods.current) {
         didNotifyInitialPeriods.current = true;
@@ -168,7 +186,7 @@ export function usePeriodWindow({
     });
     pendingSuppressedEdges.current.clear();
     pendingBuiltEvents.current.splice(0).forEach(event => onPeriodsBuilt?.(event.periods, event.direction));
-  }, [initialLeadingPeriodCount, onInitialPeriods, onPeriodsBuilt, onPeriodsReset, periodWidth, periods, ready, windowSize]);
+  }, [coveredLeftWidth, onInitialPeriods, onPeriodsBuilt, onPeriodsReset, periodWidth, periods, ready, windowSize]);
 
   return { periods, viewportRef, goToDate };
 }

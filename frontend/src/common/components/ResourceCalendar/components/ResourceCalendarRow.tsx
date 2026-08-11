@@ -1,18 +1,29 @@
 import { memo, type MutableRefObject, type ReactNode } from 'react';
 import ResourceCalendarCell from './ResourceCalendarCell';
 import type { CalendarPointerDrag } from '../hooks/useCalendarItemDrag';
+import type { CalendarRangeResize } from '../hooks/useCalendarRangeResize';
+import type { CalendarRangeMove } from '../hooks/useCalendarRangeMove';
 import type {
   BuildItemContext,
+  BuildRangeItemContext,
   CalendarCellContext,
+  CalendarCellAction,
   CalendarPeriod,
   CellOverflowContext,
   OverflowItemActions,
+  ItemRange,
+  ItemCapabilityContext,
+  CalendarItemCapabilities,
+  ItemActivateContext,
 } from '../types';
+import { layoutRangeItems } from '../utils/rangeLayout';
 
 interface ResourceCalendarRowProps<TResource, TItemData> {
   resource: TResource;
   resourceIndex: number;
   resourceData: Record<string, readonly TItemData[]>;
+  rangeItems: readonly TItemData[];
+  getItemRange?: (item: TItemData) => ItemRange;
   periods: readonly CalendarPeriod[];
   gridColumns: string;
   rowHeight: number;
@@ -22,10 +33,20 @@ interface ResourceCalendarRowProps<TResource, TItemData> {
   selected: boolean;
   onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
+  buildRangeItem?: (context: BuildRangeItemContext<TResource, TItemData>) => ReactNode;
+  getItemCapabilities?: (context: ItemCapabilityContext<TResource, TItemData>) => CalendarItemCapabilities;
+  onItemActivate?: (context: ItemActivateContext<TResource, TItemData>) => void;
+  rangeResizeEnabled: boolean;
+  beginResize: (resize: CalendarRangeResize<TResource, TItemData>) => void;
+  resizeByKeyboard: (resize: Omit<CalendarRangeResize<TResource, TItemData>, 'pointerId' | 'startX' | 'sourceElement' | 'rangeElement' | 'nextIndex' | 'resizing'>, direction: -1 | 1) => void;
+  suppressResizeClickRef: MutableRefObject<boolean>;
+  rangeMoveEnabled: boolean;
+  beginRangeMove: (move: CalendarRangeMove<TResource, TItemData>) => void;
+  suppressRangeMoveClickRef: MutableRefObject<boolean>;
   buildOverflowItem?: (context: BuildItemContext<TResource, TItemData>, actions: OverflowItemActions) => ReactNode;
-  isItemDraggable?: (context: BuildItemContext<TResource, TItemData>) => boolean;
   onItemDropEnabled: boolean;
   onCellClick?: (context: CalendarCellContext<TResource, TItemData>) => void;
+  getCellActions?: (context: CalendarCellContext<TResource, TItemData>) => readonly CalendarCellAction[];
   maxVisibleItemsPerCell: number;
   renderOverflowSummary?: (context: CellOverflowContext<TResource, TItemData>) => ReactNode;
   beginDrag: (drag: CalendarPointerDrag<TResource, TItemData>) => void;
@@ -37,6 +58,8 @@ function ResourceCalendarRow<TResource, TItemData>({
   resource,
   resourceIndex,
   resourceData,
+  rangeItems,
+  getItemRange,
   periods,
   gridColumns,
   rowHeight,
@@ -46,10 +69,20 @@ function ResourceCalendarRow<TResource, TItemData>({
   selected,
   onResourceSelect,
   buildItem,
+  buildRangeItem,
+  getItemCapabilities,
+  onItemActivate,
+  rangeResizeEnabled,
+  beginResize,
+  resizeByKeyboard,
+  suppressResizeClickRef,
+  rangeMoveEnabled,
+  beginRangeMove,
+  suppressRangeMoveClickRef,
   buildOverflowItem,
-  isItemDraggable,
   onItemDropEnabled,
   onCellClick,
+  getCellActions,
   maxVisibleItemsPerCell,
   renderOverflowSummary,
   beginDrag,
@@ -57,9 +90,61 @@ function ResourceCalendarRow<TResource, TItemData>({
   today,
 }: ResourceCalendarRowProps<TResource, TItemData>) {
   const resourceId = getResourceId(resource);
+  const normalizedMaxVisibleItems = Math.max(0, Math.floor(maxVisibleItemsPerCell));
+  const selectResource = () => {
+    if (!selected) onResourceSelect?.(resource);
+  };
+  const positionedRanges = getItemRange && buildRangeItem
+    ? layoutRangeItems(rangeItems, periods, getItemRange)
+    : [];
+  const renderItem = (
+    period: CalendarPeriod,
+    item: TItemData,
+    onEnd?: () => void,
+    closeOverflow?: () => void,
+  ) => {
+    const itemContext = { resource, period, data: item };
+    const draggable = onItemDropEnabled && (getItemCapabilities?.(itemContext).draggable ?? true);
+    return (
+      <div
+        className={`resource-calendar__item${draggable ? ' draggable' : ''}`}
+        onPointerDown={draggable ? event => {
+          if (event.button !== 0) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          beginDrag({
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            x: event.clientX,
+            y: event.clientY,
+            width: bounds.width,
+            sourceElement: event.currentTarget,
+            context: itemContext,
+            dragging: false,
+            onEnd,
+          });
+        } : undefined}
+        onClickCapture={event => {
+          if (suppressClickRef.current) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          selectResource();
+        }}
+        onClick={() => onItemActivate?.(itemContext)}
+      >
+        {closeOverflow && buildOverflowItem
+          ? buildOverflowItem(itemContext, { close: closeOverflow })
+          : buildItem(itemContext)}
+      </div>
+    );
+  };
+
   return (
     <div
       className={`resource-calendar__row${selected ? ' resource-calendar__row--selected' : ''}`}
+      data-resource-id={resourceId}
       style={{ gridTemplateColumns: gridColumns, height: rowHeight }}
     >
       <div className="resource-calendar__resource">
@@ -68,7 +153,7 @@ function ResourceCalendarRow<TResource, TItemData>({
             type="button"
             className="resource-calendar__resource-select"
             aria-pressed={selected}
-            onClick={() => onResourceSelect(resource)}
+            onClick={selectResource}
           >
             {renderResource({ resource, index: resourceIndex })}
           </button>
@@ -76,40 +161,6 @@ function ResourceCalendarRow<TResource, TItemData>({
       </div>
       {periods.map(period => {
         const items = resourceData[period.key] ?? [];
-        const renderItem = (item: TItemData, onEnd?: () => void, closeOverflow?: () => void) => {
-          const itemContext = { resource, period, data: item };
-          const draggable = onItemDropEnabled && (isItemDraggable?.(itemContext) ?? true);
-          return (
-            <div
-              className={`resource-calendar__item${draggable ? ' resource-calendar__item--draggable' : ''}`}
-              onPointerDown={draggable ? event => {
-                if (event.button !== 0) return;
-                const bounds = event.currentTarget.getBoundingClientRect();
-                beginDrag({
-                  pointerId: event.pointerId,
-                  startX: event.clientX,
-                  startY: event.clientY,
-                  x: event.clientX,
-                  y: event.clientY,
-                  width: bounds.width,
-                  sourceElement: event.currentTarget,
-                  context: itemContext,
-                  dragging: false,
-                  onEnd,
-                });
-              } : undefined}
-              onClickCapture={event => {
-                if (!suppressClickRef.current) return;
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-            >
-              {closeOverflow && buildOverflowItem
-                ? buildOverflowItem(itemContext, { close: closeOverflow })
-                : buildItem(itemContext)}
-            </div>
-          );
-        };
         return (
           <ResourceCalendarCell
             key={period.key}
@@ -117,14 +168,74 @@ function ResourceCalendarRow<TResource, TItemData>({
             context={{ resource, resourceIndex, period, items }}
             resourceId={resourceId}
             getItemId={getItemId}
-            renderItem={renderItem}
-            renderOverflowItem={(item, onEnd, closeOverflow) => renderItem(item, onEnd, closeOverflow)}
+            renderOverflowItem={(item, onEnd, closeOverflow) => renderItem(period, item, onEnd, closeOverflow)}
             onCellClick={onCellClick}
-            maxVisibleItems={Math.max(0, Math.floor(maxVisibleItemsPerCell))}
+            getCellActions={getCellActions}
+            maxVisibleItems={normalizedMaxVisibleItems}
             renderOverflowSummary={renderOverflowSummary}
           />
         );
       })}
+      <div
+        className="resource-calendar__item-layer"
+        style={{ gridTemplateColumns: gridColumns }}
+      >
+        <div aria-hidden="true" />
+        {periods.map(period => {
+          const items = resourceData[period.key] ?? [];
+          const visibleItems = items.length > normalizedMaxVisibleItems ? [] : items;
+          return (
+            <div
+              key={period.key}
+              className="resource-calendar__item-slot"
+              data-item-period={period.key}
+              data-item-resource-id={resourceId}
+            >
+              {visibleItems.map(item => (
+                <div key={getItemId(item)}>{renderItem(period, item)}</div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      {positionedRanges.length > 0 && (
+        <div className="resource-calendar__range-layer" style={{ gridTemplateColumns: gridColumns }}>
+          {positionedRanges.map(({ item, range, startIndex, endIndex, lane }) => {
+            const capabilities = getItemCapabilities?.({ resource, data: item, range });
+            const movable = rangeMoveEnabled && (capabilities?.draggable ?? false)
+              && range.start === periods[startIndex].key && range.end === periods[endIndex].key;
+            return (
+            <div
+              key={getItemId(item)}
+              className={`resource-calendar__item resource-calendar__range-item${movable ? ' draggable' : ''}${capabilities?.resizable && rangeResizeEnabled ? ' resizable' : ''}`}
+              style={{ gridColumn: `${startIndex + 2} / ${endIndex + 3}`, gridRow: lane + 1 }}
+              onPointerDown={movable ? event => {
+                if (event.button !== 0) return;
+                beginRangeMove({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, sourceElement: event.currentTarget, resource, item, range, startIndex, endIndex, delta: 0, moving: false });
+              } : undefined}
+              onClickCapture={event => {
+                if (suppressResizeClickRef.current || suppressRangeMoveClickRef.current) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return;
+                }
+                selectResource();
+              }}
+              onClick={() => onItemActivate?.({ resource, data: item, range })}
+            >
+              {(() => {
+                const context = { resource, data: item, range, visibleStart: periods[startIndex], visibleEnd: periods[endIndex] };
+                const resizable = rangeResizeEnabled && (capabilities?.resizable ?? false);
+                return <>
+                  {resizable && range.start === periods[startIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--start" aria-label={`Resize start of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'start', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'start', startIndex, endIndex, nextIndex: startIndex, resizing: false }); }} />}
+                  {buildRangeItem?.(context)}
+                  {resizable && range.end === periods[endIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--end" aria-label={`Resize end of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'end', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'end', startIndex, endIndex, nextIndex: endIndex, resizing: false }); }} />}
+                </>;
+              })()}
+            </div>
+          );})}
+        </div>
+      )}
     </div>
   );
 }

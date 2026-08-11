@@ -122,15 +122,15 @@ An enumerated application field has one contract spread across the database cons
 Most finite-value fields in this repository use `TEXT` plus a named `CHECK` constraint. Rename a value in one atomic forward migration by temporarily removing the constraint, migrating stored rows, and recreating the complete constraint:
 
 ```sql
-ALTER TABLE time_entries DROP CONSTRAINT time_entries_task_check;
+ALTER TABLE time_entries DROP CONSTRAINT time_entries_category_check;
 
 UPDATE time_entries
-SET task = 'outreach'
-WHERE task = 'promotion';
+SET category = 'outreach'
+WHERE category = 'promotion';
 
 ALTER TABLE time_entries
-  ADD CONSTRAINT time_entries_task_check
-  CHECK (task IN ('program_delivery', 'planning_prep', 'outreach'));
+  ADD CONSTRAINT time_entries_category_check
+  CHECK (category IN ('program_delivery', 'planning_prep', 'outreach'));
 ```
 
 Do not support both spellings merely to avoid migrating data. After the migration, backend validation and frontend types should accept only the new value. Verify the actual constraint name in the defining migration or PostgreSQL catalog rather than guessing it.
@@ -213,6 +213,7 @@ Current example:
 | `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 | `leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
 | `timeEntryService.ts` | `time_entries` create, update, and delete operations |
+| `taskService.ts` | `tasks` create, detail/status update, and delete operations, including assignment snapshots |
 
 ### `transactionId`
 
@@ -323,16 +324,29 @@ erDiagram
         uuid staff_id FK
         uuid program_id FK nullable
         uuid cycle_id FK
-        string task
+        string category
+        uuid task_id FK nullable
         date work_date
         numeric hours
         string note
+    }
+    tasks {
+        string title
+        string category
+        string status
+        date start_date
+        date due_date
+        uuid staff_id FK
+        uuid program_id FK nullable
+        uuid cycle_id FK
     }
     base_table ||--o{ users : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ youth_profiles : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ addresses : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ contacts : "LIKE base_table INCLUDING ALL"
     base_table ||--o{ time_entries : "LIKE base_table INCLUDING ALL"
+    base_table ||--o{ tasks : "LIKE base_table INCLUDING ALL"
+    tasks ||--o{ time_entries : tracks
 ```
 
 > Auth security tables (`user_refresh_tokens`, `system_revoked_tokens`, `user_auth_codes`, `user_trusted_devices`, `user_credentials`) and RBAC tables (`user_roles`, `user_permissions`, `user_role_has_permissions`) are also defined in the init migration but are omitted from the diagram for brevity.

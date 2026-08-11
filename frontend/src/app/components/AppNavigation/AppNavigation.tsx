@@ -13,7 +13,8 @@ export default function AppNavigation() {
   } = navigation;
   const {
     canManageHomepage, canViewYouth, canViewOutreach, canViewCohorts,
-    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming, canViewTimesheets,
+    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming,
+    canViewTasks, canViewTimesheets, canViewStaff,
   } = permissions;
 
   return (
@@ -57,6 +58,19 @@ export default function AppNavigation() {
         <nav className="sidebar-nav">
           {isAuthenticated && (
             <>
+              {canViewStaff && (
+                <button
+                  ref={refs.staff}
+                  onClick={() => toggleMenu('staff')}
+                  aria-haspopup="menu"
+                  aria-expanded={menus.staff.isOpen}
+                  className={`sidebar-link${active.staff || menus.staff.isOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faClock} /></span>
+                  <span>Staff</span>
+                </button>
+              )}
+
               {canViewYouth && (
                 <button
                   ref={refs.youth}
@@ -80,16 +94,6 @@ export default function AppNavigation() {
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
                   <span>Programming</span>
-                </button>
-              )}
-
-              {canViewTimesheets && (
-                <button
-                  onClick={() => go('/staff/timesheets')}
-                  className={`sidebar-link${active.staff ? ' active' : ''}`}
-                >
-                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faClock} /></span>
-                  <span>Timesheets</span>
                 </button>
               )}
 
@@ -163,6 +167,13 @@ export default function AppNavigation() {
           >
             Leads
           </button>
+        </FloatingMenuPanel>
+      )}
+
+      {canViewStaff && menus.staff.position && (
+        <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
+          {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
+          {canViewTimesheets && <button role="menuitem" onClick={() => go('/staff/timesheets')} className={`settings-flyout-item${isActive('/staff/timesheets') ? ' active' : ''}`}>Timesheets</button>}
         </FloatingMenuPanel>
       )}
 

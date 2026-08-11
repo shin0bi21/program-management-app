@@ -36,8 +36,8 @@ describe('TimesheetOverviewCard', () => {
     const dialog = screen.getByRole('dialog', { name: 'Jordan Lee' });
     expect(within(dialog).getByText('Program Delivery')).toBeInTheDocument();
     expect(within(dialog).getByText('5.00')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('7.25')).toHaveLength(2);
-    expect(within(dialog).getByText('hrs')).toBeInTheDocument();
+    expect(within(dialog).getByText('7.25')).toBeInTheDocument();
+    expect(within(dialog).queryByText('hrs')).not.toBeInTheDocument();
     expect(within(dialog).getByText('Jul 29 – Aug 11, 2026')).toBeInTheDocument();
     expect(within(dialog).getByRole('img', { name: 'Breakdown of 7.25 hours' })).toBeInTheDocument();
     expect(within(dialog).getByText('Total').parentElement).toHaveTextContent('7.25');

@@ -95,6 +95,8 @@ After password validation, `loginUser` checks `cred.status !== 'active'` and thr
 
 Route access and mutations are permission-based. Roles group permissions in the database and may also shape authorized results or presentation—for example, administrators can manage staff and youth accounts while staff can manage youth accounts only. A role check must never replace the route permission check.
 
+Authorization has two layers: route permissions define the capability an actor may attempt, while domain policies under `src/policies/` define record scope. Services apply those policies inside authoritative reads and transaction-locked mutation lookups. Frontend restrictions mirror the policy for usability but are never the authorization boundary.
+
 ### Roles and their permissions
 
 | Role | Permissions |
@@ -127,8 +129,10 @@ Route access and mutations are permission-based. Roles group permissions in the 
 | `write:homepage` | Manage homepage images and programming content |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
-| `read:timesheets` | Read self-scoped time entries for staff or all entries for administrators |
-| `write:timesheets` | Create, update, and delete self-scoped time entries for staff or all entries for administrators |
+| `read:timesheets` | Read timesheet resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete time-entry row; administrators see all |
+| `write:timesheets` | Create, update, move, and delete policy-scoped time entries; staff are self-scoped and administrators may act for any staff member |
+| `read:tasks` | Read task resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete task row; administrators see all |
+| `write:tasks` | Create, update, change status, and delete policy-scoped tasks; staff are self-scoped and administrators may act for any staff member |
 
 ### How permissions flow into a token
 
@@ -163,7 +167,7 @@ interface BaseTokenPayload {
 
 // Access token — adds role, permissions array, and type discriminator
 interface AccessTokenPayload extends BaseTokenPayload {
-  role: UserRole;            // string — for display only, not used for authz
+  role: UserRole;            // used by domain policies for record scope, never as a route-capability substitute
   permissions: Permission[]; // e.g. ['read:youth_profiles', 'write:youth_profiles'] — used for all authz checks
   tokenType: 'access';
   iat: number;               // required on decoded tokens (always present after verify)

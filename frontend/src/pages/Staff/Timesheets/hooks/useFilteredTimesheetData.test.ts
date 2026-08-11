@@ -2,21 +2,33 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useFilteredTimesheetData } from './useFilteredTimesheetData';
 import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
-import type { TimesheetItem } from '../types';
+import type { TimesheetItem } from '../../../../common/features/timeEntries/types';
 
-const entry = (id: string, task: TimesheetItem['task']): TimesheetItem => ({
+const entry = (id: string, category: TimesheetItem['category']): TimesheetItem => ({
   id,
   programId: null,
   programName: null,
   cycleId: 'cycle-1',
   cycleName: 'Summer 2026',
-  task,
-  label: task,
+  category,
+  categoryLabel: category,
+  taskId: null,
+  taskTitle: null,
   hours: 1,
   note: id,
 });
 
 describe('useFilteredTimesheetData', () => {
+  it('returns the source object unchanged when no filters are active', () => {
+    const data: ResourcePeriodData<TimesheetItem> = {
+      first: { '2026-08-09': [entry('entry-1', 'meeting')] },
+    };
+
+    const { result } = renderHook(() => useFilteredTimesheetData(data, [], []));
+
+    expect(result.current).toBe(data);
+  });
+
   it('preserves filtered data references for unchanged resources', () => {
     const firstResource = { '2026-08-09': [entry('entry-1', 'meeting')] };
     const secondResource = { '2026-08-09': [entry('entry-2', 'meeting')] };
@@ -42,5 +54,22 @@ describe('useFilteredTimesheetData', () => {
     const { result } = renderHook(() => useFilteredTimesheetData(data, [], [], 'cycle-1'));
 
     expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-1' })]);
+  });
+
+  it('discards cached resource results when the filter contract changes', () => {
+    const periods = {
+      '2026-08-09': [entry('entry-1', 'meeting'), entry('entry-2', 'other')],
+    };
+    const data: ResourcePeriodData<TimesheetItem> = { first: periods };
+    const { result, rerender } = renderHook(
+      ({ categories }) => useFilteredTimesheetData(data, categories, []),
+      { initialProps: { categories: ['meeting'] } },
+    );
+
+    expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-1' })]);
+
+    rerender({ categories: ['other'] });
+
+    expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-2' })]);
   });
 });

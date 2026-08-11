@@ -90,26 +90,13 @@
   }
 }
 
-.timesheet-overview-card__modal-metric {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.timesheet-overview-card__modal-metric strong {
-  color: var(--color-ink);
-  font-size: 2.5rem;
-  line-height: 1;
-}
-
-.timesheet-overview-card__modal-metric span,
 .timesheet-overview-card__modal-subtitle,
 .timesheet-overview-card__no-breakdown {
   color: var(--color-muted);
 }
 
 .timesheet-overview-card__modal-subtitle {
-  margin: var(--space-1) 0 0;
+  margin: 0;
 }
 
 .timesheet-overview-card__segments {
@@ -172,6 +159,8 @@
   margin-top: var(--space-5);
   padding-top: var(--space-3);
   border-top: var(--border-line-soft);
+  font-size: 1.25rem;
+  line-height: 1.2;
 }
 
 .timesheet-overview-card__total span {
