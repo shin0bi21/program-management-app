@@ -6,6 +6,7 @@ import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
   createTimeEntry,
   deleteTimeEntry,
+  getTimeEntryOverview,
   getTimeEntries,
   getTimeEntryCohorts,
   updateTimeEntry,
@@ -37,6 +38,7 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
 
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({
   getTimeEntries: vi.fn(),
+  getTimeEntryOverview: vi.fn(),
   getTimeEntryCohorts: vi.fn(),
   createTimeEntry: vi.fn(),
   updateTimeEntry: vi.fn(),
@@ -72,6 +74,16 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+function dashboardOverview(totalHours: number, label = 'Meeting') {
+  const breakdown = totalHours ? [{ label, hours: totalHours }] : [];
+  return {
+    payPeriod: {
+      periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours, breakdown,
+    },
+    biweeklyAverage: { periodCount: 1, averageHours: totalHours, breakdown },
+  };
+}
+
 describe('Timesheets', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -95,6 +107,12 @@ describe('Timesheets', () => {
       resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {},
+    });
+    vi.mocked(getTimeEntryOverview).mockResolvedValue({
+      payPeriod: {
+        periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
+      },
+      biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
     });
     vi.mocked(getTimeEntryCohorts).mockResolvedValue([]);
     vi.mocked(getTasks).mockResolvedValue([]);
@@ -192,6 +210,9 @@ describe('Timesheets', () => {
         }] },
       },
     });
+    vi.mocked(getTimeEntryOverview).mockImplementation(async staffId => (
+      staffId === 'staff-2' ? dashboardOverview(4, 'Administration') : dashboardOverview(1)
+    ));
 
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
@@ -238,6 +259,7 @@ describe('Timesheets', () => {
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Entry from another cycle',
         }] } },
     });
+    vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
@@ -298,7 +320,7 @@ describe('Timesheets', () => {
     expect(getTimeEntries).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps pay-period hours global while averaging the selected cycle', async () => {
+  it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
@@ -316,6 +338,15 @@ describe('Timesheets', () => {
         }],
       } },
     });
+    vi.mocked(getTimeEntryOverview).mockResolvedValue({
+      payPeriod: {
+        periodStart: '2026-09-02', periodEnd: '2026-09-15', totalHours: 4,
+        breakdown: [{ label: 'Outreach', hours: 4 }],
+      },
+      biweeklyAverage: {
+        periodCount: 1, averageHours: 4, breakdown: [{ label: 'Outreach', hours: 4 }],
+      },
+    });
 
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
@@ -324,7 +355,8 @@ describe('Timesheets', () => {
     );
 
     const payPeriodCard = await screen.findByRole('heading', { name: 'Hours This Pay Period' });
-    expect(payPeriodCard.closest('article')).toHaveTextContent('2.00');
+    await waitFor(() => expect(payPeriodCard.closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
+    expect(payPeriodCard.closest('article')).toHaveTextContent('4.00');
     const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
     expect(averageCard.closest('article')).toHaveTextContent('4.00');
     expect(averageCard.closest('article')).toHaveTextContent('CycleFall 2026');
@@ -332,6 +364,11 @@ describe('Timesheets', () => {
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(screen.queryByText('Current pay-period work')).not.toBeInTheDocument();
     expect(screen.getByText('Fall cycle work')).toBeInTheDocument();
+    expect(getTimeEntryOverview).toHaveBeenCalledWith(
+      'staff-1',
+      'cycle-fall',
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it('always shows searchable list overview cards for staff', async () => {
@@ -344,6 +381,7 @@ describe('Timesheets', () => {
         categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, hours: 2, note: 'Youth workshop',
       }] } },
     });
+    vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
@@ -393,6 +431,9 @@ describe('Timesheets', () => {
         }] },
       },
     });
+    vi.mocked(getTimeEntryOverview).mockImplementation(async staffId => (
+      staffId === 'staff-2' ? dashboardOverview(7) : dashboardOverview(2, 'Program Delivery')
+    ));
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
@@ -415,10 +456,10 @@ describe('Timesheets', () => {
 
     await screen.findByText('Alex planning meeting');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
-    expect(periodCard).toHaveTextContent('2.00');
+    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
     expect(periodCard).not.toHaveTextContent('Zoe Wilson');
     fireEvent.click(screen.getByText('Alex planning meeting').closest('tr')!);
-    expect(periodCard).toHaveTextContent('7.00');
+    await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
     expect(periodCard).not.toHaveTextContent('Alex Morgan');
     expect(periodCard).not.toHaveTextContent('Zoe Wilson');
   });
