@@ -127,7 +127,7 @@ export default function GenerateSessionsModal({
     <Modal
       isOpen={open}
       onClose={onClose}
-      title={cohort ? `Add sessions for ${cohort.name}` : 'Add sessions'}
+      title={cohort ? `Add Sessions for ${cohort.name}` : 'Add Sessions'}
       status={submitStatus}
       statusMessage={statusMessage}
       successDelay={1400}

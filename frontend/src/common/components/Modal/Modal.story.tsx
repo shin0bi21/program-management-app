@@ -10,7 +10,7 @@ export function Interactive() {
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        title="Edit profile"
+        title="Edit Profile"
         footer={<button type="button" onClick={() => setIsOpen(false)}>Save</button>}
       >
         <label htmlFor="profile-name">Name</label>

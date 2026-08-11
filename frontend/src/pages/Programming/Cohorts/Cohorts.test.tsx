@@ -206,7 +206,7 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('button', { name: 'Add Program' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
-    expect(screen.getByRole('heading', { name: 'Add cohort' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Cohort' })).toBeInTheDocument();
   });
 
   it('defaults staff with one assigned program to that program and active cohorts', async () => {

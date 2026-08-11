@@ -56,7 +56,7 @@ describe('Programming settings', () => {
     expect(cycleRow).toHaveAttribute('tabindex', '0');
     await user.click(screen.getByRole('button', { name: 'Actions for Fall 2026' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit Cycle' }));
-    expect(screen.getByRole('heading', { name: 'Edit cycle' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Cycle' })).toBeInTheDocument();
   });
 
   it('creates programs from the settings page', async () => {
