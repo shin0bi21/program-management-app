@@ -6,6 +6,7 @@ import type { AccessTokenPayload } from '../types/auth';
 import type {
   SetTimeEntryInput,
   TimeEntryCategory,
+  TimeEntryOverviewQuery,
   TimeEntryQuery,
   UpdateTimeEntryPlacementInput,
 } from '../validation/timeEntrySchemas';
@@ -27,6 +28,16 @@ interface TimeEntryRow {
   hours: string;
   note: string;
 }
+
+const categoryLabels: Record<TimeEntryCategory, string> = {
+  program_delivery: 'Program Delivery',
+  planning_prep: 'Planning / Prep',
+  meeting: 'Meeting',
+  administration: 'Administration',
+  outreach: 'Outreach',
+  maintenance: 'Maintenance',
+  other: 'Other',
+};
 
 async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
   if (input.source === 'general') return {
@@ -89,6 +100,20 @@ async function assertProgramResource(programId: string | null, db: typeof sql = 
   if (!rows.length) throw new NotFoundError('Program not found');
 }
 
+function getTimeEntryResources(actor: AccessTokenPayload) {
+  return sql<Array<{ id: string; name: string; role: string; writable: boolean }>>`
+    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
+      (${timeEntryWriteScopePredicate(actor, sql`u.id`)}) AS writable
+    FROM users u
+    INNER JOIN user_roles role ON role.id = u.role_id
+    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
+    WHERE role.name IN ('admin', 'staff')
+      AND credentials.status = 'active'
+      AND ${timeEntryResourceReadScopePredicate(actor, sql`u.id`)}
+    ORDER BY u.first_name, u.last_name, u.id
+  `;
+}
+
 async function assertCycleResource(cycleId: string, programId: string | null, db: typeof sql = sql) {
   const rows = await db<{ id: string }[]>`
     SELECT cycle.id
@@ -136,17 +161,7 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
   const programs = await sql<Array<{ id: string; name: string }>>`
     SELECT id, name FROM programs ORDER BY name, id
   `;
-  const resources = await sql<Array<{ id: string; name: string; role: string; writable: boolean }>>`
-    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
-      (${timeEntryWriteScopePredicate(actor, sql`u.id`)}) AS writable
-    FROM users u
-    INNER JOIN user_roles role ON role.id = u.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
-    WHERE role.name IN ('admin', 'staff')
-      AND credentials.status = 'active'
-      AND ${timeEntryResourceReadScopePredicate(actor, sql`u.id`)}
-    ORDER BY u.first_name, u.last_name, u.id
-  `;
+  const resources = await getTimeEntryResources(actor);
   const rows = await sql<TimeEntryRow[]>`
     SELECT
       entry.id,
@@ -176,15 +191,6 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
     ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
 
-  const categoryLabels: Record<TimeEntryCategory, string> = {
-    program_delivery: 'Program Delivery',
-    planning_prep: 'Planning / Prep',
-    meeting: 'Meeting',
-    administration: 'Administration',
-    outreach: 'Outreach',
-    maintenance: 'Maintenance',
-    other: 'Other',
-  };
   const data: Record<string, Record<string, Array<{ id: string; programId: string | null; programName: string | null; cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string; category: string; categoryLabel: string; taskId: string | null; taskTitle: string | null; hours: number; note: string }>>> = {};
   rows.forEach(row => {
     data[row.staffId] ??= {};
@@ -207,6 +213,78 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
   });
 
   return { resources, programs, data };
+}
+
+export async function getTimeEntryOverview(actor: AccessTokenPayload, query: TimeEntryOverviewQuery) {
+  const readableStaff = await getTimeEntryResources(actor);
+  if (!readableStaff.some(resource => resource.id === query.staffId)) {
+    throw new NotFoundError('Timesheet overview not found');
+  }
+
+  const rows = await sql<Array<{
+    periodStart: string;
+    periodEnd: string;
+    periodCount: number;
+    category: TimeEntryCategory | null;
+    periodHours: string;
+    cycleHours: string;
+  }>>`
+    WITH selected_cycle AS (
+      SELECT id, starts_on, ends_on,
+        GREATEST(
+          starts_on,
+          LEAST(ends_on, (NOW() AT TIME ZONE 'America/Toronto')::date)
+        ) AS effective_date
+      FROM program_cycles
+      WHERE id = ${query.cycleId}
+    ), current_period AS (
+      SELECT id,
+        starts_on + (((effective_date - starts_on) / 14) * 14) AS period_start,
+        LEAST(
+          ends_on,
+          starts_on + (((effective_date - starts_on) / 14) * 14) + 13
+        ) AS period_end,
+        ((effective_date - starts_on) / 14) + 1 AS period_count
+      FROM selected_cycle
+    )
+    SELECT
+      period.period_start::text AS period_start,
+      period.period_end::text AS period_end,
+      period.period_count,
+      entry.category,
+      COALESCE(SUM(entry.hours) FILTER (
+        WHERE entry.work_date BETWEEN period.period_start AND period.period_end
+      ), 0)::text AS period_hours,
+      COALESCE(SUM(entry.hours), 0)::text AS cycle_hours
+    FROM current_period period
+    LEFT JOIN time_entries entry
+      ON entry.staff_id = ${query.staffId}
+      AND entry.cycle_id = period.id
+    GROUP BY period.period_start, period.period_end, period.period_count, entry.category
+    ORDER BY COALESCE(SUM(entry.hours), 0) DESC, entry.category
+  `;
+  if (!rows.length) throw new NotFoundError('Timesheet overview not found');
+
+  const payPeriodBreakdown = rows.flatMap(row => row.category && Number(row.periodHours) > 0
+    ? [{ label: categoryLabels[row.category], hours: Number(row.periodHours) }]
+    : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
+  const periodCount = Number(rows[0].periodCount);
+  const biweeklyBreakdown = rows.flatMap(row => row.category && Number(row.cycleHours) > 0
+    ? [{ label: categoryLabels[row.category], hours: Number(row.cycleHours) / periodCount }]
+    : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
+  return {
+    payPeriod: {
+      periodStart: rows[0].periodStart,
+      periodEnd: rows[0].periodEnd,
+      totalHours: payPeriodBreakdown.reduce((total, item) => total + item.hours, 0),
+      breakdown: payPeriodBreakdown,
+    },
+    biweeklyAverage: {
+      periodCount,
+      averageHours: biweeklyBreakdown.reduce((total, item) => total + item.hours, 0),
+      breakdown: biweeklyBreakdown,
+    },
+  };
 }
 
 export async function createTimeEntry(input: SetTimeEntryInput, actor: AccessTokenPayload) {
