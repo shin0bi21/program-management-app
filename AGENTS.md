@@ -19,6 +19,7 @@
 - Read `docs/architecture/frontend.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `docs/architecture/backend.md` and the relevant architecture document before changing backend architecture, authentication, errors, or database behavior. Read the relevant file under `backend/docs/` for integrations.
 - Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
+- Use `.agents/skills/maintain-ci/` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations. That skill routes the canonical CI documentation.
 
 ## Stable invariants
 
@@ -38,12 +39,12 @@
 - Required GitHub checks are the full merge gate for pull requests into `develop`; do not run the full local suite for every concern by default. Run it locally only when explicitly requested, when CI is unavailable, or when the concern map identifies cross-cutting risk that focused suites cannot cover.
 - In this repo, when the user refers to the "full test suite," default to `scripts/tests/test-app.sh`.
 - Script layout matters here:
-  - `scripts/tests/backend/` contains Docker-backed backend test runners, and `test-apis.sh` composes the individual backend suites.
-  - `scripts/tests/frontend/` contains frontend Vitest runners, and `test-ui.sh` composes the page/path-specific frontend suites.
+  - `scripts/tests/backend/` contains Docker-backed focused runners, while `test-apis.sh` launches the complete backend suite once.
+  - `scripts/tests/frontend/` contains focused Vitest runners, while `test-ui.sh` launches the complete frontend Vitest suite once.
   - `scripts/tests/test-app.sh` is the cross-stack runner and executes deploy checks, backend tests, then frontend tests.
 - Be precise about test coverage:
   - `scripts/tests/backend/test-apis.sh` runs backend API tests only.
-  - `scripts/tests/frontend/test-ui.sh` runs frontend UI tests only.
+  - `scripts/tests/frontend/test-ui.sh` runs all frontend Vitest tests across Node and jsdom environments.
   - Some frontend path runners may skip cleanly when a page folder has no tests yet.
 - Prefer the repo's feature-folder pattern for non-trivial frontend units: colocate UI, hook, schema/types, and tests inside the page component folder when the code is page-specific.
 - For shell-script changes, run `bash -n` and `shellcheck` when available.
