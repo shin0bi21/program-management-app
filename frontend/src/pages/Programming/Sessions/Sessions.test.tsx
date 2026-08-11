@@ -387,7 +387,7 @@ describe('Sessions', () => {
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
-    const addSessionsHeading = screen.getByRole('heading', { name: 'Add sessions' });
+    const addSessionsHeading = screen.getByRole('heading', { name: 'Add Sessions' });
     expect(addSessionsHeading).toBeInTheDocument();
     expect(within(addSessionsHeading.closest('.modal-container') as HTMLElement).getByRole('button', { name: 'Cohort' })).toHaveTextContent('Soft Skills · Summer 2026');
     expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();

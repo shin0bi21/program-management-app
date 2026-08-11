@@ -504,7 +504,7 @@ describe('Timesheets', () => {
     fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
 
-    expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Time Entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
     expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Select a program');
     expect(screen.getByRole('button', { name: 'Cycle' })).toHaveTextContent('Summer 2026');
@@ -542,7 +542,7 @@ describe('Timesheets', () => {
     expect(screen.getByRole('menuitem', { name: 'Session Time' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Task Time' }));
-    expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Time Entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Task' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Program' })).not.toBeInTheDocument();
   });
@@ -780,7 +780,7 @@ describe('Timesheets', () => {
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
     await waitFor(() => expect(createTimeEntry).toHaveBeenCalledOnce());
-    const dialog = screen.getByRole('dialog', { name: 'Add time entry' });
+    const dialog = screen.getByRole('dialog', { name: 'Add Time Entry' });
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
@@ -795,7 +795,7 @@ describe('Timesheets', () => {
       taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Pending work',
     });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add time entry' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Time Entry' })).not.toBeInTheDocument());
   });
 
   it('updates an existing entry without triggering the cell add flow', async () => {
@@ -828,7 +828,7 @@ describe('Timesheets', () => {
 
     fireEvent.click(entry);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    expect(screen.getByRole('heading', { name: 'Edit time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Time Entry' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Updated workshop' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
@@ -873,7 +873,7 @@ describe('Timesheets', () => {
     fireEvent.pointerDown(editAction);
     fireEvent.click(editAction);
 
-    expect(screen.getByRole('heading', { name: 'Edit time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Time Entry' })).toBeInTheDocument();
     expect(document.querySelector('.resource-calendar__overflow-panel')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(1);
     expect(screen.getByLabelText('Note')).toHaveValue('Workshop 1');

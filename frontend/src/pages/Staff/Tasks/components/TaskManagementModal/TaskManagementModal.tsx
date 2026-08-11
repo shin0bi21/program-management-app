@@ -104,7 +104,7 @@ export default function TaskManagementModal({ isOpen, resources, programs, cycle
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={task ? 'Edit task' : 'Add task'}
+      title={task ? 'Edit Task' : 'Add Task'}
       maxWidth="620px"
       status={error ? 'error' : submitting ? 'submitting' : 'idle'}
       statusMessage={statusMessage}

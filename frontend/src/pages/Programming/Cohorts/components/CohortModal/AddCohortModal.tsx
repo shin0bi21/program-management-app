@@ -63,7 +63,7 @@ export default function AddCohortModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add cohort"
+      title="Add Cohort"
       status={status}
       statusMessage={statusMessage}
       successDelay={1400}

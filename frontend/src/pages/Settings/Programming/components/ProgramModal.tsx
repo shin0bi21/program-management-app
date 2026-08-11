@@ -56,7 +56,7 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={program ? 'Edit program' : 'Add program'}
+      title={program ? 'Edit Program' : 'Add Program'}
       status={status}
       statusMessage={statusMessage}
       successDelay={1400}

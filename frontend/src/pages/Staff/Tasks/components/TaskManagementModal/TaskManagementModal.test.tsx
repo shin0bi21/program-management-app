@@ -39,7 +39,7 @@ describe('TaskManagementModal', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole('dialog', { name: 'Add task' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Add Task' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Existing tasks' })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Task title *'), { target: { value: 'Create marketing poster' } });

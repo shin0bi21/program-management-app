@@ -48,7 +48,7 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
         footer={(
           <>
             <Button variant="secondary" onClick={onClose}>Close</Button>
-            <Button onClick={() => setAddingYouth(true)}>Add youth</Button>
+            <Button onClick={() => setAddingYouth(true)}>Add Youth</Button>
           </>
         )}
       >

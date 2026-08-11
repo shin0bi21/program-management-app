@@ -60,7 +60,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
     <Modal
       isOpen={session !== null}
       onClose={onClose}
-      title="Edit session"
+      title="Edit Session"
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}

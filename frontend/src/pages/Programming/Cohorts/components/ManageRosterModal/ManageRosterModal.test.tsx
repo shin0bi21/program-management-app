@@ -41,10 +41,10 @@ describe('ManageRosterModal', () => {
     expect(onSuccess).toHaveBeenCalledOnce();
   });
 
-  it('opens the existing enrollment flow from Add youth', async () => {
+  it('opens the existing enrollment flow from Add Youth', async () => {
     const user = userEvent.setup();
     render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Add youth' }));
+    await user.click(screen.getByRole('button', { name: 'Add Youth' }));
     expect(screen.getByRole('heading', { name: 'Soft Skills - Summer 2026 Enrollment' })).toBeInTheDocument();
   });
 });

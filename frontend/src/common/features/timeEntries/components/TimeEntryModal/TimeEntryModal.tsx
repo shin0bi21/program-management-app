@@ -112,7 +112,7 @@ export default function TimeEntryModal({
     finally { setSubmitting(false); }
   };
 
-  return <Modal isOpen={isOpen} onClose={onClose} title={initialItem ? 'Edit time entry' : 'Add time entry'} maxWidth="620px"
+  return <Modal isOpen={isOpen} onClose={onClose} title={initialItem ? 'Edit Time Entry' : 'Add Time Entry'} maxWidth="620px"
     status={status} statusMessage={statusMessage} footer={<>
       <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
       <Button type="submit" form="time-entry-form" disabled={submitting || !resources.length || (entrySource === 'task' ? !taskId : entrySource === 'session' ? !sessionId : !cycleId)}>{initialItem ? 'Save changes' : 'Add entry'}</Button>
