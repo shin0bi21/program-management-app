@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
+import type { ListSort } from '../../../../common/types/pagination';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import {
   TASK_CATEGORY_OPTIONS,
@@ -7,6 +8,7 @@ import {
   type TaskOptions,
   type TaskStatus,
 } from '../../../../common/features/tasks/types';
+import type { TaskSortKey } from './useTaskViewData';
 
 export type TasksView = 'calendar' | 'list';
 
@@ -24,6 +26,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   const [cycleIds, setCycleIds] = useState<string[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [statusFilters, setStatusFilters] = useState<TaskStatus[]>([]);
+  const [sorting, setSorting] = useState<ListSort<TaskSortKey>>({ key: 'startDate', direction: 'asc' });
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [ready, setReady] = useState(false);
   const { preference, loading, error, save } = useUserPreference('task-filters');
@@ -35,6 +38,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     setCycleIds(preference?.cycleIds ?? []);
     setCategories(preference?.categories ?? []);
     setStatusFilters(preference?.statuses ?? []);
+    setSorting(preference?.sorting ?? { key: 'startDate', direction: 'asc' });
     setColumnWidths(preference?.columnWidths ?? {});
     setReady(true);
   }, [loading, optionsLoading, preference, ready]);
@@ -52,9 +56,10 @@ export default function useTaskControls(options: TaskOptions | undefined, option
       cycleIds: nextCycles,
       categories: nextCategories,
       statuses: nextStatuses,
+      sorting,
       columnWidths: widths,
     });
-  }, [columnWidths, save, view]);
+  }, [columnWidths, save, sorting, view]);
 
   const availableCycles = useMemo(() => (options?.cycles ?? []).filter(
     cycle => !programIds.length || programIds.includes(cycle.programId),
@@ -104,9 +109,15 @@ export default function useTaskControls(options: TaskOptions | undefined, option
       cycleIds,
       categories,
       statuses: statusFilters,
+      sorting,
       columnWidths,
     });
-  }, [categories, columnWidths, cycleIds, programIds, save, statusFilters]);
+  }, [categories, columnWidths, cycleIds, programIds, save, sorting, statusFilters]);
+
+  const changeSorting = useCallback((next: ListSort<TaskSortKey>) => {
+    setSorting(next);
+    void save({ view, programIds, cycleIds, categories, statuses: statusFilters, sorting: next, columnWidths });
+  }, [categories, columnWidths, cycleIds, programIds, save, statusFilters, view]);
 
   const changeColumnWidths = useCallback((next: Record<string, number>) => {
     setColumnWidths(next);
@@ -121,6 +132,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     cycleIds,
     categories,
     statusFilters,
+    sorting,
     columnWidths,
     ready,
     error,
@@ -128,6 +140,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     applyFilter,
     clearFilters,
     changeView,
+    changeSorting,
     changeColumnWidths,
   };
 }

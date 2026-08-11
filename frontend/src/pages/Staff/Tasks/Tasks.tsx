@@ -18,7 +18,8 @@ import TaskItem from './components/TaskItem/TaskItem';
 import TaskHoursLoggedCard from './components/TaskHoursLoggedCard/TaskHoursLoggedCard';
 import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
-import useTaskViewData from './hooks/useTaskViewData';
+import useTaskViewData, { type TaskSortKey } from './hooks/useTaskViewData';
+import type { ListSort } from '../../../common/types/pagination';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
@@ -73,7 +74,7 @@ export default function Tasks() {
     statuses: controls.statusFilters,
   }), [controls.categories, controls.cycleIds, controls.programIds, controls.search, controls.statusFilters, controls.view]);
   const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
-    tasksQuery.data ?? [], resources, taskFilters, selectedResourceId,
+    tasksQuery.data ?? [], resources, taskFilters, selectedResourceId, controls.sorting,
   );
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
   const selectedTask = dashboardTasks.find(task => task.id === selectedTaskId) ?? null;
@@ -97,16 +98,17 @@ export default function Tasks() {
     mutations.addTask(task);
   }, [modalTarget, mutations]);
   const columns = useMemo<TableColumn<Task>[]>(() => [
-    { key: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
-    { key: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
-    { key: 'title', header: 'Task', render: task => task.title },
-    { key: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
-    { key: 'program', header: 'Program', width: 160, render: task => task.programName ?? 'General' },
-    { key: 'cycle', header: 'Cycle', width: 160, render: task => task.cycleName },
-    { key: 'startDate', header: 'Start', width: 120, render: task => task.startDate },
-    { key: 'dueDate', header: 'Due', width: 120, render: task => task.dueDate },
+    { key: 'firstName', sortKey: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
+    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
+    { key: 'title', sortKey: 'title', header: 'Task', render: task => task.title },
+    { key: 'category', sortKey: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
+    { key: 'program', sortKey: 'program', header: 'Program', width: 160, render: task => task.programName ?? 'General' },
+    { key: 'cycle', sortKey: 'cycle', header: 'Cycle', width: 160, render: task => task.cycleName },
+    { key: 'startDate', sortKey: 'startDate', header: 'Start', width: 120, render: task => task.startDate },
+    { key: 'dueDate', sortKey: 'dueDate', header: 'Due', width: 120, render: task => task.dueDate },
     {
       key: 'status',
+      sortKey: 'status',
       header: 'Status',
       width: 150,
       render: task => <TaskStatusCell task={task} canWrite={canWrite} onChange={(item, status) => void mutations.setStatus(item, status)} />,
@@ -180,6 +182,8 @@ export default function Tasks() {
           keyExtractor={task => task.id}
           selectedKey={selectedTaskId}
           onRowSelect={selectTask}
+          sorting={controls.sorting}
+          onSortingChange={next => controls.changeSorting(next as ListSort<TaskSortKey>)}
           columnWidths={controls.columnWidths}
           onColumnWidthsChange={controls.changeColumnWidths}
         /> } : { calendar: tasksQuery.isLoading ? <p>Loading tasks…</p> : !tasksQuery.error ? <ResourceCalendar

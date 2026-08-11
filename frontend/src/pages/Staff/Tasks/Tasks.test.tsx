@@ -13,6 +13,7 @@ type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
   view: 'list' as 'list' | 'calendar',
   props: null as TaskCalendarProps | null,
+  savePreference: vi.fn(),
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
@@ -21,7 +22,7 @@ vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
 }));
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ createTimeEntry: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: vi.fn() }),
+  default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: calendarTestState.savePreference }),
 }));
 vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   default: (props: TaskCalendarProps) => {
@@ -47,6 +48,7 @@ describe('Tasks', () => {
     vi.clearAllMocks();
     calendarTestState.view = 'list';
     calendarTestState.props = null;
+    calendarTestState.savePreference.mockReset();
     vi.mocked(getTasks).mockResolvedValue([task]);
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
@@ -68,8 +70,9 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
+    const timeEntryForm = document.getElementById('time-entry-form')!;
+    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
+    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
@@ -131,6 +134,13 @@ describe('Tasks', () => {
     expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Smith' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
+    await waitFor(() => expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({
+      sorting: { key: 'firstName', direction: 'asc' },
+    })));
+    const dataRows = screen.getAllByRole('row').slice(1);
+    expect(dataRows[0]).toHaveTextContent('Alex');
+    expect(dataRows[1]).toHaveTextContent('Zoe');
     expect(screen.getByRole('button', { name: 'Actions for Prepare workshop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Actions for Complete administration' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Status for Complete administration' })).not.toBeInTheDocument();
