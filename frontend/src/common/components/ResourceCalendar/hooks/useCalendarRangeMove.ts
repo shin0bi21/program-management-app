@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type { CalendarPeriod, ItemRange, RangeMoveContext } from '../types';
 import { createCalendarPreviewHost } from '../utils/rangePreview';
 import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
 import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
+import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarRangeMove<TResource, TItemData> {
   pointerId: number;
@@ -15,6 +16,7 @@ export interface CalendarRangeMove<TResource, TItemData> {
   startIndex: number;
   endIndex: number;
   delta: number;
+  nextRange?: ItemRange;
   moving: boolean;
   targetResourceId?: string;
   x?: number;
@@ -35,6 +37,7 @@ export function useCalendarRangeMove<TResource, TItemData>({
   dragEdgeSize,
   dragScrollSpeed,
   coveredLeftWidth,
+  interactionCoordinator,
 }: {
   viewportRef: RefObject<HTMLElement | null>;
   periods: readonly CalendarPeriod[];
@@ -46,9 +49,9 @@ export function useCalendarRangeMove<TResource, TItemData>({
   dragEdgeSize: number;
   dragScrollSpeed: number;
   coveredLeftWidth: number;
+  interactionCoordinator: CalendarInteractionCoordinator;
 }) {
-  const [active, setActive] = useState<CalendarRangeMove<TResource, TItemData> | null>(null);
-  const activeRef = useRef(active);
+  const activeRef = useRef<CalendarRangeMove<TResource, TItemData> | null>(null);
   const suppressClickRef = useRef(false);
   const periodsRef = useRef(periods);
   const resourcesRef = useRef(resources);
@@ -60,7 +63,6 @@ export function useCalendarRangeMove<TResource, TItemData>({
   onRangeMoveRef.current = onRangeMove;
 
   useEffect(() => {
-    if (!active) return;
     let animationFrame: number | undefined;
     const locateResource = (x: number, y: number) => {
       const row = document.elementFromPoint(x, y)?.closest<HTMLElement>('.resource-calendar__row');
@@ -70,7 +72,20 @@ export function useCalendarRangeMove<TResource, TItemData>({
     const calculateDelta = (current: CalendarRangeMove<TResource, TItemData>, viewport: HTMLElement, x: number) => {
       const requested = Math.round((x - current.startX
         + viewport.scrollLeft - (current.startScrollLeft ?? viewport.scrollLeft)) / periodWidth);
-      return Math.max(-current.startIndex, Math.min(periodsRef.current.length - 1 - current.endIndex, requested));
+      const currentStartIndex = periodsRef.current.findIndex(period => period.key === current.range.start);
+      const currentEndIndex = periodsRef.current.findIndex(period => period.key === current.range.end);
+      if (currentStartIndex < 0 || currentEndIndex < 0) return { delta: current.delta, nextRange: current.nextRange };
+      const delta = Math.max(-currentStartIndex, Math.min(
+        periodsRef.current.length - 1 - currentEndIndex,
+        requested,
+      ));
+      return {
+        delta,
+        nextRange: {
+          start: periodsRef.current[currentStartIndex + delta].key,
+          end: periodsRef.current[currentEndIndex + delta].key,
+        },
+      };
     };
     const tick = () => {
       const current = activeRef.current;
@@ -96,7 +111,7 @@ export function useCalendarRangeMove<TResource, TItemData>({
           viewport.scrollTop += vertical;
           activeRef.current = {
             ...current,
-            delta: calculateDelta(current, viewport, current.x),
+            ...calculateDelta(current, viewport, current.x),
             targetResourceId: locateResource(current.x, current.y),
           };
         }
@@ -125,22 +140,22 @@ export function useCalendarRangeMove<TResource, TItemData>({
         Object.assign(previewElement.style, { position: 'absolute', left: `${bounds.left - preview.bounds.left}px`, top: `${bounds.top - preview.bounds.top}px`, width: `${bounds.width}px`, height: `${bounds.height}px`, transform: '' });
         previewHost.appendChild(previewElement);
       }
-      const delta = calculateDelta(current, viewport, event.clientX);
+      const rangeUpdate = calculateDelta(current, viewport, event.clientX);
       const targetResourceId = locateResource(event.clientX, event.clientY);
-      const next = { ...current, moving, delta, previewElement, previewHost, targetResourceId, x: event.clientX, y: event.clientY };
+      const next = { ...current, moving, ...rangeUpdate, previewElement, previewHost, targetResourceId, x: event.clientX, y: event.clientY };
       activeRef.current = next;
       if (previewElement) previewElement.style.transform = `translate(${event.clientX - current.startX}px, ${event.clientY - current.startY}px)`;
     };
     const finish = (event: PointerEvent) => {
       const current = activeRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
+      interactionCoordinator.release('range-move', event.pointerId);
       activeRef.current = null;
-      setActive(null);
       current.previewHost?.remove();
       releaseCalendarPointer(current.sourceElement, event.pointerId);
       if (!current.moving || event.type !== 'pointerup') return;
       const destinationResource = resourcesRef.current.find(resource => getResourceId(resource) === current.targetResourceId);
-      if (!destinationResource) return;
+      if (!destinationResource || !current.nextRange) return;
       if (current.delta === 0 && getResourceId(destinationResource) === getResourceId(current.resource)) return;
       suppressClickRef.current = true;
       window.setTimeout(() => { suppressClickRef.current = false; }, 0);
@@ -149,34 +164,48 @@ export function useCalendarRangeMove<TResource, TItemData>({
         destinationResource,
         item: current.item,
         originalRange: current.range,
-        nextRange: {
-          start: periodsRef.current[current.startIndex + current.delta].key,
-          end: periodsRef.current[current.endIndex + current.delta].key,
-        },
+        nextRange: current.nextRange,
       };
       if (canRangeMoveRef.current && !canRangeMoveRef.current(context)) return;
       void onRangeMoveRef.current?.(context);
     };
+    const lostCapture = (event: PointerEvent) => {
+      const pointerId = event.pointerId;
+      queueMicrotask(() => {
+        const current = activeRef.current;
+        if (!current || current.pointerId !== pointerId) return;
+        interactionCoordinator.release('range-move', pointerId);
+        activeRef.current = null;
+        current.previewHost?.remove();
+      });
+    };
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
-    window.addEventListener('lostpointercapture', finish);
+    window.addEventListener('lostpointercapture', lostCapture);
     return () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
-      window.removeEventListener('lostpointercapture', finish);
+      window.removeEventListener('lostpointercapture', lostCapture);
       if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
-      activeRef.current?.previewHost?.remove();
+      const current = activeRef.current;
+      if (current) interactionCoordinator.release('range-move', current.pointerId);
+      current?.previewHost?.remove();
+      activeRef.current = null;
     };
-  }, [active, coveredLeftWidth, dragEdgeSize, dragScrollSpeed, getResourceId, periodWidth, viewportRef]);
+  }, [coveredLeftWidth, dragEdgeSize, dragScrollSpeed, getResourceId, interactionCoordinator, periodWidth, viewportRef]);
 
   return {
     beginRangeMove: useCallback((value: CalendarRangeMove<TResource, TItemData>) => {
-      const next = { ...value, startScrollLeft: viewportRef.current?.scrollLeft ?? 0 };
+      if (!interactionCoordinator.claim('range-move', value.pointerId)) return;
+      const next = {
+        ...value,
+        startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
+        nextRange: value.range,
+      };
       activeRef.current = next;
-      setActive(next);
-    }, [viewportRef]),
+    }, [interactionCoordinator, viewportRef]),
     suppressRangeMoveClickRef: suppressClickRef,
   };
 }

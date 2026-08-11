@@ -63,6 +63,7 @@ Paths below are relative to `/api`. Protected endpoints require the permissions 
 |---|---|---|
 | `GET` | `/` | List time-entry resources and entries for a date range |
 | `GET` | `/cohorts` | List cohorts for a selected program |
+| `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
 | `POST` | `/` | Create a time entry |
 | `PUT` | `/:id` | Update a time entry |
 | `DELETE` | `/:id` | Delete a time entry |

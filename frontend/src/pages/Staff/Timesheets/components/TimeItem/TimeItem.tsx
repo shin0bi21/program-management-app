@@ -12,14 +12,14 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
     id={item.id}
     ariaLabel={`${item.taskTitle ?? item.categoryLabel}, ${item.hours} hours`}
     leading={`${item.hours}h`}
-    summary={<>{item.taskTitle ?? item.categoryLabel} · {item.programName ?? 'General'}</>}
+    summary={<>{item.taskTitle ?? item.categoryLabel}{item.programName ? ` · ${item.programName}` : ''}</>}
     detailTitle={item.taskTitle ?? item.categoryLabel}
     details={[
+      ...(item.programName ? [{ label: 'Program', value: item.programName }] : []),
+      ...(item.cycleName ? [{ label: 'Cycle', value: item.cycleName }] : []),
       { label: 'Category', value: item.categoryLabel },
       { label: 'Hours', value: item.hours },
-      { label: 'Program', value: item.programName ?? 'General' },
-      ...(item.cycleName ? [{ label: 'Cycle', value: item.cycleName }] : []),
-      { label: 'Note', value: item.note, multiline: true },
+      { label: 'Notes', value: item.note, multiline: true },
     ]}
     onEdit={onEdit}
     onDelete={onDelete}

@@ -152,7 +152,7 @@ export function RangeLaneSizing() {
   ];
 
   return <div style={{ height: '300px', padding: '16px' }}>
-    <ResourceCalendar
+    <ResourceCalendar<StoryResource, StoryItem>
       resources={[firstResource]}
       data={{}}
       rangeData={{ [firstResource.id]: tasks }}
@@ -164,6 +164,23 @@ export function RangeLaneSizing() {
       renderResource={({ resource }) => <span>{resource.name}</span>}
       buildItem={() => null}
       buildRangeItem={({ data: item }) => <button type="button">{item.label}</button>}
+    />
+  </div>;
+}
+
+export function PersistedPosition() {
+  return <div style={{ height: '420px', padding: '16px' }}>
+    <ResourceCalendar<StoryResource, StoryItem>
+      resources={resources.slice(0, 3)}
+      data={{}}
+      initialDate={new Date(2026, 7, 8)}
+      positionStorageKey="resource-calendar:playwright-position"
+      ariaLabel="Persisted-position resource calendar"
+      resourceHeader="Staff member"
+      getResourceId={resource => resource.id}
+      getItemId={item => item.id}
+      renderResource={({ resource }) => <span>{resource.name}</span>}
+      buildItem={() => null}
     />
   </div>;
 }

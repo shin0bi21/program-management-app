@@ -4,6 +4,9 @@ import ResourceCalendar from './ResourceCalendar';
 import { dayKey } from './periods';
 import { calculateCalendarAnchorScrollLeft } from './utils/calendarPosition';
 
+const PERIOD_WIDTH = 145;
+const RESOURCE_WIDTH = 200;
+
 class MockIntersectionObserver {
   static instances: MockIntersectionObserver[] = [];
   readonly observed = new Set<Element>();
@@ -38,7 +41,7 @@ describe('ResourceCalendar', () => {
   });
 
   it('sizes the initial day window in full weeks with one group on each side', () => {
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(190 + 10 * 152);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(RESOURCE_WIDTH + 10 * PERIOD_WIDTH);
     const onInitialPeriods = vi.fn();
     const { container } = render(
       <ResourceCalendar
@@ -55,14 +58,14 @@ describe('ResourceCalendar', () => {
 
     const viewport = container.querySelector<HTMLElement>('.resource-calendar')!;
     expect(container.querySelectorAll('.resource-calendar__period')).toHaveLength(28);
-    expect(viewport.scrollLeft).toBe(14 * 152);
+    expect(viewport.scrollLeft).toBe(14 * PERIOD_WIDTH);
     expect(onInitialPeriods).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ key: '2026-08-09' }),
     ]));
     expect(onInitialPeriods.mock.calls[0][0]).toHaveLength(28);
   });
 
-  it('persists each observed week edge before suppressing duplicate window builds', async () => {
+  it('debounces scroll persistence and restores the leftmost day at its exact offset', async () => {
     const storageKey = 'resource-calendar:test-position';
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
     const first = render(
@@ -77,18 +80,21 @@ describe('ResourceCalendar', () => {
         buildItem={() => null}
       />,
     );
-    const rightEdge = first.container.querySelector<HTMLElement>('[data-edge="right"]')!;
-    const edgeDate = rightEdge.dataset.periodKey!;
-    const observer = MockIntersectionObserver.instances.find(instance => instance.observed.has(rightEdge))!;
+    const viewport = first.container.querySelector<HTMLElement>('.resource-calendar')!;
+    const periods = [...first.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
+    const initialScrollLeft = viewport.scrollLeft;
+    const leftAnchorIndex = Math.floor(initialScrollLeft / PERIOD_WIDTH);
+    const anchorDate = periods[leftAnchorIndex]!.dataset.periodKey!;
 
+    viewport.scrollLeft = initialScrollLeft + 37;
+    fireEvent.scroll(viewport);
+    expect(setItem).not.toHaveBeenCalled();
     await act(async () => {
-      observer.emit(rightEdge, true);
-      observer.emit(rightEdge, true);
-      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 110));
     });
 
-    expect(localStorage.getItem(storageKey)).toBe(`${edgeDate}|right`);
-    expect(setItem).toHaveBeenCalledTimes(2);
+    expect(localStorage.getItem(storageKey)).toBe(JSON.stringify({ date: anchorDate, offset: 37 }));
+    expect(setItem).toHaveBeenCalledTimes(1);
     first.unmount();
 
     const restored = render(
@@ -103,17 +109,15 @@ describe('ResourceCalendar', () => {
         buildItem={() => null}
       />,
     );
-    const periods = [...restored.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
-    const periodIndex = periods.findIndex(period => period.dataset.periodKey === edgeDate);
-    const viewport = restored.container.querySelector<HTMLElement>('.resource-calendar')!;
+    const restoredPeriods = [...restored.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
+    const periodIndex = restoredPeriods.findIndex(period => period.dataset.periodKey === anchorDate);
+    const restoredViewport = restored.container.querySelector<HTMLElement>('.resource-calendar')!;
 
     expect(periodIndex).toBeGreaterThanOrEqual(0);
-    expect(viewport.scrollLeft).toBe(calculateCalendarAnchorScrollLeft({
+    expect(restoredViewport.scrollLeft).toBe(calculateCalendarAnchorScrollLeft({
       periodIndex,
-      edge: 'right',
-      periodWidth: 152,
-      viewportWidth: 1280,
-      coveredLeftWidth: 190,
+      offset: 37,
+      periodWidth: PERIOD_WIDTH,
     }));
   });
 

@@ -12,7 +12,7 @@ function task(id: string, dueDate: string, status: Task['status']): Task {
 }
 
 describe('task overview', () => {
-  it('groups active, current-week, and overdue tasks for follow-up', () => {
+  it('groups active tasks into overdue and upcoming, with a due-this-week subset', () => {
     const tasks = [
       task('overdue', '2026-08-09', 'in_progress'),
       task('this-week', '2026-08-14', 'todo'),
@@ -24,6 +24,7 @@ describe('task overview', () => {
     const overview = groupTasksForOverview(tasks, '2026-08-11');
     expect(overview.activeTasks.map(item => item.id)).toEqual(['overdue', 'this-week', 'later']);
     expect(overview.overdueTasks.map(item => item.id)).toEqual(['overdue']);
+    expect(overview.upcomingTasks.map(item => item.id)).toEqual(['this-week', 'later']);
     expect(overview.dueThisWeekTasks.map(item => item.id)).toEqual(['this-week']);
   });
 

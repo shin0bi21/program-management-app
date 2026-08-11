@@ -4,7 +4,6 @@ import {
   calculateCalendarAnchorScrollLeft,
   saveCalendarPosition,
   type CalendarPosition,
-  type CalendarPositionEdge,
 } from '../utils/calendarPosition';
 
 type Direction = 'left' | 'right';
@@ -18,7 +17,7 @@ interface UsePeriodWindowOptions {
   coveredLeftWidth: number;
   onPeriodsBuilt?: (periods: readonly CalendarPeriod[], direction: Direction) => void;
   onInitialPeriods?: (periods: readonly CalendarPeriod[]) => void;
-  initialEdge: CalendarPositionEdge;
+  initialOffset: number;
   positionStorageKey?: string;
   ready: boolean;
   onPeriodsReset?: (periods: readonly CalendarPeriod[]) => void;
@@ -39,7 +38,7 @@ export function usePeriodWindow({
   coveredLeftWidth,
   onPeriodsBuilt,
   onInitialPeriods,
-  initialEdge,
+  initialOffset,
   positionStorageKey,
   ready,
   onPeriodsReset,
@@ -61,7 +60,7 @@ export function usePeriodWindow({
   const didNotifyInitialPeriods = useRef(false);
   const previousWindowSize = useRef(windowSize);
   const pendingReset = useRef(false);
-  const pendingTarget = useRef<CalendarPosition>({ date: new Date(initialDate), edge: initialEdge });
+  const pendingTarget = useRef<CalendarPosition>({ date: new Date(initialDate), offset: initialOffset });
 
   useLayoutEffect(() => {
     if (previousWindowSize.current === windowSize) return;
@@ -88,15 +87,40 @@ export function usePeriodWindow({
   }, [buildSize, periodDefinition, periodWidth, windowSize]);
 
   const observeEdge = useCallback((element: HTMLElement, direction: Direction) => {
-    const periodKey = element.dataset.periodKey;
-    if (!periodKey) throw new Error('Observed calendar edge is missing its period key');
-    saveCalendarPosition(positionStorageKey, periodKey, direction);
     if (element.classList.contains('resource-calendar__period--observed')
       && element.dataset.observedEdge === direction) return;
     element.classList.add('resource-calendar__period--observed');
     element.dataset.observedEdge = direction;
     enqueueEdge(direction);
-  }, [enqueueEdge, positionStorageKey]);
+  }, [enqueueEdge]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!ready || !viewport || !positionStorageKey) return;
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastScrollLeft = viewport.scrollLeft;
+    const savePosition = () => {
+      const periodIndex = Math.min(
+        periodsRef.current.length - 1,
+        Math.max(0, Math.floor(viewport.scrollLeft / periodWidth)),
+      );
+      const period = periodsRef.current[periodIndex];
+      if (!period) return;
+      const offset = viewport.scrollLeft - periodIndex * periodWidth;
+      saveCalendarPosition(positionStorageKey, period.key, offset);
+    };
+    const onScroll = () => {
+      if (viewport.scrollLeft === lastScrollLeft) return;
+      lastScrollLeft = viewport.scrollLeft;
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(savePosition, 100);
+    };
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      viewport.removeEventListener('scroll', onScroll);
+    };
+  }, [periodWidth, positionStorageKey, ready]);
 
   const goToDate = useCallback((date: Date) => {
     const resetPeriods = periodDefinition.buildInitial(date, windowSize);
@@ -108,8 +132,8 @@ export function usePeriodWindow({
     pendingReset.current = true;
     const targetPeriod = resetPeriods.find(period => date >= period.start && date < period.end);
     if (!targetPeriod) throw new Error('Calendar target date is outside its rebuilt period window');
-    pendingTarget.current = { date: new Date(date), edge: 'left' };
-    saveCalendarPosition(positionStorageKey, targetPeriod.key, 'left');
+    pendingTarget.current = { date: new Date(date), offset: 0 };
+    saveCalendarPosition(positionStorageKey, targetPeriod.key, 0);
     setPeriods(resetPeriods);
   }, [periodDefinition, positionStorageKey, windowSize]);
 
@@ -159,10 +183,8 @@ export function usePeriodWindow({
       if (targetIndex < 0) throw new Error('Calendar anchor date is outside its rendered period window');
       viewport.scrollLeft = calculateCalendarAnchorScrollLeft({
         periodIndex: targetIndex,
-        edge: target.edge,
+        offset: target.offset,
         periodWidth,
-        viewportWidth: viewport.clientWidth,
-        coveredLeftWidth,
       });
       didSetInitialPosition.current = true;
       if (!didNotifyInitialPeriods.current) {

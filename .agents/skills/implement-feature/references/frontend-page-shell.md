@@ -11,7 +11,7 @@
 
 - Restore persisted controls before rendering dependent content or misleading defaults.
 - Place page-level loading, error/retry, empty, filtered-empty, and permission states around the owned content without replacing component-owned states.
-- Keep dashboards, detail panels, tables, and calendars in the page content region; do not recreate page-title or header-control layouts locally.
+- Compose data pages with `PageHeader` followed by the shared `PageBody`. Put overview cards and selected-record details in its `dashboard` slot, and provide exactly one `table` or `calendar` content slot so every data page exposes the same `page-dashboard`, `page-table`, and `page-calendar` structure.
 - Define what selects each dashboard (current actor, resource row, or item), keep list and calendar selection wiring equivalent, and avoid defaulting to the first response row when authorization distinguishes writable and read-only resources.
 
 ## Verify the shell

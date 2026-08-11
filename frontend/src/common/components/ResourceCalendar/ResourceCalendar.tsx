@@ -6,6 +6,7 @@ import { useCalendarViewport } from './hooks/useCalendarViewport';
 import { useCalendarRangeResize } from './hooks/useCalendarRangeResize';
 import { useCalendarRangeMove } from './hooks/useCalendarRangeMove';
 import { useVirtualizedRows } from './hooks/useVirtualizedRows';
+import { useCalendarInteractionCoordinator } from './hooks/useCalendarInteractionCoordinator';
 import ResourceCalendarToolbar from './components/ResourceCalendarToolbar';
 import ResourceCalendarGrid from './components/ResourceCalendarGrid';
 import {
@@ -20,9 +21,10 @@ import { loadCalendarPosition } from './utils/calendarPosition';
 import './ResourceCalendar.css';
 import './components/CalendarItem.css';
 
-const PERIOD_WIDTH = 152;
-const RESOURCE_WIDTH = 190;
-const HEADER_HEIGHT = 58;
+const PERIOD_WIDTH = 145;
+const RESOURCE_WIDTH = 200;
+const HEADER_HEIGHT = 40;
+
 export default function ResourceCalendar<TResource, TItemData>({
   resources,
   data,
@@ -78,7 +80,7 @@ export default function ResourceCalendar<TResource, TItemData>({
   const { periods, viewportRef, goToDate } = usePeriodWindow({
     periodDefinition,
     initialDate: initialPosition.date,
-    initialEdge: initialPosition.edge,
+    initialOffset: initialPosition.offset,
     positionStorageKey,
     initialPeriodCount: calculatedInitialPeriodCount,
     periodBuildSize: effectivePeriodBuildSize,
@@ -104,6 +106,7 @@ export default function ResourceCalendar<TResource, TItemData>({
 
   const gridColumns = `${RESOURCE_WIDTH}px repeat(${periods.length}, ${PERIOD_WIDTH}px)`;
   const [today] = useState(() => new Date());
+  const interactionCoordinator = useCalendarInteractionCoordinator();
 
   const { drag, beginDrag, overlayRef, suppressClickRef } = useCalendarItemDrag({
     viewportRef,
@@ -115,14 +118,17 @@ export default function ResourceCalendar<TResource, TItemData>({
     dragEdgeSize,
     dragScrollSpeed,
     coveredLeftWidth: RESOURCE_WIDTH,
+    interactionCoordinator,
   });
   const { beginResize, resizeByKeyboard, suppressClickRef: suppressResizeClickRef } = useCalendarRangeResize({
     viewportRef, periods, periodWidth: PERIOD_WIDTH, coveredLeftWidth: RESOURCE_WIDTH, onRangeResize,
     dragEdgeSize, dragScrollSpeed,
+    interactionCoordinator,
   });
   const { beginRangeMove, suppressRangeMoveClickRef } = useCalendarRangeMove({
     viewportRef, periods, periodWidth: PERIOD_WIDTH, resources, getResourceId, canRangeMove, onRangeMove,
     dragEdgeSize, dragScrollSpeed, coveredLeftWidth: RESOURCE_WIDTH,
+    interactionCoordinator,
   });
 
   const navigationHandler = navigateDate ?? periodDefinition.navigate;

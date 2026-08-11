@@ -10,12 +10,12 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { deleteTask, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods';
-import { TASK_CATEGORY_LABELS, TASK_CATEGORY_OPTIONS, type Task, type TaskCategory, type TaskStatus } from '../../../common/features/tasks/types';
+import { TASK_CATEGORY_LABELS, TASK_CATEGORY_OPTIONS, TASK_STATUS_LABELS, type Task, type TaskCategory, type TaskStatus } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
 import TaskManagementModal from './components/TaskManagementModal/TaskManagementModal';
 import TaskItem from './components/TaskItem/TaskItem';
@@ -25,18 +25,11 @@ import TimeEntryModal from '../../../common/features/timeEntries/components/Time
 import { createTimeEntry, type SetTimeEntryInput } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
 import useTaskViewData from './hooks/useTaskViewData';
-import './Tasks.css';
 
 const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'todo', label: 'To do' }, { value: 'in_progress', label: 'In progress' },
   { value: 'completed', label: 'Completed' }, { value: 'cancelled', label: 'Cancelled' },
 ];
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
 const TASKS_QUERY_KEY = ['tasks'] as const;
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 type TaskModalTarget = Task | { startDate: string; dueDate: string; fixedStaffId?: string };
@@ -51,7 +44,7 @@ function TaskStatusCell({ task, canWrite, onChange }: {
   canWrite: boolean;
   onChange: (task: Task, status: TaskStatus) => void;
 }) {
-  if (!canWrite || !task.writable) return STATUS_LABELS[task.status];
+  if (!canWrite || !task.writable) return TASK_STATUS_LABELS[task.status];
   return <FloatingSelect
     id={`task-status-${task.id}`}
     value={task.status}
@@ -121,16 +114,18 @@ export default function Tasks() {
   useEffect(() => {
     if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
   }, [selectedResourceId, writableResources]);
-  const taskFilters = useMemo(() => ({ search, programIds, cycleIds, categories, statuses: statusFilters }), [categories, cycleIds, programIds, search, statusFilters]);
+  const taskFilters = useMemo(() => ({
+    search: view === 'list' ? search : '',
+    programIds,
+    cycleIds,
+    categories,
+    statuses: statusFilters,
+  }), [categories, cycleIds, programIds, search, statusFilters, view]);
   const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
     tasksQuery.data ?? [], resources, taskFilters, selectedResourceId,
   );
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
   const selectedTask = dashboardTasks.find(task => task.id === selectedTaskId) ?? null;
-  useEffect(() => {
-    if (selectedTask || !dashboardTasks.length) return;
-    setSelectedTaskId(dashboardTasks[0].id);
-  }, [dashboardTasks, selectedTask]);
   const logTaskHours = async (input: SetTimeEntryInput) => {
     await createTimeEntry(input);
     await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
@@ -199,6 +194,10 @@ export default function Tasks() {
     setSelectedResourceId(task.assignee.id);
     setSelectedTaskId(task.id);
   }, []);
+  const selectResource = useCallback((resourceId: string) => {
+    setSelectedResourceId(resourceId);
+    setSelectedTaskId(null);
+  }, []);
   const saveTask = useCallback((task: Task) => {
     if (modalTarget && 'id' in modalTarget) {
       replaceTask(task);
@@ -248,19 +247,19 @@ export default function Tasks() {
     : undefined;
 
   return <>
-    <main className="page-container page-container--data tasks-page">
+    <main className="page-container page-container--data">
       <PageHeader
         title="Tasks"
         actions={canWrite && writableResources.length ? <Button
           disabled={optionsQuery.isLoading || Boolean(optionsQuery.error)}
           onClick={openAddTask}
         >+ Add</Button> : undefined}
-        search={<SearchInput
+        search={view === 'list' ? <SearchInput
           label="Search tasks"
           value={search}
           onChange={event => setSearch(event.target.value)}
           placeholder="Search tasks"
-        />}
+        /> : undefined}
         view={<ViewMenu
           value={view}
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
@@ -274,32 +273,28 @@ export default function Tasks() {
         />}
       />
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
-      {preferencesReady && selectedResource && <DashboardCardGroup ariaLabel="Task overview">
-        <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
-        <TaskHoursLoggedCard
-          task={selectedTask}
-          onLogHours={logHoursAction}
-        />
-      </DashboardCardGroup>}
-      {preferencesReady && view === 'list' && <Table
-        ariaLabel="Tasks"
-        columns={columns}
-        data={rows}
-        loading={tasksQuery.isLoading}
-        error={tasksQuery.error ? 'Unable to load tasks.' : undefined}
-        emptyMessage={search.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
-        keyExtractor={task => task.id}
-        selectedKey={selectedTaskId}
-        onRowSelect={selectTask}
-        columnWidths={columnWidths}
-        onColumnWidthsChange={next => {
-          setColumnWidths(next);
-          persist(programIds, cycleIds, categories, statusFilters, next);
-        }}
-      />}
-      {preferencesReady && view === 'calendar' && tasksQuery.isLoading && <p>Loading tasks…</p>}
-      {preferencesReady && view === 'calendar' && !tasksQuery.isLoading && !tasksQuery.error && <div className="tasks-calendar">
-        <ResourceCalendar
+      {preferencesReady && <PageBody
+        ariaLabel="Task overview and assignments"
+        dashboard={selectedResource ? <>
+          <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
+          <TaskHoursLoggedCard task={selectedTask} onLogHours={logHoursAction} />
+        </> : null}
+        {...(view === 'list' ? { table: <Table
+          ariaLabel="Tasks"
+          columns={columns}
+          data={rows}
+          loading={tasksQuery.isLoading}
+          error={tasksQuery.error ? 'Unable to load tasks.' : undefined}
+          emptyMessage={search.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
+          keyExtractor={task => task.id}
+          selectedKey={selectedTaskId}
+          onRowSelect={selectTask}
+          columnWidths={columnWidths}
+          onColumnWidthsChange={next => {
+            setColumnWidths(next);
+            persist(programIds, cycleIds, categories, statusFilters, next);
+          }}
+        /> } : { calendar: tasksQuery.isLoading ? <p>Loading tasks…</p> : !tasksQuery.error ? <ResourceCalendar
           resources={resources}
           data={{}}
           rangeData={rangeData}
@@ -311,7 +306,7 @@ export default function Tasks() {
             : { draggable: canWrite && task.writable }}
           renderResource={({ resource }) => resource.name}
           selectedResourceId={selectedResourceId}
-          onResourceSelect={resource => setSelectedResourceId(current => current === resource.id ? current : resource.id)}
+          onResourceSelect={resource => selectResource(resource.id)}
           buildItem={() => null}
           buildRangeItem={({ data: task }) => <TaskItem
             task={task}
@@ -340,8 +335,8 @@ export default function Tasks() {
           positionStorageKey={TASK_CALENDAR_POSITION_KEY}
           resourceHeader="Staff"
           rowHeight={112}
-        />
-      </div>}
+        /> : null })}
+      />}
     </main>
     {canWrite && modalTarget && <TaskManagementModal
       isOpen

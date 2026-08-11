@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
+import { getUser } from '../../../auth/storage';
 import Button from '../../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -11,6 +12,7 @@ import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../common/components/ResourceCalendar/types';
 import type { PeriodRange } from '../../../common/components/ResourceCalendar/PeriodDataBuffer';
 import TimeItem from './components/TimeItem/TimeItem';
@@ -22,17 +24,18 @@ import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimesheetItem 
 import {
   createTimeEntry,
   deleteTimeEntry,
+  getTimeEntryOverview,
   getTimeEntries,
   updateTimeEntry,
   updateTimeEntryPlacement,
   type SetTimeEntryInput,
+  type TimeEntryOverviewResponse,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
 import { getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import type { ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate, formatShortDateRange } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
-import { summarizeCycleHours } from './timesheetSummary';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import TimesheetOverviewCard from './components/TimesheetOverviewCard/TimesheetOverviewCard';
 import './Timesheets.css';
@@ -56,6 +59,7 @@ const summarizeOverflow = ({ items, itemCount }: { items: readonly TimesheetItem
 
 export default function Timesheets() {
   const { permissions, role } = useAuth();
+  const currentUserId = getUser()?.id;
   const canWriteTimesheets = permissions.includes('write:timesheets');
   const [resources, setResources] = useState<StaffResource[]>([]);
   const [programs, setPrograms] = useState<TimeEntryProgram[]>([]);
@@ -73,6 +77,8 @@ export default function Timesheets() {
   const [cycleData, setCycleData] = useState<Awaited<ReturnType<typeof getTimeEntries>>['data']>({});
   const [cycleLoading, setCycleLoading] = useState(true);
   const [cycleError, setCycleError] = useState<string | null>(null);
+  const [dashboardOverview, setDashboardOverview] = useState<TimeEntryOverviewResponse | null>(null);
+  const [dashboardOverviewError, setDashboardOverviewError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'general' | 'task' }>({});
   const [editTarget, setEditTarget] = useState<EntryTarget | null>(null);
@@ -245,36 +251,39 @@ export default function Timesheets() {
     });
   }, [categoryFilters, listColumnWidths, programFilters, role, save, selectListRow, selectedCycleId, staffFilters, view]);
 
-  const dashboardStaff = role === 'staff'
-    ? resources.find(resource => resource.id === selectedDashboardStaffId) ?? writableResources[0] ?? null
-    : resources.find(resource => resource.id === selectedDashboardStaffId) ?? null;
-  const dashboardRows = useMemo(() => {
-    if (!dashboardStaff) return [];
-    return Object.entries(cycleData[dashboardStaff.id] ?? {}).flatMap(([date, items]) => (
-      items.map(item => ({ id: item.id, resourceId: dashboardStaff.id, date, item, staffName: dashboardStaff.name }))
-    ));
-  }, [cycleData, dashboardStaff]);
+  const currentUserResource = resources.find(resource => resource.id === currentUserId) ?? null;
+  const dashboardStaff = resources.find(resource => resource.id === selectedDashboardStaffId)
+    ?? currentUserResource;
   const overviewCycle = selectedCycle
     ?? cycles.find(cycle => cycle.state === 'active')
     ?? cycles[0]
     ?? null;
-  const overviewCycleRows = useMemo(
-    () => overviewCycle ? dashboardRows.filter(row => row.item.cycleId === overviewCycle.id) : [],
-    [dashboardRows, overviewCycle],
-  );
-
-  const summary = useMemo(() => {
-    const result = summarizeCycleHours(
-      overviewCycleRows.map(row => ({ date: row.date, label: row.item.categoryLabel, hours: row.item.hours })),
-      overviewCycle,
-      undefined,
-      dashboardRows.map(row => ({ date: row.date, label: row.item.categoryLabel, hours: row.item.hours })),
-    );
-    return { ...result, periodLabel: result.periodStart && result.periodEnd
-      ? formatShortDateRange(result.periodStart, result.periodEnd)
-      : 'No cycle selected' };
-  }, [dashboardRows, overviewCycle, overviewCycleRows]);
-  const hasStaffOverview = dashboardStaff !== null;
+  const dashboardStaffId = dashboardStaff?.id ?? null;
+  const overviewCycleId = overviewCycle?.id ?? null;
+  useEffect(() => {
+    if (!dashboardStaffId || !overviewCycleId) {
+      setDashboardOverview(null);
+      setDashboardOverviewError(null);
+      return undefined;
+    }
+    const controller = new AbortController();
+    setDashboardOverview(null);
+    void getTimeEntryOverview(dashboardStaffId, overviewCycleId, { signal: controller.signal })
+      .then(overview => {
+        setDashboardOverview(overview);
+        setDashboardOverviewError(null);
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setDashboardOverviewError(getErrorMessage(cause, 'Could not load the timesheet overview.'));
+        }
+      });
+    return () => controller.abort();
+  }, [cycleData, dashboardStaffId, overviewCycleId]);
+  const payPeriodLabel = dashboardOverview
+    ? formatShortDateRange(dashboardOverview.payPeriod.periodStart, dashboardOverview.payPeriod.periodEnd)
+    : 'Loading pay period…';
+  const hasStaffOverview = dashboardStaff !== null && overviewCycle !== null;
   const hasCycleOverview = dashboardStaff !== null && overviewCycle !== null;
   const overviewEmptyMessage = 'Select a staff member to view their time entry overview.';
 
@@ -476,44 +485,43 @@ export default function Timesheets() {
             />
           ) : undefined}
         />
-        {(error || moveError || cycleError || preferenceError) && (
+        {(error || moveError || cycleError || dashboardOverviewError || preferenceError) && (
           <div className="timesheets-page__error" role="alert">
-            <span>{moveError ?? error ?? cycleError ?? preferenceError}</span>
+            <span>{moveError ?? error ?? cycleError ?? dashboardOverviewError ?? preferenceError}</span>
             {error && <Button size="sm" variant="secondary" onClick={retry}>Retry</Button>}
           </div>
         )}
-        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <section className="timesheets-page__overview" aria-label="Timesheet overview">
-          <TimesheetOverviewCard
-            title="Hours This Pay Period"
-            total={summary.periodTotal}
-            modalTitle={dashboardStaff?.name ?? ''}
-            modalSubtitle={summary.periodLabel}
-            breakdown={summary.periodTaskHours}
-            emptyMessage={overviewEmptyMessage}
-            hasStaff={hasStaffOverview}
-            details={[
-              ['Current Pay Period', summary.periodLabel],
-              ['Hours', summary.periodTotal.toFixed(2)],
-            ]}
-          />
-          <TimesheetOverviewCard
-            title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
-            total={summary.average}
-            modalTitle={dashboardStaff?.name ?? ''}
-            modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
-            breakdown={summary.taskHours.map(
-              ([label, hours]): [string, number] => [label, hours / summary.periodCount],
-            )}
-            emptyMessage={overviewEmptyMessage}
-            hasStaff={hasCycleOverview}
-            details={[
-              ['Cycle', overviewCycle?.name ?? ''],
-              ['Biweekly Average', summary.average.toFixed(2)],
-            ]}
-          />
-        </section>}
-        {preferencesReady && (view === 'calendar' ? <div className="timesheets-page__calendar">
-          <ResourceCalendar
+        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <PageBody
+          ariaLabel="Timesheet overview and entries"
+          dashboard={<>
+            <TimesheetOverviewCard
+              title="Hours This Pay Period"
+              total={dashboardOverview?.payPeriod.totalHours ?? 0}
+              modalTitle={dashboardStaff?.name ?? ''}
+              modalSubtitle={payPeriodLabel}
+              breakdown={(dashboardOverview?.payPeriod.breakdown ?? []).map(item => [item.label, item.hours])}
+              emptyMessage={overviewEmptyMessage}
+              hasStaff={hasStaffOverview}
+              details={[
+                ['Current Pay Period', payPeriodLabel],
+                ['Hours', (dashboardOverview?.payPeriod.totalHours ?? 0).toFixed(2)],
+              ]}
+            />
+            <TimesheetOverviewCard
+              title={`Average Biweekly Hours${overviewCycle ? ` - ${overviewCycle.name}` : ''}`}
+              total={dashboardOverview?.biweeklyAverage.averageHours ?? 0}
+              modalTitle={dashboardStaff?.name ?? ''}
+              modalSubtitle={`${overviewCycle?.name ?? ''} · Biweekly Average`}
+              breakdown={(dashboardOverview?.biweeklyAverage.breakdown ?? []).map(item => [item.label, item.hours])}
+              emptyMessage={overviewEmptyMessage}
+              hasStaff={hasCycleOverview}
+              details={[
+                ['Cycle', overviewCycle?.name ?? ''],
+                ['Biweekly Average', (dashboardOverview?.biweeklyAverage.averageHours ?? 0).toFixed(2)],
+              ]}
+            />
+          </>}
+          {...(view === 'calendar' ? { calendar: <ResourceCalendar
             resources={visibleResources}
             data={visibleData}
             initialDate={initialDate}
@@ -526,7 +534,8 @@ export default function Timesheets() {
             onItemDrop={canWriteTimesheets ? moveTimeEntry : undefined}
             canDropItem={canDropWithinStaff}
             getItemCapabilities={({ resource }) => ({ draggable: canWriteTimesheets && resource.writable })}
-            maxVisibleItemsPerCell={2}
+            maxVisibleItemsPerCell={3}
+            rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
               { id: 'general', label: 'Regular Time', onSelect: () => openCellEntry(context, 'general') },
@@ -535,13 +544,11 @@ export default function Timesheets() {
             getResourceId={getStaffResourceId}
             getItemId={getTimesheetItemId}
             renderResource={renderCalendarResource}
-            selectedResourceId={selectedDashboardStaffId ?? writableResources[0]?.id}
+            selectedResourceId={dashboardStaff?.id}
             onResourceSelect={resource => setSelectedDashboardStaffId(resource.id)}
             buildItem={buildCalendarItem}
             buildOverflowItem={buildOverflowItem}
-          />
-        </div> : (
-          <Table
+          /> } : { table: <Table
             ariaLabel="Timesheet entries"
             columns={listColumns}
             data={visibleListRows}
@@ -565,8 +572,8 @@ export default function Timesheets() {
             emptyMessage={listSearch.trim()
               ? 'No time entries match your search'
               : selectedCycle ? 'No time entries for this cycle' : 'No time entries found'}
-          />
-        ))}
+          /> })}
+        />}
       </main>
       <TimeEntryModal
         isOpen={addOpen}

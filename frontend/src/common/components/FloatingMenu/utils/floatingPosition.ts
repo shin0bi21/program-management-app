@@ -33,19 +33,19 @@ function resolveSide(
 ): Side {
   switch (preferred) {
     case 'bottom':
-      return window.innerHeight - rect.bottom - offset < heightEstimate && rect.top >= heightEstimate
+      return window.innerHeight - rect.bottom - offset < heightEstimate && rect.top - offset >= heightEstimate
         ? 'top'
         : 'bottom';
     case 'top':
-      return rect.top - offset < heightEstimate && window.innerHeight - rect.bottom >= heightEstimate
+      return rect.top - offset < heightEstimate && window.innerHeight - rect.bottom - offset >= heightEstimate
         ? 'bottom'
         : 'top';
     case 'right':
-      return window.innerWidth - rect.right - offset < widthEstimate && rect.left >= widthEstimate
+      return window.innerWidth - rect.right - offset < widthEstimate && rect.left - offset >= widthEstimate
         ? 'left'
         : 'right';
     case 'left':
-      return rect.left - offset < widthEstimate && window.innerWidth - rect.right >= widthEstimate
+      return rect.left - offset < widthEstimate && window.innerWidth - rect.right - offset >= widthEstimate
         ? 'right'
         : 'left';
   }
@@ -127,7 +127,13 @@ function computePosition(
     }
   }
 
-  return { top, left };
+  const maxTop = Math.max(0, window.innerHeight - heightEstimate);
+  const maxLeft = Math.max(0, window.innerWidth - widthEstimate);
+
+  return {
+    top: Math.max(0, Math.min(top, maxTop)),
+    left: Math.max(0, Math.min(left, maxLeft)),
+  };
 }
 
 export function calculateFloatingPosition(
@@ -135,12 +141,18 @@ export function calculateFloatingPosition(
   placement: Placement = { side: 'bottom', align: 'start' },
   options: PlacementOptions = {},
 ): FloatingPosition {
+  return calculateFloatingPositionFromRect(anchor.getBoundingClientRect(), placement, options);
+}
+
+export function calculateFloatingPositionFromRect(
+  rect: DOMRect,
+  placement: Placement = { side: 'bottom', align: 'start' },
+  options: PlacementOptions = {},
+): FloatingPosition {
   const offset = options.offset ?? DEFAULT_OFFSET;
   const widthEstimate = options.widthEstimate ?? DEFAULT_WIDTH_ESTIMATE;
   const heightEstimate = options.heightEstimate ?? DEFAULT_HEIGHT_ESTIMATE;
   const align = placement.align ?? 'start';
-
-  const rect = anchor.getBoundingClientRect();
 
   const resolvedSide = resolveSide(placement.side, rect, heightEstimate, widthEstimate, offset);
   const resolvedAlign = resolveAlignment(align, resolvedSide, rect, heightEstimate, widthEstimate);
@@ -155,10 +167,5 @@ export function calculateFloatingPositionFromPoint(
   options: PlacementOptions = {},
 ): FloatingPosition {
   const point = new DOMRect(x, y, 0, 0);
-  const offset = options.offset ?? DEFAULT_OFFSET;
-  const widthEstimate = options.widthEstimate ?? DEFAULT_WIDTH_ESTIMATE;
-  const heightEstimate = options.heightEstimate ?? DEFAULT_HEIGHT_ESTIMATE;
-  const resolvedSide = resolveSide(placement.side, point, heightEstimate, widthEstimate, offset);
-  const resolvedAlign = resolveAlignment(placement.align ?? 'start', resolvedSide, point, heightEstimate, widthEstimate);
-  return computePosition(resolvedSide, resolvedAlign, point, offset, widthEstimate, heightEstimate);
+  return calculateFloatingPositionFromRect(point, placement, options);
 }
