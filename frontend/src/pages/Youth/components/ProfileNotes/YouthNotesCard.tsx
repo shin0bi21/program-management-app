@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
 import type { YouthProfileNote } from '../../../../common/types/youth';
-import ProfileNoteRow from '../ProfileNoteRow/ProfileNoteRow';
+import ProfileNoteRow from './ProfileNoteRow';
 
 interface YouthNotesCardProps {
   profileNotes?: YouthProfileNote[];

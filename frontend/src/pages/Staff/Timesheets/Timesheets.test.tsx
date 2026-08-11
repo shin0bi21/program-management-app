@@ -106,7 +106,7 @@ describe('Timesheets', () => {
     vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {},
     });
@@ -135,12 +135,14 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem').slice(0, 3).map(item => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitem').slice(0, 4).map(item => item.textContent)).toEqual([
       expect.stringContaining('Program'),
       expect.stringContaining('Category'),
+      expect.stringContaining('Type'),
       expect.stringContaining('Cycle'),
     ]);
   });
@@ -148,7 +150,7 @@ describe('Timesheets', () => {
   it('matches task calendar row sizing and shows three entries before overflow', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [1, 2, 3].map(index => ({
         id: `entry-${index}`,
@@ -171,11 +173,11 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
-    expect(screen.getByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /meeting 3, 3 hours/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show all 3 items/i })).not.toBeInTheDocument();
   });
 
@@ -187,7 +189,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.getByRole('menuitem', { name: /Staff/ })).toBeInTheDocument();
   });
@@ -196,8 +198,8 @@ describe('Timesheets', () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
-        { id: 'staff-2', name: 'Alex Morgan', role: 'staff', writable: false },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
@@ -224,6 +226,10 @@ describe('Timesheets', () => {
     );
 
     expect(await screen.findByText('Coworker administration')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Morgan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Actions for Meeting on 2026-08-09' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Actions for Administration on 2026-08-09' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Coworker administration').closest('tr')!);
@@ -247,14 +253,15 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall', columnWidths: {},
+      view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-fall',
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
   });
 
   it('clears the persisted cycle with the other Timesheets filters', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
         programs: [{ id: 'program-1', name: 'Soft Skills' }],
         data: { 'staff-1': { '2026-08-09': [{
           id: 'all-cycle-entry', programId: 'program-1', programName: 'Soft Skills',
@@ -275,7 +282,8 @@ describe('Timesheets', () => {
 
     expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
     expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], cycleId: null, columnWidths: {},
+      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
     await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
       {},
@@ -289,7 +297,8 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByText('Entry from another cycle').closest('tr')!);
 
     expect(preferenceHook.save).toHaveBeenLastCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1', columnWidths: {},
+      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1',
+      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
     });
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
     expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
@@ -298,7 +307,7 @@ describe('Timesheets', () => {
   it('does not reload overview data when only the cycle filter changes', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { '2026-08-09': [{
         id: 'current-entry', programId: null, programName: null,
@@ -326,7 +335,7 @@ describe('Timesheets', () => {
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': {
         '2026-08-09': [{
@@ -357,9 +366,9 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    const payPeriodCard = await screen.findByRole('heading', { name: 'Hours This Pay Period' });
-    await waitFor(() => expect(payPeriodCard.closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
-    expect(payPeriodCard.closest('article')).toHaveTextContent('4.00');
+    await screen.findByRole('heading', { name: 'Hours This Pay Period' });
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00');
     const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
     expect(averageCard.closest('article')).toHaveTextContent('4.00');
     expect(averageCard.closest('article')).toHaveTextContent('CycleFall 2026');
@@ -376,7 +385,7 @@ describe('Timesheets', () => {
 
   it('always shows searchable list overview cards for staff', async () => {
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { '2026-08-09': [{
         id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
@@ -391,7 +400,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     const calendarPayPeriodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
     await waitFor(() => expect(calendarPayPeriodCard).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
@@ -417,8 +426,8 @@ describe('Timesheets', () => {
     auth.role = 'admin';
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [
-        { id: 'staff-2', name: 'Alex Morgan', role: 'staff', writable: true },
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
@@ -443,46 +452,59 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Alex Morgan')).length).toBeGreaterThan(0);
-    const periodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
-    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
+    expect((await screen.findAllByLabelText('Alex Morgan')).length).toBeGreaterThan(0);
+    const getPeriodCard = () => screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(await screen.findByRole('button', { name: /Meeting, 7 hours/ }));
-    await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
-    expect(periodCard).toHaveTextContent('Current Pay Period');
-    expect(periodCard).toHaveTextContent('Hours');
-    expect(periodCard).not.toHaveTextContent('Alex Morgan');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    expect(getPeriodCard()).toHaveTextContent('Current Pay Period');
+    expect(getPeriodCard()).toHaveTextContent('Hours');
+    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
     await screen.findByText('Alex planning meeting');
+    expect(screen.getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'First Name', 'Last Name', 'Date', 'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Note', 'Type', '',
+    ]);
+    expect(screen.getByRole('columnheader', { name: 'Session' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
+    await waitFor(() => expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+      sorting: { key: 'firstName', direction: 'asc' },
+    })));
+    const listRows = screen.getAllByRole('row').slice(1);
+    expect(listRows[0]).toHaveTextContent('Alex');
+    expect(listRows[1]).toHaveTextContent('Zoe');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
-    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
-    expect(periodCard).not.toHaveTextContent('Zoe Wilson');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
+    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
     fireEvent.click(screen.getByText('Alex planning meeting').closest('tr')!);
-    await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
-    expect(periodCard).not.toHaveTextContent('Alex Morgan');
-    expect(periodCard).not.toHaveTextContent('Zoe Wilson');
+    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
+    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
   });
 
   it('opens a prefilled add form when a calendar cell is clicked', async () => {
+    const workDate = dayKey(new Date());
     vi.mocked(getTimeEntryCohorts).mockResolvedValue([
       { id: 'cohort-1', cycleId: 'cycle-fall', name: 'Fall 2026', state: 'active' },
       { id: 'cohort-2', cycleId: 'cycle-spring', name: 'Spring 2026', state: 'completed' },
     ]);
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
 
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
 
-    expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Time Entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
     expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Select a program');
     expect(screen.getByRole('button', { name: 'Cycle' })).toHaveTextContent('Summer 2026');
@@ -512,7 +534,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
     expect(screen.getByRole('menuitem', { name: 'Other Time' })).toBeInTheDocument();
@@ -520,20 +542,20 @@ describe('Timesheets', () => {
     expect(screen.getByRole('menuitem', { name: 'Session Time' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Task Time' }));
-    expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Time Entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Task' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Program' })).not.toBeInTheDocument();
   });
 
   it('loads the selected staff member\'s sessions for the calendar day', async () => {
-    render(
+    const workDate = dayKey(new Date());
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
-    const cell = screen.getAllByRole('gridcell')[0];
-    const workDate = cell.getAttribute('data-period')!;
+    await screen.findAllByLabelText('Zoe Wilson');
+    const cell = container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!;
     vi.mocked(getTimeEntrySessions).mockResolvedValue([{
       id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', workDate, startsAt: `${workDate}T14:00:00.000Z`,
@@ -580,7 +602,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Session Time' }));
 
@@ -604,7 +626,7 @@ describe('Timesheets', () => {
   it('keeps session time fixed to its scheduled calendar day', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-session', programId: 'program-1', programName: 'Soft Skills',
@@ -632,13 +654,13 @@ describe('Timesheets', () => {
       taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Cleaned shared equipment',
     });
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    await screen.findAllByLabelText('Zoe Wilson');
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Maintenance' }));
@@ -671,12 +693,12 @@ describe('Timesheets', () => {
       hoursLogged: 0,
       loggedHoursByDate: [],
       completedAt: null,
-      assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+      assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     }, {
       id: 'task-complete', title: 'Completed report', details: null, category: 'administration',
       programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'completed',
       startDate: '2026-08-01', dueDate: '2026-08-08', hoursLogged: 1, loggedHoursByDate: [],
-      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     }]);
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-task', staffId: 'staff-1', programId: null, programName: null,
@@ -684,13 +706,13 @@ describe('Timesheets', () => {
       category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', sessionId: null, sessionLabel: null, workDate,
       hours: 1, note: 'Drafted poster concepts',
     });
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    await screen.findAllByLabelText('Zoe Wilson');
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Time' }));
     await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
       { staffId: 'staff-1' },
@@ -725,7 +747,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cycle' }));
@@ -743,21 +765,22 @@ describe('Timesheets', () => {
   });
 
   it('prevents Escape and X dismissal while an entry is submitting', async () => {
+    const workDate = dayKey(new Date());
     const pendingCreate = deferred<Awaited<ReturnType<typeof createTimeEntry>>>();
     vi.mocked(createTimeEntry).mockImplementation(() => pendingCreate.promise);
-    render(
+    const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
-    fireEvent.click(screen.getAllByRole('gridcell')[0]);
+    await screen.findAllByLabelText('Zoe Wilson');
+    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
     await waitFor(() => expect(createTimeEntry).toHaveBeenCalledOnce());
-    const dialog = screen.getByRole('dialog', { name: 'Add time entry' });
+    const dialog = screen.getByRole('dialog', { name: 'Add Time Entry' });
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
@@ -772,13 +795,13 @@ describe('Timesheets', () => {
       taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Pending work',
     });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add time entry' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Time Entry' })).not.toBeInTheDocument());
   });
 
   it('updates an existing entry without triggering the cell add flow', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
         'staff-1': {
@@ -805,7 +828,7 @@ describe('Timesheets', () => {
 
     fireEvent.click(entry);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    expect(screen.getByRole('heading', { name: 'Edit time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Time Entry' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Updated workshop' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
@@ -833,7 +856,7 @@ describe('Timesheets', () => {
       note: `Workshop ${index + 1}`,
     }));
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: entries } },
     });
@@ -850,7 +873,7 @@ describe('Timesheets', () => {
     fireEvent.pointerDown(editAction);
     fireEvent.click(editAction);
 
-    expect(screen.getByRole('heading', { name: 'Edit time entry' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Time Entry' })).toBeInTheDocument();
     expect(document.querySelector('.resource-calendar__overflow-panel')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(1);
     expect(screen.getByLabelText('Note')).toHaveValue('Workshop 1');
@@ -865,7 +888,7 @@ describe('Timesheets', () => {
       categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [item] } },
     });
@@ -905,7 +928,7 @@ describe('Timesheets', () => {
     const first = deferred<never>();
     const second = deferred<never>();
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [item] } },
     });
@@ -954,7 +977,7 @@ describe('Timesheets', () => {
   it('renders a read-only calendar without mutation controls', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
@@ -980,7 +1003,7 @@ describe('Timesheets', () => {
   it('deletes an entry and removes it from the buffered calendar data', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { [workDate]: [{
         id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',

@@ -50,7 +50,7 @@ export default function CycleModal({ isOpen, cycle, onClose, onSaved }: CycleMod
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={cycle ? 'Edit cycle' : 'Add cycle'}
+      title={cycle ? 'Edit Cycle' : 'Add Cycle'}
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}

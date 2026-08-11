@@ -94,7 +94,8 @@ export default function Leads() {
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
   const columns: TableColumn<Lead>[] = [
-    { key: 'name', sortKey: 'name', header: 'Youth', render: lead => `${lead.youthFirstName} ${lead.youthLastName}` },
+    { key: 'firstName', sortKey: 'name', header: 'First Name', render: lead => lead.youthFirstName },
+    { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
     { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
     { key: 'program', sortKey: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
     { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },

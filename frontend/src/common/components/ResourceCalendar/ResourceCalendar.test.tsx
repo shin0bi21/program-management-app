@@ -5,7 +5,7 @@ import { dayKey } from './periods';
 import { calculateCalendarAnchorScrollLeft } from './utils/calendarPosition';
 
 const PERIOD_WIDTH = 145;
-const RESOURCE_WIDTH = 200;
+const RESOURCE_WIDTH = 125;
 
 class MockIntersectionObserver {
   static instances: MockIntersectionObserver[] = [];

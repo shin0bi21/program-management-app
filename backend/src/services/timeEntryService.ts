@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { sql, asTransactionSql } from '../db/client';
 import { audit } from './auditService';
-import { ConflictError, NotFoundError } from '../errors';
+import { ConflictError, InternalServerError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
 import type {
   SetTimeEntryInput,
@@ -128,8 +128,8 @@ async function assertProgramResource(programId: string | null, db: typeof sql = 
 }
 
 function getTimeEntryResources(actor: AccessTokenPayload) {
-  return sql<Array<{ id: string; name: string; role: string; writable: boolean }>>`
-    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
+  return sql<Array<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }>>`
+    SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
       (${timeEntryWriteScopePredicate(actor, sql`u.id`)}) AS writable
     FROM users u
     INNER JOIN user_roles role ON role.id = u.role_id
@@ -282,6 +282,16 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
     throw new NotFoundError('Timesheet overview not found');
   }
+  const currentCycles = await sql<Array<{ id: string; startsOn: string }>>`
+    SELECT id, starts_on::text AS starts_on
+    FROM program_cycles
+    WHERE (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN starts_on AND ends_on
+    ORDER BY starts_on, id
+  `;
+  if (currentCycles.length !== 1) {
+    throw new InternalServerError(`Expected exactly one current program cycle, found ${currentCycles.length}.`);
+  }
+  const currentCycle = currentCycles[0];
 
   const rows = await sql<Array<{
     periodStart: string;
@@ -291,7 +301,15 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
     periodHours: string;
     cycleHours: string;
   }>>`
-    WITH selected_cycle AS (
+    WITH current_period AS (
+      SELECT
+        ${currentCycle.startsOn}::date + (
+          FLOOR(((NOW() AT TIME ZONE 'America/Toronto')::date - ${currentCycle.startsOn}::date) / 14.0)::int * 14
+        ) AS period_start,
+        ${currentCycle.startsOn}::date + (
+          FLOOR(((NOW() AT TIME ZONE 'America/Toronto')::date - ${currentCycle.startsOn}::date) / 14.0)::int * 14
+        ) + 13 AS period_end
+    ), selected_cycle AS (
       SELECT id, starts_on, ends_on,
         GREATEST(
           starts_on,
@@ -299,31 +317,42 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
         ) AS effective_date
       FROM program_cycles
       WHERE id = ${query.cycleId}
-    ), current_period AS (
+    ), selected_cycle_summary AS (
       SELECT id,
-        starts_on + (((effective_date - starts_on) / 14) * 14) AS period_start,
-        LEAST(
-          ends_on,
-          starts_on + (((effective_date - starts_on) / 14) * 14) + 13
-        ) AS period_end,
         ((effective_date - starts_on) / 14) + 1 AS period_count
       FROM selected_cycle
+    ), categories AS (
+      SELECT DISTINCT entry.category
+      FROM time_entries entry, current_period period
+      WHERE entry.staff_id = ${query.staffId}
+        AND (
+          entry.work_date BETWEEN period.period_start AND period.period_end
+          OR entry.cycle_id = (SELECT id FROM selected_cycle)
+        )
     )
     SELECT
       period.period_start::text AS period_start,
       period.period_end::text AS period_end,
-      period.period_count,
-      entry.category,
-      COALESCE(SUM(entry.hours) FILTER (
-        WHERE entry.work_date BETWEEN period.period_start AND period.period_end
+      selected.period_count,
+      category.category,
+      COALESCE((
+        SELECT SUM(entry.hours)
+        FROM time_entries entry
+        WHERE entry.staff_id = ${query.staffId}
+          AND entry.category = category.category
+          AND entry.work_date BETWEEN period.period_start AND period.period_end
       ), 0)::text AS period_hours,
-      COALESCE(SUM(entry.hours), 0)::text AS cycle_hours
+      COALESCE((
+        SELECT SUM(entry.hours)
+        FROM time_entries entry
+        WHERE entry.staff_id = ${query.staffId}
+          AND entry.cycle_id = selected.id
+          AND entry.category = category.category
+      ), 0)::text AS cycle_hours
     FROM current_period period
-    LEFT JOIN time_entries entry
-      ON entry.staff_id = ${query.staffId}
-      AND entry.cycle_id = period.id
-    GROUP BY period.period_start, period.period_end, period.period_count, entry.category
-    ORDER BY COALESCE(SUM(entry.hours), 0) DESC, entry.category
+    CROSS JOIN selected_cycle_summary selected
+    LEFT JOIN categories category ON TRUE
+    ORDER BY category.category
   `;
   if (!rows.length) throw new NotFoundError('Timesheet overview not found');
 

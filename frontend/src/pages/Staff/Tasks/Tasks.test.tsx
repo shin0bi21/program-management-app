@@ -13,6 +13,7 @@ type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
   view: 'list' as 'list' | 'calendar',
   props: null as TaskCalendarProps | null,
+  savePreference: vi.fn(),
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
@@ -21,12 +22,14 @@ vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
 }));
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ createTimeEntry: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: vi.fn() }),
+  default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: calendarTestState.savePreference }),
 }));
 vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   default: (props: TaskCalendarProps) => {
     calendarTestState.props = props;
-    return <div aria-label="Task calendar" />;
+    return <div aria-label="Task calendar">
+      {props.resources.map((resource, index) => <div key={resource.id}>{props.renderResource({ resource, index })}</div>)}
+    </div>;
   },
 }));
 
@@ -34,7 +37,7 @@ const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
   programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
-  assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+  assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
@@ -47,9 +50,10 @@ describe('Tasks', () => {
     vi.clearAllMocks();
     calendarTestState.view = 'list';
     calendarTestState.props = null;
+    calendarTestState.savePreference.mockReset();
     vi.mocked(getTasks).mockResolvedValue([task]);
     vi.mocked(getTaskOptions).mockResolvedValue({
-      resources: [{ id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [], cycles: [{ id: 'cycle-1', name: 'Summer 2026', programId: 'program-1', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }],
     });
     vi.mocked(createTimeEntry).mockResolvedValue({
@@ -68,8 +72,9 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
+    const timeEntryForm = document.getElementById('time-entry-form')!;
+    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
+    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
@@ -100,6 +105,8 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     expect(screen.queryByRole('textbox', { name: 'Search tasks' })).not.toBeInTheDocument();
+    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
     expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]);
   });
 
@@ -110,14 +117,14 @@ describe('Tasks', () => {
       title: 'Complete administration',
       programId: null,
       programName: null,
-      assignee: { id: 'staff-2', name: 'Alex Smith' },
+      assignee: { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' },
       writable: false,
     };
     vi.mocked(getTasks).mockResolvedValue([task, coworkerTask]);
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [
-        { id: 'staff-2', name: 'Alex Smith', role: 'staff', writable: false },
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [],
       cycles: [{ id: 'cycle-1', name: 'Summer 2026', programId: 'program-1', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }],
@@ -127,7 +134,17 @@ describe('Tasks', () => {
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     expect(await screen.findByText('Complete administration')).toBeInTheDocument();
-    expect(screen.getByText('Alex Smith')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Smith' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
+    await waitFor(() => expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({
+      sorting: { key: 'firstName', direction: 'asc' },
+    })));
+    const dataRows = screen.getAllByRole('row').slice(1);
+    expect(dataRows[0]).toHaveTextContent('Alex');
+    expect(dataRows[1]).toHaveTextContent('Zoe');
     expect(screen.getByRole('button', { name: 'Actions for Prepare workshop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Actions for Complete administration' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Status for Complete administration' })).not.toBeInTheDocument();
@@ -157,7 +174,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     await act(async () => {
       await calendarTestState.props!.onRangeResize!({
-        resource: { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         item: task,
         originalRange: { start: '2026-08-10', end: '2026-08-12' },
         nextRange: { start: '2026-08-11', end: '2026-08-13' },
@@ -196,7 +213,7 @@ describe('Tasks', () => {
     const start = new Date('2026-08-10T12:00:00');
     const end = new Date('2026-08-12T12:00:00');
     const item = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       data: task,
       range: { start: task.startDate, end: task.dueDate },
       visibleStart: { key: task.startDate, start, end: start },
@@ -206,17 +223,17 @@ describe('Tasks', () => {
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
 
     act(() => calendarTestState.props!.onResourceSelect?.({
-      id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true,
+      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
     }));
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
   });
 
   it('persists cross-resource calendar moves through the narrow placement contract', async () => {
     calendarTestState.view = 'calendar';
-    const destination = { id: 'staff-2', name: 'Alex Smith', role: 'staff', writable: true };
+    const destination = { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: true };
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         destination,
       ],
       programs: [],
@@ -226,7 +243,12 @@ describe('Tasks', () => {
       ...task,
       startDate: '2026-08-11',
       dueDate: '2026-08-13',
-      assignee: { id: destination.id, name: destination.name },
+      assignee: {
+        id: destination.id,
+        firstName: destination.firstName,
+        lastName: destination.lastName,
+        name: destination.name,
+      },
     });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
@@ -235,7 +257,7 @@ describe('Tasks', () => {
     await act(async () => {
       await calendarTestState.props!.onRangeMove!({
         item: task,
-        resource: { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+        resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         destinationResource: destination,
         originalRange: { start: '2026-08-10', end: '2026-08-12' },
         nextRange: { start: '2026-08-11', end: '2026-08-13' },

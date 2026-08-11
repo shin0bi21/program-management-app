@@ -49,7 +49,7 @@ export default function EditCohortModal({ cohort, cycles, onClose, onUpdated }: 
     <Modal
       isOpen={cohort !== null}
       onClose={onClose}
-      title="Edit cohort"
+      title="Edit Cohort"
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}

@@ -78,7 +78,7 @@ describe('GenerateSessionsModal', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Add sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cohort' })).toHaveTextContent(
       'Soft Skills · Summer 2026',
     );

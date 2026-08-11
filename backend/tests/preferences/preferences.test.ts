@@ -86,7 +86,10 @@ describe('User preferences API', () => {
       staffIds: [],
       programIds: ['general'],
       categories: ['meeting'],
+      types: ['session'],
       cycleId: '00000000-0000-4000-8000-000000000001',
+      sorting: { key: 'session', direction: 'asc' },
+      columnWidths: { firstName: 180, lastName: 200, session: 220, type: 120 },
     };
     const saved = await request(app)
       .put('/api/preferences/timesheet-filters')
@@ -121,6 +124,43 @@ describe('User preferences API', () => {
         .send({ statuses: [], roles: [], columnWidths });
       expect(rejected.status).toBe(400);
     }
+  });
+
+  it('persists separate Outreach first and last name column widths', async () => {
+    const preferences = [
+      {
+        key: 'lead-filters',
+        value: { statuses: [], programIds: [], columnWidths: { firstName: 180, lastName: 200 } },
+      },
+      {
+        key: 'expression-interest-filters',
+        value: { statuses: [], programIds: [], columnWidths: { firstName: 170, lastName: 210 } },
+      },
+    ] as const;
+
+    for (const { key, value } of preferences) {
+      const saved = await request(app)
+        .put(`/api/preferences/${key}`)
+        .set('Authorization', `Bearer ${firstToken}`)
+        .send(value);
+      expect(saved.status).toBe(200);
+      expect(saved.body).toEqual(value);
+    }
+  });
+
+  it('persists separate task assignee first and last name column widths', async () => {
+    const value = {
+      view: 'list', programIds: [], cycleIds: [], categories: [], statuses: [],
+      sorting: { key: 'lastName', direction: 'desc' },
+      columnWidths: { firstName: 180, lastName: 200 },
+    };
+    const saved = await request(app)
+      .put('/api/preferences/task-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(value);
+
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual(value);
   });
 
   it('rejects unknown preference keys and malformed filter values', async () => {

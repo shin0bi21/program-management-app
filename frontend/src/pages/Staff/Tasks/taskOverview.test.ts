@@ -7,7 +7,7 @@ function task(id: string, dueDate: string, status: Task['status']): Task {
     id, title: id, details: null, category: 'administration', programId: null, programName: null,
     cycleId: 'cycle-1', cycleName: 'Summer 2026', status, startDate: '2026-08-01', dueDate,
     hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
-    assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+    assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
   };
 }
 

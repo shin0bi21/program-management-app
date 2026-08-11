@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
-import { makeYouthProfile } from '../../../../tests/factories/youth';
+import { makeYouthProfile } from '../../../../../tests/factories/youth';
 
-vi.mock('../../../../common/features/youth/api/youth.api', () => ({
+vi.mock('../../api/youth.api', () => ({
   setYouth: vi.fn(),
 }));
 
@@ -28,11 +28,11 @@ vi.mock('./schools/hooks/useSchools', () => ({
   }),
 }));
 
-vi.mock('../../../../auth/authContext', () => ({
+vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => authState,
 }));
 
-import { setYouth } from '../../../../common/features/youth/api/youth.api';
+import { setYouth } from '../../api/youth.api';
 
 const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 

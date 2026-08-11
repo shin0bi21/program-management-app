@@ -29,8 +29,10 @@ export interface PreferenceValues {
     staffIds: string[];
     programIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    types?: Array<'task' | 'session' | 'other'>;
     cycleId: string | null;
-    columnWidths?: ColumnWidths<'date' | 'staff' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
+    sorting?: { key: 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type'; direction: 'asc' | 'desc' };
+    columnWidths?: ColumnWidths<'date' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type'>;
   };
   'task-filters': {
     view?: 'calendar' | 'list';
@@ -38,7 +40,8 @@ export interface PreferenceValues {
     cycleIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;
-    columnWidths?: ColumnWidths<'title' | 'category' | 'assignee' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
+    sorting?: { key: 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'; direction: 'asc' | 'desc' };
+    columnWidths?: ColumnWidths<'title' | 'category' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
   };
   'cohort-filters': {
     programId: string | null;
@@ -50,13 +53,13 @@ export interface PreferenceValues {
     statuses: Array<'new' | 'contacted' | 'eligible' | 'ineligible' | 'signed_up'>;
     programIds: string[];
     sorting?: { key: 'name' | 'school' | 'program' | 'status' | 'createdAt'; direction: 'asc' | 'desc' };
-    columnWidths?: ColumnWidths<'name' | 'school' | 'program' | 'status' | 'created'>;
+    columnWidths?: ColumnWidths<'firstName' | 'lastName' | 'school' | 'program' | 'status' | 'created'>;
   };
   'expression-interest-filters': {
     statuses: Array<'new' | 'reviewed' | 'contacted' | 'converted' | 'signed_up' | 'lost' | 'spam'>;
     programIds: string[];
     sorting?: { key: 'name' | 'age' | 'school' | 'program' | 'submittedByRole' | 'createdAt' | 'status'; direction: 'asc' | 'desc' };
-    columnWidths?: ColumnWidths<'youthName' | 'age' | 'school' | 'program' | 'submittedByRole' | 'submittedAt' | 'status'>;
+    columnWidths?: ColumnWidths<'firstName' | 'lastName' | 'age' | 'school' | 'program' | 'submittedByRole' | 'submittedAt' | 'status'>;
   };
 }
 

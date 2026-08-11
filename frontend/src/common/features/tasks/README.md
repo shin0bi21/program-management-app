@@ -8,6 +8,8 @@ Calendar movement and resizing use the narrow task-placement API. Placement writ
 
 Task responses include `hoursLogged` plus `loggedHoursByDate`, which contains task-linked hours aggregated by calendar date. Dashboard consumers can build a daily breakdown without loading the full timesheet-entry dataset.
 
+Task assignees and task-option resources expose required `firstName`, `lastName`, and combined `name` fields. List tables use the separate fields; calendars, selectors, cards, and compact labels use the server-provided combined name.
+
 Compact task calendar items show title and category. Their shared hover-details panel also shows program, cycle, planned dates, total hours logged, and task details; hours do not appear in the compact item summary.
 
 The task dashboard is resource-scoped, not account-scoped or calendar-filter-scoped. Selecting any readable staff resource shows that person's overview while write actions remain capability-scoped. The dashboard summarizes active assignments, tasks due in the current Monday-through-Sunday week, and overdue active tasks; its detail report names the tasks and due dates in the latter two groups. An active task is `todo` or `in_progress`; it is overdue only when its due date is before today. Calendar items expose overdue state through the shared trailing-content slot, while the task page owns the task-specific red indicator and report language.

@@ -59,7 +59,7 @@ describe('Leads', () => {
 
   it('signs up a Lead through the dedicated conversion action', async () => {
     renderPage();
-    await screen.findByText('Avery Outreach');
+    await screen.findByRole('row', { name: /Avery Outreach/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
@@ -78,7 +78,11 @@ describe('Leads', () => {
   it('renders fetched leads and direct-create access', async () => {
     renderPage();
 
-    expect(await screen.findByText('Avery Outreach')).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: /First Name/ })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+    expect(screen.getByRole('cell', { name: 'Avery' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Outreach' })).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
@@ -96,7 +100,7 @@ describe('Leads', () => {
 
   it('requests filtered lead data from the API', async () => {
     renderPage();
-    await screen.findByText('Avery Outreach');
+    await screen.findByRole('row', { name: /Avery Outreach/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
@@ -112,7 +116,7 @@ describe('Leads', () => {
 
   it('requests leads filtered by program', async () => {
     renderPage();
-    await screen.findByText('Avery Outreach');
+    await screen.findByRole('row', { name: /Avery Outreach/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     const programFilter = screen.getByRole('menuitem', { name: /Program/ });
@@ -131,7 +135,7 @@ describe('Leads', () => {
 
   it('opens the selected Lead for editing from its actions menu', async () => {
     renderPage();
-    await screen.findByText('Avery Outreach');
+    await screen.findByRole('row', { name: /Avery Outreach/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
@@ -152,7 +156,7 @@ describe('Leads', () => {
     }]);
 
     renderPage();
-    await screen.findByText('Avery Outreach');
+    await screen.findByRole('row', { name: /Avery Outreach/ });
 
     expect(screen.queryByRole('button', { name: 'More actions for Avery Outreach' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();

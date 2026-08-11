@@ -161,6 +161,9 @@ run_changed_suites() {
   select_frontend_file() {
     local frontend_file="$1"
     case "$frontend_file" in
+      frontend/playwright/*|frontend/playwright.config.ts)
+        add_frontend_runner scripts/tests/frontend/run-browser-tests.sh
+        ;;
       frontend/src/common/components/ResourceCalendar/*|frontend/src/common/components/FloatingMenu/*)
         add_frontend_runner scripts/tests/frontend/run-common-tests.sh
         add_frontend_runner scripts/tests/frontend/run-task-tests.sh
@@ -247,6 +250,9 @@ run_changed_suites() {
         ;;
       scripts/tests/frontend/run-timesheet-tests.sh)
         add_frontend_runner scripts/tests/frontend/run-timesheet-tests.sh
+        ;;
+      scripts/tests/frontend/run-browser-tests.sh)
+        add_frontend_runner scripts/tests/frontend/run-browser-tests.sh
         ;;
       scripts/tests/frontend/*)
         run_all_frontend=true

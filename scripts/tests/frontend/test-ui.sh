@@ -7,16 +7,7 @@ echo "=========================================="
 echo "Running FRONTEND UI tests"
 echo "=========================================="
 
-bash scripts/tests/frontend/run-platform-tests.sh
-bash scripts/tests/frontend/run-auth-tests.sh
-bash scripts/tests/frontend/run-common-tests.sh
-bash scripts/tests/frontend/run-homepage-tests.sh
-bash scripts/tests/frontend/run-outreach-tests.sh
-bash scripts/tests/frontend/run-programming-tests.sh
-bash scripts/tests/frontend/run-settings-tests.sh
-bash scripts/tests/frontend/run-staff-tests.sh
-bash scripts/tests/frontend/run-youth-tests.sh
-bash scripts/tests/frontend/run-browser-tests.sh
+(cd frontend && npm test)
 
 echo ""
 echo "=========================================="

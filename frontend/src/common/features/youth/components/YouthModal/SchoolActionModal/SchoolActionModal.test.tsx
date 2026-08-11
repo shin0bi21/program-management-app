@@ -8,7 +8,9 @@ vi.mock('../schools/api/schools.api', () => ({ createSchool: vi.fn(), deleteScho
 const school = { id: 'school-1', name: 'Central High' };
 
 describe('SchoolActionModal', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('adds a school by name', async () => {
     const onUpsert = vi.fn();

@@ -16,7 +16,7 @@ RETRY_INTERVAL=2
 
 # Remember whether containers were already up before we touched anything
 _CONTAINERS_WERE_RUNNING=false
-if docker-compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
+if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
   _CONTAINERS_WERE_RUNNING=true
 fi
 
@@ -34,22 +34,22 @@ cleanup() {
   else
     echo ""
     echo "Cleaning up containers..."
-    docker-compose down --remove-orphans 2>/dev/null || true
+    docker compose down --remove-orphans 2>/dev/null || true
   fi
   exit $exit_code
 }
 trap cleanup EXIT INT TERM
 
 echo "=========================================="
-echo "Starting Docker containers..."
+echo "Starting backend test services..."
 echo "=========================================="
-docker-compose up -d --build
+docker compose up -d backend db_test
 
 # Wait for database
 echo ""
 echo "Waiting for database..."
 retries=0
-until docker-compose exec -T db pg_isready -U root -d myapp_db > /dev/null 2>&1; do
+until docker compose exec -T db pg_isready -U root -d myapp_db > /dev/null 2>&1; do
   retries=$((retries + 1))
   if [ $retries -ge $MAX_RETRIES ]; then
     echo "Database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s"
@@ -65,7 +65,7 @@ echo "Database is ready (after ~$((retries * RETRY_INTERVAL))s)"
 echo ""
 echo "Waiting for test database..."
 retries=0
-until docker-compose exec -T db_test pg_isready -U root -d myapp_db_test > /dev/null 2>&1; do
+until docker compose exec -T db_test pg_isready -U root -d myapp_db_test > /dev/null 2>&1; do
   retries=$((retries + 1))
   if [ $retries -ge $MAX_RETRIES ]; then
     echo "Test database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s"
@@ -81,13 +81,13 @@ echo "Test database is ready (after ~$((retries * RETRY_INTERVAL))s)"
 echo ""
 echo "Waiting for backend..."
 retries=0
-until docker-compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || (echo > /dev/tcp/localhost/5001) 2>/dev/null" 2>/dev/null; do
+until docker compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || (echo > /dev/tcp/localhost/5001) 2>/dev/null" 2>/dev/null; do
   retries=$((retries + 1))
   if [ $retries -ge $MAX_RETRIES ]; then
     echo "Backend failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s"
     echo ""
     echo "Backend container logs:"
-    docker-compose logs --tail=30 backend
+    docker compose logs --tail=30 backend
     exit 1
   fi
   printf "."
@@ -99,9 +99,9 @@ echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
 # Apply migrations against the test DB (idempotent — safe to run every time)
 echo ""
 echo "Migrating test database..."
-docker-compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
+docker compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
   echo "Test DB migration failed"
-  docker-compose exec -T backend npm run db:migrate:test
+  docker compose exec -T backend npm run db:migrate:test
   exit 1
 }
 echo "Test database migrated"
