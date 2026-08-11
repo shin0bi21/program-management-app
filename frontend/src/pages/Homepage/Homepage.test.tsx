@@ -88,6 +88,10 @@ describe('Homepage', () => {
     expect(teamCards[2]).toHaveTextContent("Hi, I'm Bilal! I've been a part of Be Original since 2022.");
     expect(teamCards[2].querySelector('source')).toHaveAttribute('srcset', '/team/bilal-mobile.webp');
     expect(teamCards[2].querySelector('img')).toHaveAttribute('src', '/team/bilal-display.webp');
+    expect(teamCards[3]).toHaveTextContent('Hello everyone! My name is Jomariel');
+    expect(teamCards[3]).toHaveTextContent('I will be working with youth ages 12-15 years old.');
+    expect(teamCards[3].querySelector('source')).toHaveAttribute('srcset', '/team/jomariel-mobile.webp');
+    expect(teamCards[3].querySelector('img')).toHaveAttribute('src', '/team/jomariel-display.webp');
     expect(teamCards[4]).toHaveTextContent('I serve my community willingly with the utmost humility.');
     expect(teamCards[4].querySelector('img')).toHaveAttribute('src', '/team/elijah-display.webp');
   });
