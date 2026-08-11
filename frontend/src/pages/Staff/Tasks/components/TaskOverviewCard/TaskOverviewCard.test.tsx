@@ -20,14 +20,16 @@ describe('TaskOverviewCard', () => {
     render(<TaskOverviewCard tasks={[baseTask, overdueTask]} resourceName="Zoe Wilson" />);
 
     expect(screen.getByText('Tasks Assigned').nextSibling).toHaveTextContent('2');
-    expect(screen.getByText('Due This Week').nextSibling).toHaveTextContent('1');
-    fireEvent.click(screen.getByRole('button', { name: 'See Overview' }));
+    expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
+    expect(screen.getByRole('heading', { name: 'Task Overview' })).toHaveClass('task-overview-card__accessible-title');
+    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson Task Overview' });
-    expect(within(dialog).getByText('Currently Assigned').nextSibling).toHaveTextContent('2');
-    expect(within(dialog).getByRole('heading', { name: 'Overdue Tasks' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Submit report').nextSibling).toHaveTextContent('Due Aug 9, 2026');
-    expect(within(dialog).getByRole('heading', { name: 'Due This Week' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Due Aug 12, 2026');
+    const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
+    expect(within(dialog).getByText('Assigned').nextSibling).toHaveTextContent('2');
+    expect(within(dialog).getByRole('heading', { name: 'Overdue' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Submit report').nextSibling).toHaveTextContent('Aug 9');
+    expect(within(dialog).getByRole('heading', { name: 'Upcoming' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Aug 12');
+    expect(within(dialog).getByText('Prepare workshop').parentElement).toHaveClass('task-overview-card__task--due-this-week');
   });
 });

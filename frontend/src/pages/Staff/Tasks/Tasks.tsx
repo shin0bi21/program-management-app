@@ -126,10 +126,6 @@ export default function Tasks() {
   );
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
   const selectedTask = dashboardTasks.find(task => task.id === selectedTaskId) ?? null;
-  useEffect(() => {
-    if (selectedTask || !dashboardTasks.length) return;
-    setSelectedTaskId(dashboardTasks[0].id);
-  }, [dashboardTasks, selectedTask]);
   const logTaskHours = async (input: SetTimeEntryInput) => {
     await createTimeEntry(input);
     await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
@@ -197,6 +193,10 @@ export default function Tasks() {
   const selectTask = useCallback((task: Task) => {
     setSelectedResourceId(task.assignee.id);
     setSelectedTaskId(task.id);
+  }, []);
+  const selectResource = useCallback((resourceId: string) => {
+    setSelectedResourceId(resourceId);
+    setSelectedTaskId(null);
   }, []);
   const saveTask = useCallback((task: Task) => {
     if (modalTarget && 'id' in modalTarget) {
@@ -306,7 +306,7 @@ export default function Tasks() {
             : { draggable: canWrite && task.writable }}
           renderResource={({ resource }) => resource.name}
           selectedResourceId={selectedResourceId}
-          onResourceSelect={resource => setSelectedResourceId(current => current === resource.id ? current : resource.id)}
+          onResourceSelect={resource => selectResource(resource.id)}
           buildItem={() => null}
           buildRangeItem={({ data: task }) => <TaskItem
             task={task}

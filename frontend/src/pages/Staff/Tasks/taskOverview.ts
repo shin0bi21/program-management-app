@@ -41,13 +41,13 @@ export function isTaskOverdue(task: Task, today: string) {
 export function groupTasksForOverview(tasks: readonly Task[], today: string) {
   const week = currentWeekBounds(today);
   const activeTasks = tasks.filter(isTaskActive);
-  const dueThisWeekTasks = activeTasks.filter(task => (
-    task.dueDate >= week.start && task.dueDate <= week.end
-  ));
   const overdueTasks = activeTasks.filter(task => isTaskOverdue(task, today));
+  const upcomingTasks = activeTasks.filter(task => task.dueDate >= today);
+  const dueThisWeekTasks = upcomingTasks.filter(task => task.dueDate <= week.end);
   return {
     activeTasks: sortByDueDate(activeTasks),
-    dueThisWeekTasks: sortByDueDate(dueThisWeekTasks),
     overdueTasks: sortByDueDate(overdueTasks),
+    upcomingTasks: sortByDueDate(upcomingTasks),
+    dueThisWeekTasks: sortByDueDate(dueThisWeekTasks),
   };
 }
