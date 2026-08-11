@@ -1,5 +1,5 @@
 .dashboard-card.timesheet-overview-card {
-  height: 100px;
+  height: 75px;
 }
 
 .timesheet-overview-card .dashboard-card__header {
@@ -7,7 +7,6 @@
 }
 
 .timesheet-overview-card--details {
-  position: relative;
   justify-content: flex-start;
 }
 
@@ -23,18 +22,16 @@
   border: 0;
 }
 
-.timesheet-overview-card__action {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+.timesheet-overview-card__layout {
+  flex: 1;
 }
 
 .timesheet-overview-card__details {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(100px, 0.8fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5);
+  min-width: 0;
   margin: 0;
-  padding-right: 180px;
 }
 
 .timesheet-overview-card__details div {
@@ -44,16 +41,20 @@
 
 .timesheet-overview-card__details dt {
   color: var(--color-muted);
-  font-size: 0.85rem;
-  font-weight: 650;
+  font-size: .74rem;
+  line-height: 1.15;
 }
 
 .timesheet-overview-card__details dd {
-  margin: 0;
+  margin: 3px 0 0;
   color: var(--color-ink);
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.timesheet-overview-card__details .timesheet-overview-card__text-value {
+  font-size: 1rem;
 }
 
 .timesheet-overview-card__metric,
@@ -75,19 +76,13 @@
 @media (max-width: 768px) {
   .dashboard-card.timesheet-overview-card {
     height: auto;
-    min-height: 100px;
+    min-height: 75px;
   }
 
   .timesheet-overview-card__details {
     grid-template-columns: 1fr;
-    padding-right: 0;
   }
 
-  .timesheet-overview-card__action {
-    position: static;
-    align-self: flex-end;
-    margin-bottom: var(--space-2);
-  }
 }
 
 .timesheet-overview-card__modal-subtitle,
