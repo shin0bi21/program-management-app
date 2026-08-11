@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { buildTimesheetListRows, useTimesheetListData } from './useTimesheetListData';
+import { buildTimesheetListRows, timesheetEntryType, useTimesheetListData } from './useTimesheetListData';
 
 const item = {
   id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
@@ -9,6 +9,14 @@ const item = {
 };
 
 describe('useTimesheetListData', () => {
+  it.each([
+    [{ ...item, taskId: 'task-1' }, 'Task'],
+    [{ ...item, sessionId: 'session-1' }, 'Session'],
+    [item, 'Other'],
+  ])('derives the persisted entry type from its linkage', (entry, expected) => {
+    expect(timesheetEntryType(entry)).toBe(expected);
+  });
+
   it('fails loudly when entry data references an unknown staff resource', () => {
     expect(() => buildTimesheetListRows(
       { 'missing-staff': { '2026-08-11': [item] } },
@@ -23,6 +31,7 @@ describe('useTimesheetListData', () => {
       [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       [],
       'robotics',
+      { key: 'date', direction: 'desc' },
     ));
     expect(result.current).toHaveLength(1);
   });
@@ -42,7 +51,26 @@ describe('useTimesheetListData', () => {
       [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       [],
       'zoe wilson',
+      { key: 'date', direction: 'desc' },
     ));
     expect(result.current).toHaveLength(1);
+  });
+
+  it('sorts rows by the selected column with an entry ID tie-breaker', () => {
+    const { result } = renderHook(() => useTimesheetListData(
+      {
+        'staff-1': { '2026-08-10': [{ ...item, id: 'entry-2', hours: 5 }] },
+        'staff-2': { '2026-08-11': [{ ...item, id: 'entry-1', hours: 1 }] },
+      },
+      [
+        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+        { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: true },
+      ],
+      [],
+      '',
+      { key: 'hours', direction: 'asc' },
+    ));
+
+    expect(result.current.map(row => row.id)).toEqual(['entry-1', 'entry-2']);
   });
 });

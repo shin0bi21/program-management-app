@@ -39,8 +39,10 @@ const valuesByKey = {
     staffIds: unique(z.string().uuid('Invalid staff ID'), 'Staff'),
     programIds: unique(z.union([z.string().uuid('Invalid program ID'), z.literal('general')]), 'Programs'),
     categories: unique(z.enum(['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other']), 'Categories'),
+    types: unique(z.enum(['task', 'session', 'other']), 'Types').max(3).optional(),
     cycleId: z.string().uuid('Invalid cycle ID').nullable(),
-    columnWidths: columnWidths(['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'task', 'hours', 'note']).optional(),
+    sorting: sorting(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type']).optional(),
+    columnWidths: columnWidths(['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type']).optional(),
   }),
   'task-filters': z.object({
     view: z.enum(['calendar', 'list']).optional(),
