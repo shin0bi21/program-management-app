@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TimeItem from './TimeItem';
 
@@ -17,12 +17,12 @@ const item = {
 };
 
 describe('TimeItem', () => {
-  it('shows complete entry details on hover', () => {
+  it('shows complete entry details on hover', async () => {
     render(<TimeItem item={{ ...item, cycleName: 'Summer 2026' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
-    const tooltip = screen.getByRole('tooltip');
+    const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Program Delivery');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Summer 2026');
@@ -33,37 +33,52 @@ describe('TimeItem', () => {
     ]);
   });
 
-  it('omits the program detail instead of labeling an unspecified program as General', () => {
+  it('omits the program detail instead of labeling an unspecified program as General', async () => {
     render(<TimeItem item={{ ...item, programId: null, programName: null }} />);
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
-    const tooltip = screen.getByRole('tooltip');
+    const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
       'Cycle', 'Category', 'Hours', 'Notes',
     ]);
   });
 
-  it('dismisses hover details when a scroll container moves', () => {
+  it('dismisses hover details when a scroll container moves', async () => {
     const { container } = render(<TimeItem item={item} onEdit={vi.fn()} onDelete={vi.fn()} />);
     fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.scroll(container);
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('dismisses hover details immediately on pointer down', () => {
+  it('dismisses hover details immediately on pointer down', async () => {
     render(<TimeItem item={item} onEdit={vi.fn()} onDelete={vi.fn()} />);
     const trigger = screen.getByRole('button', { name: /program delivery, 2 hours/i });
     fireEvent.mouseEnter(trigger);
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.pointerDown(trigger);
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('does not open hover details when the pointer leaves during the delay', () => {
+    vi.useFakeTimers();
+    try {
+      render(<TimeItem item={item} />);
+      const trigger = screen.getByRole('button', { name: /program delivery, 2 hours/i });
+      fireEvent.mouseEnter(trigger);
+      fireEvent.mouseLeave(trigger);
+      act(() => vi.advanceTimersByTime(120));
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('opens entry actions without invoking either action immediately', () => {

@@ -12,6 +12,8 @@ export interface CalendarItemDetail {
   sectionStart?: boolean;
 }
 
+const HOVER_DETAILS_DELAY_MS = 120;
+
 interface CalendarItemProps {
   id: string;
   ariaLabel: string;
@@ -31,8 +33,9 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   const detailRef = useRef<HTMLDivElement>(null);
   const detailAnchorRef = useRef<DOMRect | null>(null);
   const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const detailOpenTimerRef = useRef<number | null>(null);
   const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
-  const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
+  const { isOpen, openAtPoint, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'start' },
     { widthEstimate: 150, heightEstimate: 86 },
@@ -40,16 +43,22 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   useViewportDismissal(detailPosition !== null, () => setDetailPosition(null));
   const hasActions = Boolean(onEdit && onDelete);
   const detailsId = `calendar-item-details-${id}`;
+  const cancelPendingDetails = () => {
+    if (detailOpenTimerRef.current === null) return;
+    window.clearTimeout(detailOpenTimerRef.current);
+    detailOpenTimerRef.current = null;
+  };
   const hideDetails = () => {
+    cancelPendingDetails();
     detailAnchorRef.current = null;
     setDetailPosition(null);
   };
-  const showDetails = (clientX?: number) => {
+  const getVisibleItemAnchor = (clientX?: number) => {
     const trigger = triggerRef.current;
-    if (!trigger) return;
+    if (!trigger) return null;
     const daySlots = trigger.closest('.resource-calendar__row')
       ?.querySelectorAll<HTMLElement>('.resource-calendar__item-slot');
-    const hoveredDay = clientX === undefined ? undefined : [...(daySlots ?? [])].find(slot => {
+    const hoveredDay = clientX === undefined || clientX <= 0 ? undefined : [...(daySlots ?? [])].find(slot => {
       const bounds = slot.getBoundingClientRect();
       return clientX >= bounds.left && clientX < bounds.right;
     });
@@ -57,12 +66,16 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     const dayBounds = hoveredDay?.getBoundingClientRect();
     const anchorLeft = dayBounds ? Math.max(dayBounds.left, itemBounds.left) : itemBounds.left;
     const anchorRight = dayBounds ? Math.min(dayBounds.right, itemBounds.right) : itemBounds.right;
-    const anchorBounds = new DOMRect(
+    return new DOMRect(
       anchorLeft,
       itemBounds.top,
       anchorRight - anchorLeft,
       itemBounds.height,
     );
+  };
+  const showDetails = (clientX?: number) => {
+    const anchorBounds = getVisibleItemAnchor(clientX);
+    if (!anchorBounds) return;
     detailAnchorRef.current = anchorBounds;
     const measuredSize = detailSizeRef.current;
     const next = calculateFloatingPositionFromRect(
@@ -76,7 +89,17 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     );
     setDetailPosition(current => current?.top === next.top && current.left === next.left ? current : next);
   };
+  const scheduleDetails = (clientX: number) => {
+    cancelPendingDetails();
+    detailOpenTimerRef.current = window.setTimeout(() => {
+      detailOpenTimerRef.current = null;
+      showDetails(clientX);
+    }, HOVER_DETAILS_DELAY_MS);
+  };
   const detailsOpen = detailPosition !== null;
+  useLayoutEffect(() => () => {
+    if (detailOpenTimerRef.current !== null) window.clearTimeout(detailOpenTimerRef.current);
+  }, []);
   useLayoutEffect(() => {
     const detail = detailRef.current;
     if (!detailsOpen || !detail) return undefined;
@@ -109,13 +132,22 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
       aria-haspopup={hasActions ? 'menu' : undefined}
       aria-expanded={hasActions ? isOpen : undefined}
       aria-describedby={detailPosition ? detailsId : undefined}
-      onMouseEnter={event => showDetails(event.clientX)}
-      onMouseMove={event => showDetails(event.clientX)}
+      onMouseEnter={event => scheduleDetails(event.clientX)}
       onMouseLeave={hideDetails}
       onFocus={() => { if (triggerRef.current?.matches(':focus-visible')) showDetails(); }}
       onBlur={hideDetails}
       onPointerDown={hideDetails}
-      onClick={event => { event.stopPropagation(); hideDetails(); onActivate?.(); if (hasActions) toggle(); }}
+      onClick={event => {
+        event.stopPropagation();
+        hideDetails();
+        onActivate?.();
+        if (!hasActions) return;
+        if (isOpen) close();
+        else {
+          const anchor = getVisibleItemAnchor(event.clientX);
+          if (anchor) openAtPoint(anchor.left, anchor.bottom);
+        }
+      }}
     >
       {leading !== undefined && leading !== null && <strong>{leading}</strong>}
       <span className="calendar-item__summary">{summary}</span>

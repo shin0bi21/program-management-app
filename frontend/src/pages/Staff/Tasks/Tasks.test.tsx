@@ -90,6 +90,19 @@ describe('Tasks', () => {
     expect(Array.from(dashboard?.children ?? []).filter(child => child.matches('.dashboard-card'))).toHaveLength(2);
   });
 
+  it('keeps search in list view and removes it from the calendar header', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Search tasks' }), { target: { value: 'missing' } });
+    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    expect(screen.queryByRole('textbox', { name: 'Search tasks' })).not.toBeInTheDocument();
+    expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]);
+  });
+
   it('shows tasks from a readable coworker resource without exposing write controls', async () => {
     const coworkerTask: Task = {
       ...task,

@@ -16,16 +16,18 @@ describe('TaskHoursLoggedCard', () => {
     render(<TaskHoursLoggedCard task={task} />);
 
     const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')!;
-    expect(within(card).getByText('4.50')).toBeInTheDocument();
+    expect(within(card).getByText('4.5 hours')).toBeInTheDocument();
     expect(within(card).queryByText('Task Start')).not.toBeInTheDocument();
     expect(card).toHaveClass('task-hours-breakdown-card');
 
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Prepare workshop' });
-    expect(within(dialog).getByRole('progressbar', { name: '3.00 hours on Aug 10, 2026' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('progressbar', { name: '1.50 hours on Aug 11, 2026' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Total').nextSibling).toHaveTextContent('4.50');
+    expect(within(dialog).getByText('Start').nextSibling).toHaveTextContent('Aug 10, 2026');
+    expect(within(dialog).getByText('End').nextSibling).toHaveTextContent('Aug 12, 2026');
+    expect(within(dialog).getByRole('progressbar', { name: '3 hours on Aug 10, 2026' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('progressbar', { name: '1.5 hours on Aug 11, 2026' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Total').nextSibling).toHaveTextContent('4.5 hours');
   });
 
   it('delegates contextual task-time logging', () => {

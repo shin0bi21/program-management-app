@@ -6,6 +6,10 @@ import type { Task } from '../../../../../common/features/tasks/types';
 import '../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskHoursLoggedCard.css';
 
+function formatHours(hours: number) {
+  return `${hours.toLocaleString('en-CA', { maximumFractionDigits: 2 })} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
 export default function TaskHoursLoggedCard({ task, onLogHours }: {
   task: Task | null;
   onLogHours?: () => void;
@@ -18,7 +22,7 @@ export default function TaskHoursLoggedCard({ task, onLogHours }: {
       {task ? <>
         <div className="dashboard-card__compact-layout task-hours-breakdown__layout">
           <dl className="task-hours-breakdown__summary">
-            <div><dt>Hours Logged</dt><dd>{task.hoursLogged.toFixed(2)}</dd></div>
+            <div><dt>Logged</dt><dd>{formatHours(task.hoursLogged)}</dd></div>
           </dl>
           <div className="dashboard-card__compact-action task-hours-breakdown__actions">
             {onLogHours && <Button size="sm" onClick={onLogHours}>Log Hours</Button>}
@@ -29,18 +33,20 @@ export default function TaskHoursLoggedCard({ task, onLogHours }: {
     </article>
     <Modal isOpen={open} onClose={() => setOpen(false)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
       {task && <dl className="task-hours-breakdown__details">
-        <div><dt>Task Start Date</dt><dd>{formatShortDate(task.startDate)}</dd></div>
-        <div><dt>Task Due Date</dt><dd>{formatShortDate(task.dueDate)}</dd></div>
-        <div><dt>Hours Logged</dt><dd>{task.hoursLogged.toFixed(2)}</dd></div>
+        <div><dt>Start</dt><dd>{formatShortDate(task.startDate)}</dd></div>
+        <div><dt>End</dt><dd>{formatShortDate(task.dueDate)}</dd></div>
+        <div><dt>Logged</dt><dd>{formatHours(task.hoursLogged)}</dd></div>
       </dl>}
-      <p className="task-hours-breakdown__subtitle">Work by date</p>
-      {task?.loggedHoursByDate.length ? <dl className="task-hours-breakdown__list">
-        {task.loggedHoursByDate.map(entry => <div key={entry.date}>
-          <dt>{formatShortDate(entry.date)}</dt>
-          <dd><progress max={maxDailyHours} value={entry.hours} aria-label={`${entry.hours.toFixed(2)} hours on ${formatShortDate(entry.date)}`} /><strong>{entry.hours.toFixed(2)}</strong></dd>
-        </div>)}
-      </dl> : <p className="task-hours-breakdown__empty">No hours recorded.</p>}
-      {task && <div className="task-hours-breakdown__total"><span>Total</span><strong>{task.hoursLogged.toFixed(2)}</strong></div>}
+      <section className="task-hours-breakdown__section" aria-labelledby="task-hours-breakdown-title">
+        <h3 id="task-hours-breakdown-title" className="task-hours-breakdown__subtitle">Hours breakdown</h3>
+        {task?.loggedHoursByDate.length ? <dl className="task-hours-breakdown__list">
+          {task.loggedHoursByDate.map(entry => <div key={entry.date}>
+            <dt>{formatShortDate(entry.date)}</dt>
+            <dd><progress max={maxDailyHours} value={entry.hours} aria-label={`${formatHours(entry.hours)} on ${formatShortDate(entry.date)}`} /><strong>{formatHours(entry.hours)}</strong></dd>
+          </div>)}
+        </dl> : <p className="task-hours-breakdown__empty">No hours recorded.</p>}
+        {task && <div className="task-hours-breakdown__total"><span>Total</span><strong>{formatHours(task.hoursLogged)}</strong></div>}
+      </section>
     </Modal>
   </>;
 }
