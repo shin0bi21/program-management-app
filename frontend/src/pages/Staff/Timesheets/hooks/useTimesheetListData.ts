@@ -7,21 +7,25 @@ export interface TimesheetListRow {
   resourceId: string;
   date: string;
   item: TimesheetItem;
+  staffFirstName: string;
+  staffLastName: string;
   staffName: string;
 }
 
 export function buildTimesheetListRows(data: ResourcePeriodData<TimesheetItem>, resources: readonly StaffResource[], staffFilters: readonly string[]) {
-  const resourceNames = new Map(resources.map(resource => [resource.id, resource.name]));
+  const resourcesById = new Map(resources.map(resource => [resource.id, resource]));
   return Object.entries(data).flatMap(([resourceId, periods]) => {
     if (staffFilters.length && !staffFilters.includes(resourceId)) return [];
-    const staffName = resourceNames.get(resourceId);
-    if (!staffName) throw new Error(`Timesheet data references unknown staff resource ${resourceId}.`);
+    const resource = resourcesById.get(resourceId);
+    if (!resource) throw new Error(`Timesheet data references unknown staff resource ${resourceId}.`);
     return Object.entries(periods).flatMap(([date, items]) => items.map(item => ({
       id: item.id,
       resourceId,
       date,
       item,
-      staffName,
+      staffFirstName: resource.firstName,
+      staffLastName: resource.lastName,
+      staffName: resource.name,
     })));
   }).sort((left, right) => right.date.localeCompare(left.date) || left.staffName.localeCompare(right.staffName));
 }

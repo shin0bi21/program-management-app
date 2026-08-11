@@ -128,8 +128,8 @@ async function assertProgramResource(programId: string | null, db: typeof sql = 
 }
 
 function getTimeEntryResources(actor: AccessTokenPayload) {
-  return sql<Array<{ id: string; name: string; role: string; writable: boolean }>>`
-    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
+  return sql<Array<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }>>`
+    SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
       (${timeEntryWriteScopePredicate(actor, sql`u.id`)}) AS writable
     FROM users u
     INNER JOIN user_roles role ON role.id = u.role_id

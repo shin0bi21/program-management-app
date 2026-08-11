@@ -27,9 +27,15 @@ describe('Time entries API', () => {
   beforeAll(async () => {
     const stamp = Date.now();
     const admin = await seedTestUser({ email: `timesheet-admin-${stamp}@test.local`, role: 'admin' });
-    const firstStaff = await seedTestUser({ email: `timesheet-staff-a-${stamp}@test.local`, role: 'staff' });
-    const secondStaff = await seedTestUser({ email: `timesheet-staff-b-${stamp}@test.local`, role: 'staff' });
-    const unrelatedStaff = await seedTestUser({ email: `timesheet-staff-c-${stamp}@test.local`, role: 'staff' });
+    const firstStaff = await seedTestUser({
+      email: `timesheet-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
+    });
+    const secondStaff = await seedTestUser({
+      email: `timesheet-staff-b-${stamp}@test.local`, firstName: 'Alex', lastName: 'Morgan', role: 'staff',
+    });
+    const unrelatedStaff = await seedTestUser({
+      email: `timesheet-staff-c-${stamp}@test.local`, firstName: 'Jamie', lastName: 'Unrelated', role: 'staff',
+    });
     adminId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     firstStaffId = firstStaff.userId;
@@ -97,8 +103,12 @@ describe('Time entries API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(listed.status).toBe(200);
     expect(listed.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId, writable: true }),
-      expect.objectContaining({ id: secondStaffId, writable: false }),
+      expect.objectContaining({
+        id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', writable: true,
+      }),
+      expect.objectContaining({
+        id: secondStaffId, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', writable: false,
+      }),
     ]));
     expect(listed.body.resources).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: unrelatedStaffId }),

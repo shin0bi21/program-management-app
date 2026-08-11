@@ -181,7 +181,8 @@ export default function Timesheets() {
   }, [refreshCycleData, removeItem]);
 
   const listColumns = useMemo<TableColumn<TimesheetListRow>[]>(() => [
-    { key: 'staff', header: 'Staff', render: row => row.staffName },
+    { key: 'firstName', header: 'First Name', render: row => row.staffFirstName },
+    { key: 'lastName', header: 'Last Name', render: row => row.staffLastName },
     { key: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
     { key: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
     { key: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },

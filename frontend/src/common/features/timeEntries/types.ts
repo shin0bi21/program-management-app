@@ -1,4 +1,11 @@
-export interface StaffResource { id: string; name: string; role: string; writable: boolean }
+export interface StaffResource {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  role: string;
+  writable: boolean;
+}
 export interface TimeEntryProgram { id: string; name: string }
 export interface TimeEntryCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
 export type TimeEntryCategory = 'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other';
