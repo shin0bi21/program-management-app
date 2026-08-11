@@ -1,6 +1,8 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock } from '@fortawesome/free-solid-svg-icons';
 import logoUrl from '../../../assets/logo.webp';
+import logo160Url from '../../../assets/logo-160.webp';
+import logo320Url from '../../../assets/logo-320.webp';
 import FloatingMenuPanel from '../../../common/components/FloatingMenu/FloatingMenuPanel';
 import { useAppNavigation } from './useAppNavigation';
 import './AppNavigation.css';
@@ -27,7 +29,15 @@ export default function AppNavigation() {
           onClick={() => go('/')}
           aria-label="Go to homepage"
         >
-          <img src={logoUrl} alt="" className="mobile-topbar-logo" />
+          <img
+            src={logo160Url}
+            srcSet={`${logo160Url} 160w, ${logo320Url} 320w, ${logoUrl} 512w`}
+            sizes="134px"
+            width="160"
+            height="101"
+            alt=""
+            className="mobile-topbar-logo"
+          />
         </button>
         <button
           className="mobile-topbar-toggle"
@@ -52,7 +62,15 @@ export default function AppNavigation() {
             onClick={() => go('/')}
             aria-label="Go to homepage"
           >
-            <img src={logoUrl} alt="" className="sidebar-logo" />
+            <img
+              src={logo160Url}
+              srcSet={`${logo160Url} 160w, ${logo320Url} 320w, ${logoUrl} 512w`}
+              sizes="134px"
+              width="160"
+              height="101"
+              alt=""
+              className="sidebar-logo"
+            />
           </button>
         </div>
         <nav className="sidebar-nav">
