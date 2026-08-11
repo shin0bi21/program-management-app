@@ -6,7 +6,7 @@ General time requires a cycle and category with an optional program. Task time s
 
 Pages own when the workflow opens and how successful writes refresh their page data. They must consume this shared modal rather than importing another page's private implementation or recreating the form.
 
-The Timesheets dashboard has two distinct cycle contracts. The current pay period is the 14-day period containing today, counted from the start of the single active organization cycle. The cycle selected in the page filters controls the biweekly-average calculation only; selecting an upcoming or completed cycle must not move the current pay period. More than one active cycle is an invalid organization state and must fail visibly rather than choosing an arbitrary anchor.
+The Timesheets dashboard has two distinct cycle contracts. The current pay period is the 14-day period containing today, counted from the start of the most recently started organization cycle; that anchor continues through gaps until the next cycle starts. The cycle selected in the page filters controls the biweekly-average calculation only, so selecting an upcoming or completed cycle does not move the current pay period. Overlapping cycles with the same start date share the same pay-period anchor.
 
 Timesheet resource responses expose an authoritative `writable` capability. Staff can read the complete time-entry rows of coworkers who share any program assignment with them, including general and administrative time, but may mutate only their own resource. Page consumers must use `writable` consistently for cell actions, item mechanics, menus, and modal resource choices rather than reconstructing authorization from roles or entry metadata.
 
