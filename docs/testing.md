@@ -10,7 +10,7 @@ Run test commands from the repository root. The supported test workflow uses the
 | Suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
 | Static analysis | `bash scripts/tests/test-static.sh` |
 | Backend APIs | `bash scripts/tests/backend/test-apis.sh` |
-| Frontend UI (Vitest + jsdom) | `bash scripts/tests/frontend/test-ui.sh` |
+| Frontend tests (Vitest: Node + jsdom) | `bash scripts/tests/frontend/test-ui.sh` |
 | Playwright browser components | `bash scripts/tests/frontend/test-browser.sh` |
 
 The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, and Timesheet coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.

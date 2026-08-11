@@ -54,17 +54,19 @@ scoped independently from pull-request CI.
 Repository rulesets enforce the following merge requirements:
 
 - `develop`: require a pull request and require `Lint & Shell Analysis`,
-  `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`.
+  `Backend — Typecheck, Migrate & Test`, `Frontend — Typecheck & Build`, and
+  `Review repository patterns`.
 - `main`: require a pull request, require the merge-path job that rejects
-  sources other than `develop`, require the three standard checks above, and
-  also require
+  sources other than `develop`, require `Lint & Shell Analysis`,
+  `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`,
+  and also require
   `Production Compose Validation`, `Backend Production Image`, and
   `Frontend Production Image`.
 
 The production validation jobs are always present on pull requests to `main`.
 They are conditional on relevant package, container, nginx, Compose, or
-deployment changes for pull requests to `develop`, so the `develop` ruleset
-requires only the three standard checks.
+deployment changes for pull requests to `develop`. The `develop` ruleset
+requires its three standard CI checks plus the independent pattern review.
 
 ## CI and automatic deployment
 
