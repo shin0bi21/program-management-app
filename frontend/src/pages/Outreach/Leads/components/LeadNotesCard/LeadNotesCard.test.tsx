@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import render from '../../../../../tests/renderWithQueryClient';
 import type { Lead } from '../../types';
 import LeadNotesCard from './LeadNotesCard';
@@ -41,6 +42,21 @@ const existingNote = {
   updatedAt: '2026-08-07T13:00:00.000Z',
   createdByName: 'Quinton Macnevin',
 };
+
+const otherLead: Lead = {
+  ...lead,
+  id: 'lead-2',
+  expressionOfInterestId: 'expression-2',
+  youthFirstName: 'Taylor',
+};
+
+function LeadNotesSelectionHarness() {
+  const [selectedLead, setSelectedLead] = useState(lead);
+  return <>
+    <button onClick={() => setSelectedLead(otherLead)}>Select Taylor</button>
+    <LeadNotesCard lead={selectedLead} canWrite />
+  </>;
+}
 
 describe('LeadNotesCard', () => {
   beforeEach(() => {
@@ -107,5 +123,20 @@ describe('LeadNotesCard', () => {
     await waitFor(() => expect(api.deleteLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id));
     await waitFor(() => expect(screen.queryByText(existingNote.details)).not.toBeInTheDocument());
     expect(api.getLeadNotes).toHaveBeenCalledOnce();
+  });
+
+  it('closes an editor instead of carrying its note into a newly selected lead', async () => {
+    render(<LeadNotesSelectionHarness />);
+    await screen.findByText(existingNote.details);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit follow-up note/ }));
+    expect(screen.getByRole('dialog', { name: 'Edit Follow-up Note' })).toBeInTheDocument();
+
+    api.getLeadNotes.mockResolvedValue([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Select Taylor' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Follow-up Note' })).not.toBeInTheDocument());
+    expect(api.updateLeadNote).not.toHaveBeenCalled();
+    expect(api.getLeadNotes).toHaveBeenLastCalledWith(otherLead.id, expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 });
