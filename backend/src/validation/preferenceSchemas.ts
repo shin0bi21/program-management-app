@@ -60,13 +60,13 @@ const valuesByKey = {
     statuses: unique(z.enum(['new', 'contacted', 'eligible', 'ineligible', 'signed_up']), 'Statuses'),
     programIds: uuidList,
     sorting: sorting(['name', 'school', 'program', 'status', 'createdAt']).optional(),
-    columnWidths: columnWidths(['name', 'school', 'program', 'status', 'created']).optional(),
+    columnWidths: columnWidths(['firstName', 'lastName', 'school', 'program', 'status', 'created']).optional(),
   }),
   'expression-interest-filters': z.object({
     statuses: unique(z.enum(['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam']), 'Statuses'),
     programIds: uuidList,
     sorting: sorting(['name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status']).optional(),
-    columnWidths: columnWidths(['youthName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status']).optional(),
+    columnWidths: columnWidths(['firstName', 'lastName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status']).optional(),
   }),
 } as const;
 

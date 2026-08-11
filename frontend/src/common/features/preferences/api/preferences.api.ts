@@ -50,13 +50,13 @@ export interface PreferenceValues {
     statuses: Array<'new' | 'contacted' | 'eligible' | 'ineligible' | 'signed_up'>;
     programIds: string[];
     sorting?: { key: 'name' | 'school' | 'program' | 'status' | 'createdAt'; direction: 'asc' | 'desc' };
-    columnWidths?: ColumnWidths<'name' | 'school' | 'program' | 'status' | 'created'>;
+    columnWidths?: ColumnWidths<'firstName' | 'lastName' | 'school' | 'program' | 'status' | 'created'>;
   };
   'expression-interest-filters': {
     statuses: Array<'new' | 'reviewed' | 'contacted' | 'converted' | 'signed_up' | 'lost' | 'spam'>;
     programIds: string[];
     sorting?: { key: 'name' | 'age' | 'school' | 'program' | 'submittedByRole' | 'createdAt' | 'status'; direction: 'asc' | 'desc' };
-    columnWidths?: ColumnWidths<'youthName' | 'age' | 'school' | 'program' | 'submittedByRole' | 'submittedAt' | 'status'>;
+    columnWidths?: ColumnWidths<'firstName' | 'lastName' | 'age' | 'school' | 'program' | 'submittedByRole' | 'submittedAt' | 'status'>;
   };
 }
 
