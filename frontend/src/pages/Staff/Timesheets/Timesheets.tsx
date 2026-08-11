@@ -365,7 +365,7 @@ export default function Timesheets() {
             getItemCapabilities={({ resource, data: item }) => ({
               draggable: canWriteTimesheets && resource.writable && !item.sessionId,
             })}
-            maxVisibleItemsPerCell={3}
+            maxVisibleItemsPerCell={7}
             rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [

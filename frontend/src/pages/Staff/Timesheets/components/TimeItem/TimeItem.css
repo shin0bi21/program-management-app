@@ -6,6 +6,12 @@
   font-weight: 700;
 }
 
+.resource-calendar__item-slot--compact .time-item__type,
+.resource-calendar__item-slot--dense .time-item__type {
+  padding: 1px 3px;
+  font-size: inherit;
+}
+
 .time-item__type--task {
   background: var(--color-status-warn-bg);
   color: var(--color-status-warn);

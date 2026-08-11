@@ -16,7 +16,22 @@ import type {
   CalendarItemCapabilities,
   ItemActivateContext,
 } from '../types';
-import { layoutRangeItems } from '../utils/rangeLayout';
+import {
+  getCalendarItemDensity,
+  layoutRangeItems,
+  type CalendarItemDensity,
+} from '../utils/rangeLayout';
+
+const MAX_READABLE_ITEMS_PER_CELL = 7;
+
+function getRangeItemGeometry(density: CalendarItemDensity, lane: number, laneCount: number, rowHeight: number) {
+  const padding = density === 'dense' ? 4 : density === 'compact' ? 7 : 8;
+  const gap = density === 'dense' ? 2 : density === 'compact' ? 3 : 8;
+  const height = density === 'normal'
+    ? 26
+    : (rowHeight - (padding * 2) - (gap * (laneCount - 1))) / laneCount;
+  return { top: padding + (lane * (height + gap)), height };
+}
 
 interface ResourceCalendarRowProps<TResource, TItemData> {
   resource: TResource;
@@ -90,7 +105,10 @@ function ResourceCalendarRow<TResource, TItemData>({
   today,
 }: ResourceCalendarRowProps<TResource, TItemData>) {
   const resourceId = getResourceId(resource);
-  const normalizedMaxVisibleItems = Math.max(0, Math.floor(maxVisibleItemsPerCell));
+  const normalizedMaxVisibleItems = Math.min(
+    MAX_READABLE_ITEMS_PER_CELL,
+    Math.max(0, Math.floor(maxVisibleItemsPerCell)),
+  );
   const selectResource = () => {
     if (!selected) onResourceSelect?.(resource);
   };
@@ -184,10 +202,12 @@ function ResourceCalendarRow<TResource, TItemData>({
         {periods.map(period => {
           const items = resourceData[period.key] ?? [];
           const visibleItems = items.length > normalizedMaxVisibleItems ? [] : items;
+          const density = getCalendarItemDensity(visibleItems.length);
           return (
             <div
               key={period.key}
-              className="resource-calendar__item-slot"
+              className={`resource-calendar__item-slot resource-calendar__item-slot--${density}`}
+              data-item-count={visibleItems.length}
               data-item-period={period.key}
               data-item-resource-id={resourceId}
             >
@@ -200,15 +220,20 @@ function ResourceCalendarRow<TResource, TItemData>({
       </div>
       {positionedRanges.length > 0 && (
         <div className="resource-calendar__range-layer" style={{ gridTemplateColumns: gridColumns }}>
-          {positionedRanges.map(({ item, range, startIndex, endIndex, lane }) => {
+          {positionedRanges.map(({ item, range, startIndex, endIndex, lane, laneCount }) => {
             const capabilities = getItemCapabilities?.({ resource, data: item, range });
             const movable = rangeMoveEnabled && (capabilities?.draggable ?? false)
               && range.start === periods[startIndex].key && range.end === periods[endIndex].key;
+            const resizable = rangeResizeEnabled && (capabilities?.resizable ?? false);
+            const density = getCalendarItemDensity(laneCount);
+            const geometry = getRangeItemGeometry(density, lane, laneCount, rowHeight);
+            const context = { resource, data: item, range, visibleStart: periods[startIndex], visibleEnd: periods[endIndex] };
             return (
             <div
               key={getItemId(item)}
-              className={`resource-calendar__item resource-calendar__range-item${movable ? ' draggable' : ''}${capabilities?.resizable && rangeResizeEnabled ? ' resizable' : ''}`}
-              style={{ gridColumn: `${startIndex + 2} / ${endIndex + 3}`, gridRow: lane + 1 }}
+              className={`resource-calendar__item resource-calendar__range-item resource-calendar__range-item--${density}${movable ? ' draggable' : ''}${resizable ? ' resizable' : ''}`}
+              data-range-density={density}
+              style={{ gridColumn: `${startIndex + 2} / ${endIndex + 3}`, gridRow: 1, top: geometry.top, height: geometry.height }}
               onPointerDown={movable ? event => {
                 if (event.button !== 0) return;
                 beginRangeMove({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, sourceElement: event.currentTarget, resource, item, range, startIndex, endIndex, delta: 0, moving: false });
@@ -223,15 +248,9 @@ function ResourceCalendarRow<TResource, TItemData>({
               }}
               onClick={() => onItemActivate?.({ resource, data: item, range })}
             >
-              {(() => {
-                const context = { resource, data: item, range, visibleStart: periods[startIndex], visibleEnd: periods[endIndex] };
-                const resizable = rangeResizeEnabled && (capabilities?.resizable ?? false);
-                return <>
-                  {resizable && range.start === periods[startIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--start" aria-label={`Resize start of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'start', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'start', startIndex, endIndex, nextIndex: startIndex, resizing: false }); }} />}
-                  {buildRangeItem?.(context)}
-                  {resizable && range.end === periods[endIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--end" aria-label={`Resize end of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'end', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'end', startIndex, endIndex, nextIndex: endIndex, resizing: false }); }} />}
-                </>;
-              })()}
+              {resizable && range.start === periods[startIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--start" aria-label={`Resize start of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'start', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'start', startIndex, endIndex, nextIndex: startIndex, resizing: false }); }} />}
+              {buildRangeItem?.(context)}
+              {resizable && range.end === periods[endIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--end" aria-label={`Resize end of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'end', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'end', startIndex, endIndex, nextIndex: endIndex, resizing: false }); }} />}
             </div>
           );})}
         </div>
