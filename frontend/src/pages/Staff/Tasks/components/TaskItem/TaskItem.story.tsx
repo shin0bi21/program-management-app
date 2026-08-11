@@ -34,7 +34,7 @@ export function InteractiveTaskItem() {
       getItemCapabilities={() => ({ draggable: true, resizable: true })}
       renderResource={({ resource: item }) => item.name}
       buildItem={() => null}
-      buildRangeItem={({ data: item }) => <TaskItem task={item} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
+      buildRangeItem={({ data: item }) => <TaskItem task={item} onComplete={() => setAction('complete')} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
       onRangeMove={({ nextRange }) => { setRangeChange(`move:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
       onRangeResize={({ nextRange }) => { setRangeChange(`resize:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
     />

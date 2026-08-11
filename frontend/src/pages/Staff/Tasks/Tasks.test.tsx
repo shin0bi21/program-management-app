@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskOptions, getTasks, updateTaskPlacement } from '../../../common/features/tasks/api/tasks.api';
+import { getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
@@ -62,6 +62,7 @@ describe('Tasks', () => {
       category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
     });
     vi.mocked(updateTaskPlacement).mockResolvedValue(task);
+    vi.mocked(updateTaskStatus).mockResolvedValue({ ...task, status: 'completed', completedAt: '2026-08-11T12:00:00.000Z' });
   });
 
   it('opens contextual task time from the selected task dashboard', async () => {
@@ -186,6 +187,27 @@ describe('Tasks', () => {
       startDate: '2026-08-11',
       dueDate: '2026-08-13',
     });
+  });
+
+  it('marks an active calendar task complete through the narrow status command', async () => {
+    calendarTestState.view = 'calendar';
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    const start = new Date('2026-08-10T12:00:00');
+    const end = new Date('2026-08-12T12:00:00');
+    const item = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { onComplete: () => void } };
+
+    await act(async () => item.props.onComplete());
+
+    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'completed');
   });
 
   it('shows calendar loading and task-query failure states instead of an empty calendar', async () => {

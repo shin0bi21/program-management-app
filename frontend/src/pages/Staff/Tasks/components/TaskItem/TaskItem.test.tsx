@@ -38,17 +38,30 @@ describe('TaskItem', () => {
 
   it('opens the floating action menu before invoking edit or delete', () => {
     const onActivate = vi.fn();
+    const onComplete = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
-    render(<div onClick={onActivate}><TaskItem task={task} onEdit={onEdit} onDelete={onDelete} /></div>);
+    render(<div onClick={onActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, 2026-08-10 to 2026-08-12. Open actions' }));
     expect(onActivate).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitem', { name: 'Mark complete' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledOnce();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('invokes mark complete from the task action menu', () => {
+    const onComplete = vi.fn();
+    render(<TaskItem task={task} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark complete' }));
+
+    expect(onComplete).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('notifies the page when the task item is activated', () => {
@@ -85,6 +98,9 @@ describe('TaskItem', () => {
     }} />);
 
     expect(screen.queryByLabelText('Overdue')).not.toBeInTheDocument();
+    const completed = screen.getByLabelText('Completed');
+    expect(completed).toHaveTextContent('✓');
+    expect(completed).toHaveAttribute('title', 'Completed');
     fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Completed');

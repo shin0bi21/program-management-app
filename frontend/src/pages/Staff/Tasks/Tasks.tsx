@@ -36,6 +36,10 @@ function getStatusOptions(task: Task) {
   return STATUS_OPTIONS.filter(option => option.value !== 'cancelled');
 }
 
+function canMarkComplete(task: Task) {
+  return task.status === 'todo' || task.status === 'in_progress';
+}
+
 function TaskStatusCell({ task, canWrite, onChange }: {
   task: Task;
   canWrite: boolean;
@@ -123,6 +127,7 @@ export default function Tasks() {
       render: (task: Task) => task.writable ? <ActionsMenu
         ariaLabel={`Actions for ${task.title}`}
         items={[
+          ...(canMarkComplete(task) ? [{ id: 'complete', label: 'Mark complete', onClick: () => void mutations.setStatus(task, 'completed') }] : []),
           { id: 'edit', label: 'Edit', onClick: () => setModalTarget(task) },
           { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => mutations.requestDelete(task) },
         ]}
@@ -206,6 +211,7 @@ export default function Tasks() {
           buildRangeItem={({ data: task }) => <TaskItem
             task={task}
             onActivate={() => selectTask(task)}
+            onComplete={canWrite && task.writable && canMarkComplete(task) ? () => void mutations.setStatus(task, 'completed') : undefined}
             onEdit={canWrite && task.writable ? () => setModalTarget(task) : undefined}
             onDelete={canWrite && task.writable ? () => mutations.requestDelete(task) : undefined}
           />}
