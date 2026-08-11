@@ -1,11 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import PageBody from '../../common/components/PageBody/PageBody';
 import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
 import AttendanceCard from './components/AttendanceCard/AttendanceCard';
-import YouthNotesCard from './components/YouthNotesCard/YouthNotesCard';
+import YouthNotesCard from './components/ProfileNotes/YouthNotesCard';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
@@ -16,15 +15,12 @@ import { useAuth } from '../../auth/authContext';
 import { calculateAge } from '../../common/utils/time';
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import useTableSelection from '../../common/components/Table/hooks/useTableSelection';
-import type { YouthFilters, YouthProfileNote, YouthSortKey } from '../../common/types/youth';
+import type { YouthFilters, YouthSortKey } from '../../common/types/youth';
 import type { ListSort } from '../../common/types/pagination';
-import { deleteYouthProfileNote, getYouthProfileNotes } from '../../common/features/youth/api/youth.api';
-import Modal from '../../common/components/Modal/Modal';
 import useUserPreference from '../../common/features/preferences/hooks/useUserPreference';
 import './Youth.css';
-import ProfileNoteModal from './components/ProfileNoteModal/ProfileNoteModal';
-import ProfileNoteDetails from './components/ProfileNoteDetails/ProfileNoteDetails';
-import { getErrorMessage } from '../../http/clientErrors';
+import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
+import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 
@@ -43,17 +39,11 @@ export default function Youth() {
   }) : null, [debouncedSearch, filtersReady, programFilters, statusFilters]);
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
-  const [profileNoteTarget, setProfileNoteTarget] = useState<YouthProfileNote | 'new' | null>(null);
-  const [selectedProfileNote, setSelectedProfileNote] = useState<YouthProfileNote | null>(null);
-  const [confirmingProfileNoteDelete, setConfirmingProfileNoteDelete] = useState(false);
-  const [deletingProfileNote, setDeletingProfileNote] = useState(false);
-  const [profileNoteDeleteError, setProfileNoteDeleteError] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
     cohort: YouthProfile['cohorts'][number];
     youthId: string;
   } | null>(null);
-  const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
   const {
@@ -76,12 +66,8 @@ export default function Youth() {
   const canViewAttendanceReport = permissions.includes('read:cohorts')
     && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
-  const profileNotesQuery = useQuery({
-    queryKey: ['youth-profile-notes', selectedProfileId],
-    queryFn: ({ signal }) => getYouthProfileNotes(selectedProfileId!, { signal }),
-    enabled: Boolean(selectedProfileId),
-  });
-  const profileNotes = profileNotesQuery.data ?? [];
+  const profileNotes = useProfileNotes(selectedProfileId);
+  const openProfileNoteEditor = profileNotes.openEditor;
 
   useEffect(() => {
     if (filtersReady || preferencesLoading || programsLoading) return;
@@ -108,10 +94,6 @@ export default function Youth() {
   }, [search]);
 
   useEffect(() => {
-    setSelectedProfileNote(null);
-    setConfirmingProfileNoteDelete(false);
-    setDeletingProfileNote(false);
-    setProfileNoteDeleteError('');
     setAttendanceTarget(null);
   }, [selectedProfileId]);
 
@@ -201,12 +183,12 @@ export default function Youth() {
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
           items={[
             { id: 'edit', label: 'Edit Profile', onClick: () => setModalTarget(profile) },
-            { id: 'add-note', label: 'Add Note', onClick: () => { selectProfile(profile); setProfileNoteTarget('new'); } },
+            { id: 'add-note', label: 'Add Note', onClick: () => { selectProfile(profile); openProfileNoteEditor('new', profile.id); } },
           ]}
         />
       ) : null,
     },
-  ], [canWrite, selectProfile]);
+  ], [canWrite, openProfileNoteEditor, selectProfile]);
 
   return (
     <>
@@ -273,18 +255,14 @@ export default function Youth() {
               }}
             />
             <YouthNotesCard
-              profileNotes={profileNotes}
+              profileNotes={profileNotes.notes}
               selected={selectedProfile !== null}
-              onSelectProfileNote={setSelectedProfileNote}
+              onSelectProfileNote={profileNotes.openDetails}
               canManageProfileNotes={canWrite}
-              onEditProfileNote={note => setProfileNoteTarget(note)}
-              onDeleteProfileNote={note => {
-                setSelectedProfileNote(note);
-                setConfirmingProfileNoteDelete(true);
-                setProfileNoteDeleteError('');
-              }}
-              profileNotesLoading={profileNotesQuery.isLoading}
-              profileNotesError={profileNotesQuery.error ? 'Could not load profile notes' : null}
+              onEditProfileNote={profileNotes.openEditor}
+              onDeleteProfileNote={profileNotes.requestDelete}
+              profileNotesLoading={profileNotes.loading}
+              profileNotesError={profileNotes.error}
             />
           </>}
         />
@@ -316,59 +294,21 @@ export default function Youth() {
         onSuccess={handleSaveYouth}
       />
 
-      {profileNoteTarget && selectedProfileId && (
-        <ProfileNoteModal
-          youthId={selectedProfileId}
-          note={profileNoteTarget === 'new' ? undefined : profileNoteTarget}
-          onClose={() => setProfileNoteTarget(null)}
-          onSaved={note => {
-            const shouldReturnToDetails = profileNoteTarget !== 'new';
-            queryClient.setQueryData<YouthProfileNote[]>(['youth-profile-notes', selectedProfileId], current => {
-              const rows = current ?? [];
-              const index = rows.findIndex(item => item.id === note.id);
-              return index === -1 ? [note, ...rows] : rows.map(item => item.id === note.id ? note : item);
-            });
-            setProfileNoteTarget(null);
-            if (shouldReturnToDetails) setSelectedProfileNote(note);
-          }}
-        />
-      )}
-      <Modal
-        isOpen={selectedProfileNote !== null}
-        onClose={() => {
-          if (deletingProfileNote) return;
-          setSelectedProfileNote(null);
-          setConfirmingProfileNoteDelete(false);
-          setProfileNoteDeleteError('');
-        }}
-        title={confirmingProfileNoteDelete ? 'Delete Profile Note' : selectedProfileNote?.title || 'Profile Note'}
-        status={profileNoteDeleteError ? 'error' : deletingProfileNote ? 'submitting' : 'idle'}
-        statusMessage={profileNoteDeleteError || (deletingProfileNote ? 'Deleting profile note...' : undefined)}
-        footer={selectedProfileNote && canWrite ? confirmingProfileNoteDelete ? <>
-          <Button variant="secondary" disabled={deletingProfileNote} onClick={() => { setConfirmingProfileNoteDelete(false); setProfileNoteDeleteError(''); }}>Cancel</Button>
-          <Button variant="danger" onClick={async () => {
-              setDeletingProfileNote(true);
-              setProfileNoteDeleteError('');
-              try {
-                await deleteYouthProfileNote(selectedProfileNote.youthId, selectedProfileNote.id);
-                queryClient.setQueryData<YouthProfileNote[]>(['youth-profile-notes', selectedProfileNote.youthId], current => current?.filter(note => note.id !== selectedProfileNote.id) ?? []);
-                setSelectedProfileNote(null);
-                setConfirmingProfileNoteDelete(false);
-              } catch (error) {
-                setProfileNoteDeleteError(getErrorMessage(error, 'Failed to delete profile note'));
-              } finally {
-                setDeletingProfileNote(false);
-              }
-            }} disabled={deletingProfileNote}>Delete</Button>
-        </> : <>
-          <Button onClick={() => { setProfileNoteTarget(selectedProfileNote); setSelectedProfileNote(null); }}>Edit</Button>
-          <Button variant="danger" onClick={() => setConfirmingProfileNoteDelete(true)}>Delete</Button>
-        </> : <Button variant="secondary" onClick={() => setSelectedProfileNote(null)}>Close</Button>}
-      >
-        {selectedProfileNote && (confirmingProfileNoteDelete
-          ? <p>Delete {selectedProfileNote.title || 'this profile note'}? This cannot be undone.</p>
-          : <ProfileNoteDetails note={selectedProfileNote} />)}
-      </Modal>
+      <ProfileNoteDialogs
+        editorTarget={profileNotes.editorTarget}
+        selectedNote={profileNotes.selectedNote}
+        canManage={canWrite}
+        confirmingDelete={profileNotes.confirmingDelete}
+        deleting={profileNotes.deleting}
+        deleteError={profileNotes.deleteError}
+        onCloseEditor={profileNotes.closeEditor}
+        onSaved={profileNotes.handleSaved}
+        onCloseDetails={profileNotes.closeDetails}
+        onEdit={profileNotes.openEditor}
+        onRequestDelete={profileNotes.requestDelete}
+        onCancelDelete={profileNotes.cancelDelete}
+        onConfirmDelete={profileNotes.confirmDelete}
+      />
     </>
   );
 }
