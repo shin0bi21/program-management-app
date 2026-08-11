@@ -81,7 +81,7 @@ export default function SessionNoteModal({
     }
   };
 
-  const complete = submitStatus === 'submitting' || submitStatus === 'success';
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
   return (
     <Modal
@@ -91,7 +91,6 @@ export default function SessionNoteModal({
       status={submitStatus}
       statusMessage={statusMessage || undefined}
       successDelay={1200}
-      disableClose={submitStatus === 'submitting'}
       footer={<ModalFormFooter formId="session-note-form" submitLabel={note ? 'Save' : 'Add Note'} submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="session-note-form" onSubmit={event => void submit(event)}>
@@ -105,7 +104,7 @@ export default function SessionNoteModal({
           <textarea key={`${note?.id ?? 'new'}-details`} id="session-note-details" name="details" rows={5} maxLength={5000} defaultValue={note?.details ?? ''} />
         </FormField>
         {session && !hideYouthSelection && (
-          <fieldset className="session-note-youth" disabled={complete}>
+          <fieldset className="session-note-youth" disabled={submissionComplete}>
             <legend>Link youth</legend>
             {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
               <p className="form-error" role="alert">{rosterQuery.error instanceof Error ? rosterQuery.error.message : 'Could not load session roster'}</p>

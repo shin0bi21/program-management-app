@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
-import Header from '../../common/components/Header/Header';
 import Modal from '../../common/components/Modal/Modal';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import { useConfirmModal, type ConfirmAction } from '../../common/components/Modal/hooks/useConfirmModal';
@@ -138,7 +137,6 @@ export default function ManageHomepage() {
   }));
   return (
     <>
-      <Header />
       <div className="page-container homepage-management-page">
         <PageHeader
           title="Manage Homepage"
@@ -248,7 +246,6 @@ export default function ManageHomepage() {
         status={confirmModal.status}
         statusMessage={confirmModal.statusMessage}
         footer={confirmModal.footer}
-        disableClose={confirmModal.disableClose}
         successDelay={confirmModal.successDelay}
       >
         {confirmAction && <p>{confirmAction.message}</p>}

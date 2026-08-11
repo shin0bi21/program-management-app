@@ -24,8 +24,8 @@ export async function audit(
       ${tableName},
       ${recordId}::uuid,
       ${action},
-      ${oldData !== null ? JSON.stringify(oldData) : null}::jsonb,
-      ${newData !== null ? JSON.stringify(newData) : null}::jsonb
+      ${oldData !== null ? trx.json(oldData as Parameters<typeof trx.json>[0]) : null},
+      ${newData !== null ? trx.json(newData as Parameters<typeof trx.json>[0]) : null}
     )
   `;
 }

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../../http/client';
 import { getCohortPage } from './cohorts.api';
-import { createSessionAttachment, getSessions } from './sessions.api';
+import {
+  createSessionAttachment,
+  getSessionAttachmentDownloadName,
+  getSessions,
+} from './sessions.api';
 
 vi.mock('../../../../http/client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn() },
@@ -47,5 +51,12 @@ describe('programming APIs', () => {
     expect(form.get('description')).toBe('Preparation notes');
     expect(form.get('youthIds')).toBe('["youth-1","youth-2"]');
     expect(form.get('file')).toBe(file);
+  });
+
+  it('builds safe attachment downloads from the title and MIME type', () => {
+    expect(getSessionAttachmentDownloadName({
+      title: 'Workshop / Photos.',
+      mimeType: 'image/png',
+    })).toBe('Workshop - Photos.png');
   });
 });

@@ -1,559 +1,127 @@
 # Youth Services Application — Backend
 
-Express + TypeScript + PostgreSQL backend for a youth services management system.
+Express + TypeScript + PostgreSQL API for the youth services application.
 
-For the full-stack overview and request flow diagram see the [root README](../README.md).
-Repository-wide invariants begin in [`AGENTS.md`](../AGENTS.md); detailed backend behavior lives in the architecture docs linked below.
+## Documentation
 
----
+| Area | Canonical document |
+|---|---|
+| Backend architecture | [`../docs/architecture/backend.md`](../docs/architecture/backend.md) |
+| Authentication and permissions | [`../docs/architecture/auth.md`](../docs/architecture/auth.md) |
+| Database and migrations | [`../docs/architecture/database.md`](../docs/architecture/database.md) |
+| Error handling | [`../docs/architecture/errors.md`](../docs/architecture/errors.md) |
+| Full HTTP lifecycle | [`../docs/architecture/http.mmd`](../docs/architecture/http.mmd) |
+| Local setup | [`../docs/local/setup.md`](../docs/local/setup.md) |
+| Local development | [`../docs/local/development.md`](../docs/local/development.md) |
+| Testing | [`../docs/testing.md`](../docs/testing.md) |
+| Deployment | [`../docs/deployment.md`](../docs/deployment.md) |
+| Google Sheets scripts | [`docs/google-sheets.md`](docs/google-sheets.md) |
 
-## Table of Contents
+Repository-wide implementation invariants and documentation routing begin in [`../AGENTS.md`](../AGENTS.md).
 
-1. [What This Is](#1-what-this-is)
-2. [Get Running](#2-get-running)
-3. [Project Structure](#3-project-structure)
-4. [API Reference](#4-api-reference)
-5. [Database & Migrations](#5-database--migrations)
-6. [Testing](#6-testing)
-7. [Development Workflow](#7-development-workflow)
-8. [Deployment](#8-deployment)
-9. [Troubleshooting](#9-troubleshooting)
-10. [Commands Reference](#10-commands-reference)
-11. [Architecture Docs](#11-architecture-docs)
+## Stack
 
----
-
-## 1. What This Is
-
-A management system for organisations running youth programs.
-
-| Role | Access |
-|------|--------|
-| `admin` | Full access — manage staff, youth accounts, and youth profiles |
-| `staff` | Manage youth accounts and profiles; cannot manage staff accounts |
-
-See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for the full permissions breakdown, how permissions flow into tokens, and where to add a new permission.
-
-Youth profiles are program records managed by staff. A youth profile may optionally have login credentials and account access.
-
-### Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
+| Concern | Technology |
+|---|---|
 | Runtime | Node.js 24+ |
 | Framework | Express 4.18.2 |
 | Language | TypeScript 5.9.3 |
-| Database | PostgreSQL 18 via postgres.js 3.4.8 |
-| Auth | JWT (jsonwebtoken 9.0.3) + 2FA via email |
+| Database | PostgreSQL 18 with postgres.js 3.4.8 |
+| Authentication | JWT and email 2FA |
 | Validation | Zod 4.3.6 |
-| Testing | Jest 30.2.0 + Supertest 7.2.2 |
+| Testing | Jest 30.2.0 and Supertest 7.2.2 |
 | Email | Nodemailer 7.0.12 |
 
-### System Topology
-
-```
-[Browser / React app :5173]
-        │  HTTP (proxied via Nginx in prod)
-        ▼
-[Express API :5001]  ←  postgres.js  →  [PostgreSQL :5432]
-        │
-  Docker network (all services in docker-compose.yml at project root)
-```
-
----
-
-## 2. Get Running
-
-Use the repository-level guides as the source of truth for operating the local
-stack:
-
-- [First-time local environment setup](../docs/local/setup.md)
-- [Day-to-day local development commands](../docs/local/development.md)
-
-Backend environment variables and their maintained examples are defined in
-`.env.example`. Backend architecture, database behavior, debugging, and command
-reference remain documented below.
-
----
-
-## 3. Project Structure
-
-```
-backend/
-├── docs/               # Architecture references (auth.md, db.md, errors.md)
-├── src/
-│   ├── index.ts        # Entry point — middleware, routes, server start
-│   ├── controllers/    # HTTP layer — extract params, call service, send response
-│   ├── services/       # Business logic and all SQL queries
-│   ├── routes/         # Route definitions with middleware chains
-│   ├── middleware/     # authenticateToken, requirePermission, rateLimiter, validateRequest
-│   ├── validation/     # Zod schemas per domain
-│   ├── db/             # postgres.js client + asTransactionSql() helper
-│   ├── errors.ts       # AppError + subclasses + sendError()
-│   ├── types/          # JWT payload types, generated DB schema, DbRow<T>
-│   └── utils/          # requireEnv, emailService, deviceUtils
-├── db/
-│   ├── migrations/     # SQL files — YYYY-MM-DD_#_description.sql
-│   └── scripts/        # Migration runner (update_schemas.ts), seed-admin, migration_status
-└── tests/
-    ├── shared/         # App factory + seedTestUser/deleteTestUser helpers
-    ├── auth/           # 44 tests
-    ├── accounts/       # Account API and RBAC tests
-    ├── youth/          # 25 tests
-    ├── schools/        # 28 tests
-    ├── expressionOfInterest/ # Outreach submission tests
-    ├── leads/          # Lead workflow tests
-    └── public/         # Public intake tests
-```
-
-For middleware and error flow, see [`docs/errors.md`](docs/errors.md). For transaction and migration rules, see [`docs/db.md`](docs/db.md).
-
----
-
-## 4. API Reference
-
-### Authentication — `/api/auth`
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/login` | Email/password login — returns 2FA challenge |
-| `POST` | `/verify` | Submit 2FA code — returns JWT access token + sets refresh cookie |
-| `POST` | `/resend` | Resend 2FA code |
-| `POST` | `/refresh` | Rotate refresh token — returns new access token |
-| `POST` | `/logout` | Blacklist tokens, clear session cookie |
-| `POST` | `/forgot-password` | Send password reset email |
-| `POST` | `/reset-password` | Reset password via token |
-
-### Accounts — `/api/accounts`
-
-Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List role-scoped accounts with search, role, and status filters | `read:accounts` |
-| `POST` | `/` | Invite or update a staff/admin account | `write:accounts` |
-| `PATCH` | `/:id` | Toggle account status | `write:accounts` |
-| `DELETE` | `/:id` | Revoke a pending account invitation | `write:accounts` |
-
-### Youth — `/api/youth`
-
-Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List all youth profiles | `read:youth_profiles` |
-| `GET` | `/?id=<uuid>` | Get a single youth profile with addresses and contacts | `read:youth_profiles` |
-| `GET` | `/:id/cohorts/:cohortId/attendance` | List one youth's attendance and linked notes across a cohort's sessions | `read:youth_profiles` + `read:attendance` + `read:sessions` |
-| `PUT` | `/:id/cohorts/:cohortId/attendance` | Replace one youth's attendance across a cohort without changing the session roster | `read:youth_profiles` + `write:attendance` + `read:sessions` |
-| `POST` | `/` | Create or update a youth profile (upsert by `id`) | `write:youth_profiles` |
-| `PATCH` | `/:id` | Toggle youth active status | `write:youth_profiles` |
-
-Youth-specific session-note removal unlinks only the association through
-`DELETE /api/cohorts/sessions/:sessionId/notes/:noteId/youth/:youthId` (`write:sessions`).
-The session note remains, including when its final youth association is removed.
-
-### Schools — `/api/schools`
-
-Protected. See [docs/auth.md §3 RBAC Model](docs/auth.md#3-rbac-model) for which roles hold each permission.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List all schools | `read:schools` |
-| `POST` | `/` | Create/update school | `write:schools` |
-| `DELETE` | `/:id` | Delete school | `write:schools` |
-
-### Programs — `/api/programs`
-
-Protected read-only lookup used by lead and youth profile workflows.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List canonical programs | `read:programs` |
-| `POST` | `/` | Create a program | `write:programs` |
-
-### Public — `/api/public`
-
-Unauthenticated homepage intake endpoints.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/homepage/images` | Return the staff-managed hero-image manifest independently of programming data. |
-| `GET` | `/homepage/sessions` | Return upcoming homepage programming sessions independently of hero images. |
-| `POST` | `/expressions-of-interest` | Store a normalized public expression of interest with youth, school/source, primary contact, and notes. |
-
-### Expressions of Interest — `/api/expressions-of-interest`
-
-Protected. Intended for internal review of homepage signup submissions.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List expressions of interest newest first | `read:outreach` |
-| `PATCH` | `/:id` | Update submission review status | `write:outreach` |
-| `POST` | `/:id/convert` | Convert one submission into one lead | `write:outreach` |
-
-### Leads — `/api/leads`
-
-Protected Outreach endpoints for staff-originated and converted leads.
-
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| `GET` | `/` | List leads newest first | `read:outreach` |
-| `POST` | `/` | Create a staff-originated lead | `write:outreach` |
-| `PUT` | `/:id` | Update a lead's intake details | `write:outreach` |
-| `PATCH` | `/:id/status` | Update lead follow-up status | `write:outreach` |
-| `GET` | `/:id/notes` | List authored follow-up notes for a lead | `read:outreach` |
-| `POST` | `/:id/notes` | Add an authored follow-up note | `write:outreach` |
-| `PUT` | `/:id/notes/:noteId` | Update a follow-up note | `write:outreach` |
-| `DELETE` | `/:id/notes/:noteId` | Delete a follow-up note | `write:outreach` |
-| `POST` | `/:id/sign-up` | Atomically create a youth profile/contact and mark the lead signed up | `write:outreach` + `write:youth_profiles` |
-
-For the auth sequence diagram, token TTLs, refresh rotation, and reuse-detection see [docs/auth.md](docs/auth.md).
-
----
-
-## 5. Database & Migrations
-
-Migrations are plain `.sql` files in `db/migrations/`, named `YYYY-MM-DD_#_description.sql`. They run in filename order, each inside a single transaction with full rollback on error. Applied files are tracked with SHA-256 checksums — never edit an applied migration, create a new one instead.
-
-### Commands
-
-```bash
-docker compose exec backend npm run db:migrate   # apply pending migrations + regenerate types
-docker compose exec backend npm run db:status    # applied migrations + checksum status
-```
-
-For the ERD, base table pattern, audit/auth log architecture, and safety guarantees see [docs/db.md](docs/db.md).
-
----
-
-## 6. Testing
-
-Tests run **inside the Docker container**. Never run Jest locally against a remote DB. `DATABASE_URL` must be set (it is, via `docker-compose.yml`).
-
-### Running Tests
-
-From the project root (`my-webapp/`):
-
-```bash
-# All backend API suites
-bash scripts/tests/backend/test-apis.sh
-
-# This boots the backend test environment once, then composes every
-# path-specific backend runner.
-
-# Full application suite (deploy checks + backend API + frontend UI)
-bash scripts/tests/test-app.sh
-
-# Individual suites
-bash scripts/tests/backend/run-auth-tests.sh
-bash scripts/tests/backend/run-accounts-tests.sh
-bash scripts/tests/backend/run-youth-tests.sh
-bash scripts/tests/backend/run-schools-tests.sh
-bash scripts/tests/backend/run-outreach-tests.sh
-
-# Or directly
-docker compose exec backend npm run test:auth
-docker compose exec backend npm run test:accounts
-docker compose exec backend npm run test:youth
-docker compose exec backend npm run test:schools
-docker compose exec backend npm run test:coverage
-```
-
-The helper scripts detect already-running containers and **will not tear them down** afterwards — your dev data is preserved.
-
-### Test Structure
-
-| File | Purpose |
-|------|---------|
-| `tests/shared/app.ts` | Express app factory used by all suites |
-| `tests/shared/db.ts` | `seedTestUser`, `deleteTestUser` helpers |
-| `tests/auth/auth.test.ts` | Login → 2FA → refresh → logout → password reset |
-| `tests/auth/helpers.ts` | Trusted device tokens, 2FA codes, cookies |
-| `tests/accounts/users.test.ts` | Account CRUD, filtering, and permission checks |
-| `tests/accounts/helpers.ts` | Account token generation helpers |
-| `tests/youth/youth.test.ts` | Youth CRUD, upsert, address/contact sync |
-| `tests/youth/helpers.ts` | Token generation, `deleteTestYouth` cleanup |
-| `tests/schools/schools.test.ts` | Schools CRUD, permission checks, validation |
-| `tests/schools/helpers.ts` | Token generation, `deleteTestSchool` cleanup |
-| `tests/public/public.test.ts` | Public expression-of-interest intake and validation |
-| `tests/expressionOfInterest/expressionOfInterest.test.ts` | Submission review and conversion |
-| `tests/leads/leads.test.ts` | Lead creation, lifecycle, and permissions |
-
-### Jest + Node16 Module Resolution
-
-The backend uses `"moduleResolution": "node16"` in `tsconfig.json`. Under Node16, TypeScript requires explicit `.js` extensions on relative imports. `ts-jest` resolves tests against raw `.ts` source — so those `.js` extensions don't resolve at runtime inside Jest.
-
-Fix: a `moduleNameMapper` entry in `jest.config.js` strips `.js` from any relative import path before Jest resolves it:
-
-```js
-moduleNameMapper: {
-  '^(\\.{1,2}/.*)\\.js$': '$1',
-},
-```
-
-See [ts-jest issue #4207](https://github.com/kulshekhar/ts-jest/issues/4207) for the original discussion.
-
-### Writing a Test
-
-```typescript
-import request from 'supertest';
-import { createApp } from '../shared/app';
-import { seedTestUser, deleteTestUser } from '../shared/db';
-
-const app = createApp();
-
-describe('Feature Tests', () => {
-  let user: { userId: string };
-
-  beforeAll(async () => {
-    user = await seedTestUser({ permission: 'staff' });
-  });
-
-  afterAll(async () => {
-    await deleteTestUser(user.userId);
-  });
-
-  it('should do the thing', async () => {
-    const res = await request(app)
-      .get('/api/endpoint')
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(res.status).toBe(200);
-  });
-});
-```
-
----
-
-## 7. Development Workflow
-
-### Daily Loop
-
-Use [Local Development Commands](../docs/local/development.md) for starting,
-restarting, recreating, migrating, and testing the Docker stack. During backend
-work, `docker compose exec backend npm run typecheck` provides a focused
-TypeScript check before the full repository test suite.
-
-### Debugging
-
-The backend container runs with the Node.js inspector on port 9229.
-
-1. Open Run and Debug panel (`Cmd+Shift+D`)
-2. Select **"Docker: Debug Backend"** from the dropdown
-3. Press `F5` to attach (or click the green ▶ play button)
-4. Set breakpoints in `src/` — they'll pause on the next matching request
-
-> **Source maps:** `tsconfig.json` must include `"sourceMap": true`. Without it, breakpoints in service files will be silently skipped. After a `tsconfig.json` change, run `docker compose restart backend` then re-attach.
-
-### Adding a Backend Domain
-
-1. Add Zod request schemas under `src/validation/`.
-2. Add database and business behavior under `src/services/`.
-3. Add thin request handlers under `src/controllers/`.
-4. Add permission, rate-limit, validation, and `asyncHandler` wiring under `src/routes/`.
-5. Mount the routes in both `src/index.ts` and `tests/shared/app.ts`.
-6. Add a focused backend test directory and register its runner with the backend test scripts.
-
----
-
-## 8. Deployment
-
-Deployments are triggered automatically on pushes to `main` after the release
-pull request has passed its required checks.
-For the production setup checklist, required GitHub secrets, monitoring, and
-manual fallback commands, see [`docs/deployment.md`](../docs/deployment.md).
-
-### Automated Flow
-
-```
-PR to develop → standard CI
-PR from develop to main → standard CI + production image validation
-push to main → SSH deploy → public HTTPS smoke checks
-```
-
-`scripts/deploy.sh` (project root) records the last successfully deployed
-frontend, backend, and infrastructure revisions, then selects the smallest safe
-deployment flow:
-
-| Detected production changes | Deployment flow |
+## API reference
+
+Paths below are relative to `/api`. Protected endpoints require the permissions shown in the route source and summarized in the [RBAC model](../docs/architecture/auth.md#3-rbac-model).
+
+### Authentication — `/auth`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/login` | Validate credentials and begin 2FA or trusted-device login |
+| `POST` | `/verify` | Verify 2FA and issue the session |
+| `POST` | `/resend` | Resend a 2FA code |
+| `POST` | `/refresh` | Rotate the refresh token and issue an access token |
+| `POST` | `/logout` | Revoke the session and clear its cookie |
+| `POST` | `/forgot-password` | Send a password-reset email |
+| `POST` | `/reset-password` | Reset a password or activate an invited account |
+
+### Accounts — `/accounts`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | List policy-scoped accounts |
+| `POST` | `/` | Invite or update an account |
+| `PATCH` | `/:id` | Change account status |
+| `DELETE` | `/:id` | Revoke a pending invitation |
+
+### Timesheets — `/time-entries`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | List time-entry resources and entries for a date range |
+| `GET` | `/cohorts` | List cohorts for a selected program |
+| `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
+| `POST` | `/` | Create a time entry |
+| `PUT` | `/:id` | Update a time entry |
+| `DELETE` | `/:id` | Delete a time entry |
+
+Staff access is self-scoped; administrators can manage entries for active staff and administrators.
+
+### Assigned tasks — `/tasks`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | List active assigned tasks, optionally filtered by staff and category |
+| `GET` | `/options` | List assignable staff, programs, and program-scoped cycles |
+| `POST` | `/` | Create a task with one required policy-scoped `staffId` owner |
+| `PUT` | `/:id` | Update policy-scoped task details, status, dates, and owner |
+| `PATCH` | `/:id/placement` | Move or resize a task without replacing unrelated task fields |
+| `PATCH` | `/:id/status` | Update an assigned task's status |
+| `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
+
+General time entries require `category` and `cycleId`; `programId` is optional. Task-linked time accepts an assigned `taskId` instead and derives its category, cycle, and optional program from that task inside the write transaction. Tasks referenced by time entries cannot be deleted, preserving their IDs and titles for reporting.
+Staff timesheet reads are resource-scoped: coworkers who share any program assignment are visible as complete time-entry rows, including general and administrative time. This visibility does not grant mutation rights; staff writes remain self-scoped, while administrators may read and mutate every active staff resource. `staffResourcePolicy.ts` owns the shared read boundary; `timeEntryPolicy.ts` owns time-entry writes.
+Task writes require `category`, `cycleId`, `startDate`, and `dueDate`; `programId` is optional. Dates use `YYYY-MM-DD`, with the due date on or after the start date. Planned task dates remain editable after time is logged, and task-linked time may be recorded before or after that planned range so later reporting can compare scheduled and actual work.
+Creating or updating a time entry that references a to-do task moves that task to `in_progress` in the same transaction. An in-progress task cannot transition to `cancelled` through either the full update or status endpoint.
+Only a to-do task without logged time can be reassigned to another staff member.
+Staff task writes are self-scoped: they may create and mutate tasks assigned to themselves. Staff reads are resource-scoped: coworkers who share any program assignment are visible as complete task rows, including programless work, without granting write access. Administrators may read and mutate every active staff resource. Routes enforce `read:tasks` / `write:tasks`; `staffResourcePolicy.ts` owns the shared read boundary and `taskPolicy.ts` owns task writes.
+
+### Youth — `/youth`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | List youth or retrieve one profile with `?id=<uuid>` |
+| `POST` | `/` | Create or update a youth profile |
+| `PATCH` | `/:id` | Change youth status |
+| `POST` | `/:id/invite` | Invite a youth account |
+| `GET` | `/:id/cohorts/:cohortId/attendance` | Read youth-centric cohort attendance |
+| `PUT` | `/:id/cohorts/:cohortId/attendance` | Replace youth-centric cohort attendance |
+| `GET/POST` | `/:id/notes` | List or create youth profile notes |
+| `PUT/DELETE` | `/:id/notes/:noteId` | Update or delete a youth profile note |
+
+### Programming
+
+| Base path | Purpose |
 |---|---|
-| `frontend/**` only | Build the frontend/nginx image, replace nginx, validate its configuration |
-| `backend/**` without migrations | Build and replace the backend, wait for health, run backend post-deploy work |
-| Backend migration files | Build backend, snapshot the database, migrate with rollback protection, replace backend |
-| Production Compose, Dockerfile, nginx, or deploy-script changes | Conservative full frontend/backend build and guarded migration flow |
-| Documentation and development tooling only | No production containers are rebuilt |
+| `/programs` | Program lookup and creation |
+| `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
+| `/schools` | School lookup and management |
 
-All required images are built before a running service is replaced. When both
-application layers changed, the backend is migrated, deployed, and health-checked
-before nginx exposes the new frontend. Revision markers under `.deploy-state/`
-advance only after the corresponding component succeeds. Missing or invalid
-markers force a full deployment, which initializes the state safely.
+### Outreach
 
-The CI SSH entrypoint checks that the server worktree is clean and synchronizes
-it to `origin/main` before invoking the deploy script. Manual runs perform the
-same synchronization internally and re-execute the freshly pulled script when
-necessary. This prevents a deploy-script update from mixing old and new shell
-control flow in one process.
+| Base path | Purpose |
+|---|---|
+| `/public` | Unauthenticated homepage content and expression-of-interest intake |
+| `/expressions-of-interest` | Internal review, status updates, and lead conversion |
+| `/leads` | Lead intake, status, notes, and youth signup |
 
-Use `./scripts/deploy.sh --plan` to print the detected flow without building
-images, replacing containers, touching the database, or advancing revision markers.
+Route files under `src/routes/` are the source of truth for exact paths, validation, and required permissions.
 
-### Manual Deployment Flow
+## Operations
 
-If a push to `main` does not deploy cleanly:
-
-```bash
-ssh -i ~/.ssh/be-original-key.pem ubuntu@18.216.104.46
-cd ~/my-webapp
-./scripts/deploy.sh
-```
-
-### Updating Expired GitHub Token
-
-If `./scripts/deploy.sh` fails at `git fetch origin main` with:
-
-```text
-remote: Invalid username or token. Password authentication is not supported for Git operations.
-fatal: Authentication failed for 'https://github.com/...'
-```
-
-the server repo is using HTTPS auth with an expired GitHub token.
-
-Fix it on the Lightsail server:
-
-```bash
-cd /path/to/my-webapp
-
-# Keep the remote clean — no token in the URL
-git remote set-url origin https://github.com/shin0bi21/be-original.git
-
-# Store the new token for HTTPS git auth
-git config --global credential.helper store
-printf "https://YOUR_GITHUB_USERNAME:YOUR_NEW_FULL_TOKEN@github.com\n" > ~/.git-credentials
-chmod 600 ~/.git-credentials
-
-# Verify and test
-git remote -v
-git fetch origin main
-```
-
-Notes:
-- `git remote -v` should show `https://github.com/shin0bi21/be-original.git` with no token embedded.
-- If the old token was exposed in shell history, logs, or chat, revoke it in GitHub immediately.
-- Long-term, SSH deploy keys are cleaner than HTTPS + PAT on a server.
-
-### First-Time Server Setup
-
-Run once on the Lightsail server before the first deploy:
-
-```bash
-# Install Docker
-sudo apt update && sudo apt install -y docker.io docker-compose-plugin
-sudo usermod -aG docker $USER
-
-# Clone repo and configure
-git clone <repo-url> /path/to/my-webapp && cd /path/to/my-webapp
-cp .env.example .env   # fill in all required vars
-
-# Issue SSL cert (port 80 must be free — Docker not started yet)
-sudo apt install -y certbot
-sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
-
-# Replace domain placeholder in nginx.conf
-sed -i 's/your-domain.com/yourdomain.com/g' nginx.conf
-
-# Create webroot dir for cert renewals
-sudo mkdir -p /var/www/certbot
-
-# First start + run migrations + seed admin
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml exec backend npm run db:migrate
-docker compose -f docker-compose.prod.yml exec backend npm run seed:admin
-
-# Switch certbot renewal to webroot (nginx now running) and set up cron
-sudo certbot certonly --webroot -w /var/www/certbot \
-  -d yourdomain.com -d www.yourdomain.com --force-renewal
-echo "0 3 * * * root certbot renew --quiet && docker exec myapp_nginx nginx -s reload" \
-  | sudo tee /etc/cron.d/certbot-renew
-```
-
-### GitHub Secrets Required
-
-| Secret | Value |
-|--------|-------|
-| `LIGHTSAIL_HOST` | Server IP |
-| `LIGHTSAIL_USER` | SSH user (e.g. `ubuntu`) |
-| `LIGHTSAIL_SSH_KEY` | Private key (`-----BEGIN...-----END...`) |
-| `LIGHTSAIL_APP_PATH` | Absolute path to repo on server |
-
-Do not re-run `seed:admin` on subsequent deploys.
-
----
-
-## 9. Troubleshooting
-
-### "Checksum mismatch"
-
-A migration file was modified after being applied. Never edit applied migrations — create a new one instead.
-
-### "Advisory lock timeout"
-
-Another migration process is still running. Wait, or check:
-
-```sql
-SELECT * FROM pg_locks WHERE locktype = 'advisory';
-```
-
-### Connection issues
-
-1. Check `DATABASE_URL` in `.env`
-2. Verify the container is up: `docker ps`
-3. Check container logs: `docker logs myapp_db`
-
-### Deploy fails with "Invalid username or token"
-
-The server's GitHub HTTPS credential is stale or invalid. Follow [Server GitHub Token Refresh](#server-github-token-refresh).
-
-### Tests fail with "relation does not exist"
-
-The test DB is in a bad state. Reset it:
-
-```bash
-bash scripts/reset-app.sh
-```
-
----
-
-## 10. Commands Reference
-
-All `npm run` commands execute inside the Docker container via `docker compose exec backend npm run <command>`.
-
-| Command | Description |
-|---------|-------------|
-| `dev` | Start development server with ts-node |
-| `build` | Compile TypeScript to JavaScript |
-| `start` | Run compiled JavaScript |
-| `typecheck` | Validate TypeScript without emitting |
-| `test` | Run all test suites |
-| `test:auth` | Auth test suite only |
-| `test:accounts` | Account test suite only |
-| `test:youth` | Youth test suite only |
-| `test:schools` | Schools test suite only |
-| `test:watch` | Run tests in watch mode |
-| `test:coverage` | Run tests with coverage report |
-| `db:migrate` | Apply pending migrations + regenerate types |
-| `db:status` | Show applied migrations + checksum status |
-| `db:types` | Regenerate TypeScript types from DB schema |
-| `seed:admin` | Seed the admin user (idempotent) |
-
----
-
-## 11. Architecture Docs
-
-| File | Covers |
-|------|--------|
-| [docs/auth.md](docs/auth.md) | JWT payload types, token signing, refresh rotation, blacklist design, **RBAC model, roles & permissions**, auth logging, staff invite flow, full sequence diagram |
-| [docs/db.md](docs/db.md) | Migration system, ERD, base table pattern, audit log, auth log, safety guarantees |
-| [docs/errors.md](docs/errors.md) | AppError hierarchy, errorHandler, request flow, response shape |
-| [docs/google-sheets.md](docs/google-sheets.md) | Service account setup, `readSheet` / `writeSheet` / `appendToSheet` API, smoke test, script pattern |
-| [`../AGENTS.md`](../AGENTS.md) | Repository entry point, stable invariants, and test-runner routing |
+- Use [`../docs/local/development.md`](../docs/local/development.md) for backend restarts, environment changes, migrations, database types, logs, debugging, and resets.
+- Use [`../docs/testing.md`](../docs/testing.md) for full, backend-only, and focused test commands.
+- Use [`../docs/deployment.md`](../docs/deployment.md) for CI, production deployment, monitoring, and production troubleshooting.

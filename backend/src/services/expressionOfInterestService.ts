@@ -52,34 +52,34 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
 }
 
 export async function updateExpressionOfInterestStatus(id: string, data: UpdateExpressionOfInterestStatusInput) {
-  const rows = await sql`
-    UPDATE expressions_of_interest
-    SET
-      status = ${data.status},
-      status_updated_at = NOW(),
-      updated_at = NOW()
-    WHERE id = ${id}
-    RETURNING
-      id,
-      youth_first_name,
-      youth_last_name,
-      contact_phone_number,
-      contact_relationship,
-      age,
-      school,
-      submitted_by_role,
-      discovery_source,
-      notes,
-      status,
-      created_at,
-      status_updated_at
-  `;
+  return sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const expressions = await tx<{ id: string; converted: boolean }[]>`
+      SELECT e.id, EXISTS (
+        SELECT 1 FROM leads lead WHERE lead.expression_of_interest_id = e.id
+      ) AS converted
+      FROM expressions_of_interest e
+      WHERE e.id = ${id}
+      FOR UPDATE
+    `;
+    if (!expressions.length) throw new NotFoundError('Expression of interest not found');
+    if (expressions[0].converted && data.status !== 'converted') {
+      throw new ConflictError('Converted expressions of interest cannot be changed');
+    }
+    if (!expressions[0].converted && data.status === 'converted') {
+      throw new ConflictError('Use Convert to Lead to mark an expression of interest as converted');
+    }
 
-  if (!rows.length) {
-    throw new NotFoundError('Expression of interest not found');
-  }
-
-  return rows[0];
+    const rows = await tx`
+      UPDATE expressions_of_interest
+      SET status = ${data.status}, status_updated_at = NOW(), updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING id, youth_first_name, youth_last_name, contact_phone_number,
+        contact_relationship, age, school, submitted_by_role, discovery_source,
+        notes, status, created_at, status_updated_at
+    `;
+    return rows[0];
+  });
 }
 
 export async function convertExpressionOfInterest(id: string, actorId: string) {

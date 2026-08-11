@@ -32,10 +32,9 @@ vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
 }));
 
 vi.mock('../../auth/authContext', () => ({
-  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
+  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
 }));
 
-vi.mock('../../common/components/Header/Header', () => ({ default: () => null }));
 vi.mock('./components/YouthModal/YouthModal', () => ({
   default: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) => isOpen
     ? <div data-testid="youth-modal">{mode ?? 'full'}</div>
@@ -46,16 +45,26 @@ vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
     ? <div data-testid="youth-attendance-modal">{cohort.name}</div>
     : null,
 }));
+vi.mock('../../common/features/programming/components/YouthReportModal/YouthReportModal', () => ({
+  default: ({ cohort, youthId }: { cohort: { name: string }; youthId?: string }) => (
+    <div data-testid="youth-report-modal">{cohort.name} · {youthId}</div>
+  ),
+}));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
   default: ({ ariaLabel, items }: {
     ariaLabel: string;
-    items: Array<{ id: string; label: string }>;
-  }) => <button aria-label={ariaLabel}>{items[0].label}</button>,
+    items: Array<{ id: string; label: string; onClick: () => void }>;
+  }) => <>
+    <button aria-label={ariaLabel}>{items[0].label}</button>
+    {items.slice(1).map(item => <button key={item.id} onClick={item.onClick}>{item.label}</button>)}
+  </>,
 }));
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
+    youthApi.createYouthProfileNote.mockReset();
+    youthApi.updateYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
     preferenceHook.preference = null;
     preferenceHook.loading = false;
@@ -68,6 +77,26 @@ describe('Youth', () => {
       error: null,
       refetch: vi.fn(),
     });
+  });
+
+  it('closes a newly saved profile note without opening its details', async () => {
+    youthApi.createYouthProfileNote.mockResolvedValue({
+      id: 'profile-note-new', youthId: 'youth-1', category: 'general', title: 'New profile note',
+      details: null, createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
+      createdByName: 'Bilal Khan',
+    });
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'New profile note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Profile Note' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
+    expect(youthApi.createYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
+      title: 'New profile note',
+    }));
   });
 
   it('keeps account invitation controls out of the Youth page', () => {
@@ -200,6 +229,26 @@ describe('Youth', () => {
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
     expect(screen.getByTestId('youth-attendance-modal')).toHaveTextContent('Summer 2026');
+  });
+
+  it('opens the cohort attendance report filtered to the selected youth', () => {
+    const profile = makeYouthProfile({
+      cohorts: [{
+        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2026-08-31',
+        enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
+        absentCount: 0, lastAttendedOn: '2026-07-21',
+      }],
+    });
+    mockUseYouth.mockReturnValue({
+      youth: [profile], upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+    });
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
+
+    expect(screen.getByTestId('youth-report-modal')).toHaveTextContent(`Summer 2026 · ${profile.id}`);
   });
 
   it('keeps a profile note open and reports a deletion failure', async () => {

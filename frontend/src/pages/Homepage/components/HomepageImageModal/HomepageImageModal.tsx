@@ -53,8 +53,6 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
     }
   };
 
-  const disabled = status === 'submitting' || status === 'success';
-
   return (
     <Modal
       isOpen={isOpen}
@@ -63,7 +61,6 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
       status={status}
       statusMessage={statusMessage}
       successDelay={1200}
-      disableClose={disabled}
       footer={(
         <ModalFormFooter
           formId="homepage-image-form"

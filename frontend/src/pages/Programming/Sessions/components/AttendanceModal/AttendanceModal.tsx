@@ -144,7 +144,6 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
         status={submitStatus}
         statusMessage={statusMessage}
         successDelay={1400}
-        disableClose={submitStatus === 'submitting'}
         footer={(
           <ModalFormFooter
             formId="attendance-form"

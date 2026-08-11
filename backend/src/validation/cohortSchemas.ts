@@ -21,6 +21,7 @@ const commaSeparated = <T extends z.ZodType>(schema: T) => z.preprocess(value =>
 export const cohortQuerySchema = z.object({
   query: z.object({
     programId: z.string().uuid('Invalid program ID').optional(),
+    cycleId: z.string().uuid('Invalid cycle ID').optional(),
     scope: z.enum(['all']).optional(),
     search: z.string().trim().max(120).optional().default(''),
     status: z.enum(['active', 'upcoming', 'completed']).optional(),
@@ -31,27 +32,43 @@ export const cohortQuerySchema = z.object({
 export const createCohortSchema = z.object({
   body: z.object({
     programId: z.string().uuid('Invalid program ID'),
+    cycleId: z.string().uuid('Invalid cycle ID'),
+  }),
+});
+export const createCycleSchema = z.object({
+  body: z.object({
     name: z.string().trim().min(1).max(120),
     startsOn: dateSchema,
     endsOn: dateSchema,
   }).refine(data => data.endsOn >= data.startsOn, {
-    message: 'Cohort end date must be on or after its start date',
+    message: 'Cycle end date must be on or after its start date',
     path: ['endsOn'],
   }),
 });
 export const updateCohortSchema = z.object({
   params: z.object({ cohortId: z.string().uuid() }),
   body: z.object({
+    cycleId: z.string().uuid('Invalid cycle ID'),
+  }),
+});
+export const updateCycleSchema = z.object({
+  params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
+  body: z.object({
     name: z.string().trim().min(1).max(120),
     startsOn: dateSchema,
     endsOn: dateSchema,
   }).refine(data => data.endsOn >= data.startsOn, {
-    message: 'Cohort end date must be on or after its start date',
+    message: 'Cycle end date must be on or after its start date',
     path: ['endsOn'],
   }),
 });
 export const deleteCohortSchema = z.object({
   params: z.object({ cohortId: z.string().uuid() }),
+});
+
+export const cohortYouthReportSchema = z.object({
+  params: z.object({ cohortId: z.string().uuid() }),
+  query: z.object({ youthId: z.string().uuid('Invalid youth ID').optional() }),
 });
 
 export const enrollYouthSchema = z.object({
@@ -221,6 +238,20 @@ export const createSessionAttachmentSchema = z.object({
     path: ['youthIds'],
   }),
 });
+export const updateSessionAttachmentSchema = z.object({
+  params: z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+    attachmentId: z.string().uuid('Invalid attachment ID'),
+  }),
+  body: z.object({
+    title: z.string().trim().min(1, 'Title is required').max(160),
+    description: z.string().trim().max(5000).nullable().transform(value => value || null),
+    youthIds: z.array(z.string().uuid('Invalid youth ID')).max(50),
+  }).refine(data => new Set(data.youthIds).size === data.youthIds.length, {
+    message: 'Youth attachments must be unique',
+    path: ['youthIds'],
+  }),
+});
 export const sessionAttachmentParamsSchema = z.object({
   params: z.object({
     sessionId: z.string().uuid('Invalid session ID'),
@@ -230,6 +261,8 @@ export const sessionAttachmentParamsSchema = z.object({
 
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
+export type CreateCycleInput = z.infer<typeof createCycleSchema.shape.body>;
+export type UpdateCycleInput = z.infer<typeof updateCycleSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
@@ -239,3 +272,4 @@ export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;
 export type CreateSessionAttachmentInput = z.infer<typeof createSessionAttachmentSchema.shape.body>;
+export type UpdateSessionAttachmentInput = z.infer<typeof updateSessionAttachmentSchema.shape.body>;

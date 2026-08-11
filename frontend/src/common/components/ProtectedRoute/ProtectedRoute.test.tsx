@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
+import { getLastAuthPath, rememberAuthPath, setAuthData } from '../../../auth/storage';
 
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({
@@ -17,7 +18,29 @@ function Location() {
 }
 
 describe('ProtectedRoute youth access', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setAuthData('token', {
+      id: 'user-1',
+      firstName: 'Test',
+      lastName: 'User',
+      email: 'test@example.com',
+    });
+  });
+
+  it('remembers the current authenticated path and query for this user', () => {
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
+        <ProtectedRoute><span>Sessions page</span></ProtectedRoute>
+      </MemoryRouter>,
+    );
+
+    expect(getLastAuthPath('user-1')).toBe('/programming/sessions?session=session-1');
+  });
+
   it('redirects youth away from pages requiring permissions they do not have', () => {
+    rememberAuthPath('user-1', '/settings/account');
+
     render(
       <MemoryRouter initialEntries={['/youth']}>
         <Routes>
@@ -29,6 +52,7 @@ describe('ProtectedRoute youth access', () => {
 
     expect(screen.getByText('/')).toBeInTheDocument();
     expect(screen.queryByText('Youth management')).not.toBeInTheDocument();
+    expect(getLastAuthPath('user-1')).toBe('/settings/account');
   });
 
   it('allows youth to access My Account without an additional permission', () => {

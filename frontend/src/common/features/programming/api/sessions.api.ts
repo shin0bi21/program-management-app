@@ -14,6 +14,7 @@ import type {
   SessionSortKey,
   SessionType,
   UpdateSessionInput,
+  UpdateSessionAttachmentInput,
   UpdateSessionNoteInput,
 } from '../../../types/cohort';
 import type { CursorPage, CursorRequest } from '../../../types/pagination';
@@ -120,12 +121,55 @@ export function deleteSessionAttachment(sessionId: string, attachmentId: string)
   return apiClient.delete(`/cohorts/sessions/${sessionId}/attachments/${attachmentId}`);
 }
 
+export function updateSessionAttachment(
+  sessionId: string,
+  attachmentId: string,
+  data: UpdateSessionAttachmentInput,
+) {
+  return apiClient.put<SessionAttachment>(
+    `/cohorts/sessions/${sessionId}/attachments/${attachmentId}`,
+    data,
+  );
+}
+
+export function getSessionAttachmentFile(
+  sessionId: string,
+  attachmentId: string,
+  opts?: RequestOptions,
+) {
+  return apiClient.download(
+    `/cohorts/sessions/${sessionId}/attachments/${attachmentId}/file`,
+    opts,
+  );
+}
+
+const attachmentExtensions: Record<string, string> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'text/plain': '.txt',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+};
+
+export const getSessionAttachmentDownloadName = (
+  attachment: Pick<SessionAttachment, 'title' | 'mimeType'>,
+) => (
+  `${attachment.title
+    .split('')
+    .map(character => character.charCodeAt(0) < 32 ? '-' : character)
+    .join('')
+    .replace(/[<>:"/\\|?*]/g, '-')
+    .replace(/[. ]+$/g, '')
+    .trim() || 'attachment'}${attachmentExtensions[attachment.mimeType] ?? ''}`
+);
+
 export async function downloadSessionAttachment(sessionId: string, attachment: SessionAttachment) {
-  const blob = await apiClient.download(`/cohorts/sessions/${sessionId}/attachments/${attachment.id}/file`);
+  const blob = await getSessionAttachmentFile(sessionId, attachment.id);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = attachment.originalFilename;
+  anchor.download = getSessionAttachmentDownloadName(attachment);
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

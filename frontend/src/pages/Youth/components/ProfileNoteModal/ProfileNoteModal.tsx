@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Button from '../../../../common/components/Button/Button';
+import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import { createYouthProfileNote, updateYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
@@ -21,8 +22,21 @@ export default function ProfileNoteModal({ youthId, note, onClose, onSaved }: { 
       onSaved(note ? await updateYouthProfileNote(youthId, note.id, data) : await createYouthProfileNote(youthId, data));
     } catch (err) { setError(getErrorMessage(err, 'Failed to save profile note')); } finally { setSubmitting(false); }
   };
-  return <Modal isOpen onClose={onClose} title={note ? 'Edit Profile Note' : 'Add Profile Note'} status={error ? 'error' : submitting ? 'submitting' : 'idle'} statusMessage={error || (submitting ? 'Saving note...' : undefined)} disableClose={submitting} footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button><Button onClick={submit} disabled={submitting || !title.trim()}>Save</Button></>}>
-    <FormField id="profile-note-category" label="Type"><select id="profile-note-category" value={category} onChange={event => setCategory(event.target.value as YouthProfileNoteCategory)}><option value="general">General</option><option value="health">Health</option><option value="preference">Preference</option></select></FormField>
+  return <Modal isOpen onClose={onClose} title={note ? 'Edit Profile Note' : 'Add Profile Note'} status={error ? 'error' : submitting ? 'submitting' : 'idle'} statusMessage={error || (submitting ? 'Saving note...' : undefined)} footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button><Button onClick={submit} disabled={submitting || !title.trim()}>Save</Button></>}>
+    <FormField id="profile-note-category" label="Type">
+      <FloatingSelect
+        id="profile-note-category"
+        ariaLabel="Type"
+        value={category}
+        options={[
+          { value: 'general', label: 'General' },
+          { value: 'health', label: 'Health' },
+          { value: 'preference', label: 'Preference' },
+        ]}
+        onChange={value => setCategory(value as YouthProfileNoteCategory)}
+        disabled={submitting}
+      />
+    </FormField>
     <FormField id="profile-note-title" label="Title *"><input id="profile-note-title" value={title} onChange={event => setTitle(event.target.value)} /></FormField>
     <FormField id="profile-note-details" label="Details (optional)"><textarea id="profile-note-details" rows={5} value={details} onChange={event => setDetails(event.target.value)} /></FormField>
   </Modal>;

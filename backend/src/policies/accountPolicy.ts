@@ -1,5 +1,10 @@
 import type { AccessTokenPayload, UserRole } from '../types/auth';
 import { ForbiddenError } from '../errors';
+import { sql } from '../db/client';
+
+export function accountAccessPredicate(actor: AccessTokenPayload, targetRole: ReturnType<typeof sql>) {
+  return actor.role === 'admin' ? sql`TRUE` : sql`${targetRole} = 'youth'`;
+}
 
 export function assertCanCreateAccount(actor: AccessTokenPayload, role: UserRole) {
   if (actor.role !== 'admin' || !['admin', 'staff'].includes(role)) {

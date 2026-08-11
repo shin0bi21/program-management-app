@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint frontend/src frontend/vite.config.ts backend/src backend/tests",
+    "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents",
     "lint:fix": "npm run lint -- --fix"
   },
   "devDependencies": {

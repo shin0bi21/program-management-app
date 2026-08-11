@@ -24,6 +24,22 @@ export interface PreferenceValues {
     sorting?: { key: 'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status'; direction: 'asc' | 'desc' };
     columnWidths?: ColumnWidths<'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status'>;
   };
+  'timesheet-filters': {
+    view: 'calendar' | 'list';
+    staffIds: string[];
+    programIds: string[];
+    categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    cycleId: string | null;
+    columnWidths?: ColumnWidths<'date' | 'staff' | 'program' | 'cycle' | 'category' | 'task' | 'hours' | 'note'>;
+  };
+  'task-filters': {
+    view?: 'calendar' | 'list';
+    programIds: string[];
+    cycleIds: string[];
+    categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
+    statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;
+    columnWidths?: ColumnWidths<'title' | 'category' | 'assignee' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
+  };
   'cohort-filters': {
     programId: string | null;
     status: 'active' | 'upcoming' | 'completed' | null;

@@ -224,6 +224,27 @@ describe('Expression of interest API', () => {
     expect(res.body.error).toBe('This expression of interest has already been converted');
   });
 
+  it('does not allow a converted submission to return to an editable status', async () => {
+    const [submission] = await sql<{ id: string }[]>`
+      SELECT expression.id
+      FROM expressions_of_interest expression
+      INNER JOIN leads lead ON lead.expression_of_interest_id = expression.id
+      WHERE expression.youth_last_name = ${fixtureYouthLastName}
+      LIMIT 1
+    `;
+
+    const response = await request(app)
+      .patch(`/api/expressions-of-interest/${submission.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'reviewed' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Converted expressions of interest cannot be changed');
+    await expect(sql`
+      UPDATE expressions_of_interest SET status = 'reviewed' WHERE id = ${submission.id}
+    `).rejects.toMatchObject({ code: '23514' });
+  });
+
   it('does not automatically assign a program of interest during conversion', async () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id FROM expressions_of_interest WHERE youth_last_name = ${jobReadinessYouthLastName} LIMIT 1

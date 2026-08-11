@@ -3,12 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import Header from '../../../common/components/Header/Header';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/features/programming/api/programming.api';
 import { useAuth } from '../../../auth/authContext';
@@ -322,10 +321,9 @@ export default function Sessions() {
 
   return (
     <>
-      <Header />
       <main className="page-container page-container--data">
         <div
-          className={`sessions-page data-detail-page-content${view === 'calendar' ? ' sessions-page--calendar' : ''}`}
+          className={`sessions-page data-page${view === 'calendar' ? ' sessions-page--calendar' : ''}`}
         >
           <PageHeader
             title="Sessions"
@@ -374,7 +372,7 @@ export default function Sessions() {
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (
-            <TableDetailLayout
+            <PageBody
               ariaLabel="Sessions and overview"
               table={
                 <Table
@@ -406,7 +404,7 @@ export default function Sessions() {
                   }
                 />
               }
-              details={
+              dashboard={
                 <SessionOverview
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
@@ -416,9 +414,9 @@ export default function Sessions() {
               }
             />
           ) : (
-            <TableDetailLayout
+            <PageBody
               ariaLabel="Sessions calendar and overview"
-              table={
+              calendar={
                 <SessionsCalendarView
                   selectedProgramIds={selectedProgramIds}
                   selectedCohortId={cohortId}
@@ -445,7 +443,7 @@ export default function Sessions() {
                     : undefined}
                 />
               }
-              details={
+              dashboard={
                 <SessionOverview
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
@@ -468,7 +466,6 @@ export default function Sessions() {
             status={confirmModal.status}
             statusMessage={confirmModal.statusMessage}
             footer={confirmModal.footer}
-            disableClose={confirmModal.disableClose}
             successDelay={confirmModal.successDelay}
           >
             {confirmAction && <p>{confirmAction.message}</p>}

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { deleteTestUser, seedTestUser, sql } from '../shared/db';
+import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -13,6 +13,8 @@ describe('Leads API', () => {
   let softSkillsProgramId: string;
   let softSkillsCohortId: string;
   let otherProgramCohortId: string;
+  let softSkillsCycleId: string;
+  let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
   let convertedYouthWithoutCohortId: string | undefined;
 
@@ -37,22 +39,17 @@ describe('Leads API', () => {
     youthToken = generateToken(youth.userId, 'youth', youth.email);
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
-    const [cohort] = await sql<{ id: string }[]>`
-      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-      VALUES (${softSkillsProgramId}, ${`Lead Conversion ${Date.now()}`}, CURRENT_DATE, CURRENT_DATE + 90)
-      RETURNING id
+    ({ cohortId: softSkillsCohortId, cycleId: softSkillsCycleId } = await seedTestCohort({
+      programId: softSkillsProgramId,
+      name: `Lead Conversion ${Date.now()}`,
+    }));
+    const [otherProgram] = await sql<{ id: string }[]>`
+      SELECT id FROM programs WHERE id != ${softSkillsProgramId} ORDER BY name LIMIT 1
     `;
-    softSkillsCohortId = cohort.id;
-    const [otherProgramCohort] = await sql<{ id: string }[]>`
-      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-      SELECT id, ${`Other Program ${Date.now()}`}, CURRENT_DATE, CURRENT_DATE + 90
-      FROM programs
-      WHERE id != ${softSkillsProgramId}
-      ORDER BY name
-      LIMIT 1
-      RETURNING id
-    `;
-    otherProgramCohortId = otherProgramCohort.id;
+    ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
+      programId: otherProgram.id,
+      name: `Other Program ${Date.now()}`,
+    }));
   });
 
   afterAll(async () => {
@@ -64,7 +61,8 @@ describe('Leads API', () => {
     if (convertedYouthWithoutCohortId) {
       await sql`DELETE FROM users WHERE id = ${convertedYouthWithoutCohortId}`;
     }
-    await sql`DELETE FROM program_cohorts WHERE id IN (${softSkillsCohortId}, ${otherProgramCohortId})`;
+    await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
+    await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
   });

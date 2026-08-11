@@ -66,7 +66,6 @@ export default function SchoolActionModal({ action, onClose, onUpsert, onDelete 
       title={title}
       status={error ? 'error' : submitting ? 'submitting' : 'idle'}
       statusMessage={error || (submitting ? (deleting ? 'Deleting school...' : 'Saving school...') : undefined)}
-      disableClose={submitting}
       footer={(
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>

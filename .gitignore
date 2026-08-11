@@ -13,7 +13,10 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+*.tsbuildinfo
 backend/uploads/
+frontend/playwright-report/
+frontend/test-results/
 
 # OS
 .DS_Store
@@ -35,8 +38,6 @@ logs/
 vulnerabilities.md
 /docs/*
 !/docs/deployment.md
+!/docs/testing.md
 !/docs/local/
-!/docs/local/development.md
-!/docs/local/setup.md
 !/docs/architecture/
-!/docs/architecture/request-flow.mmd

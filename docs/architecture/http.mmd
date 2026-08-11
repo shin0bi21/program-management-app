@@ -1,0 +1,85 @@
+%% Full-stack HTTP lifecycle: browser client → Express → PostgreSQL → client
+sequenceDiagram
+  autonumber
+
+  actor UI as UI / data hook
+  participant API as Endpoint adapter
+  participant HTTP as apiClient
+  participant AUTH as Auth subsystem
+  participant SERVER as Express route
+  participant SERVICE as Service layer
+  participant DB as PostgreSQL
+
+  UI->>API: Call typed endpoint function
+  API->>HTTP: method(path, body, options)
+
+  opt Authenticated request (default)
+    HTTP->>AUTH: getValidToken()
+    alt Token missing
+      AUTH-->>UI: Throw AuthError
+    else Token expired
+      AUTH-->>UI: Open ReLoginModal
+      UI->>AUTH: Re-authenticate
+      AUTH-->>HTTP: Fresh access token
+    else Token near expiry and cooldown elapsed
+      AUTH->>SERVER: POST /auth/refresh<br/>(httpOnly cookie)
+      alt Refresh succeeds
+        SERVER-->>AUTH: Fresh access token
+      else Refresh fails
+        AUTH-->>UI: Clear auth data and navigate to /login
+      end
+    else Token valid
+      AUTH-->>HTTP: Current access token
+    end
+  end
+
+  HTTP->>SERVER: HTTPS request<br/>Authorization: Bearer …
+  Note over HTTP,SERVER: rawFetch applies a 15-second timeout
+
+  alt Network failure
+    HTTP-->>UI: Throw NetworkError
+  else Request timeout
+    HTTP-->>UI: Throw RequestTimeoutError
+  else Caller aborts request
+    HTTP-->>UI: Rethrow AbortError
+  else Request reaches Express
+    SERVER->>SERVER: requestId → helmet → cors<br/>json → cookieParser
+
+    alt Health route
+      SERVER-->>HTTP: 2xx response
+    else Auth route
+      SERVER->>SERVER: authLimiter → asyncHandler
+    else Public route
+      SERVER->>SERVER: rate limiter → validation → asyncHandler
+    else Protected route
+      SERVER->>SERVER: authenticateToken → requirePermission<br/>rateLimiter → validateRequest → asyncHandler
+    end
+
+    opt Controller runs
+      SERVER->>SERVICE: Call business operation
+      SERVICE->>DB: Parameterized query / transaction
+      DB-->>SERVICE: Rows or database error
+      SERVICE-->>SERVER: Result or AppError
+    end
+
+    alt Successful response
+      SERVER-->>HTTP: 2xx typed data
+      Note over HTTP: 204/205 and empty successful bodies resolve as undefined
+      HTTP-->>API: T
+      API-->>UI: Update state / navigate / render
+    else Protected request returns 401
+      SERVER-->>HTTP: 401 error response
+      HTTP->>AUTH: requestReAuth()
+      AUTH-->>UI: Open ReLoginModal
+      UI->>AUTH: Re-authenticate
+      AUTH-->>HTTP: Re-authentication succeeded
+      HTTP->>SERVER: Retry request once
+      Note over HTTP,SERVER: Retry then follows the same success/error handling
+    else Application or middleware error
+      SERVER->>SERVER: handleError → sendError
+      SERVER-->>HTTP: 4xx / 5xx<br/>{ error, details?, requestId }
+      HTTP-->>UI: Throw ApiError
+    end
+  end
+
+  Note over UI,HTTP: UI catches errors with getErrorMessage(error, fallback)

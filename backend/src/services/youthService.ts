@@ -48,10 +48,11 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
   const activeStatus = sql`CASE WHEN EXISTS (
     SELECT 1 FROM cohort_enrollments current_enrollment
     INNER JOIN program_cohorts current_cohort ON current_cohort.id = current_enrollment.cohort_id
+    INNER JOIN program_cycles current_cycle ON current_cycle.id = current_cohort.cycle_id
     WHERE current_enrollment.youth_id = u.id
       AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
       AND (current_enrollment.withdrawn_on IS NULL OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
-      AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN current_cohort.starts_on AND current_cohort.ends_on
+      AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN current_cycle.starts_on AND current_cycle.ends_on
   ) THEN 'active' ELSE 'inactive' END`;
   const sortValue = filters ? ({
     firstName: sql`LOWER(u.first_name)`,
@@ -90,12 +91,12 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
         SELECT json_agg(
           json_build_object(
             'id', pc.id,
-            'name', pc.name,
+            'name', cycle.name,
             'programId', p.id,
             'programName', p.name,
             'rosterMode', p.roster_mode,
-            'startsOn', pc.starts_on,
-            'endsOn', pc.ends_on,
+            'startsOn', cycle.starts_on,
+            'endsOn', cycle.ends_on,
             'enrolledOn', participation.enrolled_on,
             'withdrawnOn', participation.withdrawn_on,
             'presentCount', attendance.present_count,
@@ -103,7 +104,7 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
             'absentCount', attendance.absent_count,
             'lastAttendedOn', attendance.last_attended_on
           )
-          ORDER BY pc.starts_on DESC
+          ORDER BY cycle.starts_on DESC
         )
         FROM (
           SELECT
@@ -134,6 +135,7 @@ export async function getYouth(id?: string, filters?: YouthQuery): Promise<Youth
           GROUP BY open_cs.cohort_id
         ) participation
         INNER JOIN program_cohorts pc ON pc.id = participation.cohort_id
+        INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
         LEFT JOIN LATERAL (
           SELECT
@@ -218,7 +220,7 @@ export async function getYouthSessionNotes(
       cs.theme AS session_theme,
       cs.starts_at,
       pc.id AS cohort_id,
-      pc.name AS cohort_name,
+      cycle.name AS cohort_name,
       p.id AS program_id,
       p.name AS program_name,
       p.roster_mode,
@@ -239,13 +241,14 @@ export async function getYouthSessionNotes(
       AND selected_youth.youth_id = ${youthId}
     INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+    INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id
     LEFT JOIN users author ON author.id = sn.created_by
     LEFT JOIN session_note_has_youth linked_note ON linked_note.note_id = sn.id
     LEFT JOIN users linked_youth ON linked_youth.id = linked_note.youth_id
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
       AND ${cohortId ? sql`cs.cohort_id = ${cohortId}` : sql`TRUE`}
-    GROUP BY sn.id, author.id, cs.id, pc.id, p.id
+    GROUP BY sn.id, author.id, cs.id, pc.id, cycle.id, p.id
     ORDER BY cs.starts_at DESC, sn.created_at DESC
   `;
 }

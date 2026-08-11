@@ -55,6 +55,7 @@ export default function FloatingMenuPanel({
       role="menu"
       className={`floating-menu-panel${className ? ` ${className}` : ''}`}
       style={{ top: position.top, left: position.left, width }}
+      onPointerDown={event => event.stopPropagation()}
     >
       {children}
     </div>,

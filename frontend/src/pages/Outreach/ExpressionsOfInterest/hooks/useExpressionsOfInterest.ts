@@ -20,5 +20,6 @@ export function useExpressionsOfInterest(filters: ExpressionOfInterestFilters | 
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
     loadNextPage: query.loadNextPage,
+    refetch: query.refetch,
   };
 }

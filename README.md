@@ -17,15 +17,12 @@ Full-stack youth services management system.
 
 ## Docs
 
-| | |
+| Area | Documentation |
 |---|---|
-| Frontend setup | [frontend/README.md](frontend/README.md) |
-| Frontend structure & conventions | [frontend/STRUCTURE.md](frontend/STRUCTURE.md) |
-| Full-stack request pipeline | [docs/architecture/request-flow.mmd](docs/architecture/request-flow.mmd) |
-| Backend setup & API reference | [backend/README.md](backend/README.md) |
-| Backend auth | [backend/docs/auth.md](backend/docs/auth.md) |
-| Backend errors | [backend/docs/errors.md](backend/docs/errors.md) |
-| Database | [backend/docs/db.md](backend/docs/db.md) |
-| First-time local environment setup | [docs/local/setup.md](docs/local/setup.md) |
-| Local development commands | [docs/local/development.md](docs/local/development.md) |
-| Production deployment and GitHub Actions setup | [docs/deployment.md](docs/deployment.md) |
+| Architecture | [docs/architecture/README.md](docs/architecture/README.md) |
+| Frontend | [frontend/README.md](frontend/README.md) |
+| Backend and API | [backend/README.md](backend/README.md) |
+| Local setup | [docs/local/setup.md](docs/local/setup.md) |
+| Local development | [docs/local/development.md](docs/local/development.md) |
+| Testing | [docs/testing.md](docs/testing.md) |
+| Production deployment | [docs/deployment.md](docs/deployment.md) |

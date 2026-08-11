@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { seedTestUser, deleteTestUser, sql } from '../shared/db';
+import { deleteTestCohort, seedTestCohort, seedTestUser, deleteTestUser, sql } from '../shared/db';
 import { generateToken, generateExpiredToken, deleteTestYouth } from './helpers';
 
 const app = createApp();
@@ -16,6 +16,7 @@ describe('Youth API', () => {
   let adminToken: string;
   let softSkillsProgramId: string;
   let softSkillsCohortId: string;
+  let softSkillsCycleId: string;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, role: 'admin' });
@@ -23,16 +24,14 @@ describe('Youth API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
-    const [cohort] = await sql<{ id: string }[]>`
-      INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-      VALUES (${softSkillsProgramId}, ${`Youth Test ${Date.now()}`}, CURRENT_DATE - 30, CURRENT_DATE + 30)
-      RETURNING id
-    `;
-    softSkillsCohortId = cohort.id;
+    ({ cohortId: softSkillsCohortId, cycleId: softSkillsCycleId } = await seedTestCohort({
+      programId: softSkillsProgramId,
+      name: `Youth Test ${Date.now()}`,
+    }));
   });
 
   afterAll(async () => {
-    await sql`DELETE FROM program_cohorts WHERE id = ${softSkillsCohortId}`;
+    await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
     await deleteTestUser(adminUserId);
   });
 
@@ -675,6 +674,7 @@ describe('Youth API', () => {
     let secondSessionId: string;
     let linkedSessionNoteId: string;
     let openCohortId: string;
+    let openCycleId: string;
     let openSessionId: string;
 
     beforeAll(async () => {
@@ -733,12 +733,12 @@ describe('Youth API', () => {
       const [openProgram] = await sql<{ id: string }[]>`
         SELECT id FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
       `;
-      const [openCohort] = await sql<{ id: string }[]>`
-        INSERT INTO program_cohorts (program_id, name, starts_on, ends_on)
-        VALUES (${openProgram.id}, ${`Youth Open Attendance ${Date.now()}`}, CURRENT_DATE - 30, CURRENT_DATE + 30)
-        RETURNING id
-      `;
-      openCohortId = openCohort.id;
+      const openCohort = await seedTestCohort({
+        programId: openProgram.id,
+        name: `Youth Open Attendance ${Date.now()}`,
+      });
+      openCohortId = openCohort.cohortId;
+      openCycleId = openCohort.cycleId;
       const [openSession] = await sql<{ id: string }[]>`
         INSERT INTO cohort_sessions (
           cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
@@ -753,7 +753,7 @@ describe('Youth API', () => {
       await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
       await sql`DELETE FROM session_notes WHERE id = ${linkedSessionNoteId}`;
       await sql`DELETE FROM cohort_sessions WHERE id IN (${firstSessionId}, ${secondSessionId}, ${openSessionId})`;
-      await sql`DELETE FROM program_cohorts WHERE id = ${openCohortId}`;
+      await deleteTestCohort(openCohortId, openCycleId);
       await deleteTestYouth(youthId);
       await deleteTestYouth(otherYouthId);
     });

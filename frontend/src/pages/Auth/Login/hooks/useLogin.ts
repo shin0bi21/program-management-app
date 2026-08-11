@@ -6,7 +6,7 @@ import { login } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint } from '../../../../auth/deviceFingerprint';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import { setAuthData, STORAGE_KEYS } from '../../../../auth/storage';
+import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
 
 export const useLogin = () => {
@@ -34,8 +34,7 @@ export const useLogin = () => {
         updateAuthState();
 
         // Navigate to last visited authenticated page, or settings as default
-        const lastPath = localStorage.getItem(STORAGE_KEYS.LAST_AUTH_PATH) || '/settings/account';
-        navigate(lastPath);
+        navigate(getLastAuthPath(response.user.id));
       } else if (response.requiresVerification) {
         // Redirect to verification page
         navigate('/verify-password', { state: { userId: response.userId } });

@@ -1,42 +1,36 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import FloatingMenuPanel from '../../../common/components/FloatingMenu/FloatingMenuPanel';
-import Header from '../../../common/components/Header/Header';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import TableDetailLayout from '../../../common/components/TableDetailLayout/TableDetailLayout';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
-import { deleteCohort } from '../../../common/features/programming/api/programming.api';
+import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import { useAuth } from '../../../auth/authContext';
-import { useFloatingMenu } from '../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import type { CohortSortKey, ProgramCohort } from '../../../common/types/cohort';
+import type { CohortSortKey, ProgramCohort, ProgramCycle } from '../../../common/types/cohort';
 import type { ListSort } from '../../../common/types/pagination';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaults';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
-import EnrollYouthModal from './components/EnrollYouthModal/EnrollYouthModal';
-import AddProgramModal from './components/ProgramModal/AddProgramModal';
-import WithdrawYouthModal from './components/WithdrawYouthModal/WithdrawYouthModal';
+import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
+import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import './Cohorts.css';
 import useCohortTable from './hooks/useCohortTable';
 
 export default function Cohorts() {
-  const navigate = useNavigate();
   const { permissions, role } = useAuth();
-  const canWritePrograms = permissions.includes('write:programs');
   const canWriteCohorts = permissions.includes('write:cohorts');
-  const { programs, upsertProgram, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
+  const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
+  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const [selectedProgramId, setSelectedProgramId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [filtersReady, setFiltersReady] = useState(false);
@@ -51,22 +45,31 @@ export default function Cohorts() {
   const cohortsLoading = cohortTable.loading;
   const error = cohortTable.error;
   const refreshCohorts = cohortTable.refetch;
-  const [programModalOpen, setProgramModalOpen] = useState(false);
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
-  const [enrollTarget, setEnrollTarget] = useState<ProgramCohort | null>(null);
-  const [withdrawTarget, setWithdrawTarget] = useState<ProgramCohort | null>(null);
+  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
+  const [cyclesError, setCyclesError] = useState<string | null>(null);
+  const [rosterTarget, setRosterTarget] = useState<ProgramCohort | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
   const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-  const addButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    isOpen: addMenuOpen,
-    toggle: toggleAddMenu,
-    close: closeAddMenu,
-    position: addMenuPosition,
-    menuRef: addMenuRef,
-  } = useFloatingMenu(addButtonRef, { side: 'right', align: 'start' }, { widthEstimate: 180, heightEstimate: 100 });
+
+  const refreshCycles = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setCycles(await getProgramCycles(signal ? { signal } : undefined));
+      setCyclesError(null);
+    } catch (cause) {
+      if (signal?.aborted) return;
+      setCyclesError(cause instanceof Error ? cause.message : 'Could not load cycles');
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void refreshCycles(controller.signal);
+    return () => controller.abort();
+  }, [refreshCycles]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 250);
@@ -119,7 +122,7 @@ export default function Cohorts() {
   const columns = useMemo<TableColumn<ProgramCohort>[]>(
     () => [
       { key: 'program', sortKey: 'program', header: 'Program', render: (cohort) => cohort.programName },
-      { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (cohort) => cohort.name },
+      { key: 'cohort', sortKey: 'cohort', header: 'Cycle', render: (cohort) => cohort.cycleName },
       { key: 'start', sortKey: 'start', header: 'Start', width: 140, render: (cohort) => formatShortDate(cohort.startsOn) },
       { key: 'end', sortKey: 'end', header: 'End', width: 140, render: (cohort) => formatShortDate(cohort.endsOn) },
       {
@@ -141,6 +144,9 @@ export default function Cohorts() {
                 <ActionsMenu
                   ariaLabel={`More actions for ${cohort.name}`}
                   items={[
+                    ...(cohort.rosterMode === 'enrolled'
+                      ? [{ id: 'manage-roster', label: 'Manage Roster', onClick: () => setRosterTarget(cohort) }]
+                      : []),
                     { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
                     { id: 'edit', label: 'Edit Cohort', onClick: () => setEditCohortTarget(cohort) },
                     {
@@ -186,51 +192,16 @@ export default function Cohorts() {
     });
   };
 
-  const openProgramModal = () => {
-    closeAddMenu();
-    setProgramModalOpen(true);
-  };
-  const openCohortModal = () => {
-    closeAddMenu();
-    setCohortModalOpen(true);
-  };
-
   return (
     <>
-      <Header />
       <main className="page-container page-container--data">
-        <div className="data-detail-page-content">
+        <div className="data-page">
           <PageHeader
             title="Cohorts"
             actions={
-              canWritePrograms ? (
-                <>
-                  <Button ref={addButtonRef} aria-haspopup="menu" aria-expanded={addMenuOpen} onClick={toggleAddMenu}>
-                    + Add
-                  </Button>
-                  {addMenuPosition && (
-                    <FloatingMenuPanel
-                      menuRef={addMenuRef}
-                      position={addMenuPosition}
-                      onClose={closeAddMenu}
-                      width={180}
-                    >
-                      <button type="button" role="menuitem" onClick={openProgramModal}>
-                        Add Program
-                      </button>
-                      {canWriteCohorts && (
-                        <button type="button" role="menuitem" disabled={!programs.length} onClick={openCohortModal}>
-                          Add Cohort
-                        </button>
-                      )}
-                    </FloatingMenuPanel>
-                  )}
-                </>
-              ) : canWriteCohorts ? (
-                <Button onClick={openCohortModal} disabled={!programs.length}>
-                  + Add
-                </Button>
-              ) : undefined
+              canWriteCohorts
+                ? <Button disabled={!programs.length || !cycles.length} onClick={() => setCohortModalOpen(true)}>+ Add Cohort</Button>
+                : undefined
             }
             search={
               <SearchInput
@@ -261,8 +232,9 @@ export default function Cohorts() {
           />
 
           {programsError && <p className="form-error">{programsError}</p>}
+          {cyclesError && <p className="form-error">{cyclesError}</p>}
           {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
-          <TableDetailLayout
+          <PageBody
             ariaLabel="Programming cohorts and overview"
             table={
               <Table
@@ -289,104 +261,43 @@ export default function Cohorts() {
                 }
               />
             }
-            details={
-              <>
-                <DashboardCard
-                  title={!selectedCohort || selectedCohort.rosterMode === 'enrolled' ? 'Youth enrolled' : 'Youth attended'}
-                  emptyMessage="No cohort selected."
-                  action={
-                    !selectedCohort || selectedCohort.rosterMode === 'enrolled' ? (
-                      <div className="cohort-card-actions">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!selectedCohort}
-                          aria-label="Enroll youth"
-                          onClick={() => {
-                            if (selectedCohort) setEnrollTarget(selectedCohort);
-                          }}
-                        >
-                          Enroll
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!selectedCohort}
-                          aria-label="Withdraw youth"
-                          onClick={() => {
-                            if (selectedCohort) setWithdrawTarget(selectedCohort);
-                          }}
-                        >
-                          Withdraw
-                        </Button>
-                      </div>
-                    ) : undefined
-                  }
-                >
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.rosterMode === 'enrolled'
-                        ? selectedCohort.enrolledCount
-                        : selectedCohort.uniqueAttendeeCount}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-                <DashboardCard
-                  title="Next session"
-                  emptyMessage="No cohort selected."
-                  action={
-                    selectedCohort?.nextSessionId ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => navigate(`/programming/sessions?session=${selectedCohort.nextSessionId}`)}
-                      >
-                        Go to
-                      </Button>
-                    ) : undefined
-                  }
-                >
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.nextSessionAt ? formatShortDate(selectedCohort.nextSessionAt) : 'None'}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-                <DashboardCard title="Average attendance" emptyMessage="No cohort selected.">
-                  {selectedCohort ? (
-                    <strong className="dashboard-card__metric">
-                      {selectedCohort.averageAttendance === null ? '—' : `${selectedCohort.averageAttendance}%`}
-                    </strong>
-                  ) : undefined}
-                </DashboardCard>
-              </>
+            dashboard={
+              <DashboardCard
+                title="Youth Overview"
+                className="cohort-overview-card"
+                emptyMessage="No cohort selected."
+                action={selectedCohort ? <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!canViewYouthReport || selectedCohort.rosterMode === 'open'}
+                  title={selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
+                  onClick={() => setReportTarget(selectedCohort)}
+                >View Report</Button> : undefined}
+              >
+                {selectedCohort ? (
+                  <dl className="cohort-overview">
+                    <div><dt>{selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selectedCohort.rosterMode === 'enrolled' ? selectedCohort.enrolledCount : selectedCohort.uniqueAttendeeCount}</dd></div>
+                    <div><dt>Average attendance:</dt><dd>{selectedCohort.averageAttendance === null ? '—' : `${selectedCohort.averageAttendance}%`}</dd></div>
+                  </dl>
+                ) : undefined}
+              </DashboardCard>
             }
           />
 
-          <AddProgramModal
-            isOpen={programModalOpen}
-            onClose={() => setProgramModalOpen(false)}
-            onCreated={(program) => {
-              upsertProgram(program);
-              selectProgram(program.id);
-            }}
-          />
           <AddCohortModal
             isOpen={cohortModalOpen}
             programs={programs}
+            cycles={cycles}
             initialProgramId={selectedProgramId}
             onClose={() => setCohortModalOpen(false)}
             onCreated={refreshCohorts}
           />
 
-          <EnrollYouthModal cohort={enrollTarget} onClose={() => setEnrollTarget(null)} onSuccess={refreshCohorts} />
-          <WithdrawYouthModal
-            cohort={withdrawTarget}
-            onClose={() => setWithdrawTarget(null)}
-            onSuccess={refreshCohorts}
-          />
+          <ManageRosterModal cohort={rosterTarget} onClose={() => setRosterTarget(null)} onSuccess={refreshCohorts} />
+          {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
           <EditCohortModal
             cohort={editCohortTarget}
+            cycles={cycles}
             onClose={() => setEditCohortTarget(null)}
             onUpdated={refreshCohorts}
           />
@@ -398,7 +309,6 @@ export default function Cohorts() {
             status={confirmModal.status}
             statusMessage={confirmModal.statusMessage}
             footer={confirmModal.footer}
-            disableClose={confirmModal.disableClose}
             successDelay={confirmModal.successDelay}
           >
             {confirmAction && <p>{confirmAction.message}</p>}

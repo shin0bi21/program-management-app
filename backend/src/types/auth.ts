@@ -19,7 +19,11 @@ export type Permission =
   | 'read:homepage'
   | 'write:homepage'
   | 'read:settings'
-  | 'write:settings';
+  | 'write:settings'
+  | 'read:timesheets'
+  | 'write:timesheets'
+  | 'read:tasks'
+  | 'write:tasks';
 
 export interface BaseTokenPayload {
   userId: string;
