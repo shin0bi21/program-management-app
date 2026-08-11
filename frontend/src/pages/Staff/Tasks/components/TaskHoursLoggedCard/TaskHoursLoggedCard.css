@@ -74,16 +74,16 @@
 }
 
 .task-hours-breakdown__section {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-warm);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
 }
 
 .task-hours-breakdown__list {
   display: grid;
   gap: var(--space-2);
   margin: var(--space-5) 0 0;
+  padding-left: var(--space-3);
+  border-left: 4px solid var(--accent-28);
 }
 
 .task-hours-breakdown__list div,
