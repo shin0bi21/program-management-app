@@ -1,6 +1,8 @@
 name: Pattern Review
 
 on:
+  pull_request:
+    branches: [develop]
   push:
     branches: [develop]
   workflow_dispatch:
@@ -17,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pattern-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   review:
     name: Review repository patterns
@@ -30,18 +36,40 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version-file: .nvmrc
+          node-version: '24'
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
 
       - name: Review changed patterns
-        if: github.event_name == 'push' || inputs.scope == 'changed'
+        if: github.event_name != 'workflow_dispatch' || inputs.scope == 'changed'
         env:
-          CHECK_PATTERNS_BASE_REF: ${{ github.event_name == 'push' && github.event.before || 'HEAD^' }}
-        run: node scripts/agents/check-patterns.js --changed
+          CHECK_PATTERNS_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || 'HEAD^' }}
+        run: |
+          mkdir -p artifacts/pattern-review
+          node scripts/agents/check-patterns.js --changed 2>&1 | tee artifacts/pattern-review/report.txt
 
       - name: Review all patterns
         if: github.event_name == 'workflow_dispatch' && inputs.scope == 'full'
-        run: node scripts/agents/check-patterns.js --all
+        run: |
+          mkdir -p artifacts/pattern-review
+          node scripts/agents/check-patterns.js --all 2>&1 | tee artifacts/pattern-review/report.txt
+
+      - name: Publish pattern review summary
+        if: always()
+        run: |
+          echo '## Pattern Review' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat artifacts/pattern-review/report.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload pattern review report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: pattern-review-${{ github.run_id }}
+          path: artifacts/pattern-review/report.txt
+          if-no-files-found: error
+          retention-days: 30
