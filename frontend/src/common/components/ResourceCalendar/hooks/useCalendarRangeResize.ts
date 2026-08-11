@@ -193,7 +193,7 @@ export function useCalendarRangeResize<TResource, TItemData>({
       nextPeriodKey: periodsRef.current[initialIndex]?.key,
     };
     activeRef.current = next;
-  }, [interactionCoordinator, viewportRef]);
+  }, [interactionCoordinator]);
   const resizeByKeyboard = useCallback((
     value: KeyboardRangeResize<TResource, TItemData>,
     direction: -1 | 1,

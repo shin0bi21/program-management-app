@@ -352,7 +352,6 @@ test('keeps range movement locked out while a resize pointer owns the calendar',
 test('keeps range resize locked out while a move pointer owns the calendar', async ({ page, mount }) => {
   const component = await mount(storyId);
   const item = component.getByRole('button', { name: 'Ranged task' });
-  const wrapper = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
   const handle = component.getByRole('button', { name: 'Resize end of ranged-task' });
   const itemBox = await item.boundingBox();
   const handleBox = await handle.boundingBox();
