@@ -11,9 +11,11 @@ Run test commands from the repository root. The supported test workflow uses the
 | Static analysis | `bash scripts/tests/test-static.sh` |
 | Backend APIs | `bash scripts/tests/backend/test-apis.sh` |
 | Frontend UI (Vitest + jsdom) | `bash scripts/tests/frontend/test-ui.sh` |
-| Playwright browser components | `cd frontend && npm run test:browser` |
+| Playwright browser components | `bash scripts/tests/frontend/test-browser.sh` |
 
-The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is not part of the standard full runner. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, Timesheet, and browser coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
+The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, and Timesheet coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
+
+Repository pattern review is separate from ordinary static and application runners. `.github/workflows/pattern-review.yml` runs a changed-only review after merges and other pushes to `develop`, comparing the new revision with the push's previous revision. Its manual dispatch supports either changed scope or an explicitly requested full-repository review.
 
 Preview the same routing without executing tests with `bash scripts/tests/test-app.sh --plan-changed`. This is useful for verifying that a new feature path is registered before relying on `--changed`.
 
@@ -47,7 +49,7 @@ bash scripts/tests/frontend/run-staff-tests.sh
 bash scripts/tests/frontend/run-timesheet-tests.sh
 bash scripts/tests/frontend/run-task-tests.sh
 bash scripts/tests/frontend/run-common-tests.sh
-bash scripts/tests/frontend/run-browser-tests.sh
+bash scripts/tests/frontend/test-browser.sh
 ```
 
 Check `scripts/tests/backend/` and `scripts/tests/frontend/` for the complete current list.
