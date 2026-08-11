@@ -118,7 +118,8 @@ Open:
 - Backend: <http://localhost:5001>
 
 Sign in with the configured admin credentials. Then run the full repository
-test suite:
+test suite. This standard suite does not require Playwright or a locally
+installed browser:
 
 ```bash
 bash scripts/tests/test-app.sh

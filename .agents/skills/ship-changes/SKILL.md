@@ -68,10 +68,12 @@ For every isolated branch:
 1. Poll until the pull request's expected checks are registered.
 2. Treat `no checks reported` as pending or blocked, never as success.
 3. Wait for all required checks—including the repository-wide backend, frontend, migration, build, and static gates—to complete successfully. These checks are the full-suite merge boundary.
-4. If GitHub Actions is degraded or checks never register, preserve the branch and report the blocker instead of merging.
-5. Merge only into `develop` after checks pass and delete the remote feature branch.
-6. Switch local state to `develop`, fast-forward from `origin/develop`, and verify the working tree is clean and local `develop` equals its upstream.
-7. Only after that checkpoint, select the next concern, re-evaluate its scope against the updated base, and begin again at traceability.
+4. Poll at 60-second intervals, reporting each status change. Do not use an unbounded watch command that can conceal a stale check state.
+5. If the same expected check remains pending for two polls, inspect its Actions run directly with `gh run view <run-id> --json status,conclusion,jobs`. If the run is complete but the PR check rollup is still pending, re-query the PR once after one more minute; never treat the completed job as merge permission until the PR's required-check record also passes.
+6. After three unchanged polls, or if Actions is degraded or checks never register, preserve the branch and report a concrete CI-status blocker instead of waiting indefinitely or bypassing branch protection.
+7. Merge only into `develop` after checks pass and delete the remote feature branch.
+8. Switch local state to `develop`, fast-forward from `origin/develop`, and verify the working tree is clean and local `develop` equals its upstream.
+9. Only after that checkpoint, select the next concern, re-evaluate its scope against the updated base, and begin again at traceability.
 
 Never prepare a batch of concern branches from the pre-merge base. Logical splitting happens upfront; physical branch preparation and shipping happen one concern at a time.
 
