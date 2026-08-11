@@ -13,7 +13,9 @@ Run test commands from the repository root. The supported test workflow uses the
 | Frontend UI | `bash scripts/tests/frontend/test-ui.sh` |
 | Playwright browser components | `cd frontend && npm run test:browser` |
 
-The full application runner executes deployment checks, backend API tests, and frontend tests. Pass `--changed` to select those suites from committed branch changes plus staged, unstaged, and untracked files. The comparison base defaults to the remote default branch (or `origin/develop`); override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`. Documentation-only changes skip tests, while unrecognized cross-cutting files conservatively run the full suite.
+The full application runner executes deployment checks, backend API tests, and frontend tests. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, Timesheet, and browser coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
+
+Preview the same routing without executing tests with `bash scripts/tests/test-app.sh --plan-changed`. This is useful for verifying that a new feature path is registered before relying on `--changed`.
 
 Bare `test-app.sh` and the explicit `--full` option both run the full suite. This keeps CI and existing developer workflows deterministic.
 
@@ -30,16 +32,30 @@ bash scripts/tests/backend/run-youth-tests.sh
 bash scripts/tests/backend/run-schools-tests.sh
 bash scripts/tests/backend/run-outreach-tests.sh
 bash scripts/tests/backend/run-timesheet-tests.sh
+bash scripts/tests/backend/run-task-tests.sh
 
 bash scripts/tests/frontend/run-platform-tests.sh
 bash scripts/tests/frontend/run-homepage-tests.sh
 bash scripts/tests/frontend/run-youth-tests.sh
 bash scripts/tests/frontend/run-staff-tests.sh
+bash scripts/tests/frontend/run-timesheet-tests.sh
+bash scripts/tests/frontend/run-task-tests.sh
 bash scripts/tests/frontend/run-common-tests.sh
 bash scripts/tests/frontend/run-browser-tests.sh
 ```
 
 Check `scripts/tests/backend/` and `scripts/tests/frontend/` for the complete current list.
+
+## Agent guardrails
+
+Use the deterministic repository checks before review or handoff:
+
+```bash
+node scripts/agents/check-patterns.js --changed
+node scripts/agents/validate-skills.js
+```
+
+`check-patterns.js` is diff-scoped by default. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, and accidental test-marker regressions. Use `--all` for an intentional repository-wide scrub; historical findings may need to be scheduled separately. These checks do not generate semantic tests or replace behavior review.
 
 ## Direct package commands
 

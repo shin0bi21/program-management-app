@@ -11,10 +11,10 @@
 ## Canonical documentation
 
 - Use this file as the single automatic agent entry point.
-- Use `.agents/skills/implement-frontend/` when creating or changing frontend pages, components, hooks, forms, modals, menus, tables, calendars, API adapters, or UI tests.
-- Also use `.agents/skills/build-list-page/` when creating or materially changing a list/table page, its dashboard or detail composition, search, filters, views, sorting, selection, pagination, preferences, or responsive behavior.
-- Also use `.agents/skills/build-calendar-page/` when creating or materially changing a resource-calendar page, its periods, buffered loading, items, overflow, mutations, drag/drop, preferences, or responsive behavior.
-- Use `.agents/skills/review-changes/` for repeatable change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
+- Use `.agents/skills/implement-feature/` for application changes. Its `SKILL.md` routes frontend work, frontend list/calendar variants, backend APIs, and cross-stack features into the required references under that skill.
+- Before deep review or shipping, use `.agents/skills/split-changes/` to make the top-level split decision. A cohesive diff may remain one concern; a mixed diff must produce a concern map that becomes the source of truth for review and shipping.
+- Use `.agents/skills/review-changes/` for repeatable concern-level change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
+- Use the workflow order `split decision → concern review and focused verification → concern commit/PR/merge to develop → separately authorized deployment`. Do not infer deployment permission from commit or merge approval.
 - Read `docs/architecture/frontend.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `docs/architecture/backend.md` and the relevant architecture document before changing backend architecture, authentication, errors, or database behavior. Read the relevant file under `backend/docs/` for integrations.
 - Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
@@ -22,16 +22,19 @@
 ## Stable invariants
 
 - Do not change pinned runtime, database, framework, or TypeScript versions unless the user explicitly requests it.
-- Never edit an applied database migration; add a new migration.
+- Never edit a committed migration or one applied to a shared environment. An uncommitted migration used only in confirmed-disposable local databases may be folded before shipping, but reset every affected database so checksums and generated types match.
 - Preserve backend middleware ordering and permission checks. Use `asyncHandler` for Express 4 async routes.
 - Use parameterized database queries and join existing transactions rather than opening nested transactions.
 - Use `requireEnv()` for required backend environment variables.
 - Escape user-controlled values interpolated into email HTML.
 - Route frontend HTTP calls through the centralized API client.
-- Preserve the frontend dependency direction `pages → features → common`.
+- Preserve the frontend dependency direction `pages → common/features → common/components`.
 
 ## Testing
 
+- Reuse successful test evidence while the exact concern diff is unchanged. Do not rerun the same suite in implementation, review, and shipping merely because the workflow phase changed.
+- During implementation and review, run the narrow authoritative suites for the selected concern. After isolating a concern for shipping, rerun its narrow suites when isolation changes the tested tree or prior evidence does not match that exact diff.
+- Required GitHub checks are the full merge gate for pull requests into `develop`; do not run the full local suite for every concern by default. Run it locally only when explicitly requested, when CI is unavailable, or when the concern map identifies cross-cutting risk that focused suites cannot cover.
 - In this repo, when the user refers to the "full test suite," default to `scripts/tests/test-app.sh`.
 - Script layout matters here:
   - `scripts/tests/backend/` contains Docker-backed backend test runners, and `test-apis.sh` composes the individual backend suites.

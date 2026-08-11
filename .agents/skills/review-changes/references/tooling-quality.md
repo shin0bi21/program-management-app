@@ -8,6 +8,7 @@ For every tooling-motivated change:
 - reject weakened types, broader casts, non-null assertions, fake dependencies, decorative memoization, ref indirection, redundant state, or custom lifecycle logic added only to satisfy a rule;
 - scrutinize disable comments, ignore patterns, warning suppressions, coverage exclusions, and configuration exceptions. Require a narrow technical reason and confirm that a standard library or repository pattern cannot express the contract;
 - prefer official framework and library types or APIs over locally reconstructed conditional types and compatibility shims;
+- reject optional chaining, nullish coalescing, placeholder defaults, broad catches, and empty fallbacks added merely to satisfy types or prevent a visible failure when the contract requires data to exist;
 - compare behavior before and after, including stale closures, effect timing, focus restoration, asynchronous ordering, and render frequency;
 - report remaining diagnostics as residual debt when the sound correction is outside scope. Do not describe a review as clean because a warning was hidden.
 
