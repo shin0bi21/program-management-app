@@ -6,7 +6,7 @@ import TaskItem from './TaskItem';
 const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };
 const initialTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: 'Prepare activities and materials.', category: 'planning_prep',
-  programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
+  programId: 'program-1', programName: 'Soft Skills', status: 'in_progress',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
   assignee: {

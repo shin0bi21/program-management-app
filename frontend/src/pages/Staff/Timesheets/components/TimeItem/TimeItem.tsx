@@ -18,11 +18,11 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
     summary={<span className={`time-item__type time-item__type--${entryType.toLowerCase()}`}>{entryType}</span>}
     detailTitle={title}
     details={[
+      { label: 'Cycle', value: item.cycleName ?? '—' },
       { label: 'Program', value: item.programName ?? '—' },
-      ...(item.cycleName ? [{ label: 'Cycle', value: item.cycleName }] : []),
+      { label: 'Category', value: item.categoryLabel },
       ...(item.sessionLabel ? [{ label: 'Session', value: item.sessionLabel }] : []),
-      ...(!item.sessionId ? [{ label: 'Category', value: item.categoryLabel }] : []),
-      { label: 'Hours', value: item.hours },
+      { label: 'Hours', value: item.hours, sectionStart: true },
       { label: 'Notes', value: item.note, multiline: true },
     ]}
     onEdit={onEdit}

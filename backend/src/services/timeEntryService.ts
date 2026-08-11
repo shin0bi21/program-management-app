@@ -45,12 +45,12 @@ const categoryLabels: Record<TimeEntryCategory, string> = {
 
 async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
   if (input.source === 'other') return {
-    programId: input.programId, cycleId: input.cycleId, category: input.category,
+    programId: input.programId, category: input.category,
     taskId: null, taskStatus: null, sessionId: null, workDate: input.workDate,
   };
   if (input.source === 'session') {
-    const rows = await db<Array<{ programId: string; cycleId: string; workDate: string }>>`
-      SELECT cohort.program_id, cohort.cycle_id,
+    const rows = await db<Array<{ programId: string; workDate: string }>>`
+      SELECT cohort.program_id,
         (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date
       FROM cohort_sessions session
       INNER JOIN program_cohorts cohort ON cohort.id = session.cohort_id
@@ -72,40 +72,42 @@ async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
       taskId: null, taskStatus: null, sessionId: input.sessionId,
     };
   }
-  const rows = await db<Array<{ category: string; programId: string | null; cycleId: string; status: 'todo' | 'in_progress' | 'completed'; startDate: string; dueDate: string }>>`
-    SELECT task.category, task.program_id, task.cycle_id, task.status,
+  const rows = await db<Array<{ category: string; programId: string | null; status: 'todo' | 'in_progress' | 'completed'; startDate: string; dueDate: string }>>`
+    SELECT task.category, task.program_id, task.status,
       task.start_date::text, task.due_date::text
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}
-      AND task.status <> 'cancelled'
+      AND task.status IN ('todo', 'in_progress')
     LIMIT 1
     FOR UPDATE OF task
   `;
   if (!rows.length) throw new NotFoundError('Assigned task not found');
   const task = rows[0];
   return {
-    programId: task.programId, cycleId: task.cycleId, category: task.category as TimeEntryCategory,
+    programId: task.programId, category: task.category as TimeEntryCategory,
     taskId: input.taskId, taskStatus: task.status, sessionId: null, workDate: input.workDate,
   };
 }
 
-async function markTaskInProgress(
+async function updateTaskAfterTimeEntry(
   taskId: string | null,
   status: 'todo' | 'in_progress' | 'completed' | null,
+  completeTask: boolean,
   staffId: string,
   trx: typeof sql,
   actor: AccessTokenPayload,
   transactionId: string,
 ) {
-  if (!taskId || status !== 'todo') return;
+  if (!taskId || (!completeTask && status !== 'todo')) return;
+  const nextStatus = completeTask ? 'completed' : 'in_progress';
   await trx`
     UPDATE tasks
-    SET status = 'in_progress', completed_at = NULL, updated_by = ${actor.userId}, updated_at = NOW()
+    SET status = ${nextStatus}, completed_at = ${completeTask ? sql`NOW()` : null}, updated_by = ${actor.userId}, updated_at = NOW()
     WHERE id = ${taskId}
   `;
   await audit(trx, actor.userId, transactionId, 'tasks', taskId, 'UPDATE',
-    { status: 'todo', staffId }, { status: 'in_progress', staffId });
+    { status, staffId }, { status: nextStatus, staffId });
 }
 
 async function assertStaffResource(staffId: string) {
@@ -142,66 +144,37 @@ function getTimeEntryResources(actor: AccessTokenPayload) {
   `;
 }
 
-async function assertCycleResource(cycleId: string, programId: string | null, db: typeof sql = sql) {
+async function resolveCycleForWorkDate(workDate: string, programId: string | null, db: typeof sql = sql) {
   const rows = await db<{ id: string }[]>`
     SELECT cycle.id
     FROM program_cycles cycle
-    WHERE cycle.id = ${cycleId}
+    WHERE ${workDate}::date BETWEEN cycle.starts_on AND cycle.ends_on
       AND ${programId ? sql`EXISTS (
         SELECT 1 FROM program_cohorts cohort
         WHERE cohort.program_id = ${programId} AND cohort.cycle_id = cycle.id
       )` : sql`TRUE`}
-    LIMIT 1
+    ORDER BY cycle.starts_on, cycle.id
+    LIMIT 2
   `;
-  if (!rows.length) throw new NotFoundError(programId ? 'Cycle not found for selected program' : 'Cycle not found');
-}
-
-export async function getTimeEntryCohorts(programId: string) {
-  await assertProgramResource(programId);
-  return sql<Array<{ id: string; cycleId: string; name: string; state: 'active' | 'upcoming' | 'completed' }>>`
-    SELECT
-      cohort.id,
-      cycle.id AS cycle_id,
-      cycle.name,
-      cycle.starts_on::text AS starts_on,
-      cycle.ends_on::text AS ends_on,
-      CASE
-        WHEN CURRENT_DATE < cycle.starts_on THEN 'upcoming'
-        WHEN CURRENT_DATE > cycle.ends_on THEN 'completed'
-        ELSE 'active'
-      END AS state
-    FROM program_cohorts cohort
-    INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
-    WHERE cohort.program_id = ${programId}
-    ORDER BY
-      CASE
-        WHEN CURRENT_DATE BETWEEN cycle.starts_on AND cycle.ends_on THEN 0
-        WHEN CURRENT_DATE < cycle.starts_on THEN 1
-        ELSE 2
-      END,
-      cycle.starts_on DESC,
-      cycle.name,
-      cohort.id
-  `;
+  if (!rows.length) throw new ConflictError('No cycle covers the selected work date');
+  if (rows.length > 1) throw new ConflictError('Multiple cycles cover the selected work date');
+  return rows[0].id;
 }
 
 export async function getTimeEntrySessions(actor: AccessTokenPayload, query: TimeEntrySessionQuery) {
   assertCanWriteTimeFor(actor, query.staffId);
   await assertStaffResource(query.staffId);
   return sql<Array<{
-    id: string; label: string; programId: string; programName: string;
-    cycleId: string; cycleName: string; workDate: string; startsAt: string;
+    id: string; label: string; programId: string; programName: string; workDate: string; startsAt: string;
   }>>`
     SELECT session.id,
       session.theme AS label,
       program.id AS program_id, program.name AS program_name,
-      cycle.id AS cycle_id, cycle.name AS cycle_name,
       (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date,
       session.starts_at::text AS starts_at
     FROM cohort_sessions session
     INNER JOIN program_cohorts cohort ON cohort.id = session.cohort_id
     INNER JOIN programs program ON program.id = cohort.program_id
-    INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
     WHERE session.cancelled_at IS NULL
       AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = ${query.workDate}::date
@@ -386,10 +359,10 @@ export async function createTimeEntry(input: SetTimeEntryInput, actor: AccessTok
     const trx = asTransactionSql(tx);
     const scope = await resolveTimeEntryScope(input, trx);
     await assertProgramResource(scope.programId, trx);
-    await assertCycleResource(scope.cycleId, scope.programId, trx);
+    const cycleId = await resolveCycleForWorkDate(scope.workDate, scope.programId, trx);
     const rows = await trx<TimeEntryRow[]>`
       INSERT INTO time_entries (staff_id, program_id, cycle_id, category, task_id, session_id, work_date, hours, note, created_by, updated_by)
-      VALUES (${input.staffId}, ${scope.programId}, ${scope.cycleId}, ${scope.category}, ${scope.taskId}, ${scope.sessionId}, ${scope.workDate}, ${input.hours}, ${input.note}, ${actor.userId}, ${actor.userId})
+      VALUES (${input.staffId}, ${scope.programId}, ${cycleId}, ${scope.category}, ${scope.taskId}, ${scope.sessionId}, ${scope.workDate}, ${input.hours}, ${input.note}, ${actor.userId}, ${actor.userId})
       RETURNING id, staff_id, program_id, (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
         cycle_id,
         (SELECT name FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_name,
@@ -400,7 +373,7 @@ export async function createTimeEntry(input: SetTimeEntryInput, actor: AccessTok
         work_date::text, hours::text, note
     `;
     created = rows[0];
-    await markTaskInProgress(scope.taskId, scope.taskStatus, input.staffId, trx, actor, transactionId);
+    await updateTaskAfterTimeEntry(scope.taskId, scope.taskStatus, input.source === 'task' && input.completeTask, input.staffId, trx, actor, transactionId);
     await audit(trx, actor.userId, transactionId, 'time_entries', created.id, 'INSERT', null, { ...created });
   });
   return { ...created, hours: Number(created.hours) };
@@ -437,11 +410,11 @@ export async function updateTimeEntry(id: string, input: SetTimeEntryInput, acto
     const trx = asTransactionSql(tx);
     const scope = await resolveTimeEntryScope(input, trx);
     await assertProgramResource(scope.programId, trx);
-    await assertCycleResource(scope.cycleId, scope.programId, trx);
+    const cycleId = await resolveCycleForWorkDate(scope.workDate, scope.programId, trx);
     const existing = await getOwnedEntry(trx, id, actor);
     const rows = await trx<TimeEntryRow[]>`
       UPDATE time_entries
-      SET staff_id = ${input.staffId}, program_id = ${scope.programId}, cycle_id = ${scope.cycleId}, category = ${scope.category}, task_id = ${scope.taskId}, session_id = ${scope.sessionId}, work_date = ${scope.workDate},
+      SET staff_id = ${input.staffId}, program_id = ${scope.programId}, cycle_id = ${cycleId}, category = ${scope.category}, task_id = ${scope.taskId}, session_id = ${scope.sessionId}, work_date = ${scope.workDate},
           hours = ${input.hours}, note = ${input.note}, updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, staff_id, program_id, (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
@@ -454,7 +427,7 @@ export async function updateTimeEntry(id: string, input: SetTimeEntryInput, acto
         work_date::text, hours::text, note
     `;
     updated = rows[0];
-    await markTaskInProgress(scope.taskId, scope.taskStatus, input.staffId, trx, actor, transactionId);
+    await updateTaskAfterTimeEntry(scope.taskId, scope.taskStatus, false, input.staffId, trx, actor, transactionId);
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
   });
   return { ...updated, hours: Number(updated.hours) };
@@ -473,9 +446,10 @@ export async function updateTimeEntryPlacement(
     if (existing.sessionId && input.workDate !== existing.workDate) {
       throw new ConflictError('Session time must stay on the session date');
     }
+    const cycleId = await resolveCycleForWorkDate(input.workDate, existing.programId, trx);
     const rows = await trx<TimeEntryRow[]>`
       UPDATE time_entries
-      SET work_date = ${input.workDate}, updated_by = ${actor.userId}, updated_at = NOW()
+      SET work_date = ${input.workDate}, cycle_id = ${cycleId}, updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, staff_id, program_id, (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
         cycle_id,

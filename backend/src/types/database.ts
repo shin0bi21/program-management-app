@@ -306,7 +306,6 @@ export interface Tasks {
   completed_at: Timestamp | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  cycle_id: string;
   details: string | null;
   due_date: Timestamp;
   id: Generated<string>;

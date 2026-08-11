@@ -23,7 +23,6 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   const [view, setView] = useState<TasksView>('calendar');
   const [search, setSearch] = useState('');
   const [programIds, setProgramIds] = useState<string[]>([]);
-  const [cycleIds, setCycleIds] = useState<string[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [statusFilters, setStatusFilters] = useState<TaskStatus[]>([]);
   const [sorting, setSorting] = useState<ListSort<TaskSortKey>>({ key: 'startDate', direction: 'asc' });
@@ -35,7 +34,6 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     if (ready || loading || optionsLoading) return;
     setProgramIds(preference?.programIds ?? []);
     setView(preference?.view ?? 'calendar');
-    setCycleIds(preference?.cycleIds ?? []);
     setCategories(preference?.categories ?? []);
     setStatusFilters(preference?.statuses ?? []);
     setSorting(preference?.sorting ?? { key: 'startDate', direction: 'asc' });
@@ -45,7 +43,6 @@ export default function useTaskControls(options: TaskOptions | undefined, option
 
   const persist = useCallback((
     nextPrograms: string[],
-    nextCycles: string[],
     nextCategories: TaskCategory[],
     nextStatuses: TaskStatus[],
     widths = columnWidths,
@@ -53,7 +50,6 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     void save({
       view,
       programIds: nextPrograms,
-      cycleIds: nextCycles,
       categories: nextCategories,
       statuses: nextStatuses,
       sorting,
@@ -61,44 +57,27 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     });
   }, [columnWidths, save, sorting, view]);
 
-  const availableCycles = useMemo(() => (options?.cycles ?? []).filter(
-    cycle => !programIds.length || programIds.includes(cycle.programId),
-  ), [options?.cycles, programIds]);
-
-  useEffect(() => {
-    if (!ready) return;
-    const availableIds = new Set(availableCycles.map(cycle => cycle.id));
-    const nextCycles = cycleIds.filter(id => availableIds.has(id));
-    if (nextCycles.length === cycleIds.length) return;
-    setCycleIds(nextCycles);
-    persist(programIds, nextCycles, categories, statusFilters);
-  }, [availableCycles, categories, cycleIds, persist, programIds, ready, statusFilters]);
-
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: (options?.programs ?? []).map(item => ({ value: item.id, label: item.name })) },
-    { id: 'cycle', label: 'Cycle', options: availableCycles.map(item => ({ value: item.id, label: item.name })) },
     { id: 'category', label: 'Category', options: TASK_CATEGORY_OPTIONS },
     { id: 'status', label: 'Status', options: STATUS_OPTIONS },
-  ], [availableCycles, options?.programs]);
+  ], [options?.programs]);
 
   const applyFilter = useCallback((id: string, selected: string[]) => {
     const nextPrograms = id === 'program' ? selected : programIds;
-    const nextCycles = id === 'cycle' ? selected : cycleIds;
     const nextCategories = id === 'category' ? selected as TaskCategory[] : categories;
     const nextStatuses = id === 'status' ? selected as TaskStatus[] : statusFilters;
     setProgramIds(nextPrograms);
-    setCycleIds(nextCycles);
     setCategories(nextCategories);
     setStatusFilters(nextStatuses);
-    persist(nextPrograms, nextCycles, nextCategories, nextStatuses);
-  }, [categories, cycleIds, persist, programIds, statusFilters]);
+    persist(nextPrograms, nextCategories, nextStatuses);
+  }, [categories, persist, programIds, statusFilters]);
 
   const clearFilters = useCallback(() => {
     setProgramIds([]);
-    setCycleIds([]);
     setCategories([]);
     setStatusFilters([]);
-    persist([], [], [], []);
+    persist([], [], []);
   }, [persist]);
 
   const changeView = useCallback((nextView: TasksView) => {
@@ -106,30 +85,28 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     void save({
       view: nextView,
       programIds,
-      cycleIds,
       categories,
       statuses: statusFilters,
       sorting,
       columnWidths,
     });
-  }, [categories, columnWidths, cycleIds, programIds, save, sorting, statusFilters]);
+  }, [categories, columnWidths, programIds, save, sorting, statusFilters]);
 
   const changeSorting = useCallback((next: ListSort<TaskSortKey>) => {
     setSorting(next);
-    void save({ view, programIds, cycleIds, categories, statuses: statusFilters, sorting: next, columnWidths });
-  }, [categories, columnWidths, cycleIds, programIds, save, statusFilters, view]);
+    void save({ view, programIds, categories, statuses: statusFilters, sorting: next, columnWidths });
+  }, [categories, columnWidths, programIds, save, statusFilters, view]);
 
   const changeColumnWidths = useCallback((next: Record<string, number>) => {
     setColumnWidths(next);
-    persist(programIds, cycleIds, categories, statusFilters, next);
-  }, [categories, cycleIds, persist, programIds, statusFilters]);
+    persist(programIds, categories, statusFilters, next);
+  }, [categories, persist, programIds, statusFilters]);
 
   return {
     view,
     search,
     setSearch,
     programIds,
-    cycleIds,
     categories,
     statusFilters,
     sorting,

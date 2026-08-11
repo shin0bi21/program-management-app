@@ -2,7 +2,7 @@
 
 This shared feature owns the time-entry transport contract, reusable entry modal, category options, and cross-page types used by Timesheets and Tasks.
 
-General time requires a cycle and category with an optional program. Task time sends an assigned task ID and the backend derives its category, cycle, and optional program. A contextual task workflow passes `initialTask`; the modal then locks both the task and its assigned staff while leaving date, hours, and note editable.
+General time requires a category with an optional program. Task time sends an assigned task ID and the backend derives its category and optional program. The backend derives exactly one cycle from the effective work date. A contextual task workflow passes `initialTask`; the modal then locks both the task and its assigned staff while leaving date, hours, and note editable.
 
 Pages own when the workflow opens and how successful writes refresh their page data. They must consume this shared modal rather than importing another page's private implementation or recreating the form.
 

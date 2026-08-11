@@ -62,7 +62,6 @@ Paths below are relative to `/api`. Protected endpoints require the permissions 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/` | List time-entry resources and entries for a date range |
-| `GET` | `/cohorts` | List cohorts for a selected program |
 | `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
 | `POST` | `/` | Create a time entry |
 | `PUT` | `/:id` | Update a time entry |
@@ -82,9 +81,9 @@ Staff access is self-scoped; administrators can manage entries for active staff 
 | `PATCH` | `/:id/status` | Update an assigned task's status |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
 
-General time entries require `category` and `cycleId`; `programId` is optional. Task-linked time accepts an assigned `taskId` instead and derives its category, cycle, and optional program from that task inside the write transaction. Tasks referenced by time entries cannot be deleted, preserving their IDs and titles for reporting.
+General time entries require `category`; `programId` is optional. Task-linked time accepts an assigned `taskId` and derives its category and optional program from that task inside the write transaction. Every time-entry write derives exactly one cycle from its effective work date and rejects dates covered by zero or multiple eligible cycles. Tasks referenced by time entries cannot be deleted, preserving their IDs and titles for reporting.
 Staff timesheet reads are resource-scoped: coworkers who share any program assignment are visible as complete time-entry rows, including general and administrative time. This visibility does not grant mutation rights; staff writes remain self-scoped, while administrators may read and mutate every active staff resource. `staffResourcePolicy.ts` owns the shared read boundary; `timeEntryPolicy.ts` owns time-entry writes.
-Task writes require `category`, `cycleId`, `startDate`, and `dueDate`; `programId` is optional. Dates use `YYYY-MM-DD`, with the due date on or after the start date. Planned task dates remain editable after time is logged, and task-linked time may be recorded before or after that planned range so later reporting can compare scheduled and actual work.
+Task writes require `category`, `startDate`, and `dueDate`; `programId` is optional. New tasks start as `todo` and may be cancelled before work begins. Their first time entry moves them to `in_progress`, after which they may be completed or cancelled through status actions. Completed tasks reopen as `in_progress`; cancelled tasks reopen as `todo` when they have no logged time and `in_progress` otherwise. Ordinary edits and calendar placement changes preserve status. Task time can only be created or edited while its task is `todo` or `in_progress`. Dates use `YYYY-MM-DD`, with the due date on or after the start date. Planned task dates remain editable after time is logged, and task-linked time may be recorded before or after that planned range so later reporting can compare scheduled and actual work.
 Creating or updating a time entry that references a to-do task moves that task to `in_progress` in the same transaction. An in-progress task cannot transition to `cancelled` through either the full update or status endpoint.
 Only a to-do task without logged time can be reassigned to another staff member.
 Staff task writes are self-scoped: they may create and mutate tasks assigned to themselves. Staff reads are resource-scoped: coworkers who share any program assignment are visible as complete task rows, including programless work, without granting write access. Administrators may read and mutate every active staff resource. Routes enforce `read:tasks` / `write:tasks`; `staffResourcePolicy.ts` owns the shared read boundary and `taskPolicy.ts` owns task writes.

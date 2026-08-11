@@ -1,0 +1,29 @@
+.task-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.task-status-badge--todo {
+  background: var(--color-status-todo-bg);
+  color: var(--color-status-todo);
+}
+
+.task-status-badge--in_progress {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.task-status-badge--completed {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.task-status-badge--cancelled {
+  background: var(--ink-06);
+  color: var(--color-muted);
+}

@@ -403,12 +403,12 @@ export default function Timesheets() {
         isOpen={addOpen}
         resources={writableResources}
         programs={programs}
-        cycles={cycles}
         onClose={() => setAddOpen(false)}
         onAdd={addTimeEntry}
         initialResourceId={addTarget.resourceId}
         initialDate={addTarget.date}
         initialSource={addTarget.source}
+        staffLocked={Boolean(addTarget.resourceId)}
         initialItem={editTarget?.item}
       />
       <Modal
