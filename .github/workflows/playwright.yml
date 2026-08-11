@@ -40,8 +40,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run browser component tests
-        working-directory: frontend
-        run: npm run test:browser
+        run: bash scripts/tests/frontend/test-browser.sh
 
       - name: Upload failure traces
         if: failure()
