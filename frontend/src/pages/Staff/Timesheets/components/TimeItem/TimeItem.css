@@ -1,0 +1,22 @@
+.time-item__type {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: .65rem;
+  font-weight: 700;
+}
+
+.time-item__type--task {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.time-item__type--session {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.time-item__type--other {
+  background: var(--ink-06);
+  color: var(--color-muted);
+}

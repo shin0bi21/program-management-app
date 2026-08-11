@@ -18,7 +18,7 @@ interface AccountModalProps {
 export default function AccountModal(props: AccountModalProps) {
   const { account } = props;
   const { programs, loading: programsLoading } = usePrograms();
-  const { register, control, errors, onSubmit, submitStatus, error, handleClose, selectedRole } = useAccountModal(props);
+  const { register, control, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
   const isEdit = account !== undefined;
   const assignablePrograms = programs.filter(program => program.rosterMode === 'enrolled');
   const openPrograms = programs.filter(program => program.rosterMode === 'open');
@@ -69,8 +69,7 @@ export default function AccountModal(props: AccountModalProps) {
             />
           </FormField>
         </div>
-        {selectedRole === 'staff' && (
-          <fieldset className="account-programs">
+        <fieldset className="account-programs">
             <legend>Programs</legend>
             <div className="account-programs__list">
               {programsLoading ? (
@@ -89,8 +88,7 @@ export default function AccountModal(props: AccountModalProps) {
                 Automatically available: {openPrograms.map(program => program.name).join(', ')}
               </small>
             )}
-          </fieldset>
-        )}
+        </fieldset>
       </form>
     </Modal>
   );

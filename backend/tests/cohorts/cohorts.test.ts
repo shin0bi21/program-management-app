@@ -75,7 +75,7 @@ describe('Cohorts and attendance API', () => {
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     programId = program.id;
     await sql`
-      INSERT INTO staff_program_assignments (staff_id, program_id)
+      INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${staffId}, ${programId})
     `;
     const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Drop In'`;
@@ -304,7 +304,7 @@ describe('Cohorts and attendance API', () => {
     ]);
   });
 
-  it('generates a session without a theme', async () => {
+  it('rejects a session without a title or theme', async () => {
     const response = await request(app)
       .post(`/api/cohorts/${cohortId}/sessions/generate`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -315,9 +315,7 @@ describe('Cohorts and attendance API', () => {
         endTime: '14:00',
       });
 
-    expect(response.status).toBe(201);
-    expect(response.body.sessions).toHaveLength(1);
-    expect(response.body.sessions[0].theme).toBeNull();
+    expect(response.status).toBe(400);
   });
 
   it('stores session notes separately with optional enrolled youth attachments', async () => {

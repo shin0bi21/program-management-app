@@ -100,7 +100,7 @@ export default function GenerateSessionsModal({
     try {
       const result = await generateSessions(selectedCohort.id, {
         sessionTypeId,
-        theme: String(form.get('theme')).trim() || null,
+        theme: String(form.get('theme')).trim(),
         frequency,
         ...((frequency === 'weekly' || frequency === 'biweekly') && { dayOfWeek }),
         ...(frequency === 'monthly' && { dayOfMonth: Number(dayOfMonth) }),
@@ -166,8 +166,8 @@ export default function GenerateSessionsModal({
             options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
           />
         </FormField>
-        <FormField id="session-theme" label="Theme (optional)">
-          <input id="session-theme" name="theme" maxLength={160} placeholder="Communication" />
+        <FormField id="session-theme" label="Title / Theme">
+          <input id="session-theme" name="theme" required maxLength={160} placeholder="Communication" />
         </FormField>
         <div className="form-row">
           <FormField id="session-frequency" label="Frequency">

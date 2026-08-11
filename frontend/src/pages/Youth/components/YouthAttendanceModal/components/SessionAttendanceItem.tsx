@@ -30,7 +30,7 @@ export default function SessionAttendanceItem({
   onEditNote: (note: SessionNote) => void;
   onUnlinkNote: (note: SessionNote) => void;
 }) {
-  const sessionLabel = session.theme || session.sessionTypeName;
+  const sessionLabel = session.theme;
   const canAddNote = rosterMode === 'enrolled' || session.status === 'present';
 
   return (

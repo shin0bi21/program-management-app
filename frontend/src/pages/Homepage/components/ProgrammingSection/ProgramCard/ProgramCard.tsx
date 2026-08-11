@@ -51,7 +51,7 @@ function UpcomingSessions({
               <span className="next-session-month">{monthFormatter.format(date)}</span>
             </time>
             <div className="next-session-body">
-              <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.theme || session.programName}</p>
+              <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.theme}</p>
               <span className="next-session-tag">
                 {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}
               </span>

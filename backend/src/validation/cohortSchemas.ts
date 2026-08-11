@@ -93,7 +93,7 @@ export const generateSessionsSchema = z.object({
   body: z.object({
     sessionTypeId: z.string().uuid('Invalid session type ID')
       .default('00000000-0000-4000-8000-000000000001'),
-    theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
+    theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
     frequency: z.enum(['once', 'weekly', 'biweekly', 'monthly']),
     dayOfWeek: weekdaySchema.optional(),
     dayOfMonth: z.number().int().min(1).max(31).optional(),
@@ -165,7 +165,7 @@ export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
     sessionTypeId: z.string().uuid('Invalid session type ID').optional(),
-    theme: z.string().trim().max(160).nullable().optional().transform(value => value || null),
+    theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
     description: z.string().trim().max(5000).nullable().optional(),

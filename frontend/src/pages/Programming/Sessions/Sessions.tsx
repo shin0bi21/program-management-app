@@ -68,7 +68,7 @@ export default function Sessions() {
     (session: CohortSession, onDeleted: () => void | Promise<void>) => {
       setConfirmAction({
         title: 'Delete Session',
-        message: `Delete the ${session.theme || session.sessionTypeName} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
+        message: `Delete the ${session.theme} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
         confirmLabel: 'Delete',
         confirmVariant: 'danger',
         successMessage: 'Session deleted',
@@ -235,7 +235,7 @@ export default function Sessions() {
     () => [
       { key: 'program', sortKey: 'program', header: 'Program', render: (session) => session.programName },
       { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
-      { key: 'theme', sortKey: 'theme', header: 'Theme', render: (session) => session.theme || '—' },
+      { key: 'theme', sortKey: 'theme', header: 'Title / Theme', render: (session) => session.theme },
       { key: 'date', sortKey: 'date', header: 'Date', width: 135, render: (session) => formatShortDate(session.startsAt) },
       {
         key: 'time',
@@ -273,7 +273,7 @@ export default function Sessions() {
               className: 'col-actions',
               render: (session: CohortSession) => (
                 <ActionsMenu
-                  ariaLabel={`More actions for ${session.theme || `${session.programName} session`}`}
+                  ariaLabel={`More actions for ${session.theme}`}
                   items={[
                     ...(canWriteAttendance
                       ? [
@@ -339,7 +339,7 @@ export default function Sessions() {
                 label="Search sessions"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search themes, descriptions, or cohorts"
+                placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
             filters={

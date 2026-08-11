@@ -54,7 +54,7 @@ describe('Tasks API', () => {
     `;
     cohortId = cohorts[0].id;
     await sql`
-      INSERT INTO staff_program_assignments (staff_id, program_id)
+      INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
   });

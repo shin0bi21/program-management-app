@@ -64,7 +64,7 @@ export default function SessionsCalendarView({
 
   const events = useMemo<EventInput[]>(() => sessions.map(session => ({
     id: session.id,
-    title: session.theme ?? '',
+    title: session.theme,
     start: session.startsAt,
     end: session.endsAt,
     backgroundColor: session.cancelledAt ? '#6b7280' : undefined,

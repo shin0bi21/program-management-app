@@ -22,7 +22,7 @@ const firstItem: TimesheetItem = {
   category: 'program_delivery',
   categoryLabel: 'Program Delivery',
   taskId: null,
-  taskTitle: null,
+  taskTitle: null, sessionId: null, sessionLabel: null,
   hours: 2,
   note: 'Workshop delivery',
 };

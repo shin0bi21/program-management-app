@@ -32,7 +32,7 @@ describe('Programs API', () => {
     `;
     softSkillsProgramId = softSkills.id;
     await sql`
-      INSERT INTO staff_program_assignments (staff_id, program_id)
+      INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${staffUserId}, ${softSkillsProgramId})
     `;
   });

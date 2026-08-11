@@ -15,7 +15,7 @@ interface YouthCohortContext {
 interface YouthAttendanceSession {
   id: string;
   sessionTypeName: string;
-  theme: string | null;
+  theme: string;
   startsAt: Date;
   endsAt: Date;
   cancelledAt: Date | null;

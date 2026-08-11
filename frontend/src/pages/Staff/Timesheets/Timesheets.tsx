@@ -80,7 +80,7 @@ export default function Timesheets() {
   const [dashboardOverview, setDashboardOverview] = useState<TimeEntryOverviewResponse | null>(null);
   const [dashboardOverviewError, setDashboardOverviewError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'general' | 'task' }>({});
+  const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'other' | 'task' | 'session' }>({});
   const [editTarget, setEditTarget] = useState<EntryTarget | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -229,6 +229,7 @@ export default function Timesheets() {
       row.item.cycleName ?? '',
       row.item.categoryLabel,
       row.item.taskTitle ?? '',
+      row.item.sessionLabel ?? '',
       row.item.note,
     ].some(value => value.toLocaleLowerCase().includes(query)));
   }, [listRows, listSearch]);
@@ -341,10 +342,10 @@ export default function Timesheets() {
   const listColumns = useMemo<TableColumn<TimesheetListRow>[]>(() => [
     { key: 'staff', header: 'Staff', render: row => row.staffName },
     { key: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
-    { key: 'program', header: 'Program', render: row => row.item.programName ?? 'General' },
+    { key: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
     { key: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
     { key: 'category', header: 'Category', render: row => row.item.categoryLabel },
-    { key: 'task', header: 'Task', render: row => row.item.taskTitle ?? '—' },
+    { key: 'source', header: 'Linked item', render: row => row.item.taskTitle ?? row.item.sessionLabel ?? '—' },
     { key: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
     { key: 'note', header: 'Note', render: row => row.item.note },
     ...(canWriteTimesheets ? [{
@@ -431,7 +432,7 @@ export default function Timesheets() {
     { resource, period, data: item }: BuildItemContext<StaffResource, TimesheetItem>,
     { close }: { close: () => void },
   ) => renderTimeItem(resource, period.key, item, close), [renderTimeItem]);
-  const openCellEntry = useCallback(({ resource, period }: CalendarCellContext<StaffResource, TimesheetItem>, source: 'general' | 'task') => {
+  const openCellEntry = useCallback(({ resource, period }: CalendarCellContext<StaffResource, TimesheetItem>, source: 'other' | 'task' | 'session') => {
     setAddTarget({ resourceId: resource.id, date: period.key, source });
     setEditTarget(null);
     setAddOpen(true);
@@ -447,14 +448,19 @@ export default function Timesheets() {
               triggerLabel="+ Add"
               ariaLabel="Add time entry"
               items={[
-                { id: 'general', label: 'Regular Time', onClick: () => {
+                { id: 'session', label: 'Session Time', onClick: () => {
                   setEditTarget(null);
-                  setAddTarget({ source: 'general' });
+                  setAddTarget({ source: 'session' });
                   setAddOpen(true);
                 } },
                 { id: 'task', label: 'Task Time', onClick: () => {
                   setEditTarget(null);
                   setAddTarget({ source: 'task' });
+                  setAddOpen(true);
+                } },
+                { id: 'other', label: 'Other Time', onClick: () => {
+                  setEditTarget(null);
+                  setAddTarget({ source: 'other' });
                   setAddOpen(true);
                 } },
               ]}
@@ -533,13 +539,16 @@ export default function Timesheets() {
             onPeriodsReset={reset}
             onItemDrop={canWriteTimesheets ? moveTimeEntry : undefined}
             canDropItem={canDropWithinStaff}
-            getItemCapabilities={({ resource }) => ({ draggable: canWriteTimesheets && resource.writable })}
+            getItemCapabilities={({ resource, data: item }) => ({
+              draggable: canWriteTimesheets && resource.writable && !item.sessionId,
+            })}
             maxVisibleItemsPerCell={3}
             rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
-              { id: 'general', label: 'Regular Time', onSelect: () => openCellEntry(context, 'general') },
+              { id: 'session', label: 'Session Time', onSelect: () => openCellEntry(context, 'session') },
               { id: 'task', label: 'Task Time', onSelect: () => openCellEntry(context, 'task') },
+              { id: 'other', label: 'Other Time', onSelect: () => openCellEntry(context, 'other') },
             ] : [] : undefined}
             getResourceId={getStaffResourceId}
             getItemId={getTimesheetItemId}
