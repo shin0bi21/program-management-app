@@ -401,7 +401,7 @@ describe('Timesheets', () => {
     await screen.findAllByText('Zoe Wilson');
 
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
 
     expect(screen.getByRole('heading', { name: 'Add time entry' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
@@ -461,7 +461,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Maintenance' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Cleaned shared equipment' } });
@@ -508,7 +508,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Task Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Time' }));
     await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
       expect.objectContaining({ staffId: 'staff-1', includeClosed: true }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -543,7 +543,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cycle' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Summer 2026' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
@@ -568,7 +568,7 @@ describe('Timesheets', () => {
     );
     await screen.findAllByText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Time' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Time' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
