@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,6 +64,7 @@ describe('Tasks', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
+    fireEvent.click(await screen.findByText('Prepare workshop'));
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
@@ -117,12 +118,16 @@ describe('Tasks', () => {
     expect(screen.getByRole('button', { name: 'Actions for Prepare workshop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Actions for Complete administration' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Status for Complete administration' })).not.toBeInTheDocument();
+    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Prepare workshop'));
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Complete administration'));
-    fireEvent.click(screen.getByRole('button', { name: 'See Overview' }));
+    const overviewCard = screen.getByRole('heading', { name: 'Task Overview' }).closest('article')!;
+    fireEvent.click(within(overviewCard).getByRole('button', { name: 'See Breakdown' }));
 
-    expect(screen.getByRole('dialog', { name: 'Alex Smith Task Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Alex Smith' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
@@ -167,6 +172,30 @@ describe('Tasks', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load tasks.');
     expect(screen.queryByLabelText('Task calendar')).not.toBeInTheDocument();
+  });
+
+  it('clears the selected task when a calendar resource is selected', async () => {
+    calendarTestState.view = 'calendar';
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    const start = new Date('2026-08-10T12:00:00');
+    const end = new Date('2026-08-12T12:00:00');
+    const item = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { onActivate: () => void } };
+    act(() => item.props.onActivate());
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+
+    act(() => calendarTestState.props!.onResourceSelect?.({
+      id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true,
+    }));
+    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
   });
 
   it('persists cross-resource calendar moves through the narrow placement contract', async () => {

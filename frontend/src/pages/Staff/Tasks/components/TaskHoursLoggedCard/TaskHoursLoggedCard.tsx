@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
-import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { Task } from '../../../../../common/features/tasks/types';
@@ -13,18 +12,20 @@ export default function TaskHoursLoggedCard({ task, onLogHours }: {
   const [open, setOpen] = useState(false);
   const maxDailyHours = task ? Math.max(...task.loggedHoursByDate.map(entry => entry.hours), 1) : 1;
   return <>
-    <DashboardCard
-      title="Hours Logged"
-      action={task ? <div className="task-hours-breakdown__actions">
-        {onLogHours && <Button size="sm" onClick={onLogHours}>Log Hours</Button>}
-        <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setOpen(true)}>See Breakdown</Button>
-      </div> : undefined}
-    >
-      {task ? <dl className="task-hours-breakdown__summary">
-        <div><dt>Task Start</dt><dd>{formatShortDate(task.startDate)}</dd></div>
-        <div><dt>Hours Logged</dt><dd>{task.hoursLogged.toFixed(2)}</dd></div>
-      </dl> : <p className="task-hours-breakdown__empty">Select a task to view its logged hours.</p>}
-    </DashboardCard>
+    <article className="dashboard-card task-hours-breakdown-card">
+      <h2 className="task-hours-breakdown__accessible-title">Hours Logged</h2>
+      {task ? <>
+        <div className="dashboard-card__compact-layout task-hours-breakdown__layout">
+          <dl className="task-hours-breakdown__summary">
+            <div><dt>Hours Logged</dt><dd>{task.hoursLogged.toFixed(2)}</dd></div>
+          </dl>
+          <div className="dashboard-card__compact-action task-hours-breakdown__actions">
+            {onLogHours && <Button size="sm" onClick={onLogHours}>Log Hours</Button>}
+            <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setOpen(true)}>See Breakdown</Button>
+          </div>
+        </div>
+      </> : <p className="task-hours-breakdown__empty">Click a task to view its logged hours.</p>}
+    </article>
     <Modal isOpen={open} onClose={() => setOpen(false)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
       {task && <dl className="task-hours-breakdown__details">
         <div><dt>Task Start Date</dt><dd>{formatShortDate(task.startDate)}</dd></div>
