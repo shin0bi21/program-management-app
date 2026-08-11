@@ -15,6 +15,7 @@
 - Let item components dismiss their own transient details when pointer interaction begins; prevent hover transfer during an active drag through the shared pointer lifecycle rather than page-specific suppression.
 - Keep high-frequency movement outside declarative rerender paths when DOM transforms or refs can update geometry safely.
 - Keep one authoritative live interaction session in a ref. React state may start or stop declarative UI, but rerenders from scrolling or virtualization must never overwrite newer pointer coordinates, preview nodes, targets, or cleanup handles with a stale state snapshot.
+- When one public surface supports multiple pointer modes, route every mode through one shared session coordinator. Drag, move, and resize must claim the session before installing state and remain mutually exclusive until release, cancellation, lost capture, or unmount.
 - Treat `pointercancel`, unmount, lost capture, and invalid targets as cancellation: remove previews, release capture, stop animation frames/listeners, restore transient classes, and never commit the mutation.
 - Scope hit-testing to the owning interaction surface. A document-level `elementFromPoint` result must be verified as a descendant of the active viewport before it can become a drop target.
 - Derive autoscroll boundaries from owner geometry once. Covered sticky regions such as a resource column are not part of the horizontal item zone, and consumers must not provide alternate boundary calculations.

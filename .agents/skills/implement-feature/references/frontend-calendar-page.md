@@ -22,7 +22,7 @@
 - Type builders, overflow, cell, item, and resource callbacks through ResourceCalendar contexts. Provide accessible overflow summaries.
 - Give fixed-height desktop calendar wrappers `flex: 1` and `min-height: 0`; preserve mobile flow at `768px`.
 - Persist view and filters before dependent loading/rendering and hide permission-redundant controls.
-- For calendars that preserve navigation locally, give each page a stable `positionStorageKey`. Keep buffered periods on both sides while aligning the visible zone to the exact initial day; persist observed seven-day window edges before duplicate-observer suppression and restore the saved edge alignment rather than treating buffer width as the visible anchor.
+- For calendars that preserve navigation locally, give each page a stable `positionStorageKey`. Keep buffered periods on both sides while aligning the visible zone to the exact initial day. Persist the leftmost day and within-period pixel offset from a debounced horizontal-scroll lifecycle; observers extend the period window and never own viewport persistence.
 - Treat ranged-item overlap as an explicit product decision before choosing fixed overflow, expandable rows, or variable-height virtualization. Do not introduce dynamic row heights implicitly because they create layout shifts and require cumulative virtualized offsets.
 
 ## Load and mutate safely

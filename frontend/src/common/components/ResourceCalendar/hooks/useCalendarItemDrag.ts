@@ -3,6 +3,7 @@ import type { BuildItemContext, CalendarPeriod, ItemDropContext } from '../types
 import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
 import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
 import { getCalendarPreviewBounds, type CalendarPreviewBounds } from '../utils/rangePreview';
+import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarPointerDrag<TResource, TItemData> {
   pointerId: number;
@@ -30,6 +31,7 @@ interface UseCalendarItemDragOptions<TResource, TItemData> {
   dragEdgeSize: number;
   dragScrollSpeed: number;
   coveredLeftWidth: number;
+  interactionCoordinator: CalendarInteractionCoordinator;
 }
 
 export function useCalendarItemDrag<TResource, TItemData>({
@@ -42,12 +44,23 @@ export function useCalendarItemDrag<TResource, TItemData>({
   dragEdgeSize,
   dragScrollSpeed,
   coveredLeftWidth,
+  interactionCoordinator,
 }: UseCalendarItemDragOptions<TResource, TItemData>) {
   const [drag, setDrag] = useState<CalendarPointerDrag<TResource, TItemData> | null>(null);
   const dragRef = useRef<CalendarPointerDrag<TResource, TItemData> | null>(null);
   const suppressClickRef = useRef(false);
   const animationFrameRef = useRef<number>();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const resourcesRef = useRef(resources);
+  const periodsRef = useRef(periods);
+  const getResourceIdRef = useRef(getResourceId);
+  const canDropItemRef = useRef(canDropItem);
+  const onItemDropRef = useRef(onItemDrop);
+  resourcesRef.current = resources;
+  periodsRef.current = periods;
+  getResourceIdRef.current = getResourceId;
+  canDropItemRef.current = canDropItem;
+  onItemDropRef.current = onItemDrop;
 
   const positionOverlay = useCallback((current: CalendarPointerDrag<TResource, TItemData>) => {
     if (!overlayRef.current || !current.previewBounds) return;
@@ -111,7 +124,6 @@ export function useCalendarItemDrag<TResource, TItemData>({
   }, [coveredLeftWidth, drag?.dragging, dragEdgeSize, dragScrollSpeed, locateTarget, positionOverlay, viewportRef]);
 
   useEffect(() => {
-    if (!drag) return;
     const onPointerMove = (event: PointerEvent) => {
       const current = dragRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
@@ -139,6 +151,7 @@ export function useCalendarItemDrag<TResource, TItemData>({
     const finish = (event: PointerEvent) => {
       const current = dragRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
+      interactionCoordinator.release('item-drag', event.pointerId);
       setCurrentDrag(null);
       releaseCalendarPointer(current.sourceElement, event.pointerId);
       current.sourceElement.classList.remove('dragging');
@@ -147,38 +160,56 @@ export function useCalendarItemDrag<TResource, TItemData>({
       if (event.type !== 'pointerup') return;
       suppressClickRef.current = true;
       window.setTimeout(() => { suppressClickRef.current = false; }, 0);
-      const destinationResource = resources.find(resource => getResourceId(resource) === current.targetResourceId);
-      const destinationPeriod = periods.find(period => period.key === current.targetPeriodKey);
+      const destinationResource = resourcesRef.current.find(
+        resource => getResourceIdRef.current(resource) === current.targetResourceId,
+      );
+      const destinationPeriod = periodsRef.current.find(period => period.key === current.targetPeriodKey);
       if (!destinationResource || !destinationPeriod) return;
       const dropContext = {
         item: current.context.data,
         source: { resource: current.context.resource, period: current.context.period },
         destination: { resource: destinationResource, period: destinationPeriod },
       };
-      if (getResourceId(dropContext.source.resource) === getResourceId(destinationResource)
+      if (getResourceIdRef.current(dropContext.source.resource) === getResourceIdRef.current(destinationResource)
         && dropContext.source.period.key === destinationPeriod.key) return;
-      if (canDropItem && !canDropItem(dropContext)) return;
-      void onItemDrop?.(dropContext);
+      if (canDropItemRef.current && !canDropItemRef.current(dropContext)) return;
+      void onItemDropRef.current?.(dropContext);
+    };
+    const lostCapture = (event: PointerEvent) => {
+      const pointerId = event.pointerId;
+      queueMicrotask(() => {
+        const current = dragRef.current;
+        if (!current || current.pointerId !== pointerId) return;
+        interactionCoordinator.release('item-drag', pointerId);
+        current.sourceElement.classList.remove('dragging');
+        current.onEnd?.();
+        setCurrentDrag(null);
+      });
     };
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
-    window.addEventListener('lostpointercapture', finish);
+    window.addEventListener('lostpointercapture', lostCapture);
     return () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
-      window.removeEventListener('lostpointercapture', finish);
+      window.removeEventListener('lostpointercapture', lostCapture);
+      const current = dragRef.current;
+      if (current) interactionCoordinator.release('item-drag', current.pointerId);
+      current?.sourceElement.classList.remove('dragging');
+      dragRef.current = null;
     };
-  }, [canDropItem, drag, getResourceId, locateTarget, onItemDrop, periods, positionOverlay, resources, setCurrentDrag, viewportRef]);
+  }, [interactionCoordinator, locateTarget, positionOverlay, setCurrentDrag, viewportRef]);
 
   useEffect(() => {
     if (drag?.dragging) positionOverlay(drag);
   }, [drag, positionOverlay]);
 
   const beginDrag = useCallback((next: CalendarPointerDrag<TResource, TItemData>) => {
-    setCurrentDrag(next);
-  }, [setCurrentDrag]);
+    if (!interactionCoordinator.claim('item-drag', next.pointerId)) return;
+    dragRef.current = next;
+  }, [interactionCoordinator]);
 
   return { drag, beginDrag, overlayRef, suppressClickRef };
 }

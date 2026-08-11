@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type { CalendarPeriod, ItemRange, RangeResizeContext } from '../types';
 import { createCalendarPreviewHost } from '../utils/rangePreview';
 import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
 import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
+import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarRangeResize<TResource, TItemData> {
   pointerId: number;
@@ -16,13 +17,13 @@ export interface CalendarRangeResize<TResource, TItemData> {
   startIndex: number;
   endIndex: number;
   nextIndex: number;
+  nextPeriodKey?: string;
   resizing: boolean;
   previewElement?: HTMLElement;
   previewHost?: HTMLElement;
   previewLeft?: number;
   previewWidth?: number;
   x?: number;
-  startScrollLeft?: number;
 }
 
 interface KeyboardRangeResize<TResource, TItemData> {
@@ -42,6 +43,7 @@ export function useCalendarRangeResize<TResource, TItemData>({
   onRangeResize,
   dragEdgeSize,
   dragScrollSpeed,
+  interactionCoordinator,
 }: {
   viewportRef: RefObject<HTMLElement | null>;
   periods: readonly CalendarPeriod[];
@@ -50,9 +52,9 @@ export function useCalendarRangeResize<TResource, TItemData>({
   onRangeResize?: (context: RangeResizeContext<TResource, TItemData>) => void | Promise<void>;
   dragEdgeSize: number;
   dragScrollSpeed: number;
+  interactionCoordinator: CalendarInteractionCoordinator;
 }) {
-  const [active, setActive] = useState<CalendarRangeResize<TResource, TItemData> | null>(null);
-  const activeRef = useRef(active);
+  const activeRef = useRef<CalendarRangeResize<TResource, TItemData> | null>(null);
   const suppressClickRef = useRef(false);
   const periodsRef = useRef(periods);
   const onRangeResizeRef = useRef(onRangeResize);
@@ -60,21 +62,34 @@ export function useCalendarRangeResize<TResource, TItemData>({
   onRangeResizeRef.current = onRangeResize;
 
   useEffect(() => {
-    if (!active) return;
     let animationFrame: number | undefined;
     const updatePreview = (current: CalendarRangeResize<TResource, TItemData>, viewport: HTMLElement, x: number) => {
       const bounds = viewport.getBoundingClientRect();
       const rawIndex = Math.floor((x - bounds.left + viewport.scrollLeft - coveredLeftWidth) / periodWidth);
       const nextIndex = Math.max(0, Math.min(periodsRef.current.length - 1, rawIndex));
-      const bounded = current.edge === 'start' ? Math.min(nextIndex, current.endIndex) : Math.max(nextIndex, current.startIndex);
+      const currentStartIndex = periodsRef.current.findIndex(period => period.key === current.range.start);
+      const currentEndIndex = periodsRef.current.findIndex(period => period.key === current.range.end);
+      const bounded = current.edge === 'start'
+        ? currentEndIndex >= 0 ? Math.min(nextIndex, currentEndIndex) : nextIndex
+        : currentStartIndex >= 0 ? Math.max(nextIndex, currentStartIndex) : nextIndex;
+      const previewHostBounds = current.previewHost?.getBoundingClientRect();
+      const pointerLeft = previewHostBounds ? x - previewHostBounds.left : undefined;
+      const previewLeft = current.previewLeft ?? 0;
+      const previewWidth = current.previewWidth ?? 0;
+      const oppositeRight = previewLeft + previewWidth;
+      const draggedEdge = current.edge === 'start'
+        ? Math.min(pointerLeft ?? previewLeft, oppositeRight)
+        : Math.max(pointerLeft ?? oppositeRight, previewLeft);
       if (current.previewElement) {
-        const delta = (bounded - (current.edge === 'start' ? current.startIndex : current.endIndex)) * periodWidth;
         if (current.edge === 'start') {
-          current.previewElement.style.left = `${(current.previewLeft ?? 0) + delta}px`;
-          current.previewElement.style.width = `${(current.previewWidth ?? 0) - delta}px`;
-        } else current.previewElement.style.width = `${(current.previewWidth ?? 0) + delta}px`;
+          current.previewElement.style.left = `${draggedEdge}px`;
+          current.previewElement.style.width = `${oppositeRight - draggedEdge}px`;
+        } else current.previewElement.style.width = `${draggedEdge - previewLeft}px`;
       }
-      return bounded;
+      return {
+        nextIndex: bounded,
+        nextPeriodKey: periodsRef.current[bounded]?.key,
+      };
     };
     const tick = () => {
       const current = activeRef.current;
@@ -90,7 +105,7 @@ export function useCalendarRangeResize<TResource, TItemData>({
         );
         if (horizontal) {
           viewport.scrollLeft += horizontal;
-          activeRef.current = { ...current, nextIndex: updatePreview(current, viewport, current.x) };
+          activeRef.current = { ...current, ...updatePreview(current, viewport, current.x) };
         }
       }
       animationFrame = requestAnimationFrame(tick);
@@ -122,44 +137,63 @@ export function useCalendarRangeResize<TResource, TItemData>({
         previewHost.appendChild(previewElement);
       }
       const previewState = { ...current, previewElement, previewHost, previewLeft, previewWidth };
-      const bounded = updatePreview(previewState, viewport, event.clientX);
-      const next = { ...previewState, resizing, nextIndex: bounded, x: event.clientX };
+      const previewUpdate = updatePreview(previewState, viewport, event.clientX);
+      const next = { ...previewState, ...previewUpdate, resizing, x: event.clientX };
       activeRef.current = next;
     };
     const finish = (event: PointerEvent) => {
       const current = activeRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
+      interactionCoordinator.release('range-resize', event.pointerId);
       activeRef.current = null;
-      setActive(null);
       releaseCalendarPointer(current.sourceElement, event.pointerId);
       current.previewHost?.remove();
       if (!current.resizing || event.type !== 'pointerup') return;
       suppressClickRef.current = true;
       window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+      if (!current.nextPeriodKey) return;
       const nextRange = current.edge === 'start'
-        ? { ...current.range, start: periodsRef.current[current.nextIndex].key }
-        : { ...current.range, end: periodsRef.current[current.nextIndex].key };
+        ? { ...current.range, start: current.nextPeriodKey }
+        : { ...current.range, end: current.nextPeriodKey };
       void onRangeResizeRef.current?.({ resource: current.resource, item: current.item, originalRange: current.range, nextRange, edge: current.edge });
+    };
+    const lostCapture = (event: PointerEvent) => {
+      const pointerId = event.pointerId;
+      queueMicrotask(() => {
+        const current = activeRef.current;
+        if (!current || current.pointerId !== pointerId) return;
+        interactionCoordinator.release('range-resize', pointerId);
+        activeRef.current = null;
+        current.previewHost?.remove();
+      });
     };
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
-    window.addEventListener('lostpointercapture', finish);
+    window.addEventListener('lostpointercapture', lostCapture);
     return () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
-      window.removeEventListener('lostpointercapture', finish);
+      window.removeEventListener('lostpointercapture', lostCapture);
       if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
-      activeRef.current?.previewHost?.remove();
+      const current = activeRef.current;
+      if (current) interactionCoordinator.release('range-resize', current.pointerId);
+      current?.previewHost?.remove();
+      activeRef.current = null;
     };
-  }, [active, coveredLeftWidth, dragEdgeSize, dragScrollSpeed, periodWidth, viewportRef]);
+  }, [coveredLeftWidth, dragEdgeSize, dragScrollSpeed, interactionCoordinator, periodWidth, viewportRef]);
 
   const beginResize = useCallback((value: CalendarRangeResize<TResource, TItemData>) => {
-    const next = { ...value, startScrollLeft: viewportRef.current?.scrollLeft ?? 0 };
+    const claimed = interactionCoordinator.claim('range-resize', value.pointerId);
+    if (!claimed) return;
+    const initialIndex = value.edge === 'start' ? value.startIndex : value.endIndex;
+    const next = {
+      ...value,
+      nextPeriodKey: periodsRef.current[initialIndex]?.key,
+    };
     activeRef.current = next;
-    setActive(next);
-  }, [viewportRef]);
+  }, [interactionCoordinator]);
   const resizeByKeyboard = useCallback((
     value: KeyboardRangeResize<TResource, TItemData>,
     direction: -1 | 1,
