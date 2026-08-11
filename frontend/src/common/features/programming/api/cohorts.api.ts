@@ -66,6 +66,10 @@ export function updateProgramCycle(cycleId: string, data: SetProgramCycleInput) 
   return apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data);
 }
 
+export function deleteProgramCycle(cycleId: string) {
+  return apiClient.delete<{ id: string }>(`/cohorts/cycles/${cycleId}`);
+}
+
 export function deleteCohort(cohortId: string) {
   return apiClient.delete(`/cohorts/${cohortId}`);
 }

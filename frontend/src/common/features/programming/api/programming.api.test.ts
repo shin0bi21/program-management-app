@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../../http/client';
-import { getCohortPage } from './cohorts.api';
+import { deleteProgramCycle, getCohortPage } from './cohorts.api';
 import {
   createSessionAttachment,
   getSessionAttachmentDownloadName,
@@ -8,7 +8,7 @@ import {
 } from './sessions.api';
 
 vi.mock('../../../../http/client', () => ({
-  apiClient: { get: vi.fn(), post: vi.fn() },
+  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn() },
 }));
 
 describe('programming APIs', () => {
@@ -23,6 +23,12 @@ describe('programming APIs', () => {
     expect(apiClient.get).toHaveBeenCalledWith(
       '/cohorts?programId=program-1&search=Summer+%2B+Fall&status=active&sort=start&direction=desc&limit=10&cursor=cursor-1',
     );
+  });
+
+  it('deletes a cycle through its narrow endpoint', () => {
+    deleteProgramCycle('cycle-1');
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/cohorts/cycles/cycle-1');
   });
 
   it('serializes session list filters without adding a trailing question mark', () => {

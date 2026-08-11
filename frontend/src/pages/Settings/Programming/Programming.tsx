@@ -3,9 +3,11 @@ import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import { DashboardCard, DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import Modal from '../../../common/components/Modal/Modal';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import { getProgramCycles } from '../../../common/features/programming/api/programming.api';
+import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/programming.api';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../common/types/cohort';
@@ -22,6 +24,8 @@ export default function Programming() {
   const [cyclesError, setCyclesError] = useState<string | null>(null);
   const [programTarget, setProgramTarget] = useState<Program | null | undefined>(undefined);
   const [cycleTarget, setCycleTarget] = useState<ProgramCycle | null | undefined>(undefined);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const programSelection = useTableSelection(programs);
   const cycleSelection = useTableSelection(cycles);
 
@@ -43,6 +47,20 @@ export default function Programming() {
     return () => controller.abort();
   }, [refreshCycles]);
 
+  const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
+    setConfirmAction({
+      title: 'Delete Cycle',
+      message: `Delete ${cycle.name}? Cycles assigned to cohorts, tasks, or time entries cannot be deleted.`,
+      confirmLabel: 'Delete',
+      confirmVariant: 'danger',
+      successMessage: 'Cycle deleted',
+      onConfirm: async () => {
+        await deleteProgramCycle(cycle.id);
+        setCycles(current => current.filter(item => item.id !== cycle.id));
+      },
+    });
+  }, []);
+
   const programColumns = useMemo<TableColumn<Program>[]>(() => [
     { key: 'name', header: 'Program', render: program => program.name },
     { key: 'attendance', header: 'Attendance', render: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },
@@ -57,9 +75,12 @@ export default function Programming() {
     { key: 'start', header: 'Start', width: 140, render: cycle => formatShortDate(cycle.startsOn) },
     { key: 'end', header: 'End', width: 140, render: cycle => formatShortDate(cycle.endsOn) },
     { key: 'actions', header: '', width: 40, resizable: false, className: 'col-actions', render: cycle => (
-      <ActionsMenu ariaLabel={`Actions for ${cycle.name}`} items={[{ id: 'edit', label: 'Edit Cycle', onClick: () => setCycleTarget(cycle) }]} />
+      <ActionsMenu ariaLabel={`Actions for ${cycle.name}`} items={[
+        { id: 'edit', label: 'Edit Cycle', onClick: () => setCycleTarget(cycle) },
+        { id: 'delete', label: 'Delete Cycle', variant: 'danger', onClick: () => requestCycleDeletion(cycle) },
+      ]} />
     ) },
-  ], []);
+  ], [requestCycleDeletion]);
 
   return (
     <main className="page-container page-container--data programming-settings-page">
@@ -104,6 +125,17 @@ export default function Programming() {
         onClose={() => setCycleTarget(undefined)}
         onSaved={refreshCycles}
       />
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? ''}
+        status={confirmModal.status}
+        statusMessage={confirmModal.statusMessage}
+        footer={confirmModal.footer}
+        successDelay={confirmModal.successDelay}
+      >
+        {confirmAction && <p>{confirmAction.message}</p>}
+      </Modal>
     </main>
   );
 }

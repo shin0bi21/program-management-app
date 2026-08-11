@@ -7,6 +7,7 @@ import {
   handleDeleteSessionAttachment,
   handleDeleteSessionNote,
   handleDeleteCohort,
+  handleDeleteProgramCycle,
   handleDeleteSession,
   handleEnrollYouth,
   handleGenerateSessions,
@@ -41,6 +42,7 @@ import {
   createSessionAttachmentSchema,
   deleteSessionNoteSchema,
   deleteCohortSchema,
+  deleteCycleSchema,
   deleteSessionSchema,
   enrollYouthSchema,
   generateSessionsSchema,
@@ -65,6 +67,7 @@ router.get('/', authenticateToken, requirePermission('read:cohorts'), generalLim
 router.get('/cycles', authenticateToken, requirePermission('read:programs'), generalLimiter, asyncHandler(handleGetProgramCycles));
 router.post('/cycles', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(createCycleSchema), asyncHandler(handleCreateProgramCycle));
 router.put('/cycles/:cycleId', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(updateCycleSchema), asyncHandler(handleUpdateProgramCycle));
+router.delete('/cycles/:cycleId', authenticateToken, requirePermission('write:programs'), generalLimiter, validateRequest(deleteCycleSchema), asyncHandler(handleDeleteProgramCycle));
 router.get('/:cohortId/reports/youth', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(cohortYouthReportSchema), asyncHandler(handleGetCohortYouthReport));
 router.get('/:cohortId/reports/youth.pdf', authenticateToken, requirePermission('read:cohorts', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(cohortYouthReportSchema), asyncHandler(handleGetCohortYouthReportPdf));
 router.post('/', authenticateToken, requirePermission('write:cohorts'), generalLimiter, validateRequest(createCohortSchema), asyncHandler(handleCreateCohort));
