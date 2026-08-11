@@ -12,6 +12,7 @@ const renderPage = () => {
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
+const updateLeadStatus = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
 const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
@@ -20,7 +21,7 @@ vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
-  updateLeadStatus: vi.fn(),
+  updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
   createLeadNote: vi.fn(),
@@ -45,7 +46,15 @@ describe('Leads', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
     preferenceHook.save.mockReset();
-    signUpLead.mockResolvedValue({});
+    signUpLead.mockResolvedValue({
+      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: 'youth-1',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
+      discoverySource: 'community_outreach', notes: null, status: 'signed_up',
+      statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    });
+    updateLeadStatus.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
@@ -55,6 +64,28 @@ describe('Leads', () => {
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }]);
+  });
+
+  it('updates only the changed lead after a status change', async () => {
+    updateLeadStatus.mockResolvedValue({
+      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      contactPhoneNumber: '416-555-0142',
+      contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
+      status: 'contacted', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    });
+    renderPage();
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+    const initialRequestCount = getLeads.mock.calls.length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
+
+    await waitFor(() => expect(updateLeadStatus).toHaveBeenCalledWith('lead-1', 'contacted'));
+    expect(await screen.findByText('Contacted')).toBeInTheDocument();
+    expect(getLeads).toHaveBeenCalledTimes(initialRequestCount);
+    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
   it('signs up a Lead through the dedicated conversion action', async () => {

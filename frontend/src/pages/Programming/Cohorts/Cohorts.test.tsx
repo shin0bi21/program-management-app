@@ -13,6 +13,7 @@ function LocationProbe() {
 
 const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
+  deleteCohort: vi.fn(),
   getCohorts: vi.fn(),
   getProgramCycles: vi.fn(),
   getSessionTypes: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohortPage: api.getCohorts,
   getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
+  deleteCohort: api.deleteCohort,
   getProgramCycles: api.getProgramCycles,
 }));
 
@@ -191,6 +193,26 @@ describe('Cohorts', () => {
     expect(await screen.findByText(
       'Soft Skills successfully added to Summer 2026.',
     )).toBeInTheDocument();
+  });
+
+  it('removes a deleted cohort without refetching the table', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/cohorts']}>
+        <Cohorts />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Summer 2026');
+    const initialRequestCount = api.getCohorts.mock.calls.length;
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Cohort' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(api.deleteCohort).toHaveBeenCalledWith('cohort-1'));
+    await waitFor(() => expect(screen.queryByText('Summer 2026')).not.toBeInTheDocument());
+    expect(api.getCohorts).toHaveBeenCalledTimes(initialRequestCount);
+    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
   it('opens Add Cohort directly for staff without exposing global programming settings', async () => {
