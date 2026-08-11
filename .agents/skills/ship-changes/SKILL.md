@@ -1,11 +1,13 @@
 ---
 name: ship-changes
-description: Ship approved repository changes through GitHub Issues, issue-numbered branches, isolated full-suite testing, commits, pull requests, required checks, merges, and safety stashes. Use when the user explicitly asks to ship, commit and merge, split and ship, or finalize reviewed working-tree changes and return safely to the base branch.
+description: Ship approved repository changes through GitHub Issues, issue-numbered branches, isolated verification, commits, pull requests, required checks, merges, and safety stashes. Use when the user explicitly asks to ship, commit and merge, split and ship, or finalize reviewed working-tree changes and return safely to the base branch.
 ---
 
 # Ship Changes
 
 Turn approved working-tree changes into traceable, tested pull requests without losing unrelated work. Deep code review belongs to `review-changes`; perform only the final shipping audit here.
+
+Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) when shipping a change to CI topology, required checks, or test-runner ownership.
 
 ## Production boundary
 
