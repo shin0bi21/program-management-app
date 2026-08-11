@@ -22,7 +22,7 @@ import './ResourceCalendar.css';
 import './components/CalendarItem.css';
 
 const PERIOD_WIDTH = 145;
-const RESOURCE_WIDTH = 200;
+const RESOURCE_WIDTH = 125;
 const HEADER_HEIGHT = 40;
 
 export default function ResourceCalendar<TResource, TItemData>({

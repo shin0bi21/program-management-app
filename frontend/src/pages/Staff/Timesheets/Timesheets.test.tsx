@@ -135,7 +135,8 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('menuitem').slice(0, 4).map(item => item.textContent)).toEqual([
@@ -172,7 +173,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
     expect(await screen.findByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
@@ -188,7 +189,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.getByRole('menuitem', { name: /Staff/ })).toBeInTheDocument();
   });
@@ -399,7 +400,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     const calendarPayPeriodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
     await waitFor(() => expect(calendarPayPeriodCard).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
@@ -451,7 +452,7 @@ describe('Timesheets', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect((await screen.findAllByText('Alex Morgan')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByLabelText('Alex Morgan')).length).toBeGreaterThan(0);
     const getPeriodCard = () => screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
@@ -498,7 +499,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
 
     fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
@@ -533,7 +534,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
     expect(screen.getByRole('menuitem', { name: 'Other Time' })).toBeInTheDocument();
@@ -553,7 +554,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     const cell = container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!;
     vi.mocked(getTimeEntrySessions).mockResolvedValue([{
       id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
@@ -601,7 +602,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(screen.getByRole('button', { name: 'Add time entry' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Session Time' }));
 
@@ -658,7 +659,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
@@ -710,7 +711,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Time' }));
     await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
@@ -746,7 +747,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(screen.getAllByRole('gridcell')[0]);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cycle' }));
@@ -772,7 +773,7 @@ describe('Timesheets', () => {
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    await screen.findAllByText('Zoe Wilson');
+    await screen.findAllByLabelText('Zoe Wilson');
     fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Other Time' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });

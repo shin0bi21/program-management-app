@@ -27,7 +27,9 @@ vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
 vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   default: (props: TaskCalendarProps) => {
     calendarTestState.props = props;
-    return <div aria-label="Task calendar" />;
+    return <div aria-label="Task calendar">
+      {props.resources.map((resource, index) => <div key={resource.id}>{props.renderResource({ resource, index })}</div>)}
+    </div>;
   },
 }));
 
@@ -103,6 +105,8 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     expect(screen.queryByRole('textbox', { name: 'Search tasks' })).not.toBeInTheDocument();
+    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
     expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]);
   });
 
