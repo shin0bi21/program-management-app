@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
+import { getUser } from '../../../auth/storage';
 import Button from '../../../common/components/Button/Button';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -57,6 +58,7 @@ const summarizeOverflow = ({ items, itemCount }: { items: readonly TimesheetItem
 
 export default function Timesheets() {
   const { permissions, role } = useAuth();
+  const currentUserId = getUser()?.id;
   const canWriteTimesheets = permissions.includes('write:timesheets');
   const [resources, setResources] = useState<StaffResource[]>([]);
   const [programs, setPrograms] = useState<TimeEntryProgram[]>([]);
@@ -246,9 +248,9 @@ export default function Timesheets() {
     });
   }, [categoryFilters, listColumnWidths, programFilters, role, save, selectListRow, selectedCycleId, staffFilters, view]);
 
-  const dashboardStaff = role === 'staff'
-    ? resources.find(resource => resource.id === selectedDashboardStaffId) ?? writableResources[0] ?? null
-    : resources.find(resource => resource.id === selectedDashboardStaffId) ?? null;
+  const currentUserResource = resources.find(resource => resource.id === currentUserId) ?? null;
+  const dashboardStaff = resources.find(resource => resource.id === selectedDashboardStaffId)
+    ?? currentUserResource;
   const dashboardRows = useMemo(() => {
     if (!dashboardStaff) return [];
     return Object.entries(cycleData[dashboardStaff.id] ?? {}).flatMap(([date, items]) => (
@@ -537,7 +539,7 @@ export default function Timesheets() {
             getResourceId={getStaffResourceId}
             getItemId={getTimesheetItemId}
             renderResource={renderCalendarResource}
-            selectedResourceId={selectedDashboardStaffId ?? writableResources[0]?.id}
+            selectedResourceId={dashboardStaff?.id}
             onResourceSelect={resource => setSelectedDashboardStaffId(resource.id)}
             buildItem={buildCalendarItem}
             buildOverflowItem={buildOverflowItem}
