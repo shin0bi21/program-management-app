@@ -48,7 +48,7 @@ const valuesByKey = {
     cycleIds: unique(z.string().uuid('Invalid cycle ID'), 'Cycles'),
     categories: unique(z.enum(['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other']), 'Categories'),
     statuses: unique(z.enum(['todo', 'in_progress', 'completed', 'cancelled']), 'Statuses').max(4),
-    columnWidths: columnWidths(['title', 'category', 'assignee', 'program', 'cycle', 'startDate', 'dueDate', 'status']).optional(),
+    columnWidths: columnWidths(['title', 'category', 'firstName', 'lastName', 'program', 'cycle', 'startDate', 'dueDate', 'status']).optional(),
   }),
   'cohort-filters': z.object({
     programId: z.string().uuid('Invalid program ID').nullable(),

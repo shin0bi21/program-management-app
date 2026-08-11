@@ -8,7 +8,7 @@ const task: Task = {
   programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
-  completedAt: null, assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+  completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
 
 describe('TaskItem', () => {

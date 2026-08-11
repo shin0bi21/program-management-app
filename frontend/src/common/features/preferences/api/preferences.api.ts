@@ -38,7 +38,7 @@ export interface PreferenceValues {
     cycleIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;
-    columnWidths?: ColumnWidths<'title' | 'category' | 'assignee' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
+    columnWidths?: ColumnWidths<'title' | 'category' | 'firstName' | 'lastName' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status'>;
   };
   'cohort-filters': {
     programId: string | null;

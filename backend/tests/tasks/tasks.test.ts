@@ -28,9 +28,15 @@ describe('Tasks API', () => {
   beforeAll(async () => {
     const stamp = Date.now();
     const admin = await seedTestUser({ email: `tasks-admin-${stamp}@test.local`, role: 'admin' });
-    const firstStaff = await seedTestUser({ email: `tasks-staff-a-${stamp}@test.local`, role: 'staff' });
-    const secondStaff = await seedTestUser({ email: `tasks-staff-b-${stamp}@test.local`, role: 'staff' });
-    const unrelatedStaff = await seedTestUser({ email: `tasks-staff-c-${stamp}@test.local`, role: 'staff' });
+    const firstStaff = await seedTestUser({
+      email: `tasks-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
+    });
+    const secondStaff = await seedTestUser({
+      email: `tasks-staff-b-${stamp}@test.local`, firstName: 'Alex', lastName: 'Smith', role: 'staff',
+    });
+    const unrelatedStaff = await seedTestUser({
+      email: `tasks-staff-c-${stamp}@test.local`, firstName: 'Jamie', lastName: 'Unrelated', role: 'staff',
+    });
     adminId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     firstStaffId = firstStaff.userId;
@@ -80,8 +86,8 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminOptions.status).toBe(200);
     expect(adminOptions.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId }),
-      expect.objectContaining({ id: secondStaffId }),
+      expect.objectContaining({ id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }),
+      expect.objectContaining({ id: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' }),
       expect.objectContaining({ id: unrelatedStaffId }),
     ]));
     expect(adminOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
@@ -139,7 +145,9 @@ describe('Tasks API', () => {
         staffId: firstStaffId,
       }));
     expect(ownTask.status).toBe(201);
-    expect(ownTask.body.assignee).toEqual(expect.objectContaining({ id: firstStaffId }));
+    expect(ownTask.body.assignee).toEqual({
+      id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson',
+    });
 
     const otherCreate = await request(app)
       .post('/api/tasks')
@@ -278,7 +286,9 @@ describe('Tasks API', () => {
         startDate: taskDate, dueDate: taskDate, staffId: secondStaffId,
       });
     expect(reassigned.status).toBe(200);
-    expect(reassigned.body.assignee).toEqual(expect.objectContaining({ id: secondStaffId }));
+    expect(reassigned.body.assignee).toEqual({
+      id: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
+    });
 
     const returned = await request(app)
       .patch(`/api/tasks/${task.body.id}/placement`)

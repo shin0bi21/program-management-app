@@ -8,19 +8,19 @@ const tasks: Task[] = [
     id: 'task-1', title: 'Prepare workshop', details: 'Materials', category: 'planning_prep',
     programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026',
     status: 'todo', startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0,
-    loggedHoursByDate: [], completedAt: null, assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+    loggedHoursByDate: [], completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
   },
   {
     id: 'task-2', title: 'Contact partners', details: null, category: 'outreach',
     programId: null, programName: null, cycleId: 'cycle-2', cycleName: 'Fall 2026',
     status: 'completed', startDate: '2026-09-01', dueDate: '2026-09-02', hoursLogged: 1,
     loggedHoursByDate: [{ date: '2026-09-01', hours: 1 }], completedAt: '2026-09-01T12:00:00Z',
-    assignee: { id: 'staff-2', name: 'Alex Smith' }, writable: false,
+    assignee: { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' }, writable: false,
   },
 ];
 const resources = [
-  { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
-  { id: 'staff-2', name: 'Alex Smith', role: 'staff', writable: false },
+  { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+  { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
 ];
 
 describe('useTaskViewData', () => {

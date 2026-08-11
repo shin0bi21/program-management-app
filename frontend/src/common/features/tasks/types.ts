@@ -27,10 +27,19 @@ export const TASK_CATEGORY_OPTIONS: Array<{ value: TaskCategory; label: string }
 
 export interface TaskAssignee {
   id: string;
+  firstName: string;
+  lastName: string;
   name: string;
 }
 
-export interface TaskResource { id: string; name: string; role: string; writable: boolean }
+export interface TaskResource {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  role: string;
+  writable: boolean;
+}
 export interface TaskProgram { id: string; name: string }
 export interface TaskCycle {
   id: string;
