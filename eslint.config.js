@@ -64,6 +64,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/agents/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',

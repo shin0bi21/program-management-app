@@ -46,6 +46,8 @@ docker compose down
 | Install the Playwright browser | `cd frontend && npm run test:browser:install` |
 | Run browser component tests | `cd frontend && npm run test:browser` |
 | Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
+| Check changed architecture patterns | `node scripts/agents/check-patterns.js --changed` |
+| Validate repository skills | `node scripts/agents/validate-skills.js` |
 
 Never edit an applied migration. Add a new migration instead.
 

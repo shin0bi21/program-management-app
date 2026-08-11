@@ -22,9 +22,10 @@ This workflow ends after the approved changes are merged and pushed to `develop`
 2. Inventory the complete tracked and untracked diff.
 3. Inspect existing stashes without applying or dropping them.
 4. Check for GitHub Issues and pull requests that already cover the work.
-5. Use concern groups from the latest review when available. Otherwise group changes by independently shippable concern, keeping coupled code, migrations, tests, and documentation together.
+5. Use the latest approved `split-changes` concern map and concern-level reviews. If a large or mixed diff has no concern map, stop and run the split workflow before creating remote changes.
+6. Do not ship with unresolved high- or medium-severity findings. List every remaining low-severity finding and require it to be fixed, explicitly accepted, or assigned to a concrete deferred concern before creating remote changes.
 
-Present the issue and branch groups before remote changes. State what will remain uncommitted or stashed. Obtain approval unless the user's request explicitly approves the complete issue-to-merge workflow.
+Present the mapped issue and branch groups before remote changes without rediscovering them. State what will remain uncommitted or stashed. Obtain approval unless the user's request explicitly approves the complete issue-to-merge workflow.
 
 ## 2. Create traceability
 
@@ -48,11 +49,12 @@ Use patch-based restoration when concerns overlap in a file. Never bundle an unr
 
 For every isolated branch:
 
-1. Run `scripts/tests/test-app.sh` before committing.
-2. Fix branch-introduced failures and rerun relevant checks plus the full suite.
-3. Review `git diff --check`, the final diff, and `git status`.
-4. Commit with a concise message referencing the issue.
-5. Push the branch and open a pull request.
+1. Run `node scripts/agents/check-patterns.js --changed`. If repository skills changed, also run `node scripts/agents/validate-skills.js`.
+2. Run the concern map's narrow authoritative suites against the isolated branch. Reuse prior evidence only when it covers that exact isolated diff; do not repeat equivalent runners.
+3. Fix branch-introduced failures and rerun only failed or affected focused checks.
+4. Review `git diff --check`, the final diff, and `git status`.
+5. Commit with a concise message referencing the issue.
+6. Push the branch and open a pull request.
    For multiline Markdown, write the pull-request description to a temporary file
    and pass it with `gh pr create --body-file <path>`. Never embed a multiline body,
    Markdown backticks, `$()`, or other shell-sensitive text directly in a shell
@@ -63,7 +65,7 @@ For every isolated branch:
 
 1. Poll until the pull request's expected checks are registered.
 2. Treat `no checks reported` as pending or blocked, never as success.
-3. Wait for all required checks to complete successfully.
+3. Wait for all required checks—including the repository-wide backend, frontend, migration, build, and static gates—to complete successfully. These checks are the full-suite merge boundary.
 4. If GitHub Actions is degraded or checks never register, preserve the branch and report the blocker instead of merging.
 5. Merge only into `develop` after checks pass, delete the remote feature branch, and update the local `develop` branch.
 
