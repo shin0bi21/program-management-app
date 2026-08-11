@@ -29,12 +29,14 @@ Present the mapped issue and branch groups before remote changes without redisco
 
 ## 2. Create traceability
 
-For each approved group:
+For the current approved group only:
 
 1. Create or reuse a GitHub Issue with the problem, scope, and acceptance criteria.
 2. Start from the synchronized base branch.
 3. Create a branch named `<issue-number>-<short-description>`.
 4. Reference the issue in commits and use `Closes #<issue-number>` in the pull request body.
+
+Do not create or prepare the next concern branch while the current concern is open. Issues may exist as backlog records, but they do not authorize early branches, restored diffs, commits, or pull requests.
 
 ## 3. Isolate safely
 
@@ -61,15 +63,17 @@ For every isolated branch:
    `--body` argument; the shell can execute command substitutions before `gh` runs.
    Remove only the known temporary body file after the pull request is created.
 
-## 5. Wait for GitHub checks and merge
+## 5. Wait for GitHub checks, merge, and reset the base
 
 1. Poll until the pull request's expected checks are registered.
 2. Treat `no checks reported` as pending or blocked, never as success.
 3. Wait for all required checks—including the repository-wide backend, frontend, migration, build, and static gates—to complete successfully. These checks are the full-suite merge boundary.
 4. If GitHub Actions is degraded or checks never register, preserve the branch and report the blocker instead of merging.
-5. Merge only into `develop` after checks pass, delete the remote feature branch, and update the local `develop` branch.
+5. Merge only into `develop` after checks pass and delete the remote feature branch.
+6. Switch local state to `develop`, fast-forward from `origin/develop`, and verify the working tree is clean and local `develop` equals its upstream.
+7. Only after that checkpoint, select the next concern, re-evaluate its scope against the updated base, and begin again at traceability.
 
-Repeat from a fresh base branch for the next concern.
+Never prepare a batch of concern branches from the pre-merge base. Logical splitting happens upfront; physical branch preparation and shipping happen one concern at a time.
 
 ## 6. Reconcile and report
 
