@@ -1,6 +1,13 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { createTimeEntry, deleteTimeEntry, getTimeEntries, getTimeEntryCohorts, updateTimeEntry } from '../services/timeEntryService';
+import {
+  createTimeEntry,
+  deleteTimeEntry,
+  getTimeEntries,
+  getTimeEntryCohorts,
+  updateTimeEntry,
+  updateTimeEntryPlacement,
+} from '../services/timeEntryService';
 import { timeEntryCohortQuerySchema, timeEntryQuerySchema } from '../validation/timeEntrySchemas';
 
 export async function handleGetTimeEntries(req: Request, res: Response) {
@@ -20,6 +27,10 @@ export async function handleCreateTimeEntry(req: Request, res: Response) {
 
 export async function handleUpdateTimeEntry(req: Request, res: Response) {
   res.json(await updateTimeEntry(req.params.id, req.body, (req as AuthRequest).user!));
+}
+
+export async function handleUpdateTimeEntryPlacement(req: Request, res: Response) {
+  res.json(await updateTimeEntryPlacement(req.params.id, req.body, (req as AuthRequest).user!));
 }
 
 export async function handleDeleteTimeEntry(req: Request, res: Response) {

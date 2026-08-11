@@ -147,3 +147,18 @@ export function calculateFloatingPosition(
 
   return computePosition(resolvedSide, resolvedAlign, rect, offset, widthEstimate, heightEstimate);
 }
+
+export function calculateFloatingPositionFromPoint(
+  x: number,
+  y: number,
+  placement: Placement = { side: 'bottom', align: 'start' },
+  options: PlacementOptions = {},
+): FloatingPosition {
+  const point = new DOMRect(x, y, 0, 0);
+  const offset = options.offset ?? DEFAULT_OFFSET;
+  const widthEstimate = options.widthEstimate ?? DEFAULT_WIDTH_ESTIMATE;
+  const heightEstimate = options.heightEstimate ?? DEFAULT_HEIGHT_ESTIMATE;
+  const resolvedSide = resolveSide(placement.side, point, heightEstimate, widthEstimate, offset);
+  const resolvedAlign = resolveAlignment(placement.align ?? 'start', resolvedSide, point, heightEstimate, widthEstimate);
+  return computePosition(resolvedSide, resolvedAlign, point, offset, widthEstimate, heightEstimate);
+}

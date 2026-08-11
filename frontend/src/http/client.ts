@@ -138,7 +138,9 @@ async function execute<T>(
     );
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204 || res.status === 205) return undefined as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 async function download(path: string, opts: RequestOptions = {}): Promise<Blob> {

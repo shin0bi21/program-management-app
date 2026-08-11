@@ -1,0 +1,70 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import TaskItem from './TaskItem';
+import type { Task } from '../../../../../common/features/tasks/types';
+
+const task: Task = {
+  id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
+  programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
+  startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
+  loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
+  completedAt: null, assignee: { id: 'staff-1', name: 'Zoe Wilson' }, writable: true,
+};
+
+describe('TaskItem', () => {
+  it('shows task details through the shared calendar-item hover behavior', () => {
+    render(<TaskItem task={{ ...task, programName: 'Soft Skills', cycleName: 'Summer 2026', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
+    expect(item).toHaveTextContent('Prepare workshop · Planning / Prep');
+    expect(item).not.toHaveTextContent('1.5h');
+    expect(item).not.toHaveTextContent('Soft Skills');
+    fireEvent.mouseEnter(item);
+
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Prepare workshop');
+    expect(tooltip).toHaveTextContent('Planning / Prep');
+    expect(tooltip).toHaveTextContent('Soft Skills');
+    expect(tooltip).toHaveTextContent('Summer 2026');
+    expect(tooltip).toHaveTextContent('Hours Logged');
+    expect(tooltip).toHaveTextContent('1.50');
+    expect(tooltip).toHaveTextContent('Prepare activities.');
+  });
+
+  it('opens the floating action menu before invoking edit or delete', () => {
+    const onActivate = vi.fn();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<div onClick={onActivate}><TaskItem task={task} onEdit={onEdit} onDelete={onDelete} /></div>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, 2026-08-10 to 2026-08-12. Open actions' }));
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('notifies the page when the task item is activated', () => {
+    const onActivate = vi.fn();
+    render(<TaskItem task={task} onActivate={onActivate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop/ }));
+
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('shows an overdue status at the end of an active task item', () => {
+    render(<TaskItem task={{ ...task, dueDate: '2000-01-01' }} />);
+
+    const overdue = screen.getByLabelText('Overdue');
+    expect(overdue).toHaveTextContent('!');
+    expect(overdue).toHaveAttribute('title', 'Overdue');
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Prepare workshop');
+    expect(tooltip.querySelector('.task-item__overdue-badge')).toHaveTextContent('Overdue');
+  });
+});

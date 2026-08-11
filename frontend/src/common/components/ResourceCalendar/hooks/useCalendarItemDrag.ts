@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { BuildItemContext, CalendarPeriod, ItemDropContext } from '../types';
-
-const DRAG_THRESHOLD = 5;
+import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
+import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
+import { getCalendarPreviewBounds, type CalendarPreviewBounds } from '../utils/rangePreview';
 
 export interface CalendarPointerDrag<TResource, TItemData> {
   pointerId: number;
@@ -16,6 +17,7 @@ export interface CalendarPointerDrag<TResource, TItemData> {
   targetResourceId?: string;
   targetPeriodKey?: string;
   onEnd?: () => void;
+  previewBounds?: CalendarPreviewBounds;
 }
 
 interface UseCalendarItemDragOptions<TResource, TItemData> {
@@ -48,8 +50,8 @@ export function useCalendarItemDrag<TResource, TItemData>({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const positionOverlay = useCallback((current: CalendarPointerDrag<TResource, TItemData>) => {
-    if (!overlayRef.current) return;
-    overlayRef.current.style.transform = `translate3d(${current.x}px, ${current.y + 12}px, 0) rotate(1deg)`;
+    if (!overlayRef.current || !current.previewBounds) return;
+    overlayRef.current.style.transform = `translate3d(${current.x - current.previewBounds.left}px, ${current.y - current.previewBounds.top + 12}px, 0) rotate(1deg)`;
   }, []);
 
   const setCurrentDrag = useCallback((next: CalendarPointerDrag<TResource, TItemData> | null) => {
@@ -58,14 +60,17 @@ export function useCalendarItemDrag<TResource, TItemData>({
   }, []);
 
   const locateTarget = useCallback((x: number, y: number) => {
-    const cell = document.elementFromPoint(x, y)?.closest<HTMLElement>('.resource-calendar__cell');
+    const cell = document.elementFromPoint(x, y)?.closest<HTMLElement>(
+      '.resource-calendar__cell, .resource-calendar__item-slot',
+    );
     const viewport = viewportRef.current;
     if (!cell || !viewport?.contains(cell)) {
       return { targetResourceId: undefined, targetPeriodKey: undefined };
     }
+    const itemSlot = cell.classList.contains('resource-calendar__item-slot');
     return {
-      targetResourceId: cell.dataset.resourceId,
-      targetPeriodKey: cell.dataset.period,
+      targetResourceId: itemSlot ? cell.dataset.itemResourceId : cell.dataset.resourceId,
+      targetPeriodKey: itemSlot ? cell.dataset.itemPeriod : cell.dataset.period,
     };
   }, [viewportRef]);
 
@@ -75,20 +80,24 @@ export function useCalendarItemDrag<TResource, TItemData>({
       const current = dragRef.current;
       const viewport = viewportRef.current;
       if (!current?.dragging || !viewport) return;
-      const bounds = viewport.getBoundingClientRect();
-      const leftDistance = current.x - (bounds.left + coveredLeftWidth);
-      const rightDistance = bounds.right - current.x;
-      let direction = 0;
-      let intensity = 0;
-      if (leftDistance >= 0 && leftDistance < dragEdgeSize) {
-        direction = -1;
-        intensity = 1 - leftDistance / dragEdgeSize;
-      } else if (rightDistance >= 0 && rightDistance < dragEdgeSize) {
-        direction = 1;
-        intensity = 1 - rightDistance / dragEdgeSize;
-      }
-      if (direction) {
-        viewport.scrollLeft += direction * Math.max(2, dragScrollSpeed * intensity);
+      const periodZone = getPeriodZoneBounds(viewport, coveredLeftWidth);
+      const horizontal = getEdgeScrollDelta(
+        current.x,
+        periodZone.left,
+        periodZone.right,
+        dragEdgeSize,
+        dragScrollSpeed,
+      );
+      const vertical = getEdgeScrollDelta(
+        current.y,
+        periodZone.viewportBounds.top,
+        periodZone.viewportBounds.bottom,
+        dragEdgeSize,
+        dragScrollSpeed,
+      );
+      if (horizontal || vertical) {
+        viewport.scrollLeft += horizontal;
+        viewport.scrollTop += vertical;
         const next = { ...current, ...locateTarget(current.x, current.y) };
         dragRef.current = next;
         positionOverlay(next);
@@ -107,18 +116,21 @@ export function useCalendarItemDrag<TResource, TItemData>({
       const current = dragRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
       const dragging = current.dragging
-        || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) >= DRAG_THRESHOLD;
+        || crossedPointerThreshold(current.startX, current.startY, event.clientX, event.clientY);
       if (dragging) event.preventDefault();
       const next = {
         ...current,
         x: event.clientX,
         y: event.clientY,
         dragging,
+        previewBounds: current.previewBounds
+          ?? (dragging && viewportRef.current ? getCalendarPreviewBounds(viewportRef.current) : undefined),
         ...(dragging ? locateTarget(event.clientX, event.clientY) : {}),
       };
       dragRef.current = next;
       if (dragging && !current.dragging) {
-        current.sourceElement.classList.add('resource-calendar__item--dragging');
+        captureCalendarPointer(current.sourceElement, event.pointerId);
+        current.sourceElement.classList.add('dragging');
         setDrag(next);
       } else if (dragging) {
         positionOverlay(next);
@@ -128,9 +140,11 @@ export function useCalendarItemDrag<TResource, TItemData>({
       const current = dragRef.current;
       if (!current || event.pointerId !== current.pointerId) return;
       setCurrentDrag(null);
-      current.sourceElement.classList.remove('resource-calendar__item--dragging');
+      releaseCalendarPointer(current.sourceElement, event.pointerId);
+      current.sourceElement.classList.remove('dragging');
       if (!current.dragging) return;
       current.onEnd?.();
+      if (event.type !== 'pointerup') return;
       suppressClickRef.current = true;
       window.setTimeout(() => { suppressClickRef.current = false; }, 0);
       const destinationResource = resources.find(resource => getResourceId(resource) === current.targetResourceId);
@@ -149,12 +163,14 @@ export function useCalendarItemDrag<TResource, TItemData>({
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
+    window.addEventListener('lostpointercapture', finish);
     return () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
+      window.removeEventListener('lostpointercapture', finish);
     };
-  }, [canDropItem, drag, getResourceId, locateTarget, onItemDrop, periods, positionOverlay, resources, setCurrentDrag]);
+  }, [canDropItem, drag, getResourceId, locateTarget, onItemDrop, periods, positionOverlay, resources, setCurrentDrag, viewportRef]);
 
   useEffect(() => {
     if (drag?.dragging) positionOverlay(drag);

@@ -8,6 +8,10 @@ import { requireEnv } from '../../src/utils/env';
 const databaseUrl = requireEnv('DATABASE_URL');
 const primaryStaffId = '20000000-0000-4000-8000-000000000001';
 const secondStaffId = '20000000-0000-4000-8000-000000000002';
+const primaryDeliveryTaskId = '40000000-0000-4000-8000-000000000001';
+const secondDeliveryTaskId = '40000000-0000-4000-8000-000000000002';
+const primaryOutreachTaskId = '40000000-0000-4000-8000-000000000003';
+const secondPlanningTaskId = '40000000-0000-4000-8000-000000000004';
 
 const sql = postgres(databaseUrl);
 
@@ -93,7 +97,32 @@ async function main() {
       }
     }
 
-    for (const [id, staffId, programName, task, workDate, hours, note] of entries) {
+    const softSkillsId = programIds.get('Soft Skills')!;
+    const jobReadinessId = programIds.get('Job Readiness')!;
+    await tx`
+      INSERT INTO tasks (
+        id, title, details, category, staff_id, program_id, cycle_id, status,
+        start_date, due_date, created_by, updated_by
+      ) VALUES
+        (${primaryDeliveryTaskId}, 'Deliver healthy relationships workshop', 'Facilitate the scheduled Soft Skills workshop.', 'program_delivery', ${primaryStaffId}, ${softSkillsId}, ${cycle.id}, 'in_progress', '2026-08-01', '2026-08-14', ${primaryStaffId}, ${primaryStaffId}),
+        (${secondDeliveryTaskId}, 'Run mock interview session', 'Lead the Job Readiness mock interview rotation.', 'program_delivery', ${secondStaffId}, ${jobReadinessId}, ${cycle.id}, 'in_progress', '2026-08-06', '2026-08-14', ${secondStaffId}, ${secondStaffId}),
+        (${primaryOutreachTaskId}, 'Confirm community partner visit', 'Coordinate the upcoming partner visit and participant list.', 'outreach', ${primaryStaffId}, NULL, ${cycle.id}, 'todo', '2026-08-11', '2026-08-18', ${primaryStaffId}, ${primaryStaffId}),
+        (${secondPlanningTaskId}, 'Prepare workplace tour materials', 'Prepare participant handouts and facilitator notes.', 'planning_prep', ${secondStaffId}, ${jobReadinessId}, ${cycle.id}, 'todo', '2026-08-12', '2026-08-20', ${secondStaffId}, ${secondStaffId})
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        details = EXCLUDED.details,
+        category = EXCLUDED.category,
+        staff_id = EXCLUDED.staff_id,
+        program_id = EXCLUDED.program_id,
+        cycle_id = EXCLUDED.cycle_id,
+        status = EXCLUDED.status,
+        start_date = EXCLUDED.start_date,
+        due_date = EXCLUDED.due_date,
+        updated_by = EXCLUDED.updated_by,
+        updated_at = NOW()
+    `;
+
+    for (const [id, staffId, programName, category, workDate, hours, note] of entries) {
       let programId: string | null = null;
       if (programName) {
         const matchingProgramId = programIds.get(programName);
@@ -102,17 +131,17 @@ async function main() {
       }
       await tx`
         INSERT INTO time_entries (
-          id, staff_id, program_id, cycle_id, task, work_date, hours, note, created_by, updated_by
+          id, staff_id, program_id, cycle_id, category, work_date, hours, note, created_by, updated_by
         )
         VALUES (
           ${id}, ${staffId}, ${programId}, ${cycle.id},
-          ${task}, ${workDate}, ${hours}, ${note}, ${staffId}, ${staffId}
+          ${category}, ${workDate}, ${hours}, ${note}, ${staffId}, ${staffId}
         )
         ON CONFLICT (id) DO UPDATE SET
           staff_id = EXCLUDED.staff_id,
           program_id = EXCLUDED.program_id,
           cycle_id = EXCLUDED.cycle_id,
-          task = EXCLUDED.task,
+          category = EXCLUDED.category,
           work_date = EXCLUDED.work_date,
           hours = EXCLUDED.hours,
           note = EXCLUDED.note,
@@ -120,9 +149,23 @@ async function main() {
           updated_at = NOW()
       `;
     }
+
+    await tx`
+      UPDATE time_entries
+      SET task_id = CASE id
+        WHEN '30000000-0000-4000-8000-000000000008'::uuid THEN ${primaryDeliveryTaskId}::uuid
+        WHEN '30000000-0000-4000-8000-000000000018'::uuid THEN ${secondDeliveryTaskId}::uuid
+        ELSE task_id
+      END,
+      updated_at = NOW()
+      WHERE id IN (
+        '30000000-0000-4000-8000-000000000008'::uuid,
+        '30000000-0000-4000-8000-000000000018'::uuid
+      )
+    `;
   });
 
-  console.log(`Timesheet demo ready: ${entries.length} entries across 2 active staff accounts and 3 biweekly periods`);
+  console.log(`Staff demo ready: ${entries.length} time entries and 4 tasks across 2 active staff accounts`);
 }
 
 main()

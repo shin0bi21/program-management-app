@@ -1,6 +1,6 @@
-import type { TimeEntryTask } from './types';
+import type { TimeEntryCategory } from './types';
 
-export const TIME_ENTRY_TASK_OPTIONS: Array<{ value: TimeEntryTask; label: string }> = [
+export const TIME_ENTRY_CATEGORY_OPTIONS: Array<{ value: TimeEntryCategory; label: string }> = [
   { value: 'program_delivery', label: 'Program Delivery' },
   { value: 'planning_prep', label: 'Planning / Prep' },
   { value: 'meeting', label: 'Meeting' },

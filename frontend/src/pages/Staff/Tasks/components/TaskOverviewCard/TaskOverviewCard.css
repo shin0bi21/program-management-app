@@ -1,0 +1,86 @@
+.task-overview-card__metrics,
+.task-overview-card__report {
+  margin: 0;
+}
+
+.task-overview-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.task-overview-card__metrics div {
+  min-width: 0;
+}
+
+.task-overview-card__metrics dt {
+  color: var(--color-muted);
+  font-size: .74rem;
+}
+
+.task-overview-card__metrics dd {
+  margin: 3px 0 0;
+  color: var(--color-ink);
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.task-overview-card__report {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.task-overview-card__report div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.task-overview-card__report dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+.task-overview-card__task-lists {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.task-overview-card__task-section h3 {
+  margin: 0 0 var(--space-2);
+  font-size: .95rem;
+}
+
+.task-overview-card__task-section ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-overview-card__task-section li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.task-overview-card__task-section li span,
+.task-overview-card__task-section p {
+  color: var(--color-muted);
+  font-size: .82rem;
+}
+
+.task-overview-card__task-section p {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .task-overview-card__metrics {
+    grid-template-columns: 1fr;
+  }
+}
