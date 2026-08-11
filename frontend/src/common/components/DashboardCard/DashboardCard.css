@@ -53,6 +53,19 @@
   color: var(--color-muted);
 }
 
+.dashboard-card__compact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-card__compact-action {
+  margin-left: auto;
+}
+
 .dashboard-card__metric {
   display: block;
   color: var(--color-ink);

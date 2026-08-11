@@ -3,7 +3,7 @@ import { z } from 'zod';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RANGE_DAYS = 366;
 
-export const timeEntryTaskSchema = z.enum([
+export const timeEntryCategorySchema = z.enum([
   'program_delivery',
   'planning_prep',
   'meeting',
@@ -50,17 +50,35 @@ export const timeEntryCohortQuerySchema = z.object({
   query: z.object({ programId: z.string().uuid('Invalid program ID') }),
 });
 
-export const setTimeEntrySchema = z.object({
-  body: z.object({
+const sharedTimeEntryFields = {
     staffId: z.string().uuid('Invalid staff ID'),
-    programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
-    cycleId: z.string().uuid('Invalid cycle ID'),
-    task: timeEntryTaskSchema,
     workDate: dateSchema,
     hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),
     note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
-  }),
+};
+
+export const setTimeEntrySchema = z.object({
+  body: z.discriminatedUnion('source', [
+    z.object({
+      ...sharedTimeEntryFields,
+      source: z.literal('general'),
+      programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
+      cycleId: z.string().uuid('Invalid cycle ID'),
+      category: timeEntryCategorySchema,
+    }),
+    z.object({
+      ...sharedTimeEntryFields,
+      source: z.literal('task'),
+      taskId: z.string().uuid('Invalid task ID'),
+    }),
+  ]),
+});
+
+export const updateTimeEntryPlacementSchema = z.object({
+  body: z.object({ workDate: dateSchema }),
 });
 
 export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema.shape.query>;
 export type SetTimeEntryInput = z.infer<typeof setTimeEntrySchema.shape.body>;
+export type UpdateTimeEntryPlacementInput = z.infer<typeof updateTimeEntryPlacementSchema.shape.body>;
+export type TimeEntryCategory = z.infer<typeof timeEntryCategorySchema>;

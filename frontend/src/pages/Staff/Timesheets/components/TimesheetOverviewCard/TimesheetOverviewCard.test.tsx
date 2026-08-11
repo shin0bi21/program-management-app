@@ -36,8 +36,8 @@ describe('TimesheetOverviewCard', () => {
     const dialog = screen.getByRole('dialog', { name: 'Jordan Lee' });
     expect(within(dialog).getByText('Program Delivery')).toBeInTheDocument();
     expect(within(dialog).getByText('5.00')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('7.25')).toHaveLength(2);
-    expect(within(dialog).getByText('hrs')).toBeInTheDocument();
+    expect(within(dialog).getByText('7.25')).toBeInTheDocument();
+    expect(within(dialog).queryByText('hrs')).not.toBeInTheDocument();
     expect(within(dialog).getByText('Jul 29 – Aug 11, 2026')).toBeInTheDocument();
     expect(within(dialog).getByRole('img', { name: 'Breakdown of 7.25 hours' })).toBeInTheDocument();
     expect(within(dialog).getByText('Total').parentElement).toHaveTextContent('7.25');
@@ -61,5 +61,50 @@ describe('TimesheetOverviewCard', () => {
 
     expect(screen.getByText('Select a time entry.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'See Breakdown' })).not.toBeInTheDocument();
+  });
+
+  it('uses compact dashboard typography for a visible pay-period range', () => {
+    render(
+      <TimesheetOverviewCard
+        title="Hours This Pay Period"
+        total={7.25}
+        modalTitle="Jordan Lee"
+        modalSubtitle="Jul 29 – Aug 11, 2026"
+        breakdown={[]}
+        emptyMessage="Select a time entry."
+        hasStaff
+        details={[
+          ['Current Pay Period', 'Jul 29 – Aug 11, 2026'],
+          ['Hours', '7.25'],
+        ]}
+      />,
+    );
+
+    const dateRange = screen.getByText('Jul 29 – Aug 11, 2026');
+    expect(dateRange).toHaveClass('timesheet-overview-card__text-value');
+    const layout = dateRange.closest('.timesheet-overview-card__layout')!;
+    expect(layout.firstElementChild).toHaveClass('timesheet-overview-card__details');
+    expect(layout.lastElementChild).toHaveClass('timesheet-overview-card__action');
+  });
+
+  it('uses compact text sizing for cycle names while keeping averages prominent', () => {
+    render(
+      <TimesheetOverviewCard
+        title="Average Biweekly Hours"
+        total={0.33}
+        modalTitle="Jordan Lee"
+        modalSubtitle="Summer 2026"
+        breakdown={[]}
+        emptyMessage="Select a time entry."
+        hasStaff
+        details={[
+          ['Cycle', 'Summer 2026'],
+          ['Biweekly Average', '0.33'],
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Summer 2026')).toHaveClass('timesheet-overview-card__text-value');
+    expect(screen.getByText('0.33')).not.toHaveClass('timesheet-overview-card__text-value');
   });
 });

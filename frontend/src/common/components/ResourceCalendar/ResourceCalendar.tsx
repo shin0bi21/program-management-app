@@ -3,7 +3,10 @@ import { createPortal } from 'react-dom';
 import { usePeriodWindow } from './hooks/usePeriodWindow';
 import { useCalendarItemDrag } from './hooks/useCalendarItemDrag';
 import { useCalendarViewport } from './hooks/useCalendarViewport';
+import { useCalendarRangeResize } from './hooks/useCalendarRangeResize';
+import { useCalendarRangeMove } from './hooks/useCalendarRangeMove';
 import { useVirtualizedRows } from './hooks/useVirtualizedRows';
+import { useCalendarInteractionCoordinator } from './hooks/useCalendarInteractionCoordinator';
 import ResourceCalendarToolbar from './components/ResourceCalendarToolbar';
 import ResourceCalendarGrid from './components/ResourceCalendarGrid';
 import {
@@ -13,7 +16,10 @@ import {
 } from './utils/periodWindowSizing';
 import { dayPeriodDefinition } from './periods';
 import type { ResourceCalendarProps } from './types';
+import { getCalendarPreviewHostStyle } from './utils/rangePreview';
+import { loadCalendarPosition } from './utils/calendarPosition';
 import './ResourceCalendar.css';
+import './components/CalendarItem.css';
 
 const PERIOD_WIDTH = 152;
 const RESOURCE_WIDTH = 190;
@@ -21,23 +27,32 @@ const HEADER_HEIGHT = 58;
 export default function ResourceCalendar<TResource, TItemData>({
   resources,
   data,
+  rangeData,
+  getItemRange,
   getResourceId,
   getItemId,
   renderResource,
   selectedResourceId,
   onResourceSelect,
   buildItem,
+  buildRangeItem,
+  getItemCapabilities,
+  onItemActivate,
+  onRangeResize,
+  onRangeMove,
+  canRangeMove,
   buildOverflowItem,
-  isItemDraggable,
   canDropItem,
   onItemDrop,
-  onCellClick,
+  onCellActivate,
+  getCellActions,
   maxVisibleItemsPerCell = 1,
   renderOverflowSummary,
   periodDefinition = dayPeriodDefinition,
   ariaLabel = 'Resource calendar',
   resourceHeader = 'Resource',
   initialDate = new Date(),
+  positionStorageKey,
   initialVisiblePeriodCount = 15,
   periodBuildSize,
   rowHeight = 92,
@@ -52,7 +67,8 @@ export default function ResourceCalendar<TResource, TItemData>({
   dragScrollSpeed = 14,
 }: ResourceCalendarProps<TResource, TItemData>) {
   const [scrollTop, setScrollTop] = useState(0);
-  const [navigationAnchor, setNavigationAnchor] = useState(() => new Date(initialDate));
+  const [initialPosition] = useState(() => loadCalendarPosition(positionStorageKey, initialDate));
+  const [navigationAnchor, setNavigationAnchor] = useState(() => new Date(initialPosition.date));
   const periodGroupSize = normalizePeriodGroupSize(periodDefinition.groupSize);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const visiblePeriodCount = measuredWidth && measuredWidth > RESOURCE_WIDTH
@@ -62,14 +78,15 @@ export default function ResourceCalendar<TResource, TItemData>({
   const effectivePeriodBuildSize = periodBuildSize ?? periodGroupSize;
   const { periods, viewportRef, goToDate } = usePeriodWindow({
     periodDefinition,
-    initialDate,
+    initialDate: initialPosition.date,
+    initialOffset: initialPosition.offset,
+    positionStorageKey,
     initialPeriodCount: calculatedInitialPeriodCount,
     periodBuildSize: effectivePeriodBuildSize,
     periodWidth: PERIOD_WIDTH,
     coveredLeftWidth: RESOURCE_WIDTH,
     onPeriodsBuilt,
     onInitialPeriods,
-    initialLeadingPeriodCount: periodGroupSize,
     ready: measuredWidth !== null,
     onPeriodsReset,
   });
@@ -77,10 +94,18 @@ export default function ResourceCalendar<TResource, TItemData>({
   useEffect(() => {
     if (viewport.initialWidth !== null) setMeasuredWidth(current => current ?? viewport.initialWidth);
   }, [viewport.initialWidth]);
-  const visibleRows = useVirtualizedRows(resources, scrollTop, viewport.height, rowHeight, HEADER_HEIGHT, overscanRows);
+  const visibleRows = useVirtualizedRows(
+    resources,
+    scrollTop,
+    viewport.height,
+    rowHeight,
+    HEADER_HEIGHT,
+    overscanRows,
+  );
 
   const gridColumns = `${RESOURCE_WIDTH}px repeat(${periods.length}, ${PERIOD_WIDTH}px)`;
   const [today] = useState(() => new Date());
+  const interactionCoordinator = useCalendarInteractionCoordinator();
 
   const { drag, beginDrag, overlayRef, suppressClickRef } = useCalendarItemDrag({
     viewportRef,
@@ -92,6 +117,17 @@ export default function ResourceCalendar<TResource, TItemData>({
     dragEdgeSize,
     dragScrollSpeed,
     coveredLeftWidth: RESOURCE_WIDTH,
+    interactionCoordinator,
+  });
+  const { beginResize, resizeByKeyboard, suppressClickRef: suppressResizeClickRef } = useCalendarRangeResize({
+    viewportRef, periods, periodWidth: PERIOD_WIDTH, coveredLeftWidth: RESOURCE_WIDTH, onRangeResize,
+    dragEdgeSize, dragScrollSpeed,
+    interactionCoordinator,
+  });
+  const { beginRangeMove, suppressRangeMoveClickRef } = useCalendarRangeMove({
+    viewportRef, periods, periodWidth: PERIOD_WIDTH, resources, getResourceId, canRangeMove, onRangeMove,
+    dragEdgeSize, dragScrollSpeed, coveredLeftWidth: RESOURCE_WIDTH,
+    interactionCoordinator,
   });
 
   const navigationHandler = navigateDate ?? periodDefinition.navigate;
@@ -128,6 +164,8 @@ export default function ResourceCalendar<TResource, TItemData>({
           firstResourceIndex={visibleRows.first}
           periods={periods}
           data={data}
+          rangeData={rangeData}
+          getItemRange={getItemRange}
           gridColumns={gridColumns}
           rowHeight={rowHeight}
           topSpacerHeight={visibleRows.first * rowHeight}
@@ -139,10 +177,20 @@ export default function ResourceCalendar<TResource, TItemData>({
           selectedResourceId={selectedResourceId}
           onResourceSelect={onResourceSelect}
           buildItem={buildItem}
+          buildRangeItem={buildRangeItem}
+          getItemCapabilities={getItemCapabilities}
+          onItemActivate={onItemActivate}
+          rangeResizeEnabled={!!onRangeResize}
+          beginResize={beginResize}
+          resizeByKeyboard={resizeByKeyboard}
+          suppressResizeClickRef={suppressResizeClickRef}
+          rangeMoveEnabled={!!onRangeMove}
+          beginRangeMove={beginRangeMove}
+          suppressRangeMoveClickRef={suppressRangeMoveClickRef}
           buildOverflowItem={buildOverflowItem}
-          isItemDraggable={isItemDraggable}
           onItemDropEnabled={!!onItemDrop}
-          onCellClick={onCellClick}
+          onCellClick={onCellActivate}
+          getCellActions={getCellActions}
           maxVisibleItemsPerCell={maxVisibleItemsPerCell}
           renderOverflowSummary={renderOverflowSummary}
           beginDrag={beginDrag}
@@ -152,13 +200,15 @@ export default function ResourceCalendar<TResource, TItemData>({
         />
       </div>
       {drag?.dragging && createPortal(
-        <div
-          ref={overlayRef}
-          className="resource-calendar__drag-overlay"
-          style={{ left: 0, top: 0, width: drag.width }}
-          aria-hidden="true"
-        >
-          {buildItem(drag.context)}
+        <div className="resource-calendar__preview-host" style={getCalendarPreviewHostStyle(drag.previewBounds!)}>
+          <div
+            ref={overlayRef}
+            className="resource-calendar__drag-overlay"
+            style={{ left: 0, top: 0, width: drag.width }}
+            aria-hidden="true"
+          >
+            {buildItem(drag.context)}
+          </div>
         </div>,
         document.body,
       )}

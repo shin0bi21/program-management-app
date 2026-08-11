@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/authContext';
 import { useFloatingMenu } from '../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 
-type MenuName = 'youth' | 'programming' | 'outreach' | 'settings';
+type MenuName = 'youth' | 'programming' | 'staff' | 'outreach' | 'settings';
 
 export function useAppNavigation() {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ export function useAppNavigation() {
   const youthRef = useRef<HTMLButtonElement>(null);
   const programmingRef = useRef<HTMLButtonElement>(null);
   const outreachRef = useRef<HTMLButtonElement>(null);
+  const staffRef = useRef<HTMLButtonElement>(null);
   const settingsRef = useRef<HTMLButtonElement>(null);
 
   const youth = useFloatingMenu(
@@ -30,6 +31,7 @@ export function useAppNavigation() {
     { side: 'right', align: 'start' },
     { widthEstimate: 160, heightEstimate: 120 },
   );
+  const staff = useFloatingMenu(staffRef, { side: 'right', align: 'start' }, { widthEstimate: 160, heightEstimate: 100 });
   const settings = useFloatingMenu(
     settingsRef,
     { side: 'right', align: 'start' },
@@ -38,18 +40,20 @@ export function useAppNavigation() {
   const closeYouth = youth.close;
   const closeProgramming = programming.close;
   const closeOutreach = outreach.close;
+  const closeStaff = staff.close;
   const closeSettings = settings.close;
 
   const closeAllMenus = useCallback((except?: MenuName) => {
     if (except !== 'youth') closeYouth();
     if (except !== 'programming') closeProgramming();
     if (except !== 'outreach') closeOutreach();
+    if (except !== 'staff') closeStaff();
     if (except !== 'settings') closeSettings();
-  }, [closeOutreach, closeProgramming, closeSettings, closeYouth]);
+  }, [closeOutreach, closeProgramming, closeSettings, closeStaff, closeYouth]);
 
   const toggleMenu = (menu: MenuName) => {
     closeAllMenus(menu);
-    ({ youth, programming, outreach, settings })[menu].toggle();
+    ({ youth, programming, staff, outreach, settings })[menu].toggle();
   };
 
   const go = (path: string) => {
@@ -64,14 +68,16 @@ export function useAppNavigation() {
 
   const canViewCohorts = grantedPermissions.includes('read:cohorts');
   const canViewSessions = grantedPermissions.includes('read:sessions');
+  const canViewTasks = grantedPermissions.includes('read:tasks');
+  const canViewTimesheets = grantedPermissions.includes('read:timesheets');
 
   return {
     isAuthenticated,
     logout,
     mobileOpen,
     setMobileOpen,
-    refs: { youth: youthRef, programming: programmingRef, outreach: outreachRef, settings: settingsRef },
-    menus: { youth, programming, outreach, settings },
+    refs: { youth: youthRef, programming: programmingRef, staff: staffRef, outreach: outreachRef, settings: settingsRef },
+    menus: { youth, programming, staff, outreach, settings },
     permissions: {
       canManageHomepage: grantedPermissions.includes('read:homepage'),
       canViewYouth: grantedPermissions.includes('read:youth_profiles'),
@@ -81,7 +87,9 @@ export function useAppNavigation() {
       canViewProgramming: canViewCohorts || canViewSessions,
       canManageAccounts: grantedPermissions.includes('read:accounts'),
       canManageProgramming: grantedPermissions.includes('write:programs'),
-      canViewTimesheets: grantedPermissions.includes('read:timesheets'),
+      canViewTasks,
+      canViewTimesheets,
+      canViewStaff: canViewTasks || canViewTimesheets,
     },
     active: {
       settings: location.pathname.startsWith('/settings'),

@@ -17,6 +17,7 @@ The complete client-to-database lifecycle is shown in [`http.mmd`](http.mmd). Au
 | `src/index.ts` | Application composition, global middleware, route mounting, health check, and process lifecycle |
 | `src/routes/` | Endpoint definitions and ordered middleware chains |
 | `src/middleware/` | Authentication, authorization, rate limiting, validation, request IDs, and error handling |
+| `src/policies/` | Domain authorization scope predicates and assertions applied by services |
 | `src/controllers/` | Thin HTTP adapters that extract input, call services, and send successful responses |
 | `src/services/` | Business rules, transactions, SQL queries, audit writes, and external-operation orchestration |
 | `src/validation/` | Zod schemas for request parameters, queries, and bodies |
@@ -29,6 +30,7 @@ The complete client-to-database lifecycle is shown in [`http.mmd`](http.mmd). Au
 ```text
 routes → middleware + controllers → services → db
                                   ↘ utils/types ↙
+                                  ↘ policies ↙
 ```
 
 - Controllers do not contain business logic or SQL.
@@ -61,6 +63,8 @@ See [`database.md`](database.md) for migration, transaction, and audit details.
 ## Security boundaries
 
 - Routes authorize with permissions, not role-name checks.
+- Route permissions define capabilities (`read:*` / `write:*`). Domain policies define which records the actor may read or mutate, including self/admin, assignment, program, cohort, and shared-resource scope.
+- Apply policy predicates inside authoritative reads and locked mutation lookups. Do not scatter equivalent role or ownership checks through services, and never rely on frontend restrictions for authorization.
 - Access and refresh tokens use separate secrets and payload types.
 - Required environment variables are loaded with `requireEnv()`.
 - User-controlled values interpolated into email HTML are escaped.

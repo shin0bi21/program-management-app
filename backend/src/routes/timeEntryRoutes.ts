@@ -1,9 +1,22 @@
 import { Router } from 'express';
-import { handleCreateTimeEntry, handleDeleteTimeEntry, handleGetTimeEntries, handleGetTimeEntryCohorts, handleUpdateTimeEntry } from '../controllers/timeEntryController';
+import {
+  handleCreateTimeEntry,
+  handleDeleteTimeEntry,
+  handleGetTimeEntries,
+  handleGetTimeEntryCohorts,
+  handleUpdateTimeEntry,
+  handleUpdateTimeEntryPlacement,
+} from '../controllers/timeEntryController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { setTimeEntrySchema, timeEntryCohortQuerySchema, timeEntryParamsSchema, timeEntryQuerySchema } from '../validation/timeEntrySchemas';
+import {
+  setTimeEntrySchema,
+  timeEntryCohortQuerySchema,
+  timeEntryParamsSchema,
+  timeEntryQuerySchema,
+  updateTimeEntryPlacementSchema,
+} from '../validation/timeEntrySchemas';
 
 const router = Router();
 
@@ -11,6 +24,7 @@ router.get('/', authenticateToken, requirePermission('read:timesheets'), general
 router.get('/cohorts', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryCohortQuerySchema), asyncHandler(handleGetTimeEntryCohorts));
 router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleCreateTimeEntry));
 router.put('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(setTimeEntrySchema), asyncHandler(handleUpdateTimeEntry));
+router.patch('/:id/placement', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(updateTimeEntryPlacementSchema), asyncHandler(handleUpdateTimeEntryPlacement));
 router.delete('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), asyncHandler(handleDeleteTimeEntry));
 
 export default router;

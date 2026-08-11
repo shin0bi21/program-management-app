@@ -15,6 +15,8 @@ interface TimesheetOverviewCardProps {
   details?: Array<[string, string]>;
 }
 
+const compactDetailLabels = new Set(['Current Pay Period', 'Cycle']);
+
 export default function TimesheetOverviewCard({
   title,
   total,
@@ -43,14 +45,17 @@ export default function TimesheetOverviewCard({
         <article className="dashboard-card timesheet-overview-card timesheet-overview-card--details">
           <h2 className="timesheet-overview-card__accessible-title">{title}</h2>
           {hasStaff ? (
-            <>
-              <div className="timesheet-overview-card__action">{breakdownAction}</div>
+            <div className="dashboard-card__compact-layout timesheet-overview-card__layout">
               <dl className="timesheet-overview-card__details">
                 {details.map(([label, value]) => (
-                  <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd className={compactDetailLabels.has(label) ? 'timesheet-overview-card__text-value' : undefined}>{value}</dd>
+                  </div>
                 ))}
               </dl>
-            </>
+              <div className="dashboard-card__compact-action timesheet-overview-card__action">{breakdownAction}</div>
+            </div>
           ) : <p className="dashboard-card__empty">{emptyMessage}</p>}
         </article>
       ) : (
@@ -74,10 +79,6 @@ export default function TimesheetOverviewCard({
         title={modalTitle}
         maxWidth="440px"
       >
-        <div className="timesheet-overview-card__modal-metric">
-          <strong>{total.toFixed(2)}</strong>
-          <span>hrs</span>
-        </div>
         <p className="timesheet-overview-card__modal-subtitle">{modalSubtitle}</p>
         {breakdown.length ? (
           <>

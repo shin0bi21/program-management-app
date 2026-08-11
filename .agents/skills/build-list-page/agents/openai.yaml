@@ -1,4 +1,0 @@
-interface:
-  display_name: "Build List Page"
-  short_description: "Build consistent responsive list and table pages"
-  default_prompt: "Use $build-list-page to build or update this repository’s list page consistently."

@@ -1,0 +1,20 @@
+.task-item__overdue {
+  color: var(--color-danger);
+  font-size: 1rem;
+}
+
+.task-item__detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-item__overdue-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: .68rem;
+  font-weight: 700;
+}

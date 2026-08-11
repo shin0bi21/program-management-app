@@ -1,12 +1,21 @@
 import { memo, type MutableRefObject, type ReactNode } from 'react';
 import ResourceCalendarRow from './ResourceCalendarRow';
 import type { CalendarPointerDrag } from '../hooks/useCalendarItemDrag';
+import type { CalendarRangeResize } from '../hooks/useCalendarRangeResize';
+import type { CalendarRangeMove } from '../hooks/useCalendarRangeMove';
 import type {
   BuildItemContext,
   CalendarCellContext,
+  CalendarCellAction,
   CalendarPeriod,
   CellOverflowContext,
+  BuildRangeItemContext,
+  ItemRange,
+  ItemCapabilityContext,
+  CalendarItemCapabilities,
+  ItemActivateContext,
   OverflowItemActions,
+  ResourceRangeData,
   ResourcePeriodData,
 } from '../types';
 
@@ -15,6 +24,8 @@ interface ResourceCalendarGridProps<TResource, TItemData> {
   firstResourceIndex: number;
   periods: readonly CalendarPeriod[];
   data: ResourcePeriodData<TItemData>;
+  rangeData?: ResourceRangeData<TItemData>;
+  getItemRange?: (item: TItemData) => ItemRange;
   gridColumns: string;
   rowHeight: number;
   topSpacerHeight: number;
@@ -26,10 +37,20 @@ interface ResourceCalendarGridProps<TResource, TItemData> {
   selectedResourceId?: string | null;
   onResourceSelect?: (resource: TResource) => void;
   buildItem: (context: BuildItemContext<TResource, TItemData>) => ReactNode;
+  buildRangeItem?: (context: BuildRangeItemContext<TResource, TItemData>) => ReactNode;
+  getItemCapabilities?: (context: ItemCapabilityContext<TResource, TItemData>) => CalendarItemCapabilities;
+  onItemActivate?: (context: ItemActivateContext<TResource, TItemData>) => void;
+  rangeResizeEnabled: boolean;
+  beginResize: (resize: CalendarRangeResize<TResource, TItemData>) => void;
+  resizeByKeyboard: (resize: Omit<CalendarRangeResize<TResource, TItemData>, 'pointerId' | 'startX' | 'sourceElement' | 'rangeElement' | 'nextIndex' | 'resizing'>, direction: -1 | 1) => void;
+  suppressResizeClickRef: MutableRefObject<boolean>;
+  rangeMoveEnabled: boolean;
+  beginRangeMove: (move: CalendarRangeMove<TResource, TItemData>) => void;
+  suppressRangeMoveClickRef: MutableRefObject<boolean>;
   buildOverflowItem?: (context: BuildItemContext<TResource, TItemData>, actions: OverflowItemActions) => ReactNode;
-  isItemDraggable?: (context: BuildItemContext<TResource, TItemData>) => boolean;
   onItemDropEnabled: boolean;
   onCellClick?: (context: CalendarCellContext<TResource, TItemData>) => void;
+  getCellActions?: (context: CalendarCellContext<TResource, TItemData>) => readonly CalendarCellAction[];
   maxVisibleItemsPerCell: number;
   renderOverflowSummary?: (context: CellOverflowContext<TResource, TItemData>) => ReactNode;
   beginDrag: (drag: CalendarPointerDrag<TResource, TItemData>) => void;
@@ -45,6 +66,8 @@ function ResourceCalendarGrid<TResource, TItemData>({
   firstResourceIndex,
   periods,
   data,
+  rangeData,
+  getItemRange,
   gridColumns,
   rowHeight,
   topSpacerHeight,
@@ -56,10 +79,20 @@ function ResourceCalendarGrid<TResource, TItemData>({
   selectedResourceId,
   onResourceSelect,
   buildItem,
+  buildRangeItem,
+  getItemCapabilities,
+  onItemActivate,
+  rangeResizeEnabled,
+  beginResize,
+  resizeByKeyboard,
+  suppressResizeClickRef,
+  rangeMoveEnabled,
+  beginRangeMove,
+  suppressRangeMoveClickRef,
   buildOverflowItem,
-  isItemDraggable,
   onItemDropEnabled,
   onCellClick,
+  getCellActions,
   maxVisibleItemsPerCell,
   renderOverflowSummary,
   beginDrag,
@@ -76,6 +109,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
             key={period.key}
             className={`resource-calendar__period${today >= period.start && today < period.end ? ' resource-calendar__period--today' : ''}`}
             data-edge={index === 0 ? 'left' : index === periods.length - 1 ? 'right' : undefined}
+            data-period-key={period.key}
           >
             <span>{formatPeriodLabel(period)}</span>
           </div>
@@ -89,6 +123,8 @@ function ResourceCalendarGrid<TResource, TItemData>({
           resource={resource}
           resourceIndex={firstResourceIndex + visibleIndex}
           resourceData={data[getResourceId(resource)] ?? EMPTY_RESOURCE_DATA as Record<string, readonly TItemData[]>}
+          rangeItems={rangeData?.[getResourceId(resource)] ?? []}
+          getItemRange={getItemRange}
           periods={periods}
           gridColumns={gridColumns}
           rowHeight={rowHeight}
@@ -98,10 +134,20 @@ function ResourceCalendarGrid<TResource, TItemData>({
           selected={selectedResourceId === getResourceId(resource)}
           onResourceSelect={onResourceSelect}
           buildItem={buildItem}
+          buildRangeItem={buildRangeItem}
+          getItemCapabilities={getItemCapabilities}
+          onItemActivate={onItemActivate}
+          rangeResizeEnabled={rangeResizeEnabled}
+          beginResize={beginResize}
+          resizeByKeyboard={resizeByKeyboard}
+          suppressResizeClickRef={suppressResizeClickRef}
+          rangeMoveEnabled={rangeMoveEnabled}
+          beginRangeMove={beginRangeMove}
+          suppressRangeMoveClickRef={suppressRangeMoveClickRef}
           buildOverflowItem={buildOverflowItem}
-          isItemDraggable={isItemDraggable}
           onItemDropEnabled={onItemDropEnabled}
           onCellClick={onCellClick}
+          getCellActions={getCellActions}
           maxVisibleItemsPerCell={maxVisibleItemsPerCell}
           renderOverflowSummary={renderOverflowSummary}
           beginDrag={beginDrag}

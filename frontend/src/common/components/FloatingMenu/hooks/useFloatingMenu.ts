@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, type RefObject } from 'react';
 import {
   calculateFloatingPosition,
+  calculateFloatingPositionFromPoint,
   type Placement,
   type FloatingPosition,
   type PlacementOptions,
@@ -21,6 +22,7 @@ export interface UseFloatingMenuOptions extends PlacementOptions {
 export interface UseFloatingMenuReturn {
   isOpen: boolean;
   open: () => void;
+  openAtPoint: (x: number, y: number) => void;
   close: () => void;
   toggle: () => void;
   position: FloatingPosition | null;
@@ -44,20 +46,28 @@ export function useFloatingMenu(
 
   // isOpen as a ref so toggle never captures a stale snapshot
   const isOpenRef = useRef(false);
+  const anchorPointRef = useRef<{ x: number; y: number } | null>(null);
   const isOpen = position !== null;
   isOpenRef.current = isOpen;
 
   const close = useCallback(() => {
+    anchorPointRef.current = null;
     setPosition(null);
   }, []);
   useViewportDismissal(isOpen, close);
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
+    anchorPointRef.current = null;
     setPosition(
       calculateFloatingPosition(triggerRef.current, placementRef.current, optionsRef.current),
     );
   }, [triggerRef]);
+
+  const openAtPoint = useCallback((x: number, y: number) => {
+    anchorPointRef.current = { x, y };
+    setPosition(calculateFloatingPositionFromPoint(x, y, placementRef.current, optionsRef.current));
+  }, []);
 
   const toggle = useCallback(() => {
     if (isOpenRef.current) close();
@@ -75,11 +85,9 @@ export function useFloatingMenu(
       widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
       heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
     };
-    const measuredPosition = calculateFloatingPosition(
-      trigger,
-      placementRef.current,
-      measuredOptions,
-    );
+    const measuredPosition = anchorPointRef.current
+      ? calculateFloatingPositionFromPoint(anchorPointRef.current.x, anchorPointRef.current.y, placementRef.current, measuredOptions)
+      : calculateFloatingPosition(trigger, placementRef.current, measuredOptions);
 
     setPosition(current => current
       && current.top === measuredPosition.top
@@ -141,5 +149,5 @@ export function useFloatingMenu(
     };
   }, [isOpen, triggerRef]);
 
-  return { isOpen, open, close, toggle, position, menuRef };
+  return { isOpen, open, openAtPoint, close, toggle, position, menuRef };
 }

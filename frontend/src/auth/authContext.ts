@@ -23,7 +23,9 @@ export type Permission =
   | 'read:settings'
   | 'write:settings'
   | 'read:timesheets'
-  | 'write:timesheets';
+  | 'write:timesheets'
+  | 'read:tasks'
+  | 'write:tasks';
 
 export interface AuthContextValue {
   isAuthenticated: boolean;

@@ -8,8 +8,10 @@ const item = {
   programName: 'Soft Skills',
   cycleId: 'cycle-1',
   cycleName: 'Summer 2026',
-  task: 'program_delivery' as const,
-  label: 'Program Delivery',
+  category: 'program_delivery' as const,
+  categoryLabel: 'Program Delivery',
+  taskId: null,
+  taskTitle: null,
   hours: 2,
   note: 'Workshop delivery',
 };
@@ -33,6 +35,17 @@ describe('TimeItem', () => {
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.scroll(container);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('dismisses hover details immediately on pointer down', () => {
+    render(<TimeItem item={item} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    const trigger = screen.getByRole('button', { name: /program delivery, 2 hours/i });
+    fireEvent.mouseEnter(trigger);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.pointerDown(trigger);
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });

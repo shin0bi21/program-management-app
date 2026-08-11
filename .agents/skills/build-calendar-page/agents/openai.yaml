@@ -1,4 +1,0 @@
-interface:
-  display_name: "Build Calendar Page"
-  short_description: "Build reliable responsive resource calendar pages"
-  default_prompt: "Use $build-calendar-page to build or update this repository’s calendar page consistently."
