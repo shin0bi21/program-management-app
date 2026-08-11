@@ -137,7 +137,8 @@ export default function ExpressionsOfInterest() {
   };
 
   const columns: TableColumn<ExpressionOfInterest>[] = [
-    { key: 'youthName', sortKey: 'name', header: 'Youth Name', render: submissionYouthName },
+    { key: 'firstName', sortKey: 'name', header: 'First Name', render: item => item.youthFirstName },
+    { key: 'lastName', header: 'Last Name', render: item => item.youthLastName },
     { key: 'age', sortKey: 'age', header: 'Age', width: 100, render: item => item.age },
     { key: 'school', sortKey: 'school', header: 'School', render: item => item.school },
     { key: 'program', sortKey: 'program', header: 'Program', render: item => item.suggestedProgramName ?? '—' },

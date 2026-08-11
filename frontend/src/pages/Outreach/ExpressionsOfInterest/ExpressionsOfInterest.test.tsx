@@ -50,13 +50,17 @@ describe('ExpressionsOfInterest', () => {
 
   it('shows contact and notes when a row is selected without View buttons', async () => {
     renderPage();
-    const youthName = await screen.findByText('Avery Interest');
+    const youthRow = await screen.findByRole('row', { name: /Avery Interest/ });
     const table = screen.getByRole('table', { name: 'Expressions of interest' });
 
     expect(screen.queryByRole('button', { name: 'View' })).not.toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /First Name/ })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: 'Avery' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: 'Interest' })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: /Filled Out By/ })).toBeInTheDocument();
     expect(within(table).getByText('Parent')).toBeInTheDocument();
-    fireEvent.click(youthName.closest('tr')!);
+    fireEvent.click(youthRow);
     expect(screen.getByText('416-555-0100')).toBeInTheDocument();
     expect(screen.getByText('Follow up next week')).toBeInTheDocument();
   });
@@ -64,7 +68,7 @@ describe('ExpressionsOfInterest', () => {
   it('renders the inferred program without a create action', async () => {
     renderPage();
 
-    expect(await screen.findByText('Avery Interest')).toBeInTheDocument();
+    expect(await screen.findByRole('row', { name: /Avery Interest/ })).toBeInTheDocument();
     expect(screen.getByText('Test School')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
@@ -72,7 +76,7 @@ describe('ExpressionsOfInterest', () => {
 
   it('stays on expressions of interest and marks the row converted after conversion', async () => {
     renderPage();
-    await screen.findByText('Avery Interest');
+    await screen.findByRole('row', { name: /Avery Interest/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Interest' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Convert to Lead' }));
@@ -95,7 +99,7 @@ describe('ExpressionsOfInterest', () => {
       .mockResolvedValueOnce([{ ...baseSubmission, status: 'converted' }]);
     convertExpression.mockRejectedValueOnce(new Error('This expression of interest has already been converted'));
     renderPage();
-    await screen.findByText('Avery Interest');
+    await screen.findByRole('row', { name: /Avery Interest/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Interest' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Convert to Lead' }));
@@ -107,7 +111,7 @@ describe('ExpressionsOfInterest', () => {
 
   it('requests expressions filtered by inferred program', async () => {
     renderPage();
-    await screen.findByText('Avery Interest');
+    await screen.findByRole('row', { name: /Avery Interest/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     const programFilter = screen.getByRole('menuitem', { name: /Program/ });
