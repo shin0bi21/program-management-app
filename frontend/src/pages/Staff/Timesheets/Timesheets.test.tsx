@@ -16,6 +16,7 @@ import queryClient from '../../../query/queryClient';
 import Timesheets from './Timesheets';
 import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
 import { getTasks } from '../../../common/features/tasks/api/tasks.api';
+import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
@@ -50,6 +51,7 @@ vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
 }));
 
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const auth: AuthContextValue = {
   isAuthenticated: true,
@@ -80,6 +82,9 @@ describe('Timesheets', () => {
     preferenceHook.loading = false;
     preferenceHook.error = null;
     preferenceHook.save.mockReset();
+    vi.mocked(getUser).mockReturnValue({
+      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com',
+    });
     queryClient.clear();
     vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} });
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
@@ -336,8 +341,8 @@ describe('Timesheets', () => {
     auth.role = 'admin';
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [
-        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', name: 'Alex Morgan', role: 'staff', writable: true },
+        { id: 'staff-1', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {
@@ -361,7 +366,8 @@ describe('Timesheets', () => {
 
     expect((await screen.findAllByText('Alex Morgan')).length).toBeGreaterThan(0);
     const periodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
-    expect(periodCard).toHaveTextContent('Select a staff member to view their time entry overview.');
+    await waitFor(() => expect(periodCard).toHaveTextContent('2.00'));
+    expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(await screen.findByRole('button', { name: /Meeting, 7 hours/ }));
     await waitFor(() => expect(periodCard).toHaveTextContent('7.00'));
     expect(periodCard).toHaveTextContent('Current Pay Period');
