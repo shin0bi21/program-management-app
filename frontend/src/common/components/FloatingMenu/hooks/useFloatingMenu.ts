@@ -17,6 +17,8 @@ export interface UseFloatingMenuOptions extends PlacementOptions {
    * Example: 'button'
    */
   returnFocusSelector?: string;
+  /** Keep the menu open through viewport changes caused by its own interaction. */
+  dismissOnViewportChange?: boolean;
 }
 
 export interface UseFloatingMenuReturn {
@@ -54,7 +56,7 @@ export function useFloatingMenu(
     anchorPointRef.current = null;
     setPosition(null);
   }, []);
-  useViewportDismissal(isOpen, close);
+  useViewportDismissal(isOpen && options.dismissOnViewportChange !== false, close);
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
