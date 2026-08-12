@@ -90,7 +90,7 @@ describe('Programming settings', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Delete Cycle' }));
 
     expect(screen.getByRole('heading', { name: 'Delete Cycle' })).toBeInTheDocument();
-    expect(screen.getByText(/Cycles assigned to cohorts, tasks, or time entries cannot be deleted/)).toBeInTheDocument();
+    expect(screen.getByText(/Cycles assigned to cohorts or time entries cannot be deleted/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(programmingApi.deleteProgramCycle).toHaveBeenCalledWith('cycle-1'));

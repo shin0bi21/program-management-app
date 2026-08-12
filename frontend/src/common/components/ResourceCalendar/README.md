@@ -35,6 +35,7 @@
 ## Item geometry
 
 - Calendar items render in one absolutely positioned layer owned by each resource row. Period cells remain responsible for backgrounds, focus, empty-cell activation, and drop coordinates.
+- Keep virtualized resource rows fixed-height. Point-item slots and connected groups of overlapping ranged items use normal density for one to three items, compact density for four or five, and dense one-line text for six or seven. Each ranged item keeps one height and lane across its complete span; the density of its connected overlap group is based on that group's peak simultaneous lane count. Disconnected groups in the same resource row choose density independently. Point-item overflow begins beyond seven or the consumer's lower `maxVisibleItemsPerCell`. Density may reduce padding, gaps, handles, and font size, but must preserve each item's accessible label and must not resize or spill into a neighboring resource row while scrolling.
 - Item slots and cells expose the same resource and period coordinates so drag targeting works over both empty and occupied periods.
 - The item layer shares the row's complete scrollable coordinate space. Native viewport scrolling moves cells and items together; consumers must not reposition items from scroll handlers.
 - Keep item geometry independent of mounted cell DOM. Range items derive their start and span from period indexes, clip them to the rendered period window, and use the same row layer.

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import FloatingSelect from '../../../common/components/FloatingSelect/FloatingSelect';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
@@ -12,9 +11,10 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods';
-import { TASK_CATEGORY_LABELS, TASK_STATUS_LABELS, type Task, type TaskStatus } from '../../../common/features/tasks/types';
+import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
 import TaskItem from './components/TaskItem/TaskItem';
+import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
 import TaskHoursLoggedCard from './components/TaskHoursLoggedCard/TaskHoursLoggedCard';
 import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
@@ -25,30 +25,22 @@ import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
 
-const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
-  { value: 'todo', label: 'To do' }, { value: 'in_progress', label: 'In progress' },
-  { value: 'completed', label: 'Completed' }, { value: 'cancelled', label: 'Cancelled' },
-];
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 
-function getStatusOptions(task: Task) {
-  if (task.status !== 'in_progress') return STATUS_OPTIONS;
-  return STATUS_OPTIONS.filter(option => option.value !== 'cancelled');
+function canCancelTask(task: Task) {
+  return task.status === 'todo' || task.status === 'in_progress';
 }
 
-function TaskStatusCell({ task, canWrite, onChange }: {
-  task: Task;
-  canWrite: boolean;
-  onChange: (task: Task, status: TaskStatus) => void;
-}) {
-  if (!canWrite || !task.writable) return TASK_STATUS_LABELS[task.status];
-  return <FloatingSelect
-    id={`task-status-${task.id}`}
-    value={task.status}
-    options={getStatusOptions(task)}
-    onChange={value => onChange(task, value as TaskStatus)}
-    ariaLabel={`Status for ${task.title}`}
-  />;
+function canCompleteTask(task: Task) {
+  return task.status === 'in_progress';
+}
+
+function canReopenTask(task: Task) {
+  return task.status === 'completed' || task.status === 'cancelled';
+}
+
+function reopenedStatus(task: Task): 'todo' | 'in_progress' {
+  return task.status === 'completed' || task.hoursLogged > 0 ? 'in_progress' : 'todo';
 }
 
 export default function Tasks() {
@@ -70,10 +62,9 @@ export default function Tasks() {
   const taskFilters = useMemo(() => ({
     search: controls.view === 'list' ? controls.search : '',
     programIds: controls.programIds,
-    cycleIds: controls.cycleIds,
     categories: controls.categories,
     statuses: controls.statusFilters,
-  }), [controls.categories, controls.cycleIds, controls.programIds, controls.search, controls.statusFilters, controls.view]);
+  }), [controls.categories, controls.programIds, controls.search, controls.statusFilters, controls.view]);
   const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
     tasksQuery.data ?? [], resources, taskFilters, selectedResourceId, controls.sorting,
   );
@@ -102,9 +93,8 @@ export default function Tasks() {
     { key: 'firstName', sortKey: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
     { key: 'lastName', sortKey: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
     { key: 'title', sortKey: 'title', header: 'Task', render: task => task.title },
-    { key: 'category', sortKey: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
     { key: 'program', sortKey: 'program', header: 'Program', width: 160, render: task => task.programName ?? 'General' },
-    { key: 'cycle', sortKey: 'cycle', header: 'Cycle', width: 160, render: task => task.cycleName },
+    { key: 'category', sortKey: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
     { key: 'startDate', sortKey: 'startDate', header: 'Start', width: 120, render: task => task.startDate },
     { key: 'dueDate', sortKey: 'dueDate', header: 'Due', width: 120, render: task => task.dueDate },
     {
@@ -112,7 +102,7 @@ export default function Tasks() {
       sortKey: 'status',
       header: 'Status',
       width: 150,
-      render: task => <TaskStatusCell task={task} canWrite={canWrite} onChange={(item, status) => void mutations.setStatus(item, status)} />,
+      render: task => <TaskStatusBadge status={task.status} />,
     },
     ...(canWrite ? [{
       key: 'actions',
@@ -123,6 +113,9 @@ export default function Tasks() {
       render: (task: Task) => task.writable ? <ActionsMenu
         ariaLabel={`Actions for ${task.title}`}
         items={[
+          ...(canCompleteTask(task) ? [{ id: 'complete', label: 'Set Completed', onClick: () => void mutations.setStatus(task, 'completed') }] : []),
+          ...(canCancelTask(task) ? [{ id: 'cancel', label: 'Set Cancelled', onClick: () => void mutations.setStatus(task, 'cancelled') }] : []),
+          ...(canReopenTask(task) ? [{ id: 'reopen', label: 'Reopen task', onClick: () => void mutations.setStatus(task, reopenedStatus(task)) }] : []),
           { id: 'edit', label: 'Edit', onClick: () => setModalTarget(task) },
           { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => mutations.requestDelete(task) },
         ]}
@@ -134,9 +127,9 @@ export default function Tasks() {
     || controls.error
     || (optionsQuery.error ? 'Unable to load task form options.' : '')
     || (tasksQuery.error ? 'Unable to load tasks.' : '');
-  const hasFilters = controls.programIds.length > 0 || controls.cycleIds.length > 0
+  const hasFilters = controls.programIds.length > 0
     || controls.categories.length > 0 || controls.statusFilters.length > 0;
-  const logHoursAction = canWrite && selectedTask?.writable && selectedTask.status !== 'cancelled'
+  const logHoursAction = canWrite && selectedTask?.writable && (selectedTask.status === 'todo' || selectedTask.status === 'in_progress')
     ? () => setLogHoursTask(selectedTask)
     : undefined;
 
@@ -161,7 +154,7 @@ export default function Tasks() {
         />}
         filters={<FilterCard
           categories={controls.filterCategories}
-          values={{ program: controls.programIds, cycle: controls.cycleIds, category: controls.categories, status: controls.statusFilters }}
+          values={{ program: controls.programIds, category: controls.categories, status: controls.statusFilters }}
           onApply={controls.applyFilter}
           onClearAll={controls.clearFilters}
         />}
@@ -205,7 +198,11 @@ export default function Tasks() {
           buildItem={() => null}
           buildRangeItem={({ data: task }) => <TaskItem
             task={task}
+            selected={task.id === selectedTaskId}
             onActivate={() => selectTask(task)}
+            onComplete={canWrite && task.writable && canCompleteTask(task) ? () => void mutations.setStatus(task, 'completed') : undefined}
+            onCancel={canWrite && task.writable && canCancelTask(task) ? () => void mutations.setStatus(task, 'cancelled') : undefined}
+            onReopen={canWrite && task.writable && canReopenTask(task) ? () => void mutations.setStatus(task, reopenedStatus(task)) : undefined}
             onEdit={canWrite && task.writable ? () => setModalTarget(task) : undefined}
             onDelete={canWrite && task.writable ? () => mutations.requestDelete(task) : undefined}
           />}
@@ -214,7 +211,10 @@ export default function Tasks() {
             setModalTarget({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
           } : undefined}
           onRangeResize={canWrite
-            ? ({ item: task, nextRange }) => mutations.setTaskRange(task, nextRange, 'resize')
+            ? ({ item: task, nextRange }) => {
+              selectTask(task);
+              return mutations.setTaskRange(task, nextRange, 'resize');
+            }
             : undefined}
           canRangeMove={({ item: task, resource, destinationResource }) => (
             task.writable
@@ -222,9 +222,11 @@ export default function Tasks() {
             && canMoveTaskToResource(task, resource.id, destinationResource.id)
           )}
           onRangeMove={canWrite
-            ? ({ item: task, nextRange, destinationResource }) => (
-              mutations.setTaskRange(task, nextRange, 'move', destinationResource.id)
-            )
+            ? ({ item: task, nextRange, destinationResource }) => {
+              setSelectedResourceId(destinationResource.id);
+              setSelectedTaskId(task.id);
+              return mutations.setTaskRange(task, nextRange, 'move', destinationResource.id);
+            }
             : undefined}
           ariaLabel="Task calendar"
           positionStorageKey={TASK_CALENDAR_POSITION_KEY}
@@ -241,7 +243,6 @@ export default function Tasks() {
       resources={resources}
       writableResources={writableResources}
       programs={optionsQuery.data?.programs ?? []}
-      cycles={optionsQuery.data?.cycles ?? []}
       onTaskSaved={saveTask}
       onCloseTask={() => setModalTarget(null)}
       onLogHours={mutations.logHours}

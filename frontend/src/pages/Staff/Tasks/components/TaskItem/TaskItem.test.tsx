@@ -5,7 +5,7 @@ import type { Task } from '../../../../../common/features/tasks/types';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
+  programId: null, programName: null, status: 'todo',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
@@ -13,7 +13,7 @@ const task: Task = {
 
 describe('TaskItem', () => {
   it('shows task details through the shared calendar-item hover behavior', async () => {
-    render(<TaskItem task={{ ...task, programName: 'Soft Skills', cycleName: 'Summer 2026', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
     expect(item).toHaveTextContent('Prepare workshop · Planning / Prep');
@@ -26,29 +26,41 @@ describe('TaskItem', () => {
     expect(tooltip).toHaveTextContent('To do');
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
-    expect(tooltip).toHaveTextContent('Summer 2026');
     expect(tooltip).toHaveTextContent('Logged');
     expect(tooltip).toHaveTextContent('1.5 hours');
     expect(tooltip).toHaveTextContent('Prepare activities.');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Cycle', 'Category', 'Start', 'End', 'Logged', 'Notes',
+      'Program', 'Category', 'Start', 'End', 'Logged', 'Notes',
     ]);
     expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('calendar-item-details__section-start');
   });
 
   it('opens the floating action menu before invoking edit or delete', () => {
     const onActivate = vi.fn();
+    const onComplete = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
-    render(<div onClick={onActivate}><TaskItem task={task} onEdit={onEdit} onDelete={onDelete} /></div>);
+    render(<div onClick={onActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, 2026-08-10 to 2026-08-12. Open actions' }));
     expect(onActivate).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledOnce();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('invokes mark complete from the task action menu', () => {
+    const onComplete = vi.fn();
+    render(<TaskItem task={task} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Set Completed' }));
+
+    expect(onComplete).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('notifies the page when the task item is activated', () => {
@@ -58,6 +70,15 @@ describe('TaskItem', () => {
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop/ }));
 
     expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('keeps selected task styling independent of the transient action menu', () => {
+    render(<TaskItem task={task} selected onComplete={vi.fn()} />);
+
+    const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
+    expect(item).toHaveClass('task-item--selected');
+    fireEvent.click(item);
+    expect(item).toHaveClass('task-item--selected', 'calendar-item--menu-open');
   });
 
   it('shows an overdue status at the end of an active task item', async () => {
@@ -85,6 +106,9 @@ describe('TaskItem', () => {
     }} />);
 
     expect(screen.queryByLabelText('Overdue')).not.toBeInTheDocument();
+    const completed = screen.getByLabelText('Completed');
+    expect(completed).toHaveTextContent('✓');
+    expect(completed).toHaveAttribute('title', 'Completed');
     fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Completed');
@@ -100,7 +124,7 @@ describe('TaskItem', () => {
     render(<TaskItem task={{ ...task, status }} />);
     fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
 
-    const badge = await screen.findByText(label, { selector: '.task-item__status-badge' });
-    expect(badge).toHaveClass(`task-item__status-badge--${status}`);
+    const badge = await screen.findByText(label, { selector: '.task-status-badge' });
+    expect(badge).toHaveClass(`task-status-badge--${status}`);
   });
 });

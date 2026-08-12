@@ -46,10 +46,6 @@ export const timeEntryQuerySchema = z.object({
   }),
 });
 
-export const timeEntryCohortQuerySchema = z.object({
-  query: z.object({ programId: z.string().uuid('Invalid program ID') }),
-});
-
 export const timeEntrySessionQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
@@ -78,13 +74,13 @@ export const setTimeEntrySchema = z.object({
       ...datedTimeEntryFields,
       source: z.literal('other'),
       programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
-      cycleId: z.string().uuid('Invalid cycle ID'),
       category: timeEntryCategorySchema.exclude(['program_delivery']),
     }),
     z.object({
       ...datedTimeEntryFields,
       source: z.literal('task'),
       taskId: z.string().uuid('Invalid task ID'),
+      completeTask: z.boolean().optional().default(false),
     }),
     z.object({
       ...sharedTimeEntryFields,

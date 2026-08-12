@@ -45,6 +45,7 @@ export default function Cohorts() {
   const cohortsLoading = cohortTable.loading;
   const error = cohortTable.error;
   const refreshCohorts = cohortTable.refetch;
+  const removeCohort = cohortTable.remove;
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
@@ -162,7 +163,7 @@ export default function Cohorts() {
                           successMessage: 'Cohort deleted',
                           onConfirm: async () => {
                             await deleteCohort(cohort.id);
-                            await refreshCohorts();
+                            removeCohort(cohort.id);
                           },
                         }),
                     },
@@ -173,7 +174,7 @@ export default function Cohorts() {
           ]
         : []),
     ],
-    [canWriteCohorts, refreshCohorts],
+    [canWriteCohorts, removeCohort],
   );
 
   const selectProgram = (programId: string) => {
@@ -317,7 +318,7 @@ export default function Cohorts() {
           <GenerateSessionsModal
             cohort={generationTarget}
             onClose={() => setGenerationTarget(null)}
-            onSuccess={refreshCohorts}
+            onSuccess={() => undefined}
           />
         </div>
       </main>

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskOptions, getTasks, updateTaskPlacement } from '../../../common/features/tasks/api/tasks.api';
+import { getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
@@ -35,7 +35,7 @@ vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
+  programId: null, programName: null, status: 'todo',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
   assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
@@ -54,7 +54,7 @@ describe('Tasks', () => {
     vi.mocked(getTasks).mockResolvedValue([task]);
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [], cycles: [{ id: 'cycle-1', name: 'Summer 2026', programId: 'program-1', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }],
+      programs: [],
     });
     vi.mocked(createTimeEntry).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
@@ -62,6 +62,7 @@ describe('Tasks', () => {
       category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
     });
     vi.mocked(updateTaskPlacement).mockResolvedValue(task);
+    vi.mocked(updateTaskStatus).mockResolvedValue({ ...task, status: 'completed', completedAt: '2026-08-11T12:00:00.000Z' });
   });
 
   it('opens contextual task time from the selected task dashboard', async () => {
@@ -93,6 +94,33 @@ describe('Tasks', () => {
     expect(dashboard).not.toBeNull();
     expect(dashboard?.querySelector('.dashboard-card-group')).toBeNull();
     expect(Array.from(dashboard?.children ?? []).filter(child => child.matches('.dashboard-card'))).toHaveLength(2);
+  });
+
+  it('shows program before category in the task table', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
+    expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
+    expect(screen.getByRole('cell', { name: 'To do' }).querySelector('.task-status-badge--todo')).not.toBeNull();
+  });
+
+  it('shows completion again after a completed task is reopened', async () => {
+    const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-11T12:00:00.000Z', hoursLogged: 1 };
+    vi.mocked(getTasks).mockResolvedValue([completedTask]);
+    vi.mocked(updateTaskStatus).mockResolvedValue({ ...completedTask, status: 'in_progress', completedAt: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    fireEvent.click(await screen.findByText('Prepare workshop'));
+    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
+    await waitFor(() => expect(screen.getByRole('cell', { name: 'In progress' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Prepare workshop' }));
+    expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Set Cancelled' })).toBeInTheDocument();
   });
 
   it('keeps search in list view and removes it from the calendar header', async () => {
@@ -127,7 +155,6 @@ describe('Tasks', () => {
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [],
-      cycles: [{ id: 'cycle-1', name: 'Summer 2026', programId: 'program-1', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }],
     });
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -188,6 +215,63 @@ describe('Tasks', () => {
     });
   });
 
+  it('offers complete and cancel commands for an in-progress calendar task', async () => {
+    calendarTestState.view = 'calendar';
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    const start = new Date('2026-08-10T12:00:00');
+    const end = new Date('2026-08-12T12:00:00');
+    const todoItem = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { onComplete?: () => void; onCancel: () => void } };
+    expect(todoItem.props.onComplete).toBeUndefined();
+    await act(async () => todoItem.props.onCancel());
+    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'cancelled');
+
+    const activeTask = { ...task, status: 'in_progress' as const };
+    const item = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: activeTask,
+      range: { start: activeTask.startDate, end: activeTask.dueDate },
+      visibleStart: { key: activeTask.startDate, start, end: start },
+      visibleEnd: { key: activeTask.dueDate, start: end, end },
+    }) as { props: { onComplete: () => void; onCancel: () => void } };
+
+    await act(async () => item.props.onComplete());
+    await act(async () => item.props.onCancel());
+
+    const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-12T12:00:00.000Z', hoursLogged: 1 };
+    const completedItem = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: completedTask,
+      range: { start: completedTask.startDate, end: completedTask.dueDate },
+      visibleStart: { key: completedTask.startDate, start, end: start },
+      visibleEnd: { key: completedTask.dueDate, start: end, end },
+    }) as { props: { onReopen: () => void } };
+    await act(async () => completedItem.props.onReopen());
+
+    const cancelledTask = { ...task, status: 'cancelled' as const };
+    const cancelledItem = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: cancelledTask,
+      range: { start: cancelledTask.startDate, end: cancelledTask.dueDate },
+      visibleStart: { key: cancelledTask.startDate, start, end: start },
+      visibleEnd: { key: cancelledTask.dueDate, start: end, end },
+    }) as { props: { onReopen: () => void } };
+    await act(async () => cancelledItem.props.onReopen());
+
+    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'completed');
+    expect(updateTaskStatus).toHaveBeenCalledTimes(5);
+    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'in_progress');
+    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'todo');
+  });
+
   it('shows calendar loading and task-query failure states instead of an empty calendar', async () => {
     calendarTestState.view = 'calendar';
     let rejectTasks!: (error: Error) => void;
@@ -218,9 +302,19 @@ describe('Tasks', () => {
       range: { start: task.startDate, end: task.dueDate },
       visibleStart: { key: task.startDate, start, end: start },
       visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { onActivate: () => void } };
+    }) as { props: { onActivate: () => void; selected?: boolean } };
+    expect(item.props.selected).toBe(false);
     act(() => item.props.onActivate());
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+
+    const selectedItem = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { selected?: boolean } };
+    expect(selectedItem.props.selected).toBe(true);
 
     act(() => calendarTestState.props!.onResourceSelect?.({
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
@@ -237,7 +331,6 @@ describe('Tasks', () => {
         destination,
       ],
       programs: [],
-      cycles: [{ id: 'cycle-1', name: 'Summer 2026', programId: 'program-1', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' }],
     });
     vi.mocked(updateTaskPlacement).mockResolvedValue({
       ...task,

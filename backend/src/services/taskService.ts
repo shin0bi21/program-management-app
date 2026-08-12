@@ -17,9 +17,7 @@ interface TaskRow {
   staffName: string;
   programId: string | null;
   programName: string | null;
-  cycleId: string;
-  cycleName: string;
-  status: SetTaskInput['status'];
+  status: 'todo' | 'in_progress' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
   hoursLogged: number;
@@ -59,17 +57,6 @@ async function assertTaskResources(input: SetTaskInput, trx: typeof sql) {
     const programs = await trx<{ id: string }[]>`SELECT id FROM programs WHERE id = ${input.programId} LIMIT 1`;
     if (!programs.length) throw new NotFoundError('Program not found');
   }
-  const cycles = await trx<{ id: string }[]>`
-    SELECT cycle.id
-    FROM program_cycles cycle
-    WHERE cycle.id = ${input.cycleId}
-      AND ${input.programId ? sql`EXISTS (
-        SELECT 1 FROM program_cohorts cohort
-        WHERE cohort.program_id = ${input.programId} AND cohort.cycle_id = cycle.id
-      )` : sql`TRUE`}
-    LIMIT 1
-  `;
-  if (!cycles.length) throw new NotFoundError(input.programId ? 'Cycle not found for selected program' : 'Cycle not found');
 }
 
 async function loadLoggedHours(taskIds: string[], db: typeof sql = sql) {
@@ -104,13 +91,11 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
       task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
       CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
       task.program_id, program.name AS program_name,
-      task.cycle_id, cycle.name AS cycle_name,
       task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
       (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
     FROM tasks task
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
-    LEFT JOIN program_cycles cycle ON cycle.id = task.cycle_id
     WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
       AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${query.category ? sql`task.category = ${query.category}` : sql`TRUE`}
@@ -138,19 +123,7 @@ export async function getTaskOptions(actor: AccessTokenPayload) {
     FROM programs program
     ORDER BY program.name, program.id
   `;
-  const cycles = await sql<{ id: string; name: string; programId: string; startsOn: string; endsOn: string; state: string }[]>`
-    SELECT DISTINCT cycle.id, cycle.name, cohort.program_id,
-      cycle.starts_on::text, cycle.ends_on::text,
-      CASE
-        WHEN CURRENT_DATE < cycle.starts_on THEN 'upcoming'
-        WHEN CURRENT_DATE > cycle.ends_on THEN 'completed'
-        ELSE 'active'
-      END AS state
-    FROM program_cycles cycle
-    INNER JOIN program_cohorts cohort ON cohort.cycle_id = cycle.id
-    ORDER BY cycle.name, cycle.id, cohort.program_id
-  `;
-  return { resources, programs, cycles };
+  return { resources, programs };
 }
 
 export async function createTask(input: SetTaskInput, actor: AccessTokenPayload) {
@@ -162,10 +135,10 @@ export async function createTask(input: SetTaskInput, actor: AccessTokenPayload)
     await assertTaskResources(input, trx);
     const rows = await trx<TaskRow[]>`
       INSERT INTO tasks (
-        title, details, category, staff_id, program_id, cycle_id, status, start_date, due_date, completed_at, created_by, updated_by
+        title, details, category, staff_id, program_id, status, start_date, due_date, completed_at, created_by, updated_by
       ) VALUES (
-        ${input.title}, ${input.details}, ${input.category}, ${input.staffId}, ${input.programId}, ${input.cycleId}, ${input.status}, ${input.startDate}, ${input.dueDate},
-        ${input.status === 'completed' ? sql`NOW()` : null}, ${actor.userId}, ${actor.userId}
+        ${input.title}, ${input.details}, ${input.category}, ${input.staffId}, ${input.programId}, 'todo', ${input.startDate}, ${input.dueDate},
+        null, ${actor.userId}, ${actor.userId}
       )
       RETURNING id, title, details, category, staff_id,
         (SELECT first_name FROM users WHERE id = tasks.staff_id) AS staff_first_name,
@@ -173,7 +146,6 @@ export async function createTask(input: SetTaskInput, actor: AccessTokenPayload)
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
-        cycle_id, (SELECT name FROM program_cycles WHERE id = tasks.cycle_id) AS cycle_name,
         status, start_date::text, due_date::text, completed_at::text, 0::float AS hours_logged
     `;
     created = rows[0];
@@ -193,21 +165,17 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
       SELECT task.id, task.title, task.details, task.category, task.program_id,
         task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
         CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
-        program.name AS program_name, task.cycle_id, cycle.name AS cycle_name,
+        program.name AS program_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
       FROM tasks task
       INNER JOIN users staff ON staff.id = task.staff_id
       LEFT JOIN programs program ON program.id = task.program_id
-      LEFT JOIN program_cycles cycle ON cycle.id = task.cycle_id
       WHERE task.id = ${id}
         AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
-    if (existingRows[0].status === 'in_progress' && input.status === 'cancelled') {
-      throw new ConflictError('In-progress tasks cannot be cancelled');
-    }
     const oldStaffId = existingRows[0].staffId;
     const assigneeChanged = oldStaffId !== input.staffId;
     if (assigneeChanged && (existingRows[0].status !== 'todo' || existingRows[0].hoursLogged > 0)) {
@@ -216,9 +184,8 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
     const rows = await trx<TaskRow[]>`
       UPDATE tasks
       SET title = ${input.title}, details = ${input.details}, category = ${input.category},
-        staff_id = ${input.staffId}, program_id = ${input.programId}, cycle_id = ${input.cycleId}, status = ${input.status},
+        staff_id = ${input.staffId}, program_id = ${input.programId},
         start_date = ${input.startDate}, due_date = ${input.dueDate},
-        completed_at = CASE WHEN ${input.status} = 'completed' THEN COALESCE(completed_at, NOW()) ELSE NULL END,
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, title, details, category, staff_id,
@@ -227,7 +194,6 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
-        cycle_id, (SELECT name FROM program_cycles WHERE id = tasks.cycle_id) AS cycle_name,
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
@@ -255,13 +221,11 @@ export async function updateTaskPlacement(
         task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
         CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
-        task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
       FROM tasks task
       INNER JOIN users staff ON staff.id = task.staff_id
       LEFT JOIN programs program ON program.id = task.program_id
-      LEFT JOIN program_cycles cycle ON cycle.id = task.cycle_id
       WHERE task.id = ${id}
         AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
       FOR UPDATE OF task
@@ -288,7 +252,6 @@ export async function updateTaskPlacement(
         (SELECT last_name FROM users WHERE id = tasks.staff_id) AS staff_last_name,
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id, (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
-        cycle_id, (SELECT name FROM program_cycles WHERE id = tasks.cycle_id) AS cycle_name,
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
@@ -305,7 +268,7 @@ export async function updateTaskPlacement(
   return attachDetails([updated], await loadLoggedHours([id]), actor)[0];
 }
 
-export async function updateTaskStatus(id: string, status: SetTaskInput['status'], actor: AccessTokenPayload) {
+export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
   let updated!: TaskRow;
   await sql.begin(async tx => {
@@ -315,20 +278,30 @@ export async function updateTaskStatus(id: string, status: SetTaskInput['status'
         task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
         CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
-        task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
       FROM tasks task
       INNER JOIN users staff ON staff.id = task.staff_id
       LEFT JOIN programs program ON program.id = task.program_id
-      LEFT JOIN program_cycles cycle ON cycle.id = task.cycle_id
       WHERE task.id = ${id}
         AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
-    if (existingRows[0].status === 'in_progress' && status === 'cancelled') {
-      throw new ConflictError('In-progress tasks cannot be cancelled');
+    if (status === 'completed' && existingRows[0].status !== 'in_progress') {
+      throw new ConflictError('Only in-progress tasks can be completed');
+    }
+    if (status === 'cancelled' && !['todo', 'in_progress'].includes(existingRows[0].status)) {
+      throw new ConflictError('Only open tasks can be cancelled');
+    }
+    if (status === 'todo' && (existingRows[0].status !== 'cancelled' || existingRows[0].hoursLogged > 0)) {
+      throw new ConflictError('Only cancelled tasks without logged time can be reopened as to do');
+    }
+    if (status === 'in_progress' && !(
+      existingRows[0].status === 'completed'
+      || (existingRows[0].status === 'cancelled' && existingRows[0].hoursLogged > 0)
+    )) {
+      throw new ConflictError('Only completed tasks or cancelled tasks with logged time can be reopened as in progress');
     }
     const rows = await trx<TaskRow[]>`
       UPDATE tasks SET status = ${status},
@@ -341,7 +314,6 @@ export async function updateTaskStatus(id: string, status: SetTaskInput['status'
         (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = tasks.staff_id) AS staff_name,
         program_id,
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
-        cycle_id, (SELECT name FROM program_cycles WHERE id = tasks.cycle_id) AS cycle_name,
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
@@ -362,13 +334,11 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
         task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
         CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
         task.program_id, program.name AS program_name,
-        task.cycle_id, cycle.name AS cycle_name,
         task.status, task.start_date::text, task.due_date::text, task.completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged
       FROM tasks task
       INNER JOIN users staff ON staff.id = task.staff_id
       LEFT JOIN programs program ON program.id = task.program_id
-      LEFT JOIN program_cycles cycle ON cycle.id = task.cycle_id
       WHERE task.id = ${id}
         AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
       FOR UPDATE OF task

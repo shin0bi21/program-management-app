@@ -365,7 +365,7 @@ export default function Timesheets() {
             getItemCapabilities={({ resource, data: item }) => ({
               draggable: canWriteTimesheets && resource.writable && !item.sessionId,
             })}
-            maxVisibleItemsPerCell={3}
+            maxVisibleItemsPerCell={7}
             rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
@@ -403,12 +403,12 @@ export default function Timesheets() {
         isOpen={addOpen}
         resources={writableResources}
         programs={programs}
-        cycles={cycles}
         onClose={() => setAddOpen(false)}
         onAdd={addTimeEntry}
         initialResourceId={addTarget.resourceId}
         initialDate={addTarget.date}
         initialSource={addTarget.source}
+        staffLocked={Boolean(addTarget.resourceId)}
         initialItem={editTarget?.item}
       />
       <Modal

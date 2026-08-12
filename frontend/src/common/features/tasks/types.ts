@@ -41,15 +41,7 @@ export interface TaskResource {
   writable: boolean;
 }
 export interface TaskProgram { id: string; name: string }
-export interface TaskCycle {
-  id: string;
-  name: string;
-  programId: string;
-  startsOn: string;
-  endsOn: string;
-  state: 'upcoming' | 'active' | 'completed';
-}
-export interface TaskOptions { resources: TaskResource[]; programs: TaskProgram[]; cycles: TaskCycle[] }
+export interface TaskOptions { resources: TaskResource[]; programs: TaskProgram[] }
 
 export interface Task {
   id: string;
@@ -58,8 +50,6 @@ export interface Task {
   category: TaskCategory;
   programId: string | null;
   programName: string | null;
-  cycleId: string;
-  cycleName: string;
   status: TaskStatus;
   startDate: string;
   dueDate: string;
@@ -75,8 +65,6 @@ export interface SetTaskInput {
   details: string | null;
   category: TaskCategory;
   programId: string | null;
-  cycleId: string;
-  status: TaskStatus;
   startDate: string;
   dueDate: string;
   staffId: string;

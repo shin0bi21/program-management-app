@@ -6,6 +6,15 @@ export interface PositionedRange<TItemData> {
   startIndex: number;
   endIndex: number;
   lane: number;
+  laneCount: number;
+}
+
+export type CalendarItemDensity = 'normal' | 'compact' | 'dense';
+
+export function getCalendarItemDensity(itemCount: number): CalendarItemDensity {
+  if (itemCount >= 6) return 'dense';
+  if (itemCount >= 4) return 'compact';
+  return 'normal';
 }
 
 export function layoutRangeItems<TItemData>(
@@ -28,7 +37,7 @@ export function layoutRangeItems<TItemData>(
       : [];
   }).sort((left, right) => left.startIndex - right.startIndex || left.endIndex - right.endIndex);
 
-  const positioned: Array<PositionedRange<TItemData>> = [];
+  const positioned: Array<Omit<PositionedRange<TItemData>, 'laneCount'>> = [];
   visible.forEach(item => {
     const occupiedLanes = positioned
       .filter(prior => prior.endIndex >= item.startIndex)
@@ -38,5 +47,21 @@ export function layoutRangeItems<TItemData>(
     positioned.push({ ...item, lane });
   });
 
-  return positioned;
+  const result: Array<PositionedRange<TItemData>> = [];
+  let groupStart = 0;
+  while (groupStart < positioned.length) {
+    let groupEnd = groupStart + 1;
+    let latestEnd = positioned[groupStart]!.endIndex;
+    while (groupEnd < positioned.length && positioned[groupEnd]!.startIndex <= latestEnd) {
+      latestEnd = Math.max(latestEnd, positioned[groupEnd]!.endIndex);
+      groupEnd += 1;
+    }
+    const laneCount = positioned
+      .slice(groupStart, groupEnd)
+      .reduce((count, item) => Math.max(count, item.lane + 1), 0);
+    positioned.slice(groupStart, groupEnd).forEach(item => result.push({ ...item, laneCount }));
+    groupStart = groupEnd;
+  }
+
+  return result;
 }

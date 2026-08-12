@@ -65,7 +65,7 @@ export default function Sessions() {
   const canWriteSessions = permissions.includes('write:sessions');
 
   const requestSessionDeletion = useCallback(
-    (session: CohortSession, onDeleted: () => void | Promise<void>) => {
+    (session: CohortSession, onDeleted: (id: string) => void | Promise<void>) => {
       setConfirmAction({
         title: 'Delete Session',
         message: `Delete the ${session.theme} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
@@ -74,7 +74,7 @@ export default function Sessions() {
         successMessage: 'Session deleted',
         onConfirm: async () => {
           await deleteSession(session.id);
-          await onDeleted();
+          await onDeleted(session.id);
         },
       });
     },
@@ -116,6 +116,7 @@ export default function Sessions() {
 
   const {
     sessions,
+    removeSession,
     loading,
     refreshing,
     error,
@@ -291,7 +292,7 @@ export default function Sessions() {
                             id: 'delete',
                             label: 'Delete Session',
                             variant: 'danger' as const,
-                            onClick: () => requestSessionDeletion(session, refreshSessions),
+                            onClick: () => requestSessionDeletion(session, removeSession),
                           },
                         ]
                       : []),
@@ -302,7 +303,7 @@ export default function Sessions() {
           ]
         : []),
     ],
-    [canWriteAttendance, canWriteSessions, refreshSessions, requestSessionDeletion],
+    [canWriteAttendance, canWriteSessions, removeSession, requestSessionDeletion],
   );
 
   const activeSessions = view === 'calendar' ? calendarSessions : sessions;
@@ -438,7 +439,7 @@ export default function Sessions() {
                   onSessionDelete={canWriteSessions
                     ? session => requestSessionDeletion(
                         session,
-                        () => setCalendarRefreshToken(current => current + 1),
+                        id => setCalendarSessions(current => current.filter(session => session.id !== id)),
                       )
                     : undefined}
                 />

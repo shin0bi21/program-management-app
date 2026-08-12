@@ -20,8 +20,6 @@
 .calendar-item:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
 .calendar-item__summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-item__trailing { flex: 0 0 auto; margin-left: auto; }
-.calendar-item--completed { opacity: .65; }
-.calendar-item--completed .calendar-item__summary { text-decoration: line-through; }
 .floating-menu-panel.calendar-item-menu { min-width: 150px; }
 .floating-menu-panel .calendar-item-menu__delete { color: var(--color-danger); }
 .floating-menu-panel .calendar-item-menu__delete:hover { background: var(--color-danger-bg); }

@@ -1,7 +1,7 @@
 import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type { ResourcePeriodData } from '../../../components/ResourceCalendar/types';
-import type { StaffResource, TimeEntryCategory, TimeEntryCohort, TimeEntryProgram, TimeEntrySession, TimesheetItem } from '../types';
+import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimeEntrySession, TimesheetItem } from '../types';
 
 export interface TimeEntryResponse {
   id: string; staffId: string; programId: string | null; programName: string | null;
@@ -13,8 +13,8 @@ export interface TimeEntryResponse {
 
 interface SharedTimeEntryInput { staffId: string; hours: number; note: string }
 export type SetTimeEntryInput = SharedTimeEntryInput & ({
-  source: 'other'; workDate: string; programId: string | null; cycleId: string; category: Exclude<TimeEntryCategory, 'program_delivery'>;
-} | { source: 'task'; workDate: string; taskId: string }
+  source: 'other'; workDate: string; programId: string | null; category: Exclude<TimeEntryCategory, 'program_delivery'>;
+} | { source: 'task'; workDate: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: string });
 export interface UpdateTimeEntryPlacementInput { workDate: string }
 
@@ -53,10 +53,6 @@ export function getTimeEntryOverview(staffId: string, cycleId: string, opts?: Re
   return apiClient.get<TimeEntryOverviewResponse>(`/time-entries/overview?${params}`, opts);
 }
 
-export function getTimeEntryCohorts(programId: string, signal?: AbortSignal) {
-  const params = new URLSearchParams({ programId });
-  return apiClient.get<TimeEntryCohort[]>(`/time-entries/cohorts?${params}`, { signal });
-}
 export function getTimeEntrySessions(staffId: string, workDate: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ staffId, workDate });
   return apiClient.get<TimeEntrySession[]>(`/time-entries/sessions?${params}`, { signal });

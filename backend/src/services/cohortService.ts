@@ -193,7 +193,6 @@ export async function deleteProgramCycle(id: string) {
     const dependencies = await trx`
       SELECT
         EXISTS (SELECT 1 FROM program_cohorts WHERE cycle_id = ${id})
-        OR EXISTS (SELECT 1 FROM tasks WHERE cycle_id = ${id})
         OR EXISTS (SELECT 1 FROM time_entries WHERE cycle_id = ${id})
         AS in_use
     `;
