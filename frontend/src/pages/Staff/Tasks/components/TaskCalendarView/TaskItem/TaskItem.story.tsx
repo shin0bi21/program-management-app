@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import type { Task } from '../../../../../common/features/tasks/types';
+import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
+import type { Task } from '../../../../../../common/features/tasks/types';
 import TaskItem from './TaskItem';
 
 const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };

@@ -7,7 +7,7 @@ import useUserPreference from '../../../../common/features/preferences/hooks/use
 import type { ProgramCycle } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import type { TimesheetEntryType, TimesheetSortKey } from './useTimesheetListData';
+import type { TimesheetEntryType, TimesheetSortKey } from '../timesheetViewData';
 
 export type TimesheetView = 'calendar' | 'list';
 

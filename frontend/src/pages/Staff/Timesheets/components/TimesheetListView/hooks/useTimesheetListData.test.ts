@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { buildTimesheetListRows, timesheetEntryType, useTimesheetListData } from './useTimesheetListData';
+import { timesheetEntryType } from '../../../timesheetViewData';
+import { buildTimesheetListRows, useTimesheetListData } from './useTimesheetListData';
 
 const item = {
   id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',

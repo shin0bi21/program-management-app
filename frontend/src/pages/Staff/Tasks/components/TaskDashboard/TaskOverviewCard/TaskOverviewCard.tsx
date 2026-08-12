@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import Button from '../../../../../common/components/Button/Button';
-import Modal from '../../../../../common/components/Modal/Modal';
-import { dayKey } from '../../../../../common/components/ResourceCalendar/periods';
-import type { Task } from '../../../../../common/features/tasks/types';
-import { groupTasksForOverview } from '../../taskOverview';
-import '../../../../../common/components/DashboardCard/DashboardCard.css';
+import Button from '../../../../../../common/components/Button/Button';
+import Modal from '../../../../../../common/components/Modal/Modal';
+import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods';
+import type { Task } from '../../../../../../common/features/tasks/types';
+import { groupTasksForOverview } from '../../../taskOverview';
+import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewCard.css';
 
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });

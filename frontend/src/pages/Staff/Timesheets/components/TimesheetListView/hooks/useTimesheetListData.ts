@@ -1,13 +1,8 @@
 import { useMemo } from 'react';
-import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
-import type { StaffResource, TimesheetItem } from '../../../../common/features/timeEntries/types';
-import type { ListSort } from '../../../../common/types/pagination';
-import type { TimeEntryListRowResponse } from '../../../../common/features/timeEntries/api/timeEntries.api';
-
-export type TimesheetSortKey = 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type';
-export type TimesheetEntryType = 'task' | 'session' | 'other';
-
-export type TimesheetListRow = TimeEntryListRowResponse;
+import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
+import type { StaffResource, TimesheetItem } from '../../../../../../common/features/timeEntries/types';
+import type { ListSort } from '../../../../../../common/types/pagination';
+import { timesheetEntryType, type TimesheetListRow, type TimesheetSortKey } from '../../../timesheetViewData';
 
 export function buildTimesheetListRows(data: ResourcePeriodData<TimesheetItem>, resources: readonly StaffResource[], staffFilters: readonly string[]) {
   const resourcesById = new Map(resources.map(resource => [resource.id, resource]));
@@ -41,14 +36,6 @@ function sortValue(row: TimesheetListRow, key: TimesheetSortKey): string | numbe
     type: timesheetEntryType(row.item),
   };
   return values[key];
-}
-
-export function timesheetEntryType(item: TimesheetItem) {
-  return item.taskId ? 'Task' : item.sessionId ? 'Session' : 'Regular';
-}
-
-export function timesheetEntryTypeKey(item: TimesheetItem): TimesheetEntryType {
-  return item.taskId ? 'task' : item.sessionId ? 'session' : 'other';
 }
 
 export function sortTimesheetRows(rows: readonly TimesheetListRow[], sorting: ListSort<TimesheetSortKey>) {

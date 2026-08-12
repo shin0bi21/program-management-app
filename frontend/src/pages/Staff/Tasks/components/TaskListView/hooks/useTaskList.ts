@@ -1,10 +1,10 @@
 import { useDeferredValue } from 'react';
-import { getTaskList } from '../../../../common/features/tasks/api/tasks.api';
-import type { Task, TaskCategory, TaskStatus } from '../../../../common/features/tasks/types';
-import type { ListSort } from '../../../../common/types/pagination';
-import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
-import { TASKS_QUERY_KEY } from './useTaskMutations';
-import type { TaskSortKey } from './useTaskViewData';
+import { getTaskList } from '../../../../../../common/features/tasks/api/tasks.api';
+import type { Task, TaskCategory, TaskStatus } from '../../../../../../common/features/tasks/types';
+import type { ListSort } from '../../../../../../common/types/pagination';
+import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
+import { TASKS_QUERY_KEY } from '../../../hooks/useTaskMutations';
+import type { TaskSortKey } from '../../../taskViewTypes';
 
 interface TaskListFilters {
   programIds: string[];

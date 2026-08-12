@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import type { ResourcePeriodData } from '../../../../../common/components/ResourceCalendar/types';
-import type { TimesheetItem } from '../../../../../common/features/timeEntries/types';
+import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
+import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
+import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
 import TimeItem from './TimeItem';
 
 interface StoryResource {

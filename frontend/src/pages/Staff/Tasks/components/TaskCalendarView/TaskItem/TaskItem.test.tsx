@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../../../../../common/features/tasks/types';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',

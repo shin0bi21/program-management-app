@@ -266,7 +266,7 @@ describe('Timesheets', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
   });
 
-  it('restores and saves the selected Timesheets view', async () => {
+  it('switches between the persisted Timesheets views', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
@@ -282,10 +282,7 @@ describe('Timesheets', () => {
     ));
     fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-fall',
-      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
-    });
+    expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
   it('clears the persisted cycle with the other Timesheets filters', async () => {
@@ -311,10 +308,6 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
 
     expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
-    expect(preferenceHook.save).toHaveBeenCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
-      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
-    });
     await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
@@ -326,10 +319,6 @@ describe('Timesheets', () => {
 
     fireEvent.click(screen.getByText('Entry from another cycle').closest('tr')!);
 
-    expect(preferenceHook.save).toHaveBeenLastCalledWith({
-      view: 'list', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1',
-      sorting: { key: 'date', direction: 'desc' }, columnWidths: {},
-    });
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
     expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
   });

@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import Button from '../../../../../common/components/Button/Button';
-import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
-import Modal from '../../../../../common/components/Modal/Modal';
-import './TimesheetOverviewCard.css';
+import Button from '../../../../../../common/components/Button/Button';
+import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import Modal from '../../../../../../common/components/Modal/Modal';
+import './TimesheetDashboardCard.css';
 
-interface EmptyTimesheetOverviewCardProps {
+interface EmptyTimesheetDashboardCardProps {
   title?: string;
   emptyMessage: string;
 }
 
-interface ReadyTimesheetOverviewCardProps extends EmptyTimesheetOverviewCardProps {
+interface ReadyTimesheetDashboardCardProps extends EmptyTimesheetDashboardCardProps {
   total: number;
   modalTitle: string;
   modalSubtitle: string;
@@ -17,11 +17,11 @@ interface ReadyTimesheetOverviewCardProps extends EmptyTimesheetOverviewCardProp
   details?: Array<[string, string]>;
 }
 
-type TimesheetOverviewCardProps = EmptyTimesheetOverviewCardProps | ReadyTimesheetOverviewCardProps;
+type TimesheetDashboardCardProps = EmptyTimesheetDashboardCardProps | ReadyTimesheetDashboardCardProps;
 
 const compactDetailLabels = new Set(['Current Pay Period', 'Cycle']);
 
-export default function TimesheetOverviewCard(props: TimesheetOverviewCardProps) {
+export default function TimesheetDashboardCard(props: TimesheetDashboardCardProps) {
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const hasData = 'total' in props;
   const { title, emptyMessage } = props;

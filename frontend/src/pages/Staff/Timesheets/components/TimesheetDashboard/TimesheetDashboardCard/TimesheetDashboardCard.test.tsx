@@ -1,14 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import TimesheetOverviewCard from './TimesheetOverviewCard';
+import TimesheetDashboardCard from './TimesheetDashboardCard';
 
-describe('TimesheetOverviewCard', () => {
+describe('TimesheetDashboardCard', () => {
   it('opens the task breakdown in a modal', async () => {
     const user = userEvent.setup();
 
     render(
-      <TimesheetOverviewCard
+      <TimesheetDashboardCard
         title="Hours This Pay Period"
         total={7.25}
         modalTitle="Jordan Lee"
@@ -47,7 +47,7 @@ describe('TimesheetOverviewCard', () => {
 
   it('shows the empty state without a breakdown action when no staff member is selected', () => {
     render(
-      <TimesheetOverviewCard
+      <TimesheetDashboardCard
         title="Average Biweekly Hours This Cycle"
         emptyMessage="Select a time entry."
       />,
@@ -59,7 +59,7 @@ describe('TimesheetOverviewCard', () => {
 
   it('uses compact dashboard typography for a visible pay-period range', () => {
     render(
-      <TimesheetOverviewCard
+      <TimesheetDashboardCard
         title="Hours This Pay Period"
         total={7.25}
         modalTitle="Jordan Lee"
@@ -82,7 +82,7 @@ describe('TimesheetOverviewCard', () => {
 
   it('uses compact text sizing for cycle names while keeping averages prominent', () => {
     render(
-      <TimesheetOverviewCard
+      <TimesheetDashboardCard
         title="Average Biweekly Hours"
         total={0.33}
         modalTitle="Jordan Lee"

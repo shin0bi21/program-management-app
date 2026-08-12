@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import CalendarItem from '../../../../../common/components/ResourceCalendar/components/CalendarItem';
-import { dayKey } from '../../../../../common/components/ResourceCalendar/periods';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../../../common/features/tasks/types';
-import { isTaskOverdue } from '../../taskOverview';
-import TaskStatusBadge from '../TaskStatusBadge/TaskStatusBadge';
+import CalendarItem from '../../../../../../common/components/ResourceCalendar/components/CalendarItem';
+import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods';
+import { TASK_CATEGORY_LABELS, type Task } from '../../../../../../common/features/tasks/types';
+import { isTaskOverdue } from '../../../taskOverview';
+import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import './TaskItem.css';
 
 export default function TaskItem({ task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete, onActivate }: { task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void; onActivate?: () => void }) {

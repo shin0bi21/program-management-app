@@ -3,10 +3,10 @@ import {
   getTimeEntryList,
   type TimeEntryListFilters,
   type TimeEntryListRowResponse,
-} from '../../../../common/features/timeEntries/api/timeEntries.api';
-import type { ListSort } from '../../../../common/types/pagination';
-import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
-import type { TimesheetSortKey } from './useTimesheetListData';
+} from '../../../../../../common/features/timeEntries/api/timeEntries.api';
+import type { ListSort } from '../../../../../../common/types/pagination';
+import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
+import type { TimesheetSortKey } from '../../../timesheetViewData';
 
 interface TimesheetListFilters extends Omit<TimeEntryListFilters, 'search'> {
   search: string;
