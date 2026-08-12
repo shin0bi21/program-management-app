@@ -41,11 +41,12 @@ describe('useTaskCalendarData', () => {
     expect(result.current).toEqual({ 'staff-1': [] });
   });
 
-  it('preserves the filtered result while its data and filter references are unchanged', () => {
+  it('preserves the filtered result when only the filters wrapper changes', () => {
     const rangeData = { 'staff-1': [task] };
-    const filters = { search: '', programIds: [], categories: [], statuses: [] } as const;
+    let filters = { search: '', programIds: [], categories: [], statuses: [] } as const;
     const { result, rerender } = renderHook(() => useTaskCalendarData(rangeData, filters));
     const firstResult = result.current;
+    filters = { ...filters };
     rerender();
     expect(result.current).toBe(firstResult);
   });

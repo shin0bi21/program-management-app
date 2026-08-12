@@ -25,10 +25,15 @@ export function useTaskCalendarData(
   rangeData: Record<string, readonly Task[]>,
   filters: TaskCalendarFilters,
 ) {
-  return useMemo(() => Object.fromEntries(
-    Object.entries(rangeData).map(([resourceId, tasks]) => [
-      resourceId,
-      tasks.filter(task => matchesTask(task, filters)),
-    ]),
-  ), [filters.categories, filters.programIds, filters.search, filters.statuses, rangeData]);
+  const { search, programIds, categories, statuses } = filters;
+
+  return useMemo(() => {
+    const activeFilters = { search, programIds, categories, statuses };
+    return Object.fromEntries(
+      Object.entries(rangeData).map(([resourceId, tasks]) => [
+        resourceId,
+        tasks.filter(task => matchesTask(task, activeFilters)),
+      ]),
+    );
+  }, [categories, programIds, rangeData, search, statuses]);
 }
