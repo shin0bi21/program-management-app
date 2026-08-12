@@ -72,7 +72,7 @@ export const setTimeEntrySchema = z.object({
   body: z.discriminatedUnion('source', [
     z.object({
       ...datedTimeEntryFields,
-      source: z.literal('other'),
+      source: z.literal('regular'),
       programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
       category: timeEntryCategorySchema.exclude(['program_delivery']),
     }),

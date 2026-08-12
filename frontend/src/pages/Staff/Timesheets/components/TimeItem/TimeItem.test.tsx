@@ -20,7 +20,7 @@ describe('TimeItem', () => {
   it.each([
     ['Task', { taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null }],
     ['Session', { taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Healthy Relationships' }],
-    ['Other', { taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
+    ['Regular', { taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
   ])('shows hours and the %s entry type', (type, source) => {
     render(<TimeItem item={{ ...item, ...source }} />);
 

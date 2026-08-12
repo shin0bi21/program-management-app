@@ -12,7 +12,7 @@ describe('useTimesheetListData', () => {
   it.each([
     [{ ...item, taskId: 'task-1' }, 'Task'],
     [{ ...item, sessionId: 'session-1' }, 'Session'],
-    [item, 'Other'],
+    [item, 'Regular'],
   ])('derives the persisted entry type from its linkage', (entry, expected) => {
     expect(timesheetEntryType(entry)).toBe(expected);
   });

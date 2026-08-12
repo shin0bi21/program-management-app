@@ -21,7 +21,7 @@ interface TimeEntryModalProps {
   onAdd: (input: SetTimeEntryInput) => Promise<void>;
   initialResourceId?: string;
   initialDate?: string;
-  initialSource?: 'other' | 'task' | 'session';
+  initialSource?: 'regular' | 'task' | 'session';
   staffLocked?: boolean;
   initialTask?: Task;
   initialItem?: TimesheetItem;
@@ -29,10 +29,10 @@ interface TimeEntryModalProps {
 
 export default function TimeEntryModal({
   isOpen, resources, programs, onClose, onAdd,
-  initialResourceId, initialDate, initialSource = 'other', staffLocked = false, initialTask, initialItem,
+  initialResourceId, initialDate, initialSource = 'regular', staffLocked = false, initialTask, initialItem,
 }: TimeEntryModalProps) {
   const [resourceId, setResourceId] = useState(resources[0]?.id ?? '');
-  const [entrySource, setEntrySource] = useState<'other' | 'task' | 'session'>('other');
+  const [entrySource, setEntrySource] = useState<'regular' | 'task' | 'session'>('regular');
   const [programId, setProgramId] = useState('');
   const [date, setDate] = useState(dayKey(new Date()));
   const [category, setCategory] = useState<Exclude<TimeEntryCategory, 'program_delivery'>>('planning_prep');
@@ -59,7 +59,7 @@ export default function TimeEntryModal({
   });
   const sessionOptions = sessionQuery.data ?? [];
   const status = error ? 'error' : submitting ? 'submitting' : 'idle';
-  const statusMessage = error || (submitting ? (initialItem ? 'Updating time entry...' : 'Adding time entry...') : undefined);
+  const statusMessage = error || (submitting ? (initialItem ? 'Updating logged hours...' : 'Logging hours...') : undefined);
   useEffect(() => {
     if (!isOpen) return;
     const preferredResourceId = initialTask?.assignee.id ?? initialResourceId;
@@ -83,16 +83,16 @@ export default function TimeEntryModal({
       const shared = { staffId: resourceId, hours: Number(hours), note: note.trim() };
       await onAdd(entrySource === 'task' ? { ...shared, source: 'task', workDate: date, taskId, completeTask }
         : entrySource === 'session' ? { ...shared, source: 'session', sessionId }
-          : { ...shared, source: 'other', workDate: date, programId: programId || null, category });
+          : { ...shared, source: 'regular', workDate: date, programId: programId || null, category });
       setNote(''); onClose();
-    } catch (cause) { setError(getErrorMessage(cause, initialItem ? 'Unable to update time entry' : 'Unable to add time entry')); }
+    } catch (cause) { setError(getErrorMessage(cause, initialItem ? 'Unable to update logged hours' : 'Unable to log hours')); }
     finally { setSubmitting(false); }
   };
 
-  return <Modal isOpen={isOpen} onClose={onClose} title={initialItem ? 'Edit Time Entry' : 'Add Time Entry'} maxWidth="620px"
+  return <Modal isOpen={isOpen} onClose={onClose} title={initialItem ? 'Edit Logged Hours' : 'Log Hours'} maxWidth="620px"
     status={status} statusMessage={statusMessage} footer={<>
       <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
-      <Button type="submit" form="time-entry-form" disabled={submitting || !resources.length || (entrySource === 'task' ? !taskId : entrySource === 'session' ? !sessionId : false)}>{initialItem ? 'Save changes' : 'Add entry'}</Button>
+      <Button type="submit" form="time-entry-form" disabled={submitting || !resources.length || (entrySource === 'task' ? !taskId : entrySource === 'session' ? !sessionId : false)}>{initialItem ? 'Save changes' : 'Log hours'}</Button>
     </>}>
     <form id="time-entry-form" className="time-entry-form" onSubmit={submit}>
       <div className="time-entry-form__staff"><FormField id="time-entry-staff" label="Staff member"><FloatingSelect id="time-entry-staff" value={resourceId}
@@ -120,10 +120,10 @@ export default function TimeEntryModal({
             if (session) setDate(session.workDate);
           }} placeholder={sessionQuery.isLoading ? 'Loading sessions…' : !sessionOptions.length ? 'No sessions on this date' : 'Select session'} ariaLabel="Session"
           disabled={submitting || sessionQuery.isLoading} /></FormField></div>}
-      {entrySource === 'other' && <FormField id="time-entry-program" label="Program (optional)"><FloatingSelect id="time-entry-program" value={programId}
+      {entrySource === 'regular' && <FormField id="time-entry-program" label="Program (optional)"><FloatingSelect id="time-entry-program" value={programId}
         options={programs.map(program => ({ value: program.id, label: program.name }))} onChange={setProgramId} placeholder="Select a program" ariaLabel="Program" disabled={submitting}
         action={programId ? { label: 'Clear program', onSelect: () => setProgramId('') } : undefined} /></FormField>}
-      {entrySource === 'other' && <FormField id="time-entry-category" label="Category *"><FloatingSelect id="time-entry-category" value={category}
+      {entrySource === 'regular' && <FormField id="time-entry-category" label="Category *"><FloatingSelect id="time-entry-category" value={category}
         options={OTHER_TIME_ENTRY_CATEGORY_OPTIONS} onChange={value => { setCategory(value as Exclude<TimeEntryCategory, 'program_delivery'>); setTaskId(''); }} ariaLabel="Category" disabled={submitting} /></FormField>}
       <FormField id="time-entry-date" label="Date"><input id="time-entry-date" type="date" value={date}
         onChange={event => { setDate(event.target.value); if (entrySource === 'session') setSessionId(''); }}
