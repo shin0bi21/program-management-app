@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/PeriodDataBuffer';
@@ -7,7 +7,7 @@ import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../.
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from '../../taskCalendarCapabilities';
 import type { TaskCalendarActions, TaskViewMutationCache } from '../../taskViewTypes';
-import { matchesTask } from './taskCalendarData';
+import { useTaskCalendarData } from './hooks/useTaskCalendarData';
 import TaskItem from './TaskItem/TaskItem';
 import type { TaskModalTarget } from '../TaskDialogs/TaskDialogs';
 
@@ -58,12 +58,7 @@ export default function TaskCalendarView({
     };
     return () => { mutationCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
   }, [calendar, mutationCacheRef]);
-  const rangeData = useMemo(() => Object.fromEntries(
-    Object.entries(calendar.rangeData).map(([resourceId, tasks]) => [
-      resourceId,
-      tasks.filter(task => matchesTask(task, { ...filters, search: '' })),
-    ]),
-  ), [calendar.rangeData, filters]);
+  const rangeData = useTaskCalendarData(calendar.rangeData, { ...filters, search: '' });
 
   return <>
     {calendar.error && <p className="form-error" role="alert">{calendar.error}</p>}
