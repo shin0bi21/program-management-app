@@ -50,14 +50,14 @@ import type {
   UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
-import { cohortQuerySchema, cohortYouthReportSchema, sessionListQuerySchema } from '../validation/cohortSchemas';
+import type { CohortQuery, CohortYouthReportQuery, SessionListQuery } from '../validation/cohortSchemas';
 import { getCohortYouthReport } from '../services/cohortReportService';
 import { generateCohortYouthReportPdf } from '../services/cohortReportPdfService';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetCohorts = async (req: Request, res: Response) => {
-  const query = cohortQuerySchema.shape.query.parse(req.query);
+  const query = req.query as unknown as CohortQuery;
   res.json(await getCohorts(
     actor(req),
     query,
@@ -93,12 +93,12 @@ export const handleDeleteCohort = async (req: Request, res: Response) => {
 };
 
 export const handleGetCohortYouthReport = async (req: Request, res: Response) => {
-  const { youthId } = cohortYouthReportSchema.shape.query.parse(req.query);
+  const { youthId } = req.query as unknown as CohortYouthReportQuery;
   res.json(await getCohortYouthReport(req.params.cohortId, actor(req), youthId));
 };
 
 export const handleGetCohortYouthReportPdf = async (req: Request, res: Response) => {
-  const { youthId } = cohortYouthReportSchema.shape.query.parse(req.query);
+  const { youthId } = req.query as unknown as CohortYouthReportQuery;
   const pdf = await generateCohortYouthReportPdf(req.params.cohortId, actor(req), youthId);
   const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Youth Report.pdf';
   res.type('application/pdf');
@@ -124,7 +124,7 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
-  res.json(await getSessionList(actor(req), sessionListQuerySchema.shape.query.parse(req.query)));
+  res.json(await getSessionList(actor(req), req.query as unknown as SessionListQuery));
 };
 export const handleGetSessionTypes = async (_req: Request, res: Response) => {
   res.json(await getSessionTypes());

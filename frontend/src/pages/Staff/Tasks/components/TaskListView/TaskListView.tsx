@@ -8,6 +8,7 @@ import useTaskList from './hooks/useTaskList';
 interface TaskListViewProps {
   columns: TableColumn<Task>[];
   hiddenColumnKeys: string[];
+  staffIds: string[];
   programIds: string[];
   categories: TaskCategory[];
   statuses: TaskStatus[];
@@ -22,15 +23,15 @@ interface TaskListViewProps {
 }
 
 export default function TaskListView({
-  columns, hiddenColumnKeys, programIds, categories, statuses, search, sorting, columnWidths,
+  columns, hiddenColumnKeys, staffIds, programIds, categories, statuses, search, sorting, columnWidths,
   selectedTaskId, mutationCacheRef, onTaskSelect, onSortingChange, onColumnWidthsChange,
 }: TaskListViewProps) {
-  const query = useTaskList({ programIds, categories, statuses, search }, sorting, true);
+  const query = useTaskList({ staffIds, programIds, categories, statuses, search }, sorting, true);
   useEffect(() => {
     mutationCacheRef.current = { upsert: query.replace, remove: query.remove };
     return () => { mutationCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
   }, [mutationCacheRef, query.remove, query.replace]);
-  const hasFilters = programIds.length > 0 || categories.length > 0 || statuses.length > 0;
+  const hasFilters = staffIds.length > 0 || programIds.length > 0 || categories.length > 0 || statuses.length > 0;
 
   return <Table
     ariaLabel="Tasks"

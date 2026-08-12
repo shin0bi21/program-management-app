@@ -6,7 +6,7 @@ export function sharedStaffResourceReadPredicate(
   staffId: ReturnType<typeof sql>,
 ) {
   if (actor.role === 'admin') return sql`TRUE`;
-  return sql`
+  return sql`(
     ${staffId} = ${actor.userId}
     OR EXISTS (
       SELECT 1
@@ -16,5 +16,5 @@ export function sharedStaffResourceReadPredicate(
       WHERE actor_program.user_id = ${actor.userId}
         AND resource_program.user_id = ${staffId}
     )
-  `;
+  )`;
 }

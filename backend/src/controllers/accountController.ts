@@ -6,11 +6,11 @@ import {
   setAccount,
   toggleAccountStatus,
 } from '../services/accountService';
-import { accountQuerySchema } from '../validation/accountSchemas';
+import type { AccountQuery } from '../validation/accountSchemas';
 
 export const handleGetAccounts = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
-  const filters = accountQuerySchema.shape.query.parse(req.query);
+  const filters = req.query as unknown as AccountQuery;
   res.json(await getAccounts(actor, filters));
 };
 

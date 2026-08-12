@@ -154,6 +154,17 @@ function checkBackendRoutes(violations, file, source) {
   }
 }
 
+function checkBackendControllers(violations, file, source) {
+  if (!/^backend\/src\/controllers\/.*\.ts$/.test(file)) return;
+  addMatches(
+    violations,
+    file,
+    source,
+    /\.parse(?:Async)?\s*\(\s*req\.query\s*\)/g,
+    'controllers must consume route-validated query values without parsing them again.',
+  );
+}
+
 function checkFocusedAdapters(violations, file, source) {
   if (!file.startsWith('frontend/src/') || !file.endsWith('.api.ts')) return;
   const broadFocusedMutation = /apiClient\.put(?:<[^>]+>)?\s*\(\s*(?:`[^`]*\/(?:status|placement)(?:[/?][^`]*)?`|'[^']*\/(?:status|placement)(?:[/?][^']*)?')/g;
@@ -295,6 +306,7 @@ for (const file of files.filter(isReadableSource)) {
   checkFrontendOwnership(violations, file, source);
   checkCentralizedHttp(violations, file, source);
   checkBackendRoutes(violations, file, source);
+  checkBackendControllers(violations, file, source);
   checkFocusedAdapters(violations, file, source);
   checkPaginatedTables(violations, file, source);
   checkResourceCalendars(violations, file, source);

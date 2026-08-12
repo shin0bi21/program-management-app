@@ -155,7 +155,7 @@ export default function Tasks() {
           : undefined}
         filters={<FilterCard
           categories={controls.filterCategories}
-          values={{ program: controls.programIds, category: controls.categories, status: controls.statusFilters }}
+          values={{ staff: controls.staffIds, program: controls.programIds, category: controls.categories, status: controls.statusFilters }}
           onApply={controls.applyFilter}
           onClearAll={controls.clearFilters}
         />}
@@ -172,6 +172,7 @@ export default function Tasks() {
         {...(controls.view === 'list' ? { table: <TaskListView
           columns={columns}
           hiddenColumnKeys={controls.hiddenColumns}
+          staffIds={controls.staffIds}
           programIds={controls.programIds}
           categories={controls.categories}
           statuses={controls.statusFilters}
@@ -185,7 +186,7 @@ export default function Tasks() {
           onColumnWidthsChange={controls.changeColumnWidths}
         /> } : { calendar: <TaskCalendarView
           resources={resources}
-          filters={{ programIds: controls.programIds, categories: controls.categories, statuses: controls.statusFilters }}
+          filters={{ staffIds: controls.staffIds, programIds: controls.programIds, categories: controls.categories, statuses: controls.statusFilters }}
           canWrite={canWrite}
           selectedResourceId={selectedResourceId}
           selectedTaskId={selectedTaskId}

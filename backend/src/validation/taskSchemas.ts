@@ -39,6 +39,7 @@ const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value
 
 export const taskListQuerySchema = z.object({
   query: z.object({
+    staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
     programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
     categories: commaSeparated(timeEntryCategorySchema),
     statuses: commaSeparated(taskStatusSchema),

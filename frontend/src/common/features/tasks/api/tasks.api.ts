@@ -23,7 +23,7 @@ export function getTasks(filters: TaskFilters = {}, opts?: RequestOptions) {
 }
 
 export interface TaskListFilters {
-  programIds: string[]; categories: TaskCategory[]; statuses: Task['status'][]; search?: string;
+  staffIds: string[]; programIds: string[]; categories: TaskCategory[]; statuses: Task['status'][]; search?: string;
 }
 
 export function getTaskList(filters: TaskListFilters, opts: RequestOptions | undefined, pagination: CursorRequest) {
@@ -31,6 +31,7 @@ export function getTaskList(filters: TaskListFilters, opts: RequestOptions | und
     sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? 25),
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
+  if (filters.staffIds.length) params.set('staffIds', filters.staffIds.join(','));
   if (filters.programIds.length) params.set('programIds', filters.programIds.join(','));
   if (filters.categories.length) params.set('categories', filters.categories.join(','));
   if (filters.statuses.length) params.set('statuses', filters.statuses.join(','));
