@@ -92,6 +92,8 @@ Data pages compose one route-level `PageHeader` followed by `PageBody`. `PageBod
 owns the shared `page-dashboard` region and exactly one `page-table` or
 `page-calendar` region; page-specific wrappers must not recreate that structure.
 
+Create a route-family layout only when sibling routes share persistent rendered UI, state, or coordination. A common URL prefix, redirect, permission, or identical page-shell classes does not justify an `Outlet`-only layout; in that case each concrete route owns its `main.page-container` shell and receives its own route guard.
+
 ## Feature folders
 
 A non-trivial unit owns its UI, stateful behavior, validation, types, and tests together:

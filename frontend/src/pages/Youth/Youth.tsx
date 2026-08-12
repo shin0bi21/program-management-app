@@ -191,7 +191,7 @@ export default function Youth() {
 
   return (
     <>
-      <div className="data-page">
+      <main className="page-container page-container--data">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -241,7 +241,7 @@ export default function Youth() {
             onDeleteProfileNote={profileNotes.requestDelete}
           />}
         />
-      </div>
+      </main>
 
       <YouthModal
         isOpen={modalTarget !== null}
