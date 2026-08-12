@@ -9,7 +9,7 @@ import classicThemePlugin from '@fullcalendar/react/themes/classic';
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/theme.css';
 import '@fullcalendar/react/themes/classic/palette.css';
-import { sessionTypeModifier } from '../../utils/sessionType';
+import { sessionTypeModifier } from '../../../utils/sessionType';
 import './ProgrammingCalendar.css';
 
 interface ProgrammingCalendarProps {
