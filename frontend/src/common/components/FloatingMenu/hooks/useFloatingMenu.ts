@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, type RefObject } from 'react';
 import {
   calculateFloatingPosition,
+  calculateFloatingPositionFromRect,
   calculateFloatingPositionFromPoint,
   type Placement,
   type FloatingPosition,
@@ -24,6 +25,7 @@ export interface UseFloatingMenuOptions extends PlacementOptions {
 export interface UseFloatingMenuReturn {
   isOpen: boolean;
   open: () => void;
+  openAtRect: (rect: DOMRect) => void;
   openAtPoint: (x: number, y: number) => void;
   close: () => void;
   toggle: () => void;
@@ -48,11 +50,13 @@ export function useFloatingMenu(
 
   // isOpen as a ref so toggle never captures a stale snapshot
   const isOpenRef = useRef(false);
+  const anchorRectRef = useRef<DOMRect | null>(null);
   const anchorPointRef = useRef<{ x: number; y: number } | null>(null);
   const isOpen = position !== null;
   isOpenRef.current = isOpen;
 
   const close = useCallback(() => {
+    anchorRectRef.current = null;
     anchorPointRef.current = null;
     setPosition(null);
   }, []);
@@ -60,13 +64,21 @@ export function useFloatingMenu(
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
+    anchorRectRef.current = null;
     anchorPointRef.current = null;
     setPosition(
       calculateFloatingPosition(triggerRef.current, placementRef.current, optionsRef.current),
     );
   }, [triggerRef]);
 
+  const openAtRect = useCallback((rect: DOMRect) => {
+    anchorRectRef.current = rect;
+    anchorPointRef.current = null;
+    setPosition(calculateFloatingPositionFromRect(rect, placementRef.current, optionsRef.current));
+  }, []);
+
   const openAtPoint = useCallback((x: number, y: number) => {
+    anchorRectRef.current = null;
     anchorPointRef.current = { x, y };
     setPosition(calculateFloatingPositionFromPoint(x, y, placementRef.current, optionsRef.current));
   }, []);
@@ -87,9 +99,14 @@ export function useFloatingMenu(
       widthEstimate: menuRect.width || optionsRef.current.widthEstimate,
       heightEstimate: menuRect.height || optionsRef.current.heightEstimate,
     };
-    const measuredPosition = anchorPointRef.current
-      ? calculateFloatingPositionFromPoint(anchorPointRef.current.x, anchorPointRef.current.y, placementRef.current, measuredOptions)
-      : calculateFloatingPosition(trigger, placementRef.current, measuredOptions);
+    let measuredPosition: FloatingPosition;
+    if (anchorRectRef.current) {
+      measuredPosition = calculateFloatingPositionFromRect(anchorRectRef.current, placementRef.current, measuredOptions);
+    } else if (anchorPointRef.current) {
+      measuredPosition = calculateFloatingPositionFromPoint(anchorPointRef.current.x, anchorPointRef.current.y, placementRef.current, measuredOptions);
+    } else {
+      measuredPosition = calculateFloatingPosition(trigger, placementRef.current, measuredOptions);
+    }
 
     setPosition(current => current
       && current.top === measuredPosition.top
@@ -151,5 +168,5 @@ export function useFloatingMenu(
     };
   }, [isOpen, triggerRef]);
 
-  return { isOpen, open, openAtPoint, close, toggle, position, menuRef };
+  return { isOpen, open, openAtRect, openAtPoint, close, toggle, position, menuRef };
 }

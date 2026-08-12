@@ -43,7 +43,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
   const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
   const detailOpenTimerRef = useRef<number | null>(null);
   const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
-  const { isOpen, open, close, position, menuRef } = useFloatingMenu(
+  const { isOpen, openAtRect, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'start' },
     { widthEstimate: 150, heightEstimate: 86 },
@@ -151,7 +151,10 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
         onActivate?.();
         if (!hasActions) return;
         if (isOpen) close();
-        else open();
+        else {
+          const anchor = getVisibleItemAnchor(event.clientX);
+          if (anchor) openAtRect(anchor);
+        }
       }}
     >
       {leading !== undefined && leading !== null && <strong>{leading}</strong>}
