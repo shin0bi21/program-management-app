@@ -1,7 +1,8 @@
 import type { Task } from '../../../common/features/tasks/types';
+import { canEditTask } from './taskActionCapabilities';
 
 export function getTaskCalendarCapabilities(task: Task, canWriteTask: boolean) {
-  const canAdjustDates = canWriteTask && (task.status === 'todo' || task.status === 'in_progress');
+  const canAdjustDates = canWriteTask && canEditTask(task);
   return { draggable: canAdjustDates, resizable: canAdjustDates };
 }
 

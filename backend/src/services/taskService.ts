@@ -27,6 +27,10 @@ interface TaskRow {
 
 interface LoggedHoursRow { taskId: string; workDate: string; hours: number }
 
+function isTerminalTask(task: TaskRow) {
+  return task.status === 'completed' || task.status === 'cancelled';
+}
+
 function indexLoggedHours(loggedHours: readonly LoggedHoursRow[]) {
   const loggedHoursByTask = new Map<string, Array<{ date: string; hours: number }>>();
   loggedHours.forEach(entry => {
@@ -217,6 +221,9 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
+    if (isTerminalTask(existingRows[0])) {
+      throw new ConflictError('Completed or cancelled tasks must be reopened before they can be edited');
+    }
     const oldStaffId = existingRows[0].staffId;
     const assigneeChanged = oldStaffId !== input.staffId;
     if (assigneeChanged && (existingRows[0].status !== 'todo' || existingRows[0].hoursLogged > 0)) {
@@ -274,6 +281,9 @@ export async function updateTaskPlacement(
     if (!existingRows.length) throw new NotFoundError('Task not found');
 
     const existing = existingRows[0];
+    if (isTerminalTask(existing)) {
+      throw new ConflictError('Completed or cancelled tasks must be reopened before their placement can change');
+    }
     const nextStaffId = input.staffId ?? existing.staffId;
     const assigneeChanged = nextStaffId !== existing.staffId;
     if (assigneeChanged) {
@@ -331,6 +341,9 @@ export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress
     if (!existingRows.length) throw new NotFoundError('Task not found');
     if (status === 'completed' && existingRows[0].status !== 'in_progress') {
       throw new ConflictError('Only in-progress tasks can be completed');
+    }
+    if (status === 'completed' && existingRows[0].hoursLogged === 0) {
+      throw new ConflictError('Tasks need logged time before they can be completed');
     }
     if (status === 'cancelled' && !['todo', 'in_progress'].includes(existingRows[0].status)) {
       throw new ConflictError('Only open tasks can be cancelled');
