@@ -5,7 +5,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import './TimesheetOverviewCard.css';
 
 interface EmptyTimesheetOverviewCardProps {
-  title: string;
+  title?: string;
   emptyMessage: string;
 }
 
@@ -45,7 +45,7 @@ export default function TimesheetOverviewCard(props: TimesheetOverviewCardProps)
     <>
       {details ? (
         <article className="dashboard-card timesheet-overview-card timesheet-overview-card--details">
-          <h2 className="timesheet-overview-card__accessible-title">{title}</h2>
+          {title && <h2 className="timesheet-overview-card__accessible-title">{title}</h2>}
           {hasData ? (
             <div className="dashboard-card__compact-layout timesheet-overview-card__layout">
               <dl className="timesheet-overview-card__details">

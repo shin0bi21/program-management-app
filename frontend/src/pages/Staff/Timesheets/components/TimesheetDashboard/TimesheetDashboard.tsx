@@ -19,10 +19,11 @@ export default function TimesheetDashboard({ staff, cycle, overview }: Timesheet
     : overview.status === 'error' ? overview.message : unavailableMessage;
 
   if (overview.status !== 'ready') {
+    const showTitles = Boolean(staff);
     return <>
-      <TimesheetOverviewCard title="Hours This Pay Period" emptyMessage={stateMessage} />
+      <TimesheetOverviewCard title={showTitles ? 'Hours This Pay Period' : undefined} emptyMessage={stateMessage} />
       <TimesheetOverviewCard
-        title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
+        title={showTitles ? `Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}` : undefined}
         emptyMessage={stateMessage}
       />
     </>;
