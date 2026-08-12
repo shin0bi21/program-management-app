@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';
 import type { Task } from '../../../../../../common/features/tasks/types';
@@ -33,6 +33,16 @@ describe('TaskItem', () => {
       'Program', 'Category', 'Start', 'End', 'Logged', 'Notes',
     ]);
     expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('calendar-item-details__section-start');
+  });
+
+  it('shows a dash when the task has no program', async () => {
+    render(<TaskItem task={task} />);
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getByText('—')).toBeInTheDocument();
+    expect(tooltip).not.toHaveTextContent('General');
   });
 
   it('opens the floating action menu before invoking edit or delete', () => {

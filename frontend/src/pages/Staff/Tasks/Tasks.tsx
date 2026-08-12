@@ -106,7 +106,7 @@ export default function Tasks() {
     { key: 'firstName', sortKey: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
     { key: 'lastName', sortKey: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
     { key: 'title', sortKey: 'title', header: 'Task', render: task => task.title },
-    { key: 'program', sortKey: 'program', header: 'Program', width: 160, render: task => task.programName ?? 'General' },
+    { key: 'program', sortKey: 'program', header: 'Program', width: 160, render: task => task.programName ?? '—' },
     { key: 'category', sortKey: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
     { key: 'startDate', sortKey: 'startDate', header: 'Start', width: 120, render: task => task.startDate },
     { key: 'dueDate', sortKey: 'dueDate', header: 'Due', width: 120, render: task => task.dueDate },
