@@ -68,7 +68,7 @@ export default function Timesheets() {
   const [cycleLoading, setCycleLoading] = useState(true);
   const [cycleError, setCycleError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'other' | 'task' | 'session' }>({});
+  const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'regular' | 'task' | 'session' }>({});
   const [editTarget, setEditTarget] = useState<EntryTarget | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -124,7 +124,7 @@ export default function Timesheets() {
       setCycleError(null);
     } catch (cause) {
       if (signal?.aborted || revision !== cycleRequestRevisionRef.current) return;
-      setCycleError(getErrorMessage(cause, 'Could not load timesheets for this cycle.'));
+      setCycleError(getErrorMessage(cause, 'Could not load hours for this cycle.'));
     } finally {
       if (!signal?.aborted && revision === cycleRequestRevisionRef.current) setCycleLoading(false);
     }
@@ -170,8 +170,8 @@ export default function Timesheets() {
 
   const requestDelete = useCallback((target: EntryTarget) => {
     setConfirmAction({
-      title: 'Delete time entry',
-      message: `Delete this ${target.item.categoryLabel.toLowerCase()} entry?`,
+      title: 'Delete logged hours',
+      message: `Delete these ${target.item.categoryLabel.toLowerCase()} hours?`,
       confirmLabel: 'Delete',
       confirmVariant: 'danger',
       onConfirm: async () => {
@@ -247,7 +247,7 @@ export default function Timesheets() {
       const confirmed = confirmedMoveSourcesRef.current.get(item.id);
       if (confirmed) upsertItem(confirmed.resourceId, confirmed.date, confirmed.item);
       confirmedMoveSourcesRef.current.delete(item.id);
-      setMoveError('Unable to move time entry. The entry was returned to its original day.');
+      setMoveError('Unable to move logged hours. The hours were returned to their original day.');
     }
   };
 
@@ -283,7 +283,7 @@ export default function Timesheets() {
     { resource, period, data: item }: BuildItemContext<StaffResource, TimesheetItem>,
     { close }: { close: () => void },
   ) => renderTimeItem(resource, period.key, item, close), [renderTimeItem]);
-  const openCellEntry = useCallback(({ resource, period }: CalendarCellContext<StaffResource, TimesheetItem>, source: 'other' | 'task' | 'session') => {
+  const openCellEntry = useCallback(({ resource, period }: CalendarCellContext<StaffResource, TimesheetItem>, source: 'regular' | 'task' | 'session') => {
     setAddTarget({ resourceId: resource.id, date: period.key, source });
     setEditTarget(null);
     setAddOpen(true);
@@ -293,25 +293,25 @@ export default function Timesheets() {
     <>
       <main className="page-container page-container--data timesheets-page">
         <PageHeader
-          title="Timesheets"
+          title="Hours"
           actions={canWriteTimesheets && writableResources.length ? (
             <ActionsMenu
               triggerLabel="+ Add"
-              ariaLabel="Add time entry"
+              ariaLabel="Add hours"
               items={[
-                { id: 'session', label: 'Session Time', onClick: () => {
+                { id: 'session', label: 'Session Hours', onClick: () => {
                   setEditTarget(null);
                   setAddTarget({ source: 'session' });
                   setAddOpen(true);
                 } },
-                { id: 'task', label: 'Task Time', onClick: () => {
+                { id: 'task', label: 'Task Hours', onClick: () => {
                   setEditTarget(null);
                   setAddTarget({ source: 'task' });
                   setAddOpen(true);
                 } },
-                { id: 'other', label: 'Other Time', onClick: () => {
+                { id: 'regular', label: 'Regular Hours', onClick: () => {
                   setEditTarget(null);
-                  setAddTarget({ source: 'other' });
+                  setAddTarget({ source: 'regular' });
                   setAddOpen(true);
                 } },
               ]}
@@ -338,10 +338,10 @@ export default function Timesheets() {
             : undefined}
           search={view === 'list' ? (
             <SearchInput
-              label="Search time entries"
+              label="Search hours"
               value={listSearch}
               onChange={event => setListSearch(event.target.value)}
-              placeholder="Search time entries"
+              placeholder="Search hours"
             />
           ) : undefined}
         />
@@ -352,14 +352,14 @@ export default function Timesheets() {
           </div>
         )}
         {!preferencesReady ? <p role="status">Loading saved filters…</p> : <PageBody
-          ariaLabel="Timesheet overview and entries"
+          ariaLabel="Hours overview and entries"
           dashboard={<TimesheetDashboard staff={dashboardStaff} cycle={overviewCycle} overview={dashboardOverview} />}
           {...(view === 'calendar' ? { calendar: <ResourceCalendar
             resources={visibleResources}
             data={visibleData}
             initialDate={initialDate}
             positionStorageKey={TIMESHEET_CALENDAR_POSITION_KEY}
-            ariaLabel="Staff timesheet calendar"
+            ariaLabel="Staff hours calendar"
             resourceHeader="Name"
             onPeriodsBuilt={onPeriodsBuilt}
             onInitialPeriods={initialize}
@@ -373,9 +373,9 @@ export default function Timesheets() {
             rowHeight={112}
             renderOverflowSummary={summarizeOverflow}
             getCellActions={canWriteTimesheets ? context => context.resource.writable ? [
-              { id: 'session', label: 'Session Time', onSelect: () => openCellEntry(context, 'session') },
-              { id: 'task', label: 'Task Time', onSelect: () => openCellEntry(context, 'task') },
-              { id: 'other', label: 'Other Time', onSelect: () => openCellEntry(context, 'other') },
+              { id: 'session', label: 'Session Hours', onSelect: () => openCellEntry(context, 'session') },
+              { id: 'task', label: 'Task Hours', onSelect: () => openCellEntry(context, 'task') },
+              { id: 'regular', label: 'Regular Hours', onSelect: () => openCellEntry(context, 'regular') },
             ] : [] : undefined}
             getResourceId={getStaffResourceId}
             getItemId={getTimesheetItemId}
@@ -385,7 +385,7 @@ export default function Timesheets() {
             buildItem={buildCalendarItem}
             buildOverflowItem={buildOverflowItem}
           /> } : { table: <Table
-            ariaLabel="Timesheet entries"
+            ariaLabel="Hours entries"
             columns={listColumns}
             hiddenColumnKeys={hiddenColumns}
             data={visibleListRows}
@@ -399,8 +399,8 @@ export default function Timesheets() {
             columnWidths={listColumnWidths}
             onColumnWidthsChange={setColumnWidths}
             emptyMessage={listSearch.trim()
-              ? 'No time entries match your search'
-              : selectedCycle ? 'No time entries for this cycle' : 'No time entries found'}
+              ? 'No hours match your search'
+              : selectedCycle ? 'No hours for this cycle' : 'No hours found'}
           /> })}
         />}
       </main>
@@ -410,7 +410,7 @@ export default function Timesheets() {
         programs={programs}
         onClose={() => setAddOpen(false)}
         onAdd={addTimeEntry}
-        initialResourceId={addTarget.resourceId}
+        initialResourceId={addTarget.resourceId ?? (!editTarget ? currentUserId : undefined)}
         initialDate={addTarget.date}
         initialSource={addTarget.source}
         staffLocked={Boolean(addTarget.resourceId)}

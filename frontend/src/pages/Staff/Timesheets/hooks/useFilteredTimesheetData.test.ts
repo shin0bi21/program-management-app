@@ -73,7 +73,7 @@ describe('useFilteredTimesheetData', () => {
     expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-2' })]);
   });
 
-  it('filters entries by Task, Session, and Other linkage type', () => {
+  it('filters entries by Task, Session, and Regular linkage type', () => {
     const data: ResourcePeriodData<TimesheetItem> = {
       first: { '2026-08-09': [
         { ...entry('task-entry', 'meeting'), taskId: 'task-1' },

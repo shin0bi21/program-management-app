@@ -12,10 +12,10 @@ interface TimesheetDashboardProps {
 
 export default function TimesheetDashboard({ staff, cycle, overview }: TimesheetDashboardProps) {
   const unavailableMessage = staff && cycle
-    ? 'Timesheet overview is unavailable.'
-    : 'Select a staff member to view their time entry overview.';
+    ? 'Hours overview is unavailable.'
+    : 'Select a staff member to view their hours overview.';
   const stateMessage = overview.status === 'loading'
-    ? 'Loading timesheet overview…'
+    ? 'Loading hours overview…'
     : overview.status === 'error' ? overview.message : unavailableMessage;
 
   if (overview.status !== 'ready') {

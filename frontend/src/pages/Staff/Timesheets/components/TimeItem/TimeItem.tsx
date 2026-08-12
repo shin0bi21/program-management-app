@@ -9,7 +9,7 @@ interface TimeItemProps {
 }
 
 export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
-  const entryType = item.taskId ? 'Task' : item.sessionId ? 'Session' : 'Other';
+  const entryType = item.taskId ? 'Task' : item.sessionId ? 'Session' : 'Regular';
   const title = item.taskTitle ?? item.sessionLabel ?? item.categoryLabel;
   return <CalendarItem
     id={item.id}

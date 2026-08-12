@@ -51,7 +51,7 @@ function sortValue(row: TimesheetListRow, key: TimesheetSortKey): string | numbe
 }
 
 export function timesheetEntryType(item: TimesheetItem) {
-  return item.taskId ? 'Task' : item.sessionId ? 'Session' : 'Other';
+  return item.taskId ? 'Task' : item.sessionId ? 'Session' : 'Regular';
 }
 
 export function timesheetEntryTypeKey(item: TimesheetItem): TimesheetEntryType {

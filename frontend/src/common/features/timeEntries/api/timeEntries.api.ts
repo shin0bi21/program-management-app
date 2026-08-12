@@ -13,7 +13,7 @@ export interface TimeEntryResponse {
 
 interface SharedTimeEntryInput { staffId: string; hours: number; note: string }
 export type SetTimeEntryInput = SharedTimeEntryInput & ({
-  source: 'other'; workDate: string; programId: string | null; category: Exclude<TimeEntryCategory, 'program_delivery'>;
+  source: 'regular'; workDate: string; programId: string | null; category: Exclude<TimeEntryCategory, 'program_delivery'>;
 } | { source: 'task'; workDate: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: string });
 export interface UpdateTimeEntryPlacementInput { workDate: string }

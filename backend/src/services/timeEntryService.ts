@@ -44,7 +44,7 @@ const categoryLabels: Record<TimeEntryCategory, string> = {
 };
 
 async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
-  if (input.source === 'other') return {
+  if (input.source === 'regular') return {
     programId: input.programId, category: input.category,
     taskId: null, taskStatus: null, sessionId: null, workDate: input.workDate,
   };
