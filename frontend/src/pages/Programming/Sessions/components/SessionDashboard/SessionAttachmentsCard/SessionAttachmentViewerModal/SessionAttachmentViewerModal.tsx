@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   downloadSessionAttachment,
   getSessionAttachmentFile,
-} from '../../../../../common/features/programming/api/programming.api';
-import Button from '../../../../../common/components/Button/Button';
-import Modal from '../../../../../common/components/Modal/Modal';
-import type { CohortSession, SessionAttachment } from '../../../../../common/types/cohort';
+} from '../../../../../../../common/features/programming/api/programming.api';
+import Button from '../../../../../../../common/components/Button/Button';
+import Modal from '../../../../../../../common/components/Modal/Modal';
+import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';
 import './SessionAttachmentViewerModal.css';
 
 export default function SessionAttachmentViewerModal({

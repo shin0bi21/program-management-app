@@ -1,32 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
+import type { TableColumn } from '../../../common/components/Table/Table';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/features/programming/api/programming.api';
 import { useAuth } from '../../../auth/authContext';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
-import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import type { CohortSession, SessionSortKey } from '../../../common/types/cohort';
-import type { ListSort } from '../../../common/types/pagination';
+import type { CohortSession } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
 import { useSessionTypes } from '../common/hooks/useSessionTypes';
-import { getSingleActiveCohort, getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaults';
 import AttendanceModal from './components/AttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
-import SessionOverview from './components/SessionOverview/SessionOverview';
+import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
-import { useSessions } from './hooks/useSessions';
+import SessionListView, { type SessionListMutationCache } from './components/SessionListView/SessionListView';
+import { useSessionControls } from './hooks/useSessionControls';
 import { sessionTypeModifier } from './utils/sessionType';
 import './Sessions.css';
 
@@ -34,36 +32,42 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
-type StatusFilter = 'upcoming' | 'completed';
-type SessionsView = 'list' | 'calendar';
-
 export default function Sessions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions, role } = useAuth();
   const { programs, loading: programsLoading } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, refresh: refreshCohorts } = useCohorts();
   const sessionTypes = useSessionTypes();
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
   const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
+  const [selectedListSession, setSelectedListSession] = useState<CohortSession | null>(null);
+  const emptyListMutationCache = useMemo<SessionListMutationCache>(() => ({
+    remove: () => undefined,
+    refresh: async () => undefined,
+  }), []);
+  const listMutationRef = useRef<SessionListMutationCache>(emptyListMutationCache);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-  const [view, setViewState] = useState<SessionsView>('calendar');
-  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
-  const [cohortId, setCohortId] = useState('');
-  const [selectedSessionTypeIds, setSelectedSessionTypeIds] = useState<string[]>([]);
-  const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([]);
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const selectedSessionId = searchParams.get('session') ?? '';
-  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('session-filters');
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
+  const clearSelectedSession = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('session');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+  const controls = useSessionControls({
+    role, programs, programsLoading, cohorts, cohortsLoading, sessionTypes,
+    onFiltersChanged: clearSelectedSession,
+  });
+  const {
+    search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
+    sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, ready: filtersReady,
+    sorting, columnWidths, filterCategories, schedulableCohorts,
+  } = controls;
 
   const requestSessionDeletion = useCallback(
     (session: CohortSession, onDeleted: (id: string) => void | Promise<void>) => {
@@ -83,149 +87,12 @@ export default function Sessions() {
   );
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
     const legacyKeys = ['view', 'program', 'cohort', 'status', 'type'];
     if (!legacyKeys.some(key => searchParams.has(key))) return;
     const next = new URLSearchParams(searchParams);
     legacyKeys.forEach(key => next.delete(key));
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
-
-  useEffect(() => {
-    if (filtersReady || preferenceLoading || programsLoading || cohortsLoading || role === null) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    if (preference) {
-      const programIds = preference.programIds.filter(id => availableProgramIds.has(id));
-      setViewState(preference.view);
-      setSelectedProgramIds(programIds);
-      setCohortId(cohorts.some(cohort => cohort.id === preference.cohortId) ? preference.cohortId ?? '' : '');
-      setSelectedSessionTypeIds(preference.sessionTypeIds);
-      setStatusFilters(preference.statuses);
-      setSorting(preference.sorting ?? { key: 'date', direction: 'desc' });
-      setColumnWidths(preference.columnWidths ?? {});
-    } else {
-      const assignedProgram = getSingleAssignedProgram(role, programs);
-      setSelectedProgramIds(assignedProgram ? [assignedProgram.id] : []);
-      setCohortId(assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '');
-    }
-    setFiltersReady(true);
-  }, [cohorts, cohortsLoading, filtersReady, preference, preferenceLoading, programs, programsLoading, role]);
-
-  const {
-    sessions,
-    removeSession,
-    loading,
-    refreshing,
-    error,
-    refresh: refreshSessions,
-    hasNextPage,
-    loadingNextPage,
-    loadNextPage,
-  } = useSessions(
-    {
-      programIds: selectedProgramIds,
-      cohortId: cohortId || undefined,
-      sessionTypeIds: selectedSessionTypeIds,
-      statuses: statusFilters,
-      search: debouncedSearch || undefined,
-    },
-    sorting,
-    filtersReady && view === 'list',
-  );
-
-  const filteredCohorts = useMemo(
-    () =>
-      selectedProgramIds.length ? cohorts.filter((cohort) => selectedProgramIds.includes(cohort.programId)) : cohorts,
-    [cohorts, selectedProgramIds],
-  );
-  const schedulableCohorts = useMemo(
-    () => filteredCohorts.filter((cohort) => cohort.state !== 'completed'),
-    [filteredCohorts],
-  );
-
-  const filterCategories = useMemo<FilterCardCategory[]>(
-    () => [
-      {
-        id: 'program',
-        label: 'Program',
-        options: programs.map((program) => ({ value: program.id, label: program.name })),
-      },
-      {
-        id: 'cohort',
-        label: 'Cohort',
-        selectionMode: 'single',
-        options: filteredCohorts.map((cohort) => ({
-          value: cohort.id,
-          label: `${cohort.programName} · ${cohort.name}`,
-        })),
-      },
-      {
-        id: 'type',
-        label: 'Type',
-        options: sessionTypes.map((type) => ({ value: type.id, label: type.name })),
-      },
-      {
-        id: 'status',
-        label: 'Status',
-        options: [
-          { value: 'upcoming', label: 'Upcoming' },
-          { value: 'completed', label: 'Completed' },
-        ],
-      },
-    ],
-    [filteredCohorts, programs, sessionTypes],
-  );
-
-  const setFilter = (key: string, values: string[]) => {
-    const nextProgramIds = key === 'program' ? values : selectedProgramIds;
-    const nextCohortId = key === 'program' ? '' : key === 'cohort' ? values[0] ?? '' : cohortId;
-    const nextSessionTypeIds = key === 'type' ? values : selectedSessionTypeIds;
-    const nextStatuses = key === 'status' ? values as StatusFilter[] : statusFilters;
-    setSelectedProgramIds(nextProgramIds);
-    setCohortId(nextCohortId);
-    setSelectedSessionTypeIds(nextSessionTypeIds);
-    setStatusFilters(nextStatuses);
-    void save({
-      view,
-      programIds: nextProgramIds,
-      cohortId: nextCohortId || null,
-      sessionTypeIds: nextSessionTypeIds,
-      statuses: nextStatuses,
-      sorting,
-      columnWidths,
-    });
-    const next = new URLSearchParams(searchParams);
-    next.delete('session');
-    setSearchParams(next);
-  };
-
-  const setView = (nextView: SessionsView) => {
-    setViewState(nextView);
-    void save({
-      view: nextView,
-      programIds: selectedProgramIds,
-      cohortId: cohortId || null,
-      sessionTypeIds: selectedSessionTypeIds,
-      statuses: statusFilters,
-      sorting,
-      columnWidths,
-    });
-  };
-
-  const clearFilters = () => {
-    setSelectedProgramIds([]);
-    setCohortId('');
-    setSelectedSessionTypeIds([]);
-    setStatusFilters([]);
-    void save({ view, programIds: [], cohortId: null, sessionTypeIds: [], statuses: [], sorting, columnWidths });
-    const next = new URLSearchParams(searchParams);
-    next.delete('session');
-    setSearchParams(next);
-  };
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
     const next = new URLSearchParams(searchParams);
@@ -293,7 +160,7 @@ export default function Sessions() {
                             id: 'delete',
                             label: 'Delete Session',
                             variant: 'danger' as const,
-                            onClick: () => requestSessionDeletion(session, removeSession),
+                            onClick: () => requestSessionDeletion(session, listMutationRef.current.remove),
                           },
                         ]
                       : []),
@@ -304,21 +171,19 @@ export default function Sessions() {
           ]
         : []),
     ],
-    [canWriteAttendance, canWriteSessions, removeSession, requestSessionDeletion],
+    [canWriteAttendance, canWriteSessions, requestSessionDeletion],
   );
 
-  const activeSessions = view === 'calendar' ? calendarSessions : sessions;
-  const selectedSession = useMemo(
-    () => activeSessions.find((session) => session.id === selectedSessionId) ?? null,
-    [activeSessions, selectedSessionId],
-  );
+  const selectedSession = view === 'calendar'
+    ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
+    : selectedListSession?.id === selectedSessionId ? selectedListSession : null;
 
   const refreshActiveView = async () => {
     if (view === 'calendar') {
       setCalendarRefreshToken((current) => current + 1);
       return;
     }
-    await refreshSessions();
+    await listMutationRef.current.refresh();
   };
 
   return (
@@ -340,7 +205,7 @@ export default function Sessions() {
               <SearchInput
                 label="Search sessions"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => controls.setSearch(event.target.value)}
                 placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
@@ -353,10 +218,8 @@ export default function Sessions() {
                   status: statusFilters,
                   type: selectedSessionTypeIds,
                 }}
-                onApply={(category, selected) =>
-                  setFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)
-                }
-                onClearAll={clearFilters}
+                onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
+                onClearAll={controls.clearFilters}
               />
             }
             view={(
@@ -366,52 +229,42 @@ export default function Sessions() {
                   { value: 'calendar', label: 'Calendar' },
                   { value: 'list', label: 'List' },
                 ]}
-                onChange={setView}
+                onChange={controls.setView}
               />
             )}
             columns={view === 'list'
-              ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />
+              ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
               : undefined}
           />
-          {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
+          {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (
             <PageBody
               ariaLabel="Sessions and overview"
               table={
-                <Table
-                  ariaLabel="Sessions"
+                <SessionListView
                   columns={columns}
-                  hiddenColumnKeys={preference?.hiddenColumns ?? []}
-                  data={sessions}
-                  loading={loading}
-                  refreshing={refreshing}
-                  error={error ?? undefined}
-                  keyExtractor={(session) => session.id}
-                  selectedKey={selectedSessionId || null}
-                  scrollToSelected={Boolean(selectedSessionId)}
-                  onRowSelect={selectSession}
+                  hiddenColumnKeys={controls.hiddenColumns}
+                  filters={{
+                    programIds: selectedProgramIds,
+                    cohortId: cohortId || undefined,
+                    sessionTypeIds: selectedSessionTypeIds,
+                    statuses: statusFilters,
+                    search: debouncedSearch || undefined,
+                  }}
                   sorting={sorting}
-                  onSortingChange={next => { const value = next as ListSort<SessionSortKey>; setSorting(value); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting: value, columnWidths }); }}
                   columnWidths={columnWidths}
-                  onColumnWidthsChange={next => { setColumnWidths(next); void save({ view, programIds: selectedProgramIds, cohortId: cohortId || null, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, sorting, columnWidths: next }); }}
-                  hasNextPage={hasNextPage}
-                  loadingNextPage={loadingNextPage}
-                  onLoadNextPage={loadNextPage}
-                  emptyMessage={
-                    search ||
-                    selectedProgramIds.length ||
-                    cohortId ||
-                    selectedSessionTypeIds.length ||
-                    statusFilters.length
-                      ? 'No sessions match your search and filters'
-                      : 'No sessions yet'
-                  }
+                  selectedSessionId={selectedSessionId}
+                  mutationCacheRef={listMutationRef}
+                  onSelectedSessionResolved={setSelectedListSession}
+                  onSessionSelect={selectSession}
+                  onSortingChange={controls.setSorting}
+                  onColumnWidthsChange={controls.setColumnWidths}
                 />
               }
               dashboard={
-                <SessionOverview
+                <SessionDashboard
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}
@@ -450,7 +303,7 @@ export default function Sessions() {
                 />
               }
               dashboard={
-                <SessionOverview
+                <SessionDashboard
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}

@@ -4,16 +4,16 @@ import {
   createSessionAttachment,
   getSessionRoster,
   updateSessionAttachment,
-} from '../../../../../common/features/programming/api/programming.api';
-import FormField from '../../../../../common/components/FormField/FormField';
-import Modal from '../../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+} from '../../../../../../../common/features/programming/api/programming.api';
+import FormField from '../../../../../../../common/components/FormField/FormField';
+import Modal from '../../../../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
+import type { SubmitStatus } from '../../../../../../../common/hooks/useSubmitStatus';
 import type {
   CohortSession,
   SessionAttachment,
   SessionRosterMember,
-} from '../../../../../common/types/cohort';
+} from '../../../../../../../common/types/cohort';
 import './SessionAttachmentModal.css';
 
 export default function SessionAttachmentModal({

@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
-import Button from '../../../../../common/components/Button/Button';
-import type { SessionAttachment } from '../../../../../common/types/cohort';
+import Button from '../../../../../../../common/components/Button/Button';
+import type { SessionAttachment } from '../../../../../../../common/types/cohort';
 import './SessionAttachmentRow.css';
 
 export default function SessionAttachmentRow({
