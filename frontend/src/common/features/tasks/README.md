@@ -10,15 +10,15 @@ Task responses include `hoursLogged` plus `loggedHoursByDate`, which contains ta
 
 Task assignees and task-option resources expose required `firstName`, `lastName`, and combined `name` fields. List tables use the separate fields; calendars, selectors, cards, and compact labels use the server-provided combined name.
 
-Compact task calendar items show title and category. Their shared hover-details panel also shows program, cycle, planned dates, total hours logged, and task details; hours do not appear in the compact item summary.
+Compact task calendar items show title and category. Their shared hover-details panel also shows program, planned dates, total hours logged, and task details; hours do not appear in the compact item summary.
 
 The task dashboard is resource-scoped, not account-scoped or calendar-filter-scoped. Selecting any readable staff resource shows that person's overview while write actions remain capability-scoped. The dashboard summarizes active assignments, tasks due in the current Monday-through-Sunday week, and overdue active tasks; its detail report names the tasks and due dates in the latter two groups. An active task is `todo` or `in_progress`; it is overdue only when its due date is before today. Calendar items expose overdue state through the shared trailing-content slot, while the task page owns the task-specific red indicator and report language.
 
-Time entry creation has separate general and task contracts. General time supplies a required cycle and category plus an optional program. Task time supplies only an assigned task ID for its business scope; the backend derives its required cycle and category plus optional program from the task. Task dates describe the plan and do not restrict when actual time may be logged.
+Time entry creation has separate general and task contracts. General time supplies a category plus an optional program. Task time supplies only an assigned task ID for its business scope; the backend derives its category and optional program from the task. The backend derives the cycle from the work date for both workflows. Task dates describe the plan and do not restrict when actual time may be logged.
 
 Task pages may open the shared time-entry modal contextually with `initialTask`. That workflow locks the task and its assigned staff, while date, hours, and note remain editable. Calendar-item activation and list-row selection must update the selected task before dashboard actions such as **Log Hours** run.
 
-- A task has one required category, one required cycle, an optional program, and exactly one staff owner.
+- A task has one required category, an optional program, and exactly one staff owner.
 - Unscheduled or unassigned program backlog work is a separate future domain. It should convert into a fully scheduled, assigned task rather than weakening the current task invariants.
 - Staff resource visibility is determined once at the resource boundary. Staff may read the complete task rows of coworkers who share any program assignment with them, including those coworkers' programless and administrative tasks; staff may still mutate only their own tasks. Administrators may read and mutate every task resource.
 - Time entries may reference an assigned task, but task linkage remains optional.

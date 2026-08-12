@@ -4,23 +4,17 @@ import {
   createTimeEntry,
   deleteTimeEntry,
   getTimeEntries,
-  getTimeEntryCohorts,
   getTimeEntryOverview,
   getTimeEntrySessions,
   updateTimeEntry,
   updateTimeEntryPlacement,
 } from '../services/timeEntryService';
-import { timeEntryCohortQuerySchema, timeEntryOverviewQuerySchema, timeEntryQuerySchema, timeEntrySessionQuerySchema } from '../validation/timeEntrySchemas';
+import { timeEntryOverviewQuerySchema, timeEntryQuerySchema, timeEntrySessionQuerySchema } from '../validation/timeEntrySchemas';
 
 export async function handleGetTimeEntries(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
   const query = timeEntryQuerySchema.shape.query.parse(req.query);
   res.json(await getTimeEntries(actor, query));
-}
-
-export async function handleGetTimeEntryCohorts(req: Request, res: Response) {
-  const query = timeEntryCohortQuerySchema.shape.query.parse(req.query);
-  res.json(await getTimeEntryCohorts(query.programId));
 }
 
 export async function handleGetTimeEntryOverview(req: Request, res: Response) {

@@ -42,8 +42,9 @@ describe('TimeItem', () => {
     expect(tooltip).toHaveTextContent('Workshop delivery');
 
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Cycle', 'Category', 'Hours', 'Notes',
+      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
+    expect(screen.getByText('Hours').closest('div')).toHaveClass('calendar-item-details__section-start');
   });
 
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
@@ -56,12 +57,12 @@ describe('TimeItem', () => {
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Cycle', 'Category', 'Hours', 'Notes',
+      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
-    expect(tooltip.querySelector('dd')).toHaveTextContent('—');
+    expect(tooltip.querySelectorAll('dd')[1]).toHaveTextContent('—');
   });
 
-  it('omits the redundant Program Delivery category for session time', async () => {
+  it('keeps cycle, program, and category details for session time', async () => {
     render(<TimeItem item={{
       ...item,
       sessionId: 'session-1',
@@ -71,9 +72,9 @@ describe('TimeItem', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Cycle', 'Session', 'Hours', 'Notes',
+      'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Notes',
     ]);
-    expect(tooltip).not.toHaveTextContent('Program Delivery');
+    expect(tooltip).toHaveTextContent('Program Delivery');
   });
 
   it('dismisses hover details when a scroll container moves', async () => {

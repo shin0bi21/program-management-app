@@ -8,6 +8,11 @@
   font-size: 1rem;
 }
 
+.calendar-item.task-item--selected {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 2px var(--accent-18);
+}
+
 .resource-calendar__range-item--compact .task-item__overdue,
 .resource-calendar__range-item--compact .task-item__completed,
 .resource-calendar__range-item--dense .task-item__overdue,
@@ -28,33 +33,11 @@
   gap: 5px;
 }
 
-.task-item__status-badge,
 .task-item__overdue-badge {
-  flex: 0 0 auto;
   padding: 2px 6px;
   border-radius: 5px;
   font-size: .68rem;
   font-weight: 700;
-}
-
-.task-item__status-badge--todo {
-  background: var(--brand-orange-25);
-  color: var(--color-status-warn);
-}
-
-.task-item__status-badge--in_progress {
-  background: var(--color-status-warn-bg);
-  color: var(--color-status-warn);
-}
-
-.task-item__status-badge--completed {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.task-item__status-badge--cancelled {
-  background: var(--ink-06);
-  color: var(--color-muted);
 }
 
 .task-item__overdue-badge {

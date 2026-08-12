@@ -2,12 +2,11 @@ import { useMemo } from 'react';
 import type { ListSort } from '../../../../common/types/pagination';
 import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../common/features/tasks/types';
 
-export type TaskSortKey = 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'cycle' | 'startDate' | 'dueDate' | 'status';
+export type TaskSortKey = 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'startDate' | 'dueDate' | 'status';
 
 interface TaskViewFilters {
   search: string;
   programIds: readonly string[];
-  cycleIds: readonly string[];
   categories: readonly TaskCategory[];
   statuses: readonly TaskStatus[];
 }
@@ -16,20 +15,18 @@ function matchesTask(task: Task, filters: TaskViewFilters) {
   const search = filters.search.trim().toLocaleLowerCase();
   const matchesProgram = !filters.programIds.length
     || (task.programId !== null && filters.programIds.includes(task.programId));
-  const matchesCycle = !filters.cycleIds.length || filters.cycleIds.includes(task.cycleId);
   const matchesCategory = !filters.categories.length || filters.categories.includes(task.category);
   const matchesStatus = !filters.statuses.length || filters.statuses.includes(task.status);
   const searchableFields = [
     task.title,
     task.details ?? '',
     task.programName ?? '',
-    task.cycleName,
     task.assignee.name,
   ];
   const matchesSearch = !search
     || searchableFields.some(field => field.toLocaleLowerCase().includes(search));
 
-  return matchesProgram && matchesCycle && matchesCategory && matchesStatus && matchesSearch;
+  return matchesProgram && matchesCategory && matchesStatus && matchesSearch;
 }
 
 function buildRangeData(tasks: readonly Task[], resources: readonly TaskResource[]) {
@@ -53,7 +50,6 @@ function taskSortValue(task: Task, key: TaskSortKey) {
     title: task.title,
     category: task.category,
     program: task.programName ?? 'General',
-    cycle: task.cycleName,
     startDate: task.startDate,
     dueDate: task.dueDate,
     status: task.status,

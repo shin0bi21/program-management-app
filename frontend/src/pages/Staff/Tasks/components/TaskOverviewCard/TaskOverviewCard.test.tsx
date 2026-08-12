@@ -5,7 +5,7 @@ import TaskOverviewCard from './TaskOverviewCard';
 
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026', status: 'todo',
+  programId: null, programName: null, status: 'todo',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
   assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };

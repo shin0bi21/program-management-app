@@ -6,7 +6,7 @@ import {
   updateTaskPlacement,
   updateTaskStatus,
 } from '../../../../common/features/tasks/api/tasks.api';
-import type { Task, TaskStatus } from '../../../../common/features/tasks/types';
+import type { Task } from '../../../../common/features/tasks/types';
 import { createTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
 
 export const TASKS_QUERY_KEY = ['tasks'] as const;
@@ -74,7 +74,7 @@ export default function useTaskMutations() {
     ...(staffId !== task.assignee.id ? { staffId } : {}),
   }), `Unable to ${action} task.`), [runMutation]);
 
-  const setStatus = useCallback((task: Task, status: TaskStatus) => (
+  const setStatus = useCallback((task: Task, status: Task['status']) => (
     runMutation(() => updateTaskStatus(task.id, status), 'Unable to update task status.')
   ), [runMutation]);
 

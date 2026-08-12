@@ -559,7 +559,6 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
   await expect(tooltip).toContainText('Prepare workshop');
   await expect(tooltip).toContainText('Planning / Prep');
   await expect(tooltip).toContainText('Soft Skills');
-  await expect(tooltip).toContainText('Summer 2026');
   await expect(tooltip).toContainText('Logged');
   await expect(tooltip).toContainText('1.5 hours');
   await expect(tooltip).toContainText('Prepare activities and materials.');

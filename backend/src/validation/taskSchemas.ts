@@ -30,8 +30,6 @@ export const setTaskSchema = z.object({
     details: z.string().trim().max(2000, 'Details cannot exceed 2000 characters').nullable().optional().transform(value => value || null),
     category: timeEntryCategorySchema,
     programId: nullableUuid('Invalid program ID'),
-    cycleId: z.string().uuid('Invalid cycle ID'),
-    status: taskStatusSchema,
     startDate: calendarDate('Start date'),
     dueDate: calendarDate('Due date'),
     staffId: z.string().uuid('Invalid staff ID'),
@@ -42,7 +40,7 @@ export const setTaskSchema = z.object({
 });
 
 export const updateTaskStatusSchema = z.object({
-  body: z.object({ status: taskStatusSchema }),
+  body: z.object({ status: z.enum(['todo', 'in_progress', 'completed', 'cancelled']) }),
 });
 
 export const updateTaskPlacementSchema = z.object({

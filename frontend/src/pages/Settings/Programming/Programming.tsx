@@ -50,7 +50,7 @@ export default function Programming() {
   const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
     setConfirmAction({
       title: 'Delete Cycle',
-      message: `Delete ${cycle.name}? Cycles assigned to cohorts, tasks, or time entries cannot be deleted.`,
+      message: `Delete ${cycle.name}? Cycles assigned to cohorts or time entries cannot be deleted.`,
       confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Cycle deleted',

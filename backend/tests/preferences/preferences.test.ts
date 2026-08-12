@@ -150,7 +150,7 @@ describe('User preferences API', () => {
 
   it('persists separate task assignee first and last name column widths', async () => {
     const value = {
-      view: 'list', programIds: [], cycleIds: [], categories: [], statuses: [],
+      view: 'list', programIds: [], categories: [], statuses: [],
       sorting: { key: 'lastName', direction: 'desc' },
       columnWidths: { firstName: 180, lastName: 200 },
     };

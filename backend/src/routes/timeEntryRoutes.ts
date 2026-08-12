@@ -3,7 +3,6 @@ import {
   handleCreateTimeEntry,
   handleDeleteTimeEntry,
   handleGetTimeEntries,
-  handleGetTimeEntryCohorts,
   handleGetTimeEntryOverview,
   handleGetTimeEntrySessions,
   handleUpdateTimeEntry,
@@ -14,7 +13,6 @@ import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   setTimeEntrySchema,
-  timeEntryCohortQuerySchema,
   timeEntryOverviewQuerySchema,
   timeEntryParamsSchema,
   timeEntryQuerySchema,
@@ -25,7 +23,6 @@ import {
 const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryQuerySchema), asyncHandler(handleGetTimeEntries));
-router.get('/cohorts', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryCohortQuerySchema), asyncHandler(handleGetTimeEntryCohorts));
 router.get('/overview', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryOverviewQuerySchema), asyncHandler(handleGetTimeEntryOverview));
 router.get('/sessions', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntrySessionQuerySchema), asyncHandler(handleGetTimeEntrySessions));
 router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleCreateTimeEntry));

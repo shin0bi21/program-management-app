@@ -4,7 +4,6 @@ import TimeEntryModal from '../../../../../common/features/timeEntries/component
 import type { SetTimeEntryInput } from '../../../../../common/features/timeEntries/api/timeEntries.api';
 import type {
   Task,
-  TaskCycle,
   TaskProgram,
   TaskResource,
 } from '../../../../../common/features/tasks/types';
@@ -24,7 +23,6 @@ export default function TaskDialogs({
   resources,
   writableResources,
   programs,
-  cycles,
   onTaskSaved,
   onCloseTask,
   onLogHours,
@@ -38,7 +36,6 @@ export default function TaskDialogs({
   resources: TaskResource[];
   writableResources: TaskResource[];
   programs: TaskProgram[];
-  cycles: TaskCycle[];
   onTaskSaved: (task: Task) => void;
   onCloseTask: () => void;
   onLogHours: (input: SetTimeEntryInput) => Promise<void>;
@@ -58,7 +55,6 @@ export default function TaskDialogs({
       fixedStaffId={newTaskTarget?.fixedStaffId}
       resources={writableResources}
       programs={programs}
-      cycles={cycles}
       onSaved={onTaskSaved}
       onClose={onCloseTask}
     />}
@@ -69,7 +65,6 @@ export default function TaskDialogs({
       initialResourceId={logHoursTask.assignee.id}
       resources={resources}
       programs={programs}
-      cycles={cycles}
       onAdd={onLogHours}
       onClose={onCloseLogHours}
     />}
