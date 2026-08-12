@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPen } from '@fortawesome/free-solid-svg-icons';
-import Button from '../../../../common/components/Button/Button';
-import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
-import { getDateKeyInTimeZone } from '../../../../common/utils/date';
-import type { YouthProfile } from '../../../../common/types/youth';
-import YouthDashboardTabs from '../YouthDashboardTabs/YouthDashboardTabs';
-import './AttendanceCard.css';
+import Button from '../../../../../common/components/Button/Button';
+import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
+import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
+import type { YouthProfile } from '../../../../../common/types/youth';
+import YouthDashboardTabs from './YouthDashboardTabs/YouthDashboardTabs';
+import './YouthAttendanceDashboardCard.css';
 
 type AttendanceCohort = YouthProfile['cohorts'][number];
 
@@ -15,7 +15,7 @@ const attendanceTabs = [
   { value: 'history', label: 'History' },
 ] as const;
 
-export default function AttendanceCard({
+export default function YouthAttendanceDashboardCard({
   cohorts,
   selected,
   canManage = false,

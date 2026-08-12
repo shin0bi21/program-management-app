@@ -8,7 +8,7 @@ const getAttendanceSummary = (session: CohortSession | null) => {
   return `${session.attendedCount}/${session.attendanceMarkedCount}`;
 };
 
-export default function SessionAttendanceCard({
+export default function SessionAttendanceDashboardCard({
   session, canWrite, onManage,
 }: { session: CohortSession | null; canWrite: boolean; onManage: (session: CohortSession) => void }) {
   const summary = getAttendanceSummary(session);

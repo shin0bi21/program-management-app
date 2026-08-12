@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../../../../common/features/tasks/types';
-import TaskOverviewCard from './TaskOverviewCard';
+import TaskOverviewDashboardCard from './TaskOverviewDashboardCard';
 
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
@@ -12,12 +12,12 @@ const baseTask: Task = {
 
 afterEach(() => vi.useRealTimers());
 
-describe('TaskOverviewCard', () => {
+describe('TaskOverviewDashboardCard', () => {
   it('shows a resource overview and opens its report', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-11T12:00:00'));
     const overdueTask = { ...baseTask, id: 'task-2', title: 'Submit report', dueDate: '2026-08-09' };
-    render(<TaskOverviewCard tasks={[baseTask, overdueTask]} resourceName="Zoe Wilson" />);
+    render(<TaskOverviewDashboardCard tasks={[baseTask, overdueTask]} resourceName="Zoe Wilson" />);
 
     expect(screen.getByText('Tasks Assigned').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');

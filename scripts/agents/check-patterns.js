@@ -204,6 +204,25 @@ function checkResourceCalendars(violations, file, source) {
   }
 }
 
+function checkDashboardNames(violations, file, source) {
+  if (!file.startsWith('frontend/src/') || !file.endsWith('.tsx')
+    || /\.(?:test|spec|story)\.tsx$/.test(file)) return;
+
+  const fileName = file.match(/([^/]+)\.tsx$/)?.[1];
+  if (!fileName) return;
+
+  if (file.includes('/components/')
+    && source.includes('<DashboardCard')
+    && !fileName.endsWith('DashboardCard')) {
+    violations.push(`${file}:1 extracted dashboard card components must use the *DashboardCard naming convention.`);
+  }
+
+  const nestedDashboardCard = /\/components\/[^/]*Dashboard\/.*Card\.tsx$/.test(file);
+  if (nestedDashboardCard && !fileName.endsWith('DashboardCard')) {
+    violations.push(`${file}:1 cards nested under a *Dashboard owner must use the *DashboardCard naming convention.`);
+  }
+}
+
 function checkFocusedTests(violations, file, source) {
   if (!/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)) return;
   addMatches(violations, file, source, /\b(?:describe|it|test)\.only\s*\(/g, 'focused test marker must not be committed.');
@@ -259,6 +278,7 @@ for (const file of files.filter(isReadableSource)) {
   checkFocusedAdapters(violations, file, source);
   checkPaginatedTables(violations, file, source);
   checkResourceCalendars(violations, file, source);
+  checkDashboardNames(violations, file, source);
   checkFocusedTests(violations, file, source);
 }
 if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);

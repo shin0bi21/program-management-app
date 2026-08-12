@@ -10,7 +10,7 @@ import SessionNoteRow from '../../../../../../common/features/notes/components/S
 import { deleteSessionNote, getSessionNotes } from '../../../../../../common/features/programming/api/programming.api';
 import type { CohortSession, SessionNote } from '../../../../../../common/types/cohort';
 
-export default function SessionNotesCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
+export default function SessionNotesDashboardCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
   const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);

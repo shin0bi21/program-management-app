@@ -1,9 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import render from '../../../../../tests/renderWithQueryClient';
-import type { Lead } from '../../types';
-import LeadNotesCard from './LeadNotesCard';
+import render from '../../../../../../tests/renderWithQueryClient';
+import type { Lead } from '../../../types';
+import LeadNotesDashboardCard from './LeadNotesDashboardCard';
 
 const api = vi.hoisted(() => ({
   getLeadNotes: vi.fn(),
@@ -12,7 +12,7 @@ const api = vi.hoisted(() => ({
   deleteLeadNote: vi.fn(),
 }));
 
-vi.mock('../../api/leads.api', () => api);
+vi.mock('../../../api/leads.api', () => api);
 
 const lead: Lead = {
   id: 'lead-1',
@@ -54,11 +54,11 @@ function LeadNotesSelectionHarness() {
   const [selectedLead, setSelectedLead] = useState(lead);
   return <>
     <button onClick={() => setSelectedLead(otherLead)}>Select Taylor</button>
-    <LeadNotesCard lead={selectedLead} canWrite />
+    <LeadNotesDashboardCard lead={selectedLead} canWrite />
   </>;
 }
 
-describe('LeadNotesCard', () => {
+describe('LeadNotesDashboardCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getLeadNotes.mockResolvedValue([existingNote]);
@@ -75,7 +75,7 @@ describe('LeadNotesCard', () => {
   });
 
   it('shows authored follow-up history and adds another entry', async () => {
-    render(<LeadNotesCard lead={lead} canWrite />);
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
 
     expect(await screen.findByText('Called and left a message.')).toBeInTheDocument();
     expect(screen.getByText(/Quinton Macnevin/)).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('LeadNotesCard', () => {
   });
 
   it('updates one cached note without refetching the collection', async () => {
-    render(<LeadNotesCard lead={lead} canWrite />);
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
     await screen.findByText(existingNote.details);
 
     fireEvent.click(screen.getByRole('button', { name: /Edit follow-up note/ }));
@@ -114,7 +114,7 @@ describe('LeadNotesCard', () => {
   });
 
   it('deletes one cached note without refetching the collection', async () => {
-    render(<LeadNotesCard lead={lead} canWrite />);
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
     await screen.findByText(existingNote.details);
 
     fireEvent.click(screen.getByRole('button', { name: /Delete follow-up note/ }));

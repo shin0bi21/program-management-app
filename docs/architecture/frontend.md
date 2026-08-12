@@ -126,6 +126,8 @@ featureViewData.ts              contracts or pure helpers shared by sibling view
 
 The route owns the header, shared filters and preferences, dialogs, selection context, dashboards, and synchronization between mounted or unmounted views. A `*ListView` owns its remote list hook and table-specific behavior. A `*CalendarView` owns its range loader, buffer adapter, visible-data hook, item component, and calendar-only mutation helpers. A dashboard owns cards used only within that dashboard. Do not move a contract under one child when a sibling view or the route also consumes it; keep that contract at the narrowest shared feature level.
 
+Name the structural dashboard owner `*Dashboard`, not `*Overview`, and name extracted card components `*DashboardCard`. A semantic qualifier may precede that suffix, such as `TaskOverviewDashboardCard`. Reserve “overview” by itself for domain content, aggregate data, and hooks; it must not become an alternate structural name for either the dashboard owner or an extracted dashboard card.
+
 The same public ownership pattern does not require identical internal algorithms. Point records and ranged records may use different calendar-data shapes and caching strategies while exposing the same `loaded data + filters → visible calendar data` responsibility from their respective CalendarView-owned hooks.
 
 - Extract a component when a UI region owns meaningful rendering, interaction, or accessibility behavior.
