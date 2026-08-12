@@ -32,7 +32,7 @@ export default function TaskItem({ task, selected = false, onComplete, onCancel,
       </span>
     )}
     details={[
-      { label: 'Program', value: task.programName ?? 'General' },
+      { label: 'Program', value: task.programName ?? '—' },
       { label: 'Category', value: category },
       { label: 'Start', value: task.startDate, sectionStart: true },
       { label: 'End', value: task.dueDate },

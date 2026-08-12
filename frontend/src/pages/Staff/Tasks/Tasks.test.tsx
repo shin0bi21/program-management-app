@@ -104,6 +104,7 @@ describe('Tasks', () => {
 
     const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
     expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
+    expect(await screen.findByRole('cell', { name: '—' })).toBeInTheDocument();
     expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
   });
 
