@@ -13,8 +13,9 @@ vi.mock('../api/preferences.api', () => ({
 const getPreferenceMock = vi.mocked(getPreference);
 const setPreferenceMock = vi.mocked(setPreference);
 const filters = (statuses: Array<'active' | 'inactive'>) => ({ statuses, programIds: [] });
+let queryClient: QueryClient;
 const createWrapper = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -89,6 +90,24 @@ describe('useUserPreference', () => {
     expect(setPreferenceMock).toHaveBeenCalledTimes(1);
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(setPreferenceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a newer optimistic choice when an older save completes', async () => {
+    let finishFirst!: (value: ReturnType<typeof filters>) => void;
+    setPreferenceMock
+      .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
+      .mockImplementation(async (_key, value) => value);
+    const { result } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
+    await act(async () => Promise.resolve());
+
+    await act(async () => {
+      result.current.save(filters(['active']));
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    act(() => result.current.save(filters(['inactive'])));
+    await act(async () => finishFirst(filters(['active'])));
+
+    expect(queryClient.getQueryData(['user-preference', 'youth-profile-filters'])).toEqual(filters(['inactive']));
   });
 
   it('flushes a pending preference when the page unmounts', async () => {

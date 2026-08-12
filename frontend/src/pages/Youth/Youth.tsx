@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import Button from '../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import PageBody from '../../common/components/PageBody/PageBody';
 import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
@@ -197,6 +198,7 @@ export default function Youth() {
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
+          columns={<ColumnVisibilityMenu columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void saveFilters({ hiddenColumns })} />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, program: programFilters }}
@@ -222,7 +224,7 @@ export default function Youth() {
 
         <PageBody
           ariaLabel="Youth profiles"
-          table={<Table ariaLabel="Youth profiles" columns={youthColumns} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+          table={<Table ariaLabel="Youth profiles" columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
           dashboard={<>
             <PrimaryContactCard
               contact={selectedProfile?.contacts?.[0] ? {

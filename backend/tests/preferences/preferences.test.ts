@@ -104,11 +104,12 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
-  it('persists bounded column widths and rejects unsupported columns', async () => {
+  it('persists bounded column widths and validated hidden columns', async () => {
     const value = {
       statuses: [],
       roles: [],
       columnWidths: { name: 180, email: 320 },
+      hiddenColumns: ['email'],
     };
     const saved = await request(app)
       .put('/api/preferences/account-filters')
@@ -124,6 +125,12 @@ describe('User preferences API', () => {
         .send({ statuses: [], roles: [], columnWidths });
       expect(rejected.status).toBe(400);
     }
+
+    const rejectedHiddenColumns = await request(app)
+      .put('/api/preferences/account-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send({ statuses: [], roles: [], hiddenColumns: ['actions'] });
+    expect(rejectedHiddenColumns.status).toBe(400);
   });
 
   it('persists separate Outreach first and last name column widths', async () => {

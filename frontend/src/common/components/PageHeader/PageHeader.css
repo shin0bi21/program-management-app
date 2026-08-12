@@ -44,10 +44,13 @@
 }
 
 .page-header-filters,
-.page-header-view {
+.page-header-view,
+.page-header-columns {
   flex: 0 0 auto;
 }
 
+.page-title-row + .page-header-view,
+.page-title-row + .page-header-columns,
 .page-title-row + .page-header-filters {
   margin-left: auto;
 }
@@ -85,6 +88,10 @@
   }
 
   .page-header-view {
+    order: 2;
+  }
+
+  .page-header-columns {
     order: 2;
   }
 

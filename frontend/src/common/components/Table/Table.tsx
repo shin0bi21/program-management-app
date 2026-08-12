@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import TableBody from './components/TableBody';
 import TableHeader from './components/TableHeader';
@@ -31,7 +31,12 @@ export default function Table<T>({
   onLoadNextPage,
   columnWidths = {},
   onColumnWidthsChange,
+  hiddenColumnKeys = [],
 }: TableProps<T>) {
+  const visibleColumns = useMemo(
+    () => columns.filter(column => column.hideable === false || column.resizable === false || !hiddenColumnKeys.includes(column.key)),
+    [columns, hiddenColumnKeys],
+  );
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { navigateRows, tabbableIndex } = useTableNavigation({
     data,
@@ -50,7 +55,7 @@ export default function Table<T>({
     totalWidth,
   } = useTableModel({
     data,
-    columns,
+    columns: visibleColumns,
     sorting,
     onSortingChange,
     columnWidths,
@@ -61,7 +66,7 @@ export default function Table<T>({
     const headerCells = wrapperRef.current?.querySelectorAll<HTMLTableCellElement>('thead th');
     if (!headerCells) return undefined;
 
-    const lockedWidths = Object.fromEntries(columns.flatMap((column, index) => {
+    const lockedWidths = Object.fromEntries(visibleColumns.flatMap((column, index) => {
       if (column.resizable === false) return [];
       const renderedWidth = headerCells[index]?.getBoundingClientRect().width;
       return [[
@@ -72,7 +77,7 @@ export default function Table<T>({
 
     onColumnWidthsChange(lockedWidths);
     return lockedWidths;
-  }, [columns, onColumnWidthsChange, resolvedColumnWidths]);
+  }, [onColumnWidthsChange, resolvedColumnWidths, visibleColumns]);
   const sentinelRef = useTableInfiniteScroll({
     rootRef: wrapperRef,
     dataLength: data.length,
@@ -95,7 +100,7 @@ export default function Table<T>({
         style={{ width: '100%', minWidth: totalWidth }}
       >
         <colgroup>
-          {columns.map(column => (
+          {visibleColumns.map(column => (
             <col
               key={column.key}
               style={{ width: resolvedColumnWidths[column.key] }}
@@ -110,7 +115,7 @@ export default function Table<T>({
           onNudgeWidth={nudgeColumnWidth}
         />
         <TableBody
-          columns={columns}
+          columns={visibleColumns}
           data={data}
           loading={loading}
           refreshing={refreshing}

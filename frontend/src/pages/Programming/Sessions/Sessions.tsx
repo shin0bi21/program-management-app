@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -368,6 +369,9 @@ export default function Sessions() {
                 onChange={setView}
               />
             )}
+            columns={view === 'list'
+              ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />
+              : undefined}
           />
           {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
           {!filtersReady ? (
@@ -379,6 +383,7 @@ export default function Sessions() {
                 <Table
                   ariaLabel="Sessions"
                   columns={columns}
+                  hiddenColumnKeys={preference?.hiddenColumns ?? []}
                   data={sessions}
                   loading={loading}
                   refreshing={refreshing}

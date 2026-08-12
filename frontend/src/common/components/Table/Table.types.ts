@@ -10,6 +10,8 @@ export interface TableColumn<T> {
   className?: string;
   sortKey?: string;
   resizable?: boolean;
+  /** Whether a user can hide this column from their own table view. */
+  hideable?: boolean;
 }
 
 export interface TableSorting {
@@ -37,6 +39,7 @@ export interface TableProps<T> {
   onLoadNextPage?: () => void;
   columnWidths?: ColumnSizingState;
   onColumnWidthsChange?: (widths: ColumnSizingState) => void;
+  hiddenColumnKeys?: string[];
 }
 
 export type TableNavigationKey = 'ArrowUp' | 'ArrowDown' | 'Home' | 'End';

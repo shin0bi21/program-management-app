@@ -7,18 +7,20 @@ interface PageHeaderProps {
   filters?: ReactNode;
   search?: ReactNode;
   view?: ReactNode;
+  columns?: ReactNode;
 }
 
-export default function PageHeader({ title, actions, filters, search, view }: PageHeaderProps) {
+export default function PageHeader({ title, actions, filters, search, view, columns }: PageHeaderProps) {
   return (
-    <header className={`page-header${filters || search || view ? ' page-header--with-controls' : ''}`}>
+    <header className={`page-header${filters || search || view || columns ? ' page-header--with-controls' : ''}`}>
       <div className="page-title-row">
         <h1 className="page-title">{title}</h1>
         {actions}
       </div>
       {search && <div className="page-header-search">{search}</div>}
-      {filters && <div className="page-header-filters">{filters}</div>}
+      {columns && <div className="page-header-columns">{columns}</div>}
       {view && <div className="page-header-view">{view}</div>}
+      {filters && <div className="page-header-filters">{filters}</div>}
     </header>
   );
 }
