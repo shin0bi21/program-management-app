@@ -2,6 +2,7 @@ import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type { ResourcePeriodData } from '../../../components/ResourceCalendar/types';
 import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimeEntrySession, TimesheetItem } from '../types';
+import type { CursorPage, CursorRequest } from '../../../types/pagination';
 
 export interface TimeEntryResponse {
   id: string; staffId: string; programId: string | null; programName: string | null;
@@ -39,6 +40,14 @@ export interface TimeEntryOverviewResponse {
 }
 
 export interface TimeEntryFilters { start?: string; end?: string; cycleId?: string }
+export interface TimeEntryListFilters {
+  staffIds: string[]; categories: TimeEntryCategory[]; programIds: string[];
+  types: Array<'task' | 'session' | 'other'>; cycleId?: string; search?: string;
+}
+export interface TimeEntryListRowResponse {
+  id: string; resourceId: string; date: string; item: TimesheetItem;
+  staffFirstName: string; staffLastName: string; staffName: string;
+}
 
 export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOptions) {
   const params = new URLSearchParams();
@@ -46,6 +55,28 @@ export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOpt
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   const query = params.size ? `?${params}` : '';
   return apiClient.get<TimeEntryRangeResponse>(`/time-entries${query}`, opts);
+}
+
+export function getTimeEntryOptions(opts?: RequestOptions) {
+  return apiClient.get<{ resources: StaffResource[]; programs: TimeEntryProgram[] }>('/time-entries/options', opts);
+}
+
+export function getTimeEntryList(
+  filters: TimeEntryListFilters,
+  opts: RequestOptions | undefined,
+  pagination: CursorRequest,
+) {
+  const params = new URLSearchParams({
+    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? 25),
+  });
+  if (pagination.cursor) params.set('cursor', pagination.cursor);
+  if (filters.staffIds.length) params.set('staffIds', filters.staffIds.join(','));
+  if (filters.categories.length) params.set('categories', filters.categories.join(','));
+  if (filters.programIds.length) params.set('programIds', filters.programIds.join(','));
+  if (filters.types.length) params.set('types', filters.types.join(','));
+  if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  if (filters.search) params.set('search', filters.search);
+  return apiClient.get<CursorPage<TimeEntryListRowResponse>>(`/time-entries/list?${params}`, opts);
 }
 
 export function getTimeEntryOverview(staffId: string, cycleId: string, opts?: RequestOptions) {

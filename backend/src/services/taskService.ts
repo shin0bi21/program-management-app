@@ -3,8 +3,9 @@ import { sql, asTransactionSql } from '../db/client';
 import { audit } from './auditService';
 import { ConflictError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
-import type { SetTaskInput, TaskPlacementInput, TaskQuery } from '../validation/taskSchemas';
+import type { SetTaskInput, TaskListQuery, TaskPlacementInput, TaskQuery } from '../validation/taskSchemas';
 import { assertCanAssignTaskTo, canWriteTaskFor, taskReadScopePredicate, taskResourceReadScopePredicate, taskWriteScopePredicate } from '../policies/taskPolicy';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 interface TaskRow {
   id: string;
@@ -70,7 +71,7 @@ async function loadLoggedHours(taskIds: string[], db: typeof sql = sql) {
   `;
 }
 
-function attachDetails(rows: TaskRow[], loggedHours: LoggedHoursRow[], actor: AccessTokenPayload) {
+function attachDetails<TRow extends TaskRow>(rows: TRow[], loggedHours: LoggedHoursRow[], actor: AccessTokenPayload) {
   const loggedHoursByTask = indexLoggedHours(loggedHours);
   return rows.map(row => ({
     ...row,
@@ -107,6 +108,43 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
   `;
   const taskIds = rows.map(row => row.id);
   return attachDetails(rows, await loadLoggedHours(taskIds), actor);
+}
+
+export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuery) {
+  const cursor = decodeCursor(query.cursor);
+  const direction = query.direction;
+  const sortValue = {
+    firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, title: sql`LOWER(task.title)`,
+    category: sql`task.category::text`, program: sql`LOWER(COALESCE(program.name, ''))`,
+    startDate: sql`task.start_date::text`, dueDate: sql`task.due_date::text`, status: sql`task.status::text`,
+  }[query.sort]!;
+  const search = query.search ? `%${query.search}%` : null;
+  const rows = await sql<Array<TaskRow & { cursorValue: string }>>`
+    SELECT * FROM (SELECT task.id, task.title, task.details, task.category,
+      task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+      task.program_id, program.name AS program_name, task.status, task.start_date::text, task.due_date::text,
+      task.completed_at::text,
+      (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged,
+      ${sortValue} AS cursor_value
+    FROM tasks task
+    INNER JOIN users staff ON staff.id = task.staff_id
+    LEFT JOIN programs program ON program.id = task.program_id
+    WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+      AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`task.program_id IS NULL OR` : sql``}
+        task.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql`TRUE`}
+      AND ${query.categories.length ? sql`task.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}
+      AND ${query.statuses.length ? sql`task.status::text = ANY(${sql.array(query.statuses)}::text[])` : sql`TRUE`}
+      AND ${search ? sql`CONCAT_WS(' ', task.title, task.details, program.name, staff.first_name, staff.last_name) ILIKE ${search}` : sql`TRUE`}
+    ) listed
+    WHERE ${cursor ? (direction === 'asc'
+      ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
+      : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
+    ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
+    LIMIT ${(query.limit ?? 25) + 1}
+  `;
+  const detailed = attachDetails(rows, await loadLoggedHours(rows.map(row => row.id)), actor);
+  return cursorPage(detailed, query.limit ?? 25);
 }
 
 export async function getTaskOptions(actor: AccessTokenPayload) {

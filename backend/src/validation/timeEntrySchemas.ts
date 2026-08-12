@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RANGE_DAYS = 366;
@@ -43,6 +44,22 @@ export const timeEntryQuerySchema = z.object({
   ), {
     message: `Date range cannot exceed ${MAX_RANGE_DAYS} days`,
     path: ['end'],
+  }),
+});
+
+const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value => (
+  typeof value === 'string' && value ? value.split(',') : []
+), z.array(schema));
+
+export const timeEntryListQuerySchema = z.object({
+  query: z.object({
+    staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
+    categories: commaSeparated(timeEntryCategorySchema),
+    programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
+    types: commaSeparated(z.enum(['task', 'session', 'other'])),
+    cycleId: z.string().uuid('Invalid cycle ID').optional(),
+    search: z.string().trim().max(120).optional().default(''),
+    ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'], 'date', 'desc'),
   }),
 });
 
@@ -95,6 +112,7 @@ export const updateTimeEntryPlacementSchema = z.object({
 });
 
 export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema.shape.query>;
+export type TimeEntryListQuery = z.infer<typeof timeEntryListQuerySchema.shape.query>;
 export type TimeEntryOverviewQuery = z.infer<typeof timeEntryOverviewQuerySchema.shape.query>;
 export type TimeEntrySessionQuery = z.infer<typeof timeEntrySessionQuerySchema.shape.query>;
 export type SetTimeEntryInput = z.infer<typeof setTimeEntrySchema.shape.body>;

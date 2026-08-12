@@ -3,6 +3,8 @@ import {
   handleCreateTimeEntry,
   handleDeleteTimeEntry,
   handleGetTimeEntries,
+  handleGetTimeEntryList,
+  handleGetTimeEntryOptions,
   handleGetTimeEntryOverview,
   handleGetTimeEntrySessions,
   handleUpdateTimeEntry,
@@ -14,6 +16,7 @@ import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   setTimeEntrySchema,
   timeEntryOverviewQuerySchema,
+  timeEntryListQuerySchema,
   timeEntryParamsSchema,
   timeEntryQuerySchema,
   timeEntrySessionQuerySchema,
@@ -23,6 +26,8 @@ import {
 const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryQuerySchema), asyncHandler(handleGetTimeEntries));
+router.get('/list', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryListQuerySchema), asyncHandler(handleGetTimeEntryList));
+router.get('/options', authenticateToken, requirePermission('read:timesheets'), generalLimiter, asyncHandler(handleGetTimeEntryOptions));
 router.get('/overview', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryOverviewQuerySchema), asyncHandler(handleGetTimeEntryOverview));
 router.get('/sessions', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntrySessionQuerySchema), asyncHandler(handleGetTimeEntrySessions));
 router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleCreateTimeEntry));
