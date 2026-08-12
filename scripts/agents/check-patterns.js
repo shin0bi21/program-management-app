@@ -173,6 +173,12 @@ function checkPaginatedTables(violations, file, source) {
     violations.push(`${file}:1 page components must own remote infinite-list queries through a page hook.`);
   }
 
+  if (source.includes('useInfiniteListQuery')
+    && file.includes('ListView/')
+    && !/\/components\/[^/]*ListView\/hooks\//.test(file)) {
+    violations.push(`${file}:1 a *ListView remote-list hook must be colocated under that view's hooks directory.`);
+  }
+
   if (source.includes('useInfiniteListQuery') && !/limit\s*:\s*25\b/.test(source)) {
     violations.push(`${file}:1 remote list hooks must request the standard 25-row cursor page size.`);
   }
@@ -204,12 +210,26 @@ function checkResourceCalendars(violations, file, source) {
   }
 }
 
+function checkCalendarDataHooks(violations, file) {
+  if (!file.startsWith('frontend/src/pages/')
+    || !/\/use[^/]*CalendarData\.tsx?$/.test(file)
+    || /\.(?:test|spec)\.tsx?$/.test(file)) return;
+
+  if (!/\/components\/[^/]*CalendarView\/hooks\/use[^/]*CalendarData\.tsx?$/.test(file)) {
+    violations.push(`${file}:1 calendar-data hooks must be owned by their page-private *CalendarView hooks directory.`);
+  }
+}
+
 function checkDashboardNames(violations, file, source) {
   if (!file.startsWith('frontend/src/') || !file.endsWith('.tsx')
     || /\.(?:test|spec|story)\.tsx$/.test(file)) return;
 
   const fileName = file.match(/([^/]+)\.tsx$/)?.[1];
   if (!fileName) return;
+
+  if (fileName.endsWith('Overview') && /<[A-Z][A-Za-z0-9]*DashboardCard\b/.test(source)) {
+    violations.push(`${file}:1 structural dashboard owners must use the *Dashboard name; reserve Overview for domain content.`);
+  }
 
   if (file.includes('/components/')
     && source.includes('<DashboardCard')
@@ -278,6 +298,7 @@ for (const file of files.filter(isReadableSource)) {
   checkFocusedAdapters(violations, file, source);
   checkPaginatedTables(violations, file, source);
   checkResourceCalendars(violations, file, source);
+  checkCalendarDataHooks(violations, file);
   checkDashboardNames(violations, file, source);
   checkFocusedTests(violations, file, source);
 }
