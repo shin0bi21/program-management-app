@@ -40,6 +40,7 @@ export interface PreferenceValues {
   };
   'task-filters': {
     view?: 'calendar' | 'list';
+    staffIds?: string[];
     programIds: string[];
     categories: Array<'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other'>;
     statuses: Array<'todo' | 'in_progress' | 'completed' | 'cancelled'>;

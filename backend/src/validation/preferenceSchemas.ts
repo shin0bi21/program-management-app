@@ -51,6 +51,7 @@ const valuesByKey = {
   }),
   'task-filters': z.object({
     view: z.enum(['calendar', 'list']).optional(),
+    staffIds: unique(z.string().uuid('Invalid staff ID'), 'Staff').optional(),
     programIds: uuidList,
     categories: unique(z.enum(['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other']), 'Categories'),
     statuses: unique(z.enum(['todo', 'in_progress', 'completed', 'cancelled']), 'Statuses').max(4),

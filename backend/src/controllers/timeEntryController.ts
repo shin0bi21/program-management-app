@@ -11,17 +11,17 @@ import {
   updateTimeEntry,
   updateTimeEntryPlacement,
 } from '../services/timeEntryService';
-import { timeEntryListQuerySchema, timeEntryOverviewQuerySchema, timeEntryQuerySchema, timeEntrySessionQuerySchema } from '../validation/timeEntrySchemas';
+import type { TimeEntryListQuery, TimeEntryOverviewQuery, TimeEntryQuery, TimeEntrySessionQuery } from '../validation/timeEntrySchemas';
 
 export async function handleGetTimeEntries(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = timeEntryQuerySchema.shape.query.parse(req.query);
+  const query = req.query as unknown as TimeEntryQuery;
   res.json(await getTimeEntries(actor, query));
 }
 
 export async function handleGetTimeEntryList(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = timeEntryListQuerySchema.shape.query.parse(req.query);
+  const query = req.query as unknown as TimeEntryListQuery;
   res.json(await getTimeEntryList(actor, query));
 }
 
@@ -31,13 +31,13 @@ export async function handleGetTimeEntryOptions(req: Request, res: Response) {
 
 export async function handleGetTimeEntryOverview(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = timeEntryOverviewQuerySchema.shape.query.parse(req.query);
+  const query = req.query as unknown as TimeEntryOverviewQuery;
   res.json(await getTimeEntryOverview(actor, query));
 }
 
 export async function handleGetTimeEntrySessions(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = timeEntrySessionQuerySchema.shape.query.parse(req.query);
+  const query = req.query as unknown as TimeEntrySessionQuery;
   res.json(await getTimeEntrySessions(actor, query));
 }
 

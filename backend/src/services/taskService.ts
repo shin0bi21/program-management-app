@@ -135,6 +135,7 @@ export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuer
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
     WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+      AND ${query.staffIds.length ? sql`task.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql`TRUE`}
       AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`task.program_id IS NULL OR` : sql``}
         task.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql`TRUE`}
       AND ${query.categories.length ? sql`task.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}

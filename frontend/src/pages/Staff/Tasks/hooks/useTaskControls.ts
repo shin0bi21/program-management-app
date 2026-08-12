@@ -22,6 +22,7 @@ const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
 export default function useTaskControls(options: TaskOptions | undefined, optionsLoading: boolean) {
   const [view, setView] = useState<TasksView>('calendar');
   const [search, setSearch] = useState('');
+  const [staffIds, setStaffIds] = useState<string[]>([]);
   const [programIds, setProgramIds] = useState<string[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [statusFilters, setStatusFilters] = useState<TaskStatus[]>([]);
@@ -32,6 +33,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
 
   useEffect(() => {
     if (ready || loading || optionsLoading) return;
+    setStaffIds(preference?.staffIds ?? []);
     setProgramIds(preference?.programIds ?? []);
     setView(preference?.view ?? 'calendar');
     setCategories(preference?.categories ?? []);
@@ -42,6 +44,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   }, [loading, optionsLoading, preference, ready]);
 
   const persist = useCallback((
+    nextStaffIds: string[],
     nextPrograms: string[],
     nextCategories: TaskCategory[],
     nextStatuses: TaskStatus[],
@@ -49,6 +52,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   ) => {
     void save({
       view,
+      staffIds: nextStaffIds,
       programIds: nextPrograms,
       categories: nextCategories,
       statuses: nextStatuses,
@@ -58,49 +62,54 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   }, [columnWidths, save, sorting, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
+    { id: 'staff', label: 'Staff', options: (options?.resources ?? []).map(item => ({ value: item.id, label: item.name })) },
     { id: 'program', label: 'Program', options: (options?.programs ?? []).map(item => ({ value: item.id, label: item.name })) },
     { id: 'category', label: 'Category', options: TASK_CATEGORY_OPTIONS },
     { id: 'status', label: 'Status', options: STATUS_OPTIONS },
-  ], [options?.programs]);
+  ], [options?.programs, options?.resources]);
 
   const applyFilter = useCallback((id: string, selected: string[]) => {
+    const nextStaffIds = id === 'staff' ? selected : staffIds;
     const nextPrograms = id === 'program' ? selected : programIds;
     const nextCategories = id === 'category' ? selected as TaskCategory[] : categories;
     const nextStatuses = id === 'status' ? selected as TaskStatus[] : statusFilters;
+    setStaffIds(nextStaffIds);
     setProgramIds(nextPrograms);
     setCategories(nextCategories);
     setStatusFilters(nextStatuses);
-    persist(nextPrograms, nextCategories, nextStatuses);
-  }, [categories, persist, programIds, statusFilters]);
+    persist(nextStaffIds, nextPrograms, nextCategories, nextStatuses);
+  }, [categories, persist, programIds, staffIds, statusFilters]);
 
   const clearFilters = useCallback(() => {
+    setStaffIds([]);
     setProgramIds([]);
     setCategories([]);
     setStatusFilters([]);
-    persist([], [], []);
+    persist([], [], [], []);
   }, [persist]);
 
   const changeView = useCallback((nextView: TasksView) => {
     setView(nextView);
     void save({
       view: nextView,
+      staffIds,
       programIds,
       categories,
       statuses: statusFilters,
       sorting,
       columnWidths,
     });
-  }, [categories, columnWidths, programIds, save, sorting, statusFilters]);
+  }, [categories, columnWidths, programIds, save, sorting, staffIds, statusFilters]);
 
   const changeSorting = useCallback((next: ListSort<TaskSortKey>) => {
     setSorting(next);
-    void save({ view, programIds, categories, statuses: statusFilters, sorting: next, columnWidths });
-  }, [categories, columnWidths, programIds, save, statusFilters, view]);
+    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting: next, columnWidths });
+  }, [categories, columnWidths, programIds, save, staffIds, statusFilters, view]);
 
   const changeColumnWidths = useCallback((next: Record<string, number>) => {
     setColumnWidths(next);
-    persist(programIds, categories, statusFilters, next);
-  }, [categories, persist, programIds, statusFilters]);
+    persist(staffIds, programIds, categories, statusFilters, next);
+  }, [categories, persist, programIds, staffIds, statusFilters]);
 
   const changeHiddenColumns = useCallback((hiddenColumns: string[]) => {
     void save({ hiddenColumns });
@@ -110,6 +119,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     view,
     search,
     setSearch,
+    staffIds,
     programIds,
     categories,
     statusFilters,

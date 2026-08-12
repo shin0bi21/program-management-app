@@ -2,14 +2,14 @@ import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { getYouth, getYouthSessionNotes, setYouth } from '../services/youthService';
 import { inviteYouthAccount } from '../services/accountService';
-import { youthQuerySchema } from '../validation/youthSchemas';
+import type { YouthQuery } from '../validation/youthSchemas';
 import { createYouthProfileNote, deleteYouthProfileNote, getYouthProfileNotes, updateYouthProfileNote } from '../services/youthProfileNoteService';
 import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
 import { getYouthCohortAttendance, setYouthCohortAttendance } from '../services/youthAttendanceService';
 import type { SetYouthCohortAttendanceInput } from '../validation/youthSchemas';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
-  const filters = youthQuerySchema.shape.query.parse(req.query);
+  const filters = req.query as unknown as YouthQuery;
   res.json(filters.id ? await getYouth(filters.id) : await getYouth(undefined, filters));
 };
 

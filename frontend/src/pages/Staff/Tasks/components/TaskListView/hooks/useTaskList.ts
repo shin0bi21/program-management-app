@@ -7,6 +7,7 @@ import { TASKS_QUERY_KEY } from '../../../hooks/useTaskMutations';
 import type { TaskSortKey } from '../../../taskViewTypes';
 
 interface TaskListFilters {
+  staffIds: string[];
   programIds: string[];
   categories: TaskCategory[];
   statuses: TaskStatus[];
@@ -16,8 +17,9 @@ interface TaskListFilters {
 export default function useTaskList(filters: TaskListFilters, sorting: ListSort<TaskSortKey>, enabled: boolean) {
   const deferredSearch = useDeferredValue(filters.search);
   return useInfiniteListQuery<Task>({
-    queryKey: [...TASKS_QUERY_KEY, 'list', filters.programIds, filters.categories, filters.statuses, deferredSearch, sorting],
+    queryKey: [...TASKS_QUERY_KEY, 'list', filters.staffIds, filters.programIds, filters.categories, filters.statuses, deferredSearch, sorting],
     queryFn: ({ signal, pageParam }) => getTaskList({
+      staffIds: filters.staffIds,
       programIds: filters.programIds,
       categories: filters.categories,
       statuses: filters.statuses,

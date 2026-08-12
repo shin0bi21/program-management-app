@@ -108,6 +108,37 @@ describe('Tasks', () => {
     expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
   });
 
+  it('puts Staff first and sends the applied staff filter to the list request', async () => {
+    const coworker = {
+      id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
+    };
+    vi.mocked(getTaskOptions).mockResolvedValue({
+      resources: [coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      programs: [],
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await screen.findByRole('table', { name: 'Tasks' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    const categories = screen.getAllByRole('menuitem');
+    expect(categories[0]).toHaveTextContent('Staff');
+    fireEvent.click(categories[0]);
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Smith' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+
+    await waitFor(() => expect(getTaskList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ staffIds: ['staff-2'] }),
+      expect.anything(),
+      expect.objectContaining({ limit: 25 }),
+    ));
+    expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({ staffIds: ['staff-2'] }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+    await waitFor(() => expect(calendarTestState.props?.resources).toEqual([coworker]));
+  });
+
   it('shows completion again after a completed task is reopened', async () => {
     const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-11T12:00:00.000Z', hoursLogged: 1 };
     vi.mocked(getTasks).mockResolvedValue([completedTask]);
