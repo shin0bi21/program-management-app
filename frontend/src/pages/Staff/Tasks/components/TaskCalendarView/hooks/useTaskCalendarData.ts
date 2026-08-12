@@ -1,4 +1,5 @@
-import type { Task, TaskCategory, TaskStatus } from '../../../../../common/features/tasks/types';
+import { useMemo } from 'react';
+import type { Task, TaskCategory, TaskStatus } from '../../../../../../common/features/tasks/types';
 
 export interface TaskCalendarFilters {
   search: string;
@@ -7,7 +8,7 @@ export interface TaskCalendarFilters {
   statuses: readonly TaskStatus[];
 }
 
-export function matchesTask(task: Task, filters: TaskCalendarFilters) {
+function matchesTask(task: Task, filters: TaskCalendarFilters) {
   const search = filters.search.trim().toLocaleLowerCase();
   const matchesProgram = !filters.programIds.length
     || (task.programId !== null && filters.programIds.includes(task.programId));
@@ -18,4 +19,16 @@ export function matchesTask(task: Task, filters: TaskCalendarFilters) {
     || searchableFields.some(field => field.toLocaleLowerCase().includes(search));
 
   return matchesProgram && matchesCategory && matchesStatus && matchesSearch;
+}
+
+export function useTaskCalendarData(
+  rangeData: Record<string, readonly Task[]>,
+  filters: TaskCalendarFilters,
+) {
+  return useMemo(() => Object.fromEntries(
+    Object.entries(rangeData).map(([resourceId, tasks]) => [
+      resourceId,
+      tasks.filter(task => matchesTask(task, filters)),
+    ]),
+  ), [filters.categories, filters.programIds, filters.search, filters.statuses, rangeData]);
 }
