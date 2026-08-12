@@ -5,6 +5,8 @@ import type { SetTaskInput, Task, TaskCategory, TaskOptions, TaskPlacementInput 
 export interface TaskFilters {
   staffId?: string;
   category?: TaskCategory;
+  start?: string;
+  end?: string;
   includeClosed?: boolean;
 }
 
@@ -12,6 +14,8 @@ export function getTasks(filters: TaskFilters = {}, opts?: RequestOptions) {
   const params = new URLSearchParams();
   if (filters.staffId) params.set('staffId', filters.staffId);
   if (filters.category) params.set('category', filters.category);
+  if (filters.start) params.set('start', filters.start);
+  if (filters.end) params.set('end', filters.end);
   if (filters.includeClosed) params.set('includeClosed', 'true');
   const query = params.size ? `?${params}` : '';
   return apiClient.get<Task[]>(`/tasks${query}`, opts);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -8,6 +8,8 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
+import { usePeriodDataBuffer } from '../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
+import type { PeriodRange } from '../../../common/components/ResourceCalendar/PeriodDataBuffer';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
@@ -19,7 +21,7 @@ import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
 import TaskHoursLoggedCard from './components/TaskHoursLoggedCard/TaskHoursLoggedCard';
 import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
-import useTaskViewData, { type TaskSortKey } from './hooks/useTaskViewData';
+import useTaskViewData, { matchesTask, type TaskSortKey } from './hooks/useTaskViewData';
 import type { ListSort } from '../../../common/types/pagination';
 import { formatCompactPersonName } from '../../../common/utils/name';
 import useTaskControls from './hooks/useTaskControls';
@@ -51,10 +53,23 @@ export default function Tasks() {
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [logHoursTask, setLogHoursTask] = useState<Task | null>(null);
-  const mutations = useTaskMutations();
-  const tasksQuery = useQuery({ queryKey: TASKS_QUERY_KEY, queryFn: ({ signal }) => getTasks({ includeClosed: true }, { signal }) });
+  const calendarMutationRef = useRef<{
+    upsert: (task: Task) => void;
+    remove: (taskId: string) => void;
+  }>({
+    upsert: (_task: Task) => undefined,
+    remove: (_taskId: string) => undefined,
+  });
+  const upsertCalendarTask = useCallback((task: Task) => calendarMutationRef.current.upsert(task), []);
+  const removeCalendarTask = useCallback((taskId: string) => calendarMutationRef.current.remove(taskId), []);
+  const mutations = useTaskMutations({ onUpsert: upsertCalendarTask, onRemove: removeCalendarTask });
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading);
+  const tasksQuery = useQuery({
+    queryKey: [...TASKS_QUERY_KEY, 'list'],
+    queryFn: ({ signal }) => getTasks({ includeClosed: true }, { signal }),
+    enabled: controls.view === 'list',
+  });
   const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
   useEffect(() => {
@@ -66,11 +81,43 @@ export default function Tasks() {
     categories: controls.categories,
     statuses: controls.statusFilters,
   }), [controls.categories, controls.programIds, controls.search, controls.statusFilters, controls.view]);
-  const { rows, rangeData, dashboardTasks, resourceTasks } = useTaskViewData(
+  const { rows } = useTaskViewData(
     tasksQuery.data ?? [], resources, taskFilters, selectedResourceId, controls.sorting,
   );
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
-  const selectedTask = dashboardTasks.find(task => task.id === selectedTaskId) ?? null;
+  const overviewQuery = useQuery({
+    queryKey: [...TASKS_QUERY_KEY, 'overview', selectedResourceId],
+    queryFn: ({ signal }) => getTasks({ staffId: selectedResourceId! }, { signal }),
+    enabled: selectedResourceId !== null,
+    placeholderData: previous => previous,
+  });
+  const loadCalendarRange = useCallback(async ({ start, end }: PeriodRange) => {
+    const tasks = await getTasks({ start: start.key, end: end.key, includeClosed: true });
+    return tasks.reduce<Record<string, Record<string, Task[]>>>((data, task) => {
+      data[task.assignee.id] ??= {};
+      data[task.assignee.id][start.key] ??= [];
+      data[task.assignee.id][start.key].push(task);
+      return data;
+    }, {});
+  }, []);
+  const taskCalendar = usePeriodDataBuffer({
+    load: loadCalendarRange,
+    getItemId: task => task.id,
+    errorMessage: 'Unable to load task calendar data',
+  });
+  calendarMutationRef.current = {
+    upsert: task => taskCalendar.upsertItem(task.assignee.id, task.startDate, task),
+    remove: taskCalendar.removeItem,
+  };
+  const calendarRangeData = useMemo(() => Object.fromEntries(
+    Object.entries(taskCalendar.rangeData).map(([resourceId, tasks]) => [
+      resourceId,
+      tasks.filter(task => matchesTask(task, taskFilters)),
+    ]),
+  ), [taskCalendar.rangeData, taskFilters]);
+  const calendarTasks = useMemo(() => Object.values(taskCalendar.rangeData).flat(), [taskCalendar.rangeData]);
+  const resourceTasks = overviewQuery.data ?? [];
+  const selectedTask = [...rows, ...resourceTasks, ...calendarTasks].find(task => task.id === selectedTaskId) ?? null;
   const openAddTask = useCallback(() => {
     const today = dayKey(new Date());
     setModalTarget({ startDate: today, dueDate: today });
@@ -125,9 +172,11 @@ export default function Tasks() {
   ], [canWrite, mutations]);
 
   const taskError = mutations.statusError
+    || taskCalendar.error
     || controls.error
     || (optionsQuery.error ? 'Unable to load task form options.' : '')
-    || (tasksQuery.error ? 'Unable to load tasks.' : '');
+    || (overviewQuery.error ? 'Unable to load task overview.' : '')
+    || (controls.view === 'list' && tasksQuery.error ? 'Unable to load tasks.' : '');
   const hasFilters = controls.programIds.length > 0
     || controls.categories.length > 0 || controls.statusFilters.length > 0;
   const logHoursAction = canWrite && selectedTask?.writable && (selectedTask.status === 'todo' || selectedTask.status === 'in_progress')
@@ -185,10 +234,13 @@ export default function Tasks() {
           onSortingChange={next => controls.changeSorting(next as ListSort<TaskSortKey>)}
           columnWidths={controls.columnWidths}
           onColumnWidthsChange={controls.changeColumnWidths}
-        /> } : { calendar: tasksQuery.isLoading ? <p>Loading tasks…</p> : !tasksQuery.error ? <ResourceCalendar
+        /> } : { calendar: <ResourceCalendar
           resources={resources}
           data={{}}
-          rangeData={rangeData}
+          rangeData={calendarRangeData}
+          onInitialPeriods={taskCalendar.initialize}
+          onPeriodsBuilt={taskCalendar.onPeriodsBuilt}
+          onPeriodsReset={taskCalendar.reset}
           getResourceId={resource => resource.id}
           getItemId={task => task.id}
           getItemRange={task => ({ start: task.startDate, end: task.dueDate })}
@@ -237,7 +289,7 @@ export default function Tasks() {
           positionStorageKey={TASK_CALENDAR_POSITION_KEY}
           resourceHeader="Staff"
           rowHeight={112}
-        /> : null })}
+        /> })}
       />}
     </main>
     <TaskDialogs
