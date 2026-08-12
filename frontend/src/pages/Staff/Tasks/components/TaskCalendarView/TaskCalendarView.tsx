@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/PeriodDataBuffer';
@@ -18,7 +18,7 @@ const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 
 interface TaskCalendarViewProps {
   resources: TaskResource[];
-  filters: { programIds: string[]; categories: TaskCategory[]; statuses: TaskStatus[] };
+  filters: { staffIds: string[]; programIds: string[]; categories: TaskCategory[]; statuses: TaskStatus[] };
   canWrite: boolean;
   selectedResourceId: string | null;
   selectedTaskId: string | null;
@@ -55,11 +55,14 @@ export default function TaskCalendarView({
     return () => { mutationCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
   }, [calendar, mutationCacheRef]);
   const rangeData = useTaskCalendarData(calendar.rangeData, { ...filters, search: '' });
+  const visibleResources = useMemo(() => filters.staffIds.length
+    ? resources.filter(resource => filters.staffIds.includes(resource.id))
+    : resources, [filters.staffIds, resources]);
 
   return <>
     {calendar.error && <p className="form-error" role="alert">{calendar.error}</p>}
     <ResourceCalendar
-      resources={resources}
+      resources={visibleResources}
       data={{}}
       rangeData={rangeData}
       onInitialPeriods={calendar.initialize}

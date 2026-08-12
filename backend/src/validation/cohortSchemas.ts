@@ -271,6 +271,7 @@ export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type CohortQuery = z.infer<typeof cohortQuerySchema.shape.query>;
+export type CohortYouthReportQuery = z.infer<typeof cohortYouthReportSchema.shape.query>;
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;

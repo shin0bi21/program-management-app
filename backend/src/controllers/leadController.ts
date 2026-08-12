@@ -2,11 +2,11 @@ import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createLead, getLeads, signUpLead, updateLead, updateLeadStatus } from '../services/leadService';
 import { createLeadNote, deleteLeadNote, getLeadNotes, updateLeadNote } from '../services/leadNoteService';
-import { leadQuerySchema, type CreateLeadInput, type SignUpLeadInput, type UpdateLeadInput, type UpdateLeadStatusInput } from '../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
 import type { SetLeadNoteInput } from '../validation/leadNoteSchemas';
 
 export const handleGetLeads = async (req: Request, res: Response) => {
-  const filters = leadQuerySchema.shape.query.parse(req.query);
+  const filters = req.query as unknown as LeadQuery;
   res.json(await getLeads(filters));
 };
 

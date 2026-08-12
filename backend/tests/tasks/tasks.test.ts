@@ -214,6 +214,35 @@ describe('Tasks API', () => {
     expect(second.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} B` })], nextCursor: null });
   });
 
+  it('filters the task list by readable staff resources', async () => {
+    const marker = `Staff-filtered task ${firstStaffId}`;
+    const firstTask = rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: `${marker} first`, category: 'outreach', startDate: taskDate, dueDate: taskDate,
+        staffId: firstStaffId,
+      }));
+    const secondTask = rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: `${marker} second`, category: 'outreach', startDate: taskDate, dueDate: taskDate,
+        staffId: secondStaffId,
+      }));
+    expect(firstTask.status).toBe(201);
+    expect(secondTask.status).toBe(201);
+
+    const response = await request(app)
+      .get(`/api/tasks/list?staffIds=${secondStaffId}&search=${encodeURIComponent(marker)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.rows).toEqual([
+      expect.objectContaining({ id: secondTask.body.id, assignee: expect.objectContaining({ id: secondStaffId }) }),
+    ]);
+  });
+
   it('validates required task dates and date boundaries', async () => {
     const missingDates = await request(app)
       .post('/api/tasks')
