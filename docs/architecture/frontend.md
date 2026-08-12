@@ -108,11 +108,32 @@ components/
 
 Use only the files the feature needs. The important boundary is that the entry component composes focused units instead of accumulating unrelated effects, observers, state machines, and data adapters.
 
+Substantial data pages use nested ownership rather than leaving every page-private unit as a peer:
+
+```text
+Page.tsx                         route shell and cross-view orchestration
+components/
+  FeatureListView/              remote list query, table, and list-only helpers
+    hooks/
+  FeatureCalendarView/          calendar buffer, filtering, items, and interactions
+    hooks/
+    FeatureItem/
+  FeatureDashboard/             dashboard composition
+    FeatureDashboardCard/
+hooks/                          page-wide controls and cross-view workflows
+featureViewData.ts              contracts or pure helpers shared by sibling views
+```
+
+The route owns the header, shared filters and preferences, dialogs, selection context, dashboards, and synchronization between mounted or unmounted views. A `*ListView` owns its remote list hook and table-specific behavior. A `*CalendarView` owns its range loader, buffer adapter, visible-data hook, item component, and calendar-only mutation helpers. A dashboard owns cards used only within that dashboard. Do not move a contract under one child when a sibling view or the route also consumes it; keep that contract at the narrowest shared feature level.
+
+The same public ownership pattern does not require identical internal algorithms. Point records and ranged records may use different calendar-data shapes and caching strategies while exposing the same `loaded data + filters → visible calendar data` responsibility from their respective CalendarView-owned hooks.
+
 - Extract a component when a UI region owns meaningful rendering, interaction, or accessibility behavior.
 - Extract a hook when stateful behavior has a coherent name and owns effects, subscriptions, observers, or coordinated callbacks.
 - Extract pure transforms, constants, date arithmetic, and external-library adapters into utilities.
 - Keep one-off private prop types beside their component; place cross-unit contracts in the feature's type file.
 - Introduce `components/` or `hooks/` subdirectories when multiple peer units make a flat feature directory unclear.
+- Place focused tests with the narrowest owner. Keep route tests for composition and boundary wiring; move hook policy, persistence, filtering, caching, and reference-stability assertions into the owning hook suite instead of duplicating them in page tests.
 
 ## Type and API ownership
 
