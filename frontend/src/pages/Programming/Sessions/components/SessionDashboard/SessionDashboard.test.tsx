@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import SessionOverview from './SessionOverview';
+import SessionDashboard from './SessionDashboard';
 
 const getSessionNotes = vi.fn();
 const getSessionRoster = vi.fn();
@@ -61,7 +61,7 @@ const session: CohortSession = {
   attendanceRate: 80,
 };
 
-describe('SessionOverview', () => {
+describe('SessionDashboard', () => {
   beforeEach(() => {
     getSessionNotes.mockResolvedValue([]);
     getSessionRoster.mockResolvedValue([]);
@@ -82,7 +82,7 @@ describe('SessionOverview', () => {
 
   it('keeps every card visible before a session is selected', () => {
     render(
-      <SessionOverview
+      <SessionDashboard
         session={null}
         canWriteAttendance
         canWriteSessions
@@ -99,7 +99,7 @@ describe('SessionOverview', () => {
   it('summarizes attendance and delegates the add action', async () => {
     const onAddAttendance = vi.fn();
     render(
-      <SessionOverview
+      <SessionDashboard
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -133,7 +133,7 @@ describe('SessionOverview', () => {
     }]);
 
     render(
-      <SessionOverview
+      <SessionDashboard
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -169,7 +169,7 @@ describe('SessionOverview', () => {
     getSessionNotes.mockResolvedValue([note]);
 
     render(
-      <SessionOverview
+      <SessionDashboard
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -210,7 +210,7 @@ describe('SessionOverview', () => {
     getSessionAttachments.mockResolvedValue([attachment]);
 
     render(
-      <SessionOverview
+      <SessionDashboard
         session={session}
         canWriteAttendance
         canWriteSessions
