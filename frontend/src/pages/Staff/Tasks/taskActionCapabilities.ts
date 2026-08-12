@@ -5,7 +5,7 @@ export function canCancelTask(task: Task) {
 }
 
 export function canCompleteTask(task: Task) {
-  return task.status === 'in_progress';
+  return task.status === 'in_progress' && task.hoursLogged > 0;
 }
 
 export function canReopenTask(task: Task) {
@@ -17,7 +17,7 @@ export function canEditTask(task: Task) {
 }
 
 export function canDeleteTask(task: Task) {
-  return task.status !== 'completed' && task.hoursLogged === 0;
+  return task.hoursLogged === 0;
 }
 
 export function reopenedTaskStatus(task: Task): 'todo' | 'in_progress' {

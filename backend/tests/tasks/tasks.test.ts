@@ -420,7 +420,14 @@ describe('Tasks API', () => {
         startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
       }));
     expect(completedTask.status).toBe(201);
-    await sql`UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ${completedTask.body.id}`;
+    const completedEntry = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: completedTask.body.id, completeTask: true,
+        workDate: taskDate, hours: 1, note: 'Completed locked task',
+      });
+    expect(completedEntry.status).toBe(201);
 
     const completedEdit = await request(app)
       .put(`/api/tasks/${completedTask.body.id}`)
@@ -443,7 +450,7 @@ describe('Tasks API', () => {
       .delete(`/api/tasks/${completedTask.body.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(completedDelete.status).toBe(409);
-    expect(completedDelete.body.error).toBe('Completed tasks must be reopened before they can be deleted');
+    expect(completedDelete.body.error).toBe('Tasks with logged time cannot be deleted');
 
     const cancelledTask = rememberTask(await request(app)
       .post('/api/tasks')
@@ -499,11 +506,30 @@ describe('Tasks API', () => {
     expect(prematureCompletion.body.error).toBe('Only in-progress tasks can be completed');
 
     await sql`UPDATE tasks SET status = 'in_progress' WHERE id = ${task.body.id}`;
-    const updated = await request(app)
+    const zeroHourCompletion = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ status: 'completed' });
-    expect(updated.status).toBe(200);
+    expect(zeroHourCompletion.status).toBe(409);
+    expect(zeroHourCompletion.body.error).toBe('Tasks need logged time before they can be completed');
+
+    const completedEntry = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
+        workDate: taskDate, hours: 1, note: 'Completed audited task',
+      });
+    expect(completedEntry.status).toBe(201);
+    const completedTasks = await request(app)
+      .get('/api/tasks?includeClosed=true')
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(completedTasks.status).toBe(200);
+    expect(completedTasks.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
+    ]));
+
+    await sql`DELETE FROM time_entries WHERE id = ${completedEntry.body.id}`;
 
     const reopened = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)

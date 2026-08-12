@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/features/tasks/types';
-import { canDeleteTask, canEditTask } from './taskActionCapabilities';
+import { canCompleteTask, canDeleteTask, canEditTask } from './taskActionCapabilities';
 
 const task = { status: 'todo', hoursLogged: 0 } as Task;
 
@@ -11,8 +11,13 @@ describe('Task action capabilities', () => {
     expect(canDeleteTask({ ...task, status: 'in_progress', hoursLogged: 1 })).toBe(false);
   });
 
-  it('makes completed tasks reopen-only', () => {
-    const completed = { ...task, status: 'completed' } as Task;
+  it('requires logged time before an in-progress task can be completed', () => {
+    expect(canCompleteTask({ ...task, status: 'in_progress' })).toBe(false);
+    expect(canCompleteTask({ ...task, status: 'in_progress', hoursLogged: 1 })).toBe(true);
+  });
+
+  it('blocks editing and deletion for completed tasks through lifecycle invariants', () => {
+    const completed = { ...task, status: 'completed', hoursLogged: 1 } as Task;
     expect(canEditTask(completed)).toBe(false);
     expect(canDeleteTask(completed)).toBe(false);
   });

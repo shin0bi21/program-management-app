@@ -342,6 +342,9 @@ export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress
     if (status === 'completed' && existingRows[0].status !== 'in_progress') {
       throw new ConflictError('Only in-progress tasks can be completed');
     }
+    if (status === 'completed' && existingRows[0].hoursLogged === 0) {
+      throw new ConflictError('Tasks need logged time before they can be completed');
+    }
     if (status === 'cancelled' && !['todo', 'in_progress'].includes(existingRows[0].status)) {
       throw new ConflictError('Only open tasks can be cancelled');
     }
@@ -395,9 +398,6 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
-    if (existingRows[0].status === 'completed') {
-      throw new ConflictError('Completed tasks must be reopened before they can be deleted');
-    }
     const linkedEntries = await trx<{ exists: boolean }[]>`
       SELECT EXISTS (SELECT 1 FROM time_entries WHERE task_id = ${id}) AS exists
     `;

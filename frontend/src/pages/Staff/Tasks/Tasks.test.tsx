@@ -246,7 +246,7 @@ describe('Tasks', () => {
     await act(async () => todoItem.props.onCancel());
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'cancelled');
 
-    const activeTask = { ...task, status: 'in_progress' as const };
+    const activeTask = { ...task, status: 'in_progress' as const, hoursLogged: 1 };
     const item = calendarTestState.props!.buildRangeItem!({
       resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       data: activeTask,
