@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import ProgrammingCalendar from '../ProgrammingCalendar/ProgrammingCalendar';
+import ProgrammingCalendar from './ProgrammingCalendar/ProgrammingCalendar';
 import { useSessionCalendarData } from './hooks/useSessionCalendarData';
 import './SessionsCalendarView.css';
 
