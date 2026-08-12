@@ -1,16 +1,16 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
-import Button from '../../../../../common/components/Button/Button';
-import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
-import Modal from '../../../../../common/components/Modal/Modal';
-import { useConfirmModal } from '../../../../../common/components/Modal/hooks/useConfirmModal';
-import { formatShortDate } from '../../../../../common/utils/date';
-import type { Lead } from '../../types';
-import LeadNoteModal from '../LeadNoteModal/LeadNoteModal';
+import Button from '../../../../../../common/components/Button/Button';
+import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import Modal from '../../../../../../common/components/Modal/Modal';
+import { useConfirmModal } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
+import { formatShortDate } from '../../../../../../common/utils/date';
+import type { Lead } from '../../../types';
+import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
 import useLeadNotes from './useLeadNotes';
-import './LeadNotesCard.css';
+import './LeadNotesDashboardCard.css';
 
-export default function LeadNotesCard({ lead, canWrite }: { lead: Lead | null; canWrite: boolean }) {
+export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead | null; canWrite: boolean }) {
   const notes = useLeadNotes(lead);
   const confirmModal = useConfirmModal({ action: notes.confirmAction, onClose: notes.closeConfirmation });
 

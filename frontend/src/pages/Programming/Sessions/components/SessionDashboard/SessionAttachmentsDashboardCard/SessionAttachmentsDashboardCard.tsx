@@ -10,7 +10,7 @@ import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentMo
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';
 
-export default function SessionAttachmentsCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
+export default function SessionAttachmentsDashboardCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
   const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
   const [detailAttachment, setDetailAttachment] = useState<SessionAttachment | null>(null);

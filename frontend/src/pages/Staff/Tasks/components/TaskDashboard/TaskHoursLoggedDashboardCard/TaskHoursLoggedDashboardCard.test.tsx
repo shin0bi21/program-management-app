@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../../../../common/features/tasks/types';
-import TaskHoursLoggedCard from './TaskHoursLoggedCard';
+import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
@@ -11,9 +11,9 @@ const task: Task = {
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
 
-describe('TaskHoursLoggedCard', () => {
+describe('TaskHoursLoggedDashboardCard', () => {
   it('opens a daily breakdown for the selected staff member', () => {
-    render(<TaskHoursLoggedCard task={task} />);
+    render(<TaskHoursLoggedDashboardCard task={task} />);
 
     const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')!;
     expect(within(card).getByText('4.5 hours')).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe('TaskHoursLoggedCard', () => {
 
   it('delegates contextual task-time logging', () => {
     const onLogHours = vi.fn();
-    render(<TaskHoursLoggedCard task={{ ...task, hoursLogged: 0, loggedHoursByDate: [] }} onLogHours={onLogHours} />);
+    render(<TaskHoursLoggedDashboardCard task={{ ...task, hoursLogged: 0, loggedHoursByDate: [] }} onLogHours={onLogHours} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
 

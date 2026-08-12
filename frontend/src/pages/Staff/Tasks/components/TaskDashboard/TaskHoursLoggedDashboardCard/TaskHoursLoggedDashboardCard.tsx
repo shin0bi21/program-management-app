@@ -4,13 +4,13 @@ import Modal from '../../../../../../common/components/Modal/Modal';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import type { Task } from '../../../../../../common/features/tasks/types';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
-import './TaskHoursLoggedCard.css';
+import './TaskHoursLoggedDashboardCard.css';
 
 function formatHours(hours: number) {
   return `${hours.toLocaleString('en-CA', { maximumFractionDigits: 2 })} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-export default function TaskHoursLoggedCard({ task, onLogHours }: {
+export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
   task: Task | null;
   onLogHours?: () => void;
 }) {

@@ -1,6 +1,6 @@
 import type { Task } from '../../../../../common/features/tasks/types';
-import TaskHoursLoggedCard from './TaskHoursLoggedCard/TaskHoursLoggedCard';
-import TaskOverviewCard from './TaskOverviewCard/TaskOverviewCard';
+import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
+import TaskOverviewDashboardCard from './TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 
 interface TaskDashboardProps {
   tasks: readonly Task[];
@@ -11,7 +11,7 @@ interface TaskDashboardProps {
 
 export default function TaskDashboard({ tasks, resourceName, selectedTask, onLogHours }: TaskDashboardProps) {
   return <>
-    <TaskOverviewCard tasks={tasks} resourceName={resourceName} />
-    <TaskHoursLoggedCard task={selectedTask} onLogHours={onLogHours} />
+    <TaskOverviewDashboardCard tasks={tasks} resourceName={resourceName} />
+    <TaskHoursLoggedDashboardCard task={selectedTask} onLogHours={onLogHours} />
   </>;
 }

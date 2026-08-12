@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import AttendanceCard from './AttendanceCard';
+import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard';
 
-describe('AttendanceCard', () => {
+describe('YouthAttendanceDashboardCard', () => {
   it('keeps its empty state inside the dashboard card', () => {
-    render(<AttendanceCard cohorts={[]} selected />);
+    render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(screen.getByText('No active cohort attendance.')).toHaveClass('dashboard-card__empty');
   });
 
   it('separates active and historical attendance by program and cohort', () => {
-    render(<AttendanceCard selected cohorts={[
+    render(<YouthAttendanceDashboardCard selected cohorts={[
       {
         id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
         startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
@@ -36,7 +36,7 @@ describe('AttendanceCard', () => {
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };
-    render(<AttendanceCard selected cohorts={[cohort]} canManage onManage={onManage} />);
+    render(<YouthAttendanceDashboardCard selected cohorts={[cohort]} canManage onManage={onManage} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
     expect(onManage).toHaveBeenCalledWith(cohort);
@@ -49,7 +49,7 @@ describe('AttendanceCard', () => {
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };
-    render(<AttendanceCard selected cohorts={[cohort]} canViewReport onViewReport={onViewReport} />);
+    render(<YouthAttendanceDashboardCard selected cohorts={[cohort]} canViewReport onViewReport={onViewReport} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
     expect(onViewReport).toHaveBeenCalledWith(cohort);

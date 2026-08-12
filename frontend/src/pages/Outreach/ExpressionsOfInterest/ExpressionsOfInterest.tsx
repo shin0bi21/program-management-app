@@ -7,14 +7,13 @@ import { getErrorMessage } from '../../../http/clientErrors';
 import { formatShortDate } from '../../../common/utils/date';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PrimaryContactCard from '../../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
-import NotesCard from '../common/components/NotesCard/NotesCard';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
+import ExpressionOfInterestDashboard from './components/ExpressionOfInterestDashboard/ExpressionOfInterestDashboard';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from './types';
 import type { ListSort } from '../../../common/types/pagination';
@@ -196,13 +195,7 @@ export default function ExpressionsOfInterest() {
         <PageBody
           ariaLabel="Expressions of interest"
           table={<Table ariaLabel="Expressions of interest" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-          dashboard={<>
-            <PrimaryContactCard contact={selectedSubmission ? {
-              phoneNumber: selectedSubmission.contactPhoneNumber,
-              relationship: selectedSubmission.contactRelationship,
-            } : null} selected={selectedSubmission !== null} />
-            <NotesCard notes={selectedSubmission?.notes} selected={selectedSubmission !== null} />
-          </>}
+          dashboard={<ExpressionOfInterestDashboard submission={selectedSubmission} />}
         />
       </div>
     </>

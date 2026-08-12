@@ -1,7 +1,7 @@
 import type { CohortSession } from '../../../../../common/types/cohort';
-import SessionAttachmentsCard from './SessionAttachmentsCard/SessionAttachmentsCard';
-import SessionAttendanceCard from './SessionAttendanceCard/SessionAttendanceCard';
-import SessionNotesCard from './SessionNotesCard/SessionNotesCard';
+import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
+import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
+import SessionNotesDashboardCard from './SessionNotesDashboardCard/SessionNotesDashboardCard';
 
 interface SessionDashboardProps {
   session: CohortSession | null;
@@ -14,8 +14,8 @@ export default function SessionDashboard({
   session, canWriteAttendance, canWriteSessions, onAddAttendance,
 }: SessionDashboardProps) {
   return <>
-    <SessionAttendanceCard session={session} canWrite={canWriteAttendance} onManage={onAddAttendance} />
-    <SessionNotesCard session={session} canWrite={canWriteSessions} />
-    <SessionAttachmentsCard session={session} canWrite={canWriteSessions} />
+    <SessionAttendanceDashboardCard session={session} canWrite={canWriteAttendance} onManage={onAddAttendance} />
+    <SessionNotesDashboardCard session={session} canWrite={canWriteSessions} />
+    <SessionAttachmentsDashboardCard session={session} canWrite={canWriteSessions} />
   </>;
 }

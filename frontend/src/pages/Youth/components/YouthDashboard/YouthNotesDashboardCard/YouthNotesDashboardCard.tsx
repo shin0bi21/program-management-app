@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { DashboardCard } from '../../../../common/components/DashboardCard/DashboardCard';
-import type { YouthProfileNote } from '../../../../common/types/youth';
-import ProfileNoteRow from './ProfileNoteRow';
+import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
+import type { YouthProfileNote } from '../../../../../common/types/youth';
+import ProfileNoteRow from '../../ProfileNotes/ProfileNoteRow';
 
-interface YouthNotesCardProps {
+interface YouthNotesDashboardCardProps {
   profileNotes?: YouthProfileNote[];
   selected: boolean;
   onSelectProfileNote: (note: YouthProfileNote) => void;
@@ -14,10 +14,10 @@ interface YouthNotesCardProps {
   profileNotesError?: string | null;
 }
 
-export default function YouthNotesCard({
+export default function YouthNotesDashboardCard({
   profileNotes = [], selected, onSelectProfileNote, canManageProfileNotes = false, onEditProfileNote,
   onDeleteProfileNote, profileNotesLoading = false, profileNotesError,
-}: YouthNotesCardProps) {
+}: YouthNotesDashboardCardProps) {
   const title = selected && !profileNotesLoading ? `Profile Notes (${profileNotes.length})` : 'Profile Notes';
   let content: ReactNode;
   if (!selected) content = <p className="dashboard-card__empty">Select a row to view notes.</p>;

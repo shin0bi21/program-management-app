@@ -8,8 +8,6 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PrimaryContactCard from '../../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
-import NotesCard from '../common/components/NotesCard/NotesCard';
 import { useAuth } from '../../../auth/authContext';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import { formatShortDate } from '../../../common/utils/date';
@@ -18,7 +16,7 @@ import useTableSelection from '../../../common/components/Table/hooks/useTableSe
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
 import { updateLeadStatus } from './api/leads.api';
 import LeadModal from './components/LeadModal';
-import LeadNotesCard from './components/LeadNotesCard/LeadNotesCard';
+import LeadDashboard from './components/LeadDashboard/LeadDashboard';
 import SignUpLeadModal from './components/SignUpLeadModal';
 import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadFilters, LeadSortKey, LeadStatus } from './types';
@@ -159,14 +157,7 @@ export default function Leads() {
     <PageBody
       ariaLabel="Leads"
       table={<Table ariaLabel="Leads" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={leads} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-      dashboard={<>
-        <PrimaryContactCard contact={selectedLead ? {
-          phoneNumber: selectedLead.contactPhoneNumber,
-          relationship: selectedLead.contactRelationship,
-        } : null} selected={selectedLead !== null} />
-        <NotesCard notes={selectedLead?.notes} selected={selectedLead !== null} />
-        <LeadNotesCard lead={selectedLead} canWrite={canWrite} />
-      </>}
+      dashboard={<LeadDashboard lead={selectedLead} canWrite={canWrite} />}
     />
     <LeadModal
       isOpen={modalTarget !== null}

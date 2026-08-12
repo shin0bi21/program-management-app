@@ -1,6 +1,6 @@
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 
-export default function NotesCard({ notes, selected }: { notes?: string | null; selected: boolean }) {
+export default function NotesDashboardCard({ notes, selected }: { notes?: string | null; selected: boolean }) {
   return (
     <DashboardCard title="Notes">
       <p className={!selected || !notes?.trim() ? 'dashboard-card__empty' : undefined}>

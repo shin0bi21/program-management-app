@@ -5,7 +5,7 @@ import { dayKey } from '../../../../../../common/components/ResourceCalendar/per
 import type { Task } from '../../../../../../common/features/tasks/types';
 import { groupTasksForOverview } from '../../../taskOverview';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
-import './TaskOverviewCard.css';
+import './TaskOverviewDashboardCard.css';
 
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
 
@@ -35,7 +35,7 @@ function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeek
   </section>;
 }
 
-export default function TaskOverviewCard({ tasks, resourceName }: {
+export default function TaskOverviewDashboardCard({ tasks, resourceName }: {
   tasks: readonly Task[];
   resourceName: string;
 }) {
