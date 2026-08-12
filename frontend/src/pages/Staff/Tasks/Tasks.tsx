@@ -211,7 +211,10 @@ export default function Tasks() {
             setModalTarget({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
           } : undefined}
           onRangeResize={canWrite
-            ? ({ item: task, nextRange }) => mutations.setTaskRange(task, nextRange, 'resize')
+            ? ({ item: task, nextRange }) => {
+              selectTask(task);
+              return mutations.setTaskRange(task, nextRange, 'resize');
+            }
             : undefined}
           canRangeMove={({ item: task, resource, destinationResource }) => (
             task.writable
@@ -219,9 +222,11 @@ export default function Tasks() {
             && canMoveTaskToResource(task, resource.id, destinationResource.id)
           )}
           onRangeMove={canWrite
-            ? ({ item: task, nextRange, destinationResource }) => (
-              mutations.setTaskRange(task, nextRange, 'move', destinationResource.id)
-            )
+            ? ({ item: task, nextRange, destinationResource }) => {
+              setSelectedResourceId(destinationResource.id);
+              setSelectedTaskId(task.id);
+              return mutations.setTaskRange(task, nextRange, 'move', destinationResource.id);
+            }
             : undefined}
           ariaLabel="Task calendar"
           positionStorageKey={TASK_CALENDAR_POSITION_KEY}
