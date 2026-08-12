@@ -2,19 +2,12 @@ import { useMemo } from 'react';
 import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
 import type { StaffResource, TimesheetItem } from '../../../../common/features/timeEntries/types';
 import type { ListSort } from '../../../../common/types/pagination';
+import type { TimeEntryListRowResponse } from '../../../../common/features/timeEntries/api/timeEntries.api';
 
 export type TimesheetSortKey = 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type';
 export type TimesheetEntryType = 'task' | 'session' | 'other';
 
-export interface TimesheetListRow {
-  id: string;
-  resourceId: string;
-  date: string;
-  item: TimesheetItem;
-  staffFirstName: string;
-  staffLastName: string;
-  staffName: string;
-}
+export type TimesheetListRow = TimeEntryListRowResponse;
 
 export function buildTimesheetListRows(data: ResourcePeriodData<TimesheetItem>, resources: readonly StaffResource[], staffFilters: readonly string[]) {
   const resourcesById = new Map(resources.map(resource => [resource.id, resource]));

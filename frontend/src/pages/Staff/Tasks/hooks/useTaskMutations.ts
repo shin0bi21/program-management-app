@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { type QueryClient, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
 import {
   deleteTask,
@@ -10,12 +10,6 @@ import type { Task } from '../../../../common/features/tasks/types';
 import { createTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
 
 export const TASKS_QUERY_KEY = ['tasks'] as const;
-
-function updateTaskCaches(queryClient: QueryClient, updater: (current: Task[]) => Task[]) {
-  queryClient.setQueriesData<Task[]>({ queryKey: TASKS_QUERY_KEY }, current => (
-    current ? updater(current) : current
-  ));
-}
 
 interface TaskMutationHandlers {
   onUpsert?: (task: Task) => void;
@@ -36,13 +30,9 @@ export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHan
   }, [onUpsert, refreshTasks]);
 
   const reconcileTask = useCallback((task: Task) => {
-    updateTaskCaches(queryClient, current => (
-      current.some(item => item.id === task.id)
-        ? current.map(item => item.id === task.id ? task : item)
-        : current
-    ));
     onUpsert?.(task);
-  }, [onUpsert, queryClient]);
+    refreshTasks();
+  }, [onUpsert, refreshTasks]);
 
   const requestDelete = useCallback((task: Task) => setConfirmAction({
     title: 'Delete Task',
@@ -52,10 +42,10 @@ export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHan
     successMessage: 'Task deleted',
     onConfirm: async () => {
       await deleteTask(task.id);
-      updateTaskCaches(queryClient, current => current.filter(item => item.id !== task.id));
       onRemove?.(task.id);
+      refreshTasks();
     },
-  }), [onRemove, queryClient]);
+  }), [onRemove, refreshTasks]);
 
   const runMutation = useCallback(async (mutate: () => Promise<Task>, errorMessage: string) => {
     setStatusError('');

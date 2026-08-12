@@ -188,6 +188,32 @@ describe('Tasks API', () => {
     taskIds.delete(ownTask.body.id);
   });
 
+  it('paginates and searches the task list with a stable cursor', async () => {
+    const marker = `Paginated task ${firstStaffId}`;
+    for (const suffix of ['A', 'B']) {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({
+          title: `${marker} ${suffix}`, category: 'outreach', startDate: taskDate, dueDate: taskDate,
+          staffId: firstStaffId,
+        }));
+      expect(created.status).toBe(201);
+    }
+
+    const first = await request(app)
+      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=title&direction=asc&limit=1`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} A` })], nextCursor: expect.any(String) });
+
+    const second = await request(app)
+      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=title&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} B` })], nextCursor: null });
+  });
+
   it('validates required task dates and date boundaries', async () => {
     const missingDates = await request(app)
       .post('/api/tasks')

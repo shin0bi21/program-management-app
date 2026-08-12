@@ -6,29 +6,21 @@ import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import ResourceCalendar from '../../../common/components/ResourceCalendar/ResourceCalendar';
-import { usePeriodDataBuffer } from '../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
-import type { PeriodRange } from '../../../common/components/ResourceCalendar/PeriodDataBuffer';
+import type { TableColumn } from '../../../common/components/Table/Table';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
-import TaskItem from './components/TaskItem/TaskItem';
 import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
 import TaskHoursLoggedCard from './components/TaskHoursLoggedCard/TaskHoursLoggedCard';
 import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
-import { canMoveTaskToResource, getTaskCalendarCapabilities } from './taskCalendarCapabilities';
-import useTaskViewData, { matchesTask, type TaskSortKey } from './hooks/useTaskViewData';
-import type { ListSort } from '../../../common/types/pagination';
-import { formatCompactPersonName } from '../../../common/utils/name';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
-
-const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
+import TaskListView, { type TaskViewMutationCache } from './components/TaskListView/TaskListView';
+import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
 
 function canCancelTask(task: Task) {
   return task.status === 'todo' || task.status === 'in_progress';
@@ -52,38 +44,33 @@ export default function Tasks() {
   const [modalTarget, setModalTarget] = useState<TaskModalTarget | null>(null);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskSnapshot, setSelectedTaskSnapshot] = useState<Task | null>(null);
   const [logHoursTask, setLogHoursTask] = useState<Task | null>(null);
-  const calendarMutationRef = useRef<{
-    upsert: (task: Task) => void;
-    remove: (taskId: string) => void;
-  }>({
+  const emptyMutationCache = useMemo<TaskViewMutationCache>(() => ({
     upsert: (_task: Task) => undefined,
     remove: (_taskId: string) => undefined,
+  }), []);
+  const listMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
+  const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
+  const mutations = useTaskMutations({
+    onUpsert: task => {
+      listMutationRef.current.upsert(task);
+      calendarMutationRef.current.upsert(task);
+      setSelectedTaskSnapshot(current => current?.id === task.id ? task : current);
+    },
+    onRemove: taskId => {
+      listMutationRef.current.remove(taskId);
+      calendarMutationRef.current.remove(taskId);
+      setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
+    },
   });
-  const upsertCalendarTask = useCallback((task: Task) => calendarMutationRef.current.upsert(task), []);
-  const removeCalendarTask = useCallback((taskId: string) => calendarMutationRef.current.remove(taskId), []);
-  const mutations = useTaskMutations({ onUpsert: upsertCalendarTask, onRemove: removeCalendarTask });
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading);
-  const tasksQuery = useQuery({
-    queryKey: [...TASKS_QUERY_KEY, 'list'],
-    queryFn: ({ signal }) => getTasks({ includeClosed: true }, { signal }),
-    enabled: controls.view === 'list',
-  });
   const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
   useEffect(() => {
     if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
   }, [selectedResourceId, writableResources]);
-  const taskFilters = useMemo(() => ({
-    search: controls.view === 'list' ? controls.search : '',
-    programIds: controls.programIds,
-    categories: controls.categories,
-    statuses: controls.statusFilters,
-  }), [controls.categories, controls.programIds, controls.search, controls.statusFilters, controls.view]);
-  const { rows } = useTaskViewData(
-    tasksQuery.data ?? [], resources, taskFilters, selectedResourceId, controls.sorting,
-  );
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
   const overviewQuery = useQuery({
     queryKey: [...TASKS_QUERY_KEY, 'overview', selectedResourceId],
@@ -91,33 +78,9 @@ export default function Tasks() {
     enabled: selectedResourceId !== null,
     placeholderData: previous => previous,
   });
-  const loadCalendarRange = useCallback(async ({ start, end }: PeriodRange) => {
-    const tasks = await getTasks({ start: start.key, end: end.key, includeClosed: true });
-    return tasks.reduce<Record<string, Record<string, Task[]>>>((data, task) => {
-      data[task.assignee.id] ??= {};
-      data[task.assignee.id][start.key] ??= [];
-      data[task.assignee.id][start.key].push(task);
-      return data;
-    }, {});
-  }, []);
-  const taskCalendar = usePeriodDataBuffer({
-    load: loadCalendarRange,
-    getItemId: task => task.id,
-    errorMessage: 'Unable to load task calendar data',
-  });
-  calendarMutationRef.current = {
-    upsert: task => taskCalendar.upsertItem(task.assignee.id, task.startDate, task),
-    remove: taskCalendar.removeItem,
-  };
-  const calendarRangeData = useMemo(() => Object.fromEntries(
-    Object.entries(taskCalendar.rangeData).map(([resourceId, tasks]) => [
-      resourceId,
-      tasks.filter(task => matchesTask(task, taskFilters)),
-    ]),
-  ), [taskCalendar.rangeData, taskFilters]);
-  const calendarTasks = useMemo(() => Object.values(taskCalendar.rangeData).flat(), [taskCalendar.rangeData]);
   const resourceTasks = overviewQuery.data ?? [];
-  const selectedTask = [...rows, ...resourceTasks, ...calendarTasks].find(task => task.id === selectedTaskId) ?? null;
+  const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
+    ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
   const openAddTask = useCallback(() => {
     const today = dayKey(new Date());
     setModalTarget({ startDate: today, dueDate: today });
@@ -125,10 +88,12 @@ export default function Tasks() {
   const selectTask = useCallback((task: Task) => {
     setSelectedResourceId(task.assignee.id);
     setSelectedTaskId(task.id);
+    setSelectedTaskSnapshot(task);
   }, []);
   const selectResource = useCallback((resourceId: string) => {
     setSelectedResourceId(resourceId);
     setSelectedTaskId(null);
+    setSelectedTaskSnapshot(null);
   }, []);
   const saveTask = useCallback((task: Task) => {
     if (modalTarget && 'id' in modalTarget) {
@@ -172,13 +137,9 @@ export default function Tasks() {
   ], [canWrite, mutations]);
 
   const taskError = mutations.statusError
-    || taskCalendar.error
     || controls.error
     || (optionsQuery.error ? 'Unable to load task form options.' : '')
-    || (overviewQuery.error ? 'Unable to load task overview.' : '')
-    || (controls.view === 'list' && tasksQuery.error ? 'Unable to load tasks.' : '');
-  const hasFilters = controls.programIds.length > 0
-    || controls.categories.length > 0 || controls.statusFilters.length > 0;
+    || (overviewQuery.error ? 'Unable to load task overview.' : '');
   const logHoursAction = canWrite && selectedTask?.writable && (selectedTask.status === 'todo' || selectedTask.status === 'in_progress')
     ? () => setLogHoursTask(selectedTask)
     : undefined;
@@ -219,76 +180,31 @@ export default function Tasks() {
           <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
           <TaskHoursLoggedCard task={selectedTask} onLogHours={logHoursAction} />
         </> : null}
-        {...(controls.view === 'list' ? { table: <Table
-          ariaLabel="Tasks"
+        {...(controls.view === 'list' ? { table: <TaskListView
           columns={columns}
           hiddenColumnKeys={controls.hiddenColumns}
-          data={rows}
-          loading={tasksQuery.isLoading}
-          error={tasksQuery.error ? 'Unable to load tasks.' : undefined}
-          emptyMessage={controls.search.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
-          keyExtractor={task => task.id}
-          selectedKey={selectedTaskId}
-          onRowSelect={selectTask}
+          programIds={controls.programIds}
+          categories={controls.categories}
+          statuses={controls.statusFilters}
+          search={controls.search}
           sorting={controls.sorting}
-          onSortingChange={next => controls.changeSorting(next as ListSort<TaskSortKey>)}
           columnWidths={controls.columnWidths}
+          selectedTaskId={selectedTaskId}
+          mutationCacheRef={listMutationRef}
+          onTaskSelect={selectTask}
+          onSortingChange={controls.changeSorting}
           onColumnWidthsChange={controls.changeColumnWidths}
-        /> } : { calendar: <ResourceCalendar
+        /> } : { calendar: <TaskCalendarView
           resources={resources}
-          data={{}}
-          rangeData={calendarRangeData}
-          onInitialPeriods={taskCalendar.initialize}
-          onPeriodsBuilt={taskCalendar.onPeriodsBuilt}
-          onPeriodsReset={taskCalendar.reset}
-          getResourceId={resource => resource.id}
-          getItemId={task => task.id}
-          getItemRange={task => ({ start: task.startDate, end: task.dueDate })}
-          getItemCapabilities={({ data: task, range }) => range
-            ? getTaskCalendarCapabilities(task, canWrite && task.writable)
-            : { draggable: canWrite && task.writable }}
-          renderResource={({ resource }) => (
-            <span aria-label={resource.name}>{formatCompactPersonName(resource.firstName, resource.lastName)}</span>
-          )}
+          filters={{ programIds: controls.programIds, categories: controls.categories, statuses: controls.statusFilters }}
+          canWrite={canWrite}
           selectedResourceId={selectedResourceId}
-          onResourceSelect={resource => selectResource(resource.id)}
-          buildItem={() => null}
-          buildRangeItem={({ data: task }) => <TaskItem
-            task={task}
-            selected={task.id === selectedTaskId}
-            onActivate={() => selectTask(task)}
-            onComplete={canWrite && task.writable && canCompleteTask(task) ? () => void mutations.setStatus(task, 'completed') : undefined}
-            onCancel={canWrite && task.writable && canCancelTask(task) ? () => void mutations.setStatus(task, 'cancelled') : undefined}
-            onReopen={canWrite && task.writable && canReopenTask(task) ? () => void mutations.setStatus(task, reopenedStatus(task)) : undefined}
-            onEdit={canWrite && task.writable ? () => setModalTarget(task) : undefined}
-            onDelete={canWrite && task.writable ? () => mutations.requestDelete(task) : undefined}
-          />}
-          onCellActivate={canWrite ? ({ resource, period }) => {
-            if (!resource.writable) return;
-            setModalTarget({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
-          } : undefined}
-          onRangeResize={canWrite
-            ? ({ item: task, nextRange }) => {
-              selectTask(task);
-              return mutations.setTaskRange(task, nextRange, 'resize');
-            }
-            : undefined}
-          canRangeMove={({ item: task, resource, destinationResource }) => (
-            task.writable
-            && destinationResource.writable
-            && canMoveTaskToResource(task, resource.id, destinationResource.id)
-          )}
-          onRangeMove={canWrite
-            ? ({ item: task, nextRange, destinationResource }) => {
-              setSelectedResourceId(destinationResource.id);
-              setSelectedTaskId(task.id);
-              return mutations.setTaskRange(task, nextRange, 'move', destinationResource.id);
-            }
-            : undefined}
-          ariaLabel="Task calendar"
-          positionStorageKey={TASK_CALENDAR_POSITION_KEY}
-          resourceHeader="Staff"
-          rowHeight={112}
+          selectedTaskId={selectedTaskId}
+          mutations={mutations}
+          mutationCacheRef={calendarMutationRef}
+          onTaskSelect={selectTask}
+          onResourceSelect={selectResource}
+          onModalTargetChange={setModalTarget}
         /> })}
       />}
     </main>

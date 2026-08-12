@@ -34,7 +34,9 @@ export default function useInfiniteListQuery<T extends { id: string }>({
     initialPageParam: null as string | null,
     getNextPageParam: page => page.nextCursor ?? undefined,
   });
-  const rows = query.data?.pages.flatMap(page => page.rows) ?? [];
+  const rows = [...new Map(
+    (query.data?.pages.flatMap(page => page.rows) ?? []).map(row => [row.id, row]),
+  ).values()];
 
   const updatePages = (update: (rows: T[]) => T[]) => {
     queryClient.setQueryData<InfiniteData<CursorPage<T>>>(queryKey, current => current && ({
@@ -58,6 +60,9 @@ export default function useInfiniteListQuery<T extends { id: string }>({
       current.some(row => row.id === updatedRow.id)
         ? current.map(row => row.id === updatedRow.id ? updatedRow : row)
         : [...current, updatedRow]
+    )),
+    replace: (updatedRow: T) => updatePages(current => (
+      current.map(row => row.id === updatedRow.id ? updatedRow : row)
     )),
     remove: (id: string) => updatePages(current => current.filter(row => row.id !== id)),
   };

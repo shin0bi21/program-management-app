@@ -132,6 +132,42 @@ describe('Time entries API', () => {
     ]);
   });
 
+  it('returns separate options and cursor-paginates the filtered hours list', async () => {
+    const marker = `Paginated hours ${firstStaffId}`;
+    for (const hours of [1, 2]) {
+      const created = await request(app)
+        .post('/api/time-entries')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours, note: `${marker} ${hours}` });
+      expect(created.status).toBe(201);
+    }
+
+    const options = await request(app)
+      .get('/api/time-entries/options')
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(options.status).toBe(200);
+    expect(options.body.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstStaffId })]));
+    expect(options.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
+
+    const first = await request(app)
+      .get(`/api/time-entries/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({
+      rows: [expect.objectContaining({ resourceId: firstStaffId, item: expect.objectContaining({ hours: 1, note: `${marker} 1` }) })],
+      nextCursor: expect.any(String),
+    });
+
+    const second = await request(app)
+      .get(`/api/time-entries/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual({
+      rows: [expect.objectContaining({ item: expect.objectContaining({ hours: 2, note: `${marker} 2` }) })],
+      nextCursor: null,
+    });
+  });
+
   it('lists assigned sessions and derives session time metadata', async () => {
     const sessions = await request(app)
       .get(`/api/time-entries/sessions?staffId=${firstStaffId}&workDate=${workDate}`)

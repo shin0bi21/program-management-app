@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
+import { getTaskList, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods';
@@ -18,7 +18,7 @@ const calendarTestState = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
-  getTaskOptions: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn(), updateTaskPlacement: vi.fn(),
+  getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ createTimeEntry: vi.fn() }));
@@ -53,6 +53,7 @@ describe('Tasks', () => {
     calendarTestState.props = null;
     calendarTestState.savePreference.mockReset();
     vi.mocked(getTasks).mockResolvedValue([task]);
+    vi.mocked(getTaskList).mockResolvedValue({ rows: [task], nextCursor: null });
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
@@ -109,6 +110,9 @@ describe('Tasks', () => {
   it('shows completion again after a completed task is reopened', async () => {
     const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-11T12:00:00.000Z', hoursLogged: 1 };
     vi.mocked(getTasks).mockResolvedValue([completedTask]);
+    vi.mocked(getTaskList)
+      .mockResolvedValueOnce({ rows: [completedTask], nextCursor: null })
+      .mockResolvedValue({ rows: [{ ...completedTask, status: 'in_progress', completedAt: null }], nextCursor: null });
     vi.mocked(updateTaskStatus).mockResolvedValue({ ...completedTask, status: 'in_progress', completedAt: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
@@ -152,6 +156,7 @@ describe('Tasks', () => {
       writable: false,
     };
     vi.mocked(getTasks).mockResolvedValue([task, coworkerTask]);
+    vi.mocked(getTaskList).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [
         { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },

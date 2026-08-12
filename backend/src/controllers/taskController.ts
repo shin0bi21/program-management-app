@@ -1,11 +1,16 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { createTask, deleteTask, getTaskOptions, getTasks, updateTask, updateTaskPlacement, updateTaskStatus } from '../services/taskService';
-import { taskQuerySchema } from '../validation/taskSchemas';
+import { createTask, deleteTask, getTaskList, getTaskOptions, getTasks, updateTask, updateTaskPlacement, updateTaskStatus } from '../services/taskService';
+import { taskListQuerySchema, taskQuerySchema } from '../validation/taskSchemas';
 
 export async function handleGetTasks(req: Request, res: Response) {
   const query = taskQuerySchema.shape.query.parse(req.query);
   res.json(await getTasks((req as AuthRequest).user!, query));
+}
+
+export async function handleGetTaskList(req: Request, res: Response) {
+  const query = taskListQuerySchema.shape.query.parse(req.query);
+  res.json(await getTaskList((req as AuthRequest).user!, query));
 }
 
 export async function handleGetTaskOptions(req: Request, res: Response) {
