@@ -54,4 +54,22 @@ describe('useTimesheetOverview', () => {
     await act(async () => first.resolve(overview(2)));
     expect(result.current).toEqual({ status: 'ready', data: overview(7) });
   });
+
+  it('keeps the ready overview visible until a new staff overview replaces it', async () => {
+    const second = deferred<ReturnType<typeof overview>>();
+    vi.mocked(getTimeEntryOverview)
+      .mockResolvedValueOnce(overview(4))
+      .mockReturnValueOnce(second.promise);
+    const { result, rerender } = renderHook(
+      ({ staffId }) => useTimesheetOverview(staffId, 'cycle-1', 0),
+      { initialProps: { staffId: 'staff-1' } },
+    );
+    await waitFor(() => expect(result.current).toEqual({ status: 'ready', data: overview(4) }));
+
+    rerender({ staffId: 'staff-2' });
+    expect(result.current).toEqual({ status: 'ready', data: overview(4) });
+
+    await act(async () => second.resolve(overview(7)));
+    await waitFor(() => expect(result.current).toEqual({ status: 'ready', data: overview(7) }));
+  });
 });
