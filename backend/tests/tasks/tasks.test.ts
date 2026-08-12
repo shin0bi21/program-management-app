@@ -411,6 +411,76 @@ describe('Tasks API', () => {
     expect(deleted.body.error).toBe('Tasks with logged time cannot be deleted');
   });
 
+  it('requires terminal tasks to be reopened before edits and protects completed deletion', async () => {
+    const completedTask = rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Completed locked task', category: 'outreach',
+        startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+      }));
+    expect(completedTask.status).toBe(201);
+    await sql`UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ${completedTask.body.id}`;
+
+    const completedEdit = await request(app)
+      .put(`/api/tasks/${completedTask.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Changed completed task', category: 'planning_prep',
+        startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+      });
+    expect(completedEdit.status).toBe(409);
+    expect(completedEdit.body.error).toBe('Completed or cancelled tasks must be reopened before they can be edited');
+
+    const completedPlacement = await request(app)
+      .patch(`/api/tasks/${completedTask.body.id}/placement`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ startDate: '2026-08-10', dueDate: '2026-08-12' });
+    expect(completedPlacement.status).toBe(409);
+    expect(completedPlacement.body.error).toBe('Completed or cancelled tasks must be reopened before their placement can change');
+
+    const completedDelete = await request(app)
+      .delete(`/api/tasks/${completedTask.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(completedDelete.status).toBe(409);
+    expect(completedDelete.body.error).toBe('Completed tasks must be reopened before they can be deleted');
+
+    const cancelledTask = rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Cancelled deletable task', category: 'outreach',
+        startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+      }));
+    expect(cancelledTask.status).toBe(201);
+    const cancelled = await request(app)
+      .patch(`/api/tasks/${cancelledTask.body.id}/status`)
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({ status: 'cancelled' });
+    expect(cancelled.status).toBe(200);
+
+    const cancelledEdit = await request(app)
+      .put(`/api/tasks/${cancelledTask.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Changed cancelled task', category: 'planning_prep',
+        startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+      });
+    expect(cancelledEdit.status).toBe(409);
+
+    const cancelledPlacement = await request(app)
+      .patch(`/api/tasks/${cancelledTask.body.id}/placement`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ startDate: '2026-08-10', dueDate: '2026-08-12' });
+    expect(cancelledPlacement.status).toBe(409);
+
+    const cancelledDelete = await request(app)
+      .delete(`/api/tasks/${cancelledTask.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(cancelledDelete.status).toBe(204);
+    taskIds.delete(cancelledTask.body.id);
+  });
+
   it('writes create, update, and delete audit snapshots transactionally', async () => {
     const task = rememberTask(await request(app)
       .post('/api/tasks')

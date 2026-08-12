@@ -21,22 +21,9 @@ import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/Task
 import TaskListView from './components/TaskListView/TaskListView';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
 import type { TaskViewMutationCache } from './taskViewTypes';
-
-function canCancelTask(task: Task) {
-  return task.status === 'todo' || task.status === 'in_progress';
-}
-
-function canCompleteTask(task: Task) {
-  return task.status === 'in_progress';
-}
-
-function canReopenTask(task: Task) {
-  return task.status === 'completed' || task.status === 'cancelled';
-}
-
-function reopenedStatus(task: Task): 'todo' | 'in_progress' {
-  return task.status === 'completed' || task.hoursLogged > 0 ? 'in_progress' : 'todo';
-}
+import {
+  canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
+} from './taskActionCapabilities';
 
 export default function Tasks() {
   const { permissions } = useAuth();
@@ -128,9 +115,9 @@ export default function Tasks() {
         items={[
           ...(canCompleteTask(task) ? [{ id: 'complete', label: 'Set Completed', onClick: () => void mutations.setStatus(task, 'completed') }] : []),
           ...(canCancelTask(task) ? [{ id: 'cancel', label: 'Set Cancelled', onClick: () => void mutations.setStatus(task, 'cancelled') }] : []),
-          ...(canReopenTask(task) ? [{ id: 'reopen', label: 'Reopen task', onClick: () => void mutations.setStatus(task, reopenedStatus(task)) }] : []),
-          { id: 'edit', label: 'Edit', onClick: () => setModalTarget(task) },
-          { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => mutations.requestDelete(task) },
+          ...(canReopenTask(task) ? [{ id: 'reopen', label: 'Reopen task', onClick: () => void mutations.setStatus(task, reopenedTaskStatus(task)) }] : []),
+          ...(canEditTask(task) ? [{ id: 'edit', label: 'Edit', onClick: () => setModalTarget(task) }] : []),
+          ...(canDeleteTask(task) ? [{ id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => mutations.requestDelete(task) }] : []),
         ]}
       /> : null,
     }] : []),

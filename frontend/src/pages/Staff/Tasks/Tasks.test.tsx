@@ -121,6 +121,9 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByText('Prepare workshop'));
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
+    expect(screen.getByRole('menuitem', { name: 'Reopen task' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
     await waitFor(() => expect(screen.getByRole('cell', { name: 'In progress' })).toBeInTheDocument());
 
@@ -262,7 +265,9 @@ describe('Tasks', () => {
       range: { start: completedTask.startDate, end: completedTask.dueDate },
       visibleStart: { key: completedTask.startDate, start, end: start },
       visibleEnd: { key: completedTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void } };
+    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
+    expect(completedItem.props.onEdit).toBeUndefined();
+    expect(completedItem.props.onDelete).toBeUndefined();
     await act(async () => completedItem.props.onReopen());
 
     const cancelledTask = { ...task, status: 'cancelled' as const };
@@ -272,7 +277,9 @@ describe('Tasks', () => {
       range: { start: cancelledTask.startDate, end: cancelledTask.dueDate },
       visibleStart: { key: cancelledTask.startDate, start, end: start },
       visibleEnd: { key: cancelledTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void } };
+    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
+    expect(cancelledItem.props.onEdit).toBeUndefined();
+    expect(cancelledItem.props.onDelete).toEqual(expect.any(Function));
     await act(async () => cancelledItem.props.onReopen());
 
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'completed');

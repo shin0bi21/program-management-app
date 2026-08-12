@@ -10,15 +10,11 @@ import type { TaskCalendarActions, TaskViewMutationCache } from '../../taskViewT
 import { useTaskCalendarData } from './hooks/useTaskCalendarData';
 import TaskItem from './TaskItem/TaskItem';
 import type { TaskModalTarget } from '../TaskDialogs/TaskDialogs';
+import {
+  canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
+} from '../../taskActionCapabilities';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
-
-function canCancelTask(task: Task) { return task.status === 'todo' || task.status === 'in_progress'; }
-function canCompleteTask(task: Task) { return task.status === 'in_progress'; }
-function canReopenTask(task: Task) { return task.status === 'completed' || task.status === 'cancelled'; }
-function reopenedStatus(task: Task): 'todo' | 'in_progress' {
-  return task.status === 'completed' || task.hoursLogged > 0 ? 'in_progress' : 'todo';
-}
 
 interface TaskCalendarViewProps {
   resources: TaskResource[];
@@ -85,9 +81,9 @@ export default function TaskCalendarView({
         onActivate={() => onTaskSelect(task)}
         onComplete={canWrite && task.writable && canCompleteTask(task) ? () => void mutations.setStatus(task, 'completed') : undefined}
         onCancel={canWrite && task.writable && canCancelTask(task) ? () => void mutations.setStatus(task, 'cancelled') : undefined}
-        onReopen={canWrite && task.writable && canReopenTask(task) ? () => void mutations.setStatus(task, reopenedStatus(task)) : undefined}
-        onEdit={canWrite && task.writable ? () => onModalTargetChange(task) : undefined}
-        onDelete={canWrite && task.writable ? () => mutations.requestDelete(task) : undefined}
+        onReopen={canWrite && task.writable && canReopenTask(task) ? () => void mutations.setStatus(task, reopenedTaskStatus(task)) : undefined}
+        onEdit={canWrite && task.writable && canEditTask(task) ? () => onModalTargetChange(task) : undefined}
+        onDelete={canWrite && task.writable && canDeleteTask(task) ? () => mutations.requestDelete(task) : undefined}
       />}
       onCellActivate={canWrite ? ({ resource, period }) => {
         if (resource.writable) onModalTargetChange({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
