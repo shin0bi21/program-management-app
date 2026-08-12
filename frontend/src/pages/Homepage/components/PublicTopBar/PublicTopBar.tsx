@@ -1,17 +1,19 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import logoUrl from '../../../../assets/logo.webp';
 import logo160Url from '../../../../assets/logo-160.webp';
 import logo320Url from '../../../../assets/logo-320.webp';
 import { useAuth } from '../../../../auth/authContext';
 import { useFloatingMenu } from '../../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 import FloatingMenuPanel from '../../../../common/components/FloatingMenu/FloatingMenuPanel';
-import { HOMEPAGE_NAV_SECTIONS } from '../../homepageSections';
+import { getHomepageSectionByPath, HOMEPAGE_NAV_SECTIONS } from '../../homepageSections';
 import { scrollToHomepageSection } from '../../hooks/useSectionRouting';
 import './PublicTopBar.css';
 
 export default function PublicTopBar() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const activeSectionId = getHomepageSectionByPath(location.pathname)?.id;
   const [scrolled, setScrolled] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -62,7 +64,13 @@ export default function PublicTopBar() {
 
       <nav className="topbar-nav" aria-label="Page sections">
         {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
-          <Link key={id} to={path} className="topbar-link" onClick={handleSectionClick}>
+          <Link
+            key={id}
+            to={path}
+            className={`topbar-link${activeSectionId === id ? ' topbar-link--active' : ''}`}
+            aria-current={activeSectionId === id ? 'page' : undefined}
+            onClick={handleSectionClick}
+          >
             {label}
           </Link>
         ))}
@@ -90,7 +98,14 @@ export default function PublicTopBar() {
             className="topbar-mobile-menu"
           >
             {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
-              <Link key={id} to={path} role="menuitem" onClick={handleSectionClick}>
+              <Link
+                key={id}
+                to={path}
+                role="menuitem"
+                className={activeSectionId === id ? 'topbar-mobile-link--active' : undefined}
+                aria-current={activeSectionId === id ? 'page' : undefined}
+                onClick={handleSectionClick}
+              >
                 {label}
               </Link>
             ))}
