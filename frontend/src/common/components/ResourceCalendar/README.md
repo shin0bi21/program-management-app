@@ -2,6 +2,12 @@
 
 `ResourceCalendar` owns generic resource-by-period rendering, navigation, virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
 
+## Range data loading
+
+- Use the shared `usePeriodDataBuffer` hook when a resource calendar incrementally loads date ranges. The page supplies one `load({ start, end })` adapter and passes the hook's initialize/build/reset callbacks to `ResourceCalendar`.
+- Point items such as Hours are returned in `ResourcePeriodData` under their single calendar date. Ranged items such as Tasks are returned once in a request-owned period bucket; consume the hook's deduplicated `rangeData` output and let `ResourceCalendar` clip the complete item range.
+- Both APIs receive the requested visible interval. Point records match dates inside it; ranged records match interval overlap. Keep list pagination and overview aggregates in independent queries rather than deriving them from the calendar buffer.
+
 ## Resource selection
 
 - Pass `selectedResourceId` and `onResourceSelect` together for controlled selection.

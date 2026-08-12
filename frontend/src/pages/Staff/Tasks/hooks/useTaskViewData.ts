@@ -11,7 +11,7 @@ interface TaskViewFilters {
   statuses: readonly TaskStatus[];
 }
 
-function matchesTask(task: Task, filters: TaskViewFilters) {
+export function matchesTask(task: Task, filters: TaskViewFilters) {
   const search = filters.search.trim().toLocaleLowerCase();
   const matchesProgram = !filters.programIds.length
     || (task.programId !== null && filters.programIds.includes(task.programId));

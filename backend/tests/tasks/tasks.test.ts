@@ -218,6 +218,34 @@ describe('Tasks API', () => {
     expect(malformedId.status).toBe(400);
   });
 
+  it('returns complete tasks whose date ranges intersect the requested calendar range', async () => {
+    const create = async (title: string, startDate: string, dueDate: string) => rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title, category: 'outreach', startDate, dueDate, staffId: firstStaffId }));
+    const spanning = await create('Spans calendar range', '2026-06-10', '2026-06-20');
+    const inside = await create('Inside calendar range', '2026-06-14', '2026-06-14');
+    const outside = await create('Outside calendar range', '2026-06-21', '2026-06-22');
+
+    const response = await request(app)
+      .get('/api/tasks?start=2026-06-12&end=2026-06-15&includeClosed=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: spanning.body.id, startDate: '2026-06-10', dueDate: '2026-06-20' }),
+      expect.objectContaining({ id: inside.body.id }),
+    ]));
+    expect(response.body).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: outside.body.id }),
+    ]));
+
+    const incompleteRange = await request(app)
+      .get('/api/tasks?start=2026-06-12')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(incompleteRange.status).toBe(400);
+  });
+
   it('preserves newer task content and status when placement changes', async () => {
     const task = rememberTask(await request(app)
       .post('/api/tasks')

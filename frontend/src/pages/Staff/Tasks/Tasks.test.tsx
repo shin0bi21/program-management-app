@@ -6,6 +6,7 @@ import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
+import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import Tasks from './Tasks';
 
@@ -102,7 +103,7 @@ describe('Tasks', () => {
 
     const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
     expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
-    expect(screen.getByRole('cell', { name: 'To do' }).querySelector('.task-status-badge--todo')).not.toBeNull();
+    expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
   });
 
   it('shows completion again after a completed task is reopened', async () => {
@@ -132,6 +133,8 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
+    await waitFor(() => expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]));
     expect(screen.queryByRole('textbox', { name: 'Search tasks' })).not.toBeInTheDocument();
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
@@ -272,20 +275,22 @@ describe('Tasks', () => {
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'todo');
   });
 
-  it('shows calendar loading and task-query failure states instead of an empty calendar', async () => {
+  it('keeps the calendar rendered and reports range-load failures', async () => {
     calendarTestState.view = 'calendar';
     let rejectTasks!: (error: Error) => void;
-    vi.mocked(getTasks).mockReturnValue(new Promise((_, reject) => { rejectTasks = reject; }));
+    vi.mocked(getTasks).mockImplementation(filters => filters?.start
+      ? new Promise((_, reject) => { rejectTasks = reject; })
+      : Promise.resolve([task]));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
-    expect(await screen.findByText('Loading tasks…')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Task calendar')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
 
     rejectTasks(new Error('Task request failed'));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load tasks.');
-    expect(screen.queryByLabelText('Task calendar')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Task request failed');
+    expect(screen.getByLabelText('Task calendar')).toBeInTheDocument();
   });
 
   it('clears the selected task when a calendar resource is selected', async () => {

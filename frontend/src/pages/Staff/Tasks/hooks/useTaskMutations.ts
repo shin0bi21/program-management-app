@@ -11,36 +11,38 @@ import { createTimeEntry, type SetTimeEntryInput } from '../../../../common/feat
 
 export const TASKS_QUERY_KEY = ['tasks'] as const;
 
-type TaskCacheUpdater = (current: Task[]) => Task[] | null;
-
-function updateTaskCache(queryClient: QueryClient, updater: TaskCacheUpdater) {
-  const current = queryClient.getQueryData<Task[]>(TASKS_QUERY_KEY);
-  const next = current ? updater(current) : null;
-  if (!next) {
-    void queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-    return;
-  }
-  queryClient.setQueryData<Task[]>(TASKS_QUERY_KEY, next);
+function updateTaskCaches(queryClient: QueryClient, updater: (current: Task[]) => Task[]) {
+  queryClient.setQueriesData<Task[]>({ queryKey: TASKS_QUERY_KEY }, current => (
+    current ? updater(current) : current
+  ));
 }
 
-export default function useTaskMutations() {
+interface TaskMutationHandlers {
+  onUpsert?: (task: Task) => void;
+  onRemove?: (taskId: string) => void;
+}
+
+export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHandlers = {}) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [statusError, setStatusError] = useState('');
+  const refreshTasks = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+  }, [queryClient]);
 
   const addTask = useCallback((task: Task) => {
-    updateTaskCache(queryClient, current => (
-      current.some(item => item.id === task.id) ? null : [...current, task]
-    ));
-  }, [queryClient]);
+    onUpsert?.(task);
+    refreshTasks();
+  }, [onUpsert, refreshTasks]);
 
   const reconcileTask = useCallback((task: Task) => {
-    updateTaskCache(queryClient, current => (
+    updateTaskCaches(queryClient, current => (
       current.some(item => item.id === task.id)
         ? current.map(item => item.id === task.id ? task : item)
-        : null
+        : current
     ));
-  }, [queryClient]);
+    onUpsert?.(task);
+  }, [onUpsert, queryClient]);
 
   const requestDelete = useCallback((task: Task) => setConfirmAction({
     title: 'Delete Task',
@@ -50,9 +52,10 @@ export default function useTaskMutations() {
     successMessage: 'Task deleted',
     onConfirm: async () => {
       await deleteTask(task.id);
-      updateTaskCache(queryClient, current => current.filter(item => item.id !== task.id));
+      updateTaskCaches(queryClient, current => current.filter(item => item.id !== task.id));
+      onRemove?.(task.id);
     },
-  }), [queryClient]);
+  }), [onRemove, queryClient]);
 
   const runMutation = useCallback(async (mutate: () => Promise<Task>, errorMessage: string) => {
     setStatusError('');
@@ -80,8 +83,8 @@ export default function useTaskMutations() {
 
   const logHours = useCallback(async (input: SetTimeEntryInput) => {
     await createTimeEntry(input);
-    await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-  }, [queryClient]);
+    refreshTasks();
+  }, [refreshTasks]);
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 
   return {

@@ -18,7 +18,7 @@ import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../
 import type { PeriodRange } from '../../../common/components/ResourceCalendar/PeriodDataBuffer';
 import TimeItem from './components/TimeItem/TimeItem';
 import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
-import { useTimesheetBuffer } from './hooks/useTimesheetBuffer';
+import { usePeriodDataBuffer } from '../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
 import { useItemMutationQueue } from './hooks/useItemMutationQueue';
 import { useFilteredTimesheetData } from './hooks/useFilteredTimesheetData';
 import type { StaffResource, TimeEntryProgram, TimesheetItem } from '../../../common/features/timeEntries/types';
@@ -98,8 +98,10 @@ export default function Timesheets() {
     });
     return response.data;
   }, []);
-  const { data, error, upsertItem, removeItem, initialize, reset, onPeriodsBuilt, retry } = useTimesheetBuffer({
+  const { data, error, upsertItem, removeItem, initialize, reset, onPeriodsBuilt, retry } = usePeriodDataBuffer({
     load: loadRange,
+    getItemId: getTimesheetItemId,
+    errorMessage: 'Unable to load timesheet data',
   });
   const visibleResources = useMemo(() => staffFilters.length
     ? resources.filter(resource => staffFilters.includes(resource.id))

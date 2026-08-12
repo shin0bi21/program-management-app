@@ -97,6 +97,9 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
     WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
+      AND ${query.start && query.end
+        ? sql`task.start_date <= ${query.end}::date AND task.due_date >= ${query.start}::date`
+        : sql`TRUE`}
       AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${query.category ? sql`task.category = ${query.category}` : sql`TRUE`}
       AND ${query.includeClosed ? sql`TRUE` : sql`task.status IN ('todo', 'in_progress')`}

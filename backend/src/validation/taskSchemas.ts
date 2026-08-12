@@ -20,7 +20,15 @@ export const taskQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID').optional(),
     category: timeEntryCategorySchema.optional(),
+    start: calendarDate('Start date').optional(),
+    end: calendarDate('End date').optional(),
     includeClosed: z.union([z.enum(['true', 'false']), z.boolean()]).optional().transform(value => value === true || value === 'true'),
+  }).refine(query => Boolean(query.start) === Boolean(query.end), {
+    message: 'Start and end dates must be provided together',
+    path: ['end'],
+  }).refine(query => !query.start || !query.end || query.start <= query.end, {
+    message: 'End date must be on or after start date',
+    path: ['end'],
   }),
 });
 

@@ -5,6 +5,17 @@
 1. Inspect the affected `ResourceCalendar` files, types, period model, tests, story, and buffer adapter; narrow this for localized changes.
 2. Inspect Timesheets when changing buffering or mutations.
 3. Define resource, item, durable ID, period, and buffer contracts before rendering. Preserve date-only values and calendar arithmetic across DST, leap days, months, and years.
+4. Separate the page's calendar, list, and overview data contracts before implementation. Do not make a virtualized calendar buffer serve a complete list or aggregate dashboard.
+
+## Choose the data flow
+
+- Use one calendar range-request contract for both point and ranged records: `load({ start, end })`. The requested dates describe the rendered interval, not the intrinsic size of an item.
+- Match point records such as Hours inside the interval (`workDate >= start && workDate <= end`). Match ranged records such as Tasks by overlap (`itemStart <= end && itemEnd >= start`) and return the complete ranged record whenever it intersects.
+- Use the shared `usePeriodDataBuffer` layer above `ResourceCalendar` for incrementally loaded resource calendars. Keep `ResourceCalendar` transport-agnostic; pages supply typed loaders and mutation adapters.
+- Put point records in their single period bucket. Put each ranged record once in a request-owned bucket, consume the hook's deduplicated `rangeData`, and let `ResourceCalendar` clip the complete range. Never duplicate a ranged item across every covered day.
+- Keep list/table loading independent. Follow the established TanStack Query cursor-pagination flow for vertically paginated lists; do not construct a complete list from the calendar buffer.
+- Keep aggregates and dashboards independent when their scope can exceed loaded calendar periods. Request authoritative server aggregates, retain the previous ready result during selection/refetch, and replace it atomically when the latest response arrives.
+- After add, edit, move, resize, status, or delete operations, reconcile the affected visible cache and invalidate every affected list or overview query. Reserve cross-user stale-buffer reconciliation for the repository's future live-update contract rather than adding polling or whole-window replacement ad hoc.
 
 ## Compose and persist
 
@@ -27,7 +38,7 @@
 
 ## Load and mutate safely
 
-- Connect initial, built, and reset periods to a focused `PeriodDataBuffer` hook when loading follows the visible window.
+- Connect initial, built, and reset periods to the shared `usePeriodDataBuffer` hook when loading follows the visible window. Add domain-specific behavior through loader, item-ID, item-range, filtering, and mutation adapters rather than cloning the hook.
 - Bound retained periods, serialize replenishment and same-item mutations, pass cancellation, expose retryable errors, and ignore stale completions.
 - Preserve mutation overrides until confirmed server data arrives; prevent stale loads from resurrecting deletes or reverting moves.
 - Define draggable eligibility, drop validity, and mutation independently, and recheck authorization in the mutation path.
