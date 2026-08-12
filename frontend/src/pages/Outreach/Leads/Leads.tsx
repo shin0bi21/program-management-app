@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -136,6 +137,7 @@ export default function Leads() {
       title="Leads"
       actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
       search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
+      columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
       filters={<FilterCard
         categories={filterCategories}
         values={{ status: statusFilters, program: programFilters }}
@@ -156,7 +158,7 @@ export default function Leads() {
     {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
     <PageBody
       ariaLabel="Leads"
-      table={<Table ariaLabel="Leads" columns={columns} data={leads} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+      table={<Table ariaLabel="Leads" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={leads} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
       dashboard={<>
         <PrimaryContactCard contact={selectedLead ? {
           phoneNumber: selectedLead.contactPhoneNumber,

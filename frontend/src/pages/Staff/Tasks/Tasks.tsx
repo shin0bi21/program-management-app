@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
@@ -152,6 +153,9 @@ export default function Tasks() {
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
           onChange={controls.changeView}
         />}
+        columns={controls.view === 'list'
+          ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.changeHiddenColumns} />
+          : undefined}
         filters={<FilterCard
           categories={controls.filterCategories}
           values={{ program: controls.programIds, category: controls.categories, status: controls.statusFilters }}
@@ -169,6 +173,7 @@ export default function Tasks() {
         {...(controls.view === 'list' ? { table: <Table
           ariaLabel="Tasks"
           columns={columns}
+          hiddenColumnKeys={controls.hiddenColumns}
           data={rows}
           loading={tasksQuery.isLoading}
           error={tasksQuery.error ? 'Unable to load tasks.' : undefined}

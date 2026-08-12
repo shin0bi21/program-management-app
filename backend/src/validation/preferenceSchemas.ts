@@ -11,6 +11,7 @@ const columnWidths = <T extends readonly [string, ...string[]]>(keys: T) => z.pa
   z.enum(keys),
   z.number().int().min(100).max(500),
 );
+const hiddenColumns = <T extends readonly [string, ...string[]]>(keys: T) => unique(z.enum(keys), 'Hidden columns');
 
 const valuesByKey = {
   'account-filters': z.object({
@@ -18,12 +19,14 @@ const valuesByKey = {
     roles: unique(z.enum(['admin', 'staff', 'youth']), 'Roles'),
     sorting: sorting(['name', 'email', 'role', 'status', 'createdAt']).optional(),
     columnWidths: columnWidths(['name', 'email', 'role', 'status', 'createdAt']).optional(),
+    hiddenColumns: hiddenColumns(['name', 'email', 'role', 'status', 'createdAt']).optional(),
   }),
   'youth-profile-filters': z.object({
     statuses: unique(z.enum(['active', 'inactive']), 'Statuses').max(2),
     programIds: uuidList,
     sorting: sorting(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status']).optional(),
     columnWidths: columnWidths(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status']).optional(),
+    hiddenColumns: hiddenColumns(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status']).optional(),
   }),
   'session-filters': z.object({
     view: z.enum(['calendar', 'list']),
@@ -33,6 +36,7 @@ const valuesByKey = {
     statuses: unique(z.enum(['upcoming', 'completed']), 'Statuses').max(2),
     sorting: sorting(['program', 'cohort', 'theme', 'date', 'time', 'type', 'status']).optional(),
     columnWidths: columnWidths(['program', 'cohort', 'theme', 'date', 'time', 'type', 'status']).optional(),
+    hiddenColumns: hiddenColumns(['program', 'cohort', 'theme', 'date', 'time', 'type', 'status']).optional(),
   }),
   'timesheet-filters': z.object({
     view: z.enum(['calendar', 'list']),
@@ -43,6 +47,7 @@ const valuesByKey = {
     cycleId: z.string().uuid('Invalid cycle ID').nullable(),
     sorting: sorting(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type']).optional(),
     columnWidths: columnWidths(['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type']).optional(),
+    hiddenColumns: hiddenColumns(['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type']).optional(),
   }),
   'task-filters': z.object({
     view: z.enum(['calendar', 'list']).optional(),
@@ -51,24 +56,28 @@ const valuesByKey = {
     statuses: unique(z.enum(['todo', 'in_progress', 'completed', 'cancelled']), 'Statuses').max(4),
     sorting: sorting(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status']).optional(),
     columnWidths: columnWidths(['title', 'category', 'firstName', 'lastName', 'program', 'startDate', 'dueDate', 'status']).optional(),
+    hiddenColumns: hiddenColumns(['title', 'category', 'firstName', 'lastName', 'program', 'startDate', 'dueDate', 'status']).optional(),
   }),
   'cohort-filters': z.object({
     programId: z.string().uuid('Invalid program ID').nullable(),
     status: z.enum(['active', 'upcoming', 'completed']).nullable(),
     sorting: sorting(['program', 'cohort', 'start', 'end', 'status']).optional(),
     columnWidths: columnWidths(['program', 'cohort', 'start', 'end', 'status']).optional(),
+    hiddenColumns: hiddenColumns(['program', 'cohort', 'start', 'end', 'status']).optional(),
   }),
   'lead-filters': z.object({
     statuses: unique(z.enum(['new', 'contacted', 'eligible', 'ineligible', 'signed_up']), 'Statuses'),
     programIds: uuidList,
     sorting: sorting(['name', 'school', 'program', 'status', 'createdAt']).optional(),
     columnWidths: columnWidths(['firstName', 'lastName', 'school', 'program', 'status', 'created']).optional(),
+    hiddenColumns: hiddenColumns(['firstName', 'lastName', 'school', 'program', 'status', 'created']).optional(),
   }),
   'expression-interest-filters': z.object({
     statuses: unique(z.enum(['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam']), 'Statuses'),
     programIds: uuidList,
     sorting: sorting(['name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status']).optional(),
     columnWidths: columnWidths(['firstName', 'lastName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status']).optional(),
+    hiddenColumns: hiddenColumns(['firstName', 'lastName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status']).optional(),
   }),
 } as const;
 

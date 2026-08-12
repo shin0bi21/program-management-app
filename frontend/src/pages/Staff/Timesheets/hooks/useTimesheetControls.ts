@@ -129,6 +129,10 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     persist({ columnWidths: next });
   }, [persist]);
 
+  const setHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    void save({ hiddenColumns });
+  }, [save]);
+
   const setSorting = useCallback((next: ListSort<TimesheetSortKey>) => {
     setSortingState(next);
     persist({ sorting: next });
@@ -140,8 +144,8 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   }, [persist]);
 
   return {
-    staffFilters, categoryFilters, programFilters, typeFilters, view, ready, columnWidths, sorting,
+    staffFilters, categoryFilters, programFilters, typeFilters, view, ready, columnWidths, hiddenColumns: preference?.hiddenColumns ?? [], sorting,
     cycles, cyclesError, selectedCycleId, preferenceError, filterCategories,
-    applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
+    applyFilter, clearFilters, setView, setColumnWidths, setHiddenColumns, setSorting, selectCycle,
   };
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
 import Button from '../../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -74,7 +75,7 @@ export default function Timesheets() {
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const {
     staffFilters, categoryFilters, programFilters, typeFilters, view, ready: preferencesReady,
-    columnWidths: listColumnWidths, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
+    columnWidths: listColumnWidths, hiddenColumns, setHiddenColumns, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
     filterCategories, applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
   } = useTimesheetControls({ role, resources, programs });
   const { enqueue, isLatest } = useItemMutationQueue();
@@ -332,6 +333,9 @@ export default function Timesheets() {
               options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
             />
           ) : undefined}
+          columns={view === 'list'
+            ? <ColumnVisibilityMenu columns={listColumns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={setHiddenColumns} />
+            : undefined}
           search={view === 'list' ? (
             <SearchInput
               label="Search time entries"
@@ -383,6 +387,7 @@ export default function Timesheets() {
           /> } : { table: <Table
             ariaLabel="Timesheet entries"
             columns={listColumns}
+            hiddenColumnKeys={hiddenColumns}
             data={visibleListRows}
             loading={cycleLoading}
             error={cycleError ?? undefined}

@@ -102,6 +102,10 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     persist(programIds, categories, statusFilters, next);
   }, [categories, persist, programIds, statusFilters]);
 
+  const changeHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    void save({ hiddenColumns });
+  }, [save]);
+
   return {
     view,
     search,
@@ -111,6 +115,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     statusFilters,
     sorting,
     columnWidths,
+    hiddenColumns: preference?.hiddenColumns ?? [],
     ready,
     error,
     filterCategories,
@@ -119,5 +124,6 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     changeView,
     changeSorting,
     changeColumnWidths,
+    changeHiddenColumns,
   };
 }

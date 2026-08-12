@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
@@ -212,6 +213,7 @@ export default function Cohorts() {
                 placeholder="Search cohorts or programs"
               />
             }
+            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
             filters={
               <FilterCard
                 categories={filterCategories}
@@ -241,6 +243,7 @@ export default function Cohorts() {
               <Table
                 ariaLabel="Cohorts"
                 columns={columns}
+                hiddenColumnKeys={preference?.hiddenColumns ?? []}
                 data={cohorts}
                 loading={cohortsLoading}
                 refreshing={cohortTable.refreshing}

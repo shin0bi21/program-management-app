@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import { useAuth } from '../../../auth/authContext';
 import { getErrorMessage } from '../../../http/clientErrors';
@@ -170,6 +171,7 @@ export default function ExpressionsOfInterest() {
       <PageHeader
         title="Outreach"
         search={<SearchInput label="Search expressions of interest" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
+        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
         filters={<FilterCard
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
@@ -193,7 +195,7 @@ export default function ExpressionsOfInterest() {
 
         <PageBody
           ariaLabel="Expressions of interest"
-          table={<Table ariaLabel="Expressions of interest" columns={columns} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+          table={<Table ariaLabel="Expressions of interest" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
           dashboard={<>
             <PrimaryContactCard contact={selectedSubmission ? {
               phoneNumber: selectedSubmission.contactPhoneNumber,
