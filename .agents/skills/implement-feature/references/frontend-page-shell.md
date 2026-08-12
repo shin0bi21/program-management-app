@@ -2,6 +2,7 @@
 
 ## Compose the route page
 
+- Use a route-family layout only for persistent UI, state, or coordination genuinely shared by multiple child routes. Do not introduce an `Outlet`-only layout merely to share a URL prefix, redirect, permission, or `<main>` classes.
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.
 - Put `SearchInput`, `FilterCard`, and view-switching controls in the named `search`, `filters`, and `view` slots. Keep row actions and content-specific controls with their owning content.
