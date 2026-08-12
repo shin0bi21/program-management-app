@@ -8,10 +8,10 @@ import { getTimeEntries, updateTimeEntryPlacement } from '../../../../../common/
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../../../common/features/timeEntries/timeEntryOptions';
 import type { StaffResource, TimeEntryCategory, TimesheetItem } from '../../../../../common/features/timeEntries/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import { useFilteredTimesheetData } from '../../hooks/useFilteredTimesheetData';
-import { useItemMutationQueue } from '../../hooks/useItemMutationQueue';
-import type { TimesheetEntryType } from '../../hooks/useTimesheetListData';
-import TimeItem from '../TimeItem/TimeItem';
+import type { TimesheetEntryType } from '../../timesheetViewData';
+import { useTimesheetCalendarData } from './hooks/useTimesheetCalendarData';
+import { useItemMutationQueue } from './hooks/useItemMutationQueue';
+import TimeItem from './TimeItem/TimeItem';
 
 const initialDate = new Date();
 const TIMESHEET_CALENDAR_POSITION_KEY = 'resource-calendar:timesheets:position';
@@ -70,7 +70,7 @@ export default function TimesheetCalendarView({
   const visibleResources = useMemo(() => staffIds.length
     ? resources.filter(resource => staffIds.includes(resource.id))
     : resources, [resources, staffIds]);
-  const visibleData = useFilteredTimesheetData(calendar.data, categories, programIds, types, cycleId);
+  const visibleData = useTimesheetCalendarData(calendar.data, categories, programIds, types, cycleId);
 
   const moveTimeEntry = async ({ item, source, destination }: ItemDropContext<StaffResource, TimesheetItem>) => {
     setMoveError(null);

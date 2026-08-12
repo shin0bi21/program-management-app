@@ -6,11 +6,10 @@ import { getTasks } from '../../../../../common/features/tasks/api/tasks.api';
 import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../../common/features/tasks/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import { canMoveTaskToResource, getTaskCalendarCapabilities } from '../../taskCalendarCapabilities';
-import { matchesTask } from '../../hooks/useTaskViewData';
-import type useTaskMutations from '../../hooks/useTaskMutations';
-import TaskItem from '../TaskItem/TaskItem';
+import type { TaskCalendarActions, TaskViewMutationCache } from '../../taskViewTypes';
+import { matchesTask } from './taskCalendarData';
+import TaskItem from './TaskItem/TaskItem';
 import type { TaskModalTarget } from '../TaskDialogs/TaskDialogs';
-import type { TaskViewMutationCache } from '../TaskListView/TaskListView';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 
@@ -27,7 +26,7 @@ interface TaskCalendarViewProps {
   canWrite: boolean;
   selectedResourceId: string | null;
   selectedTaskId: string | null;
-  mutations: ReturnType<typeof useTaskMutations>;
+  mutations: TaskCalendarActions;
   mutationCacheRef: React.MutableRefObject<TaskViewMutationCache>;
   onTaskSelect: (task: Task) => void;
   onResourceSelect: (resourceId: string) => void;

@@ -8,7 +8,7 @@ import {
   type TaskOptions,
   type TaskStatus,
 } from '../../../../common/features/tasks/types';
-import type { TaskSortKey } from './useTaskViewData';
+import type { TaskSortKey } from '../taskViewTypes';
 
 export type TasksView = 'calendar' | 'list';
 

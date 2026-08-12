@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../../../../../common/features/tasks/types';
 import TaskOverviewCard from './TaskOverviewCard';
 
 const baseTask: Task = {

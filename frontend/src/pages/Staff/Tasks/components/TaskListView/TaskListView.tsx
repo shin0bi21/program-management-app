@@ -2,13 +2,8 @@ import { useEffect } from 'react';
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { Task, TaskCategory, TaskStatus } from '../../../../../common/features/tasks/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import useTaskList from '../../hooks/useTaskList';
-import type { TaskSortKey } from '../../hooks/useTaskViewData';
-
-export interface TaskViewMutationCache {
-  upsert: (task: Task) => void;
-  remove: (taskId: string) => void;
-}
+import type { TaskSortKey, TaskViewMutationCache } from '../../taskViewTypes';
+import useTaskList from './hooks/useTaskList';
 
 interface TaskListViewProps {
   columns: TableColumn<Task>[];

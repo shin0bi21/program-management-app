@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import Button from '../../../../../common/components/Button/Button';
-import Modal from '../../../../../common/components/Modal/Modal';
-import { formatShortDate } from '../../../../../common/utils/date';
-import type { Task } from '../../../../../common/features/tasks/types';
-import '../../../../../common/components/DashboardCard/DashboardCard.css';
+import Button from '../../../../../../common/components/Button/Button';
+import Modal from '../../../../../../common/components/Modal/Modal';
+import { formatShortDate } from '../../../../../../common/utils/date';
+import type { Task } from '../../../../../../common/features/tasks/types';
+import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskHoursLoggedCard.css';
 
 function formatHours(hours: number) {

@@ -25,11 +25,11 @@ import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntrie
 import { formatShortDate } from '../../../common/utils/date';
 import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
 import { useTimesheetOverview } from './hooks/useTimesheetOverview';
-import { timesheetEntryType, type TimesheetListRow } from './hooks/useTimesheetListData';
+import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
 import { useTimesheetControls } from './hooks/useTimesheetControls';
 import TimesheetListView from './components/TimesheetListView/TimesheetListView';
 import TimesheetCalendarView, { type TimesheetCalendarMutationCache, type TimesheetEntryTarget } from './components/TimesheetCalendarView/TimesheetCalendarView';
-import { TIME_ENTRY_LIST_QUERY_KEY } from './hooks/useTimesheetList';
+import { TIME_ENTRY_LIST_QUERY_KEY } from './components/TimesheetListView/hooks/useTimesheetList';
 import './Timesheets.css';
 
 export default function Timesheets() {

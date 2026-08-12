@@ -14,13 +14,13 @@ import { dayKey } from '../../../common/components/ResourceCalendar/periods';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
 import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
-import TaskHoursLoggedCard from './components/TaskHoursLoggedCard/TaskHoursLoggedCard';
-import TaskOverviewCard from './components/TaskOverviewCard/TaskOverviewCard';
+import TaskDashboard from './components/TaskDashboard/TaskDashboard';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
-import TaskListView, { type TaskViewMutationCache } from './components/TaskListView/TaskListView';
+import TaskListView from './components/TaskListView/TaskListView';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
+import type { TaskViewMutationCache } from './taskViewTypes';
 
 function canCancelTask(task: Task) {
   return task.status === 'todo' || task.status === 'in_progress';
@@ -176,10 +176,12 @@ export default function Tasks() {
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
       {controls.ready && <PageBody
         ariaLabel="Task overview and assignments"
-        dashboard={selectedResource ? <>
-          <TaskOverviewCard tasks={resourceTasks} resourceName={selectedResource.name} />
-          <TaskHoursLoggedCard task={selectedTask} onLogHours={logHoursAction} />
-        </> : null}
+        dashboard={selectedResource ? <TaskDashboard
+          tasks={resourceTasks}
+          resourceName={selectedResource.name}
+          selectedTask={selectedTask}
+          onLogHours={logHoursAction}
+        /> : null}
         {...(controls.view === 'list' ? { table: <TaskListView
           columns={columns}
           hiddenColumnKeys={controls.hiddenColumns}

@@ -1,5 +1,5 @@
-import CalendarItem from '../../../../../common/components/ResourceCalendar/components/CalendarItem';
-import type { TimesheetItem } from '../../../../../common/features/timeEntries/types';
+import CalendarItem from '../../../../../../common/components/ResourceCalendar/components/CalendarItem';
+import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
 import './TimeItem.css';
 
 interface TimeItemProps {

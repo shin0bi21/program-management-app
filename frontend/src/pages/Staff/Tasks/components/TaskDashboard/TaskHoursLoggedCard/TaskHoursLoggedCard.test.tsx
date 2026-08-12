@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../../../../../common/features/tasks/types';
 import TaskHoursLoggedCard from './TaskHoursLoggedCard';
 
 const task: Task = {

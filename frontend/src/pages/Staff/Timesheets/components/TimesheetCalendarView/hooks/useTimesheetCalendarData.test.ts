@@ -1,8 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useFilteredTimesheetData } from './useFilteredTimesheetData';
-import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
-import type { TimesheetItem } from '../../../../common/features/timeEntries/types';
+import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
+import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
+import { useTimesheetCalendarData } from './useTimesheetCalendarData';
 
 const entry = (id: string, category: TimesheetItem['category']): TimesheetItem => ({
   id,
@@ -18,13 +18,13 @@ const entry = (id: string, category: TimesheetItem['category']): TimesheetItem =
   note: id,
 });
 
-describe('useFilteredTimesheetData', () => {
+describe('useTimesheetCalendarData', () => {
   it('returns the source object unchanged when no filters are active', () => {
     const data: ResourcePeriodData<TimesheetItem> = {
       first: { '2026-08-09': [entry('entry-1', 'meeting')] },
     };
 
-    const { result } = renderHook(() => useFilteredTimesheetData(data, [], [], []));
+    const { result } = renderHook(() => useTimesheetCalendarData(data, [], [], []));
 
     expect(result.current).toBe(data);
   });
@@ -34,7 +34,7 @@ describe('useFilteredTimesheetData', () => {
     const secondResource = { '2026-08-09': [entry('entry-2', 'meeting')] };
     const initial: ResourcePeriodData<TimesheetItem> = { first: firstResource, second: secondResource };
     const { result, rerender } = renderHook(
-      ({ data }) => useFilteredTimesheetData(data, ['meeting'], [], []),
+      ({ data }) => useTimesheetCalendarData(data, ['meeting'], [], []),
       { initialProps: { data: initial } },
     );
     const previousSecond = result.current.second;
@@ -51,7 +51,7 @@ describe('useFilteredTimesheetData', () => {
       first: { '2026-08-09': [entry('entry-1', 'meeting'), otherCycle] },
     };
 
-    const { result } = renderHook(() => useFilteredTimesheetData(data, [], [], [], 'cycle-1'));
+    const { result } = renderHook(() => useTimesheetCalendarData(data, [], [], [], 'cycle-1'));
 
     expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'entry-1' })]);
   });
@@ -62,7 +62,7 @@ describe('useFilteredTimesheetData', () => {
     };
     const data: ResourcePeriodData<TimesheetItem> = { first: periods };
     const { result, rerender } = renderHook(
-      ({ categories }) => useFilteredTimesheetData(data, categories, [], []),
+      ({ categories }) => useTimesheetCalendarData(data, categories, [], []),
       { initialProps: { categories: ['meeting'] } },
     );
 
@@ -82,7 +82,7 @@ describe('useFilteredTimesheetData', () => {
       ] },
     };
 
-    const { result } = renderHook(() => useFilteredTimesheetData(data, [], [], ['session']));
+    const { result } = renderHook(() => useTimesheetCalendarData(data, [], [], ['session']));
 
     expect(result.current.first['2026-08-09']).toEqual([expect.objectContaining({ id: 'session-entry' })]);
   });

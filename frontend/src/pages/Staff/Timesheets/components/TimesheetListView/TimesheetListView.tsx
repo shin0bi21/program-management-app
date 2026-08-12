@@ -1,8 +1,8 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { TimeEntryCategory } from '../../../../../common/features/timeEntries/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { TimesheetEntryType, TimesheetListRow, TimesheetSortKey } from '../../hooks/useTimesheetListData';
-import useTimesheetList from '../../hooks/useTimesheetList';
+import type { TimesheetEntryType, TimesheetListRow, TimesheetSortKey } from '../../timesheetViewData';
+import useTimesheetList from './hooks/useTimesheetList';
 
 interface TimesheetListViewProps {
   columns: TableColumn<TimesheetListRow>[];

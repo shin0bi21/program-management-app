@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
-import type { ResourcePeriodData } from '../../../../common/components/ResourceCalendar/types';
-import type { TimesheetItem } from '../../../../common/features/timeEntries/types';
-import { timesheetEntryTypeKey, type TimesheetEntryType } from './useTimesheetListData';
+import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
+import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
+import { timesheetEntryTypeKey, type TimesheetEntryType } from '../../../timesheetViewData';
 
 const DEFAULT_PROGRAM_ID = 'general';
 const KEY_SEPARATOR = '\u0000';
@@ -61,7 +61,7 @@ function filterPeriods(
   );
 }
 
-export function useFilteredTimesheetData(
+export function useTimesheetCalendarData(
   data: ResourcePeriodData<TimesheetItem>,
   categoryFilters: readonly string[],
   programFilters: readonly string[],
