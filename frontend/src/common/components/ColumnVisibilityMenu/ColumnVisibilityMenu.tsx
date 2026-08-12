@@ -28,7 +28,11 @@ export default function ColumnVisibilityMenu<T>({
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'end' },
-    { widthEstimate: 220, heightEstimate: hideableColumns.length * 40 + 50 },
+    {
+      widthEstimate: 220,
+      heightEstimate: hideableColumns.length * 40 + 50,
+      dismissOnViewportChange: false,
+    },
   );
   const visibleCount = hideableColumns.filter(column => !hiddenColumnKeys.includes(column.key)).length;
 

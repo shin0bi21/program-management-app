@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import ColumnVisibilityMenu from './ColumnVisibilityMenu';
 
@@ -28,5 +29,19 @@ describe('ColumnVisibilityMenu', () => {
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Name' })).toBeDisabled();
     expect(onHiddenColumnKeysChange).not.toHaveBeenCalled();
+  });
+
+  it('stays open after a selection updates its controlled value', () => {
+    function Harness() {
+      const [hiddenColumnKeys, setHiddenColumnKeys] = useState<string[]>([]);
+      return <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumnKeys} onHiddenColumnKeysChange={setHiddenColumnKeys} />;
+    }
+
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
+
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Status' })).toHaveAttribute('aria-checked', 'false');
   });
 });
