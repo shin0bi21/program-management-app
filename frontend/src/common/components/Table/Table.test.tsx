@@ -28,6 +28,23 @@ describe('Table', () => {
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'name', direction: 'desc' });
   });
 
+  it('omits hidden data columns but keeps fixed action columns available', () => {
+    render(<Table
+      ariaLabel="Accounts"
+      columns={[
+        ...columns,
+        { key: 'actions', header: '', render: () => 'Actions', width: 40, resizable: false },
+      ]}
+      data={[{ id: 'one', name: 'Avery' }]}
+      keyExtractor={row => row.id}
+      hiddenColumnKeys={['status', 'actions']}
+    />);
+
+    expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByText('Actions')).toBeInTheDocument();
+  });
+
   it('resizes data columns by keyboard while leaving action columns fixed', () => {
     const onColumnWidthsChange = vi.fn();
     const resizableColumns: TableColumn<Row>[] = [

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../../../common/components/Button/Button';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Modal from '../../../common/components/Modal/Modal';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
@@ -174,6 +175,7 @@ export default function Users() {
             </div>
           )}
           search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
+          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, role: roleFilters }}
@@ -197,6 +199,7 @@ export default function Users() {
           <Table
             ariaLabel="Accounts"
             columns={columns}
+            hiddenColumnKeys={preference?.hiddenColumns ?? []}
             data={accounts}
             loading={loading}
             refreshing={refreshing}

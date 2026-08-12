@@ -15,8 +15,9 @@ Use this route-level composition. Omit an optional prop rather than passing an e
     title="Page Title"
     actions={canCreate ? <Button>+ Add</Button> : undefined}
     search={showSearch ? <SearchInput {...searchProps} /> : undefined}
-    filters={<FilterCard {...filterProps} />}
+    columns={view === 'list' ? <ColumnVisibilityMenu {...columnVisibilityProps} /> : undefined}
     view={hasMultipleViews ? <ViewMenu {...viewProps} /> : undefined}
+    filters={<FilterCard {...filterProps} />}
   />
 
   {pageError && <p className="form-error" role="alert">{pageError}</p>}
@@ -43,8 +44,9 @@ Use this route-level composition. Omit an optional prop rather than passing an e
     <!-- optional actions slot; no extra PageHeader-owned wrapper -->
   </div>
   <div class="page-header-search"><!-- optional SearchInput --></div>
-  <div class="page-header-filters"><!-- optional FilterCard --></div>
+  <div class="page-header-columns"><!-- optional ColumnVisibilityMenu --></div>
   <div class="page-header-view"><!-- optional ViewMenu --></div>
+  <div class="page-header-filters"><!-- optional FilterCard --></div>
 </header>
 ```
 
