@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { timeEntryCategorySchema } from './timeEntrySchemas';
+import { cursorListFields } from './listQuerySchemas';
 
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
 const calendarDate = (label: string) => z.string()
@@ -20,7 +21,29 @@ export const taskQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID').optional(),
     category: timeEntryCategorySchema.optional(),
+    start: calendarDate('Start date').optional(),
+    end: calendarDate('End date').optional(),
     includeClosed: z.union([z.enum(['true', 'false']), z.boolean()]).optional().transform(value => value === true || value === 'true'),
+  }).refine(query => Boolean(query.start) === Boolean(query.end), {
+    message: 'Start and end dates must be provided together',
+    path: ['end'],
+  }).refine(query => !query.start || !query.end || query.start <= query.end, {
+    message: 'End date must be on or after start date',
+    path: ['end'],
+  }),
+});
+
+const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value => (
+  typeof value === 'string' && value ? value.split(',') : []
+), z.array(schema));
+
+export const taskListQuerySchema = z.object({
+  query: z.object({
+    programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
+    categories: commaSeparated(timeEntryCategorySchema),
+    statuses: commaSeparated(taskStatusSchema),
+    search: z.string().trim().max(120).optional().default(''),
+    ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
   }),
 });
 
@@ -55,5 +78,6 @@ export const updateTaskPlacementSchema = z.object({
 });
 
 export type TaskQuery = z.infer<typeof taskQuerySchema.shape.query>;
+export type TaskListQuery = z.infer<typeof taskListQuerySchema.shape.query>;
 export type SetTaskInput = z.infer<typeof setTaskSchema.shape.body>;
 export type TaskPlacementInput = z.infer<typeof updateTaskPlacementSchema.shape.body>;

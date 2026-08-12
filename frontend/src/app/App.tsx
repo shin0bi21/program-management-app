@@ -10,11 +10,9 @@ import AppNavigation from './components/AppNavigation/AppNavigation';
 
 const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage'));
 const Youth = lazy(() => import('../pages/Youth/Youth'));
-const YouthLayout = lazy(() => import('../pages/Youth/YouthLayout'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
 const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
-const Outreach = lazy(() => import('../pages/Outreach/Outreach'));
 const ExpressionsOfInterest = lazy(() => import('../pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'));
 const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
 const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
@@ -54,17 +52,15 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+              <Route path="/youth" element={<Navigate to="/youth/profiles" replace />} />
               <Route
-                path="/youth"
+                path="/youth/profiles"
                 element={
                   <ProtectedRoute requiredPermission="read:youth_profiles">
-                    <YouthLayout />
+                    <Youth />
                   </ProtectedRoute>
                 }
-              >
-                <Route index element={<Navigate to="profiles" replace />} />
-                <Route path="profiles" element={<Youth />} />
-              </Route>
+              />
               <Route
                 path="/settings/account"
                 element={
@@ -113,18 +109,23 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/outreach" element={<Navigate to="/outreach/expressions-of-interest" replace />} />
               <Route
-                path="/outreach"
+                path="/outreach/expressions-of-interest"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
-                    <Outreach />
+                    <ExpressionsOfInterest />
                   </ProtectedRoute>
                 }
-              >
-                <Route index element={<Navigate to="expressions-of-interest" replace />} />
-                <Route path="expressions-of-interest" element={<ExpressionsOfInterest />} />
-                <Route path="leads" element={<Leads />} />
-              </Route>
+              />
+              <Route
+                path="/outreach/leads"
+                element={
+                  <ProtectedRoute requiredPermission="read:outreach">
+                    <Leads />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/settings/users"
                 element={

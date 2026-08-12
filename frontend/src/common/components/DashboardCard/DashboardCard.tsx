@@ -8,7 +8,7 @@ export function DashboardCard({
   className,
   action,
 }: {
-  title: string;
+  title?: string;
   children?: ReactNode;
   emptyMessage?: string;
   className?: string;
@@ -16,10 +16,12 @@ export function DashboardCard({
 }) {
   return (
     <article className={['dashboard-card', className].filter(Boolean).join(' ')}>
-      <div className="dashboard-card__header">
-        <h2>{title}</h2>
-        {action}
-      </div>
+      {(title || action) && (
+        <div className="dashboard-card__header">
+          {title && <h2>{title}</h2>}
+          {action}
+        </div>
+      )}
       <div className="dashboard-card__content">
         {children ?? (
           <p className="dashboard-card__empty">{emptyMessage ?? 'No data available.'}</p>

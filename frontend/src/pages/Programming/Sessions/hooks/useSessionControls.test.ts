@@ -1,0 +1,75 @@
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PreferenceValues } from '../../../../common/features/preferences/api/preferences.api';
+import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramCohort, SessionType } from '../../../../common/types/cohort';
+import { useSessionControls } from './useSessionControls';
+
+const preferenceHook = vi.hoisted<{
+  preference: PreferenceValues['session-filters'] | null;
+  loading: boolean;
+  error: string | null;
+  save: ReturnType<typeof vi.fn>;
+}>(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+
+vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
+  default: () => preferenceHook,
+}));
+
+const programs: Program[] = [{
+  id: 'program-1', name: 'Soft Skills', description: null, rosterMode: 'enrolled', minAge: 12, maxAge: 15,
+}];
+const cohorts: ProgramCohort[] = [{
+  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', name: 'Summer 2026',
+  startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active', rosterMode: 'enrolled',
+  minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycleName: 'Summer 2026', enrolledCount: 10,
+  nextSessionAt: null, nextSessionId: null, uniqueAttendeeCount: 0, averageAttendance: null,
+  attendanceAttendedCount: 0, attendanceRecordedCount: 0,
+}];
+const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
+
+describe('useSessionControls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
+  });
+
+  it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
+    preferenceHook.preference = {
+      view: 'list', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
+    };
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged: vi.fn(),
+    }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toMatchObject({
+      view: 'list', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
+    });
+  });
+
+  it('defaults staff with one assigned program to its active cohort', async () => {
+    const { result } = renderHook(() => useSessionControls({
+      role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged: vi.fn(),
+    }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.programIds).toEqual(['program-1']);
+    expect(result.current.cohortId).toBe('cohort-1');
+  });
+
+  it('persists filter and view changes and clears the selected session context', async () => {
+    const onFiltersChanged = vi.fn();
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged,
+    }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    act(() => result.current.applyFilter('status', ['completed']));
+    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] }));
+    expect(onFiltersChanged).toHaveBeenCalledTimes(1);
+    act(() => result.current.setView('list'));
+    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list', statuses: ['completed'] }));
+  });
+});

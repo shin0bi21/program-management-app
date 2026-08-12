@@ -67,6 +67,19 @@
   background: var(--ink-05);
 }
 
+.topbar-link--active,
+.topbar-link--active:hover {
+  background: var(--accent-20);
+  color: var(--brand-ink);
+  font-weight: 650;
+}
+
+.topbar-mobile-menu .topbar-mobile-link--active {
+  background: var(--accent-20);
+  color: var(--brand-ink);
+  font-weight: 650;
+}
+
 .topbar-login-btn.btn {
   margin-left: 20px;
   min-height: 36px;

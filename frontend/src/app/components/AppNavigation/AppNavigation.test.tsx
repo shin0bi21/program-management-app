@@ -199,7 +199,7 @@ describe('AppNavigation', () => {
 
     expect(screen.getByRole('button', { name: 'Staff' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Tasks' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Timesheets' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Hours' })).not.toBeInTheDocument();
 
     authState.permissions = ['read:timesheets'];
     rerender(
@@ -208,7 +208,7 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole('menuitem', { name: 'Tasks' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Timesheets' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Hours' })).toBeInTheDocument();
 
     authState.permissions = [];
     rerender(
@@ -218,6 +218,21 @@ describe('AppNavigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Staff' })).not.toBeInTheDocument();
+  });
+
+  it('places Hours before Tasks in the Staff menu', () => {
+    authState.permissions = ['read:timesheets', 'read:tasks'];
+    authState.role = 'staff';
+
+    render(
+      <MemoryRouter>
+        <AppNavigation />
+      </MemoryRouter>,
+    );
+
+    const hours = screen.getByRole('menuitem', { name: 'Hours' });
+    const tasks = screen.getByRole('menuitem', { name: 'Tasks' });
+    expect(hours.compareDocumentPosition(tasks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('shows programming management in Settings only with program write access', () => {

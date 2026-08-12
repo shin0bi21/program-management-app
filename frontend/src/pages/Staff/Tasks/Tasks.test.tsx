@@ -3,9 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
+import { getTaskList, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
+import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import Tasks from './Tasks';
 
@@ -17,7 +18,7 @@ const calendarTestState = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
-  getTaskOptions: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn(), updateTaskPlacement: vi.fn(),
+  getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ createTimeEntry: vi.fn() }));
@@ -52,6 +53,7 @@ describe('Tasks', () => {
     calendarTestState.props = null;
     calendarTestState.savePreference.mockReset();
     vi.mocked(getTasks).mockResolvedValue([task]);
+    vi.mocked(getTaskList).mockResolvedValue({ rows: [task], nextCursor: null });
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
@@ -102,12 +104,16 @@ describe('Tasks', () => {
 
     const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
     expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
-    expect(screen.getByRole('cell', { name: 'To do' }).querySelector('.task-status-badge--todo')).not.toBeNull();
+    expect(await screen.findByRole('cell', { name: '—' })).toBeInTheDocument();
+    expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
   });
 
   it('shows completion again after a completed task is reopened', async () => {
     const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-11T12:00:00.000Z', hoursLogged: 1 };
     vi.mocked(getTasks).mockResolvedValue([completedTask]);
+    vi.mocked(getTaskList)
+      .mockResolvedValueOnce({ rows: [completedTask], nextCursor: null })
+      .mockResolvedValue({ rows: [{ ...completedTask, status: 'in_progress', completedAt: null }], nextCursor: null });
     vi.mocked(updateTaskStatus).mockResolvedValue({ ...completedTask, status: 'in_progress', completedAt: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
@@ -115,6 +121,9 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByText('Prepare workshop'));
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
+    expect(screen.getByRole('menuitem', { name: 'Reopen task' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
     await waitFor(() => expect(screen.getByRole('cell', { name: 'In progress' })).toBeInTheDocument());
 
@@ -132,6 +141,8 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
+    await waitFor(() => expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]));
     expect(screen.queryByRole('textbox', { name: 'Search tasks' })).not.toBeInTheDocument();
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
@@ -149,6 +160,7 @@ describe('Tasks', () => {
       writable: false,
     };
     vi.mocked(getTasks).mockResolvedValue([task, coworkerTask]);
+    vi.mocked(getTaskList).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
     vi.mocked(getTaskOptions).mockResolvedValue({
       resources: [
         { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
@@ -234,7 +246,7 @@ describe('Tasks', () => {
     await act(async () => todoItem.props.onCancel());
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'cancelled');
 
-    const activeTask = { ...task, status: 'in_progress' as const };
+    const activeTask = { ...task, status: 'in_progress' as const, hoursLogged: 1 };
     const item = calendarTestState.props!.buildRangeItem!({
       resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       data: activeTask,
@@ -253,7 +265,9 @@ describe('Tasks', () => {
       range: { start: completedTask.startDate, end: completedTask.dueDate },
       visibleStart: { key: completedTask.startDate, start, end: start },
       visibleEnd: { key: completedTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void } };
+    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
+    expect(completedItem.props.onEdit).toBeUndefined();
+    expect(completedItem.props.onDelete).toBeUndefined();
     await act(async () => completedItem.props.onReopen());
 
     const cancelledTask = { ...task, status: 'cancelled' as const };
@@ -263,7 +277,9 @@ describe('Tasks', () => {
       range: { start: cancelledTask.startDate, end: cancelledTask.dueDate },
       visibleStart: { key: cancelledTask.startDate, start, end: start },
       visibleEnd: { key: cancelledTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void } };
+    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
+    expect(cancelledItem.props.onEdit).toBeUndefined();
+    expect(cancelledItem.props.onDelete).toEqual(expect.any(Function));
     await act(async () => cancelledItem.props.onReopen());
 
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'completed');
@@ -272,20 +288,22 @@ describe('Tasks', () => {
     expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'todo');
   });
 
-  it('shows calendar loading and task-query failure states instead of an empty calendar', async () => {
+  it('keeps the calendar rendered and reports range-load failures', async () => {
     calendarTestState.view = 'calendar';
     let rejectTasks!: (error: Error) => void;
-    vi.mocked(getTasks).mockReturnValue(new Promise((_, reject) => { rejectTasks = reject; }));
+    vi.mocked(getTasks).mockImplementation(filters => filters?.start
+      ? new Promise((_, reject) => { rejectTasks = reject; })
+      : Promise.resolve([task]));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
-    expect(await screen.findByText('Loading tasks…')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Task calendar')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
 
     rejectTasks(new Error('Task request failed'));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load tasks.');
-    expect(screen.queryByLabelText('Task calendar')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Task request failed');
+    expect(screen.getByLabelText('Task calendar')).toBeInTheDocument();
   });
 
   it('clears the selected task when a calendar resource is selected', async () => {

@@ -21,7 +21,7 @@ export function useTimesheetOverview(staffId: string | null, cycleId: string | n
     }
 
     const controller = new AbortController();
-    setState({ status: 'loading' });
+    setState(current => current.status === 'ready' ? current : { status: 'loading' });
     void getTimeEntryOverview(staffId, cycleId, { signal: controller.signal })
       .then(data => {
         if (controller.signal.aborted || requestRevisionRef.current !== revision) return;

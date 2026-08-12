@@ -21,4 +21,4 @@
 - Use `requireEnv()` for required configuration and escape user-controlled email HTML.
 - Follow the relevant guide under `backend/docs/` for third-party or file-producing integrations.
 - Keep provider, filesystem, email, and database failure boundaries explicit; do not report a durable write as failed merely because a later external delivery failed without an idempotent retry contract.
-- Restart or recreate the backend according to `docs/local/development.md` when source or environment changes require it.
+- After changing backend TypeScript, restart the backend before browser/manual verification; the local backend uses `ts-node` without a file watcher. Treat this as part of implementation, not a later troubleshooting step. Recreate it instead when environment changes require that according to `docs/local/development.md`.

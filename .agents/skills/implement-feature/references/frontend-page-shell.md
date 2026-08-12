@@ -2,6 +2,7 @@
 
 ## Compose the route page
 
+- Use a route-family layout only for persistent UI, state, or coordination genuinely shared by multiple child routes. Do not introduce an `Outlet`-only layout merely to share a URL prefix, redirect, permission, or `<main>` classes.
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.
 - Put `SearchInput`, `FilterCard`, and view-switching controls in the named `search`, `filters`, and `view` slots. Keep row actions and content-specific controls with their owning content.
@@ -57,6 +58,7 @@ The `page-header--with-controls` modifier is present when any search, filters, o
 - Restore persisted controls before rendering dependent content or misleading defaults.
 - Place page-level loading, error/retry, empty, filtered-empty, and permission states around the owned content without replacing component-owned states.
 - Compose data pages with `PageHeader` followed by the shared `PageBody`. Put overview cards and selected-record details in its `dashboard` slot, and provide exactly one `table` or `calendar` content slot so every data page exposes the same `page-dashboard`, `page-table`, and `page-calendar` structure.
+- Name an extracted dashboard owner `*Dashboard` and every extracted card component `*DashboardCard`; semantic qualifiers such as `Overview`, `Attendance`, or `Notes` precede the `DashboardCard` suffix.
 - Define what selects each dashboard (current actor, resource row, or item), keep list and calendar selection wiring equivalent, and avoid defaulting to the first response row when authorization distinguishes writable and read-only resources.
 
 `PageBody` and `DashboardCard` own and emit the following DOM. Supply `DashboardCard` items directly through the dashboard slot; use a fragment to pass multiple cards, not another layout wrapper. Use `DashboardCardGroup` only for a standalone grouped-card surface that is not already inside `PageBody`'s `page-dashboard` landmark.

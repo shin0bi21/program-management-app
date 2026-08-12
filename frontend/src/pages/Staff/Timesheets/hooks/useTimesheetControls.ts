@@ -7,7 +7,7 @@ import useUserPreference from '../../../../common/features/preferences/hooks/use
 import type { ProgramCycle } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import type { TimesheetEntryType, TimesheetSortKey } from './useTimesheetListData';
+import type { TimesheetEntryType, TimesheetSortKey } from '../timesheetViewData';
 
 export type TimesheetView = 'calendar' | 'list';
 
@@ -91,7 +91,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     { id: 'type', label: 'Type', options: [
       { value: 'task', label: 'Task' },
       { value: 'session', label: 'Session' },
-      { value: 'other', label: 'Other' },
+      { value: 'other', label: 'Regular' },
     ] },
     { id: 'cycle', label: 'Cycle', selectionMode: 'single', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
   ], [cycles, programs, resources, role]);

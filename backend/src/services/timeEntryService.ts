@@ -6,6 +6,7 @@ import type { AccessTokenPayload } from '../types/auth';
 import type {
   SetTimeEntryInput,
   TimeEntryCategory,
+  TimeEntryListQuery,
   TimeEntryOverviewQuery,
   TimeEntryQuery,
   TimeEntrySessionQuery,
@@ -13,6 +14,7 @@ import type {
 } from '../validation/timeEntrySchemas';
 import { assertCanWriteTimeFor, timeEntryReadScopePredicate, timeEntryResourceReadScopePredicate, timeEntryWriteScopePredicate } from '../policies/timeEntryPolicy';
 import { getBiweeklyPayPeriod } from './timeEntryPeriods';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 interface TimeEntryRow {
   id: string;
@@ -44,7 +46,7 @@ const categoryLabels: Record<TimeEntryCategory, string> = {
 };
 
 async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
-  if (input.source === 'other') return {
+  if (input.source === 'regular') return {
     programId: input.programId, category: input.category,
     taskId: null, taskStatus: null, sessionId: null, workDate: input.workDate,
   };
@@ -142,6 +144,14 @@ function getTimeEntryResources(actor: AccessTokenPayload) {
       AND ${timeEntryResourceReadScopePredicate(actor, sql`u.id`)}
     ORDER BY u.first_name, u.last_name, u.id
   `;
+}
+
+export async function getTimeEntryOptions(actor: AccessTokenPayload) {
+  const [resources, programs] = await Promise.all([
+    getTimeEntryResources(actor),
+    sql<Array<{ id: string; name: string }>>`SELECT id, name FROM programs ORDER BY name, id`,
+  ]);
+  return { resources, programs };
 }
 
 async function resolveCycleForWorkDate(workDate: string, programId: string | null, db: typeof sql = sql) {
@@ -249,6 +259,62 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
   });
 
   return { resources, programs, data };
+}
+
+export async function getTimeEntryList(actor: AccessTokenPayload, query: TimeEntryListQuery) {
+  const cursor = decodeCursor(query.cursor);
+  const direction = query.direction;
+  const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
+  const sortValue = {
+    firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, date: sql`entry.work_date::text`,
+    program: sql`LOWER(COALESCE(program.name, ''))`, cycle: sql`LOWER(cycle.name)`, category: sql`entry.category::text`,
+    session: sql`LOWER(COALESCE(session.theme, ''))`, hours: sql`TO_CHAR(entry.hours, 'FM0000000000.0000')`,
+    note: sql`LOWER(entry.note)`, type: entryType,
+  }[query.sort]!;
+  const search = query.search ? `%${query.search}%` : null;
+  const rows = await sql<Array<TimeEntryRow & { staffFirstName: string; staffLastName: string; staffName: string; cursorValue: string }>>`
+    SELECT * FROM (SELECT entry.id, entry.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+      entry.program_id, program.name AS program_name, cycle.id AS cycle_id, cycle.name AS cycle_name,
+      cycle.starts_on::text AS cycle_starts_on, cycle.ends_on::text AS cycle_ends_on,
+      entry.category, entry.task_id, task.title AS task_title, entry.session_id, session.theme AS session_label,
+      entry.work_date::text, entry.hours::text, entry.note, ${sortValue} AS cursor_value,
+      CONCAT_WS(' ', staff.first_name, staff.last_name, program.name, cycle.name, entry.category::text,
+        task.title, session.theme, entry.note, entry.work_date::text) AS search_value
+    FROM time_entries entry
+    INNER JOIN users staff ON staff.id = entry.staff_id
+    LEFT JOIN programs program ON program.id = entry.program_id
+    INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
+    LEFT JOIN tasks task ON task.id = entry.task_id
+    LEFT JOIN cohort_sessions session ON session.id = entry.session_id
+    WHERE ${timeEntryReadScopePredicate(actor, sql`entry.staff_id`)}
+      AND ${query.staffIds.length ? sql`entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql`TRUE`}
+      AND ${query.categories.length ? sql`entry.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}
+      AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`entry.program_id IS NULL OR` : sql``}
+        entry.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql`TRUE`}
+      AND ${query.types.length ? sql`${entryType} = ANY(${sql.array(query.types)}::text[])` : sql`TRUE`}
+      AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
+    ) listed
+    WHERE ${search ? sql`listed.search_value ILIKE ${search}` : sql`TRUE`}
+      AND ${cursor ? (direction === 'asc'
+      ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
+      : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
+    ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
+    LIMIT ${(query.limit ?? 25) + 1}
+  `;
+  const mapped = [...new Map(rows.map(row => [row.id, {
+    id: row.id, resourceId: row.staffId, date: row.workDate,
+    staffFirstName: row.staffFirstName, staffLastName: row.staffLastName, staffName: row.staffName,
+    item: {
+      id: row.id, programId: row.programId, programName: row.programName, cycleId: row.cycleId,
+      cycleName: row.cycleName, cycleStartsOn: row.cycleStartsOn, cycleEndsOn: row.cycleEndsOn,
+      category: row.category, categoryLabel: categoryLabels[row.category], taskId: row.taskId,
+      taskTitle: row.taskTitle, sessionId: row.sessionId, sessionLabel: row.sessionLabel,
+      hours: Number(row.hours), note: row.note,
+    },
+    cursorValue: row.cursorValue,
+  }])).values()];
+  return cursorPage(mapped, query.limit ?? 25);
 }
 
 export async function getTimeEntryOverview(actor: AccessTokenPayload, query: TimeEntryOverviewQuery) {

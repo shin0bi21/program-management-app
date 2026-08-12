@@ -3,9 +3,6 @@ import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Table, { TableColumn } from '../../common/components/Table/Table';
 import PageBody from '../../common/components/PageBody/PageBody';
-import PrimaryContactCard from '../../common/features/contacts/components/PrimaryContactCard/PrimaryContactCard';
-import AttendanceCard from './components/AttendanceCard/AttendanceCard';
-import YouthNotesCard from './components/ProfileNotes/YouthNotesCard';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
@@ -24,6 +21,7 @@ import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
+import YouthDashboard from './components/YouthDashboard/YouthDashboard';
 
 export default function Youth() {
   const [search, setSearch] = useState('');
@@ -193,7 +191,7 @@ export default function Youth() {
 
   return (
     <>
-      <div className="data-page">
+      <main className="page-container page-container--data">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -225,50 +223,25 @@ export default function Youth() {
         <PageBody
           ariaLabel="Youth profiles"
           table={<Table ariaLabel="Youth profiles" columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
-          dashboard={<>
-            <PrimaryContactCard
-              contact={selectedProfile?.contacts?.[0] ? {
-                phoneNumber: selectedProfile.contacts[0].phoneNumber,
-                relationship: selectedProfile.contacts[0].type,
-              } : null}
-              selected={selectedProfile !== null}
-              action={canWrite ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!selectedProfile}
-                  aria-label="Manage primary contact"
-                  onClick={() => {
-                    if (selectedProfile) setContactTarget(selectedProfile);
-                  }}
-                >
-                  Manage
-                </Button>
-              ) : undefined}
-            />
-            <AttendanceCard
-              cohorts={selectedProfile?.cohorts}
-              selected={selectedProfile !== null}
-              canManage={canManageAttendance}
-              onManage={setAttendanceTarget}
-              canViewReport={canViewAttendanceReport}
-              onViewReport={cohort => {
-                if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
-              }}
-            />
-            <YouthNotesCard
-              profileNotes={profileNotes.notes}
-              selected={selectedProfile !== null}
-              onSelectProfileNote={profileNotes.openDetails}
-              canManageProfileNotes={canWrite}
-              onEditProfileNote={profileNotes.openEditor}
-              onDeleteProfileNote={profileNotes.requestDelete}
-              profileNotesLoading={profileNotes.loading}
-              profileNotesError={profileNotes.error}
-            />
-          </>}
+          dashboard={<YouthDashboard
+            profile={selectedProfile}
+            canWrite={canWrite}
+            onManagePrimaryContact={setContactTarget}
+            canManageAttendance={canManageAttendance}
+            onManageAttendance={setAttendanceTarget}
+            canViewAttendanceReport={canViewAttendanceReport}
+            onViewAttendanceReport={cohort => {
+              if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
+            }}
+            profileNotes={profileNotes.notes}
+            profileNotesLoading={profileNotes.loading}
+            profileNotesError={profileNotes.error}
+            onSelectProfileNote={profileNotes.openDetails}
+            onEditProfileNote={profileNotes.openEditor}
+            onDeleteProfileNote={profileNotes.requestDelete}
+          />}
         />
-      </div>
+      </main>
 
       <YouthModal
         isOpen={modalTarget !== null}

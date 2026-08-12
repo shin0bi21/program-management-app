@@ -1,17 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
-import { getSessions } from '../../../../../common/features/programming/api/programming.api';
+import { useEffect } from 'react';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import ProgrammingCalendar from '../ProgrammingCalendar/ProgrammingCalendar';
+import ProgrammingCalendar from './ProgrammingCalendar/ProgrammingCalendar';
+import { useSessionCalendarData } from './hooks/useSessionCalendarData';
 import './SessionsCalendarView.css';
 
-interface CalendarRange {
-  start: string;
-  end: string;
-}
 const noSessionTypeIds: string[] = [];
-const noSessions: CohortSession[] = [];
 
 interface SessionsCalendarViewProps {
   selectedProgramIds: string[];
@@ -40,65 +33,35 @@ export default function SessionsCalendarView({
   onSessionEdit,
   onSessionDelete,
 }: SessionsCalendarViewProps) {
-  const [range, setRange] = useState<CalendarRange | null>(null);
-  const filters = range ? {
-        start: range.start,
-        end: range.end,
-        programIds: selectedProgramIds,
-        cohortId: selectedCohortId || undefined,
-        ...(selectedSessionTypeIds.length && { sessionTypeIds: selectedSessionTypeIds }),
-        statuses: selectedStatuses,
-        search: search || undefined,
-  } : null;
-  const query = useQuery({
-    queryKey: ['sessions', 'calendar', filters, refreshToken],
-    queryFn: ({ signal }) => getSessions(filters!, { signal }),
-    enabled: filters !== null,
-  });
-  const sessions = query.data ?? noSessions;
+  const calendar = useSessionCalendarData({
+    programIds: selectedProgramIds,
+    cohortId: selectedCohortId,
+    sessionTypeIds: selectedSessionTypeIds,
+    statuses: selectedStatuses,
+    search,
+  }, selectedSessionId, refreshToken);
 
   useEffect(() => {
-    if (query.isSuccess) onSessionsLoaded?.(sessions);
-    if (query.isError) onSessionsLoaded?.([]);
-  }, [onSessionsLoaded, query.isError, query.isSuccess, sessions]);
-
-  const events = useMemo<EventInput[]>(() => sessions.map(session => ({
-    id: session.id,
-    title: session.theme,
-    start: session.startsAt,
-    end: session.endsAt,
-    backgroundColor: session.cancelledAt ? '#6b7280' : undefined,
-    borderColor: session.cancelledAt ? '#6b7280' : undefined,
-    classNames: session.id === selectedSessionId ? ['programming-calendar-event--selected'] : [],
-    extendedProps: {
-      programName: session.programName,
-      sessionTypeName: session.sessionTypeName,
-    },
-  })), [selectedSessionId, sessions]);
-
-  const handleDatesSet = useCallback((nextRange: DatesSetInfo) => {
-    setRange({
-      start: nextRange.start.toISOString(),
-      end: nextRange.end.toISOString(),
-    });
-  }, []);
+    if (calendar.isSuccess) onSessionsLoaded?.(calendar.sessions);
+    if (calendar.isError) onSessionsLoaded?.([]);
+  }, [calendar.isError, calendar.isSuccess, calendar.sessions, onSessionsLoaded]);
 
   return (
     <div className="sessions-calendar-view">
-      {query.error && <p className="form-error">{query.error instanceof Error ? query.error.message : 'Could not load sessions'}</p>}
+      {calendar.error && <p className="form-error">{calendar.error instanceof Error ? calendar.error.message : 'Could not load sessions'}</p>}
       <ProgrammingCalendar
-        events={events}
-        onDatesSet={handleDatesSet}
+        events={calendar.events}
+        onDatesSet={calendar.onDatesSet}
         onEventSelect={sessionId => {
-          const session = sessions.find(candidate => candidate.id === sessionId);
+          const session = calendar.sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionSelect(session);
         }}
         onEventEdit={onSessionEdit ? sessionId => {
-          const session = sessions.find(candidate => candidate.id === sessionId);
+          const session = calendar.sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionEdit(session);
         } : undefined}
         onEventDelete={onSessionDelete ? sessionId => {
-          const session = sessions.find(candidate => candidate.id === sessionId);
+          const session = calendar.sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionDelete(session);
         } : undefined}
       />

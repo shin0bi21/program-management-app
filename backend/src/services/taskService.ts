@@ -3,8 +3,9 @@ import { sql, asTransactionSql } from '../db/client';
 import { audit } from './auditService';
 import { ConflictError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
-import type { SetTaskInput, TaskPlacementInput, TaskQuery } from '../validation/taskSchemas';
+import type { SetTaskInput, TaskListQuery, TaskPlacementInput, TaskQuery } from '../validation/taskSchemas';
 import { assertCanAssignTaskTo, canWriteTaskFor, taskReadScopePredicate, taskResourceReadScopePredicate, taskWriteScopePredicate } from '../policies/taskPolicy';
+import { cursorPage, decodeCursor } from './cursorPagination';
 
 interface TaskRow {
   id: string;
@@ -25,6 +26,10 @@ interface TaskRow {
 }
 
 interface LoggedHoursRow { taskId: string; workDate: string; hours: number }
+
+function isTerminalTask(task: TaskRow) {
+  return task.status === 'completed' || task.status === 'cancelled';
+}
 
 function indexLoggedHours(loggedHours: readonly LoggedHoursRow[]) {
   const loggedHoursByTask = new Map<string, Array<{ date: string; hours: number }>>();
@@ -70,7 +75,7 @@ async function loadLoggedHours(taskIds: string[], db: typeof sql = sql) {
   `;
 }
 
-function attachDetails(rows: TaskRow[], loggedHours: LoggedHoursRow[], actor: AccessTokenPayload) {
+function attachDetails<TRow extends TaskRow>(rows: TRow[], loggedHours: LoggedHoursRow[], actor: AccessTokenPayload) {
   const loggedHoursByTask = indexLoggedHours(loggedHours);
   return rows.map(row => ({
     ...row,
@@ -97,6 +102,9 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
     WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
+      AND ${query.start && query.end
+        ? sql`task.start_date <= ${query.end}::date AND task.due_date >= ${query.start}::date`
+        : sql`TRUE`}
       AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${query.category ? sql`task.category = ${query.category}` : sql`TRUE`}
       AND ${query.includeClosed ? sql`TRUE` : sql`task.status IN ('todo', 'in_progress')`}
@@ -104,6 +112,43 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
   `;
   const taskIds = rows.map(row => row.id);
   return attachDetails(rows, await loadLoggedHours(taskIds), actor);
+}
+
+export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuery) {
+  const cursor = decodeCursor(query.cursor);
+  const direction = query.direction;
+  const sortValue = {
+    firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, title: sql`LOWER(task.title)`,
+    category: sql`task.category::text`, program: sql`LOWER(COALESCE(program.name, ''))`,
+    startDate: sql`task.start_date::text`, dueDate: sql`task.due_date::text`, status: sql`task.status::text`,
+  }[query.sort]!;
+  const search = query.search ? `%${query.search}%` : null;
+  const rows = await sql<Array<TaskRow & { cursorValue: string }>>`
+    SELECT * FROM (SELECT task.id, task.title, task.details, task.category,
+      task.staff_id, staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+      task.program_id, program.name AS program_name, task.status, task.start_date::text, task.due_date::text,
+      task.completed_at::text,
+      (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = task.id) AS hours_logged,
+      ${sortValue} AS cursor_value
+    FROM tasks task
+    INNER JOIN users staff ON staff.id = task.staff_id
+    LEFT JOIN programs program ON program.id = task.program_id
+    WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+      AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`task.program_id IS NULL OR` : sql``}
+        task.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql`TRUE`}
+      AND ${query.categories.length ? sql`task.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}
+      AND ${query.statuses.length ? sql`task.status::text = ANY(${sql.array(query.statuses)}::text[])` : sql`TRUE`}
+      AND ${search ? sql`CONCAT_WS(' ', task.title, task.details, program.name, staff.first_name, staff.last_name) ILIKE ${search}` : sql`TRUE`}
+    ) listed
+    WHERE ${cursor ? (direction === 'asc'
+      ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
+      : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
+    ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
+    LIMIT ${(query.limit ?? 25) + 1}
+  `;
+  const detailed = attachDetails(rows, await loadLoggedHours(rows.map(row => row.id)), actor);
+  return cursorPage(detailed, query.limit ?? 25);
 }
 
 export async function getTaskOptions(actor: AccessTokenPayload) {
@@ -176,6 +221,9 @@ export async function updateTask(id: string, input: SetTaskInput, actor: AccessT
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
+    if (isTerminalTask(existingRows[0])) {
+      throw new ConflictError('Completed or cancelled tasks must be reopened before they can be edited');
+    }
     const oldStaffId = existingRows[0].staffId;
     const assigneeChanged = oldStaffId !== input.staffId;
     if (assigneeChanged && (existingRows[0].status !== 'todo' || existingRows[0].hoursLogged > 0)) {
@@ -233,6 +281,9 @@ export async function updateTaskPlacement(
     if (!existingRows.length) throw new NotFoundError('Task not found');
 
     const existing = existingRows[0];
+    if (isTerminalTask(existing)) {
+      throw new ConflictError('Completed or cancelled tasks must be reopened before their placement can change');
+    }
     const nextStaffId = input.staffId ?? existing.staffId;
     const assigneeChanged = nextStaffId !== existing.staffId;
     if (assigneeChanged) {
@@ -290,6 +341,9 @@ export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress
     if (!existingRows.length) throw new NotFoundError('Task not found');
     if (status === 'completed' && existingRows[0].status !== 'in_progress') {
       throw new ConflictError('Only in-progress tasks can be completed');
+    }
+    if (status === 'completed' && existingRows[0].hoursLogged === 0) {
+      throw new ConflictError('Tasks need logged time before they can be completed');
     }
     if (status === 'cancelled' && !['todo', 'in_progress'].includes(existingRows[0].status)) {
       throw new ConflictError('Only open tasks can be cancelled');

@@ -63,7 +63,7 @@ node scripts/agents/check-patterns.js --changed
 node scripts/agents/validate-skills.js
 ```
 
-`check-patterns.js` is diff-scoped by default. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, and accidental test-marker regressions. Use `--all` for an intentional repository-wide scrub; historical findings may need to be scheduled separately. These checks do not generate semantic tests or replace behavior review.
+`check-patterns.js` is diff-scoped by default. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, remote-list hook/page-size/table-wiring, buffered ResourceCalendar lifecycle, CalendarView-owned data hooks, dashboard owner/card naming, and accidental test-marker regressions. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. Use `--all` for an intentional repository-wide scrub; historical findings may need to be scheduled separately. These checks do not generate semantic tests or replace behavior review.
 
 ## Direct package commands
 
