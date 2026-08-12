@@ -10,6 +10,7 @@
 
 - Treat a data table/list as a remote cursor-paginated surface by default. Use the shared infinite-list query and `Table` load-more contract instead of fetching an unbounded collection or client-paginating it.
 - Put a substantial route's remote table in a cohesive page-private `*ListView` component. That view owns its domain list hook, table rendering, pagination and list-specific states; the route page owns shared header controls, dashboards, dialogs, selection context, and cross-view coordination.
+- Colocate the remote list hook and list-only row helpers under the owning `*ListView`. Keep sorting keys, row contracts, or classification helpers at feature scope only when route controls, calendars, or other sibling units also consume them; never make a CalendarView import a ListView-private module.
 - Request 25 rows per page unless the domain has a documented reason for another size. Backend list endpoints fetch `limit + 1`, return `{ rows, nextCursor }`, use a deterministic secondary ID sort, and apply search, filters, permissions, and sorting before pagination.
 - Keep the query key aligned with every server-owned filter, search, and sort input. Reset to the first page when any of those inputs change, deduplicate rows by stable ID, preserve loaded rows while fetching the next page, and never show a total count unless the product explicitly requires a separate aggregate.
 - Pass `hasNextPage`, `loadingNextPage`, and `onLoadNextPage` to `Table`; verify the scroll sentinel requests and appends the next cursor page. Do not reuse calendar range-buffer loading for list/table data.
@@ -29,3 +30,4 @@
 - Persist view, filters, sorting, widths, and established display choices through `useUserPreference`. Restore them before dependent requests or misleading defaults and hide permission-redundant choices.
 - Preserve horizontal scrolling and the shared `768px` mobile behavior.
 - Use browser tests for resizing, overflow, sticky behavior, and focus geometry. Test filter wiring, preferences, permissions, states, selection, sorting, widths, cursor advancement and append behavior, pagination deduplication, and modal workflows. For row-scoped mutations, assert that the returned row is rendered without another list request or a table-level refreshing state.
+- Test list-query pagination and row shaping beside the owning ListView hook. Retain route tests for header controls, view switching, selection context, dialogs, and cross-view reconciliation.
