@@ -11,7 +11,7 @@
 
 - Use one calendar range-request contract for both point and ranged records: `load({ start, end })`. The requested dates describe the rendered interval, not the intrinsic size of an item.
 - Match point records such as Hours inside the interval (`workDate >= start && workDate <= end`). Match ranged records such as Tasks by overlap (`itemStart <= end && itemEnd >= start`) and return the complete ranged record whenever it intersects.
-- Use the shared `usePeriodDataBuffer` layer above `ResourceCalendar` for incrementally loaded resource calendars. Keep `ResourceCalendar` transport-agnostic; pages supply typed loaders and mutation adapters.
+- Use the shared `usePeriodDataBuffer` layer above `ResourceCalendar` for incrementally loaded resource calendars. Keep `ResourceCalendar` transport-agnostic; a page-private calendar view component owns the typed loader, buffer, filtering, item builders, and mutation adapters.
 - Put point records in their single period bucket. Put each ranged record once in a request-owned bucket, consume the hook's deduplicated `rangeData`, and let `ResourceCalendar` clip the complete range. Never duplicate a ranged item across every covered day.
 - Keep list/table loading independent. Follow the established TanStack Query cursor-pagination flow for vertically paginated lists; do not construct a complete list from the calendar buffer.
 - Keep aggregates and dashboards independent when their scope can exceed loaded calendar periods. Request authoritative server aggregates, retain the previous ready result during selection/refetch, and replace it atomically when the latest response arrives.
@@ -20,7 +20,7 @@
 ## Compose and persist
 
 - Keep page-domain rendering and mutations outside the shared calendar primitive.
-- Configure `ResourceCalendar` directly from each page with its domain item component and typed callbacks. Do not add time/task-specific calendar wrappers when their only differences are item rendering and reactions.
+- Configure `ResourceCalendar` directly inside a cohesive page-private `*CalendarView` component with its domain item component and typed callbacks. The route page owns shared controls, dashboards, dialogs, selection, and cross-view coordination. Do not add a thin calendar wrapper that only forwards props; the view component must own its buffer and calendar-specific behavior.
 - Treat cells, items, drops, range moves (across periods and resources), and range resizes as calendar API events. The calendar owns pointer thresholds, capture, transient previews, release-click suppression, virtualization-safe geometry, and keyboard mechanics; the page owns permissions, validation, persistence, cache updates, and error feedback.
 - Treat point drag, range drag, and range resize as adapters over one calendar interaction contract—not independent implementations that happen to share a component. Any new geometry must inherit established clipping, raw pointer ghost movement, drop-time snapping, period-zone autoscroll, viewport-scoped hit testing, cancellation, and cleanup automatically.
 - When one cell activation can begin multiple domain workflows, expose them through calendar-owned cell actions rather than placing a mode selector inside the resulting form or positioning a page-owned menu from DOM coordinates.
