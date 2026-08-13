@@ -54,6 +54,23 @@ Open the pull request's **Checks** section or the repository's **Actions** tab, 
 
 Pattern Review publishes its report in the job summary and retains the text artifact. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented separately in [Production deployment](deployment.md).
 
+## Review CI performance over time
+
+Use the read-only CI report to compare recent merge-gate behavior or inspect a UTC date range:
+
+```bash
+npm run ci:review
+npm run ci:review -- --branch develop --last 20
+npm run ci:review -- --since 2026-07-01 --until 2026-07-31
+npm run ci:review -- --since 2026-07-01 --json
+```
+
+The default report examines the five most recent pull requests merged to `develop` or `main`. Date-range mode examines all matching merges. It retrieves pull requests, workflow runs, and jobs through the authenticated GitHub CLI, then reports queue time, merge-gate wall time, summed runner time, success rate, and reruns separately. Each pull request is one pipeline sample: wall time runs from its earliest required workflow execution to its last required workflow completion.
+
+Pull requests that change workflows, repository test runners, CI configuration, dependency manifests, or the canonical CI/testing documentation become timeline boundaries. The report shows the measurements before and after each boundary and identifies the pull request, commit, linked issue from its closing statement, and relevant files. Use `--json` when preserving samples or building another visualization. Run `gh auth status` if the command cannot read Actions data.
+
+Timing summaries use successful first attempts. Cancelled runs are excluded, and reruns remain visible but do not distort comparable medians. Release pull requests to `main` are labeled by branch and should be compared separately from feature pull requests when their production-check shape differs.
+
 ## Change CI safely
 
 1. Read [CI architecture](../architecture/ci.md).
