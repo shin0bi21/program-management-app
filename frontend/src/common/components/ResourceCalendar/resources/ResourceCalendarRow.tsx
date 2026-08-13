@@ -129,6 +129,7 @@ function ResourceCalendarRow<TResource, TItemData>({
       <div
         className={`resource-calendar__item${draggable ? ' draggable' : ''}`}
         onPointerDown={draggable ? event => {
+          if (event.pointerType === 'touch') return;
           if (event.button !== 0) return;
           const bounds = event.currentTarget.getBoundingClientRect();
           beginDrag({
@@ -239,6 +240,7 @@ function ResourceCalendarRow<TResource, TItemData>({
               data-range-density={density}
               style={{ gridColumn: `${startIndex + 3} / ${endIndex + 4}`, gridRow: 1, top: geometry.top, height: geometry.height }}
               onPointerDown={movable ? event => {
+                if (event.pointerType === 'touch') return;
                 if (event.button !== 0) return;
                 beginRangeMove({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, sourceElement: event.currentTarget, resource, item, range, startIndex, endIndex, delta: 0, moving: false });
               } : undefined}
@@ -252,9 +254,9 @@ function ResourceCalendarRow<TResource, TItemData>({
               }}
               onClick={() => onItemActivate?.({ resource, data: item, range })}
             >
-              {resizable && range.start === periods[startIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--start" aria-label={`Resize start of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'start', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'start', startIndex, endIndex, nextIndex: startIndex, resizing: false }); }} />}
+              {resizable && range.start === periods[startIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--start" aria-label={`Resize start of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'start', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.pointerType === 'touch' || event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'start', startIndex, endIndex, nextIndex: startIndex, resizing: false }); }} />}
               {buildRangeItem?.(context)}
-              {resizable && range.end === periods[endIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--end" aria-label={`Resize end of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'end', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'end', startIndex, endIndex, nextIndex: endIndex, resizing: false }); }} />}
+              {resizable && range.end === periods[endIndex].key && <button type="button" className="resource-calendar__range-handle resource-calendar__range-handle--end" aria-label={`Resize end of ${getItemId(item)}`} onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeByKeyboard({ resource, item, range, edge: 'end', startIndex, endIndex }, event.key === 'ArrowLeft' ? -1 : 1); } }} onPointerDown={event => { event.stopPropagation(); if (event.pointerType === 'touch' || event.button !== 0) return; beginResize({ pointerId: event.pointerId, startX: event.clientX, sourceElement: event.currentTarget, rangeElement: event.currentTarget.parentElement!, resource, item, range, edge: 'end', startIndex, endIndex, nextIndex: endIndex, resizing: false }); }} />}
             </div>
           );})}
         </div>

@@ -401,6 +401,30 @@ describe('ResourceCalendar', () => {
     }));
   });
 
+  it('leaves touch gestures on an item available for native calendar scrolling', () => {
+    const onItemDrop = vi.fn();
+    const { container } = render(
+      <ResourceCalendar
+        resources={[{ id: 'staff-1' }, { id: 'staff-2' }]}
+        data={{ 'staff-1': { '2026-08-09': [{ id: 'entry-1' }] } }}
+        initialDate={new Date(2026, 7, 9)}
+        getResourceId={resource => resource.id}
+        getItemId={(item: { id: string }) => item.id}
+        renderResource={({ resource }) => resource.id}
+        buildItem={({ data }) => data.id}
+        onItemDrop={onItemDrop}
+      />,
+    );
+    const item = container.querySelector<HTMLElement>('.resource-calendar__item')!;
+
+    fireEvent.pointerDown(item, { pointerId: 1, pointerType: 'touch', button: 0, clientX: 20, clientY: 20 });
+    fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'touch', clientX: 80, clientY: 20 });
+    fireEvent.pointerUp(window, { pointerId: 1, pointerType: 'touch', clientX: 80, clientY: 20 });
+
+    expect(onItemDrop).not.toHaveBeenCalled();
+    expect(container.querySelector('.resource-calendar__drag-overlay')).not.toBeInTheDocument();
+  });
+
   it('renders items in the resource row layer instead of inside period cells', () => {
     const { container } = render(
       <ResourceCalendar

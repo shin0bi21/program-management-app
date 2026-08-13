@@ -220,6 +220,45 @@ test('preserves an item control click when movement never crosses the drag thres
   await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
 });
 
+test('leaves a touch gesture that begins on an entry available for calendar scrolling', async ({ page, mount }) => {
+  const component = await mount(storyId);
+  const source = component.getByRole('button', { name: 'Movable entry' });
+  const wrapper = source.locator('..');
+  const box = await source.boundingBox();
+  if (!box) throw new Error('Touch item geometry is unavailable');
+
+  await source.evaluate((element, point) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: point.x,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  await page.evaluate(point => {
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      clientX: point.x + 80,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+    window.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      clientX: point.x + 80,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+
+  await expect(component.getByTestId('drop-record')).toHaveValue('');
+  await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
+  await expect.poll(() => wrapper.evaluate(element => getComputedStyle(element).touchAction)).toBe('auto');
+});
+
 test('clips a point-item ghost to the same calendar preview host', async ({ page, mount }) => {
   const component = await mount(storyId);
   const item = component.getByRole('button', { name: 'Movable entry' });
@@ -533,12 +572,17 @@ test('opens the real task-item floating menu instead of editing directly', async
   if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
   await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
+  await expect(page.getByRole('menuitem', { name: 'View details' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Set Completed' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
     .toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect(component.getByTestId('task-item-action')).toHaveValue('');
+  await page.getByRole('menuitem', { name: 'View details' }).click();
+  await expect(page.getByRole('tooltip')).toContainText('Prepare activities and materials.');
+
+  await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
 });

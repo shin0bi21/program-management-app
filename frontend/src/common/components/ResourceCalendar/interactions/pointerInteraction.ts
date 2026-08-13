@@ -1,4 +1,5 @@
-export const CALENDAR_POINTER_THRESHOLD = 5;
+// Keep ordinary click jitter out of drag, move, and resize lifecycles.
+export const CALENDAR_POINTER_THRESHOLD = 10;
 
 export function crossedPointerThreshold(
   startX: number,
