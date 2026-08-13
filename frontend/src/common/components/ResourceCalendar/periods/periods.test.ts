@@ -30,3 +30,4 @@ describe('day periods', () => {
   });
 
 });
+// @vitest-environment node

@@ -25,9 +25,11 @@ Backend tests run against the Docker-backed test database. The runners prepare i
 
 The frontend layers are:
 
-- Vitest tests that do not need rendered DOM should use the Node environment.
-- UI component and hook tests use Vitest with jsdom.
+- Pure utilities, finite policy/capability rules, transport adapters, and other tests that do not need browser globals run in Vitest's Node environment. Mark these files with `// @vitest-environment node` as their first line.
+- UI components, React hooks, storage, DOM geometry, and browser-global behavior use Vitest with jsdom. jsdom is the configured default, so these tests need no environment annotation.
 - Layout, scrolling, pointer, and real-browser behavior use Playwright.
+
+`test-ui.sh`, focused frontend runners, and the two normal PR-CI frontend shards all execute the same Vitest collection; Vitest selects Node or jsdom per file. The shards divide test files for parallelism rather than assigning one environment to each job. Playwright is not included in those shards or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 
 ## Focused runners
 

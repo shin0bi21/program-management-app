@@ -22,3 +22,4 @@ describe('accounts API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/accounts');
   });
 });
+// @vitest-environment node

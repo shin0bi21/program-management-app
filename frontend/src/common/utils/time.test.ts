@@ -21,3 +21,4 @@ describe('age utilities', () => {
     expect(calculateAge(null)).toBe('—');
   });
 });
+// @vitest-environment node

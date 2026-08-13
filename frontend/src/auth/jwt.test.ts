@@ -43,3 +43,4 @@ describe('JWT helpers', () => {
     expect(getTimeUntilExpiry(token({}))).toBeNull();
   });
 });
+// @vitest-environment node
