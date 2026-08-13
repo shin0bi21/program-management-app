@@ -102,7 +102,7 @@ function App() {
                 }
               />
               <Route
-                path="/staff/timesheets"
+                path="/staff/hours"
                 element={
                   <ProtectedRoute requiredPermission="read:timesheets">
                     <Timesheets />
