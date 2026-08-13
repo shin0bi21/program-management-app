@@ -161,8 +161,8 @@ const UNAVAILABLE_MESSAGE = 'The server is temporarily unavailable. Please try a
  * Throw from: anywhere an unrecoverable invariant is violated.
  */
 export class InternalServerError extends AppError {
-  constructor(message: string) {
-    super(message, 500);
+  constructor(message: string, cause?: unknown) {
+    super(message, 500, cause);
     this.name = 'InternalServerError';
   }
 }

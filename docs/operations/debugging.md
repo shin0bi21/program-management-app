@@ -24,6 +24,11 @@ request-ID design are owned by [Error handling](../architecture/errors.md).
    docker compose logs backend | rg '<request-id>'
    ```
 
+   The matching request-error entry includes the HTTP method and path, status,
+   error class and message, the originating stack, validation details when
+   present, and any preserved low-level cause. The browser receives only the
+   stable API error contract; production 5xx internals remain redacted.
+
 4. If there is no request ID, confirm service state and inspect recent logs:
 
    ```bash
