@@ -418,7 +418,7 @@ describe('Timesheets', () => {
     expect(averageCard.closest('article')).toHaveTextContent('Biweekly Average4.00');
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(screen.queryByText('Current pay-period work')).not.toBeInTheDocument();
-    expect(screen.getByText('Fall cycle work')).toBeInTheDocument();
+    expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
     expect(getTimeEntryOverview).toHaveBeenCalledWith(
       'staff-1',
       'cycle-fall',
