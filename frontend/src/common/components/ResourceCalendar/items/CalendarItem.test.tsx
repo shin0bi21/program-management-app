@@ -42,4 +42,22 @@ describe('CalendarItem', () => {
 
     expect(screen.getByRole('menu')).toHaveStyle({ top: '596px', left: '320px' });
   });
+
+  it('opens item details from the action menu for touch-accessible discovery', () => {
+    render(<CalendarItem
+      id="task-1"
+      ariaLabel="Prepare workshop"
+      summary="Prepare workshop"
+      detailTitle="Prepare workshop details"
+      details={[{ label: 'Program', value: 'After School' }]}
+      onEdit={vi.fn()}
+      onDelete={vi.fn()}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'View details' }));
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('tooltip', { name: /Prepare workshop details/ })).toHaveTextContent('After School');
+  });
 });

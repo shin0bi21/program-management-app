@@ -130,6 +130,10 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     return () => observer.disconnect();
   }, [detailsOpen]);
   const runAction = (action: () => void) => { close(); action(); };
+  const viewDetails = () => {
+    close();
+    showDetails();
+  };
 
   return <>
     <button
@@ -175,6 +179,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     )}
     {position && hasActions && createPortal(
       <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close} className="calendar-item-menu" width={150}>
+        <button type="button" role="menuitem" onClick={event => { event.stopPropagation(); viewDetails(); }}>View details</button>
         {actions.map(action => <button
           key={action.id}
           type="button"
