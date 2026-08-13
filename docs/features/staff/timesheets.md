@@ -4,7 +4,7 @@
 - Primary route family: Staff
 - Consumers: Timesheets and Tasks
 
-A time entry records actual work for one staff resource on one date. The Timesheets page presents entries in list and calendar views and summarizes cycle-based information for the selected resource.
+A time entry records actual work for one staff resource on one date. The Hours page presents entries in list and calendar views and summarizes cycle-based information for the selected resource. Its frontend URL is `/staff/hours`.
 
 ## Entry contract
 
