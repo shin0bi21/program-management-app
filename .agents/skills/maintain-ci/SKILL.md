@@ -9,12 +9,22 @@ Evolve CI without weakening the merge gate or confusing local and remote test ow
 
 ## 1. Establish the execution path
 
-1. Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) completely.
-2. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
-3. Read `docs/testing.md` when changing test ownership or runner composition. Read `docs/local/development.md` when dependencies, containers, databases, or runtime setup are involved.
-4. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
+1. Read [`docs/operations/ci.md`](../../../docs/operations/ci.md) completely.
+2. Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) completely when assessing or changing topology, gates, ownership, sharding, caching, required checks, or performance.
+3. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
+4. Read `docs/operations/testing.md` when changing test ownership or runner composition. Read `docs/operations/local-development.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/operations/deployment.md` for any push-to-main or production path.
+5. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
 
 Treat workflow files as orchestration, repository scripts as stable developer/CI entry points, and package scripts as framework-level commands.
+
+## Orchestrate large CI work
+
+When sub-agent tools are available, delegate only independent read-only lanes such as performance measurement, workflow-path auditing, or local-runner ownership analysis. Keep workflow integration, required-check decisions, implementation, and final verification with the primary agent.
+
+- Define the exact workflows, time range, commits, or runner boundary for each lane.
+- Do not have multiple agents edit shared workflow or runner files concurrently.
+- Reconcile measurements against comparable samples before claiming an improvement.
+- Continue single-threaded for ordinary CI failures or narrow workflow changes.
 
 ## 2. Preserve CI contracts
 

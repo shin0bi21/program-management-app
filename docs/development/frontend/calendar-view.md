@@ -1,4 +1,4 @@
-# Frontend resource-calendar workflow
+# Frontend resource-calendar views
 
 ## Load and model
 

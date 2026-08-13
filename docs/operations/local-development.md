@@ -1,4 +1,4 @@
-# Local Development Commands
+# Local development
 
 This is the source of truth for day-to-day operation of the local Docker
 stack. For a new machine or a fresh checkout, complete
@@ -79,7 +79,7 @@ docker compose exec backend npm run db:status
 
 ## Tests
 
-See [Testing](../testing.md) for the full application suite, static analysis,
+See [Testing](testing.md) for the full application suite, static analysis,
 backend and frontend umbrella runners, focused runners, and test ownership.
 
 ## Logs and diagnostics

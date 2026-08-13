@@ -1,4 +1,4 @@
-# Backend database workflow
+# Database changes
 
 ## Design the persistence contract
 
@@ -21,4 +21,4 @@
 - Regenerate `src/types/database.ts` through the migration workflow; do not hand-maintain a generated shape when the repository generator owns it.
 - Update deterministic seeds and fixtures for new required relationships and fields.
 - Apply migrations to fresh development and test databases, verify migration status and checksums, and query important constraints or migrated values directly.
-- Follow `docs/local/development.md` for database resets, migration commands, and backend restarts.
+- Follow [Local development](../../operations/local-development.md) for database resets, migration commands, and backend restarts.

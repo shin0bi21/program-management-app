@@ -1,4 +1,4 @@
-# Frontend interaction workflow
+# Frontend interactions
 
 ## Own the lifecycle
 

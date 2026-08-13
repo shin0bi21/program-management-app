@@ -2,7 +2,7 @@
 
 This guide takes a fresh checkout to a working local application using Docker
 Compose. Day-to-day restart, dependency, migration, testing, and reset commands
-live in [Local Development Commands](development.md).
+live in [Local Development Commands](local-development.md).
 
 ## Prerequisites
 
@@ -141,4 +141,4 @@ corresponding host-side port in `docker-compose.yml`.
 
 If dependency installation is still in progress, follow the container logs
 until the frontend and backend development servers start. For all subsequent
-operations, use [Local Development Commands](development.md).
+operations, use [Local Development Commands](local-development.md).

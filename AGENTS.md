@@ -11,14 +11,16 @@
 ## Canonical documentation
 
 - Use this file as the single automatic agent entry point.
-- Use `.agents/skills/implement-feature/` for application changes. Its `SKILL.md` routes frontend work, frontend list/calendar variants, backend APIs, and cross-stack features into the required references under that skill.
+- Use `.agents/skills/develop-feature/` for application changes. Its `SKILL.md` routes work through the human-facing feature, development, architecture, and local component documentation.
 - Before deep review or shipping, use `.agents/skills/split-changes/` to make the top-level split decision. A cohesive diff may remain one concern; a mixed diff must produce a concern map that becomes the source of truth for review and shipping.
 - Use `.agents/skills/review-changes/` for repeatable concern-level change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
 - Use the workflow order `split decision → concern review and focused verification → concern commit/PR/merge to develop → separately authorized deployment`. Do not infer deployment permission from commit or merge approval.
 - Split mixed work logically in one concern map, but ship it serially. Complete one concern through merge, return to a clean `develop`, synchronize it with `origin/develop`, and only then create or prepare the next concern branch.
 - Read `docs/architecture/frontend.md` before changing frontend ownership, component, hook, query, or test structure.
 - Read `docs/architecture/backend.md` and the relevant architecture document before changing backend architecture, authentication, errors, or database behavior. Read the relevant file under `backend/docs/` for integrations.
-- Read `docs/local/development.md` for local Docker, dependency, migration, and restart procedures.
+- Start feature work in `docs/development/adding-a-feature.md` or `docs/development/updating-a-feature.md`; follow their backend and frontend guides in dependency order.
+- Read the applicable contract under `docs/features/` before changing an established business capability; create or update the narrowest feature document when cross-layer product behavior changes.
+- Read `docs/operations/local-development.md` for local Docker, dependency, migration, and restart procedures.
 - Use `.agents/skills/maintain-ci/` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations. That skill routes the canonical CI documentation.
 
 ## Stable invariants

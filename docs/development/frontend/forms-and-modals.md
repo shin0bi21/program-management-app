@@ -1,4 +1,4 @@
-# Frontend form and modal workflow
+# Frontend forms and modals
 
 ## Define entry paths
 

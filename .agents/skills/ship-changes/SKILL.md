@@ -7,6 +7,8 @@ description: Ship approved repository changes through GitHub Issues, issue-numbe
 
 Turn approved working-tree changes into traceable, tested pull requests without losing unrelated work. Deep code review belongs to `review-changes`; perform only the final shipping audit here.
 
+Keep shipping single-threaded and serial. Do not delegate branch, stash, commit, pull-request, check-waiting, merge, or base-synchronization operations: they share mutable Git and GitHub state and must complete in one ordered workflow.
+
 Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) when shipping a change to CI topology, required checks, or test-runner ownership.
 
 ## Production boundary
