@@ -1,10 +1,22 @@
 # ResourceCalendar
 
-`ResourceCalendar` owns generic resource-by-period rendering, navigation, virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
+`ResourceCalendar` owns generic resource-by-period rendering, navigation, TanStack period virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
+
+## Internal ownership
+
+- `periods/` owns the horizontal timeline, date/index mapping, navigation, persisted position, and TanStack period virtualization.
+- `resources/` owns resource rows, cells, the composed grid, and TanStack resource virtualization.
+- `items/` owns the shared item shell, point/range layout, and preview geometry.
+- `interactions/` owns pointer coordination, drag, move, resize, and edge autoscroll.
+- `data/` owns the independent server-data buffer and its day adapter.
+- `ResourceCalendar.tsx` composes those owners and preserves the public calendar API; it must not reimplement their mechanics.
+
+Both virtualizers use TanStack's native element rectangle and scroll observers. Do not add a parallel viewport measurement hook, period-edge observer, or manual add/remove window.
 
 ## Range data loading
 
 - Use the shared `usePeriodDataBuffer` hook when a resource calendar incrementally loads date ranges. The page supplies one `load({ start, end })` adapter and passes the hook's initialize/build/reset callbacks to `ResourceCalendar`.
+- Keep rendering and loading as separate buffers. TanStack Virtual mounts the visible periods plus `overscanPeriods` on each side; `usePeriodDataBuffer` then retains and replenishes its larger server-data range beyond those rendered periods. The default contract is 14 overscan days on each side and 42 loaded days beyond the rendered range.
 - Point items such as Hours are returned in `ResourcePeriodData` under their single calendar date. Ranged items such as Tasks are returned once in a request-owned period bucket; consume the hook's deduplicated `rangeData` output and let `ResourceCalendar` clip the complete item range.
 - Both APIs receive the requested visible interval. Point records match dates inside it; ranged records match interval overlap. Keep list pagination and overview aggregates in independent queries rather than deriving them from the calendar buffer.
 
@@ -27,7 +39,7 @@
 ## Standard item setup
 
 - Build editable domain items with the shared `CalendarItem` shell. Consumers supply summary content, optional trailing status content, and detail rows; mark a detail with `sectionStart` when a semantic group needs a visible divider. The shell owns identical sizing, delayed hover/immediate focus details, pointer-down dismissal, floating Edit/Delete actions, focus return, and accessible menu state. Hover details prefer below/start alignment against the intersection of the item and the day where the pointer entered, then keep that anchor until the pointer leaves. They measure their rendered size and use the shared floating-position collision behavior to align toward the left or open above when space is constrained. Point items and the first day of a range therefore preserve their visual inset, while interior range days align to the day boundary. Do not reimplement that lifecycle in each domain item.
-- The standard primary click opens the floating action menu containing Edit and Delete from the same visible item/day intersection used by hover details. The shared floating-menu collision behavior still controls flipping and viewport clamping. It must not edit immediately and must not add a second always-visible actions trigger.
+- The standard primary click opens the floating action menu containing View details and the item's available domain actions from the same visible item/day intersection used by hover details. View details gives touch users the same detail content available through hover or keyboard focus. The shared floating-menu collision behavior still controls flipping and viewport clamping. It must not edit immediately and must not add a second always-visible actions trigger.
 - The calendar wrapper still receives pointer-down through bubbling, so ordinary item clicks and focus remain intact until movement crosses the drag threshold. Item clicks stop propagation after the row's capture-phase selection has run.
 - Enable mechanics only through `getItemCapabilities`: point items use `onItemDrop`; ranged items use `onRangeMove`; ranged items opt into edge handles with `resizable` plus `onRangeResize`.
 - Use `getCellActions` when a day/resource activation has multiple domain flows. The calendar owns the accessible floating action menu; the consumer supplies labels and callbacks, and each callback opens its appropriate workflow with the cell context already captured.
@@ -46,10 +58,11 @@
 - The item layer shares the row's complete scrollable coordinate space. Native viewport scrolling moves cells and items together; consumers must not reposition items from scroll handlers.
 - Keep item geometry independent of mounted cell DOM. Range items derive their start and span from period indexes, clip them to the rendered period window, and use the same row layer.
 - Supply ranged domain items through `rangeData`, `getItemRange`, and `buildRangeItem`. Each virtualized row receives its complete range collection, clips intersecting spans to the current period window, and positions them in the shared row coordinate space; consumers must not duplicate one ranged item into every covered day.
-- Draggable item wrappers capture the pointer only after movement crosses the drag threshold, then retain it through release or cancellation. This prevents hover transfer during a real drag without stealing ordinary clicks from item controls. Item renderers that own hover details should dismiss their current detail on pointer-down.
+- Draggable item wrappers capture the pointer only after deliberate 10px movement crosses the shared drag threshold, then retain it through release or cancellation. This prevents hover transfer and normal click jitter from starting a real drag. Item renderers that own hover details should dismiss their current detail on pointer-down.
+- Touch gestures scroll the calendar, including when they begin on an item or range handle. Point/range drag and resize are mouse/pen interactions; touch users retain the item action menu and keyboard-accessible resize controls.
 
 ## Initial position and persistence
 
-- The initial period window keeps complete seven-day buffers on both sides, but the visible period zone begins at the exact `initialDate`; buffer size never determines the visible anchor.
-- Pass a page-specific `positionStorageKey` to restore where a user left that calendar. Each intersected seven-day window edge stores its date key and left/right alignment before the observer's duplicate-build guard runs. Returning to the page rebuilds around that today-relative week and restores it on the same edge.
+- The default logical timeline contains 2,500 periods centered on the restored initial date. Only the visible periods and render overscan mount; spacer tracks retain the complete scroll range.
+- Pass a page-specific `positionStorageKey` to restore where a user left that calendar. Horizontal scrolling stores the leftmost date and its within-period pixel offset. Returning to the page rebuilds the logical range around that date and restores the exact offset.
 - Previous, Next, and Today persist their exact today-relative anchor immediately. This calendar does not normalize navigation to a weekday-based week start.

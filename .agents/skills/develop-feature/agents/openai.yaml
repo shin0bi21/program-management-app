@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop Feature"
+  short_description: "Add or update application features with repository patterns"
+  default_prompt: "Use $develop-feature to add, update, fix, or refactor this application feature through the applicable feature, development, architecture, and local code contracts."

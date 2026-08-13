@@ -86,7 +86,7 @@ throw new NotFoundError('User not found');
 
 - Headers already sent → log + bail
 - Status from `appErr.statusCode` (clamped 400–599, else 500)
-- 5xx → `console.error` + full stack; 4xx → `console.warn` + message + details + cause
+- 5xx → `console.error`; 4xx → `console.warn`. Both include request ID, method, path, status, error class, message, and the classified `Error` object so Docker logs retain the originating stack, validation details, and cause chain.
 - `isDev` = `NODE_ENV === 'development' || NODE_ENV === 'test'`; non-`isDev` 5xx → `appErr.clientMessage ?? 'An unexpected error occurred'`; 4xx and `isDev` always show the actual message
 
 ```mermaid
@@ -96,7 +96,7 @@ flowchart TD
     HS -->|no| CL[classifyError]
     CL --> SEV{status >= 500?}
     SEV -->|yes| LOG[console.error + stack]
-    SEV -->|no| WARN[console.warn + message + details]
+    SEV -->|no| WARN[console.warn + classified error and stack]
     LOG --> PROD{NODE_ENV not dev/test?}
     WARN --> PROD
     PROD -->|yes + 5xx| GEN[generic message]
@@ -113,6 +113,8 @@ flowchart TD
 - Connection failures (`ECONNREFUSED`, `57P03`, pool exhaustion, etc.) → `DbConnectionError` (503)
 - `23505` unique violation → `ConflictError` (409), original postgres error passed as `cause`
 - Everything else → `InternalServerError` (500)
+
+Classification preserves the original thrown value as `Error.cause`, so wrapping an unknown failure never discards its low-level stack or metadata in server logs.
 
 > The `/health` endpoint pings the DB directly and returns `{ status: 'ok'|'degraded', db: 'connected'|'unavailable' }` with 200 or 503.
 

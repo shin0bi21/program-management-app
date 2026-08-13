@@ -66,3 +66,4 @@ describe('programming APIs', () => {
     })).toBe('Workshop - Photos.png');
   });
 });
+// @vitest-environment node

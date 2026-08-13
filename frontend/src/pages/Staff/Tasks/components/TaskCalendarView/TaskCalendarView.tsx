@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
-import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/PeriodDataBuffer';
+import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
+import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
 import { getTasks } from '../../../../../common/features/tasks/api/tasks.api';
 import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../../common/features/tasks/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';

@@ -10,7 +10,7 @@ import type { TableColumn } from '../../../common/components/Table/Table';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods';
+import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
 import { useAuth } from '../../../auth/authContext';
 import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';

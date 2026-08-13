@@ -47,3 +47,4 @@ describe('auth API', () => {
     );
   });
 });
+// @vitest-environment node

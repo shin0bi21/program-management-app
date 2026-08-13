@@ -235,6 +235,23 @@ describe('AppNavigation', () => {
     expect(hours.compareDocumentPosition(tasks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('uses the canonical Hours URL from Staff navigation', async () => {
+    authState.permissions = ['read:timesheets'];
+    authState.role = 'staff';
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/staff/tasks']}>
+        <AppNavigation />
+        <CurrentPath />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('menuitem', { name: 'Hours' }));
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/hours');
+  });
+
   it('shows programming management in Settings only with program write access', () => {
     authState.permissions = ['write:programs'];
     authState.role = 'admin';

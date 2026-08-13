@@ -4,8 +4,8 @@ const storyId = 'ResourceCalendar/Interactive';
 const rangeLaneSizingStoryId = 'ResourceCalendar/RangeLaneSizing';
 const itemDensityStoryId = 'ResourceCalendar/ItemDensity';
 const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
-const timeItemStoryId = 'pages/Staff/Timesheets/components/TimeItem/TimeItem/InteractiveTimeItems';
-const taskItemStoryId = 'pages/Staff/Tasks/components/TaskItem/TaskItem/InteractiveTaskItem';
+const timeItemStoryId = 'pages/Staff/Timesheets/components/TimesheetCalendarView/TimeItem/TimeItem/InteractiveTimeItems';
+const taskItemStoryId = 'pages/Staff/Tasks/components/TaskCalendarView/TaskItem/TaskItem/InteractiveTaskItem';
 const periodWidth = 145;
 const resourceWidth = 125;
 
@@ -91,6 +91,15 @@ test('virtualizes a large staff list while preserving sticky headers', async ({ 
   await expect(component.getByText('Staff 60')).toBeVisible();
   await expect(component.getByText('Staff 1')).toBeHidden();
   expect((await header.boundingBox())?.y).toBeCloseTo(initialHeaderTop ?? 0, 0);
+});
+
+test('updates the centered toolbar year as the visible timeline crosses a year boundary', async ({ mount }) => {
+  const component = await mount(storyId);
+  const viewport = component.getByLabel('Browser-tested resource calendar');
+
+  await expect(component.getByLabel('Calendar year 2026')).toBeVisible();
+  await viewport.evaluate((element, width) => { element.scrollLeft += 365 * width; }, periodWidth);
+  await expect(component.getByLabel('Calendar year 2027')).toBeVisible();
 });
 
 test('keeps each overlap group aligned at its peak density', async ({ mount }) => {
@@ -209,6 +218,45 @@ test('preserves an item control click when movement never crosses the drag thres
 
   await expect(component.getByTestId('activation-record')).toHaveValue('movable-entry');
   await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
+});
+
+test('leaves a touch gesture that begins on an entry available for calendar scrolling', async ({ page, mount }) => {
+  const component = await mount(storyId);
+  const source = component.getByRole('button', { name: 'Movable entry' });
+  const wrapper = source.locator('..');
+  const box = await source.boundingBox();
+  if (!box) throw new Error('Touch item geometry is unavailable');
+
+  await source.evaluate((element, point) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: point.x,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  await page.evaluate(point => {
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      clientX: point.x + 80,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+    window.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      clientX: point.x + 80,
+      clientY: point.y,
+      pointerId: 19,
+      pointerType: 'touch',
+    }));
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+
+  await expect(component.getByTestId('drop-record')).toHaveValue('');
+  await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
+  await expect.poll(() => wrapper.evaluate(element => getComputedStyle(element).touchAction)).toBe('auto');
 });
 
 test('clips a point-item ghost to the same calendar preview host', async ({ page, mount }) => {
@@ -524,12 +572,17 @@ test('opens the real task-item floating menu instead of editing directly', async
   if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
   await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
-  await expect(page.getByRole('menuitem', { name: 'Mark complete' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'View details' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Set Completed' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
     .toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect(component.getByTestId('task-item-action')).toHaveValue('');
+  await page.getByRole('menuitem', { name: 'View details' }).click();
+  await expect(page.getByRole('tooltip')).toContainText('Prepare activities and materials.');
+
+  await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
 });
@@ -744,6 +797,31 @@ test('auto-scrolls ranged task dragging across periods and virtualized resource 
     await page.mouse.up();
   }
 
+  await expect(page.locator('.resource-calendar__preview-host')).toHaveCount(0);
+});
+
+test('keeps moving a ranged task after its original periods leave the virtualized slice', async ({ page, mount }) => {
+  const component = await mount(storyId);
+  const viewport = component.getByLabel('Browser-tested resource calendar');
+  const item = component.getByRole('button', { name: 'Ranged task' });
+  const itemBox = await item.boundingBox();
+  const viewportBox = await viewport.boundingBox();
+  if (!itemBox || !viewportBox) throw new Error('Long range-move geometry is unavailable');
+  const initialLeft = await viewport.evaluate(element => element.scrollLeft);
+
+  await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(viewportBox.x + viewportBox.width - 8, itemBox.y + itemBox.height / 2, { steps: 8 });
+  await expect.poll(
+    () => viewport.evaluate(element => element.scrollLeft),
+    { timeout: 10_000 },
+  ).toBeGreaterThan(initialLeft + 18 * periodWidth);
+  await page.mouse.up();
+
+  const record = await component.getByTestId('range-move-record').inputValue();
+  const nextStart = record.split('->')[1]?.split(':')[1];
+  expect(nextStart).toBeDefined();
+  expect(nextStart! > '2026-08-22').toBe(true);
   await expect(page.locator('.resource-calendar__preview-host')).toHaveCount(0);
 });
 

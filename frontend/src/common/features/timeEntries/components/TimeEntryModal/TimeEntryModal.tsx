@@ -4,7 +4,7 @@ import Button from '../../../../components/Button/Button';
 import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../components/FormField/FormField';
 import Modal from '../../../../components/Modal/Modal';
-import { dayKey } from '../../../../components/ResourceCalendar/periods';
+import { dayKey } from '../../../../components/ResourceCalendar/periods/periods';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 import { getTasks } from '../../../tasks/api/tasks.api';
 import type { Task } from '../../../tasks/types';

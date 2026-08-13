@@ -38,7 +38,7 @@ export function classifyError(err: unknown): AppError {
   }
 
   const message = err instanceof Error ? err.message : String(err);
-  return new InternalServerError(message);
+  return new InternalServerError(message, err);
 }
 
 // ============================================================================
@@ -79,16 +79,9 @@ export function handleError(
   const status = rawStatus >= 400 && rawStatus <= 599 ? rawStatus : 500;
   const isServerError = status >= 500;
 
-  if (isServerError) {
-    console.error(`[${rid}] handleError ${status}`, err);
-  } else {
-    console.warn(
-      `[${rid}] handleError ${status}`,
-      appErr.message,
-      appErr.details ? JSON.stringify(appErr.details) : '',
-      appErr.cause ? appErr.cause : '',
-    );
-  }
+  const summary = `[${rid}] ${req.method} ${req.path} ${status} ${appErr.name}: ${appErr.message}`;
+  if (isServerError) console.error(summary, appErr);
+  else console.warn(summary, appErr);
 
   // 3. Send — redact 5xx messages in production
   const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';

@@ -190,7 +190,7 @@ export default function AppNavigation() {
 
       {canViewStaff && menus.staff.position && (
         <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
-          {canViewTimesheets && <button role="menuitem" onClick={() => go('/staff/timesheets')} className={`settings-flyout-item${isActive('/staff/timesheets') ? ' active' : ''}`}>Hours</button>}
+          {canViewTimesheets && <button role="menuitem" onClick={() => go('/staff/hours')} className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}>Hours</button>}
           {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
         </FloatingMenuPanel>
       )}

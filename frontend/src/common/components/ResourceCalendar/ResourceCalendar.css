@@ -8,9 +8,20 @@
 
 .resource-calendar__toolbar {
   display: flex;
+  position: relative;
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
+}
+
+.resource-calendar__year {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--brand-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 34px;
 }
 
 .resource-calendar__navigation-arrows {
@@ -272,7 +283,6 @@
   border: 0;
   background: transparent;
   cursor: ew-resize;
-  touch-action: none;
 }
 .resource-calendar__range-item .resource-calendar__range-handle--start { left: 0; }
 .resource-calendar__range-item .resource-calendar__range-handle--end { right: 0; }
@@ -380,12 +390,10 @@
 
 .resource-calendar__item.draggable {
   cursor: grab;
-  touch-action: none;
 }
 
 .resource-calendar__item.draggable > :not(.resource-calendar__range-handle) {
   cursor: grab;
-  touch-action: none;
 }
 
 .resource-calendar__item.dragging {

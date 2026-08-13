@@ -68,3 +68,4 @@ describe('staff programming defaults', () => {
     ], 'soft-skills')).toBeNull();
   });
 });
+// @vitest-environment node

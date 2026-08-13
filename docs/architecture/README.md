@@ -22,6 +22,7 @@ Express API ── postgres.js ── PostgreSQL
 | Authentication and authorization | [`auth.md`](auth.md) | JWTs, 2FA, refresh rotation, RBAC, revocation, and auth module boundaries |
 | Database | [`database.md`](database.md) | Migrations, transactions, audit logging, auth logging, and base-table conventions |
 | Error handling | [`errors.md`](errors.md) | Typed errors, middleware flow, response contracts, request tracing, and client errors |
+| Continuous integration | [`ci.md`](ci.md) | Workflow topology, merge gates, runner ownership, sharding, and performance model |
 
 This directory is the canonical home for architecture. Setup, development commands, deployment, API catalogs, and integration usage remain in their operational or subsystem documentation.
 

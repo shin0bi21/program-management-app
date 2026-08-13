@@ -14,7 +14,7 @@ import {
   updateTimeEntry,
   updateTimeEntryPlacement,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods';
+import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import queryClient from '../../../query/queryClient';
 import Timesheets from './Timesheets';
 import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
@@ -104,9 +104,33 @@ describe('Timesheets', () => {
     });
     queryClient.clear();
     vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} });
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(element: Element) {
+        const target = element as HTMLElement;
+        this.callback([{
+          target,
+          contentRect: { width: target.clientWidth, height: target.clientHeight },
+          borderBoxSize: [{ inlineSize: target.clientWidth, blockSize: target.clientHeight }],
+        } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
     vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+      configurable: true,
+      value: function scrollTo(options: ScrollToOptions | number) {
+        if (typeof options === 'number') {
+          this.scrollLeft = options;
+          return;
+        }
+        if (options?.left !== undefined) this.scrollLeft = options.left;
+        if (options?.top !== undefined) this.scrollTop = options.top;
+      },
+    });
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
@@ -394,7 +418,7 @@ describe('Timesheets', () => {
     expect(averageCard.closest('article')).toHaveTextContent('Biweekly Average4.00');
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(screen.queryByText('Current pay-period work')).not.toBeInTheDocument();
-    expect(screen.getByText('Fall cycle work')).toBeInTheDocument();
+    expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
     expect(getTimeEntryOverview).toHaveBeenCalledWith(
       'staff-1',
       'cycle-fall',

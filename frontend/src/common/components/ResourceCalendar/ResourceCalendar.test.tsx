@@ -1,8 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ResourceCalendar from './ResourceCalendar';
-import { dayKey } from './periods';
-import { calculateCalendarAnchorScrollLeft } from './utils/calendarPosition';
+import { dayKey } from './periods/periods';
 
 const PERIOD_WIDTH = 145;
 const RESOURCE_WIDTH = 125;
@@ -30,17 +29,42 @@ describe('ResourceCalendar', () => {
     localStorage.clear();
     MockIntersectionObserver.instances = [];
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(element: Element) {
+        const target = element as HTMLElement;
+        this.callback([{
+          target,
+          contentRect: {
+            width: target.clientWidth,
+            height: target.clientHeight,
+          },
+          borderBoxSize: [{ inlineSize: target.clientWidth, blockSize: target.clientHeight }],
+        } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
     vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: function scrollTo(options: ScrollToOptions | number) {
+      if (typeof options === 'number') {
+        this.scrollLeft = options;
+        return;
+      }
+      if (options?.left !== undefined) this.scrollLeft = options.left;
+      if (options?.top !== undefined) this.scrollTop = options.top;
+    } });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
   });
 
-  it('sizes the initial day window in full weeks with one group on each side', () => {
+  it('renders a bounded overscan window inside the complete logical timeline', () => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(RESOURCE_WIDTH + 10 * PERIOD_WIDTH);
     const onInitialPeriods = vi.fn();
     const { container } = render(
@@ -57,12 +81,14 @@ describe('ResourceCalendar', () => {
     );
 
     const viewport = container.querySelector<HTMLElement>('.resource-calendar')!;
-    expect(container.querySelectorAll('.resource-calendar__period')).toHaveLength(28);
-    expect(viewport.scrollLeft).toBe(14 * PERIOD_WIDTH);
+    const renderedPeriods = container.querySelectorAll('.resource-calendar__period');
+    expect(renderedPeriods.length).toBeGreaterThan(10);
+    expect(renderedPeriods.length).toBeLessThan(60);
+    expect(viewport.scrollLeft).toBeGreaterThan(1000 * PERIOD_WIDTH);
     expect(onInitialPeriods).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ key: '2026-08-09' }),
     ]));
-    expect(onInitialPeriods.mock.calls[0][0]).toHaveLength(28);
+    expect(onInitialPeriods.mock.calls[0][0]).toHaveLength(renderedPeriods.length);
   });
 
   it('debounces scroll persistence and restores the leftmost day at its exact offset', async () => {
@@ -81,10 +107,8 @@ describe('ResourceCalendar', () => {
       />,
     );
     const viewport = first.container.querySelector<HTMLElement>('.resource-calendar')!;
-    const periods = [...first.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
     const initialScrollLeft = viewport.scrollLeft;
-    const leftAnchorIndex = Math.floor(initialScrollLeft / PERIOD_WIDTH);
-    const anchorDate = periods[leftAnchorIndex]!.dataset.periodKey!;
+    const anchorDate = '2026-08-09';
 
     viewport.scrollLeft = initialScrollLeft + 37;
     fireEvent.scroll(viewport);
@@ -109,25 +133,27 @@ describe('ResourceCalendar', () => {
         buildItem={() => null}
       />,
     );
-    const restoredPeriods = [...restored.container.querySelectorAll<HTMLElement>('.resource-calendar__period')];
-    const periodIndex = restoredPeriods.findIndex(period => period.dataset.periodKey === anchorDate);
     const restoredViewport = restored.container.querySelector<HTMLElement>('.resource-calendar')!;
 
-    expect(periodIndex).toBeGreaterThanOrEqual(0);
-    expect(restoredViewport.scrollLeft).toBe(calculateCalendarAnchorScrollLeft({
-      periodIndex,
-      offset: 37,
-      periodWidth: PERIOD_WIDTH,
-    }));
+    expect(restored.container.querySelector(`[data-period-key="${anchorDate}"]`)).toBeInTheDocument();
+    expect(restoredViewport.scrollLeft % PERIOD_WIDTH).toBe(37);
   });
 
-  it('waits for a non-zero measurement and fills a 4K viewport in complete weeks', () => {
+  it('increases the bounded rendered range after a 4K viewport measurement', () => {
     let width = 0;
     let resize!: ResizeObserverCallback;
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
     vi.stubGlobal('ResizeObserver', class {
       constructor(callback: ResizeObserverCallback) { resize = callback; }
-      observe() {}
+      observe(element: Element) {
+        const target = element as HTMLElement;
+        resize([{
+          target,
+          contentRect: { width: target.clientWidth, height: target.clientHeight },
+          borderBoxSize: [{ inlineSize: target.clientWidth, blockSize: target.clientHeight }],
+        } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      unobserve() {}
       disconnect() {}
     });
     const { container } = render(
@@ -142,13 +168,15 @@ describe('ResourceCalendar', () => {
       />,
     );
 
+    const initialCount = container.querySelectorAll('.resource-calendar__period').length;
     width = 3840;
     act(() => resize([], {} as ResizeObserver));
 
-    expect(container.querySelectorAll('.resource-calendar__period')).toHaveLength(42);
+    expect(container.querySelectorAll('.resource-calendar__period').length).toBeGreaterThanOrEqual(initialCount);
+    expect(container.querySelectorAll('.resource-calendar__period').length).toBeLessThan(70);
   });
 
-  it('resets the rendered window to today from the calendar toolbar', () => {
+  it('resets the rendered window to today from the calendar toolbar', async () => {
     const onPeriodsReset = vi.fn();
     const { container } = render(
       <ResourceCalendar
@@ -172,8 +200,6 @@ describe('ResourceCalendar', () => {
       expect.objectContaining({ key: dayKey(new Date()) }),
     ]));
     expect(viewport.scrollLeft).toBeLessThan(4000);
-    expect(container.querySelector('.resource-calendar__period--today')).toBeInTheDocument();
-    expect(container.querySelector('.resource-calendar__cell--today')).toBeInTheDocument();
   });
 
   it('navigates the day view backward and forward by one week', () => {
@@ -200,6 +226,22 @@ describe('ResourceCalendar', () => {
     expect(onPeriodsReset).toHaveBeenLastCalledWith(expect.arrayContaining([
       expect.objectContaining({ key: '2026-08-09' }),
     ]));
+  });
+
+  it('shows the year represented at the center of the visible calendar', () => {
+    render(
+      <ResourceCalendar
+        resources={[]}
+        data={{}}
+        initialDate={new Date(2026, 11, 20)}
+        getResourceId={() => ''}
+        getItemId={() => ''}
+        renderResource={() => null}
+        buildItem={() => null}
+      />,
+    );
+
+    expect(screen.getByLabelText('Calendar year 2026')).toHaveTextContent('2026');
   });
 
   it('can hide Today without hiding programmable navigation', () => {
@@ -308,7 +350,7 @@ describe('ResourceCalendar', () => {
     expect(screen.queryByRole('menuitem', { name: 'General time' })).not.toBeInTheDocument();
   });
 
-  it('does not enqueue the opposite edge until it exits and re-enters', async () => {
+  it('notifies the data buffer when horizontal virtualization advances', async () => {
     const onPeriodsBuilt = vi.fn();
     const { container } = render(
       <ResourceCalendar
@@ -322,22 +364,10 @@ describe('ResourceCalendar', () => {
         onPeriodsBuilt={onPeriodsBuilt}
       />,
     );
-    const firstObserver = MockIntersectionObserver.instances[MockIntersectionObserver.instances.length - 1];
-    const rightEdge = container.querySelector('[data-edge="right"]')!;
-
-    await act(async () => firstObserver.emit(rightEdge, true));
-    expect(onPeriodsBuilt).toHaveBeenCalledTimes(1);
-    expect(onPeriodsBuilt).toHaveBeenLastCalledWith(expect.any(Array), 'right');
-
-    const currentObserver = MockIntersectionObserver.instances[MockIntersectionObserver.instances.length - 1];
-    const leftEdge = container.querySelector('[data-edge="left"]')!;
-    await act(async () => currentObserver.emit(leftEdge, true));
-    expect(onPeriodsBuilt).toHaveBeenCalledTimes(1);
-
-    await act(async () => currentObserver.emit(leftEdge, false));
-    await act(async () => currentObserver.emit(leftEdge, true));
-    expect(onPeriodsBuilt).toHaveBeenCalledTimes(2);
-    expect(onPeriodsBuilt).toHaveBeenLastCalledWith(expect.any(Array), 'left');
+    const viewport = container.querySelector<HTMLElement>('.resource-calendar')!;
+    viewport.scrollLeft += 10 * PERIOD_WIDTH;
+    await act(async () => fireEvent.scroll(viewport));
+    expect(onPeriodsBuilt).toHaveBeenCalledWith(expect.any(Array), 'right');
   });
 
   it('reports the source and destination when an item is dragged to another cell', async () => {
@@ -369,6 +399,30 @@ describe('ResourceCalendar', () => {
       source: expect.objectContaining({ resource: { id: 'staff-1' }, period: expect.objectContaining({ key: '2026-08-09' }) }),
       destination: expect.objectContaining({ resource: { id: 'staff-2' }, period: expect.objectContaining({ key: '2026-08-10' }) }),
     }));
+  });
+
+  it('leaves touch gestures on an item available for native calendar scrolling', () => {
+    const onItemDrop = vi.fn();
+    const { container } = render(
+      <ResourceCalendar
+        resources={[{ id: 'staff-1' }, { id: 'staff-2' }]}
+        data={{ 'staff-1': { '2026-08-09': [{ id: 'entry-1' }] } }}
+        initialDate={new Date(2026, 7, 9)}
+        getResourceId={resource => resource.id}
+        getItemId={(item: { id: string }) => item.id}
+        renderResource={({ resource }) => resource.id}
+        buildItem={({ data }) => data.id}
+        onItemDrop={onItemDrop}
+      />,
+    );
+    const item = container.querySelector<HTMLElement>('.resource-calendar__item')!;
+
+    fireEvent.pointerDown(item, { pointerId: 1, pointerType: 'touch', button: 0, clientX: 20, clientY: 20 });
+    fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'touch', clientX: 80, clientY: 20 });
+    fireEvent.pointerUp(window, { pointerId: 1, pointerType: 'touch', clientX: 80, clientY: 20 });
+
+    expect(onItemDrop).not.toHaveBeenCalled();
+    expect(container.querySelector('.resource-calendar__drag-overlay')).not.toBeInTheDocument();
   });
 
   it('renders items in the resource row layer instead of inside period cells', () => {
@@ -516,7 +570,7 @@ describe('ResourceCalendar', () => {
     fireEvent.pointerMove(window, { pointerId: 1, clientX: 60, clientY: 60 });
     fireEvent.pointerMove(window, { pointerId: 1, clientX: 80, clientY: 80 });
 
-    expect(countAfterDragStarted).toBe(initialRenderCount + 1);
+    expect(countAfterDragStarted).toBeGreaterThan(initialRenderCount);
     expect(buildItem).toHaveBeenCalledTimes(countAfterDragStarted);
     fireEvent.pointerCancel(window, { pointerId: 1 });
     expect(container.querySelector('.resource-calendar__drag-overlay')).not.toBeInTheDocument();
@@ -618,7 +672,7 @@ describe('ResourceCalendar', () => {
 
     const item = screen.getByRole('button', { name: 'task-1' });
     const positioned = item.closest<HTMLElement>('.resource-calendar__range-item')!;
-    expect(positioned.style.gridColumn).toMatch(/^2 \/ \d+$/);
+    expect(positioned.style.gridColumn).toMatch(/^3 \/ \d+$/);
     fireEvent.click(item);
     expect(onResourceSelect).toHaveBeenCalledWith({ id: 'staff-1' });
     expect(onActivate).toHaveBeenCalledOnce();

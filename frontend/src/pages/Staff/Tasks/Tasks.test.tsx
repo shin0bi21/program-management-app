@@ -6,7 +6,7 @@ import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getTaskList, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
-import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods';
+import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import Tasks from './Tasks';
 

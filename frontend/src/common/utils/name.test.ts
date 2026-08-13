@@ -10,3 +10,4 @@ describe('formatCompactPersonName', () => {
     expect(formatCompactPersonName('Zoe', '  ')).toBe('Zoe');
   });
 });
+// @vitest-environment node
