@@ -21,3 +21,4 @@ describe('HTTP API configuration', () => {
     expect(api('/health')).toBe('/api/health');
   });
 });
+// @vitest-environment node

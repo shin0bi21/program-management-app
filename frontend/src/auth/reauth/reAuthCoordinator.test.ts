@@ -53,3 +53,4 @@ describe('reAuthCoordinator', () => {
     expect(coordinator.getSnapshot()).toEqual({ status: 'idle' });
   });
 });
+// @vitest-environment node

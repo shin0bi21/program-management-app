@@ -34,3 +34,4 @@ describe('HTTP client errors', () => {
     expect(getErrorMessage(null, 'Fallback')).toBe('Fallback');
   });
 });
+// @vitest-environment node

@@ -29,3 +29,4 @@ describe('Task action capabilities', () => {
     expect(canDeleteTask({ ...cancelled, hoursLogged: 1 })).toBe(false);
   });
 });
+// @vitest-environment node

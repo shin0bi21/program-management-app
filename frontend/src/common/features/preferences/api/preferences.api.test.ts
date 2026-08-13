@@ -29,3 +29,4 @@ describe('preferences API', () => {
     expect(apiClient.put).toHaveBeenCalledWith('/preferences/youth-profile-filters', value);
   });
 });
+// @vitest-environment node

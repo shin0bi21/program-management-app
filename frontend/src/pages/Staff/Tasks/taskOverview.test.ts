@@ -32,3 +32,4 @@ describe('task overview', () => {
     expect(isTaskOverdue(task('completed', '2026-08-01', 'completed'), '2026-08-11')).toBe(false);
   });
 });
+// @vitest-environment node

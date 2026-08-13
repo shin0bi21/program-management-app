@@ -62,8 +62,10 @@ feature pull requests. Release pull requests to `main` run all production checks
 | Browser layout and interaction | `bash scripts/tests/frontend/test-browser.sh` | Playwright with Chromium | No; scheduled/manual |
 | Standard full application suite | `bash scripts/tests/test-app.sh` | Deploy checks, backend, and frontend Vitest | Local full-suite contract |
 
-Vitest is the frontend test runner. Node and jsdom are environments selected according
-to whether a test needs DOM APIs. Playwright owns behavior that depends on a real
+Vitest is the frontend test runner. jsdom is the default environment; browser-independent
+test files explicitly select Node with their file-level Vitest environment annotation.
+Both environments are mixed across each normal PR shard because sharding divides the
+complete test-file collection rather than creating environment-specific jobs. Playwright owns behavior that depends on a real
 browser, including layout geometry, scrolling, pointer behavior, and browser focus.
 See [Testing](../operations/testing.md) for commands and focused-suite routing.
 

@@ -41,3 +41,4 @@ describe('range layout', () => {
     expect(layout.map(item => item.laneCount)).toEqual([1, 1]);
   });
 });
+// @vitest-environment node

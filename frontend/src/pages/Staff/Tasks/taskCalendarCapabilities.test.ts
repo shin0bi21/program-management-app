@@ -33,3 +33,4 @@ describe('getTaskCalendarCapabilities', () => {
     expect(canMoveTaskToResource(task, 'staff-1', 'staff-2')).toBe(true);
   });
 });
+// @vitest-environment node

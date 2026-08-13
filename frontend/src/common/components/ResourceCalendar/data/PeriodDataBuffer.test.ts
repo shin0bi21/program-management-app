@@ -225,3 +225,4 @@ describe('mergeResourcePeriodData', () => {
     });
   });
 });
+// @vitest-environment node
