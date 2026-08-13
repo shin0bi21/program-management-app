@@ -84,6 +84,10 @@ backend and frontend umbrella runners, focused runners, and test ownership.
 
 ## Logs and diagnostics
 
+For the ordered browser-to-backend tracing workflow and Node debugger setup,
+see [Debugging](debugging.md). The commands below are the local service
+inspection reference.
+
 ```bash
 docker compose ps
 docker compose logs --tail=100 frontend

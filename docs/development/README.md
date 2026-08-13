@@ -22,6 +22,8 @@ Use the guides in this order:
 | Add a list or calendar | [List view](frontend/list-view.md) or [calendar view](frontend/calendar-view.md) |
 | Add a form or modal | [Forms and modals](frontend/forms-and-modals.md) |
 | Choose React state patterns | [React state](frontend/react-state.md) |
+| Add or synchronize a package dependency | [Local development dependency commands](../operations/local-development.md#which-command-to-use) |
+| Diagnose a client, API, or backend failure | [Debugging](../operations/debugging.md) |
 | Prepare or operate an environment | [Operations](../operations/README.md) |
 | Select and run tests | [Testing](../operations/testing.md) |
 | Review and ship completed work | [Review and shipping](review-and-shipping.md) |
