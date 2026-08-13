@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDayPeriod, addDays } from '../periods';
+import { buildDayPeriod, addDays } from '../periods/periods';
 import { layoutRangeItems } from './rangeLayout';
 
 describe('range layout', () => {

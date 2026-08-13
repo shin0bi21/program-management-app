@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type { CalendarPeriod, ItemRange, RangeResizeContext } from '../types';
-import { createCalendarPreviewHost } from '../utils/rangePreview';
-import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
-import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
+import { createCalendarPreviewHost } from '../items/rangePreview';
+import { getEdgeScrollDelta, getPeriodZoneBounds } from './edgeAutoScroll';
+import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from './pointerInteraction';
 import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarRangeResize<TResource, TItemData> {
@@ -44,6 +44,7 @@ export function useCalendarRangeResize<TResource, TItemData>({
   dragEdgeSize,
   dragScrollSpeed,
   interactionCoordinator,
+  firstPeriodIndex,
 }: {
   viewportRef: RefObject<HTMLElement | null>;
   periods: readonly CalendarPeriod[];
@@ -53,19 +54,23 @@ export function useCalendarRangeResize<TResource, TItemData>({
   dragEdgeSize: number;
   dragScrollSpeed: number;
   interactionCoordinator: CalendarInteractionCoordinator;
+  firstPeriodIndex: number;
 }) {
   const activeRef = useRef<CalendarRangeResize<TResource, TItemData> | null>(null);
   const suppressClickRef = useRef(false);
   const periodsRef = useRef(periods);
+  const firstPeriodIndexRef = useRef(firstPeriodIndex);
   const onRangeResizeRef = useRef(onRangeResize);
   periodsRef.current = periods;
+  firstPeriodIndexRef.current = firstPeriodIndex;
   onRangeResizeRef.current = onRangeResize;
 
   useEffect(() => {
     let animationFrame: number | undefined;
     const updatePreview = (current: CalendarRangeResize<TResource, TItemData>, viewport: HTMLElement, x: number) => {
       const bounds = viewport.getBoundingClientRect();
-      const rawIndex = Math.floor((x - bounds.left + viewport.scrollLeft - coveredLeftWidth) / periodWidth);
+      const logicalIndex = Math.floor((x - bounds.left + viewport.scrollLeft - coveredLeftWidth) / periodWidth);
+      const rawIndex = logicalIndex - firstPeriodIndexRef.current;
       const nextIndex = Math.max(0, Math.min(periodsRef.current.length - 1, rawIndex));
       const currentStartIndex = periodsRef.current.findIndex(period => period.key === current.range.start);
       const currentEndIndex = periodsRef.current.findIndex(period => period.key === current.range.end);

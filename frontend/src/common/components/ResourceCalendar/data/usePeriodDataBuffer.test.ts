@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { buildInitialDayPeriods } from '../../../../common/components/ResourceCalendar/periods';
+import { buildInitialDayPeriods } from '../periods/periods';
 import { ApiError } from '../../../../http/clientErrors';
 import { usePeriodDataBuffer } from './usePeriodDataBuffer';
 

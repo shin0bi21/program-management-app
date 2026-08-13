@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type { CalendarPeriod, ItemRange, RangeMoveContext } from '../types';
-import { createCalendarPreviewHost } from '../utils/rangePreview';
-import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
-import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
+import { createCalendarPreviewHost } from '../items/rangePreview';
+import { getEdgeScrollDelta, getPeriodZoneBounds } from './edgeAutoScroll';
+import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from './pointerInteraction';
 import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarRangeMove<TResource, TItemData> {
@@ -72,18 +72,15 @@ export function useCalendarRangeMove<TResource, TItemData>({
     const calculateDelta = (current: CalendarRangeMove<TResource, TItemData>, viewport: HTMLElement, x: number) => {
       const requested = Math.round((x - current.startX
         + viewport.scrollLeft - (current.startScrollLeft ?? viewport.scrollLeft)) / periodWidth);
-      const currentStartIndex = periodsRef.current.findIndex(period => period.key === current.range.start);
-      const currentEndIndex = periodsRef.current.findIndex(period => period.key === current.range.end);
-      if (currentStartIndex < 0 || currentEndIndex < 0) return { delta: current.delta, nextRange: current.nextRange };
-      const delta = Math.max(-currentStartIndex, Math.min(
-        periodsRef.current.length - 1 - currentEndIndex,
+      const delta = Math.max(-current.startIndex, Math.min(
+        periodsRef.current.length - 1 - current.endIndex,
         requested,
       ));
       return {
         delta,
         nextRange: {
-          start: periodsRef.current[currentStartIndex + delta].key,
-          end: periodsRef.current[currentEndIndex + delta].key,
+          start: periodsRef.current[current.startIndex + delta].key,
+          end: periodsRef.current[current.endIndex + delta].key,
         },
       };
     };
@@ -130,7 +127,7 @@ export function useCalendarRangeMove<TResource, TItemData>({
       let previewElement = current.previewElement;
       let previewHost = current.previewHost;
       if (!current.moving) {
-        captureCalendarPointer(current.sourceElement, event.pointerId);
+        captureCalendarPointer(viewport, event.pointerId);
         const bounds = current.sourceElement.getBoundingClientRect();
         const preview = createCalendarPreviewHost(viewport);
         previewHost = preview.host;
@@ -152,7 +149,7 @@ export function useCalendarRangeMove<TResource, TItemData>({
       interactionCoordinator.release('range-move', event.pointerId);
       activeRef.current = null;
       current.previewHost?.remove();
-      releaseCalendarPointer(current.sourceElement, event.pointerId);
+      if (viewportRef.current) releaseCalendarPointer(viewportRef.current, event.pointerId);
       if (!current.moving || event.type !== 'pointerup') return;
       const destinationResource = resourcesRef.current.find(resource => getResourceId(resource) === current.targetResourceId);
       if (!destinationResource || !current.nextRange) return;
@@ -199,8 +196,16 @@ export function useCalendarRangeMove<TResource, TItemData>({
   return {
     beginRangeMove: useCallback((value: CalendarRangeMove<TResource, TItemData>) => {
       if (!interactionCoordinator.claim('range-move', value.pointerId)) return;
+      const startIndex = periodsRef.current.findIndex(period => period.key === value.range.start);
+      const endIndex = periodsRef.current.findIndex(period => period.key === value.range.end);
+      if (startIndex < 0 || endIndex < 0) {
+        interactionCoordinator.release('range-move', value.pointerId);
+        return;
+      }
       const next = {
         ...value,
+        startIndex,
+        endIndex,
         startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
         nextRange: value.range,
       };

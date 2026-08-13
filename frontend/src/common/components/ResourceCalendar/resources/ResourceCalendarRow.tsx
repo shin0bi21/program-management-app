@@ -1,8 +1,8 @@
 import { memo, type MutableRefObject, type ReactNode } from 'react';
 import ResourceCalendarCell from './ResourceCalendarCell';
-import type { CalendarPointerDrag } from '../hooks/useCalendarItemDrag';
-import type { CalendarRangeResize } from '../hooks/useCalendarRangeResize';
-import type { CalendarRangeMove } from '../hooks/useCalendarRangeMove';
+import type { CalendarPointerDrag } from '../interactions/useCalendarItemDrag';
+import type { CalendarRangeResize } from '../interactions/useCalendarRangeResize';
+import type { CalendarRangeMove } from '../interactions/useCalendarRangeMove';
 import type {
   BuildItemContext,
   BuildRangeItemContext,
@@ -20,7 +20,7 @@ import {
   getCalendarItemDensity,
   layoutRangeItems,
   type CalendarItemDensity,
-} from '../utils/rangeLayout';
+} from '../items/rangeLayout';
 
 const MAX_READABLE_ITEMS_PER_CELL = 7;
 
@@ -40,6 +40,7 @@ interface ResourceCalendarRowProps<TResource, TItemData> {
   rangeItems: readonly TItemData[];
   getItemRange?: (item: TItemData) => ItemRange;
   periods: readonly CalendarPeriod[];
+  leadingPeriodWidth: number;
   gridColumns: string;
   rowHeight: number;
   getResourceId: (resource: TResource) => string;
@@ -76,6 +77,7 @@ function ResourceCalendarRow<TResource, TItemData>({
   rangeItems,
   getItemRange,
   periods,
+  leadingPeriodWidth,
   gridColumns,
   rowHeight,
   getResourceId,
@@ -177,6 +179,7 @@ function ResourceCalendarRow<TResource, TItemData>({
           </button>
         ) : renderResource({ resource, index: resourceIndex })}
       </div>
+      <div style={{ width: leadingPeriodWidth }} aria-hidden="true" />
       {periods.map(period => {
         const items = resourceData[period.key] ?? [];
         return (
@@ -199,6 +202,7 @@ function ResourceCalendarRow<TResource, TItemData>({
         style={{ gridTemplateColumns: gridColumns }}
       >
         <div aria-hidden="true" />
+        <div style={{ width: leadingPeriodWidth }} aria-hidden="true" />
         {periods.map(period => {
           const items = resourceData[period.key] ?? [];
           const visibleItems = items.length > normalizedMaxVisibleItems ? [] : items;
@@ -233,7 +237,7 @@ function ResourceCalendarRow<TResource, TItemData>({
               key={getItemId(item)}
               className={`resource-calendar__item resource-calendar__range-item resource-calendar__range-item--${density}${movable ? ' draggable' : ''}${resizable ? ' resizable' : ''}`}
               data-range-density={density}
-              style={{ gridColumn: `${startIndex + 2} / ${endIndex + 3}`, gridRow: 1, top: geometry.top, height: geometry.height }}
+              style={{ gridColumn: `${startIndex + 3} / ${endIndex + 4}`, gridRow: 1, top: geometry.top, height: geometry.height }}
               onPointerDown={movable ? event => {
                 if (event.button !== 0) return;
                 beginRangeMove({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, sourceElement: event.currentTarget, resource, item, range, startIndex, endIndex, delta: 0, moving: false });

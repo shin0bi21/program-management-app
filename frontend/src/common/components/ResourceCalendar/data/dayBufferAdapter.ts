@@ -1,4 +1,4 @@
-import { addDays, buildDayPeriod } from './periods';
+import { addDays, buildDayPeriod } from '../periods/periods';
 import type { PeriodBufferAdapter } from './PeriodDataBuffer';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

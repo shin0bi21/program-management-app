@@ -1,4 +1,4 @@
-import type { CalendarPeriod, ResourcePeriodData } from './types';
+import type { CalendarPeriod, ResourcePeriodData } from '../types';
 
 export type BufferDirection = 'initial' | 'left' | 'right';
 
@@ -264,6 +264,15 @@ export class PeriodDataBuffer<TItemData> {
     if (direction === 'left') {
       const remaining = this.adapter.distance(this.loadedStart, this.renderedStart);
       if (remaining > this.threshold) return;
+      if (remaining < 0) {
+        const nextStart = this.adapter.shift(this.renderedStart, -this.targetSize);
+        const nextEnd = this.adapter.shift(this.renderedStart, this.targetSize);
+        await this.loadAndMerge({ start: nextStart, end: nextEnd, direction });
+        this.loadedStart = nextStart;
+        this.loadedEnd = nextEnd;
+        this.pruneToLoadedRange();
+        return;
+      }
       const previousStart = this.loadedStart;
       const nextStart = this.adapter.shift(previousStart, -this.replenishSize);
       await this.loadAndMerge({
@@ -278,6 +287,15 @@ export class PeriodDataBuffer<TItemData> {
 
     const remaining = this.adapter.distance(this.renderedEnd, this.loadedEnd);
     if (remaining > this.threshold) return;
+    if (remaining < 0) {
+      const nextStart = this.adapter.shift(this.renderedEnd, -this.targetSize);
+      const nextEnd = this.adapter.shift(this.renderedEnd, this.targetSize);
+      await this.loadAndMerge({ start: nextStart, end: nextEnd, direction });
+      this.loadedStart = nextStart;
+      this.loadedEnd = nextEnd;
+      this.pruneToLoadedRange();
+      return;
+    }
     const previousEnd = this.loadedEnd;
     const nextEnd = this.adapter.shift(previousEnd, this.replenishSize);
     await this.loadAndMerge({

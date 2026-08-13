@@ -8,9 +8,20 @@
 
 .resource-calendar__toolbar {
   display: flex;
+  position: relative;
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
+}
+
+.resource-calendar__year {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--brand-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 34px;
 }
 
 .resource-calendar__navigation-arrows {

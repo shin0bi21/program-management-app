@@ -1,10 +1,22 @@
 # ResourceCalendar
 
-`ResourceCalendar` owns generic resource-by-period rendering, navigation, virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
+`ResourceCalendar` owns generic resource-by-period rendering, navigation, TanStack period virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
+
+## Internal ownership
+
+- `periods/` owns the horizontal timeline, date/index mapping, navigation, persisted position, and TanStack period virtualization.
+- `resources/` owns resource rows, cells, the composed grid, and TanStack resource virtualization.
+- `items/` owns the shared item shell, point/range layout, and preview geometry.
+- `interactions/` owns pointer coordination, drag, move, resize, and edge autoscroll.
+- `data/` owns the independent server-data buffer and its day adapter.
+- `ResourceCalendar.tsx` composes those owners and preserves the public calendar API; it must not reimplement their mechanics.
+
+Both virtualizers use TanStack's native element rectangle and scroll observers. Do not add a parallel viewport measurement hook, period-edge observer, or manual add/remove window.
 
 ## Range data loading
 
 - Use the shared `usePeriodDataBuffer` hook when a resource calendar incrementally loads date ranges. The page supplies one `load({ start, end })` adapter and passes the hook's initialize/build/reset callbacks to `ResourceCalendar`.
+- Keep rendering and loading as separate buffers. TanStack Virtual mounts the visible periods plus `overscanPeriods` on each side; `usePeriodDataBuffer` then retains and replenishes its larger server-data range beyond those rendered periods. The default contract is 14 overscan days on each side and 42 loaded days beyond the rendered range.
 - Point items such as Hours are returned in `ResourcePeriodData` under their single calendar date. Ranged items such as Tasks are returned once in a request-owned period bucket; consume the hook's deduplicated `rangeData` output and let `ResourceCalendar` clip the complete item range.
 - Both APIs receive the requested visible interval. Point records match dates inside it; ranged records match interval overlap. Keep list pagination and overview aggregates in independent queries rather than deriving them from the calendar buffer.
 
@@ -50,6 +62,6 @@
 
 ## Initial position and persistence
 
-- The initial period window keeps complete seven-day buffers on both sides, but the visible period zone begins at the exact `initialDate`; buffer size never determines the visible anchor.
-- Pass a page-specific `positionStorageKey` to restore where a user left that calendar. Each intersected seven-day window edge stores its date key and left/right alignment before the observer's duplicate-build guard runs. Returning to the page rebuilds around that today-relative week and restores it on the same edge.
+- The default logical timeline contains 2,500 periods centered on the restored initial date. Only the visible periods and render overscan mount; spacer tracks retain the complete scroll range.
+- Pass a page-specific `positionStorageKey` to restore where a user left that calendar. Horizontal scrolling stores the leftmost date and its within-period pixel offset. Returning to the page rebuilds the logical range around that date and restores the exact offset.
 - Previous, Next, and Today persist their exact today-relative anchor immediately. This calendar does not normalize navigation to a weekday-based week start.

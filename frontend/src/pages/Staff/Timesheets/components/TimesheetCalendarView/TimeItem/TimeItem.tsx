@@ -1,4 +1,4 @@
-import CalendarItem from '../../../../../../common/components/ResourceCalendar/components/CalendarItem';
+import CalendarItem from '../../../../../../common/components/ResourceCalendar/items/CalendarItem';
 import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
 import './TimeItem.css';
 

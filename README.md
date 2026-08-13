@@ -6,7 +6,7 @@ Full-stack youth services management system.
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite |
+| Frontend | React 18, TypeScript, Vite, TanStack Query, Table, and Virtual |
 | Backend | Express 4, TypeScript, postgres.js |
 | Database | PostgreSQL |
 | Reverse proxy | Nginx |
