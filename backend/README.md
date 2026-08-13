@@ -11,10 +11,12 @@ Express + TypeScript + PostgreSQL API for the youth services application.
 | Database and migrations | [`../docs/architecture/database.md`](../docs/architecture/database.md) |
 | Error handling | [`../docs/architecture/errors.md`](../docs/architecture/errors.md) |
 | Full HTTP lifecycle | [`../docs/architecture/http.mmd`](../docs/architecture/http.mmd) |
-| Local setup | [`../docs/local/setup.md`](../docs/local/setup.md) |
-| Local development | [`../docs/local/development.md`](../docs/local/development.md) |
-| Testing | [`../docs/testing.md`](../docs/testing.md) |
-| Deployment | [`../docs/deployment.md`](../docs/deployment.md) |
+| Product features | [`../docs/features/README.md`](../docs/features/README.md) |
+| Development handbook | [`../docs/development/README.md`](../docs/development/README.md) |
+| Local setup | [`../docs/operations/setup.md`](../docs/operations/setup.md) |
+| Local development | [`../docs/operations/local-development.md`](../docs/operations/local-development.md) |
+| Testing | [`../docs/operations/testing.md`](../docs/operations/testing.md) |
+| Deployment | [`../docs/operations/deployment.md`](../docs/operations/deployment.md) |
 | Google Sheets scripts | [`docs/google-sheets.md`](docs/google-sheets.md) |
 
 Repository-wide implementation invariants and documentation routing begin in [`../AGENTS.md`](../AGENTS.md).
@@ -62,31 +64,33 @@ Paths below are relative to `/api`. Protected endpoints require the permissions 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/` | List time-entry resources and entries for a date range |
+| `GET` | `/list` | List cursor-paginated, policy-scoped time entries |
+| `GET` | `/options` | List readable staff resources and programs |
 | `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
+| `GET` | `/sessions` | List assigned sessions available for time entry |
 | `POST` | `/` | Create a time entry |
 | `PUT` | `/:id` | Update a time entry |
+| `PATCH` | `/:id/placement` | Move a time entry to another work date without replacing unrelated fields |
 | `DELETE` | `/:id` | Delete a time entry |
 
-Staff access is self-scoped; administrators can manage entries for active staff and administrators.
+Staff writes are self-scoped while reads include policy-visible coworker resources; administrators can manage entries for active staff and administrators.
+
+The complete entry, cycle, task-integration, and resource-scope contract is documented in [Time entries and timesheets](../docs/features/staff/timesheets.md).
 
 ### Assigned tasks — `/tasks`
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/` | List active assigned tasks, optionally filtered by staff and category |
-| `GET` | `/options` | List assignable staff, programs, and program-scoped cycles |
+| `GET` | `/list` | List cursor-paginated, policy-scoped tasks |
+| `GET` | `/options` | List readable staff resources and programs |
 | `POST` | `/` | Create a task with one required policy-scoped `staffId` owner |
 | `PUT` | `/:id` | Update policy-scoped task details, status, dates, and owner |
 | `PATCH` | `/:id/placement` | Move or resize a task without replacing unrelated task fields |
 | `PATCH` | `/:id/status` | Update an assigned task's status |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
 
-Regular time entries require `category`; `programId` is optional. Task-linked time accepts an assigned `taskId` and derives its category and optional program from that task inside the write transaction. Every time-entry write derives exactly one cycle from its effective work date and rejects dates covered by zero or multiple eligible cycles. Tasks referenced by time entries cannot be deleted, preserving their IDs and titles for reporting.
-Staff timesheet reads are resource-scoped: coworkers who share any program assignment are visible as complete time-entry rows, including general and administrative time. This visibility does not grant mutation rights; staff writes remain self-scoped, while administrators may read and mutate every active staff resource. `staffResourcePolicy.ts` owns the shared read boundary; `timeEntryPolicy.ts` owns time-entry writes.
-Task writes require `category`, `startDate`, and `dueDate`; `programId` is optional. New tasks start as `todo` and may be cancelled before work begins. Their first time entry moves them to `in_progress`, after which they may be completed or cancelled through status actions. Completed tasks reopen as `in_progress`; cancelled tasks reopen as `todo` when they have no logged time and `in_progress` otherwise. Ordinary edits and calendar placement changes preserve status. Task time can only be created or edited while its task is `todo` or `in_progress`. Dates use `YYYY-MM-DD`, with the due date on or after the start date. Planned task dates remain editable after time is logged, and task-linked time may be recorded before or after that planned range so later reporting can compare scheduled and actual work.
-Creating or updating a time entry that references a to-do task moves that task to `in_progress` in the same transaction. An in-progress task cannot transition to `cancelled` through either the full update or status endpoint.
-Only a to-do task without logged time can be reassigned to another staff member.
-Staff task writes are self-scoped: they may create and mutate tasks assigned to themselves. Staff reads are resource-scoped: coworkers who share any program assignment are visible as complete task rows, including programless work, without granting write access. Administrators may read and mutate every active staff resource. Routes enforce `read:tasks` / `write:tasks`; `staffResourcePolicy.ts` owns the shared read boundary and `taskPolicy.ts` owns task writes.
+The complete lifecycle, assignment, placement, deletion, time-entry integration, and resource-scope contract is documented in [Assigned tasks](../docs/features/staff/tasks.md).
 
 ### Youth — `/youth`
 
@@ -121,6 +125,6 @@ Route files under `src/routes/` are the source of truth for exact paths, validat
 
 ## Operations
 
-- Use [`../docs/local/development.md`](../docs/local/development.md) for backend restarts, environment changes, migrations, database types, logs, debugging, and resets.
-- Use [`../docs/testing.md`](../docs/testing.md) for full, backend-only, and focused test commands.
-- Use [`../docs/deployment.md`](../docs/deployment.md) for CI, production deployment, monitoring, and production troubleshooting.
+- Use [`../docs/operations/local-development.md`](../docs/operations/local-development.md) for backend restarts, environment changes, migrations, database types, logs, debugging, and resets.
+- Use [`../docs/operations/testing.md`](../docs/operations/testing.md) for full, backend-only, and focused test commands.
+- Use [`../docs/operations/deployment.md`](../docs/operations/deployment.md) for CI, production deployment, monitoring, and production troubleshooting.

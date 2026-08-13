@@ -1,4 +1,4 @@
-# Backend testing workflow
+# Backend testing
 
 ## Own tests by domain
 

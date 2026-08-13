@@ -71,13 +71,4 @@ See [`database.md`](database.md) for migration, transaction, and audit details.
 
 See [`auth.md`](auth.md) for authentication and authorization design.
 
-## Adding a backend domain
-
-1. Add request schemas under `src/validation/`.
-2. Add business behavior and database access under `src/services/`.
-3. Add thin handlers under `src/controllers/`.
-4. Define the ordered middleware chain under `src/routes/`.
-5. Mount the route in both `src/index.ts` and the shared test application.
-6. Add a focused backend test directory and register its runner.
-
-The API catalog remains in [`../../backend/README.md`](../../backend/README.md). Development commands are in [`../local/development.md`](../local/development.md), and test invocation is in [`../testing.md`](../testing.md).
+The ordered implementation workflow is documented in [`../development/backend/adding-a-domain.md`](../development/backend/adding-a-domain.md). The API catalog remains in [`../../backend/README.md`](../../backend/README.md).

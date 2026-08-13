@@ -1,8 +1,10 @@
-# Production Deployment
+# Production deployment
 
 Production deploys are automated through GitHub Actions. Pull requests are
 fully validated before they can enter `main`; the resulting push to `main`
 then runs only the deployment and public production smoke checks.
+
+See [Continuous integration](ci.md) for pull-request checks, failure reproduction, and workflow maintenance. This guide owns the separate continuous-deployment path after a push to `main`.
 
 ```text
 feature → PR to develop → standard CI
@@ -71,7 +73,7 @@ requires its three standard CI checks plus the independent pattern review.
 ## CI and automatic deployment
 
 Pull-request validation is defined in
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It runs only for pull
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). It runs only for pull
 requests targeting `develop` or `main`; merge pushes do not repeat the same
 test suite.
 
@@ -88,7 +90,7 @@ when a pull request to `develop` changes a Dockerfile, production Compose or
 nginx configuration, deployment script, package manifest, or lockfile.
 
 The deployment workflow is defined in
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml). It runs only
+[`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml). It runs only
 for a push to `main`; it does not repeat the pull-request test suites.
 
 The deployment job then:
@@ -168,13 +170,13 @@ Deployment logs are written to `logs/deploy.log` by default.
 6. Review `logs/deploy.log` on Lightsail.
 
 For the implementation, classification rules, and rollback behavior, see
-[`scripts/deploy.sh`](../scripts/deploy.sh).
+[`scripts/deploy.sh`](../../scripts/deploy.sh).
 
 ## Dependency and security automation
 
 Dependabot checks npm dependencies in the root, backend, and frontend, plus
 GitHub Actions and Docker base images, on a weekly schedule. Its configuration
-lives in [`.github/dependabot.yml`](../.github/dependabot.yml).
+lives in [`.github/dependabot.yml`](../../.github/dependabot.yml).
 
 GitHub Dependency Review and CodeQL are not configured because this private
 repository does not currently have GitHub Advanced Security. If that feature

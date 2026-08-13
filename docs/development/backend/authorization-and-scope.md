@@ -1,4 +1,4 @@
-# Authorization and record-scope workflow
+# Authorization and record scope
 
 ## Define the contract before coding
 

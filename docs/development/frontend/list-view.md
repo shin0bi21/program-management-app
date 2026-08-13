@@ -1,4 +1,4 @@
-# Frontend list-page workflow
+# Frontend list views
 
 ## Load contracts and patterns
 

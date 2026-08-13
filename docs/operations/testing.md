@@ -104,4 +104,4 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 - Add new focused runners to the appropriate backend or frontend umbrella script.
 - When a backend route is added, mount it in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 
-See [`local/development.md`](local/development.md) for container lifecycle, logs, migrations, and reset commands.
+See [`local-development.md`](local-development.md) for container lifecycle, logs, migrations, and reset commands.

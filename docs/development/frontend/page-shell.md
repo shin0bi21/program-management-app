@@ -1,4 +1,4 @@
-# Frontend page-shell workflow
+# Frontend page shell
 
 ## Compose the route page
 

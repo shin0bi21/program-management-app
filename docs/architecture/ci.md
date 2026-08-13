@@ -8,6 +8,8 @@ automation. Repository scripts provide the stable interface shared by developers
 agents, and GitHub Actions; package scripts remain framework-level implementation
 details.
 
+For inspecting runs, reproducing failures, rerunning jobs, and changing workflows, see [Continuous integration](../operations/ci.md).
+
 ## Workflow topology
 
 | Workflow | Trigger | Responsibility | Merge role |
@@ -63,7 +65,7 @@ feature pull requests. Release pull requests to `main` run all production checks
 Vitest is the frontend test runner. Node and jsdom are environments selected according
 to whether a test needs DOM APIs. Playwright owns behavior that depends on a real
 browser, including layout geometry, scrolling, pointer behavior, and browser focus.
-See `docs/testing.md` for commands and focused-suite routing.
+See [Testing](../operations/testing.md) for commands and focused-suite routing.
 
 ## Runner boundaries
 

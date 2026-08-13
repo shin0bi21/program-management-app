@@ -1,6 +1,6 @@
 # Database & Migrations
 
-For migration and database-type commands, see [Local Development Commands](../local/development.md#migrations-and-database-types).
+For migration and database-type commands, see [Local development](../operations/local-development.md#migrations-and-database-types).
 Unless stated otherwise, source paths in this document are relative to `backend/`.
 
 ---

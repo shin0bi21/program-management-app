@@ -172,7 +172,7 @@ Focused mutation hooks present their public workflows in domain order: create/ad
 - Endpoint adapter files end in `.api.ts`.
 - Tests are colocated with the public unit or behavior they cover.
 
-Testing commands and test-runner ownership are documented in [`../testing.md`](../testing.md).
+The page creation workflow is documented in [`../development/frontend/adding-a-page.md`](../development/frontend/adding-a-page.md). Testing commands and test-runner ownership are documented in [Testing](../operations/testing.md).
 
 Browser-sensitive shared interactions use Playwright component stories. The
 gallery under `frontend/playwright/gallery/` runs colocated `*.story.tsx`
