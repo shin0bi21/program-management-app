@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildInitialDayPeriods } from './periods';
+import { buildInitialDayPeriods } from '../periods/periods';
 import { dayBufferAdapter } from './dayBufferAdapter';
 import { mergeResourcePeriodData, PeriodDataBuffer, type PeriodRange } from './PeriodDataBuffer';
-import type { ResourcePeriodData } from './types';
+import type { ResourcePeriodData } from '../types';
 
 describe('PeriodDataBuffer', () => {
   it('uses the day adapter six-week runway on initialization', async () => {
@@ -47,6 +47,22 @@ describe('PeriodDataBuffer', () => {
     await Promise.all([buffer.periodsBuilt(built, 'right'), buffer.periodsBuilt(built, 'right')]);
 
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('recenters its runway when virtualization jumps beyond the loaded range', async () => {
+    const load = vi.fn().mockResolvedValue({});
+    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const buffer = new PeriodDataBuffer({ adapter: dayBufferAdapter, load, onData: vi.fn() });
+    await buffer.initialize(periods);
+    load.mockClear();
+
+    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2027, 7, 9), 1), 'right');
+
+    expect(load).toHaveBeenCalledWith(expect.objectContaining({
+      start: expect.objectContaining({ key: '2027-06-28' }),
+      end: expect.objectContaining({ key: '2027-09-20' }),
+      direction: 'right',
+    }));
   });
 
   it('retries initialization and does not commit a failed loaded range', async () => {

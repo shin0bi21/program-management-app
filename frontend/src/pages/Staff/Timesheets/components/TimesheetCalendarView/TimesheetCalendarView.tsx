@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/hooks/usePeriodDataBuffer';
-import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/PeriodDataBuffer';
+import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
+import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
 import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../../../common/components/ResourceCalendar/types';
 import { getTimeEntries, updateTimeEntryPlacement } from '../../../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../../../common/features/timeEntries/timeEntryOptions';

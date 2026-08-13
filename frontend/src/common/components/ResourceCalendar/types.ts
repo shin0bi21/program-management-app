@@ -9,15 +9,8 @@ export interface CalendarPeriod {
 }
 
 export interface PeriodDefinition {
-  groupSize?: number;
   navigate?: (anchor: Date, direction: 'previous' | 'next') => Date;
   buildInitial: (anchor: Date, count: number) => CalendarPeriod[];
-  shiftWindow: (
-    periods: readonly CalendarPeriod[],
-    direction: 'left' | 'right',
-    buildCount: number,
-    windowSize: number,
-  ) => { periods: CalendarPeriod[]; built: CalendarPeriod[] };
   formatLabel: (period: CalendarPeriod) => string;
 }
 
@@ -129,8 +122,8 @@ export interface ResourceCalendarProps<TResource, TItemData> {
   resourceHeader?: ReactNode;
   initialDate?: Date;
   positionStorageKey?: string;
-  initialVisiblePeriodCount?: number;
-  periodBuildSize?: number;
+  periodCount?: number;
+  overscanPeriods?: number;
   rowHeight?: number;
   overscanRows?: number;
   onPeriodsBuilt?: (periods: readonly CalendarPeriod[], direction: 'left' | 'right') => void;

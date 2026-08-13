@@ -2,12 +2,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 interface ResourceCalendarToolbarProps {
+  year: number;
   onToday?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
 }
 
-export default function ResourceCalendarToolbar({ onToday, onPrevious, onNext }: ResourceCalendarToolbarProps) {
+export default function ResourceCalendarToolbar({ year, onToday, onPrevious, onNext }: ResourceCalendarToolbarProps) {
   return (
     <div className="resource-calendar__toolbar" aria-label="Calendar navigation">
       {onPrevious && onNext && (
@@ -25,6 +26,9 @@ export default function ResourceCalendarToolbar({ onToday, onPrevious, onNext }:
           Today
         </button>
       )}
+      <span className="resource-calendar__year" aria-label={`Calendar year ${year}`} aria-live="polite">
+        {year}
+      </span>
     </div>
   );
 }

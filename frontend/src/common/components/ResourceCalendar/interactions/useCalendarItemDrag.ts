@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { BuildItemContext, CalendarPeriod, ItemDropContext } from '../types';
-import { getEdgeScrollDelta, getPeriodZoneBounds } from '../utils/edgeAutoScroll';
-import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from '../utils/pointerInteraction';
-import { getCalendarPreviewBounds, type CalendarPreviewBounds } from '../utils/rangePreview';
+import { getEdgeScrollDelta, getPeriodZoneBounds } from './edgeAutoScroll';
+import { captureCalendarPointer, crossedPointerThreshold, releaseCalendarPointer } from './pointerInteraction';
+import { getCalendarPreviewBounds, type CalendarPreviewBounds } from '../items/rangePreview';
 import type { CalendarInteractionCoordinator } from './useCalendarInteractionCoordinator';
 
 export interface CalendarPointerDrag<TResource, TItemData> {

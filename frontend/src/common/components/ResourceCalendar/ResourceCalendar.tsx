@@ -1,25 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePeriodWindow } from './hooks/usePeriodWindow';
-import { useCalendarItemDrag } from './hooks/useCalendarItemDrag';
-import { useCalendarViewport } from './hooks/useCalendarViewport';
-import { useCalendarRangeResize } from './hooks/useCalendarRangeResize';
-import { useCalendarRangeMove } from './hooks/useCalendarRangeMove';
-import { useVirtualizedRows } from './hooks/useVirtualizedRows';
-import { useCalendarInteractionCoordinator } from './hooks/useCalendarInteractionCoordinator';
-import ResourceCalendarToolbar from './components/ResourceCalendarToolbar';
-import ResourceCalendarGrid from './components/ResourceCalendarGrid';
-import {
-  calculateGroupedPeriodWindow,
-  calculateVisiblePeriodCount,
-  normalizePeriodGroupSize,
-} from './utils/periodWindowSizing';
-import { dayPeriodDefinition } from './periods';
+import { useVirtualizedPeriods } from './periods/useVirtualizedPeriods';
+import { useCalendarItemDrag } from './interactions/useCalendarItemDrag';
+import { useCalendarRangeResize } from './interactions/useCalendarRangeResize';
+import { useCalendarRangeMove } from './interactions/useCalendarRangeMove';
+import { useVirtualizedResources } from './resources/useVirtualizedResources';
+import { useCalendarInteractionCoordinator } from './interactions/useCalendarInteractionCoordinator';
+import ResourceCalendarToolbar from './periods/ResourceCalendarToolbar';
+import ResourceCalendarGrid from './resources/ResourceCalendarGrid';
+import { dayPeriodDefinition } from './periods/periods';
 import type { ResourceCalendarProps } from './types';
-import { getCalendarPreviewHostStyle } from './utils/rangePreview';
-import { loadCalendarPosition } from './utils/calendarPosition';
+import { getCalendarPreviewHostStyle } from './items/rangePreview';
+import { loadCalendarPosition } from './periods/calendarPosition';
 import './ResourceCalendar.css';
-import './components/CalendarItem.css';
+import './items/CalendarItem.css';
 
 const PERIOD_WIDTH = 145;
 const RESOURCE_WIDTH = 125;
@@ -54,8 +48,8 @@ export default function ResourceCalendar<TResource, TItemData>({
   resourceHeader = 'Resource',
   initialDate = new Date(),
   positionStorageKey,
-  initialVisiblePeriodCount = 15,
-  periodBuildSize,
+  periodCount = 2500,
+  overscanPeriods,
   rowHeight = 92,
   overscanRows = 3,
   onPeriodsBuilt,
@@ -67,44 +61,31 @@ export default function ResourceCalendar<TResource, TItemData>({
   dragEdgeSize = 72,
   dragScrollSpeed = 14,
 }: ResourceCalendarProps<TResource, TItemData>) {
-  const [scrollTop, setScrollTop] = useState(0);
   const [initialPosition] = useState(() => loadCalendarPosition(positionStorageKey, initialDate));
   const [navigationAnchor, setNavigationAnchor] = useState(() => new Date(initialPosition.date));
-  const periodGroupSize = normalizePeriodGroupSize(periodDefinition.groupSize);
-  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
-  const visiblePeriodCount = measuredWidth && measuredWidth > RESOURCE_WIDTH
-    ? calculateVisiblePeriodCount(measuredWidth, RESOURCE_WIDTH, PERIOD_WIDTH)
-    : initialVisiblePeriodCount;
-  const calculatedInitialPeriodCount = calculateGroupedPeriodWindow(visiblePeriodCount, periodGroupSize);
-  const effectivePeriodBuildSize = periodBuildSize ?? periodGroupSize;
-  const { periods, viewportRef, goToDate } = usePeriodWindow({
+  const effectiveOverscan = overscanPeriods ?? 14;
+  const { periods, allPeriods, viewportRef, goToDate, visibleYear, firstPeriodIndex, leadingPeriodWidth, trailingPeriodWidth } = useVirtualizedPeriods({
     periodDefinition,
     initialDate: initialPosition.date,
     initialOffset: initialPosition.offset,
     positionStorageKey,
-    initialPeriodCount: calculatedInitialPeriodCount,
-    periodBuildSize: effectivePeriodBuildSize,
+    periodCount,
+    overscan: effectiveOverscan,
     periodWidth: PERIOD_WIDTH,
     coveredLeftWidth: RESOURCE_WIDTH,
     onPeriodsBuilt,
     onInitialPeriods,
-    ready: measuredWidth !== null,
     onPeriodsReset,
   });
-  const viewport = useCalendarViewport(viewportRef);
-  useEffect(() => {
-    if (viewport.initialWidth !== null) setMeasuredWidth(current => current ?? viewport.initialWidth);
-  }, [viewport.initialWidth]);
-  const visibleRows = useVirtualizedRows(
+  const visibleRows = useVirtualizedResources(
     resources,
-    scrollTop,
-    viewport.height,
+    viewportRef,
     rowHeight,
     HEADER_HEIGHT,
     overscanRows,
   );
 
-  const gridColumns = `${RESOURCE_WIDTH}px repeat(${periods.length}, ${PERIOD_WIDTH}px)`;
+  const gridColumns = `${RESOURCE_WIDTH}px ${leadingPeriodWidth}px repeat(${periods.length}, ${PERIOD_WIDTH}px) ${trailingPeriodWidth}px`;
   const [today] = useState(() => new Date());
   const interactionCoordinator = useCalendarInteractionCoordinator();
 
@@ -122,11 +103,12 @@ export default function ResourceCalendar<TResource, TItemData>({
   });
   const { beginResize, resizeByKeyboard, suppressClickRef: suppressResizeClickRef } = useCalendarRangeResize({
     viewportRef, periods, periodWidth: PERIOD_WIDTH, coveredLeftWidth: RESOURCE_WIDTH, onRangeResize,
+    firstPeriodIndex,
     dragEdgeSize, dragScrollSpeed,
     interactionCoordinator,
   });
   const { beginRangeMove, suppressRangeMoveClickRef } = useCalendarRangeMove({
-    viewportRef, periods, periodWidth: PERIOD_WIDTH, resources, getResourceId, canRangeMove, onRangeMove,
+    viewportRef, periods: allPeriods, periodWidth: PERIOD_WIDTH, resources, getResourceId, canRangeMove, onRangeMove,
     dragEdgeSize, dragScrollSpeed, coveredLeftWidth: RESOURCE_WIDTH,
     interactionCoordinator,
   });
@@ -149,6 +131,7 @@ export default function ResourceCalendar<TResource, TItemData>({
     <div className="resource-calendar-shell">
       {showToolbar && (
         <ResourceCalendarToolbar
+          year={visibleYear}
           onToday={showTodayButton ? goToToday : undefined}
           onPrevious={navigationHandler ? () => navigate('previous') : undefined}
           onNext={navigationHandler ? () => navigate('next') : undefined}
@@ -157,13 +140,13 @@ export default function ResourceCalendar<TResource, TItemData>({
       <div
         ref={viewportRef}
         className="resource-calendar"
-        onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
         aria-label={ariaLabel}
       >
         <ResourceCalendarGrid
           resources={visibleRows.resources}
           firstResourceIndex={visibleRows.first}
           periods={periods}
+          leadingPeriodWidth={leadingPeriodWidth}
           data={data}
           rangeData={rangeData}
           getItemRange={getItemRange}

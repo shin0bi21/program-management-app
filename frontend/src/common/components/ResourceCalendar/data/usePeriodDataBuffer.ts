@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import { dayBufferAdapter } from '../dayBufferAdapter';
-import { PeriodDataBuffer, type PeriodRange } from '../PeriodDataBuffer';
+import { dayBufferAdapter } from './dayBufferAdapter';
+import { PeriodDataBuffer, type PeriodRange } from './PeriodDataBuffer';
 import type { CalendarPeriod, ResourcePeriodData, ResourceRangeData } from '../types';
 
 interface UsePeriodDataBufferOptions<TItem> {

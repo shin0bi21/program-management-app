@@ -1,4 +1,4 @@
-import type { CalendarPeriod, PeriodDefinition } from './types';
+import type { CalendarPeriod, PeriodDefinition } from '../types';
 
 function startOfLocalDay(value: Date): Date {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
@@ -32,50 +32,12 @@ export function buildInitialDayPeriods(center: Date, count: number): CalendarPer
   return Array.from({ length: safeCount }, (_, index) => buildDayPeriod(addDays(first, index)));
 }
 
-export function extendDayPeriods(
-  periods: readonly CalendarPeriod[],
-  direction: 'left' | 'right',
-  count: number,
-): CalendarPeriod[] {
-  if (!periods.length) return [];
-
-  const safeCount = Math.max(1, count);
-  if (direction === 'right') {
-    const last = periods[periods.length - 1].start;
-    return Array.from({ length: safeCount }, (_, index) => buildDayPeriod(addDays(last, index + 1)));
-  }
-
-  const first = periods[0].start;
-  return Array.from(
-    { length: safeCount },
-    (_, index) => buildDayPeriod(addDays(first, index - safeCount)),
-  );
-}
-
-export function shiftDayPeriodWindow(
-  periods: readonly CalendarPeriod[],
-  direction: 'left' | 'right',
-  buildCount: number,
-  windowSize: number,
-): { periods: CalendarPeriod[]; built: CalendarPeriod[] } {
-  const built = extendDayPeriods(periods, direction, buildCount);
-  const combined = direction === 'left' ? [...built, ...periods] : [...periods, ...built];
-  return {
-    built,
-    periods: direction === 'left'
-      ? combined.slice(0, windowSize)
-      : combined.slice(-windowSize),
-  };
-}
-
 const dayLabelFormatter = new Intl.DateTimeFormat('en-CA', {
   weekday: 'short', month: 'short', day: 'numeric',
 });
 
 export const dayPeriodDefinition: PeriodDefinition = {
-  groupSize: 7,
   navigate: (anchor, direction) => addDays(anchor, direction === 'previous' ? -7 : 7),
   buildInitial: buildInitialDayPeriods,
-  shiftWindow: shiftDayPeriodWindow,
   formatLabel: period => dayLabelFormatter.format(period.start),
 };

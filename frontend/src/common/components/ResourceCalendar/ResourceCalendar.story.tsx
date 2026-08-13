@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import ResourceCalendar from './ResourceCalendar';
-import CalendarItem from './components/CalendarItem';
+import CalendarItem from './items/CalendarItem';
 import type { ItemDropContext, RangeMoveContext, RangeResizeContext, ResourcePeriodData } from './types';
 
 interface StoryResource {

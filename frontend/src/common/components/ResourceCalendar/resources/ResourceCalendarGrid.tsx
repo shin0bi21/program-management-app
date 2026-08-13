@@ -1,8 +1,8 @@
 import { memo, type MutableRefObject, type ReactNode } from 'react';
 import ResourceCalendarRow from './ResourceCalendarRow';
-import type { CalendarPointerDrag } from '../hooks/useCalendarItemDrag';
-import type { CalendarRangeResize } from '../hooks/useCalendarRangeResize';
-import type { CalendarRangeMove } from '../hooks/useCalendarRangeMove';
+import type { CalendarPointerDrag } from '../interactions/useCalendarItemDrag';
+import type { CalendarRangeResize } from '../interactions/useCalendarRangeResize';
+import type { CalendarRangeMove } from '../interactions/useCalendarRangeMove';
 import type {
   BuildItemContext,
   CalendarCellContext,
@@ -23,6 +23,7 @@ interface ResourceCalendarGridProps<TResource, TItemData> {
   resources: readonly TResource[];
   firstResourceIndex: number;
   periods: readonly CalendarPeriod[];
+  leadingPeriodWidth: number;
   data: ResourcePeriodData<TItemData>;
   rangeData?: ResourceRangeData<TItemData>;
   getItemRange?: (item: TItemData) => ItemRange;
@@ -65,6 +66,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
   resources,
   firstResourceIndex,
   periods,
+  leadingPeriodWidth,
   data,
   rangeData,
   getItemRange,
@@ -104,11 +106,11 @@ function ResourceCalendarGrid<TResource, TItemData>({
     <>
       <div className="resource-calendar__header" style={{ gridTemplateColumns: gridColumns }}>
         <div className="resource-calendar__corner">{resourceHeader}</div>
-        {periods.map((period, index) => (
+        <div style={{ width: leadingPeriodWidth }} aria-hidden="true" />
+        {periods.map(period => (
           <div
             key={period.key}
             className={`resource-calendar__period${today >= period.start && today < period.end ? ' resource-calendar__period--today' : ''}`}
-            data-edge={index === 0 ? 'left' : index === periods.length - 1 ? 'right' : undefined}
             data-period-key={period.key}
           >
             <span>{formatPeriodLabel(period)}</span>
@@ -126,6 +128,7 @@ function ResourceCalendarGrid<TResource, TItemData>({
           rangeItems={rangeData?.[getResourceId(resource)] ?? []}
           getItemRange={getItemRange}
           periods={periods}
+          leadingPeriodWidth={leadingPeriodWidth}
           gridColumns={gridColumns}
           rowHeight={rowHeight}
           getResourceId={getResourceId}

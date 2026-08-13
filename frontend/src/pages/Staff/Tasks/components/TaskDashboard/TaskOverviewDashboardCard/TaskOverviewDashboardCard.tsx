@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods';
+import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
 import type { Task } from '../../../../../../common/features/tasks/types';
 import { groupTasksForOverview } from '../../../taskOverview';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
