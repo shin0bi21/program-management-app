@@ -699,6 +699,18 @@ test('opens the real time-item action menu without starting a drag', async ({ pa
   await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
 });
 
+test('renders time items on an opaque surface with the type aligned right', async ({ mount }) => {
+  const component = await mount(timeItemStoryId);
+  const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
+  const type = item.locator('.time-item__type');
+
+  await expect(item).toHaveCSS('background-color', 'rgb(238, 242, 255)');
+  const itemBox = await item.boundingBox();
+  const typeBox = await type.boundingBox();
+  if (!itemBox || !typeBox) throw new Error('Time item layout geometry is unavailable');
+  expect(itemBox.x + itemBox.width - (typeBox.x + typeBox.width)).toBeCloseTo(7, 0);
+});
+
 test('selects the owning row when a real time item is activated without redundant selection', async ({ page, mount }) => {
   const component = await mount(timeItemStoryId);
   const item = component.getByRole('button', { name: /Administrative, 1.5 hours/ });
