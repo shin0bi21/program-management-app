@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Permission } from '../types/auth';
 import type { AccessTokenPayload } from '../types/auth';
 import { requireEnv } from '../utils/env';
-import { isBlacklisted } from '../services/tokenRevocationService';
+import { isBlacklisted } from '../services/auth/tokenRevocationService';
 import { UnauthorizedError, ForbiddenError } from '../errors';
 import { asyncHandler } from './routeMiddleware';
 import { sql } from '../db/client';

@@ -49,7 +49,7 @@ Routes enforce `read:tasks` and `write:tasks`. The shared [staff-resource access
 ## Implementation ownership
 
 - Backend policy: `backend/src/policies/taskPolicy.ts`
-- Backend service and HTTP boundary: `backend/src/services/taskService.ts`, task validation, controller, and routes
+- Backend service and HTTP boundary: `backend/src/services/staff/tasks/taskService.ts`, task validation, controller, and routes
 - Backend tests: `backend/tests/tasks/`
 - Frontend route owner: `frontend/src/pages/Staff/Tasks/`
 - Shared frontend contract: `frontend/src/common/features/tasks/`

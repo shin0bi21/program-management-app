@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getTaskList, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
-import { createTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
+import { setTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
@@ -18,10 +18,10 @@ const calendarTestState = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
-  getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn(), updateTaskPlacement: vi.fn(),
+  getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), setTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
-vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ createTimeEntry: vi.fn() }));
+vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ setTimeEntry: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: calendarTestState.savePreference }),
 }));
@@ -58,7 +58,7 @@ describe('Tasks', () => {
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
     });
-    vi.mocked(createTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
@@ -82,7 +82,7 @@ describe('Tasks', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       source: 'task', taskId: 'task-1', staffId: 'staff-1', note: 'Prepared materials',
     })));
   });

@@ -7,8 +7,7 @@ import LeadNotesDashboardCard from './LeadNotesDashboardCard';
 
 const api = vi.hoisted(() => ({
   getLeadNotes: vi.fn(),
-  createLeadNote: vi.fn(),
-  updateLeadNote: vi.fn(),
+  setLeadNote: vi.fn(),
   deleteLeadNote: vi.fn(),
 }));
 
@@ -62,15 +61,11 @@ describe('LeadNotesDashboardCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getLeadNotes.mockResolvedValue([existingNote]);
-    api.createLeadNote.mockResolvedValue({
+    api.setLeadNote.mockImplementation((_: string, details: string, noteId?: string) => Promise.resolve({
       ...existingNote,
-      id: 'note-2',
-      details: 'Called again and booked a meeting.',
-    });
-    api.updateLeadNote.mockResolvedValue({
-      ...existingNote,
-      details: 'Called and booked a meeting.',
-    });
+      id: noteId ?? 'note-2',
+      details,
+    }));
     api.deleteLeadNote.mockResolvedValue({ success: true });
   });
 
@@ -86,7 +81,7 @@ describe('LeadNotesDashboardCard', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
 
-    await waitFor(() => expect(api.createLeadNote).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.setLeadNote).toHaveBeenCalledWith(
       lead.id,
       'Called again and booked a meeting.',
     ));
@@ -104,10 +99,10 @@ describe('LeadNotesDashboardCard', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.setLeadNote).toHaveBeenCalledWith(
       lead.id,
-      existingNote.id,
       'Called and booked a meeting.',
+      existingNote.id,
     ));
     expect(await screen.findByText('Called and booked a meeting.')).toBeInTheDocument();
     expect(api.getLeadNotes).toHaveBeenCalledOnce();
@@ -136,7 +131,7 @@ describe('LeadNotesDashboardCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Taylor' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Follow-up Note' })).not.toBeInTheDocument());
-    expect(api.updateLeadNote).not.toHaveBeenCalled();
+    expect(api.setLeadNote).not.toHaveBeenCalled();
     expect(api.getLeadNotes).toHaveBeenLastCalledWith(otherLead.id, expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 });

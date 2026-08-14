@@ -7,7 +7,7 @@ import AttendanceModal from './AttendanceModal';
 
 const api = vi.hoisted(() => ({
   getSessionRoster: vi.fn(),
-  saveSessionAttendance: vi.fn(),
+  setSessionAttendance: vi.fn(),
   getYouth: vi.fn(),
 }));
 
@@ -60,14 +60,14 @@ describe('AttendanceModal', () => {
       status: 'present',
       notes: null,
     }]);
-    api.saveSessionAttendance.mockResolvedValue([]);
+    api.setSessionAttendance.mockResolvedValue([]);
     api.getYouth.mockResolvedValue([]);
   });
 
   it('shows saving and success feedback before closing', async () => {
     const user = userEvent.setup();
     let finishSave: (value: unknown[]) => void = () => {};
-    api.saveSessionAttendance.mockReturnValue(new Promise(resolve => {
+    api.setSessionAttendance.mockReturnValue(new Promise(resolve => {
       finishSave = resolve;
     }));
     const onSaved = vi.fn().mockResolvedValue(undefined);
@@ -134,7 +134,7 @@ describe('AttendanceModal', () => {
     expect(screen.getByText('New Visitor')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
-    expect(api.saveSessionAttendance).toHaveBeenCalledWith('session-1', [
+    expect(api.setSessionAttendance).toHaveBeenCalledWith('session-1', [
       expect.objectContaining({ youthId: 'youth-2', status: 'present' }),
       expect.objectContaining({ youthId: 'youth-new', status: 'present' }),
     ]);

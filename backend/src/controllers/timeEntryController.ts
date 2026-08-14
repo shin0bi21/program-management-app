@@ -1,16 +1,15 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
-  createTimeEntry,
   deleteTimeEntry,
   getTimeEntries,
-  getTimeEntryList,
   getTimeEntryOptions,
   getTimeEntryOverview,
   getTimeEntrySessions,
-  updateTimeEntry,
+  setTimeEntry,
   updateTimeEntryPlacement,
-} from '../services/timeEntryService';
+} from '../services/staff/hours/timeEntryService';
+import { getTimeEntryList } from '../services/staff/hours/timeEntryListService';
 import type { TimeEntryListQuery, TimeEntryOverviewQuery, TimeEntryQuery, TimeEntrySessionQuery } from '../validation/timeEntrySchemas';
 
 export async function handleGetTimeEntries(req: Request, res: Response) {
@@ -41,12 +40,9 @@ export async function handleGetTimeEntrySessions(req: Request, res: Response) {
   res.json(await getTimeEntrySessions(actor, query));
 }
 
-export async function handleCreateTimeEntry(req: Request, res: Response) {
-  res.status(201).json(await createTimeEntry(req.body, (req as AuthRequest).user!));
-}
-
-export async function handleUpdateTimeEntry(req: Request, res: Response) {
-  res.json(await updateTimeEntry(req.params.id, req.body, (req as AuthRequest).user!));
+export async function handleSetTimeEntry(req: Request, res: Response) {
+  const id = req.params.id;
+  res.status(id ? 200 : 201).json(await setTimeEntry(req.body, (req as AuthRequest).user!, id));
 }
 
 export async function handleUpdateTimeEntryPlacement(req: Request, res: Response) {

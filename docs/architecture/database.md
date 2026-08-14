@@ -167,7 +167,7 @@ Once a migration has been applied to a shared environment—or committed as migr
 
 ## 6. Audit Log
 
-Services that participate in application audit logging record their mutations in `audit_log` through `src/services/auditService.ts`. The coverage table below is the current source of truth; adding a write service does not make it audited automatically.
+Services that participate in application audit logging record their mutations in `audit_log` through `src/services/shared/auditService.ts`. The coverage table below is the current source of truth; adding a write service does not make it audited automatically.
 
 ### Table: `audit_log`
 
@@ -186,7 +186,7 @@ Services that participate in application audit logging record their mutations in
 ### `auditService.ts` — `audit()`
 
 ```ts
-import { audit } from '../services/auditService';
+import { audit } from '../services/shared/auditService';
 
 await audit(trx, userId, transactionId, 'youth_profiles', profileId, 'UPDATE', oldRow, newRow);
 ```
@@ -200,20 +200,20 @@ When one write service calls another inside a larger save flow, the parent servi
 Current example:
 
 - `youthService.ts` opens one transaction for `users`, `youth_profiles`, addresses, and contacts
-- `setAddresses()` / `setContacts()` join that outer transaction when a `trx` is passed
+- `setAddresses()` / `setContacts()` in the Youth-owned address and contact services join that outer transaction when a `trx` is passed
 - the same public methods still work standalone by calling `sql.begin(...)` when no `trx` is provided
 
 ### Coverage
 
 | Service | Tables audited |
 |---------|---------------|
-| `youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
-| `accountService.ts` | account and invitation changes across users and credential records |
-| `addressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
-| `contactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
-| `leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
-| `timeEntryService.ts` | `time_entries` create, update, and delete operations |
-| `taskService.ts` | `tasks` create, detail/status update, and delete operations, including assignment snapshots |
+| `youth/youthService.ts` | `users`, `youth_profiles` (INSERT + UPDATE) |
+| `accounts/accountService.ts` | account and invitation changes across users and credential records |
+| `youth/youthAddressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
+| `youth/youthContactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
+| `outreach/leads/leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
+| `staff/hours/timeEntryService.ts` | `time_entries` create, update, and delete operations |
+| `staff/tasks/taskService.ts` | `tasks` create, detail/status update, and delete operations, including assignment snapshots |
 
 ### `transactionId`
 
@@ -223,7 +223,7 @@ Each service generates a `crypto.randomUUID()` per API call and passes it to eve
 
 ## 7. Auth Log
 
-Security events are recorded in `auth_log` by `src/services/authLogService.ts`. The write is fire-and-forget — auth operations never fail because logging failed.
+Security events are recorded in `auth_log` by `src/services/auth/authLogService.ts`. The write is fire-and-forget — auth operations never fail because logging failed.
 
 ### Table: `auth_log`
 
@@ -267,7 +267,7 @@ HMAC key: `LOG_HMAC_SECRET` env var, falling back to `JWT_SECRET`. Hashes are us
 ### `authLog()` — fire-and-forget
 
 ```ts
-import { authLog } from '../services/authLogService';
+import { authLog } from '../services/auth/authLogService';
 
 await authLog({
   event: 'login_failure',

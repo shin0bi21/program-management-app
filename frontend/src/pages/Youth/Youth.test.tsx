@@ -7,8 +7,7 @@ import render from '../../tests/renderWithQueryClient';
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({
   getYouthProfileNotes: vi.fn(),
-  createYouthProfileNote: vi.fn(),
-  updateYouthProfileNote: vi.fn(),
+  setYouthProfileNote: vi.fn(),
   deleteYouthProfileNote: vi.fn(),
 }));
 const preferenceHook = vi.hoisted(() => ({
@@ -63,8 +62,7 @@ describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
-    youthApi.createYouthProfileNote.mockReset();
-    youthApi.updateYouthProfileNote.mockReset();
+    youthApi.setYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
     preferenceHook.preference = null;
     preferenceHook.loading = false;
@@ -80,7 +78,7 @@ describe('Youth', () => {
   });
 
   it('closes a newly saved profile note without opening its details', async () => {
-    youthApi.createYouthProfileNote.mockResolvedValue({
+    youthApi.setYouthProfileNote.mockResolvedValue({
       id: 'profile-note-new', youthId: 'youth-1', category: 'general', title: 'New profile note',
       details: null, createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
       createdByName: 'Bilal Khan',
@@ -94,7 +92,7 @@ describe('Youth', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Profile Note' })).not.toBeInTheDocument());
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
-    expect(youthApi.createYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
+    expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
       title: 'New profile note',
     }));
   });
@@ -286,7 +284,7 @@ describe('Youth', () => {
       id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
       details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
     }]);
-    youthApi.updateYouthProfileNote.mockResolvedValue({
+    youthApi.setYouthProfileNote.mockResolvedValue({
       id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Updated follow-up',
       details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-08-11T12:00:00.000Z', createdByName: 'Bilal Khan',
     });
@@ -298,9 +296,9 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('dialog', { name: 'Updated follow-up' })).toBeInTheDocument();
-    expect(youthApi.updateYouthProfileNote).toHaveBeenCalledWith('youth-1', 'profile-note-1', expect.objectContaining({
+    expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
       title: 'Updated follow-up',
-    }));
+    }), 'profile-note-1');
   });
 
   it('does not reopen stale note details when the selected profile changes during save', async () => {
@@ -318,8 +316,8 @@ describe('Youth', () => {
       error: null,
       refetch: vi.fn(),
     });
-    let resolveUpdate!: (note: Awaited<ReturnType<typeof youthApi.updateYouthProfileNote>>) => void;
-    youthApi.updateYouthProfileNote.mockReturnValue(new Promise(resolve => {
+    let resolveUpdate!: (note: Awaited<ReturnType<typeof youthApi.setYouthProfileNote>>) => void;
+    youthApi.setYouthProfileNote.mockReturnValue(new Promise(resolve => {
       resolveUpdate = resolve;
     }));
     render(<Youth />);
@@ -327,7 +325,7 @@ describe('Youth', () => {
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Family follow-up' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(youthApi.updateYouthProfileNote).toHaveBeenCalled());
+    await waitFor(() => expect(youthApi.setYouthProfileNote).toHaveBeenCalled());
     fireEvent.click(screen.getByText('Taylor').closest('tr')!);
     resolveUpdate({
       id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',

@@ -3,7 +3,7 @@ import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
-import { createYouthProfileNote, updateYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
+import { setYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
 import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../../common/types/youth';
 import { getErrorMessage } from '../../../../http/clientErrors';
 
@@ -19,7 +19,9 @@ export default function ProfileNoteModal({ youthId, note, onClose, onSaved }: { 
     setSubmitting(true); setError('');
     try {
       const data = { category, title: title.trim(), details: details.trim() || null };
-      onSaved(note ? await updateYouthProfileNote(youthId, note.id, data) : await createYouthProfileNote(youthId, data));
+      onSaved(note
+        ? await setYouthProfileNote(youthId, data, note.id)
+        : await setYouthProfileNote(youthId, data));
     } catch (err) { setError(getErrorMessage(err, 'Failed to save profile note')); } finally { setSubmitting(false); }
   };
   return <Modal isOpen onClose={onClose} title={note ? 'Edit Profile Note' : 'Add Profile Note'} status={error ? 'error' : submitting ? 'submitting' : 'idle'} statusMessage={error || (submitting ? 'Saving note...' : undefined)} footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button><Button onClick={submit} disabled={submitting || !title.trim()}>Save</Button></>}>

@@ -2,63 +2,61 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   createCohort,
-  createProgramCycle,
   deleteCohort,
   deleteProgramCycle,
-  getCohorts,
   getProgramCycles,
-  updateProgramCycle,
+  setProgramCycle,
   updateCohort,
-} from '../services/cohortService';
-import { enrollYouth, withdrawYouth } from '../services/enrollmentService';
+} from '../services/programming/cohorts/cohortService';
+import { listCohorts } from '../services/programming/cohorts/cohortListService';
+import { enrollYouth, withdrawYouth } from '../services/programming/cohorts/enrollmentService';
 import {
   deleteSession,
   generateSessions,
-  getSessionList,
   getSessionTypes,
   updateSession,
-} from '../services/sessionService';
+} from '../services/programming/sessions/sessionService';
+import { listSessions } from '../services/programming/sessions/sessionListService';
 import {
   getSessionRoster,
-  saveAttendance,
-} from '../services/attendanceService';
+  setSessionAttendance,
+} from '../services/programming/sessions/sessionAttendanceService';
 import {
   createSessionNote,
   deleteSessionNote,
   getSessionNotes,
   unlinkYouthFromSessionNote,
   updateSessionNote,
-} from '../services/sessionNoteService';
+} from '../services/programming/sessions/sessionNoteService';
 import {
   createSessionAttachment,
   deleteSessionAttachment,
   getSessionAttachmentFile,
   getSessionAttachments,
   updateSessionAttachment,
-} from '../services/sessionAttachmentService';
+} from '../services/programming/sessions/sessionAttachmentService';
 import type {
   CreateCohortInput,
-  CreateCycleInput,
   CreateSessionAttachmentInput,
   UpdateSessionAttachmentInput,
   CreateSessionNoteInput,
   EnrollYouthInput,
   GenerateSessionsInput,
-  SaveAttendanceInput,
+  SetAttendanceInput,
   UpdateCohortInput,
-  UpdateCycleInput,
+  SetProgramCycleInput,
   UpdateSessionNoteInput,
   UpdateSessionInput,
 } from '../validation/cohortSchemas';
 import type { CohortQuery, CohortYouthReportQuery, SessionListQuery } from '../validation/cohortSchemas';
-import { getCohortYouthReport } from '../services/cohortReportService';
-import { generateCohortYouthReportPdf } from '../services/cohortReportPdfService';
+import { getCohortYouthReport } from '../services/programming/cohorts/cohortReportService';
+import { generateCohortYouthReportPdf } from '../services/programming/cohorts/cohortReportPdfService';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetCohorts = async (req: Request, res: Response) => {
   const query = req.query as unknown as CohortQuery;
-  res.json(await getCohorts(
+  res.json(await listCohorts(
     actor(req),
     query,
   ));
@@ -68,12 +66,9 @@ export const handleGetProgramCycles = async (_req: Request, res: Response) => {
   res.json(await getProgramCycles());
 };
 
-export const handleCreateProgramCycle = async (req: Request, res: Response) => {
-  res.status(201).json(await createProgramCycle(req.body as CreateCycleInput, actor(req)));
-};
-
-export const handleUpdateProgramCycle = async (req: Request, res: Response) => {
-  res.json(await updateProgramCycle(req.params.cycleId, req.body as UpdateCycleInput, actor(req)));
+export const handleSetProgramCycle = async (req: Request, res: Response) => {
+  const cycleId = req.params.cycleId;
+  res.status(cycleId ? 200 : 201).json(await setProgramCycle(req.body as SetProgramCycleInput, actor(req), cycleId));
 };
 
 export const handleDeleteProgramCycle = async (req: Request, res: Response) => {
@@ -124,7 +119,7 @@ export const handleGenerateSessions = async (req: Request, res: Response) => {
 };
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
-  res.json(await getSessionList(actor(req), req.query as unknown as SessionListQuery));
+  res.json(await listSessions(actor(req), req.query as unknown as SessionListQuery));
 };
 export const handleGetSessionTypes = async (_req: Request, res: Response) => {
   res.json(await getSessionTypes());
@@ -141,8 +136,8 @@ export const handleGetSessionRoster = async (req: Request, res: Response) => {
   res.json(await getSessionRoster(req.params.sessionId, actor(req)));
 };
 
-export const handleSaveAttendance = async (req: Request, res: Response) => {
-  res.json(await saveAttendance(req.params.sessionId, req.body as SaveAttendanceInput, actor(req)));
+export const handleSetSessionAttendance = async (req: Request, res: Response) => {
+  res.json(await setSessionAttendance(req.params.sessionId, req.body as SetAttendanceInput, actor(req)));
 };
 
 export const handleGetSessionNotes = async (req: Request, res: Response) => {

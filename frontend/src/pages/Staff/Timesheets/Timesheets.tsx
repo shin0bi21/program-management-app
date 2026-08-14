@@ -15,10 +15,9 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
 import type { StaffResource, TimeEntryProgram } from '../../../common/features/timeEntries/types';
 import {
-  createTimeEntry,
+  setTimeEntry,
   deleteTimeEntry,
   getTimeEntryOptions,
-  updateTimeEntry,
   type SetTimeEntryInput,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
@@ -82,8 +81,8 @@ export default function Timesheets() {
 
   const addTimeEntry = async (input: SetTimeEntryInput) => {
     const created = editTarget
-      ? await updateTimeEntry(editTarget.item.id, input)
-      : await createTimeEntry(input);
+      ? await setTimeEntry(input, editTarget.item.id)
+      : await setTimeEntry(input);
     const categoryLabel = TIME_ENTRY_CATEGORY_OPTIONS.find(option => option.value === created.category)?.label ?? created.category;
     calendarMutationRef.current.upsert(created.staffId, created.workDate, { ...created, categoryLabel });
     setOverviewRefreshToken(current => current + 1);

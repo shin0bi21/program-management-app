@@ -58,12 +58,10 @@ export function getProgramCycles(opts?: RequestOptions) {
     : apiClient.get<ProgramCycle[]>('/cohorts/cycles');
 }
 
-export function createProgramCycle(data: SetProgramCycleInput) {
-  return apiClient.post<ProgramCycle>('/cohorts/cycles', data);
-}
-
-export function updateProgramCycle(cycleId: string, data: SetProgramCycleInput) {
-  return apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data);
+export function setProgramCycle(data: SetProgramCycleInput, cycleId?: string) {
+  return cycleId
+    ? apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data)
+    : apiClient.post<ProgramCycle>('/cohorts/cycles', data);
 }
 
 export function deleteProgramCycle(cycleId: string) {

@@ -2,13 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import queryClient from '../../../../../query/queryClient';
-import { createTask, getTasks } from '../../../../../common/features/tasks/api/tasks.api';
+import { setTask, getTasks } from '../../../../../common/features/tasks/api/tasks.api';
 import TaskManagementModal from './TaskManagementModal';
 
 vi.mock('../../../../../common/features/tasks/api/tasks.api', () => ({
   getTasks: vi.fn(),
-  createTask: vi.fn(),
-  updateTask: vi.fn(),
+  setTask: vi.fn(),
 }));
 
 
@@ -17,7 +16,7 @@ describe('TaskManagementModal', () => {
     vi.clearAllMocks();
     queryClient.clear();
     vi.mocked(getTasks).mockResolvedValue([]);
-    vi.mocked(createTask).mockResolvedValue({
+    vi.mocked(setTask).mockResolvedValue({
       id: 'task-1', title: 'Create marketing poster', details: null, category: 'outreach',
       programId: null, programName: null,
       status: 'todo', startDate: '2026-08-10', dueDate: '2026-08-14', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
@@ -48,14 +47,14 @@ describe('TaskManagementModal', () => {
     fireEvent.change(screen.getByLabelText('Due date *'), { target: { value: '2026-08-14' } });
     fireEvent.submit(document.getElementById('task-form')!);
 
-    await waitFor(() => expect(createTask).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTask).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Create marketing poster',
       category: 'outreach',
       startDate: '2026-08-10',
       dueDate: '2026-08-14',
       staffId: 'staff-1',
     })));
-    expect(vi.mocked(createTask).mock.calls[0][0]).not.toHaveProperty('cycleId');
+    expect(vi.mocked(setTask).mock.calls[0][0]).not.toHaveProperty('cycleId');
   });
 
   it('submits the selected optional program without a cycle', async () => {
@@ -80,10 +79,10 @@ describe('TaskManagementModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Zoe Wilson' }));
     fireEvent.submit(document.getElementById('task-form')!);
 
-    await waitFor(() => expect(createTask).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTask).toHaveBeenLastCalledWith(expect.objectContaining({
       programId: 'program-soft', staffId: 'staff-1',
     })));
-    expect(vi.mocked(createTask).mock.calls[0][0]).not.toHaveProperty('cycleId');
+    expect(vi.mocked(setTask).mock.calls[0][0]).not.toHaveProperty('cycleId');
   });
 
   it('uses the calendar row staff assignment without showing assignment controls', async () => {
@@ -106,7 +105,7 @@ describe('TaskManagementModal', () => {
     fireEvent.change(screen.getByLabelText('Task title *'), { target: { value: 'Calendar task' } });
     fireEvent.submit(document.getElementById('task-form')!);
 
-    await waitFor(() => expect(createTask).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTask).toHaveBeenCalledWith(expect.objectContaining({
       startDate: '2026-08-10',
       dueDate: '2026-08-10',
       staffId: 'staff-1',

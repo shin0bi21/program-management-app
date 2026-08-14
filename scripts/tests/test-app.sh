@@ -113,11 +113,11 @@ run_changed_suites() {
   select_backend_file() {
     local backend_file="$1"
     case "$backend_file" in
-      backend/src/controllers/taskController.ts|backend/src/policies/taskPolicy.ts|backend/src/routes/taskRoutes.ts|backend/src/services/taskService.ts|backend/src/validation/taskSchemas.ts|backend/tests/tasks/*|backend/db/migrations/*_add_tasks.sql)
+      backend/src/controllers/taskController.ts|backend/src/policies/taskPolicy.ts|backend/src/routes/taskRoutes.ts|backend/src/services/staff/tasks/*|backend/src/validation/taskSchemas.ts|backend/tests/tasks/*|backend/db/migrations/*_add_tasks.sql)
         add_backend_runner scripts/tests/backend/run-task-tests.sh
         add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
         ;;
-      backend/src/controllers/timeEntryController.ts|backend/src/policies/timeEntryPolicy.ts|backend/src/routes/timeEntryRoutes.ts|backend/src/services/timeEntryService.ts|backend/src/validation/timeEntrySchemas.ts|backend/tests/timesheets/*|backend/db/scripts/seed-timesheet-demo.ts)
+      backend/src/controllers/timeEntryController.ts|backend/src/policies/timeEntryPolicy.ts|backend/src/routes/timeEntryRoutes.ts|backend/src/services/staff/hours/*|backend/src/validation/timeEntrySchemas.ts|backend/tests/timesheets/*|backend/db/scripts/seed-timesheet-demo.ts)
         add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
         add_backend_runner scripts/tests/backend/run-task-tests.sh
         ;;
@@ -137,10 +137,10 @@ run_changed_suites() {
       backend/tests/schools/*|backend/src/controllers/school*|backend/src/routes/school*|backend/src/services/school*|backend/src/validation/school*)
         add_backend_runner scripts/tests/backend/run-schools-tests.sh
         ;;
-      backend/tests/programs/*|backend/src/controllers/program*|backend/src/routes/program*|backend/src/services/program*|backend/src/validation/program*)
+      backend/tests/programs/*|backend/src/controllers/program*|backend/src/routes/program*|backend/src/services/programService.ts|backend/src/validation/program*)
         add_backend_runner scripts/tests/backend/run-programs-tests.sh
         ;;
-      backend/tests/cohorts/*|backend/src/controllers/cohort*|backend/src/controllers/session*|backend/src/routes/cohort*|backend/src/routes/session*|backend/src/services/cohort*|backend/src/services/session*|backend/src/validation/cohort*|backend/src/validation/session*)
+      backend/tests/cohorts/*|backend/src/controllers/cohort*|backend/src/controllers/session*|backend/src/routes/cohort*|backend/src/routes/session*|backend/src/services/cohort*|backend/src/services/session*|backend/src/services/programming/cohorts/*|backend/src/services/programming/sessions/*|backend/src/validation/cohort*|backend/src/validation/session*)
         add_backend_runner scripts/tests/backend/run-cohorts-tests.sh
         ;;
       backend/tests/homepage/*|backend/src/controllers/homepage*|backend/src/routes/homepage*|backend/src/services/homepage*|backend/src/validation/homepage*)
@@ -149,7 +149,7 @@ run_changed_suites() {
       backend/tests/preferences/*|backend/src/controllers/preference*|backend/src/routes/preference*|backend/src/services/preference*|backend/src/validation/preference*)
         add_backend_runner scripts/tests/backend/run-preferences-tests.sh
         ;;
-      backend/tests/leads/*|backend/tests/outreach/*|backend/src/controllers/lead*|backend/src/routes/lead*|backend/src/services/lead*|backend/src/validation/lead*)
+      backend/tests/leads/*|backend/tests/expressionOfInterest/*|backend/tests/public/*|backend/src/controllers/lead*|backend/src/controllers/expressionOfInterest*|backend/src/controllers/public*|backend/src/routes/lead*|backend/src/routes/expressionOfInterest*|backend/src/routes/public*|backend/src/services/lead*|backend/src/services/outreach/*|backend/src/validation/lead*|backend/src/validation/expressionOfInterest*|backend/src/validation/public*)
         add_backend_runner scripts/tests/backend/run-outreach-tests.sh
         ;;
       *)

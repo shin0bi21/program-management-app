@@ -7,7 +7,7 @@ import {
   updateTaskStatus,
 } from '../../../../common/features/tasks/api/tasks.api';
 import type { Task } from '../../../../common/features/tasks/types';
-import { createTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
+import { setTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
 
 export const TASKS_QUERY_KEY = ['tasks'] as const;
 
@@ -72,7 +72,7 @@ export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHan
   ), [runMutation]);
 
   const logHours = useCallback(async (input: SetTimeEntryInput) => {
-    await createTimeEntry(input);
+    await setTimeEntry(input);
     refreshTasks();
   }, [refreshTasks]);
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);

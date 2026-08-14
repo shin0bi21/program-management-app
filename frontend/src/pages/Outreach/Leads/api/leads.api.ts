@@ -29,9 +29,8 @@ export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts
     ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)
     : apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`);
-export const createLeadNote = (leadId: string, details: string) =>
-  apiClient.post<LeadNote>(`/leads/${leadId}/notes`, { details });
-export const updateLeadNote = (leadId: string, noteId: string, details: string) =>
-  apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details });
+export const setLeadNote = (leadId: string, details: string, noteId?: string) => noteId
+  ? apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details })
+  : apiClient.post<LeadNote>(`/leads/${leadId}/notes`, { details });
 export const deleteLeadNote = (leadId: string, noteId: string) =>
   apiClient.delete(`/leads/${leadId}/notes/${noteId}`);

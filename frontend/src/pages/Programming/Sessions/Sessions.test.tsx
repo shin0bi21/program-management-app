@@ -54,7 +54,7 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   createSessionNote: vi.fn(),
-  saveSessionAttendance: vi.fn(),
+  setSessionAttendance: vi.fn(),
   generateSessions: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));

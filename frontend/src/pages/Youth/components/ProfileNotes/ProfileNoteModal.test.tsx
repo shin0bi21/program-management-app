@@ -1,17 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createYouthProfileNote, updateYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
+import { setYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
 import ProfileNoteModal from './ProfileNoteModal';
 
 vi.mock('../../../../common/features/youth/api/youth.api', () => ({
-  createYouthProfileNote: vi.fn(),
-  updateYouthProfileNote: vi.fn(),
+  setYouthProfileNote: vi.fn(),
 }));
 
 describe('ProfileNoteModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(createYouthProfileNote).mockResolvedValue({
+    vi.mocked(setYouthProfileNote).mockResolvedValue({
       id: 'note-1',
       youthId: 'youth-1',
       category: 'health',
@@ -32,12 +31,11 @@ describe('ProfileNoteModal', () => {
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Allergy plan' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(createYouthProfileNote).toHaveBeenCalledWith('youth-1', {
+    await waitFor(() => expect(setYouthProfileNote).toHaveBeenCalledWith('youth-1', {
       category: 'health',
       title: 'Allergy plan',
       details: null,
     }));
-    expect(updateYouthProfileNote).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ category: 'health' }));
   });
 });

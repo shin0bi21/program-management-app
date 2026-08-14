@@ -4,14 +4,13 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
-  createTimeEntry,
+  setTimeEntry,
   deleteTimeEntry,
   getTimeEntryOverview,
   getTimeEntryList,
   getTimeEntryOptions,
   getTimeEntries,
   getTimeEntrySessions,
-  updateTimeEntry,
   updateTimeEntryPlacement,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
@@ -44,16 +43,14 @@ vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({
   getTimeEntryOptions: vi.fn(),
   getTimeEntryOverview: vi.fn(),
   getTimeEntrySessions: vi.fn(),
-  createTimeEntry: vi.fn(),
-  updateTimeEntry: vi.fn(),
+  setTimeEntry: vi.fn(),
   updateTimeEntryPlacement: vi.fn(),
   deleteTimeEntry: vi.fn(),
 }));
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
   getTasks: vi.fn(),
-  createTask: vi.fn(),
-  updateTask: vi.fn(),
+  setTask: vi.fn(),
 }));
 
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
@@ -625,7 +622,7 @@ describe('Timesheets', () => {
       id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
       workDate, startsAt: `${workDate}T14:00:00.000Z`,
     }]);
-    vi.mocked(createTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-session', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'program_delivery', taskId: null, taskTitle: null, sessionId: 'session-1',
@@ -645,7 +642,7 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Delivered workshop' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith({
       source: 'session', staffId: 'staff-1', sessionId: 'session-1', hours: 2, note: 'Delivered workshop',
     }));
   });
@@ -712,7 +709,7 @@ describe('Timesheets', () => {
 
   it('creates general project work in the active cycle without a program', async () => {
     const workDate = dayKey(new Date());
-    vi.mocked(createTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-general', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'maintenance', workDate,
       cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
@@ -732,7 +729,7 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Cleaned shared equipment' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       staffId: 'staff-1',
       programId: null,
       category: 'maintenance',
@@ -762,7 +759,7 @@ describe('Timesheets', () => {
       startDate: '2026-08-01', dueDate: '2026-08-08', hoursLogged: 1, loggedHoursByDate: [],
       completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
     }]);
-    vi.mocked(createTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-task', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', sessionId: null, sessionLabel: null, workDate,
@@ -787,11 +784,11 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Drafted poster concepts' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       source: 'task',
       taskId: 'task-1',
     })));
-    const taskTimeInput = vi.mocked(createTimeEntry).mock.calls[vi.mocked(createTimeEntry).mock.calls.length - 1]?.[0];
+    const taskTimeInput = vi.mocked(setTimeEntry).mock.calls[vi.mocked(setTimeEntry).mock.calls.length - 1]?.[0];
     expect(taskTimeInput).not.toHaveProperty('cycleId');
     expect(taskTimeInput).not.toHaveProperty('category');
     expect(taskTimeInput).not.toHaveProperty('programId');
@@ -799,7 +796,7 @@ describe('Timesheets', () => {
 
   it('creates general time without submitting a cycle', async () => {
     const workDate = dayKey(new Date());
-    vi.mocked(createTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-cycle-only', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, workDate, hours: 1, note: 'Organization-wide cycle meeting',
@@ -823,17 +820,17 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Organization-wide cycle meeting' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       programId: null,
       category: 'meeting',
     })));
-    expect(vi.mocked(createTimeEntry).mock.calls[vi.mocked(createTimeEntry).mock.calls.length - 1]?.[0]).not.toHaveProperty('cycleId');
+    expect(vi.mocked(setTimeEntry).mock.calls[vi.mocked(setTimeEntry).mock.calls.length - 1]?.[0]).not.toHaveProperty('cycleId');
   });
 
   it('prevents Escape and X dismissal while an entry is submitting', async () => {
     const workDate = dayKey(new Date());
-    const pendingCreate = deferred<Awaited<ReturnType<typeof createTimeEntry>>>();
-    vi.mocked(createTimeEntry).mockImplementation(() => pendingCreate.promise);
+    const pendingCreate = deferred<Awaited<ReturnType<typeof setTimeEntry>>>();
+    vi.mocked(setTimeEntry).mockImplementation(() => pendingCreate.promise);
     const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
@@ -845,7 +842,7 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(createTimeEntry).toHaveBeenCalledOnce());
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledOnce());
     const dialog = screen.getByRole('dialog', { name: 'Log Hours' });
     const close = screen.getByRole('button', { name: 'Close' });
     expect(close).toBeDisabled();
@@ -879,7 +876,7 @@ describe('Timesheets', () => {
         },
       },
     });
-    vi.mocked(updateTimeEntry).mockResolvedValue({
+    vi.mocked(setTimeEntry).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026',
       cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
@@ -899,10 +896,9 @@ describe('Timesheets', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Updated workshop' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(updateTimeEntry).toHaveBeenCalledWith('entry-1', expect.objectContaining({
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       staffId: 'staff-1', programId: 'program-1', workDate, hours: 3, note: 'Updated workshop',
-    })));
-    expect(createTimeEntry).not.toHaveBeenCalled();
+    }), 'entry-1'));
     expect(await screen.findByRole('button', { name: /Program Delivery, 3 hours/ })).toBeInTheDocument();
   });
 
@@ -979,7 +975,7 @@ describe('Timesheets', () => {
     await waitFor(() => expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', {
       workDate: nextDate,
     }));
-    expect(updateTimeEntry).not.toHaveBeenCalled();
+    expect(setTimeEntry).not.toHaveBeenCalled();
   });
 
   it('returns an entry to its last confirmed day when two queued moves fail', async () => {

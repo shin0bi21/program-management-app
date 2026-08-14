@@ -4,7 +4,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../http/clientErrors';
-import { createLeadNote, updateLeadNote } from '../../api/leads.api';
+import { setLeadNote } from '../../api/leads.api';
 import type { Lead, LeadNote } from '../../types';
 
 export default function LeadNoteModal({
@@ -35,8 +35,8 @@ export default function LeadNoteModal({
     setStatusMessage(note ? 'Updating follow-up note...' : 'Adding follow-up note...');
     try {
       const savedNote = note
-        ? await updateLeadNote(lead.id, note.id, details)
-        : await createLeadNote(lead.id, details);
+        ? await setLeadNote(lead.id, details, note.id)
+        : await setLeadNote(lead.id, details);
       onSaved(savedNote);
       setStatus('success');
       setStatusMessage(note ? 'Follow-up note updated.' : 'Follow-up note added.');

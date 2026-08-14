@@ -14,7 +14,7 @@ import {
   finalizeQuarantinedUpload,
   quarantineUpload,
   restoreQuarantinedUpload,
-} from './uploadFileService';
+} from './shared/uploadFileService';
 
 const uploadRoot = path.resolve(process.env.UPLOAD_ROOT ?? path.join(process.cwd(), 'uploads'));
 const homepageUploadRoot = path.join(uploadRoot, 'homepage');
@@ -26,80 +26,6 @@ const supportedImageTypes = new Map([
 ]);
 
 type HomepageImageVariant = 'original' | 'thumbnail' | 'mobile' | 'display';
-
-function imageVariantUrlSql(variant: Exclude<HomepageImageVariant, 'original'>) {
-  return sql`
-    CASE
-      WHEN hi.public_path IS NOT NULL THEN regexp_replace(
-        hi.public_path,
-        '[.][^./]+$',
-        ${`-${variant}.webp`}
-      )
-      ELSE '/public/homepage/images/' || hi.id::text || '/' || ${variant}
-    END
-  `;
-}
-
-function homepageImages() {
-  return sql`
-    SELECT
-      hi.id,
-      ${imageVariantUrlSql('display')} AS image_url,
-      ${imageVariantUrlSql('mobile')} AS mobile_url,
-      ${imageVariantUrlSql('thumbnail')} AS thumbnail_url,
-      hi.alt_text,
-      hi.caption,
-      hi.display_order,
-      hi.created_at,
-      hi.updated_at
-    FROM homepage_images hi
-    ORDER BY hi.display_order, hi.created_at
-  `;
-}
-
-function homepageSessions() {
-  return sql`
-    WITH ranked_sessions AS (
-      SELECT
-        cs.id,
-        cs.cohort_id,
-        cs.theme,
-        cs.description,
-        cs.starts_at,
-        cs.ends_at,
-        cs.created_at AS added_at,
-        cycle.name AS cohort_name,
-        p.id AS program_id,
-        p.name AS program_name,
-        p.description AS program_description,
-        p.roster_mode,
-        p.min_age,
-        p.max_age,
-        ROW_NUMBER() OVER (
-          PARTITION BY p.id
-          ORDER BY cs.starts_at
-        ) AS program_session_order
-      FROM cohort_sessions cs
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
-      INNER JOIN programs p ON p.id = pc.program_id
-      WHERE cs.ends_at >= NOW()
-        AND cs.cancelled_at IS NULL
-        AND p.name IN ('Drop In', 'Soft Skills', 'Job Readiness')
-    )
-    SELECT *
-    FROM ranked_sessions
-    WHERE program_session_order <= 3
-    ORDER BY
-      CASE program_name
-        WHEN 'Drop In' THEN 1
-        WHEN 'Soft Skills' THEN 2
-        WHEN 'Job Readiness' THEN 3
-        ELSE 4
-      END,
-      starts_at
-  `;
-}
 
 export async function getPublicHomepageImages() {
   return { images: await homepageImages() };
@@ -275,4 +201,78 @@ export async function getHomepageImageFile(
   } catch {
     return originalPath;
   }
+}
+
+function imageVariantUrlSql(variant: Exclude<HomepageImageVariant, 'original'>) {
+  return sql`
+    CASE
+      WHEN hi.public_path IS NOT NULL THEN regexp_replace(
+        hi.public_path,
+        '[.][^./]+$',
+        ${`-${variant}.webp`}
+      )
+      ELSE '/public/homepage/images/' || hi.id::text || '/' || ${variant}
+    END
+  `;
+}
+
+function homepageImages() {
+  return sql`
+    SELECT
+      hi.id,
+      ${imageVariantUrlSql('display')} AS image_url,
+      ${imageVariantUrlSql('mobile')} AS mobile_url,
+      ${imageVariantUrlSql('thumbnail')} AS thumbnail_url,
+      hi.alt_text,
+      hi.caption,
+      hi.display_order,
+      hi.created_at,
+      hi.updated_at
+    FROM homepage_images hi
+    ORDER BY hi.display_order, hi.created_at
+  `;
+}
+
+function homepageSessions() {
+  return sql`
+    WITH ranked_sessions AS (
+      SELECT
+        cs.id,
+        cs.cohort_id,
+        cs.theme,
+        cs.description,
+        cs.starts_at,
+        cs.ends_at,
+        cs.created_at AS added_at,
+        cycle.name AS cohort_name,
+        p.id AS program_id,
+        p.name AS program_name,
+        p.description AS program_description,
+        p.roster_mode,
+        p.min_age,
+        p.max_age,
+        ROW_NUMBER() OVER (
+          PARTITION BY p.id
+          ORDER BY cs.starts_at
+        ) AS program_session_order
+      FROM cohort_sessions cs
+      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+      INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
+      INNER JOIN programs p ON p.id = pc.program_id
+      WHERE cs.ends_at >= NOW()
+        AND cs.cancelled_at IS NULL
+        AND p.name IN ('Drop In', 'Soft Skills', 'Job Readiness')
+    )
+    SELECT *
+    FROM ranked_sessions
+    WHERE program_session_order <= 3
+    ORDER BY
+      CASE program_name
+        WHEN 'Drop In' THEN 1
+        WHEN 'Soft Skills' THEN 2
+        WHEN 'Job Readiness' THEN 3
+        ELSE 4
+      END,
+      starts_at
+  `;
 }

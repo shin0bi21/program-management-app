@@ -42,11 +42,10 @@ export function getYouthProfileNotes(id: string, opts?: RequestOptions) {
   const path = `/youth/${id}/notes`;
   return opts ? apiClient.get<YouthProfileNote[]>(path, opts) : apiClient.get<YouthProfileNote[]>(path);
 }
-export function createYouthProfileNote(id: string, data: SetYouthProfileNoteInput) {
-  return apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
-}
-export function updateYouthProfileNote(id: string, noteId: string, data: SetYouthProfileNoteInput) {
-  return apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data);
+export function setYouthProfileNote(id: string, data: SetYouthProfileNoteInput, noteId?: string) {
+  return noteId
+    ? apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data)
+    : apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
 }
 export function deleteYouthProfileNote(id: string, noteId: string) {
   return apiClient.delete<void>(`/youth/${id}/notes/${noteId}`);

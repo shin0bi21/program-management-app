@@ -43,12 +43,8 @@ export function getTaskOptions(opts?: RequestOptions) {
   return apiClient.get<TaskOptions>('/tasks/options', opts);
 }
 
-export function createTask(input: SetTaskInput) {
-  return apiClient.post<Task>('/tasks', input);
-}
-
-export function updateTask(id: string, input: SetTaskInput) {
-  return apiClient.put<Task>(`/tasks/${id}`, input);
+export function setTask(input: SetTaskInput, id?: string) {
+  return id ? apiClient.put<Task>(`/tasks/${id}`, input) : apiClient.post<Task>('/tasks', input);
 }
 
 export function updateTaskStatus(id: string, status: Task['status']) {
