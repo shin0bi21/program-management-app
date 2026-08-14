@@ -64,6 +64,31 @@ describe('ResourceCalendar', () => {
     delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
   });
 
+  it('contains interactive grid cells in the required grid and row roles', () => {
+    render(
+      <ResourceCalendar
+        resources={[{ id: 'staff-1' }]}
+        data={{}}
+        initialDate={new Date(2026, 7, 9)}
+        getResourceId={resource => resource.id}
+        getItemId={(item: { id: string }) => item.id}
+        renderResource={() => 'Staff'}
+        buildItem={() => null}
+        onCellActivate={vi.fn()}
+      />,
+    );
+
+    const grid = screen.getByRole('grid', { name: 'Resource calendar' });
+    const cell = screen.getAllByRole('gridcell')[0];
+    const row = cell.closest<HTMLElement>('[role="row"]');
+
+    expect(row).not.toBeNull();
+    expect(cell.parentElement).toBe(row);
+    expect(grid).toContainElement(row);
+    expect(screen.getByRole('columnheader', { name: 'Resource' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: 'Staff' })).toBeInTheDocument();
+  });
+
   it('renders a bounded overscan window inside the complete logical timeline', () => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(RESOURCE_WIDTH + 10 * PERIOD_WIDTH);
     const onInitialPeriods = vi.fn();
