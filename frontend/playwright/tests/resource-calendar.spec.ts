@@ -572,17 +572,13 @@ test('opens the real task-item floating menu instead of editing directly', async
   if (!dayBox) throw new Error('Task action day geometry is unavailable');
 
   await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
-  await expect(page.getByRole('menuitem', { name: 'View details' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'View details' })).toHaveCount(0);
   await expect(page.getByRole('menuitem', { name: 'Set Completed' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)
     .toBeCloseTo(Math.max(dayBox.x, itemBox.x), 0);
   await expect(component.getByTestId('task-item-action')).toHaveValue('');
-  await page.getByRole('menuitem', { name: 'View details' }).click();
-  await expect(page.getByRole('tooltip')).toContainText('Prepare activities and materials.');
-
-  await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
 });

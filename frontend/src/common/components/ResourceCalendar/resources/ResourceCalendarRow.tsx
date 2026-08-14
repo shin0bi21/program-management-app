@@ -166,9 +166,10 @@ function ResourceCalendarRow<TResource, TItemData>({
     <div
       className={`resource-calendar__row${selected ? ' resource-calendar__row--selected' : ''}`}
       data-resource-id={resourceId}
+      role="row"
       style={{ gridTemplateColumns: gridColumns, height: rowHeight }}
     >
-      <div className="resource-calendar__resource">
+      <div className="resource-calendar__resource" role="rowheader">
         {onResourceSelect ? (
           <button
             type="button"
