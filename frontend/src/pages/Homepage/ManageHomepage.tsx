@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getErrorMessage } from '../../http/clientErrors';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
 import Modal from '../../common/components/Modal/Modal';
-import PageHeader from '../../common/components/PageHeader/PageHeader';
 import { useConfirmModal, type ConfirmAction } from '../../common/components/Modal/hooks/useConfirmModal';
-import { getErrorMessage } from '../../http/clientErrors';
+import PageHeader from '../../common/components/PageHeader/PageHeader';
 import {
   deleteHomepageImage,
   getManagedHomepage,
@@ -22,6 +22,7 @@ import { HomepageContent as HomepagePreviewContent } from './Homepage';
 import './ManageHomepage.css';
 
 export default function ManageHomepage() {
+  // Remote homepage content and page-level errors.
   const queryClient = useQueryClient();
   const managedQuery = useQuery({
     queryKey: ['homepage', 'managed'],
@@ -33,6 +34,8 @@ export default function ManageHomepage() {
   const error = actionError ?? (managedQuery.error
     ? getErrorMessage(managedQuery.error, 'Could not load homepage management')
     : null);
+
+  // Preview, editor, drag, and confirmation state.
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState<HomepageContent>({ images: [], sessions: [] });
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -45,6 +48,7 @@ export default function ManageHomepage() {
     onClose: () => setConfirmAction(null),
   });
 
+  // Content refresh and modal actions.
   const load = async () => {
     setActionError(null);
     await managedQuery.refetch();
@@ -75,6 +79,7 @@ export default function ManageHomepage() {
     }
   };
 
+  // Image row actions and ordering.
   const imageActions = (image: HomepageImage) => [
     {
       id: 'edit',
@@ -135,6 +140,7 @@ export default function ManageHomepage() {
     alt: image.altText,
     caption: image.caption,
   }));
+
   return (
     <>
       <div className="page-container homepage-management-page">

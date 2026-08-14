@@ -1,95 +1,57 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import Modal from '../../../common/components/Modal/Modal';
-import Table, { TableColumn } from '../../../common/components/Table/Table';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import { useAuth } from '../../../auth/authContext';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
-import { formatShortDate } from '../../../common/utils/date';
-import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import { updateLeadStatus } from './api/leads.api';
-import LeadModal from './components/LeadModal';
-import LeadDashboard from './components/LeadDashboard/LeadDashboard';
-import SignUpLeadModal from './components/SignUpLeadModal';
-import { useLeads } from './hooks/useLeads';
-import type { Lead, LeadFilters, LeadSortKey, LeadStatus } from './types';
-import type { ListSort } from '../../../common/types/pagination';
-import './Leads.css';
-import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
-import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
+import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
+import { formatShortDate } from '../../../common/utils/date';
+import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
+import { updateLeadStatus } from './api/leads.api';
+import LeadDashboard from './components/LeadDashboard/LeadDashboard';
+import LeadModal from './components/LeadModal';
+import SignUpLeadModal from './components/SignUpLeadModal';
+import { useLeadControls } from './hooks/useLeadControls';
+import { useLeads } from './hooks/useLeads';
+import type { Lead, LeadStatus } from './types';
+import './Leads.css';
 
-const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
 const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
-const title = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 
 export default function Leads() {
+  // Services and permissions.
   const queryClient = useQueryClient();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
-  const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
-    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
-    : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
+
+  // Controls and remote records.
+  const { programs, loading: programsLoading, error: programsError } = usePrograms();
+  const controls = useLeadControls(programs, programsLoading, programsError);
+  const {
+    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    columnWidths, hiddenColumns, error: preferenceError, filterCategories,
+    hasActiveQueryFilters,
+  } = controls;
   const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
-  const { programs, loading: programsLoading } = usePrograms();
-  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
+
+  // Selection and dialogs.
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
   const {
     selectedItem: selectedLead,
     selectedKey: selectedLeadId,
     selectItem: selectLead,
   } = useTableSelection(leads);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
-    if (filtersReady || preferenceLoading || programsLoading) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(preference?.statuses ?? []);
-    setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
-    setSorting(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
-    setColumnWidths(preference?.columnWidths ?? {});
-    setFiltersReady(true);
-  }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
-
-  const persistFilters = (nextStatuses: LeadStatus[], nextProgramIds: string[]) => {
-    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting, columnWidths });
-  };
-
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    {
-      id: 'program',
-      label: 'Program',
-      options: programs.map(program => ({ value: program.id, label: program.name })),
-    },
-    {
-      id: 'status',
-      label: 'Status',
-      options: statuses.map(status => ({ value: status, label: title(status) })),
-    },
-  ], [programs]);
-
+  // Mutations and cache reconciliation.
   const setStatus = async (lead: Lead, status: LeadStatus) => {
     await updateLeadStatus(lead.id, status);
     await queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY });
@@ -106,6 +68,7 @@ export default function Leads() {
 
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
+  // Table presentation.
   const columns: TableColumn<Lead>[] = [
     { key: 'firstName', sortKey: 'name', header: 'First Name', render: lead => lead.youthFirstName },
     { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
@@ -135,31 +98,52 @@ export default function Leads() {
   return <>
     <main className="page-container page-container--data">
       <PageHeader
-      title="Leads"
-      actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-      search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
-      columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
-      filters={<FilterCard
-        categories={filterCategories}
-        values={{ status: statusFilters, program: programFilters }}
-        onApply={(category, selected) => {
-          if (category === 'status') {
-            const next = selected as LeadStatus[];
-            setStatusFilters(next);
-            persistFilters(next, programFilters);
-          }
-          if (category === 'program') {
-            setProgramFilters(selected);
-            persistFilters(statusFilters, selected);
-          }
-        }}
-        onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
-      />}
-    />
+        title="Leads"
+        actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
+        search={<SearchInput
+          label="Search leads"
+          value={search}
+          onChange={event => setSearch(event.target.value)}
+          placeholder="Search youth or school"
+        />}
+        columns={<ColumnVisibilityMenu
+          columns={columns}
+          hiddenColumnKeys={hiddenColumns}
+          onHiddenColumnKeysChange={controls.setHiddenColumns}
+        />}
+        filters={<FilterCard
+          categories={filterCategories}
+          values={{ status: statusFilters, program: programFilters }}
+          onApply={controls.applyFilter}
+          onClearAll={controls.clearFilters}
+        />}
+      />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
+      {programsError && <p className="form-error" role="alert">{programsError}</p>}
       <PageBody
         ariaLabel="Leads"
-        table={<Table ariaLabel="Leads" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={leads} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No leads match these filters' : 'No leads yet'} keyExtractor={lead => lead.id} selectedKey={selectedLeadId} onRowSelect={selectLead} sorting={sorting} onSortingChange={next => { const value = next as ListSort<LeadSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+        table={<Table
+          ariaLabel="Leads"
+          columns={columns}
+          hiddenColumnKeys={hiddenColumns}
+          data={leads}
+          loading={loading}
+          refreshing={refreshing}
+          error={error ?? undefined}
+          emptyMessage={hasActiveQueryFilters
+            ? 'No leads match these filters'
+            : 'No leads yet'}
+          keyExtractor={lead => lead.id}
+          selectedKey={selectedLeadId}
+          onRowSelect={selectLead}
+          sorting={sorting}
+          onSortingChange={controls.setSorting}
+          columnWidths={columnWidths}
+          onColumnWidthsChange={controls.setColumnWidths}
+          hasNextPage={hasNextPage}
+          loadingNextPage={loadingNextPage}
+          onLoadNextPage={loadNextPage}
+        />}
         dashboard={<LeadDashboard lead={selectedLead} canWrite={canWrite} />}
       />
     </main>
@@ -174,16 +158,9 @@ export default function Leads() {
       onClose={() => setSignUpTarget(null)}
       onSuccess={reconcileSignUp}
     />
-    <Modal
-      isOpen={!!confirmAction}
-      onClose={() => setConfirmAction(null)}
-      title={confirmAction?.title ?? ''}
-      status={confirmModal.status}
-      statusMessage={confirmModal.statusMessage}
-      footer={confirmModal.footer}
-      successDelay={confirmModal.successDelay}
-    >
-      {confirmAction && <p>{confirmAction.message}</p>}
-    </Modal>
   </>;
+}
+
+function title(value: string) {
+  return value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 }

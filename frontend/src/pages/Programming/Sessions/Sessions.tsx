@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/authContext';
@@ -44,8 +44,8 @@ export default function Sessions() {
   const { permissions, role } = useAuth();
 
   // Shared options used by filters and session forms.
-  const { programs, loading: programsLoading } = usePrograms({ assignedOnly: true });
-  const { cohorts, loading: cohortsLoading, refresh: refreshCohorts } = useCohorts();
+  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
+  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
   const sessionTypes = useSessionTypes();
 
   // Page dialogs and selected records.
@@ -69,7 +69,7 @@ export default function Sessions() {
 
   // Persisted filters, sorting, and view controls.
   const controls = useSessionControls({
-    role, programs, programsLoading, cohorts, cohortsLoading, sessionTypes,
+    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError, sessionTypes,
     onFiltersChanged: clearSelectedSession,
   });
   const {
@@ -99,14 +99,6 @@ export default function Sessions() {
     },
     [queryClient],
   );
-
-  useEffect(() => {
-    const legacyKeys = ['view', 'program', 'cohort', 'status', 'type'];
-    if (!legacyKeys.some(key => searchParams.has(key))) return;
-    const next = new URLSearchParams(searchParams);
-    legacyKeys.forEach(key => next.delete(key));
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
     const next = new URLSearchParams(searchParams);
@@ -249,6 +241,8 @@ export default function Sessions() {
               : undefined}
           />
           {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
+          {programsError && <p className="form-error" role="alert">{programsError}</p>}
+          {cohortsError && <p className="form-error" role="alert">{cohortsError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (

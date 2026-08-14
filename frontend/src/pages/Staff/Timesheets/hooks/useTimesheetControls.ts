@@ -47,7 +47,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   }, []);
 
   useEffect(() => {
-    if (ready || loading || !cyclesReady) return;
+    if (ready || loading || !cyclesReady || role === null) return;
     setViewState(preference?.view ?? 'calendar');
     setStaffFilters(role === 'admin' ? preference?.staffIds ?? [] : []);
     setCategoryFilters(preference?.categories ?? []);

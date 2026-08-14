@@ -16,7 +16,7 @@ interface TaskListFilters {
 
 export default function useTaskList(filters: TaskListFilters, sorting: ListSort<TaskSortKey>, enabled: boolean) {
   const deferredSearch = useDeferredValue(filters.search);
-  return useInfiniteListQuery<Task>({
+  const query = useInfiniteListQuery<Task>({
     queryKey: [...TASK_LIST_QUERY_KEY, filters.staffIds, filters.programIds, filters.categories, filters.statuses, deferredSearch, sorting],
     queryFn: ({ signal, pageParam }) => getTaskList({
       staffIds: filters.staffIds,
@@ -28,4 +28,5 @@ export default function useTaskList(filters: TaskListFilters, sorting: ListSort<
     errorMessage: 'Unable to load tasks.',
     enabled,
   });
+  return { ...query, appliedSearch: deferredSearch };
 }

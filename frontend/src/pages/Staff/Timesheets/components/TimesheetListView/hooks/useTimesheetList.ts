@@ -19,7 +19,7 @@ export default function useTimesheetList(
   enabled: boolean,
 ) {
   const deferredSearch = useDeferredValue(filters.search);
-  return useInfiniteListQuery<TimeEntryListRowResponse>({
+  const query = useInfiniteListQuery<TimeEntryListRowResponse>({
     queryKey: [...TIME_ENTRY_LIST_QUERY_KEY, filters.staffIds, filters.categories, filters.programIds, filters.types, filters.cycleId, deferredSearch, sorting],
     queryFn: ({ signal, pageParam }) => getTimeEntryList({
       ...filters,
@@ -28,4 +28,5 @@ export default function useTimesheetList(
     errorMessage: 'Could not load hours.',
     enabled,
   });
+  return { ...query, appliedSearch: deferredSearch };
 }

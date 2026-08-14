@@ -2,6 +2,7 @@
 
 ## Compose the route page
 
+- Keep the route file as a readable orchestrator: imports are grouped by dependency layer, initialization follows dependency order, and short section comments separate services/permissions, controls/data, selections/dialogs, effects/actions, and presentation. The complete setup pattern is in [Adding a frontend page](adding-a-page.md#4-compose-the-route-page).
 - Use a route-family layout only for persistent UI, state, or coordination genuinely shared by multiple child routes. Do not introduce an `Outlet`-only layout merely to share a URL prefix, redirect, permission, or `<main>` classes.
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.

@@ -1,66 +1,33 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../auth/authContext';
+import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import Table, { TableColumn } from '../../common/components/Table/Table';
+import FilterCard from '../../common/components/FilterCard/FilterCard';
 import PageBody from '../../common/components/PageBody/PageBody';
-import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
-import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
-import { useYouth, YouthProfile } from './hooks/useYouth';
-import { YOUTH_QUERY_KEY } from '../../common/features/youth/queryKeys';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/programming/queryKeys';
-import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
-import { useAuth } from '../../auth/authContext';
-import { calculateAge } from '../../common/utils/time';
-import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
+import Table, { type TableColumn } from '../../common/components/Table/Table';
 import useTableSelection from '../../common/components/Table/hooks/useTableSelection';
-import type { YouthFilters, YouthSortKey } from '../../common/types/youth';
-import type { ListSort } from '../../common/types/pagination';
-import useUserPreference from '../../common/features/preferences/hooks/useUserPreference';
-import './Youth.css';
+import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
+import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/programming/queryKeys';
+import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
+import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
+import { YOUTH_QUERY_KEY } from '../../common/features/youth/queryKeys';
+import { calculateAge } from '../../common/utils/time';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
-import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import YouthDashboard from './components/YouthDashboard/YouthDashboard';
+import { useYouthControls } from './hooks/useYouthControls';
+import { useYouth, type YouthProfile } from './hooks/useYouth';
+import './Youth.css';
 
 export default function Youth() {
+  // Application services and permission capabilities.
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>([]);
-  const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<YouthSortKey>>({ key: 'firstName', direction: 'asc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const queryFilters = useMemo<YouthFilters | null>(() => filtersReady ? ({
-    search: debouncedSearch,
-    statuses: statusFilters,
-    programIds: programFilters,
-  }) : null, [debouncedSearch, filtersReady, programFilters, statusFilters]);
-  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
-  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    cohort: YouthProfile['cohorts'][number];
-    youthId: string;
-  } | null>(null);
   const { permissions, role } = useAuth();
-  const { programs, loading: programsLoading } = usePrograms({ assignedOnly: role === 'staff' });
-  const {
-    preference: savedFilters,
-    loading: preferencesLoading,
-    error: preferencesError,
-    save: saveFilters,
-  } = useUserPreference('youth-profile-filters');
-  const { youth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
-  const {
-    selectedItem: selectedProfile,
-    selectedKey: selectedProfileId,
-    selectItem: selectProfile,
-  } = useTableSelection(youth);
   const canWrite = permissions.includes('write:youth_profiles');
   const canManageSessionNotes = permissions.includes('write:sessions');
   const canManageAttendance = permissions.includes('read:attendance')
@@ -69,53 +36,39 @@ export default function Youth() {
   const canViewAttendanceReport = permissions.includes('read:cohorts')
     && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
+
+  // Shared options and persisted page controls.
+  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: role === 'staff' });
+  const controls = useYouthControls({ role, programs, programsLoading, programsError });
+  const {
+    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    columnWidths, hiddenColumns, error: preferencesError, filterCategories,
+    hasActiveQueryFilters,
+  } = controls;
+
+  // Remote records and selection.
+  const { youth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
+  const {
+    selectedItem: selectedProfile,
+    selectedKey: selectedProfileId,
+    selectItem: selectProfile,
+  } = useTableSelection(youth);
+  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
+    cohort: YouthProfile['cohorts'][number];
+    youthId: string;
+  } | null>(null);
   const profileNotes = useProfileNotes(selectedProfileId);
   const openProfileNoteEditor = profileNotes.openEditor;
 
-  useEffect(() => {
-    if (filtersReady || preferencesLoading || programsLoading) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(savedFilters?.statuses ?? ['active']);
-    setProgramFilters(savedFilters
-      ? savedFilters.programIds.filter(programId => availableProgramIds.has(programId))
-      : role === 'staff' ? programs.map(program => program.id) : []);
-    setSorting(savedFilters?.sorting ?? { key: 'firstName', direction: 'asc' });
-    setColumnWidths(savedFilters?.columnWidths ?? {});
-    setFiltersReady(true);
-  }, [filtersReady, preferencesLoading, programs, programsLoading, role, savedFilters]);
-
-  const persistFilters = (
-    statuses: Array<'active' | 'inactive'>,
-    programIds: string[],
-  ) => {
-    void saveFilters({ statuses, programIds, sorting, columnWidths });
-  };
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
+  // Keep cohort-specific dialogs aligned with the selected profile.
   useEffect(() => {
     setAttendanceTarget(null);
   }, [selectedProfileId]);
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    {
-      id: 'program',
-      label: 'Program',
-      options: programs.map(program => ({ value: program.id, label: program.name })),
-    },
-    {
-      id: 'status',
-      label: 'Status',
-      options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
-      ],
-    },
-  ], [programs]);
-
+  // Page actions and table presentation.
   const handleSaveYouth = () => {
     setModalTarget(null);
     setContactTarget(null);
@@ -199,34 +152,51 @@ export default function Youth() {
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-          search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
-          columns={<ColumnVisibilityMenu columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
+          search={<SearchInput
+            label="Search youth"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Search youth, school, or program"
+          />}
+          columns={<ColumnVisibilityMenu
+            columns={youthColumns}
+            hiddenColumnKeys={hiddenColumns}
+            onHiddenColumnKeysChange={controls.setHiddenColumns}
+          />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, program: programFilters }}
-            onApply={(category, selected) => {
-              if (category === 'status') {
-                const statuses = selected as Array<'active' | 'inactive'>;
-                setStatusFilters(statuses);
-                persistFilters(statuses, programFilters);
-              }
-              if (category === 'program') {
-                setProgramFilters(selected);
-                persistFilters(statusFilters, selected);
-              }
-            }}
-            onClearAll={() => {
-              setStatusFilters([]);
-              setProgramFilters([]);
-              persistFilters([], []);
-            }}
+            onApply={controls.applyFilter}
+            onClearAll={controls.clearFilters}
           />}
         />
         {preferencesError && <p className="form-error" role="alert">{preferencesError}</p>}
+        {programsError && <p className="form-error" role="alert">{programsError}</p>}
 
         <PageBody
           ariaLabel="Youth profiles"
-          table={<Table ariaLabel="Youth profiles" columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} data={youth} loading={loading} refreshing={refreshing} error={error} emptyMessage={search || statusFilters.length || programFilters.length ? 'No youth profiles match these filters' : 'No youth profiles found'} keyExtractor={profile => profile.id} selectedKey={selectedProfileId} onRowSelect={selectProfile} sorting={sorting} onSortingChange={next => { const value = next as ListSort<YouthSortKey>; setSorting(value); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting: value, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+          table={<Table
+            ariaLabel="Youth profiles"
+            columns={youthColumns}
+            hiddenColumnKeys={hiddenColumns}
+            data={youth}
+            loading={loading}
+            refreshing={refreshing}
+            error={error}
+            emptyMessage={hasActiveQueryFilters
+              ? 'No youth profiles match these filters'
+              : 'No youth profiles found'}
+            keyExtractor={profile => profile.id}
+            selectedKey={selectedProfileId}
+            onRowSelect={selectProfile}
+            sorting={sorting}
+            onSortingChange={controls.setSorting}
+            columnWidths={columnWidths}
+            onColumnWidthsChange={controls.setColumnWidths}
+            hasNextPage={hasNextPage}
+            loadingNextPage={loadingNextPage}
+            onLoadNextPage={loadNextPage}
+          />}
           dashboard={<YouthDashboard
             profile={selectedProfile}
             canWrite={canWrite}

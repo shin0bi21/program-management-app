@@ -1,32 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
-import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumn } from '../../../common/components/Table/Table';
-import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
-import { useAuth } from '../../../auth/authContext';
-import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
+import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
+import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
+import TaskListView from './components/TaskListView/TaskListView';
+import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations from './hooks/useTaskMutations';
-import { TASKS_QUERY_KEY } from './taskQueryKeys';
-import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
-import TaskListView from './components/TaskListView/TaskListView';
-import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
-import type { TaskViewMutationCache } from './taskViewTypes';
 import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
 } from './taskActionCapabilities';
+import { TASKS_QUERY_KEY } from './taskQueryKeys';
+import type { TaskViewMutationCache } from './taskViewTypes';
 
 export default function Tasks() {
+  // Application permissions and selected page workflows.
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:tasks');
   const [modalTarget, setModalTarget] = useState<TaskModalTarget | null>(null);
@@ -34,6 +35,8 @@ export default function Tasks() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedTaskSnapshot, setSelectedTaskSnapshot] = useState<Task | null>(null);
   const [logHoursTask, setLogHoursTask] = useState<Task | null>(null);
+
+  // The calendar owns buffered range data outside TanStack Query.
   const emptyMutationCache = useMemo<TaskViewMutationCache>(() => ({
     upsert: (_task: Task) => undefined,
     remove: (_taskId: string) => undefined,
@@ -49,6 +52,8 @@ export default function Tasks() {
       setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
     },
   });
+
+  // Remote options, persisted controls, and selected resource data.
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading);
   const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
@@ -66,6 +71,8 @@ export default function Tasks() {
   const resourceTasks = overviewQuery.data ?? [];
   const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
     ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
+
+  // Page actions and selection transitions.
   const openAddTask = useCallback(() => {
     const today = dayKey(new Date());
     setModalTarget({ startDate: today, dueDate: today });
@@ -87,6 +94,8 @@ export default function Tasks() {
     }
     mutations.addTask(task);
   }, [modalTarget, mutations]);
+
+  // List presentation and page-level status.
   const columns = useMemo<TableColumn<Task>[]>(() => [
     { key: 'firstName', sortKey: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
     { key: 'lastName', sortKey: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },

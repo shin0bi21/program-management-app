@@ -18,11 +18,42 @@ For an authenticated destination, read `frontend/src/app/components/AppNavigatio
 
 Create a page- or feature-owned `.api.ts` adapter and route every request through the centralized client. Define stable query keys and put remote state, cancellation, loading, errors, mutation ordering, and cache reconciliation in focused hooks. Follow [React state](react-state.md); refs are for live non-rendering state, not ordinary filters or rendered values.
 
-Use a manual reference cache only when preserving unchanged references materially prevents downstream work, every semantic input invalidates it, and a focused reference-identity test proves the contract. Normal filters belong in React state, URL state, or persisted preference state according to their product lifetime; expensive pure derivation normally uses a helper and `useMemo`.
+Use a manual reference cache only when preserving unchanged references materially prevents downstream work, every semantic input invalidates it, and a focused reference-identity test proves the contract. Normal filters belong in React state, URL state, or persisted preference state according to their product lifetime.
+
+Build query-filter objects and `FilterCard` category arrays with `useMemo`. Their contents are derived from live controls and option data, then passed into query hooks, child props, and sometimes effect dependencies. Stable references prevent unrelated page state—such as opening a modal or selecting a row—from looking like a changed configuration to those consumers. TanStack Query hashes query keys structurally, so `useMemo` is a render-stability and readability tool here, not a correctness requirement. Do not use it for trivial values that stay inside one render.
 
 ## 4. Compose the route page
 
 Follow [Page shell](page-shell.md) for `PageHeader`, `PageBody`, actions, search, filters, views, dashboard content, loading, errors, and empty states.
+
+Treat the route component as an orchestrator. A reader should be able to scan its setup from dependencies to rendered page without tracing an uninterrupted block of hooks:
+
+1. Group imports as React and third-party libraries, app infrastructure, shared components and features, page-owned code, then styles.
+2. Initialize hooks and derived values in dependency order. Group them under short responsibility comments such as `Application services and permissions`, `Persisted controls and remote data`, and `Selected records and dialogs`.
+3. Put effects and handlers after the state they coordinate, then define derived header, table, calendar, or dashboard presentation.
+4. Keep comments structural and sparse. Do not comment every variable or restate its name.
+5. Extract a focused hook or component when a section owns a coherent workflow; comments must not become a substitute for ownership boundaries.
+
+```tsx
+export default function ExamplePage() {
+  // Application services and permission capabilities.
+  const queryClient = useQueryClient();
+  const { permissions } = useAuth();
+
+  // Persisted controls and remote data.
+  const controls = useExampleControls();
+  const records = useExamples(controls.filters, controls.sorting);
+
+  // Selected records and page-owned dialogs.
+  const selection = useTableSelection(records.data);
+  const [editorTarget, setEditorTarget] = useState<Example | 'new' | null>(null);
+
+  // Page actions and presentation.
+  const columns = useMemo(() => buildExampleColumns({ setEditorTarget }), []);
+
+  return <main className="page-container page-container--data">...</main>;
+}
+```
 
 Route specialized content to the applicable guide:
 

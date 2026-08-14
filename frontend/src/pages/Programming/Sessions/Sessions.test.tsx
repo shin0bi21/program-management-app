@@ -224,7 +224,7 @@ describe('Sessions', () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -248,7 +248,7 @@ describe('Sessions', () => {
 
   it('highlights a linked session and opens attendance from its actions menu', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list&session=session-1']}>
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -279,7 +279,7 @@ describe('Sessions', () => {
   it('removes a deleted session without refetching the table', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -298,7 +298,7 @@ describe('Sessions', () => {
 
   it('aligns the status filter with session table states', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -320,7 +320,7 @@ describe('Sessions', () => {
 
   it('preserves applied filters when switching session views', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -360,7 +360,7 @@ describe('Sessions', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
         <LocationProbe />
       </MemoryRouter>,
@@ -391,7 +391,7 @@ describe('Sessions', () => {
     ];
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?view=list']}>
+      <MemoryRouter initialEntries={['/programming/sessions']}>
         <Sessions />
         <LocationProbe />
       </MemoryRouter>,
