@@ -5,6 +5,7 @@ import CalendarItem from './CalendarItem';
 describe('CalendarItem', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('aligns an upward action menu to the clicked visible period', () => {
@@ -59,5 +60,28 @@ describe('CalendarItem', () => {
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('tooltip', { name: /Prepare workshop details/ })).toHaveTextContent('After School');
+  });
+
+  it('omits the touch details action when precise hover is available', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+
+    render(<CalendarItem
+      id="task-1"
+      ariaLabel="Prepare workshop"
+      summary="Prepare workshop"
+      detailTitle="Prepare workshop details"
+      details={[]}
+      onEdit={vi.fn()}
+      onDelete={vi.fn()}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+
+    expect(screen.queryByRole('menuitem', { name: 'View details' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toHaveFocus();
   });
 });
