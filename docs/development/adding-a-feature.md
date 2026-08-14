@@ -44,7 +44,7 @@ bash scripts/tests/test-app.sh --plan-changed
 Run the selected focused scripts under `scripts/tests/backend/` and `scripts/tests/frontend/`. Before review or handoff, run applicable builds or type checks, then:
 
 ```bash
-node scripts/agents/check-patterns.js --changed
+node scripts/patterns/check-patterns.js --changed
 git diff --check
 ```
 

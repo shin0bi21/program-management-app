@@ -61,11 +61,11 @@ Check `scripts/tests/backend/` and `scripts/tests/frontend/` for the complete cu
 Use the deterministic repository checks before review or handoff:
 
 ```bash
-node scripts/agents/check-patterns.js --changed
+node scripts/patterns/check-patterns.js --changed
 node scripts/agents/validate-skills.js
 ```
 
-`check-patterns.js` is diff-scoped by default. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, remote-list hook/page-size/table-wiring, buffered ResourceCalendar lifecycle, CalendarView-owned data hooks, dashboard owner/card naming, and accidental test-marker regressions. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. Use `--all` for an intentional repository-wide scrub; historical findings may need to be scheduled separately. These checks do not generate semantic tests or replace behavior review.
+`check-patterns.js` is diff-scoped by default: PR CI reads only changed, staged, or untracked source files, then routes each file to the rules for its path and type. It does not scan unchanged repository files; `--all` is reserved for an intentional repository-wide scrub. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, remote-list hook/page-size/table-wiring, persisted-control ownership, buffered ResourceCalendar lifecycle, CalendarView-owned data hooks, dashboard owner/card naming, and accidental test-marker regressions. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. These checks do not generate semantic tests or replace behavior review.
 
 ## Direct package commands
 

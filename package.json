@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "ci:review": "node scripts/ci/review-ci.js",
-    "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci",
+    "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns",
     "lint:fix": "npm run lint -- --fix",
     "validate:skills": "node scripts/agents/validate-skills.js"
   },

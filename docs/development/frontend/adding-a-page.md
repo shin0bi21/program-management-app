@@ -68,4 +68,4 @@ The route page owns shared controls, selection context, dashboards, dialogs, and
 
 Colocate behavior tests with their narrowest owner. Keep route tests for route composition, permission-dependent controls, navigation, view switching, selection context, dialogs, and consumer wiring. Use Playwright for real layout, focus, scrolling, pointer, observer, and drag behavior.
 
-Run the appropriate script under `scripts/tests/frontend/`, the frontend build or type checks, `node scripts/agents/check-patterns.js --changed`, and `git diff --check`.
+Run the appropriate script under `scripts/tests/frontend/`, the frontend build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.

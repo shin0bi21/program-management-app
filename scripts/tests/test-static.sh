@@ -26,6 +26,9 @@ shellcheck "${shell_files[@]}"
 echo "Running ESLint..."
 npm run lint
 
+echo "Running script tests..."
+node --test scripts/ci/review-ci.test.js scripts/patterns/checks/run.test.js
+
 echo "Validating repository skills..."
 node scripts/agents/validate-skills.js
 
