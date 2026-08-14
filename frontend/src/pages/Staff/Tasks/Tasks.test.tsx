@@ -9,6 +9,8 @@ import type { ResourceCalendarProps } from '../../../common/components/ResourceC
 import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import Tasks from './Tasks';
+import { TASK_LIST_QUERY_KEY } from './taskQueryKeys';
+import { TIME_ENTRY_QUERY_KEY } from '../../../common/features/timeEntries/queryKeys';
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
@@ -69,6 +71,7 @@ describe('Tasks', () => {
 
   it('opens contextual task time from the selected task dashboard', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
@@ -85,6 +88,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
       source: 'task', taskId: 'task-1', staffId: 'staff-1', note: 'Prepared materials',
     })));
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: TIME_ENTRY_QUERY_KEY }));
   });
 
   it('places dashboard cards directly in the shared page dashboard', async () => {
@@ -269,6 +273,36 @@ describe('Tasks', () => {
       startDate: '2026-08-11',
       dueDate: '2026-08-13',
     });
+  });
+
+  it('invalidates task lists when an update can change membership or order', async () => {
+    calendarTestState.view = 'calendar';
+    const updated = { ...task, status: 'cancelled' as const };
+    vi.mocked(updateTaskStatus).mockResolvedValue(updated);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const cachedListKey = [...TASK_LIST_QUERY_KEY, [], [], [], [], '', { key: 'dueDate', direction: 'asc' }];
+    client.setQueryData(cachedListKey, {
+      pages: [{ rows: [task], nextCursor: null }],
+      pageParams: [null],
+    });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    const start = new Date('2026-08-10T12:00:00');
+    const end = new Date('2026-08-12T12:00:00');
+    const item = calendarTestState.props!.buildRangeItem!({
+      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { onCancel: () => void } };
+
+    await act(async () => item.props.onCancel());
+
+    const cached = client.getQueryData<{ pages: Array<{ rows: Task[] }> }>(cachedListKey);
+    expect(cached?.pages[0].rows[0]).toEqual(task);
+    expect(client.getQueryState(cachedListKey)?.isInvalidated).toBe(true);
   });
 
   it('offers complete and cancel commands for an in-progress calendar task', async () => {

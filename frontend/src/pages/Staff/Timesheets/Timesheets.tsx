@@ -28,7 +28,8 @@ import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
 import { useTimesheetControls } from './hooks/useTimesheetControls';
 import TimesheetListView from './components/TimesheetListView/TimesheetListView';
 import TimesheetCalendarView, { type TimesheetCalendarMutationCache, type TimesheetEntryTarget } from './components/TimesheetCalendarView/TimesheetCalendarView';
-import { TIME_ENTRY_LIST_QUERY_KEY } from './components/TimesheetListView/hooks/useTimesheetList';
+import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
+import { TASKS_QUERY_KEY } from '../../../common/features/tasks/queryKeys';
 import './Timesheets.css';
 
 export default function Timesheets() {
@@ -86,7 +87,9 @@ export default function Timesheets() {
     const categoryLabel = TIME_ENTRY_CATEGORY_OPTIONS.find(option => option.value === created.category)?.label ?? created.category;
     calendarMutationRef.current.upsert(created.staffId, created.workDate, { ...created, categoryLabel });
     setOverviewRefreshToken(current => current + 1);
-    await refreshList();
+    const refreshes = [refreshList()];
+    if (created.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }));
+    await Promise.all(refreshes);
   };
 
   const requestDelete = useCallback((target: TimesheetEntryTarget) => {
@@ -99,7 +102,9 @@ export default function Timesheets() {
         await deleteTimeEntry(target.item.id);
         calendarMutationRef.current.remove(target.item.id);
         setOverviewRefreshToken(current => current + 1);
-        await refreshList();
+        const refreshes = [refreshList()];
+        if (target.item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }));
+        await Promise.all(refreshes);
         setEditTarget(current => current?.item.id === target.item.id ? null : current);
       },
     });
@@ -223,7 +228,6 @@ export default function Timesheets() {
               setEditTarget(null);
               setAddOpen(true);
             }}
-            onListRefresh={refreshList}
             onOverviewRefresh={() => setOverviewRefreshToken(current => current + 1)}
           /> } : { table: <TimesheetListView
             columns={listColumns}

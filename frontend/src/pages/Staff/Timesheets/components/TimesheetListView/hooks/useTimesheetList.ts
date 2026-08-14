@@ -7,12 +7,11 @@ import {
 import type { ListSort } from '../../../../../../common/types/pagination';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { TimesheetSortKey } from '../../../timesheetViewData';
+import { TIME_ENTRY_LIST_QUERY_KEY } from '../../../timesheetQueryKeys';
 
 interface TimesheetListFilters extends Omit<TimeEntryListFilters, 'search'> {
   search: string;
 }
-
-export const TIME_ENTRY_LIST_QUERY_KEY = ['time-entries', 'list'] as const;
 
 export default function useTimesheetList(
   filters: TimesheetListFilters,

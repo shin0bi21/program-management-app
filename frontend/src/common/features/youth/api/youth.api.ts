@@ -4,7 +4,8 @@ import type { YouthFilters, YouthProfile, SetYouthInput, YouthProfileNote, Youth
 import type { CursorPage, CursorRequest } from '../../../types/pagination';
 import type { YouthSessionNote } from '../../../types/cohort';
 
-export function getYouth(id?: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
+export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
+export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
 export function getYouth(id: undefined, filters: YouthFilters, opts: RequestOptions | undefined, pagination: CursorRequest<YouthSortKey>): Promise<YouthProfile[] | CursorPage<YouthProfile>>;
 export function getYouth(id?: string, filters: YouthFilters = {}, opts?: RequestOptions, pagination?: CursorRequest<YouthSortKey>) {
   const params = new URLSearchParams();
@@ -21,7 +22,9 @@ export function getYouth(id?: string, filters: YouthFilters = {}, opts?: Request
   }
   const query = params.toString();
   const path = `/youth${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<YouthProfile[] | CursorPage<YouthProfile>>(path, opts) : apiClient.get<YouthProfile[] | CursorPage<YouthProfile>>(path);
+  return opts
+    ? apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path, opts)
+    : apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path);
 }
 
 export function setYouth(data: SetYouthInput) {

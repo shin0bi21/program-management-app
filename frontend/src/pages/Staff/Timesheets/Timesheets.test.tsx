@@ -19,6 +19,7 @@ import Timesheets from './Timesheets';
 import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
 import { getTasks } from '../../../common/features/tasks/api/tasks.api';
 import { getUser } from '../../../auth/storage';
+import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
@@ -957,6 +958,7 @@ describe('Timesheets', () => {
     vi.mocked(updateTimeEntryPlacement).mockResolvedValue({
       ...item, staffId: 'staff-1', workDate: nextDate, cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
     });
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
     const { container } = render(
       <QueryClientProvider client={queryClient}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
@@ -974,6 +976,9 @@ describe('Timesheets', () => {
 
     await waitFor(() => expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', {
       workDate: nextDate,
+    }));
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: TIME_ENTRY_LIST_QUERY_KEY,
     }));
     expect(setTimeEntry).not.toHaveBeenCalled();
   });

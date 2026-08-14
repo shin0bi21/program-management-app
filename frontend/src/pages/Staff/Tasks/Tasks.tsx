@@ -16,7 +16,8 @@ import { useAuth } from '../../../auth/authContext';
 import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
 import useTaskControls from './hooks/useTaskControls';
-import useTaskMutations, { TASKS_QUERY_KEY } from './hooks/useTaskMutations';
+import useTaskMutations from './hooks/useTaskMutations';
+import { TASKS_QUERY_KEY } from './taskQueryKeys';
 import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
 import TaskListView from './components/TaskListView/TaskListView';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
@@ -37,16 +38,13 @@ export default function Tasks() {
     upsert: (_task: Task) => undefined,
     remove: (_taskId: string) => undefined,
   }), []);
-  const listMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
   const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
   const mutations = useTaskMutations({
     onUpsert: task => {
-      listMutationRef.current.upsert(task);
       calendarMutationRef.current.upsert(task);
       setSelectedTaskSnapshot(current => current?.id === task.id ? task : current);
     },
     onRemove: taskId => {
-      listMutationRef.current.remove(taskId);
       calendarMutationRef.current.remove(taskId);
       setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
     },
@@ -180,7 +178,6 @@ export default function Tasks() {
           sorting={controls.sorting}
           columnWidths={controls.columnWidths}
           selectedTaskId={selectedTaskId}
-          mutationCacheRef={listMutationRef}
           onTaskSelect={selectTask}
           onSortingChange={controls.changeSorting}
           onColumnWidthsChange={controls.changeColumnWidths}

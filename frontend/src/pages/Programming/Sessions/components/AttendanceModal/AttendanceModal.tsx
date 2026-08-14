@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import { getSessionRoster, setSessionAttendance } from '../../../../../common/features/programming/api/programming.api';
@@ -13,6 +13,7 @@ import type {
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { YouthProfile } from '../../../../../common/types/youth';
 import YouthModal from '../../../../../common/features/youth/components/YouthModal/YouthModal';
+import { YOUTH_QUERY_KEY } from '../../../../../common/features/youth/queryKeys';
 import AttendanceRoster from './AttendanceRoster';
 import OpenAttendancePicker from './OpenAttendancePicker';
 
@@ -23,6 +24,7 @@ interface AttendanceModalProps {
 }
 
 export default function AttendanceModal({ session, onClose, onSaved }: AttendanceModalProps) {
+  const queryClient = useQueryClient();
   const [roster, setRoster] = useState<SessionRosterMember[]>([]);
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
@@ -132,6 +134,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
   const handleYouthCreated = (profile: YouthProfile) => {
     addOpenAttendee(profile);
     setCreatingYouth(false);
+    void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 
   return (

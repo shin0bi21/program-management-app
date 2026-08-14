@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Table, { TableColumn } from '../../../common/components/Table/Table';
@@ -18,6 +19,7 @@ import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
 import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from './types';
 import type { ListSort } from '../../../common/types/pagination';
 import './ExpressionsOfInterest.css';
+import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
 
 const submissionYouthName = (submission: ExpressionOfInterest) =>
   [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
@@ -34,6 +36,7 @@ const statusLabel = (value: string) => value
   .join(' ');
 
 export default function ExpressionsOfInterest() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<ExpressionOfInterest['status'][]>([]);
@@ -44,7 +47,7 @@ export default function ExpressionsOfInterest() {
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch } = useExpressionsOfInterest(queryFilters, sorting);
+  const { submissions, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
   const { permissions } = useAuth();
@@ -85,8 +88,8 @@ export default function ExpressionsOfInterest() {
   ], [programs]);
 
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
-    const updated = await updateExpressionOfInterestStatus(item.id, status);
-    upsertSubmission(updated);
+    await updateExpressionOfInterestStatus(item.id, status);
+    await queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY });
   };
 
   const handleConvert = async (item: ExpressionOfInterest) => {
@@ -94,11 +97,14 @@ export default function ExpressionsOfInterest() {
     setConvertingId(item.id);
     try {
       await convertExpressionOfInterest(item.id);
-      upsertSubmission({ ...item, status: 'converted' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }),
+      ]);
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY });
       setConvertingId(null);
     }
   };

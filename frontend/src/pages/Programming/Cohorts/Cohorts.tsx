@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
@@ -24,10 +25,14 @@ import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
+import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import { COHORT_OPTIONS_QUERY_KEY, COHORT_TABLE_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
 import './Cohorts.css';
 import useCohortTable from './hooks/useCohortTable';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 
 export default function Cohorts() {
+  const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const canWriteCohorts = permissions.includes('write:cohorts');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
@@ -45,8 +50,13 @@ export default function Cohorts() {
   const cohorts = cohortTable.rows;
   const cohortsLoading = cohortTable.loading;
   const error = cohortTable.error;
-  const refreshCohorts = cohortTable.refetch;
-  const removeCohort = cohortTable.remove;
+  const refreshCohorts = useCallback(
+    () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: COHORT_TABLE_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY }),
+    ]).then(() => undefined),
+    [queryClient],
+  );
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
@@ -164,7 +174,8 @@ export default function Cohorts() {
                           successMessage: 'Cohort deleted',
                           onConfirm: async () => {
                             await deleteCohort(cohort.id);
-                            removeCohort(cohort.id);
+                            removeInfiniteListRow(queryClient, COHORT_TABLE_QUERY_KEY, cohort.id);
+                            await queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY });
                           },
                         }),
                     },
@@ -175,7 +186,7 @@ export default function Cohorts() {
           ]
         : []),
     ],
-    [canWriteCohorts, removeCohort],
+    [canWriteCohorts, queryClient],
   );
 
   const selectProgram = (programId: string) => {
@@ -297,7 +308,14 @@ export default function Cohorts() {
             onCreated={refreshCohorts}
           />
 
-          <ManageRosterModal cohort={rosterTarget} onClose={() => setRosterTarget(null)} onSuccess={refreshCohorts} />
+          <ManageRosterModal
+            cohort={rosterTarget}
+            onClose={() => setRosterTarget(null)}
+            onSuccess={() => Promise.all([
+              refreshCohorts(),
+              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+            ]).then(() => undefined)}
+          />
           {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
           <EditCohortModal
             cohort={editCohortTarget}
@@ -321,7 +339,12 @@ export default function Cohorts() {
           <GenerateSessionsModal
             cohort={generationTarget}
             onClose={() => setGenerationTarget(null)}
-            onSuccess={() => undefined}
+            onSuccess={async () => {
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+                refreshCohorts(),
+              ]);
+            }}
           />
         </div>
       </main>

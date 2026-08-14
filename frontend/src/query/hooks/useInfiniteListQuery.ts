@@ -1,8 +1,6 @@
 import {
   keepPreviousData,
   useInfiniteQuery,
-  useQueryClient,
-  type InfiniteData,
   type QueryFunctionContext,
   type QueryKey,
 } from '@tanstack/react-query';
@@ -22,7 +20,6 @@ export default function useInfiniteListQuery<T extends { id: string }>({
   errorMessage,
   enabled = true,
 }: InfiniteListQueryOptions<T>) {
-  const queryClient = useQueryClient();
   const query = useInfiniteQuery({
     queryKey,
     queryFn: async context => {
@@ -38,15 +35,6 @@ export default function useInfiniteListQuery<T extends { id: string }>({
     (query.data?.pages.flatMap(page => page.rows) ?? []).map(row => [row.id, row]),
   ).values()];
 
-  const updatePages = (update: (rows: T[]) => T[]) => {
-    queryClient.setQueryData<InfiniteData<CursorPage<T>>>(queryKey, current => current && ({
-      ...current,
-      pages: current.pages.map((page, index) => index === 0
-        ? { ...page, rows: update(current.pages.flatMap(item => item.rows)) }
-        : { ...page, rows: [] }),
-    }));
-  };
-
   return {
     rows,
     loading: query.isLoading,
@@ -55,15 +43,5 @@ export default function useInfiniteListQuery<T extends { id: string }>({
     hasNextPage: Boolean(query.hasNextPage),
     loadNextPage: () => { void query.fetchNextPage(); },
     error: query.error ? getErrorMessage(query.error, errorMessage) : '',
-    refetch: async () => { await query.refetch(); },
-    upsert: (updatedRow: T) => updatePages(current => (
-      current.some(row => row.id === updatedRow.id)
-        ? current.map(row => row.id === updatedRow.id ? updatedRow : row)
-        : [...current, updatedRow]
-    )),
-    replace: (updatedRow: T) => updatePages(current => (
-      current.map(row => row.id === updatedRow.id ? updatedRow : row)
-    )),
-    remove: (id: string) => updatePages(current => current.filter(row => row.id !== id)),
   };
 }

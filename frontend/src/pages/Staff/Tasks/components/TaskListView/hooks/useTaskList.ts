@@ -3,7 +3,7 @@ import { getTaskList } from '../../../../../../common/features/tasks/api/tasks.a
 import type { Task, TaskCategory, TaskStatus } from '../../../../../../common/features/tasks/types';
 import type { ListSort } from '../../../../../../common/types/pagination';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { TASKS_QUERY_KEY } from '../../../hooks/useTaskMutations';
+import { TASK_LIST_QUERY_KEY } from '../../../taskQueryKeys';
 import type { TaskSortKey } from '../../../taskViewTypes';
 
 interface TaskListFilters {
@@ -17,7 +17,7 @@ interface TaskListFilters {
 export default function useTaskList(filters: TaskListFilters, sorting: ListSort<TaskSortKey>, enabled: boolean) {
   const deferredSearch = useDeferredValue(filters.search);
   return useInfiniteListQuery<Task>({
-    queryKey: [...TASKS_QUERY_KEY, 'list', filters.staffIds, filters.programIds, filters.categories, filters.statuses, deferredSearch, sorting],
+    queryKey: [...TASK_LIST_QUERY_KEY, filters.staffIds, filters.programIds, filters.categories, filters.statuses, deferredSearch, sorting],
     queryFn: ({ signal, pageParam }) => getTaskList({
       staffIds: filters.staffIds,
       programIds: filters.programIds,

@@ -4,8 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpressionsOfInterest from './ExpressionsOfInterest';
 
-const renderPage = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter><ExpressionsOfInterest /></MemoryRouter>
@@ -37,6 +36,7 @@ describe('ExpressionsOfInterest', () => {
     preferenceHook.preference = null;
     preferenceHook.save.mockReset();
     convertExpression.mockReset();
+    getExpressions.mockReset();
     convertExpression.mockResolvedValue({ id: 'lead-1' });
     getExpressions.mockResolvedValue([{
       id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
@@ -91,14 +91,26 @@ describe('ExpressionsOfInterest', () => {
   });
 
   it('stays on expressions of interest and marks the row converted after conversion', async () => {
-    renderPage();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const convertedSubmission = {
+      id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
+      school: 'Test School', submittedByRole: 'parent',
+      contactPhoneNumber: '416-555-0100', contactRelationship: 'parent', discoverySource: 'online',
+      notes: 'Follow up next week', status: 'converted', createdAt: new Date().toISOString(),
+      statusUpdatedAt: new Date().toISOString(), suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
+    };
+    renderPage(queryClient);
     await screen.findByRole('row', { name: /Avery Interest/ });
+    getExpressions.mockResolvedValue([convertedSubmission]);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Interest' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Convert to Lead' }));
 
     await waitFor(() => expect(convertExpression).toHaveBeenCalledWith('expression-1'));
     expect(await screen.findByText('Converted')).toBeInTheDocument();
+    expect(getExpressions).toHaveBeenCalledTimes(2);
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['leads', 'list'] });
     expect(screen.getByRole('table', { name: 'Expressions of interest' })).toBeInTheDocument();
   });
 

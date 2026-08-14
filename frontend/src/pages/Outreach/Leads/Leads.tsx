@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -22,12 +23,16 @@ import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadFilters, LeadSortKey, LeadStatus } from './types';
 import type { ListSort } from '../../../common/types/pagination';
 import './Leads.css';
+import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
+import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
 const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
 const title = (value: string) => value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 
 export default function Leads() {
+  const queryClient = useQueryClient();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
   const [search, setSearch] = useState('');
@@ -40,7 +45,7 @@ export default function Leads() {
   const queryFilters = useMemo<LeadFilters | null>(() => filtersReady
     ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
     : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { leads, upsertLead, removeLead, loading, refreshing, error, reload, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
+  const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
   const { programs, loading: programsLoading } = usePrograms();
   const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('lead-filters');
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
@@ -86,20 +91,17 @@ export default function Leads() {
   ], [programs]);
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
-    const updated = await updateLeadStatus(lead.id, status);
-    if (statusFilters.length > 0 && !statusFilters.includes(updated.status)) {
-      removeLead(updated.id);
-      return;
-    }
-    upsertLead(updated);
+    await updateLeadStatus(lead.id, status);
+    await queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY });
   };
 
-  const reconcileSignUp = (lead: Lead) => {
-    if (statusFilters.length > 0 && !statusFilters.includes(lead.status)) {
-      removeLead(lead.id);
-      return;
-    }
-    upsertLead(lead);
+  const reconcileSignUp = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+    ]);
   };
 
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
@@ -165,7 +167,7 @@ export default function Leads() {
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
-      onSuccess={() => { setModalTarget(null); void reload(); }}
+      onSuccess={() => { setModalTarget(null); void queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }); }}
     />
     <SignUpLeadModal
       lead={signUpTarget}
