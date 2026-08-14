@@ -24,7 +24,7 @@ flowchart LR
 
 - Components render state and delegate meaningful behavior to focused hooks.
 - Endpoint adapters own paths and response types; all network traffic passes through `src/http/client.ts`.
-- TanStack Query owns server state. Page or feature hooks own query keys, loading/error presentation, and cache updates.
+- TanStack Query owns server state. Page or feature query-key modules define stable prefixes, read hooks own loading and error presentation, and mutation owners invalidate or reconcile the cache.
 - Local React state owns transient UI state such as open modals, draft form values, selections, and view controls.
 - Write flows update or invalidate the relevant query cache rather than maintaining a second unsynchronized server-state copy.
 
@@ -161,7 +161,7 @@ types ← endpoint adapter ← query/workflow hook ← component
 | Cross-page user preferences | `common/features/preferences/` |
 | High-frequency transient interaction state | Focused hooks and refs when values do not affect declarative rendering |
 
-Query keys remain stable and domain-specific. Cache writes preserve unaffected object references where practical, and mutation flows define how stale or overlapping responses are prevented from overwriting newer state.
+Query keys remain stable and domain-specific. Paginated lists use a dedicated list prefix so cache helpers cannot touch another query shape. Mutation owners invalidate server-filtered lists by default, update rows directly only when membership and order cannot change, and invalidate every domain changed by a cross-domain command. Cache writes preserve unaffected object references where practical, and mutation flows define how stale or overlapping responses are prevented from overwriting newer state.
 
 Focused mutation hooks present their public workflows in domain order: create/add, edit/update, delete, then other actions. When several workflows reconcile the same query cache, they share one helper that owns the cache-missing fallback and each workflow supplies only its validity check and transformation.
 

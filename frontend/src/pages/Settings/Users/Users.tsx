@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Modal from '../../../common/components/Modal/Modal';
@@ -17,6 +18,9 @@ import { formatShortDate } from '../../../common/utils/date';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
 import AccountModal from './components/AccountModal/AccountModal';
 import { useAccounts } from './hooks/useAccounts';
+import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import { ACCOUNTS_LIST_QUERY_KEY } from './queryKeys';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import './Users.css';
 
 function titleCase(value: string) {
@@ -28,6 +32,7 @@ function statusBadge(status: AccountStatus) {
 }
 
 export default function Users() {
+  const queryClient = useQueryClient();
   const { role, permissions } = useAuth();
   const isAdmin = role === 'admin';
   const canWrite = permissions.includes('write:accounts');
@@ -45,7 +50,7 @@ export default function Users() {
     roles: roleFilters,
     statuses: statusFilters,
   }) : null, [debouncedSearch, filtersReady, roleFilters, statusFilters]);
-  const { accounts, upsertAccount, removeAccount, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
+  const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -86,9 +91,9 @@ export default function Users() {
     successMessage: 'Invitation revoked',
     onConfirm: async () => {
       await revokeAccountInvite(account.id);
-      removeAccount(account.id);
+      removeInfiniteListRow(queryClient, ACCOUNTS_LIST_QUERY_KEY, account.id);
     },
-  }), [removeAccount]);
+  }), [queryClient]);
 
   const requestStatusToggle = useCallback((account: Account) => {
     const activating = account.status === 'inactive';
@@ -98,9 +103,12 @@ export default function Users() {
       confirmLabel: activating ? 'Activate' : 'Deactivate',
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
-      onConfirm: async () => upsertAccount(await toggleAccountStatus(account.id)),
+      onConfirm: async () => {
+        await toggleAccountStatus(account.id);
+        await queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
+      },
     });
-  }, [upsertAccount]);
+  }, [queryClient]);
 
   const columns = useMemo<TableColumn<Account>[]>(() => {
     const accountColumns: TableColumn<Account>[] = [
@@ -222,8 +230,8 @@ export default function Users() {
           isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
-          onSuccess={account => {
-            upsertAccount(account);
+          onSuccess={() => {
+            void queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
           }}
         />
       )}
@@ -233,19 +241,11 @@ export default function Users() {
           isOpen
           showLoginEmail
           onClose={() => setYouthInviteOpen(false)}
-          onSuccess={youth => {
-            if (youth.account) {
-              const account = youth.account;
-              upsertAccount({
-                id: youth.id,
-                firstName: youth.firstName,
-                lastName: youth.lastName,
-                email: account.email,
-                role: 'youth',
-                status: account.status,
-                createdAt: youth.createdAt,
-              });
-            }
+          onSuccess={() => {
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+            ]);
             setYouthInviteOpen(false);
           }}
         />

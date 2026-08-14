@@ -70,10 +70,8 @@ describe('Youth', () => {
     preferenceHook.save.mockReset();
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
-      upsertYouth: vi.fn(),
       loading: false,
       error: null,
-      refetch: vi.fn(),
     });
   });
 
@@ -208,7 +206,7 @@ describe('Youth', () => {
         }],
         contacts: [{ id: 'contact-1', phoneNumber: '416-555-0101', type: 'parent' }],
       })],
-      upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+      loading: false, error: null,
     });
     render(<Youth />);
 
@@ -232,7 +230,7 @@ describe('Youth', () => {
       }],
     });
     mockUseYouth.mockReturnValue({
-      youth: [profile], upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+      youth: [profile], loading: false, error: null,
     });
     render(<Youth />);
 
@@ -251,7 +249,7 @@ describe('Youth', () => {
       }],
     });
     mockUseYouth.mockReturnValue({
-      youth: [profile], upsertYouth: vi.fn(), loading: false, error: null, refetch: vi.fn(),
+      youth: [profile], loading: false, error: null,
     });
     render(<Youth />);
 
@@ -311,10 +309,8 @@ describe('Youth', () => {
         makeYouthProfile({ id: 'youth-1', firstName: 'Jamie', account: null }),
         makeYouthProfile({ id: 'youth-2', firstName: 'Taylor', account: null }),
       ],
-      upsertYouth: vi.fn(),
       loading: false,
       error: null,
-      refetch: vi.fn(),
     });
     let resolveUpdate!: (note: Awaited<ReturnType<typeof youthApi.setYouthProfileNote>>) => void;
     youthApi.setYouthProfileNote.mockReturnValue(new Promise(resolve => {

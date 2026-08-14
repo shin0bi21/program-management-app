@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import Table, { TableColumn } from '../../common/components/Table/Table';
@@ -8,6 +9,8 @@ import PageHeader from '../../common/components/PageHeader/PageHeader';
 import FilterCard, { type FilterCardCategory } from '../../common/components/FilterCard/FilterCard';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import { useYouth, YouthProfile } from './hooks/useYouth';
+import { YOUTH_QUERY_KEY } from '../../common/features/youth/queryKeys';
+import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/programming/queryKeys';
 import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
 import { useAuth } from '../../auth/authContext';
 import { calculateAge } from '../../common/utils/time';
@@ -24,6 +27,7 @@ import YouthReportModal from '../../common/features/programming/components/Youth
 import YouthDashboard from './components/YouthDashboard/YouthDashboard';
 
 export default function Youth() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<Array<'active' | 'inactive'>>([]);
@@ -51,7 +55,7 @@ export default function Youth() {
     error: preferencesError,
     save: saveFilters,
   } = useUserPreference('youth-profile-filters');
-  const { youth, upsertYouth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch: refetchYouth } = useYouth(queryFilters, sorting);
+  const { youth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
   const {
     selectedItem: selectedProfile,
     selectedKey: selectedProfileId,
@@ -112,10 +116,10 @@ export default function Youth() {
     },
   ], [programs]);
 
-  const handleSaveYouth = (savedYouth: YouthProfile) => {
+  const handleSaveYouth = () => {
     setModalTarget(null);
     setContactTarget(null);
-    upsertYouth(savedYouth);
+    void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 
   const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
@@ -254,7 +258,11 @@ export default function Youth() {
         cohort={attendanceTarget}
         canManageSessionNotes={canManageSessionNotes}
         onClose={() => setAttendanceTarget(null)}
-        onSaved={refetchYouth}
+        onSaved={() => Promise.all([
+          queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+        ]).then(() => undefined)}
       />
       {attendanceReportTarget && <YouthReportModal
         cohort={attendanceReportTarget.cohort}

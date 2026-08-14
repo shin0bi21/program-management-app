@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { Task, TaskCategory, TaskStatus } from '../../../../../common/features/tasks/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { TaskSortKey, TaskViewMutationCache } from '../../taskViewTypes';
+import type { TaskSortKey } from '../../taskViewTypes';
 import useTaskList from './hooks/useTaskList';
 
 interface TaskListViewProps {
@@ -16,7 +15,6 @@ interface TaskListViewProps {
   sorting: ListSort<TaskSortKey>;
   columnWidths: Record<string, number>;
   selectedTaskId: string | null;
-  mutationCacheRef: React.MutableRefObject<TaskViewMutationCache>;
   onTaskSelect: (task: Task) => void;
   onSortingChange: (sorting: ListSort<TaskSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
@@ -24,13 +22,9 @@ interface TaskListViewProps {
 
 export default function TaskListView({
   columns, hiddenColumnKeys, staffIds, programIds, categories, statuses, search, sorting, columnWidths,
-  selectedTaskId, mutationCacheRef, onTaskSelect, onSortingChange, onColumnWidthsChange,
+  selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange,
 }: TaskListViewProps) {
   const query = useTaskList({ staffIds, programIds, categories, statuses, search }, sorting, true);
-  useEffect(() => {
-    mutationCacheRef.current = { upsert: query.replace, remove: query.remove };
-    return () => { mutationCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [mutationCacheRef, query.remove, query.replace]);
   const hasFilters = staffIds.length > 0 || programIds.length > 0 || categories.length > 0 || statuses.length > 0;
 
   return <Table

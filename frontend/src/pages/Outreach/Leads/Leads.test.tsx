@@ -2,9 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
+import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
+import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 
-const renderPage = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
     <QueryClientProvider client={queryClient}><Leads /></QueryClientProvider>,
   );
@@ -54,6 +56,7 @@ describe('Leads', () => {
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     });
     updateLeadStatus.mockReset();
+    getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
@@ -65,30 +68,33 @@ describe('Leads', () => {
     }]);
   });
 
-  it('updates only the changed lead after a status change', async () => {
-    updateLeadStatus.mockResolvedValue({
+  it('refetches Leads after a status change', async () => {
+    const contactedLead = {
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
       programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'contacted', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
-    });
+    } as const;
+    updateLeadStatus.mockResolvedValue(contactedLead);
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
     const initialRequestCount = getLeads.mock.calls.length;
+    getLeads.mockResolvedValue([contactedLead]);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
 
     await waitFor(() => expect(updateLeadStatus).toHaveBeenCalledWith('lead-1', 'contacted'));
     expect(await screen.findByText('Contacted')).toBeInTheDocument();
-    expect(getLeads).toHaveBeenCalledTimes(initialRequestCount);
-    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
+    expect(getLeads.mock.calls.length).toBeGreaterThan(initialRequestCount);
   });
 
   it('signs up a Lead through the dedicated conversion action', async () => {
-    renderPage();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    renderPage(queryClient);
     await screen.findByRole('row', { name: /Avery Outreach/ });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
@@ -100,6 +106,14 @@ describe('Leads', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
+    for (const queryKey of [
+      LEADS_LIST_QUERY_KEY,
+      EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY,
+      YOUTH_QUERY_KEY,
+      COHORT_QUERY_KEY,
+    ]) {
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
+    }
     expect(await screen.findByText(
       'Youth profile successfully created for Avery Outreach.',
     )).toBeInTheDocument();

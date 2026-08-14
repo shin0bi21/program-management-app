@@ -13,7 +13,6 @@ interface SessionsCalendarViewProps {
   selectedSessionTypeIds?: string[];
   selectedStatuses: Array<'upcoming' | 'completed'>;
   search: string;
-  refreshToken: number;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
   onSessionEdit?: (session: CohortSession) => void;
@@ -27,7 +26,6 @@ export default function SessionsCalendarView({
   selectedSessionTypeIds = noSessionTypeIds,
   selectedStatuses,
   search,
-  refreshToken,
   onSessionsLoaded,
   onSessionSelect,
   onSessionEdit,
@@ -39,7 +37,7 @@ export default function SessionsCalendarView({
     sessionTypeIds: selectedSessionTypeIds,
     statuses: selectedStatuses,
     search,
-  }, selectedSessionId, refreshToken);
+  }, selectedSessionId);
 
   useEffect(() => {
     if (calendar.isSuccess) onSessionsLoaded?.(calendar.sessions);

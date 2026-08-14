@@ -4,6 +4,7 @@ import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
 import { getSessions } from '../../../../../../common/features/programming/api/programming.api';
 import type { CohortSession } from '../../../../../../common/types/cohort';
 import type { SessionStatusFilter } from '../../../sessionViewTypes';
+import { SESSION_CALENDAR_QUERY_KEY } from '../../../../common/queryKeys';
 
 interface SessionCalendarFilters {
   programIds: string[];
@@ -18,7 +19,6 @@ const noSessions: CohortSession[] = [];
 export function useSessionCalendarData(
   filters: SessionCalendarFilters,
   selectedSessionId: string,
-  refreshToken: number,
 ) {
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
   const requestFilters = range ? {
@@ -31,7 +31,7 @@ export function useSessionCalendarData(
     search: filters.search || undefined,
   } : null;
   const query = useQuery({
-    queryKey: ['sessions', 'calendar', requestFilters, refreshToken],
+    queryKey: [...SESSION_CALENDAR_QUERY_KEY, requestFilters],
     queryFn: ({ signal }) => getSessions(requestFilters!, { signal }),
     enabled: requestFilters !== null,
   });

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
 
 const mockUseAuth = vi.fn();
@@ -33,12 +34,17 @@ const accounts = [
   },
 ] as const;
 
+const renderPage = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <Users />
+  </QueryClientProvider>,
+);
+
 describe('Users', () => {
   beforeEach(() => {
     preferenceHook.save.mockReset();
     mockUseAccounts.mockReturnValue({
       accounts,
-      setAccounts: vi.fn(),
       loading: false,
       error: '',
     });
@@ -46,7 +52,7 @@ describe('Users', () => {
 
   it('persists a complete preference when first hiding a column', () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    render(<Users />);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Email' }));
@@ -59,7 +65,7 @@ describe('Users', () => {
   it('shows admin account controls and sends search state to the accounts query', async () => {
     vi.useFakeTimers();
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
-    render(<Users />);
+    renderPage();
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
@@ -78,12 +84,11 @@ describe('Users', () => {
     mockUseAuth.mockReturnValue({ role: 'staff', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     mockUseAccounts.mockReturnValue({
       accounts: [accounts[1]],
-      setAccounts: vi.fn(),
       loading: false,
       error: '',
     });
 
-    render(<Users />);
+    renderPage();
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add', expanded: false })).not.toBeInTheDocument();
@@ -96,7 +101,7 @@ describe('Users', () => {
 
   it('sends applied role and status filters and clears them by category or together', () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    render(<Users />);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
