@@ -2,7 +2,7 @@
 
 ## Own tests by domain
 
-- Give each non-trivial backend domain a focused test directory and runner. Register it in the composed backend API runner and the relevant package command.
+- Give each non-trivial backend domain a focused test directory and runner. Add its package command when the runner delegates to one, and register its paths in `scripts/tests/test-app.sh` changed-file routing.
 - Keep domain behavior owned by that suite. Cross-domain suites should retain only integration assertions at their boundary, not duplicate another domain's CRUD, policy, validation, and audit matrix.
 - Use the shared test application and database helpers so route composition, authentication, errors, and cleanup follow repository conventions.
 - Keep fixtures deterministic and clean up created records without weakening foreign-key or history assertions.
@@ -22,5 +22,5 @@
 ## Run the owned runners
 
 - Run the focused Docker-backed suite while iterating.
-- Run backend build or type checks, the composed backend API runner, migration checks when applicable, static checks, and `git diff --check` before handoff.
+- Run the focused domain runner, applicable backend build or type checks, migration checks when needed, static checks, and `git diff --check` before handoff. Required GitHub checks provide the complete merge gate; run the composed backend API runner locally only for cross-cutting risk, unavailable CI, or an explicit request.
 - Use `scripts/tests/test-app.sh` when the change is cross-stack or the user requests the full suite. Report exactly which runner was executed; do not call a focused runner the full suite.

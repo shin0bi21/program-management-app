@@ -19,7 +19,7 @@ Use the repository's human-facing development handbook as the canonical implemen
 5. Read local READMEs for shared components or integrations the change creates, modifies, or consumes.
 6. Inspect one strong matching implementation before coding. Inspect a second only when the repository contract remains ambiguous.
 
-For cross-stack work, define the shared persistence, permission, request, response, error, and frontend reconciliation contract before implementing either side. Work from persistence and backend authority outward to frontend presentation.
+For cross-stack work, agree on stored data, permissions, API shapes, errors, and frontend updates before implementing either side. Build the backend first, then connect the frontend to it.
 
 ## Orchestrate substantial work
 

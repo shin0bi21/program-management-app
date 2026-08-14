@@ -61,6 +61,7 @@ Repository rulesets enforce the following merge requirements:
 - `main`: require a pull request, require the merge-path job that rejects
   sources other than `develop`, require `Lint & Shell Analysis`,
   `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`,
+  allow only a regular merge commit so `develop` remains in production history,
   and also require
   `Production Compose Validation`, `Backend Production Image`, and
   `Frontend Production Image`.

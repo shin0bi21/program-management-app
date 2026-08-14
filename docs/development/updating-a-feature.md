@@ -1,21 +1,49 @@
 # Updating a feature
 
-An update follows the same ownership path as a new feature, but begins by tracing the existing contract before changing it.
+Start with the part of the application that owns the behavior. If the change affects stored data, API output, or permissions, start with the backend. Otherwise, jump to [Update the frontend](#3-update-the-frontend).
 
-## 1. Trace the current behavior
+Use the [Stack guide](stack/README.md) when you need an example of the React, TanStack, form, validation, Express, or SQL API used by that owner.
 
-Read the applicable contract under [`docs/features/`](../features/README.md), then identify the owning migration and constraints, service queries, policies, validation, controller and route, typed frontend adapter, state owner, page or shared feature, tests, and API documentation. Read component-local READMEs for every shared primitive the change consumes.
+## 1. Find the current behavior
 
-## 2. Define the changed contract
+Read the feature document under [`docs/features/`](../features/README.md) when one exists. Then follow the request from the page's API file to the backend route, controller, and service. You only need to inspect the layers involved in this change.
 
-Record what changes and what must remain stable: stored data, authorization and visibility, request and response fields, error behavior, cache reconciliation, destructive behavior, and concurrency. Search for all consumers of a renamed or finite value.
+Before editing a shared component, read its local README and inspect one existing consumer that uses the same pattern.
 
-## 3. Change the narrowest owners in dependency order
+## 2. Update the backend when needed
 
-When persistence changes, start with a new forward-only migration and follow [Database changes](backend/database-changes.md). Then update services and policies before HTTP adapters and frontend consumers. When persistence is unchanged, begin at the lowest owner of the changed rule rather than mechanically touching every layer.
+Use the guide that matches the change:
 
-Use the specialized backend and frontend guides linked from the [development handbook](README.md). Update the feature contract with approved behavior changes and preserve existing public contracts unless the product change explicitly replaces them.
+- Database column, constraint, or relationship: start with a new migration and follow [Database changes](backend/database-changes.md).
+- Returned fields shared by list and direct-record endpoints: update the domain's `RecordQuery`, then check both consumers.
+- Search, filters, sorting, or pagination: update the `ListService`.
+- Loading or setting one record, deleting it, or running another command: update the main domain service.
+- Record visibility or mutation access: update the policy and the service query that applies it.
+- Request or response shape: update validation, controller wiring, frontend types, and tests with the service change.
+
+See [Backend services](backend/services.md) for file ownership and declaration order. Do not touch every backend layer automatically; change only the owners of the behavior.
+
+## 3. Update the frontend
+
+Start at the typed `.api.ts` adapter when the HTTP contract changed. Then update the hook or component that owns the affected state and rendering.
+
+Use the relevant guide for a [page](frontend/adding-a-page.md), [list](frontend/list-view.md), [calendar](frontend/calendar-view.md), or [form/modal](frontend/forms-and-modals.md). Keep filters, sorting, column settings, and view settings in the established preference object. When no preference row exists yet, the first save must create a complete valid value.
+
+Search all consumers when renaming a field or changing a finite value. Keep database values, validation, API types, frontend types, labels, filters, and tests aligned.
 
 ## 4. Review and ship
 
-Run focused verification for the exact changed concern and `node scripts/agents/check-patterns.js --changed`. Then follow [Review and shipping](review-and-shipping.md). Deployment remains a separate authorization.
+Run the focused backend and frontend tests for the behavior you changed. Preview test routing when needed:
+
+```bash
+bash scripts/tests/test-app.sh --plan-changed
+```
+
+Before review, run applicable builds or type checks, then:
+
+```bash
+node scripts/agents/check-patterns.js --changed
+git diff --check
+```
+
+Update the feature document when business behavior changed. Then follow [Review and shipping](review-and-shipping.md). Deployment remains a separate step.
