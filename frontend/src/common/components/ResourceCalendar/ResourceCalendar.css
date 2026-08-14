@@ -186,7 +186,7 @@
 }
 
 .resource-calendar__cell--interactive:hover {
-  background: var(--accent-08);
+  background: var(--ink-03);
 }
 
 .resource-calendar__cell--interactive:focus-visible {

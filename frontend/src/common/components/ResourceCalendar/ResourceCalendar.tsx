@@ -140,6 +140,7 @@ export default function ResourceCalendar<TResource, TItemData>({
       <div
         ref={viewportRef}
         className="resource-calendar"
+        role="grid"
         aria-label={ariaLabel}
       >
         <ResourceCalendarGrid

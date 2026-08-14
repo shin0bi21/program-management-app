@@ -104,14 +104,15 @@ function ResourceCalendarGrid<TResource, TItemData>({
 }: ResourceCalendarGridProps<TResource, TItemData>) {
   return (
     <>
-      <div className="resource-calendar__header" style={{ gridTemplateColumns: gridColumns }}>
-        <div className="resource-calendar__corner">{resourceHeader}</div>
+      <div className="resource-calendar__header" role="row" style={{ gridTemplateColumns: gridColumns }}>
+        <div className="resource-calendar__corner" role="columnheader">{resourceHeader}</div>
         <div style={{ width: leadingPeriodWidth }} aria-hidden="true" />
         {periods.map(period => (
           <div
             key={period.key}
             className={`resource-calendar__period${today >= period.start && today < period.end ? ' resource-calendar__period--today' : ''}`}
             data-period-key={period.key}
+            role="columnheader"
           >
             <span>{formatPeriodLabel(period)}</span>
           </div>

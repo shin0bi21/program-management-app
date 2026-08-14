@@ -56,6 +56,13 @@ Both virtualizers use TanStack's native element rectangle and scroll observers. 
 - Put the resize cursor only on the start/end handles. Hovering either handle retains the same item-shell highlight as hovering the draggable body; the body retains the drag cursor and click-to-menu behavior.
 - Scrolling is contained by the calendar viewport without vertical overscroll, keeping the sticky period header fixed at either vertical edge. Consumers should not add a second scroll container around it.
 
+## Accessibility
+
+- Preserve the calendar's `grid` → `row` → `gridcell` hierarchy. The header row owns `columnheader` elements, each resource row owns its `rowheader`, and interactive period cells remain direct children of that row.
+- Give every rendered item a complete `ariaLabel`; compact and dense presentation must not remove its accessible name.
+- Keep text and status badges at WCAG AA contrast. Small text requires at least a 4.5:1 foreground-to-background contrast ratio, including after translucent colors are composited over the calendar item surface.
+- Do not use color alone to communicate an item's type or status; retain visible text or another equivalent accessible label.
+
 ## Item geometry
 
 - Calendar items render in one absolutely positioned layer owned by each resource row. Period cells remain responsible for backgrounds, focus, empty-cell activation, and drop coordinates.

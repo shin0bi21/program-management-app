@@ -29,5 +29,5 @@
 
 .time-item__type--regular {
   background: var(--ink-06);
-  color: var(--color-muted);
+  color: var(--brand-ink);
 }

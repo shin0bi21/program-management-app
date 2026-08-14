@@ -23,6 +23,7 @@
 
   /* ── Ink at standard opacities ─────────────────────────── */
   --ink-05: rgba(18, 22, 31, 0.05);
+  --ink-03: rgba(18, 22, 31, 0.03);
   --ink-08: rgba(18, 22, 31, 0.08);
   --ink-10: rgba(18, 22, 31, 0.10);
   --ink-12: rgba(18, 22, 31, 0.12);
@@ -53,7 +54,6 @@
   --accent-10: rgba(59, 92, 204, 0.10);
   --accent-08: rgba(59, 92, 204, 0.08);
   --accent-06: rgba(59, 92, 204, 0.06);
-
   /* ── Be Original orange at standard opacities ──────────── */
   --brand-orange-25: rgba(255, 181, 46, 0.25);
 
