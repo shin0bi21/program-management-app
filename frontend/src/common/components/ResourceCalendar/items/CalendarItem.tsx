@@ -20,6 +20,7 @@ export interface CalendarItemAction {
 }
 
 const HOVER_DETAILS_DELAY_MS = 120;
+const PRECISE_HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 interface CalendarItemProps {
   id: string;
@@ -47,6 +48,9 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     triggerRef,
     { side: 'bottom', align: 'start' },
     { widthEstimate: 150, heightEstimate: 86 },
+  );
+  const showTouchDetails = isOpen && (
+    typeof window.matchMedia !== 'function' || !window.matchMedia(PRECISE_HOVER_QUERY).matches
   );
   useViewportDismissal(detailPosition !== null, () => setDetailPosition(null));
   const hasActions = actions.length > 0 || Boolean(onEdit && onDelete);
@@ -179,7 +183,11 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     )}
     {position && hasActions && createPortal(
       <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close} className="calendar-item-menu" width={150}>
-        <button type="button" role="menuitem" onClick={event => { event.stopPropagation(); viewDetails(); }}>View details</button>
+        {showTouchDetails && <button
+          type="button"
+          role="menuitem"
+          onClick={event => { event.stopPropagation(); viewDetails(); }}
+        >View details</button>}
         {actions.map(action => <button
           key={action.id}
           type="button"
