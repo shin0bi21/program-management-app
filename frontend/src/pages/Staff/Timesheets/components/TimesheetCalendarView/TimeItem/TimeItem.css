@@ -6,6 +6,11 @@
   font-weight: 700;
 }
 
+.time-item .calendar-item__summary {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .resource-calendar__item-slot--compact .time-item__type,
 .resource-calendar__item-slot--dense .time-item__type {
   padding: 1px 3px;
