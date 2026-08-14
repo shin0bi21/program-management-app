@@ -25,6 +25,8 @@ For cross-stack work, define the shared persistence, permission, request, respon
 
 When sub-agent tools are available, delegate only substantial, independently useful lanes. The primary agent owns product decisions, the acceptance ledger, the shared cross-stack contract, integration, final verification, and user communication.
 
+Keep the primary orchestrator on the strongest available model and reasoning tier. Use a lower-cost worker at low reasoning by default for bounded implementation, inspection, and verification lanes. Increase a worker's capability or reasoning only when that lane itself demonstrates architectural, concurrency, security, or debugging complexity; do not escalate merely because the overall feature is large. If explicit tier selection is unavailable, use the available worker without blocking.
+
 - Settle shared contracts before delegating dependent implementation.
 - Suitable lanes include backend persistence/policies/services/HTTP, frontend adapters/state/pages/interactions, and an independent focused verification or regression audit.
 - For multiple affected features, assign lanes by cohesive feature or ownership boundary rather than by documentation layer.

@@ -24,6 +24,8 @@ Do not modify implementation unless the user explicitly requests fixes. Read-onl
 
 When sub-agent tools are available, delegate read-only review lanes only for multiple substantial concerns, features, or independently traceable frontend/backend surfaces. The primary reviewer owns the concern map, acceptance ledger, severity calibration, deduplication, cross-lane integration, and final report.
 
+Keep the primary reviewer on the strongest available model and reasoning tier. Use a lower-cost worker at low reasoning by default for bounded path, test, and pattern-review lanes. Increase a worker's capability or reasoning only when its lane itself requires complex security, concurrency, migration, or cross-boundary analysis. If explicit tier selection is unavailable, use the available worker without blocking.
+
 - Assign one clear concern or ownership lane per reviewer and provide its exact paths, contracts, and existing test evidence.
 - Require precise file/line findings, impact, correction, and residual-risk notes; do not ask sub-agents for generic summaries.
 - Keep cross-stack contract review with the primary agent or reconcile backend and frontend findings explicitly before reporting.
