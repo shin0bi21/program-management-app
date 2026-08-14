@@ -108,6 +108,19 @@ describe('Tasks', () => {
     expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
   });
 
+  it('persists a complete preference when first hiding a column', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    await screen.findByText('Prepare workshop');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Program' }));
+
+    expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({
+      view: 'list', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
+    }));
+  });
+
   it('puts Staff first and sends the applied staff filter to the list request', async () => {
     const coworker = {
       id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,

@@ -127,6 +127,23 @@ describe('Cohorts', () => {
     });
   });
 
+  it('persists a complete preference when first hiding a column', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><Cohorts /></MemoryRouter>);
+    await screen.findByRole('row', { name: /Summer 2026/ });
+
+    await user.click(screen.getByRole('button', { name: 'Columns' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
+
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      programId: null,
+      status: null,
+      sorting: { key: 'start', direction: 'desc' },
+      columnWidths: {},
+      hiddenColumns: ['status'],
+    });
+  });
+
   it('shows all cohorts by default and can display a selected program', async () => {
     const user = userEvent.setup();
     render(

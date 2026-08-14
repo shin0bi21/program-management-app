@@ -4,11 +4,12 @@ import Users from './Users';
 
 const mockUseAuth = vi.fn();
 const mockUseAccounts = vi.fn();
+const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
 
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./hooks/useAccounts', () => ({ useAccounts: (filters: unknown) => mockUseAccounts(filters) }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => ({ preference: null, loading: false, error: null, save: vi.fn() }),
+  default: () => preferenceHook,
 }));
 
 const accounts = [
@@ -34,11 +35,24 @@ const accounts = [
 
 describe('Users', () => {
   beforeEach(() => {
+    preferenceHook.save.mockReset();
     mockUseAccounts.mockReturnValue({
       accounts,
       setAccounts: vi.fn(),
       loading: false,
       error: '',
+    });
+  });
+
+  it('persists a complete preference when first hiding a column', () => {
+    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
+    render(<Users />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Email' }));
+
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: [], roles: [], sorting: { key: 'name', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['email'],
     });
   });
 

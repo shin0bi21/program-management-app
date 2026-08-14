@@ -112,8 +112,8 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   }, [categories, persist, programIds, staffIds, statusFilters]);
 
   const changeHiddenColumns = useCallback((hiddenColumns: string[]) => {
-    void save({ hiddenColumns });
-  }, [save]);
+    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting, columnWidths, hiddenColumns });
+  }, [categories, columnWidths, programIds, save, sorting, staffIds, statusFilters, view]);
 
   return {
     view,

@@ -136,7 +136,7 @@ export default function Leads() {
       title="Leads"
       actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
       search={<SearchInput label="Search leads" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth or school" />}
-      columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
+      columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
       filters={<FilterCard
         categories={filterCategories}
         values={{ status: statusFilters, program: programFilters }}
