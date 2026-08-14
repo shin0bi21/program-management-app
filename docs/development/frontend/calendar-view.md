@@ -35,6 +35,7 @@
 - Give fixed-height desktop calendar wrappers `flex: 1` and `min-height: 0`; preserve mobile flow at `768px`.
 - Persist view and filters before dependent loading/rendering and hide permission-redundant controls.
 - For calendars that preserve navigation locally, give each page a stable `positionStorageKey`. Keep period rendering and server data as separate buffers: TanStack Virtual owns the visible periods plus render overscan, while `usePeriodDataBuffer` retains a larger loaded range beyond the rendered edges. Align the visible zone to the exact initial day and persist its leftmost day plus within-period pixel offset from a debounced horizontal-scroll lifecycle.
+- Keep that browser-local navigation position separate from durable user preferences. Filters, view, sorting, widths, and hidden columns follow the complete-value `useUserPreference` contract in [List views](list-view.md); calendar position stores only the leftmost day and within-period offset for the current browser.
 - Treat ranged-item overlap as an explicit product decision before choosing fixed overflow, expandable rows, or variable-height virtualization. Do not introduce dynamic row heights implicitly because they create layout shifts and require cumulative virtualized offsets.
 
 ## Load and mutate safely
