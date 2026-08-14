@@ -2,6 +2,12 @@
 
 `ResourceCalendar` owns generic resource-by-period rendering, navigation, TanStack period virtualization, overflow, drag interactions, and optional resource selection. Business data loading, permissions, mutations, and selection-driven content remain with the consuming page.
 
+## Build a new calendar consumer
+
+Follow the [calendar-view workflow](../../../../../docs/development/frontend/calendar-view.md) to assemble a page consumer. This README owns the shared component's public contract and internal implementation.
+
+Working ranged example: [`TaskCalendarView`](../../../pages/Staff/Tasks/components/TaskCalendarView/TaskCalendarView.tsx). Working point example: [`TimesheetCalendarView`](../../../pages/Staff/Timesheets/components/TimesheetCalendarView/TimesheetCalendarView.tsx). The [React hooks](../../../../../docs/development/stack/react-and-routing.md) and [TanStack Virtual](../../../../../docs/development/stack/tanstack-data-surfaces.md) guides explain the library APIs used internally.
+
 ## Internal ownership
 
 - `periods/` owns the horizontal timeline, date/index mapping, navigation, persisted position, and TanStack period virtualization.
@@ -33,7 +39,7 @@ Both virtualizers use TanStack's native element rectangle and scroll observers. 
 - Use `onCellActivate`, `onItemActivate`, and `onResourceSelect` for their respective targets. Nested item actions may stop propagation when they intentionally differ from primary item activation.
 - Declare per-item mechanics through `getItemCapabilities`. The calendar owns enabled drag/resize lifecycles; consumers still preserve authorization and domain validation in their mutation paths.
 - Range resize is optional. When enabled, the calendar supplies pointer and keyboard handles, previews geometry without React work on every pointer move, suppresses the release click, restores transient styles, and emits one `onRangeResize` result. The consumer persists that result and reports mutation errors.
-- Ranged movement is optional through `onRangeMove` and the same `draggable` capability. The calendar preserves duration, supports moving across both periods and rendered resource rows, clamps movement to the rendered period window, previews with a transform, and emits once on release; clipped ranges remain stationary until both endpoints are represented. Use `canRangeMove` when moving dates and changing resources have different business rules.
+- Ranged movement is optional through `onRangeMove` and the same `draggable` capability. The calendar resolves the source and destination against the complete logical period range, preserves duration, supports moving across rendered resource rows, previews with a transform, and emits once on release. Virtualized unmounting of the source item does not end the interaction. Use `canRangeMove` when moving dates and changing resources have different business rules.
 - Interaction mechanics are a parity contract across point and ranged items: thresholded pointer capture, a continuously pointer-following ghost, hover suppression, viewport clipping, edge autoscroll, cancellation cleanup, and click suppression are calendar-owned behavior. Adding a new item geometry must reuse those primitives and extend the browser parity tests; consumers must never opt into these mechanics one callback at a time.
 
 ## Standard item setup

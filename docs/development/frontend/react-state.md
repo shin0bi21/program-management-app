@@ -5,6 +5,7 @@
 - Keep pure predicates, key construction, grouping, mapping, and date calculations in named helpers.
 - Use a focused hook when derivation needs memoization, stable references, effects, subscriptions, asynchronous coordination, or a reusable state transition contract.
 - Keep pages readable as orchestration. Do not hide multi-step behavior inside nested ternaries, chained transforms, compressed callbacks, or JSX.
+- In a large route orchestrator, group imports by owner and group initialization by responsibility. Use a short section comment when it makes the state easier to scan; do not comment every variable.
 - Treat absence explicitly. Use optional chaining, nullish coalescing, and defaults only when absence is part of the typed product contract; otherwise validate at the boundary and fail loudly.
 
 ## Use React APIs deliberately

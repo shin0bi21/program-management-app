@@ -1,20 +1,21 @@
 # Development handbook
 
-This directory is the human-facing guide to changing the application. Architecture documents explain system boundaries; these guides explain the ordered work required to add or update behavior within those boundaries.
+Use this handbook when adding or changing application code. It tells you what to change and in what order. Architecture documents explain why the repository is organized that way.
 
-Product behavior that crosses implementation layers lives under [`../features/`](../features/README.md). Development work reads or creates the applicable feature contract, then follows these procedural guides.
+If the feature already has a document under [`docs/features/`](../features/README.md), read it first. It records business rules that must stay consistent across the backend and frontend.
 
 Use the guides in this order:
 
 1. Start with [Adding a feature](adding-a-feature.md) or [Updating a feature](updating-a-feature.md).
 2. Follow the linked backend and frontend workflows that apply.
-3. Read the architecture documents referenced by those workflows before changing an ownership boundary.
+3. Read a linked architecture document when the change affects that boundary.
 4. Use [Testing](../operations/testing.md) and the repository scripts for focused verification.
 
 ## Guide map
 
 | Task | Guide |
 |---|---|
+| Understand the application stack | [Stack guide](stack/README.md) |
 | Add an end-to-end capability | [Adding a feature](adding-a-feature.md) |
 | Change an existing capability | [Updating a feature](updating-a-feature.md) |
 | Add a backend domain or API | [Adding a backend domain](backend/adding-a-domain.md) |
@@ -28,4 +29,4 @@ Use the guides in this order:
 | Select and run tests | [Testing](../operations/testing.md) |
 | Review and ship completed work | [Review and shipping](review-and-shipping.md) |
 
-The source tree and component-local READMEs remain authoritative for exact current names. These guides own the repeatable repository workflow and link to code locations rather than duplicating a complete file inventory.
+The source tree remains authoritative for exact filenames. These guides explain the repeatable pattern without trying to inventory every file in the repository.

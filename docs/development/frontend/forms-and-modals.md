@@ -1,5 +1,7 @@
 # Frontend forms and modals
 
+For new modal data flows, use the [TanStack Query modal recipe](../stack/tanstack-query.md#queries-and-mutations-in-a-modal). TanStack owns remote data; React Hook Form or local React state owns the draft and modal lifecycle.
+
 ## Define entry paths
 
 - Inventory every entry path before building the form: page action, calendar cell, selected dashboard record, list action, and contextual create or edit.
