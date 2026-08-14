@@ -30,6 +30,7 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Settle shared contracts before delegating dependent implementation.
 - Suitable lanes include backend persistence/policies/services/HTTP, frontend adapters/state/pages/interactions, and an independent focused verification or regression audit.
 - For multiple affected features, assign lanes by cohesive feature or ownership boundary rather than by documentation layer.
+- For a cross-page frontend change, keep the primary thread responsible for the shared pattern and integration. Delegate each independently owned target page—or a tightly coupled route family—to a separate worker, and give every worker the same settled pattern and page-specific acceptance criteria.
 - Give each sub-agent the applicable feature, development, architecture, and local README contracts. Require concrete findings, changed paths, and verification evidence in its handoff.
 - Do not delegate unresolved product decisions, split one tightly coupled owner across agents, or allow concurrent edits to the same files.
 - Continue single-threaded when the task is small, sequential, or too coupled for delegation. The primary agent must review and integrate every delegated result.
