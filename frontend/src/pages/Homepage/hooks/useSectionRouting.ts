@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   HOMEPAGE_SECTIONS,
   getHomepagePathBySectionId,
@@ -21,11 +21,18 @@ export function scrollToHomepageSection(sectionId: string, behavior: ScrollBehav
 
 export function useSectionRouting({ disabled = false }: UseSectionRoutingOptions = {}) {
   const location = useLocation()
+  const navigate = useNavigate()
   const routeScrollInProgress = useRef(false)
   const routeScrollTargetId = useRef<string | null>(null)
+  const observedPathRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (disabled) return
+
+    if (observedPathRef.current === location.pathname) {
+      observedPathRef.current = null
+      return
+    }
 
     const section = getHomepageSectionByPath(location.pathname)
     if (!section) return
@@ -51,7 +58,7 @@ export function useSectionRouting({ disabled = false }: UseSectionRoutingOptions
   }, [disabled, location.pathname])
 
   useEffect(() => {
-    if (disabled || typeof IntersectionObserver === 'undefined') return
+    if (disabled) return
 
     const sectionElements = HOMEPAGE_SECTIONS
       .map((section) => document.getElementById(section.id))
@@ -59,35 +66,44 @@ export function useSectionRouting({ disabled = false }: UseSectionRoutingOptions
 
     if (!sectionElements.length) return
 
-    const observer = new IntersectionObserver((entries) => {
+    let frameId: number | null = null
+    const updateActiveSection = () => {
+      frameId = null
+      const topBarHeight = document.querySelector<HTMLElement>('.public-topbar')?.offsetHeight ?? 0
+      const anchorY = topBarHeight + window.innerHeight * 0.25
+      let activeSection = sectionElements[0]
+
+      for (const section of sectionElements) {
+        if (section.getBoundingClientRect().top > anchorY) break
+        activeSection = section
+      }
+
       if (routeScrollInProgress.current) {
-        const reachedRouteTarget = entries.some((entry) => (
-          entry.isIntersecting && entry.target.id === routeScrollTargetId.current
-        ))
-
-        if (!reachedRouteTarget) return
-
+        if (activeSection.id !== routeScrollTargetId.current) return
         routeScrollInProgress.current = false
         routeScrollTargetId.current = null
       }
 
-      const visibleEntries = entries.filter((entry) => entry.isIntersecting)
-      if (!visibleEntries.length) return
+      const nextPath = getHomepagePathBySectionId(activeSection.id)
+      if (!nextPath || location.pathname === nextPath) return
 
-      const activeEntry = visibleEntries.reduce((best, entry) => (
-        entry.intersectionRatio > best.intersectionRatio ? entry : best
-      ))
-      const nextPath = getHomepagePathBySectionId(activeEntry.target.id)
-      if (!nextPath || window.location.pathname === nextPath) return
+      observedPathRef.current = nextPath
+      navigate(`${nextPath}${location.search}`, { replace: true, preventScrollReset: true })
+    }
 
-      window.history.replaceState(window.history.state, '', `${nextPath}${window.location.search}`)
-    }, {
-      rootMargin: '-30% 0px -55% 0px',
-      threshold: [0, 0.2, 0.5, 0.8, 1],
-    })
+    const scheduleUpdate = () => {
+      if (frameId !== null) return
+      frameId = window.requestAnimationFrame(updateActiveSection)
+    }
 
-    sectionElements.forEach((el) => observer.observe(el))
+    scheduleUpdate()
+    window.addEventListener('scroll', scheduleUpdate, { passive: true })
+    window.addEventListener('resize', scheduleUpdate)
 
-    return () => observer.disconnect()
-  }, [disabled])
+    return () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+      window.removeEventListener('scroll', scheduleUpdate)
+      window.removeEventListener('resize', scheduleUpdate)
+    }
+  }, [disabled, location.pathname, location.search, navigate])
 }
