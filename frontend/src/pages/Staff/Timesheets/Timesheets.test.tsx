@@ -97,6 +97,9 @@ describe('Timesheets', () => {
     preferenceHook.loading = false;
     preferenceHook.error = null;
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((update: PreferenceValues['timesheet-filters'] | ((current: PreferenceValues['timesheet-filters'] | null) => PreferenceValues['timesheet-filters'])) => {
+      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
+    });
     vi.mocked(getUser).mockReturnValue({
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com',
     });
@@ -521,7 +524,7 @@ describe('Timesheets', () => {
     expect(screen.getByRole('columnheader', { name: 'Session' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
-    await waitFor(() => expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(preferenceHook.preference).toEqual(expect.objectContaining({
       sorting: { key: 'firstName', direction: 'asc' },
     })));
     const listRows = screen.getAllByRole('row').slice(1);

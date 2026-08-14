@@ -7,6 +7,9 @@ import {
   type PreferenceValues,
 } from '../api/preferences.api';
 
+type PreferenceUpdate<K extends PreferenceKey> = PreferenceValues[K]
+  | ((current: PreferenceValues[K] | null) => PreferenceValues[K]);
+
 export default function useUserPreference<K extends PreferenceKey>(key: K) {
   const queryClient = useQueryClient();
   const queryKey = useMemo(() => ['user-preference', key] as const, [key]);
@@ -47,7 +50,11 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     savingRef.current = false;
   }, [mutateAsync, queryClient, queryKey]);
 
-  const save = useCallback((value: PreferenceValues[K]) => {
+  const save = useCallback((update: PreferenceUpdate<K>) => {
+    const current = latestValueRef.current
+      ?? queryClient.getQueryData<PreferenceValues[K] | null>(queryKey)
+      ?? null;
+    const value = typeof update === 'function' ? update(current) : update;
     queryClient.setQueryData(queryKey, value);
     setError(null);
     latestValueRef.current = value;

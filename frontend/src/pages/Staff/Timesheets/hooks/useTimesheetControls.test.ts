@@ -29,6 +29,9 @@ describe('useTimesheetControls', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.save.mockImplementation((update: PreferenceValues['timesheet-filters'] | ((current: PreferenceValues['timesheet-filters'] | null) => PreferenceValues['timesheet-filters'])) => {
+      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
+    });
     programmingApi.getProgramCycles.mockResolvedValue([
       { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
       { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming' },
@@ -76,18 +79,37 @@ describe('useTimesheetControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => result.current.setView('calendar'));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       view: 'calendar', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['session'], cycleId: 'cycle-2',
     }));
 
     act(() => result.current.clearFilters());
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
     }));
 
     act(() => result.current.setHiddenColumns(['note']));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: null, hiddenColumns: ['note'],
+    }));
+  });
+
+  it('preserves a new column visibility choice when a resize follows immediately', async () => {
+    preferenceHook.preference = {
+      view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['session'],
+      cycleId: 'cycle-2', hiddenColumns: [], columnWidths: { note: 240 }, sorting: { key: 'hours', direction: 'asc' },
+    };
+    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => {
+      result.current.setHiddenColumns(['note', 'program']);
+      result.current.setColumnWidths({ note: 280 });
+    });
+
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
+      hiddenColumns: ['note', 'program'],
+      columnWidths: { note: 280 },
     }));
   });
 
@@ -99,6 +121,6 @@ describe('useTimesheetControls', () => {
     expect(result.current.staffFilters).toEqual([]);
     expect(result.current.filterCategories.map(category => category.id)).not.toContain('staff');
     act(() => result.current.setView('list'));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ staffIds: [] }));
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ staffIds: [] }));
   });
 });
