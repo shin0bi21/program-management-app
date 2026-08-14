@@ -9,6 +9,10 @@ Make one read-only split decision before review or shipping. Do not modify imple
 
 Keep this workflow single-threaded. One agent must inspect the whole working tree and produce one authoritative concern map; parallel classification risks conflicting boundaries and duplicated ownership.
 
+## Agent and reasoning tier
+
+When delegation and model selection are available, the primary orchestrator should assign this entire read-only workflow to one lightweight worker at the lowest practical reasoning level. Do not use multiple split workers. The primary orchestrator should remain on the strongest available tier, verify the returned concern map against the complete working-tree inventory, and own every downstream decision. If delegation or tier selection is unavailable, run the workflow directly without blocking.
+
 The output is a logical concern map, not authorization to materialize every concern at once. Do not create issues, branches, stashes, isolated working trees, commits, or pull requests for multiple concerns during this workflow. Shipping must complete concerns serially from freshly synchronized `develop` states.
 
 ## 1. Inventory the whole change
