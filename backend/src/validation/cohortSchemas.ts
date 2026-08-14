@@ -264,15 +264,14 @@ export const sessionAttachmentParamsSchema = z.object({
 
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
-export type CreateCycleInput = z.infer<typeof createCycleSchema.shape.body>;
-export type UpdateCycleInput = z.infer<typeof updateCycleSchema.shape.body>;
+export type SetProgramCycleInput = z.infer<typeof createCycleSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type CohortQuery = z.infer<typeof cohortQuerySchema.shape.query>;
 export type CohortYouthReportQuery = z.infer<typeof cohortYouthReportSchema.shape.query>;
-export type SaveAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
+export type SetAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;
 export type CreateSessionAttachmentInput = z.infer<typeof createSessionAttachmentSchema.shape.body>;

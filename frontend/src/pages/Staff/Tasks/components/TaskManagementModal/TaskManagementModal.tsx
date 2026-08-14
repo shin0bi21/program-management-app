@@ -3,7 +3,7 @@ import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
-import { createTask, updateTask } from '../../../../../common/features/tasks/api/tasks.api';
+import { setTask } from '../../../../../common/features/tasks/api/tasks.api';
 import { TASK_CATEGORY_OPTIONS, type Task, type TaskCategory, type TaskProgram, type TaskResource } from '../../../../../common/features/tasks/types';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 import './TaskManagementModal.css';
@@ -57,7 +57,7 @@ export default function TaskManagementModal({ isOpen, resources, programs, task,
         dueDate,
         staffId,
       };
-      const saved = task ? await updateTask(task.id, input) : await createTask(input);
+      const saved = task ? await setTask(input, task.id) : await setTask(input);
       onSaved(saved);
       onClose();
     } catch (cause) {

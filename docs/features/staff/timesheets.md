@@ -40,7 +40,7 @@ Resource responses expose authoritative `writable`, `firstName`, `lastName`, and
 ## Implementation ownership
 
 - Backend policies: `backend/src/policies/staffResourcePolicy.ts` and `backend/src/policies/timeEntryPolicy.ts`
-- Backend service and HTTP boundary: `backend/src/services/timeEntryService.ts`, time-entry validation, controller, and routes
+- Backend service and HTTP boundary: `backend/src/services/staff/hours/timeEntryService.ts`, time-entry validation, controller, and routes
 - Backend tests: `backend/tests/timesheets/`
 - Frontend route owner: `frontend/src/pages/Staff/Timesheets/`
 - Shared frontend contract and modal: `frontend/src/common/features/timeEntries/`

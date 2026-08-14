@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getSchools, setSchool, deleteSchool } from '../services/schoolService';
+import { getSchools, setSchool, deleteSchool } from '../services/youth/youthSchoolService';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import type { SetSchoolInput } from '../validation/schoolSchemas';
 

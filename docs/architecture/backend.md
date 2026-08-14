@@ -19,7 +19,7 @@ The complete client-to-database lifecycle is shown in [`http.mmd`](http.mmd). Au
 | `src/middleware/` | Authentication, authorization, rate limiting, validation, request IDs, and error handling |
 | `src/policies/` | Domain authorization scope predicates and assertions applied by services |
 | `src/controllers/` | Thin HTTP adapters that extract input, call services, and send successful responses |
-| `src/services/` | Business rules, transactions, SQL queries, audit writes, and external-operation orchestration |
+| `src/services/` | Business rules, transactions, SQL queries, audit writes, and external-operation orchestration, grouped by product capability when a service family has several files |
 | `src/validation/` | Zod schemas for request parameters, queries, and bodies |
 | `src/db/` | Shared PostgreSQL client and transaction helpers |
 | `src/types/` | Runtime-independent TypeScript contracts, including generated database types |

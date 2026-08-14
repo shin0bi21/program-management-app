@@ -1,17 +1,17 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
-  getAccounts,
   revokeAccountInvite,
   setAccount,
   toggleAccountStatus,
-} from '../services/accountService';
+} from '../services/accounts/accountService';
+import { listAccounts } from '../services/accounts/accountListService';
 import type { AccountQuery } from '../validation/accountSchemas';
 
 export const handleGetAccounts = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
   const filters = req.query as unknown as AccountQuery;
-  res.json(await getAccounts(actor, filters));
+  res.json(await listAccounts(actor, filters));
 };
 
 export const handleSetAccount = async (req: Request, res: Response) => {

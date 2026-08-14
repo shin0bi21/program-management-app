@@ -24,8 +24,7 @@ vi.mock('./api/leads.api', () => ({
   updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
-  createLeadNote: vi.fn(),
-  updateLeadNote: vi.fn(),
+  setLeadNote: vi.fn(),
   deleteLeadNote: vi.fn(),
 }));
 

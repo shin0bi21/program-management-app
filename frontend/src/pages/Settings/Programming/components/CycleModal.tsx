@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import { createProgramCycle, updateProgramCycle } from '../../../../common/features/programming/api/programming.api';
+import { setProgramCycle } from '../../../../common/features/programming/api/programming.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../http/clientErrors';
@@ -35,8 +35,8 @@ export default function CycleModal({ isOpen, cycle, onClose, onSaved }: CycleMod
     setStatus('submitting');
     setStatusMessage(cycle ? `Updating ${input.name}...` : `Creating ${input.name}...`);
     try {
-      if (cycle) await updateProgramCycle(cycle.id, input);
-      else await createProgramCycle(input);
+      if (cycle) await setProgramCycle(input, cycle.id);
+      else await setProgramCycle(input);
       await onSaved();
       setStatusMessage(cycle ? 'Cycle updated successfully.' : 'Cycle created successfully.');
       setStatus('success');

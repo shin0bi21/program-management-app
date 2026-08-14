@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleCreateLead, handleCreateLeadNote, handleDeleteLeadNote, handleGetLeadNotes, handleGetLeads, handleSignUpLead, handleUpdateLead, handleUpdateLeadNote, handleUpdateLeadStatus } from '../controllers/leadController';
+import { handleCreateLead, handleDeleteLeadNote, handleGetLeadNotes, handleGetLeads, handleSetLeadNote, handleSignUpLead, handleUpdateLead, handleUpdateLeadStatus } from '../controllers/leadController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
@@ -18,9 +18,9 @@ router.patch('/:id/status', authenticateToken, requirePermission('write:outreach
 
 router.get('/:id/notes', authenticateToken, requirePermission('read:outreach'), generalLimiter, validateRequest(leadNotesSchema), asyncHandler(handleGetLeadNotes));
 
-router.post('/:id/notes', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(createLeadNoteSchema), asyncHandler(handleCreateLeadNote));
+router.post('/:id/notes', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(createLeadNoteSchema), asyncHandler(handleSetLeadNote));
 
-router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(updateLeadNoteSchema), asyncHandler(handleUpdateLeadNote));
+router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(updateLeadNoteSchema), asyncHandler(handleSetLeadNote));
 
 router.delete('/:id/notes/:noteId', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(deleteLeadNoteSchema), asyncHandler(handleDeleteLeadNote));
 

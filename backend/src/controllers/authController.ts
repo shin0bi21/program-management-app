@@ -7,9 +7,9 @@ import {
   logoutUser,
   requestPasswordReset,
   resetUserPassword,
-} from '../services/authService';
+} from '../services/auth/authService';
 import { UnauthorizedError } from '../errors';
-import { REFRESH_TOKEN_EXPIRY_MS } from '../services/authService';
+import { REFRESH_TOKEN_EXPIRY_MS } from '../services/auth/authService';
 
 const getRefreshTokenCookieOptions = () => ({
   httpOnly: true,

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { createTask, deleteTask, getTaskList, getTaskOptions, getTasks, updateTask, updateTaskPlacement, updateTaskStatus } from '../services/taskService';
+import { getTaskList } from '../services/staff/tasks/taskListService';
+import { deleteTask, getTaskOptions, getTasks, setTask, updateTaskPlacement, updateTaskStatus } from '../services/staff/tasks/taskService';
 import type { TaskListQuery, TaskQuery } from '../validation/taskSchemas';
 
 export async function handleGetTasks(req: Request, res: Response) {
@@ -17,12 +18,9 @@ export async function handleGetTaskOptions(req: Request, res: Response) {
   res.json(await getTaskOptions((req as AuthRequest).user!));
 }
 
-export async function handleCreateTask(req: Request, res: Response) {
-  res.status(201).json(await createTask(req.body, (req as AuthRequest).user!));
-}
-
-export async function handleUpdateTask(req: Request, res: Response) {
-  res.json(await updateTask(req.params.id, req.body, (req as AuthRequest).user!));
+export async function handleSetTask(req: Request, res: Response) {
+  const id = req.params.id;
+  res.status(id ? 200 : 201).json(await setTask(req.body, (req as AuthRequest).user!, id));
 }
 
 export async function handleUpdateTaskStatus(req: Request, res: Response) {

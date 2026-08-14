@@ -8,7 +8,7 @@ export function timeEntryWriteScopePredicate(actor: AccessTokenPayload, staffId:
   return actor.role === 'admin' ? sql`TRUE` : sql`${staffId} = ${actor.userId}`;
 }
 
-export function canWriteTimeFor(actor: AccessTokenPayload, staffId: string) {
+export function canSetTimeEntry(actor: AccessTokenPayload, staffId: string) {
   return actor.permissions.includes('write:timesheets')
     && (actor.role === 'admin' || actor.userId === staffId);
 }
@@ -21,8 +21,8 @@ export function timeEntryReadScopePredicate(actor: AccessTokenPayload, staffId: 
   return timeEntryResourceReadScopePredicate(actor, staffId);
 }
 
-export function assertCanWriteTimeFor(actor: AccessTokenPayload, staffId: string) {
-  if (!canWriteTimeFor(actor, staffId)) {
+export function assertCanSetTimeEntry(actor: AccessTokenPayload, staffId: string) {
+  if (!canSetTimeEntry(actor, staffId)) {
     throw new ForbiddenError('Staff can only manage their own time entries');
   }
 }

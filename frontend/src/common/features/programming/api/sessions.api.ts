@@ -68,7 +68,7 @@ export function getSessionRoster(sessionId: string, opts?: RequestOptions) {
     : apiClient.get<SessionRosterMember[]>(path);
 }
 
-export function saveSessionAttendance(
+export function setSessionAttendance(
   sessionId: string,
   records: Array<{ youthId: string; status: AttendanceStatus; notes?: string | null }>,
 ) {

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { submitExpressionOfInterest } from '../services/publicService';
+import { submitExpressionOfInterest } from '../services/outreach/expressions/publicService';
 
 export const handleExpressionOfInterest = async (req: Request, res: Response) => {
   await submitExpressionOfInterest(req.body);

@@ -88,8 +88,11 @@ export function getTimeEntrySessions(staffId: string, workDate: string, signal?:
   const params = new URLSearchParams({ staffId, workDate });
   return apiClient.get<TimeEntrySession[]>(`/time-entries/sessions?${params}`, { signal });
 }
-export function createTimeEntry(input: SetTimeEntryInput) { return apiClient.post<TimeEntryResponse>('/time-entries', input); }
-export function updateTimeEntry(id: string, input: SetTimeEntryInput) { return apiClient.put<TimeEntryResponse>(`/time-entries/${id}`, input); }
+export function setTimeEntry(input: SetTimeEntryInput, id?: string) {
+  return id
+    ? apiClient.put<TimeEntryResponse>(`/time-entries/${id}`, input)
+    : apiClient.post<TimeEntryResponse>('/time-entries', input);
+}
 export function updateTimeEntryPlacement(id: string, input: UpdateTimeEntryPlacementInput) {
   return apiClient.patch<TimeEntryResponse>(`/time-entries/${id}/placement`, input);
 }

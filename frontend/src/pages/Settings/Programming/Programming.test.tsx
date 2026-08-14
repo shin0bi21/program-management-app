@@ -7,8 +7,7 @@ import Programming from './Programming';
 
 const programmingApi = vi.hoisted(() => ({
   getProgramCycles: vi.fn(),
-  createProgramCycle: vi.fn(),
-  updateProgramCycle: vi.fn(),
+  setProgramCycle: vi.fn(),
   deleteProgramCycle: vi.fn(),
 }));
 const programsApi = vi.hoisted(() => ({

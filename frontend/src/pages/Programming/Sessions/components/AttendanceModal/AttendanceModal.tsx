@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import { getSessionRoster, saveSessionAttendance } from '../../../../../common/features/programming/api/programming.api';
+import { getSessionRoster, setSessionAttendance } from '../../../../../common/features/programming/api/programming.api';
 import { getYouth } from '../../../../../common/features/youth/api/youth.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type {
@@ -104,7 +104,7 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
     setStatusMessage(`Saving attendance for ${sessionName}...`);
     setError(null);
     try {
-      await saveSessionAttendance(
+      await setSessionAttendance(
         session.id,
         isOpenRoster
           ? roster.map(member => ({ youthId: member.youthId, status: 'present' as const, notes: member.notes }))
