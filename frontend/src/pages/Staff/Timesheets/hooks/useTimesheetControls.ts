@@ -25,6 +25,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   const [view, setViewState] = useState<TimesheetView>('calendar');
   const [ready, setReady] = useState(false);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
   const [sorting, setSortingState] = useState<ListSort<TimesheetSortKey>>({ key: 'date', direction: 'desc' });
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesReady, setCyclesReady] = useState(false);
@@ -54,6 +55,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     setProgramFilters(preference?.programIds ?? []);
     setTypeFilters(preference?.types ?? []);
     setColumnWidthsState(preference?.columnWidths ?? {});
+    setHiddenColumnsState(preference?.hiddenColumns ?? []);
     setSortingState(preference?.sorting ?? { key: 'date', direction: 'desc' });
     const savedCycleId = preference?.cycleId ?? '';
     setSelectedCycleId(preference
@@ -72,17 +74,17 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     columnWidths?: Record<string, number>;
     sorting?: ListSort<TimesheetSortKey>;
     hiddenColumns?: string[];
-  }) => save({
-    view: next.view ?? view,
-    staffIds: role === 'admin' ? next.staffIds ?? staffFilters : [],
-    programIds: next.programIds ?? programFilters,
-    categories: next.categories ?? categoryFilters,
-    types: next.types ?? typeFilters,
-    cycleId: (next.cycleId ?? selectedCycleId) || null,
-    columnWidths: next.columnWidths ?? columnWidths,
-    sorting: next.sorting ?? sorting,
-    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
-  }), [categoryFilters, columnWidths, preference?.hiddenColumns, programFilters, role, save, selectedCycleId, sorting, staffFilters, typeFilters, view]);
+  }) => save(current => ({
+    view: next.view ?? current?.view ?? view,
+    staffIds: role === 'admin' ? next.staffIds ?? current?.staffIds ?? staffFilters : [],
+    programIds: next.programIds ?? current?.programIds ?? programFilters,
+    categories: next.categories ?? current?.categories ?? categoryFilters,
+    types: next.types ?? current?.types ?? typeFilters,
+    cycleId: (next.cycleId !== undefined ? next.cycleId : current ? current.cycleId : selectedCycleId) || null,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [categoryFilters, columnWidths, hiddenColumns, programFilters, role, save, selectedCycleId, sorting, staffFilters, typeFilters, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     ...(role === 'admin' ? [{
@@ -132,6 +134,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   }, [persist]);
 
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    setHiddenColumnsState(hiddenColumns);
     persist({ hiddenColumns });
   }, [persist]);
 
@@ -146,7 +149,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   }, [persist]);
 
   return {
-    staffFilters, categoryFilters, programFilters, typeFilters, view, ready, columnWidths, hiddenColumns: preference?.hiddenColumns ?? [], sorting,
+    staffFilters, categoryFilters, programFilters, typeFilters, view, ready, columnWidths, hiddenColumns, sorting,
     cycles, cyclesError, selectedCycleId, preferenceError, filterCategories,
     applyFilter, clearFilters, setView, setColumnWidths, setHiddenColumns, setSorting, selectCycle,
   };

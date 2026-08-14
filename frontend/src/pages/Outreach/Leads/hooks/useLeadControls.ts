@@ -19,6 +19,7 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
   // Table presentation state.
   const [sorting, setSortingState] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference state.
   const { preference, loading: preferenceLoading, error, save } = useUserPreference('lead-filters');
@@ -39,6 +40,7 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
       : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
     setSortingState(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
     setColumnWidthsState(preference?.columnWidths ?? {});
+    setHiddenColumnsState(preference?.hiddenColumns ?? []);
     setReady(true);
   }, [preference, preferenceLoading, programs, programsError, programsLoading, ready]);
 
@@ -64,8 +66,8 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
     programIds: next.programIds ?? programFilters,
     sorting: next.sorting ?? sorting,
     columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
-  }), [columnWidths, preference?.hiddenColumns, programFilters, save, sorting, statusFilters]);
+    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
+  }), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
 
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {
@@ -96,11 +98,11 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
     setColumnWidthsState(next);
     void persist({ columnWidths: next });
   }, [persist]);
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => void persist({ hiddenColumns }), [persist]);
+  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting, setSorting,
-    columnWidths, setColumnWidths, hiddenColumns: preference?.hiddenColumns ?? [], setHiddenColumns,
+    columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };
 }

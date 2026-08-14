@@ -35,6 +35,7 @@ export function useSessionControls({
   const [view, setViewState] = useState<SessionsView>('calendar');
   const [sorting, setSortingState] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference initialization.
   const [ready, setReady] = useState(false);
@@ -61,6 +62,7 @@ export function useSessionControls({
       setStatuses(preference.statuses);
       setSortingState(preference.sorting ?? { key: 'date', direction: 'desc' });
       setColumnWidthsState(preference.columnWidths ?? {});
+      setHiddenColumnsState(preference.hiddenColumns ?? []);
     } else {
       const assignedProgram = getSingleAssignedProgram(role, programs);
       setProgramIds(assignedProgram ? [assignedProgram.id] : []);
@@ -99,8 +101,8 @@ export function useSessionControls({
     statuses: next.statuses ?? statuses,
     sorting: next.sorting ?? sorting,
     columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
-  }), [cohortId, columnWidths, preference?.hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
+    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
+  }), [cohortId, columnWidths, hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
 
   const applyFilter = useCallback((key: string, values: string[]) => {
     const nextProgramIds = key === 'program' ? values : programIds;
@@ -125,11 +127,11 @@ export function useSessionControls({
   const setView = useCallback((next: SessionsView) => { setViewState(next); void persist({ view: next }); }, [persist]);
   const setSorting = useCallback((next: ListSort<SessionSortKey>) => { setSortingState(next); void persist({ sorting: next }); }, [persist]);
   const setColumnWidths = useCallback((next: Record<string, number>) => { setColumnWidthsState(next); void persist({ columnWidths: next }); }, [persist]);
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { void persist({ hiddenColumns }); }, [persist]);
+  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
     search, setSearch, debouncedSearch, view, setView, programIds, cohortId, sessionTypeIds, statuses,
-    ready, sorting, setSorting, columnWidths, setColumnWidths, hiddenColumns: preference?.hiddenColumns ?? [], setHiddenColumns,
+    ready, sorting, setSorting, columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     error, filterCategories, applyFilter, clearFilters, schedulableCohorts,
   };
 }
