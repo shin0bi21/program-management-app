@@ -71,6 +71,7 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     cycleId?: string;
     columnWidths?: Record<string, number>;
     sorting?: ListSort<TimesheetSortKey>;
+    hiddenColumns?: string[];
   }) => save({
     view: next.view ?? view,
     staffIds: role === 'admin' ? next.staffIds ?? staffFilters : [],
@@ -80,7 +81,8 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
     cycleId: (next.cycleId ?? selectedCycleId) || null,
     columnWidths: next.columnWidths ?? columnWidths,
     sorting: next.sorting ?? sorting,
-  }), [categoryFilters, columnWidths, programFilters, role, save, selectedCycleId, sorting, staffFilters, typeFilters, view]);
+    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
+  }), [categoryFilters, columnWidths, preference?.hiddenColumns, programFilters, role, save, selectedCycleId, sorting, staffFilters, typeFilters, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     ...(role === 'admin' ? [{
@@ -130,8 +132,8 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   }, [persist]);
 
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => {
-    void save({ hiddenColumns });
-  }, [save]);
+    persist({ hiddenColumns });
+  }, [persist]);
 
   const setSorting = useCallback((next: ListSort<TimesheetSortKey>) => {
     setSortingState(next);

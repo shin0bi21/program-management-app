@@ -9,6 +9,8 @@ Turn approved working-tree changes into traceable, tested pull requests without 
 
 Keep shipping single-threaded and serial. Do not delegate branch, stash, commit, pull-request, check-waiting, merge, or base-synchronization operations: they share mutable Git and GitHub state and must complete in one ordered workflow.
 
+Keep the shipping orchestrator on the strongest available model and reasoning tier. The only delegated prerequisite may be the complete read-only `split-changes` workflow, using that skill's single lightweight-worker policy. Do not spawn workers for mutable shipping operations.
+
 Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) when shipping a change to CI topology, required checks, or test-runner ownership.
 
 ## Production boundary

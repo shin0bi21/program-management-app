@@ -175,7 +175,7 @@ export default function Users() {
             </div>
           )}
           search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
-          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
+          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, roles: roleFilters, sorting, columnWidths, hiddenColumns })} />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, role: roleFilters }}

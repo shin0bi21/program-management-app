@@ -119,6 +119,22 @@ describe('Leads', () => {
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
   });
 
+  it('persists a complete preference when first hiding a column', async () => {
+    renderPage();
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
+
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: [],
+      programIds: [],
+      sorting: { key: 'createdAt', direction: 'desc' },
+      columnWidths: {},
+      hiddenColumns: ['school'],
+    });
+  });
+
   it('shows primary contact details when a lead row is selected', async () => {
     renderPage();
 

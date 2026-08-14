@@ -13,6 +13,7 @@ export default function TimeItem({ item, onEdit, onDelete }: TimeItemProps) {
   const title = item.taskTitle ?? item.sessionLabel ?? item.categoryLabel;
   return <CalendarItem
     id={item.id}
+    className="time-item"
     ariaLabel={`${title}, ${item.hours} hours, ${entryType}`}
     leading={`${item.hours}h`}
     summary={<span className={`time-item__type time-item__type--${entryType.toLowerCase()}`}>{entryType}</span>}

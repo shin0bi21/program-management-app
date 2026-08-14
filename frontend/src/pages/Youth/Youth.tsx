@@ -196,7 +196,7 @@ export default function Youth() {
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
           search={<SearchInput label="Search youth" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
-          columns={<ColumnVisibilityMenu columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void saveFilters({ hiddenColumns })} />}
+          columns={<ColumnVisibilityMenu columns={youthColumns} hiddenColumnKeys={savedFilters?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void saveFilters({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, program: programFilters }}

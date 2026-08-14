@@ -28,6 +28,7 @@
 ## Persist and verify
 
 - Persist view, filters, sorting, widths, and established display choices through `useUserPreference`. Restore them before dependent requests or misleading defaults and hide permission-redundant choices.
+- Build one complete value for the preference key on every save, including first use when the backend returns `null`. Each control may replace its own field, but it must preserve or initialize every other required field; test the first interaction before a preference row exists.
 - Preserve horizontal scrolling and the shared `768px` mobile behavior.
 - Use browser tests for resizing, overflow, sticky behavior, and focus geometry. Test filter wiring, preferences, permissions, states, selection, sorting, widths, cursor advancement and append behavior, pagination deduplication, and modal workflows. For row-scoped mutations, assert that the returned row is rendered without another list request or a table-level refreshing state.
 - Test list-query pagination and row shaping beside the owning ListView hook. Retain route tests for header controls, view switching, selection context, dialogs, and cross-view reconciliation.

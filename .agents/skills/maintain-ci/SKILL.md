@@ -21,6 +21,8 @@ Treat workflow files as orchestration, repository scripts as stable developer/CI
 
 When sub-agent tools are available, delegate only independent read-only lanes such as performance measurement, workflow-path auditing, or local-runner ownership analysis. Keep workflow integration, required-check decisions, implementation, and final verification with the primary agent.
 
+Keep the primary orchestrator on the strongest available model and reasoning tier. Use a lower-cost worker at low reasoning by default for bounded measurement, inventory, and workflow-tracing lanes. Increase a worker's capability or reasoning only when its lane itself contains non-obvious dependency or concurrency analysis. If explicit tier selection is unavailable, use the available worker without blocking.
+
 - Define the exact workflows, time range, commits, or runner boundary for each lane.
 - Do not have multiple agents edit shared workflow or runner files concurrently.
 - Reconcile measurements against comparable samples before claiming an improvement.

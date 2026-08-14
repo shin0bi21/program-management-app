@@ -66,6 +66,11 @@ describe('useTimesheetControls', () => {
     expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
       view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
     }));
+
+    act(() => result.current.setHiddenColumns(['note']));
+    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
+      view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: null, hiddenColumns: ['note'],
+    }));
   });
 
   it('removes admin-only staff controls and persistence for staff users', async () => {

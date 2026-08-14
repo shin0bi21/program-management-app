@@ -170,7 +170,7 @@ export default function ExpressionsOfInterest() {
       <PageHeader
         title="Outreach"
         search={<SearchInput label="Search expressions of interest" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
-        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
+        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
         filters={<FilterCard
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
