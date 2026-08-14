@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import {
-  handleCreateTimeEntry,
   handleDeleteTimeEntry,
   handleGetTimeEntries,
   handleGetTimeEntryList,
   handleGetTimeEntryOptions,
   handleGetTimeEntryOverview,
   handleGetTimeEntrySessions,
-  handleUpdateTimeEntry,
+  handleSetTimeEntry,
   handleUpdateTimeEntryPlacement,
 } from '../controllers/timeEntryController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
@@ -30,8 +29,8 @@ router.get('/list', authenticateToken, requirePermission('read:timesheets'), gen
 router.get('/options', authenticateToken, requirePermission('read:timesheets'), generalLimiter, asyncHandler(handleGetTimeEntryOptions));
 router.get('/overview', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryOverviewQuerySchema), asyncHandler(handleGetTimeEntryOverview));
 router.get('/sessions', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntrySessionQuerySchema), asyncHandler(handleGetTimeEntrySessions));
-router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleCreateTimeEntry));
-router.put('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(setTimeEntrySchema), asyncHandler(handleUpdateTimeEntry));
+router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
+router.put('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
 router.patch('/:id/placement', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(updateTimeEntryPlacementSchema), asyncHandler(handleUpdateTimeEntryPlacement));
 router.delete('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), asyncHandler(handleDeleteTimeEntry));
 

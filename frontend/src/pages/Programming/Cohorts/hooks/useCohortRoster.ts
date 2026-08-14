@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { getYouth } from '../../../../common/features/youth/api/youth.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../common/types/youth';
@@ -12,7 +13,7 @@ const noYouth: YouthProfile[] = [];
 export function useCohortRoster(cohort: ProgramCohort | null) {
   const [search, setSearch] = useState('');
   const query = useQuery({
-    queryKey: ['cohort-roster-youth'],
+    queryKey: [...YOUTH_QUERY_KEY, 'cohort-roster'],
     queryFn: ({ signal }) => getYouth(undefined, {}, { signal }),
     enabled: cohort !== null,
   });

@@ -4,7 +4,8 @@ import type { YouthFilters, YouthProfile, SetYouthInput, YouthProfileNote, Youth
 import type { CursorPage, CursorRequest } from '../../../types/pagination';
 import type { YouthSessionNote } from '../../../types/cohort';
 
-export function getYouth(id?: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
+export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
+export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
 export function getYouth(id: undefined, filters: YouthFilters, opts: RequestOptions | undefined, pagination: CursorRequest<YouthSortKey>): Promise<YouthProfile[] | CursorPage<YouthProfile>>;
 export function getYouth(id?: string, filters: YouthFilters = {}, opts?: RequestOptions, pagination?: CursorRequest<YouthSortKey>) {
   const params = new URLSearchParams();
@@ -21,7 +22,9 @@ export function getYouth(id?: string, filters: YouthFilters = {}, opts?: Request
   }
   const query = params.toString();
   const path = `/youth${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<YouthProfile[] | CursorPage<YouthProfile>>(path, opts) : apiClient.get<YouthProfile[] | CursorPage<YouthProfile>>(path);
+  return opts
+    ? apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path, opts)
+    : apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path);
 }
 
 export function setYouth(data: SetYouthInput) {
@@ -42,11 +45,10 @@ export function getYouthProfileNotes(id: string, opts?: RequestOptions) {
   const path = `/youth/${id}/notes`;
   return opts ? apiClient.get<YouthProfileNote[]>(path, opts) : apiClient.get<YouthProfileNote[]>(path);
 }
-export function createYouthProfileNote(id: string, data: SetYouthProfileNoteInput) {
-  return apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
-}
-export function updateYouthProfileNote(id: string, noteId: string, data: SetYouthProfileNoteInput) {
-  return apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data);
+export function setYouthProfileNote(id: string, data: SetYouthProfileNoteInput, noteId?: string) {
+  return noteId
+    ? apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data)
+    : apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
 }
 export function deleteYouthProfileNote(id: string, noteId: string) {
   return apiClient.delete<void>(`/youth/${id}/notes/${noteId}`);

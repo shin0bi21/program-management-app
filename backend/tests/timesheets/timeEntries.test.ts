@@ -2,7 +2,7 @@ import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
-import { getBiweeklyPayPeriod } from '../../src/services/timeEntryPeriods';
+import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriods';
 
 const app = createApp();
 const workDate = '2026-08-09';

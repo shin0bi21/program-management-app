@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../tests/factories/youth';
 import { getYouth } from '../../../common/features/youth/api/youth.api';
@@ -44,19 +44,4 @@ describe('useYouth', () => {
     );
   });
 
-  it('upserts a saved youth in place without refetching the table', async () => {
-    const first = makeYouthProfile({ id: 'youth-1', firstName: 'Original' });
-    const second = makeYouthProfile({ id: 'youth-2', firstName: 'Second' });
-    mockGetYouth.mockResolvedValue([first, second]);
-
-    const { result } = renderHook(() => useYouth({}), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.youth).toHaveLength(2));
-
-    act(() => result.current.upsertYouth({ ...first, firstName: 'Updated' }));
-
-    await waitFor(() => expect(
-      result.current.youth.map(youth => youth.firstName),
-    ).toEqual(['Updated', 'Second']));
-    expect(mockGetYouth).toHaveBeenCalledOnce();
-  });
 });

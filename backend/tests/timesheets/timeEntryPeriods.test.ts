@@ -1,4 +1,4 @@
-import { getBiweeklyPayPeriod } from '../../src/services/timeEntryPeriods';
+import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriods';
 
 describe('Timesheet pay periods', () => {
   it.each([

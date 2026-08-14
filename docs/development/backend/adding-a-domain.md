@@ -1,37 +1,62 @@
 # Adding a backend domain
 
-Read [Backend architecture](../../architecture/backend.md), plus the database, authentication, and error architecture documents relevant to the feature. Implement from persistence upward so higher layers depend on an enforced contract.
+Use this order when a feature needs new backend data or endpoints. Skip the migration step when persistence does not change.
 
-## 1. Add the persistence contract
+## File layout
 
-Follow [Database changes](database-changes.md). Add a new forward-only SQL migration under `backend/db/migrations/`; never edit a committed or applied migration. Encode required relationships, uniqueness, finite values, history, deletion behavior, and query-supporting indexes in PostgreSQL.
+Keep controllers, routes, validation, and policies in their top-level layer folders. Organize the larger service layer by product area and capability:
 
-Apply the migration and regenerate `backend/src/types/database.ts` through the repository command:
+```text
+backend/
+├── db/migrations/<date>_add_example.sql # only when the schema changes
+├── src/policies/examplePolicy.ts
+├── src/services/<product-area>/<capability>/
+│   ├── exampleListService.ts # when the domain has a complex collection query
+│   ├── exampleRecordQuery.ts # when list and direct reads share a canonical projection
+│   ├── exampleService.ts     # direct reads, set/delete, and focused commands
+│   └── exampleFilters.ts     # only when filters need a separate file
+├── src/validation/exampleSchemas.ts
+├── src/controllers/exampleController.ts
+├── src/routes/exampleRoutes.ts
+└── tests/example/
+```
+
+A standalone service can stay directly under `src/services/`. Create a capability folder when several files belong together, such as sessions with attendance, notes, and attachments. Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`; do not name backend folders after a temporary page layout.
+
+Read [Backend architecture](../../architecture/backend.md) before changing these boundaries.
+
+## 1. Add the database migration when needed
+
+Add a new SQL file under `backend/db/migrations/`. Never edit a migration that has been committed or applied. Add the required tables, columns, relationships, constraints, and indexes.
+
+Run it with:
 
 ```bash
 docker compose exec backend npm run db:migrate
 docker compose exec backend npm run db:status
 ```
 
-Update seeds and fixtures when the schema adds required data.
+This also regenerates `backend/src/types/database.ts`. Update seeds and fixtures when the new schema requires them. See [Database changes](database-changes.md) for constraints, transactions, and migration safety.
 
-## 2. Implement services
+## 2. Add permission rules
 
-Follow [Backend services](services.md). Add business behavior and parameterized SQL under `backend/src/services/`. Services own authoritative reads, transactions, locking, invariants, audit writes, and external-operation boundaries. A helper called inside a transaction joins it rather than opening another transaction.
+If access depends on the record, add `backend/src/policies/examplePolicy.ts`. Define which records a user can read or change. The route checks the broad permission; the policy handles access to individual records. See [Authorization and record scope](authorization-and-scope.md) and [Backend policies](policies.md).
 
-Define narrow command operations for focused mutations. A status, date, assignment, move, or resize command must not replace unrelated fields from a stale client snapshot.
+## 3. Add the service
 
-## 3. Define authorization policies
+Add the service under its owning capability folder. Put SQL, business rules, transactions, locking, policy checks, and audit writes here. Use parameterized queries.
 
-Follow [Authorization and record scope](authorization-and-scope.md) and [Backend policies](policies.md). Define independently the route permission, resource and record visibility, mutation scope, and any writable capability the frontend needs returned explicitly.
+Use [Backend services](services.md) to choose between the main service, list service, shared record query, and optional colocated filters.
 
-Administrator breadth, staff self-scope, youth-linked access, shared program or cohort access, and public-facing behavior must be explicit policy decisions. Public routes are deliberately unauthenticated contracts, not protected routes with omitted checks. Never infer authority from role names in controllers or from frontend visibility.
+## 4. Add the API files
 
-## 4. Add the HTTP boundary
+Add these files:
 
-Add Zod params, query, and body schemas under `backend/src/validation/`. Add thin HTTP adapters under `backend/src/controllers/`, then define routes under `backend/src/routes/`.
+- `backend/src/validation/exampleSchemas.ts` for request validation;
+- `backend/src/controllers/exampleController.ts` to call the service and return the response;
+- `backend/src/routes/exampleRoutes.ts` for the URL and middleware.
 
-Protected middleware normally runs in this order:
+For protected routes, use this middleware order:
 
 1. `authenticateToken`;
 2. `requirePermission(...)`;
@@ -39,10 +64,15 @@ Protected middleware normally runs in this order:
 4. `validateRequest(...)`;
 5. `asyncHandler(controller)`.
 
-Mount the router in both `backend/src/index.ts` and `backend/tests/shared/app.ts`. Update `backend/README.md` when the public API catalog changes.
+Keep controllers thin. Business rules and SQL stay in the service.
 
-## 5. Test the public contract
+## 5. Mount and test the API
 
-Follow [Backend testing](testing.md). Add tests under `backend/tests/<domain>/` and a focused runner under `scripts/tests/backend/`; register it with the appropriate composed runner and changed-suite routing. Cover permissions with tokens that explicitly lack the capability, policy scope, validation, success, concealment/not-found behavior, conflicts, transactions, constraints, and destructive behavior as applicable.
+Mount the router in both:
+
+- `backend/src/index.ts`;
+- `backend/tests/shared/app.ts`.
+
+Add tests under `backend/tests/example/` and a focused runner under `scripts/tests/backend/`. Add the corresponding package command when the runner uses one, then map the domain's source and test paths in `scripts/tests/test-app.sh` so `--changed` selects it. Test validation, permissions, success, failures, and database rules that matter to the feature. Update `backend/README.md` when the API catalog changes. See [Backend testing](testing.md) for the complete checklist.
 
 Restart the backend after TypeScript changes, then run the focused runner. Use `bash scripts/tests/test-app.sh --plan-changed` to confirm a new path is routed correctly.

@@ -1,35 +1,39 @@
 # Adding a feature
 
-Add a feature from durable data and authority outward. Define the contract once, enforce it on the backend, and then expose it through typed frontend workflows.
+If the feature needs new stored data, API endpoints, or permission rules, start with the backend. If the backend already supports everything the feature needs, jump to [Build the frontend](#3-build-the-frontend).
 
-## 1. Define the product contract
+If an API in the examples is unfamiliar, use the [Stack guide](stack/README.md). It explains the libraries and APIs this repository uses without changing the implementation order below.
 
-Write down the records, lifecycle, ownership, visibility, mutation permissions, destructive behavior, date boundaries, request and response shapes, and user-visible error behavior. Separate current requirements from speculative future states.
+## 1. Confirm what you are building
 
-For cross-stack work, keep finite values, nullable fields, identifiers, permissions, and error semantics aligned from database through UI.
+Write down what the feature must do, who can use it, and the important failure cases. Add a short document under [`docs/features/`](../features/README.md) when these rules affect both backend and frontend behavior.
 
-If the capability has meaningful cross-layer lifecycle, authorization, persistence, destructive, date, concurrency, or multi-consumer behavior, add its canonical product contract under [`docs/features/`](../features/README.md). Group it by product area, not by its current page-local or shared-code placement.
+Do not document possible future versions of the feature as current behavior.
 
-## 2. Build the backend foundation
+## 2. Build the backend when needed
 
-Follow [Adding a backend domain](backend/adding-a-domain.md) in its documented order:
+Follow [Adding a backend domain](backend/adding-a-domain.md). The usual order is:
 
-1. migration and generated database types;
-2. service queries, transactions, and business rules;
-3. authorization policies and record scope;
-4. validation, controllers, and routes;
-5. production and test application mounting;
-6. backend tests and API documentation.
+1. create and run the migration when stored data changes;
+2. define record-level access rules;
+3. add the service queries and commands;
+4. add validation, the controller, and routes;
+5. mount the route and add focused API tests.
 
-The backend must independently enforce every invariant and authorization rule before the frontend depends on it.
+The policy comes before the service because service reads and writes must apply those access rules.
 
-## 3. Build the frontend capability
+## 3. Build the frontend
 
-Follow [Adding a frontend page](frontend/adding-a-page.md) when the feature owns a route. That guide routes to specialized workflows for page shells, list views, calendar views, forms and modals, React state, and browser interactions.
+Follow [Adding a frontend page](frontend/adding-a-page.md) when the feature adds a route. That guide covers the page directory, route, navigation, typed API calls, and state.
 
-Start with the typed endpoint adapter and state owner, then compose the page and its specialized views. Do not let UI implementation invent a broader contract than the backend provides.
+Then use only the guide needed for the UI you are adding:
 
-## 4. Verify the concern
+- [List view](frontend/list-view.md) for a remote table or list;
+- [Calendar view](frontend/calendar-view.md) for a resource calendar;
+- [Forms and modals](frontend/forms-and-modals.md) for create, edit, and delete workflows;
+- [Page shell](frontend/page-shell.md) for the standard page layout.
+
+## 4. Test the feature
 
 Use the narrow owner tests while developing. Preview affected-suite routing with:
 
@@ -44,4 +48,4 @@ node scripts/agents/check-patterns.js --changed
 git diff --check
 ```
 
-Use [Testing](../operations/testing.md) for runner ownership. After implementation, follow [Review and shipping](review-and-shipping.md); review and shipping do not authorize deployment.
+Use [Testing](../operations/testing.md) to choose the right test command. After implementation, follow [Review and shipping](review-and-shipping.md). Deployment is a separate step.

@@ -270,7 +270,7 @@ Errors during token decode (expired, already invalid) are silently swallowed —
 
 ## 9. Auth Logging
 
-Every security-relevant auth event is written to `auth_log` by `src/services/authLogService.ts`. The call is fire-and-forget — a logging failure never blocks or fails the auth operation.
+Every security-relevant auth event is written to `auth_log` by `src/services/auth/authLogService.ts`. The call is fire-and-forget — a logging failure never blocks or fails the auth operation.
 
 ### Events wired in `authService.ts`
 
@@ -325,7 +325,7 @@ Throws at startup if a required env var is missing. Used by `authService.ts` and
 
 Exports `BaseTokenPayload`, `AccessTokenPayload`, `RefreshTokenPayload`, `UserRole`, `Permission`. Both `authService.ts` (signing) and `authMiddleware.ts` (verification) import from here. This is the single source of truth for token shapes and permission strings on the backend — if the token shape or permission list changes, update this file first.
 
-### `src/services/tokenRevocationService.ts`
+### `src/services/auth/tokenRevocationService.ts`
 
 Owns all access token blacklist logic:
 
@@ -352,10 +352,10 @@ authService.ts     ──▶  authLogService.ts
 
 ## 12. Account Invite Flow
 
-Staff/admin accounts are invited through `accountService.ts`; youth credentials can be created with a youth profile from the Users page. Both flows reuse the password reset token mechanism:
+Staff/admin accounts are invited through `src/services/accounts/accountService.ts`; youth credentials can be created with a youth profile from the Users page. Both flows reuse the password reset token mechanism:
 
 1. An authorized user submits account/profile information through the Users page.
-2. `accountService.ts` creates credentials with a random unusable password hash (`status: 'invited'`).
+2. `src/services/accounts/accountService.ts` creates credentials with a random unusable password hash (`status: 'invited'`).
 3. A 7-day token is inserted into `user_password_reset_tokens`.
 4. `sendStaffInvite()` in `emailService.ts` sends an email with a link to `/reset-password?token=<rawToken>`.
 5. The invitee clicks the link and sets their password via `POST /api/auth/reset-password`.

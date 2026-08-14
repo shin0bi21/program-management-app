@@ -2,13 +2,14 @@
 
 ## Compose the route page
 
+- Keep the route file as a readable orchestrator: imports are grouped by dependency layer, initialization follows dependency order, and short section comments separate services/permissions, controls/data, selections/dialogs, effects/actions, and presentation. The complete setup pattern is in [Adding a frontend page](adding-a-page.md#4-compose-the-route-page).
 - Use a route-family layout only for persistent UI, state, or coordination genuinely shared by multiple child routes. Do not introduce an `Outlet`-only layout merely to share a URL prefix, redirect, permission, or `<main>` classes.
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.
 - Put `SearchInput`, `FilterCard`, and view-switching controls in the named `search`, `filters`, and `view` slots. Keep row actions and content-specific controls with their owning content.
 - Keep data loading, filtering, preference persistence, and action workflows in the page or focused hooks rather than in `PageHeader`.
 
-Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass `Table` or `ResourceCalendar` directly to its slot; do not add a page-owned table, calendar, dashboard, title-row, or controls wrapper.
+Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*ListView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper.
 
 ```tsx
 <main className="page-container page-container--data">
@@ -30,8 +31,8 @@ Use this route-level composition. Omit an optional prop rather than passing an e
       <DashboardCard title="Details" action={optionalCardAction}>...</DashboardCard>
     </>}
     {...(view === 'list'
-      ? { table: <Table {...tableProps} /> }
-      : { calendar: <ResourceCalendar {...calendarProps} /> })}
+      ? { table: <ExampleListView {...listProps} /> }
+      : { calendar: <ExampleCalendarView {...calendarProps} /> })}
   />}
 </main>
 ```

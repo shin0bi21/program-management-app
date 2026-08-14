@@ -50,6 +50,24 @@ describe('useTimesheetControls', () => {
     });
   });
 
+  it('waits for the authenticated role before restoring admin staff filters', async () => {
+    preferenceHook.preference = {
+      view: 'list', staffIds: ['staff-1'], programIds: [], categories: [], cycleId: 'cycle-1',
+    };
+    const { result, rerender } = renderHook(
+      ({ role }: { role: string | null }) => useTimesheetControls({ role, resources, programs }),
+      { initialProps: { role: null as string | null } },
+    );
+
+    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalled());
+    expect(result.current.ready).toBe(false);
+
+    rerender({ role: 'admin' });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.staffFilters).toEqual(['staff-1']);
+  });
+
   it('persists view changes and clearing all filters through one control contract', async () => {
     preferenceHook.preference = {
       view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['session'], cycleId: 'cycle-2',

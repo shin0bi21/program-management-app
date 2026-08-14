@@ -45,6 +45,6 @@ export default function TimesheetListView({
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
     onLoadNextPage={query.loadNextPage}
-    emptyMessage={search.trim() ? 'No hours match your search' : cycleId ? 'No hours for this cycle' : 'No hours found'}
+    emptyMessage={query.appliedSearch.trim() ? 'No hours match your search' : cycleId ? 'No hours for this cycle' : 'No hours found'}
   />;
 }

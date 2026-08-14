@@ -1,83 +1,51 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Button from '../../../common/components/Button/Button';
-import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import Modal from '../../../common/components/Modal/Modal';
-import Table, { TableColumn } from '../../../common/components/Table/Table';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import { useCallback, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/authContext';
+import Button from '../../../common/components/Button/Button';
+import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
+import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
-import { revokeAccountInvite, toggleAccountStatus } from './api/accounts.api';
-import type { Account, AccountRole, AccountSortKey, AccountStatus } from '../../../common/types/account';
-import type { ListSort } from '../../../common/types/pagination';
-import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import { formatShortDate } from '../../../common/utils/date';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
+import type { Account, AccountStatus } from '../../../common/types/account';
+import { formatShortDate } from '../../../common/utils/date';
+import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import { revokeAccountInvite, toggleAccountStatus } from './api/accounts.api';
 import AccountModal from './components/AccountModal/AccountModal';
+import { useAccountControls } from './hooks/useAccountControls';
 import { useAccounts } from './hooks/useAccounts';
+import { ACCOUNTS_LIST_QUERY_KEY } from './queryKeys';
 import './Users.css';
 
-function titleCase(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function statusBadge(status: AccountStatus) {
-  return <span className={`status-badge status-${status}`}>{titleCase(status)}</span>;
-}
-
 export default function Users() {
+  // Services and permissions.
+  const queryClient = useQueryClient();
   const { role, permissions } = useAuth();
   const isAdmin = role === 'admin';
   const canWrite = permissions.includes('write:accounts');
   const canInviteYouth = permissions.includes('write:youth_profiles');
-  const [search, setSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<AccountStatus[]>([]);
-  const [roleFilters, setRoleFilters] = useState<AccountRole[]>([]);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<AccountSortKey>>({ key: 'name', direction: 'asc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('account-filters');
-  const queryFilters = useMemo(() => filtersReady ? ({
-    search: debouncedSearch,
-    roles: roleFilters,
-    statuses: statusFilters,
-  }) : null, [debouncedSearch, filtersReady, roleFilters, statusFilters]);
-  const { accounts, upsertAccount, removeAccount, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
+
+  // Controls and remote records.
+  const controls = useAccountControls(isAdmin);
+  const {
+    search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
+    columnWidths, hiddenColumns, error: preferenceError, filterCategories,
+    hasActiveQueryFilters,
+  } = controls;
+  const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
+
+  // Dialog state.
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
-    if (filtersReady || preferenceLoading) return;
-    setStatusFilters(preference?.statuses ?? []);
-    setRoleFilters(preference?.roles ?? []);
-    setSorting(preference?.sorting ?? { key: 'name', direction: 'asc' });
-    setColumnWidths(preference?.columnWidths ?? {});
-    setFiltersReady(true);
-  }, [filtersReady, preference, preferenceLoading]);
-
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'status', label: 'Status', options: [
-      { value: 'active', label: 'Active' },
-      { value: 'invited', label: 'Invited' },
-      { value: 'inactive', label: 'Inactive' },
-    ] },
-    ...(isAdmin ? [{ id: 'role', label: 'Role', options: [
-      { value: 'admin', label: 'Admin' },
-      { value: 'staff', label: 'Staff' },
-      { value: 'youth', label: 'Youth' },
-    ] }] : []),
-  ], [isAdmin]);
-
+  // Mutations and confirmation workflows.
   const requestRevoke = useCallback((account: Account) => setConfirmAction({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
@@ -86,9 +54,9 @@ export default function Users() {
     successMessage: 'Invitation revoked',
     onConfirm: async () => {
       await revokeAccountInvite(account.id);
-      removeAccount(account.id);
+      removeInfiniteListRow(queryClient, ACCOUNTS_LIST_QUERY_KEY, account.id);
     },
-  }), [removeAccount]);
+  }), [queryClient]);
 
   const requestStatusToggle = useCallback((account: Account) => {
     const activating = account.status === 'inactive';
@@ -98,10 +66,14 @@ export default function Users() {
       confirmLabel: activating ? 'Activate' : 'Deactivate',
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
-      onConfirm: async () => upsertAccount(await toggleAccountStatus(account.id)),
+      onConfirm: async () => {
+        await toggleAccountStatus(account.id);
+        await queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
+      },
     });
-  }, [upsertAccount]);
+  }, [queryClient]);
 
+  // Table presentation.
   const columns = useMemo<TableColumn<Account>[]>(() => {
     const accountColumns: TableColumn<Account>[] = [
       {
@@ -175,22 +147,12 @@ export default function Users() {
             </div>
           )}
           search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
-          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, roles: roleFilters, sorting, columnWidths, hiddenColumns })} />}
+          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
           filters={<FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, role: roleFilters }}
-            onApply={(categoryId, selected) => {
-              const statuses = categoryId === 'status' ? selected as AccountStatus[] : statusFilters;
-              const roles = categoryId === 'role' ? selected as AccountRole[] : roleFilters;
-              setStatusFilters(statuses);
-              setRoleFilters(roles);
-              void save({ statuses, roles, sorting, columnWidths });
-            }}
-            onClearAll={() => {
-              setStatusFilters([]);
-              setRoleFilters([]);
-              void save({ statuses: [], roles: [], sorting, columnWidths });
-            }}
+            onApply={controls.applyFilter}
+            onClearAll={controls.clearFilters}
           />}
         />
         {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
@@ -199,17 +161,17 @@ export default function Users() {
           <Table
             ariaLabel="Accounts"
             columns={columns}
-            hiddenColumnKeys={preference?.hiddenColumns ?? []}
+            hiddenColumnKeys={hiddenColumns}
             data={accounts}
             loading={loading}
             refreshing={refreshing}
             error={error}
-            emptyMessage={search || statusFilters.length || roleFilters.length ? 'No accounts match these filters' : 'No accounts found'}
+            emptyMessage={hasActiveQueryFilters ? 'No accounts match these filters' : 'No accounts found'}
             keyExtractor={account => account.id}
             sorting={sorting}
-            onSortingChange={next => { const value = next as ListSort<AccountSortKey>; setSorting(value); void save({ statuses: statusFilters, roles: roleFilters, sorting: value, columnWidths }); }}
+            onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
-            onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, roles: roleFilters, sorting, columnWidths: next }); }}
+            onColumnWidthsChange={controls.setColumnWidths}
             hasNextPage={hasNextPage}
             loadingNextPage={loadingNextPage}
             onLoadNextPage={loadNextPage}
@@ -222,8 +184,8 @@ export default function Users() {
           isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
-          onSuccess={account => {
-            upsertAccount(account);
+          onSuccess={() => {
+            void queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
           }}
         />
       )}
@@ -233,19 +195,11 @@ export default function Users() {
           isOpen
           showLoginEmail
           onClose={() => setYouthInviteOpen(false)}
-          onSuccess={youth => {
-            if (youth.account) {
-              const account = youth.account;
-              upsertAccount({
-                id: youth.id,
-                firstName: youth.firstName,
-                lastName: youth.lastName,
-                email: account.email,
-                role: 'youth',
-                status: account.status,
-                createdAt: youth.createdAt,
-              });
-            }
+          onSuccess={() => {
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+            ]);
             setYouthInviteOpen(false);
           }}
         />
@@ -264,4 +218,12 @@ export default function Users() {
       </Modal>
     </>
   );
+}
+
+function titleCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function statusBadge(status: AccountStatus) {
+  return <span className={`status-badge status-${status}`}>{titleCase(status)}</span>;
 }

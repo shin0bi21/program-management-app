@@ -1,52 +1,62 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../../auth/authContext';
+import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
-import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/programming.api';
-import { useAuth } from '../../../auth/authContext';
-import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
-import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import type { CohortSortKey, ProgramCohort, ProgramCycle } from '../../../common/types/cohort';
-import type { ListSort } from '../../../common/types/pagination';
+import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/programming.api';
+import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
+import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
+import type { ProgramCohort, ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
-import { getSingleAssignedProgram } from '../common/utils/staffProgrammingDefaults';
+import { COHORT_OPTIONS_QUERY_KEY, COHORT_TABLE_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
-import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
-import './Cohorts.css';
+import { useCohortControls } from './hooks/useCohortControls';
 import useCohortTable from './hooks/useCohortTable';
+import './Cohorts.css';
 
 export default function Cohorts() {
+  // Application services and permission capabilities.
+  const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const canWriteCohorts = permissions.includes('write:cohorts');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
+
+  // Shared options, persisted controls, and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const [selectedProgramId, setSelectedProgramId] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<CohortSortKey>>({ key: 'start', direction: 'desc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('cohort-filters');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const tableFilters = filtersReady ? { programId: selectedProgramId || undefined, search: debouncedSearch, status: selectedStatus || undefined } : null;
+  const controls = useCohortControls(role, programs, programsLoading, programsError);
+  const {
+    search, setSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
+    sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
+    hasActiveQueryFilters,
+  } = controls;
   const cohortTable = useCohortTable(tableFilters, sorting);
   const cohorts = cohortTable.rows;
   const cohortsLoading = cohortTable.loading;
   const error = cohortTable.error;
-  const refreshCohorts = cohortTable.refetch;
-  const removeCohort = cohortTable.remove;
+  const refreshCohorts = useCallback(
+    () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: COHORT_TABLE_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY }),
+    ]).then(() => undefined),
+    [queryClient],
+  );
+
+  // Page selection and dialog state.
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
@@ -73,54 +83,13 @@ export default function Cohorts() {
     return () => controller.abort();
   }, [refreshCycles]);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
-    if (filtersReady || preferenceLoading || programsLoading || role === null) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    const defaultProgram = getSingleAssignedProgram(role, programs)?.id ?? '';
-    setSelectedProgramId(
-      preference?.programId && availableProgramIds.has(preference.programId)
-        ? preference.programId
-        : preference ? '' : defaultProgram,
-    );
-    setSelectedStatus(preference?.status ?? (role === 'staff' ? 'active' : ''));
-    setSorting(preference?.sorting ?? { key: 'start', direction: 'desc' });
-    setColumnWidths(preference?.columnWidths ?? {});
-    setFiltersReady(true);
-  }, [filtersReady, preference, preferenceLoading, programs, programsLoading, role]);
-
   const {
     selectedItem: selectedCohort,
     selectedKey: selectedCohortId,
     selectItem: selectCohort,
   } = useTableSelection(cohorts);
 
-  const filterCategories = useMemo<FilterCardCategory[]>(
-    () => [
-      {
-        id: 'program',
-        label: 'Program',
-        selectionMode: 'single',
-        options: programs.map((program) => ({ value: program.id, label: program.name })),
-      },
-      {
-        id: 'status',
-        label: 'Status',
-        selectionMode: 'single',
-        options: [
-          { value: 'active', label: 'Active' },
-          { value: 'upcoming', label: 'Upcoming' },
-          { value: 'completed', label: 'Completed' },
-        ],
-      },
-    ],
-    [programs],
-  );
-
+  // Table presentation and row actions.
   const columns = useMemo<TableColumn<ProgramCohort>[]>(
     () => [
       { key: 'program', sortKey: 'program', header: 'Program', render: (cohort) => cohort.programName },
@@ -164,7 +133,8 @@ export default function Cohorts() {
                           successMessage: 'Cohort deleted',
                           onConfirm: async () => {
                             await deleteCohort(cohort.id);
-                            removeCohort(cohort.id);
+                            removeInfiniteListRow(queryClient, COHORT_TABLE_QUERY_KEY, cohort.id);
+                            await queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY });
                           },
                         }),
                     },
@@ -175,24 +145,8 @@ export default function Cohorts() {
           ]
         : []),
     ],
-    [canWriteCohorts, removeCohort],
+    [canWriteCohorts, queryClient],
   );
-
-  const selectProgram = (programId: string) => {
-    setSelectedProgramId(programId);
-    void save({
-      programId: programId || null,
-      status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths,
-    });
-  };
-
-  const selectStatus = (status: string) => {
-    setSelectedStatus(status);
-    void save({
-      programId: selectedProgramId || null,
-      status: (status || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths,
-    });
-  };
 
   return (
     <>
@@ -213,7 +167,7 @@ export default function Cohorts() {
                 placeholder="Search cohorts or programs"
               />
             }
-            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ programId: selectedProgramId || null, status: selectedStatus ? selectedStatus as 'active' | 'upcoming' | 'completed' : null, sorting, columnWidths, hiddenColumns })} />}
+            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
             filters={
               <FilterCard
                 categories={filterCategories}
@@ -221,15 +175,8 @@ export default function Cohorts() {
                   program: selectedProgramId ? [selectedProgramId] : [],
                   status: selectedStatus ? [selectedStatus] : [],
                 }}
-                onApply={(category, selected) => {
-                  if (category === 'program') selectProgram(selected[0] ?? '');
-                  if (category === 'status') selectStatus(selected[0] ?? '');
-                }}
-                onClearAll={() => {
-                  setSelectedProgramId('');
-                  setSelectedStatus('');
-                  void save({ programId: null, status: null, sorting, columnWidths });
-                }}
+                onApply={controls.applyFilter}
+                onClearAll={controls.clearFilters}
               />
             }
           />
@@ -243,7 +190,7 @@ export default function Cohorts() {
               <Table
                 ariaLabel="Cohorts"
                 columns={columns}
-                hiddenColumnKeys={preference?.hiddenColumns ?? []}
+                hiddenColumnKeys={hiddenColumns}
                 data={cohorts}
                 loading={cohortsLoading}
                 refreshing={cohortTable.refreshing}
@@ -252,14 +199,14 @@ export default function Cohorts() {
                 selectedKey={selectedCohortId}
                 onRowSelect={selectCohort}
                 sorting={sorting}
-                onSortingChange={next => { const value = next as ListSort<CohortSortKey>; setSorting(value); void save({ programId: selectedProgramId || null, status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting: value, columnWidths }); }}
+                onSortingChange={controls.setSorting}
                 columnWidths={columnWidths}
-                onColumnWidthsChange={next => { setColumnWidths(next); void save({ programId: selectedProgramId || null, status: (selectedStatus || null) as 'active' | 'upcoming' | 'completed' | null, sorting, columnWidths: next }); }}
+                onColumnWidthsChange={controls.setColumnWidths}
                 hasNextPage={cohortTable.hasNextPage}
                 loadingNextPage={cohortTable.loadingNextPage}
                 onLoadNextPage={cohortTable.loadNextPage}
                 emptyMessage={
-                  selectedProgramId || selectedStatus || debouncedSearch
+                  hasActiveQueryFilters
                     ? 'No cohorts match your search and filters'
                     : 'No cohorts yet'
                 }
@@ -297,7 +244,14 @@ export default function Cohorts() {
             onCreated={refreshCohorts}
           />
 
-          <ManageRosterModal cohort={rosterTarget} onClose={() => setRosterTarget(null)} onSuccess={refreshCohorts} />
+          <ManageRosterModal
+            cohort={rosterTarget}
+            onClose={() => setRosterTarget(null)}
+            onSuccess={() => Promise.all([
+              refreshCohorts(),
+              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+            ]).then(() => undefined)}
+          />
           {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
           <EditCohortModal
             cohort={editCohortTarget}
@@ -321,7 +275,12 @@ export default function Cohorts() {
           <GenerateSessionsModal
             cohort={generationTarget}
             onClose={() => setGenerationTarget(null)}
-            onSuccess={() => undefined}
+            onSuccess={async () => {
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
+                refreshCohorts(),
+              ]);
+            }}
           />
         </div>
       </main>

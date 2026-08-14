@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../../../../common/components/Button/Button';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
@@ -12,6 +13,8 @@ import type { TimesheetEntryType } from '../../timesheetViewData';
 import { useTimesheetCalendarData } from './hooks/useTimesheetCalendarData';
 import { useItemMutationQueue } from './hooks/useItemMutationQueue';
 import TimeItem from './TimeItem/TimeItem';
+import { TIME_ENTRY_LIST_QUERY_KEY } from '../../timesheetQueryKeys';
+import { TASKS_QUERY_KEY } from '../../../../../common/features/tasks/queryKeys';
 
 const initialDate = new Date();
 const TIMESHEET_CALENDAR_POSITION_KEY = 'resource-calendar:timesheets:position';
@@ -44,14 +47,14 @@ interface TimesheetCalendarViewProps {
   onEdit: (target: TimesheetEntryTarget) => void;
   onDelete: (target: TimesheetEntryTarget) => void;
   onAdd: (target: { resourceId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
-  onListRefresh: () => Promise<void>;
   onOverviewRefresh: () => void;
 }
 
 export default function TimesheetCalendarView({
   resources, staffIds, categories, programIds, types, cycleId, canWrite, selectedStaffId,
-  mutationCacheRef, onStaffSelect, onEdit, onDelete, onAdd, onListRefresh, onOverviewRefresh,
+  mutationCacheRef, onStaffSelect, onEdit, onDelete, onAdd, onOverviewRefresh,
 }: TimesheetCalendarViewProps) {
+  const queryClient = useQueryClient();
   const [moveError, setMoveError] = useState<string | null>(null);
   const { enqueue, isLatest } = useItemMutationQueue();
   const confirmedMoveSourcesRef = useRef(new Map<string, TimesheetEntryTarget>());
@@ -90,7 +93,9 @@ export default function TimesheetCalendarView({
       calendar.upsertItem(destinationResourceId, destination.period.key, confirmed);
       confirmedMoveSourcesRef.current.delete(item.id);
       onOverviewRefresh();
-      await onListRefresh();
+      const refreshes = [queryClient.invalidateQueries({ queryKey: TIME_ENTRY_LIST_QUERY_KEY })];
+      if (item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }));
+      await Promise.all(refreshes);
     } catch {
       if (!isLatest(item.id, queuedMutation.revision)) return;
       const confirmed = confirmedMoveSourcesRef.current.get(item.id);

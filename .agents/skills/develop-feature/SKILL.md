@@ -19,7 +19,7 @@ Use the repository's human-facing development handbook as the canonical implemen
 5. Read local READMEs for shared components or integrations the change creates, modifies, or consumes.
 6. Inspect one strong matching implementation before coding. Inspect a second only when the repository contract remains ambiguous.
 
-For cross-stack work, define the shared persistence, permission, request, response, error, and frontend reconciliation contract before implementing either side. Work from persistence and backend authority outward to frontend presentation.
+For cross-stack work, agree on stored data, permissions, API shapes, errors, and frontend updates before implementing either side. Build the backend first, then connect the frontend to it.
 
 ## Orchestrate substantial work
 
@@ -30,6 +30,7 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Settle shared contracts before delegating dependent implementation.
 - Suitable lanes include backend persistence/policies/services/HTTP, frontend adapters/state/pages/interactions, and an independent focused verification or regression audit.
 - For multiple affected features, assign lanes by cohesive feature or ownership boundary rather than by documentation layer.
+- For a cross-page frontend change, keep the primary thread responsible for the shared pattern and integration. Delegate each independently owned target page—or a tightly coupled route family—to a separate worker, and give every worker the same settled pattern and page-specific acceptance criteria.
 - Give each sub-agent the applicable feature, development, architecture, and local README contracts. Require concrete findings, changed paths, and verification evidence in its handoff.
 - Do not delegate unresolved product decisions, split one tightly coupled owner across agents, or allow concurrent edits to the same files.
 - Continue single-threaded when the task is small, sequential, or too coupled for delegation. The primary agent must review and integrate every delegated result.

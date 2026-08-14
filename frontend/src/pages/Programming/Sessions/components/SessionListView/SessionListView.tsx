@@ -4,11 +4,6 @@ import type { CohortSession, SessionListFilters, SessionSortKey } from '../../..
 import type { ListSort } from '../../../../../common/types/pagination';
 import { useSessions } from './hooks/useSessions';
 
-export interface SessionListMutationCache {
-  remove: (id: string) => void;
-  refresh: () => Promise<unknown>;
-}
-
 interface SessionListViewProps {
   columns: TableColumn<CohortSession>[];
   hiddenColumnKeys: string[];
@@ -19,19 +14,14 @@ interface SessionListViewProps {
   onSessionSelect: (session: CohortSession) => void;
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  mutationCacheRef: React.MutableRefObject<SessionListMutationCache>;
   onSelectedSessionResolved: (session: CohortSession | null) => void;
 }
 
 export default function SessionListView({
   columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
-  onSessionSelect, onSortingChange, onColumnWidthsChange, mutationCacheRef, onSelectedSessionResolved,
+  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved,
 }: SessionListViewProps) {
   const query = useSessions(filters, sorting, true);
-  useEffect(() => {
-    mutationCacheRef.current = { remove: query.removeSession, refresh: query.refresh };
-    return () => { mutationCacheRef.current = { remove: () => undefined, refresh: async () => undefined }; };
-  }, [mutationCacheRef, query.refresh, query.removeSession]);
   const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)

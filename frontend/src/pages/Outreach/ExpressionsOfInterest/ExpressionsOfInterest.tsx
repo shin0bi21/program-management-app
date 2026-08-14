@@ -1,54 +1,42 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import Table, { TableColumn } from '../../../common/components/Table/Table';
-import { useAuth } from '../../../auth/authContext';
-import { getErrorMessage } from '../../../http/clientErrors';
-import { formatShortDate } from '../../../common/utils/date';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import FilterCard, { type FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
+import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
+import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
+import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
+import { formatShortDate } from '../../../common/utils/date';
+import { getErrorMessage } from '../../../http/clientErrors';
+import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
 import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
 import ExpressionOfInterestDashboard from './components/ExpressionOfInterestDashboard/ExpressionOfInterestDashboard';
+import { useExpressionOfInterestControls } from './hooks/useExpressionOfInterestControls';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
-import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from './types';
-import type { ListSort } from '../../../common/types/pagination';
+import type { ExpressionOfInterest } from './types';
 import './ExpressionsOfInterest.css';
 
-const submissionYouthName = (submission: ExpressionOfInterest) =>
-  [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
-
-const submitterRoleLabel = (role: ExpressionOfInterest['submittedByRole']) => role
-  ? role[0].toUpperCase() + role.slice(1)
-  : 'Not recorded';
-const submissionStatuses: ExpressionOfInterest['status'][] = [
-  'new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam',
-];
-const statusLabel = (value: string) => value
-  .split('_')
-  .map(part => part[0].toUpperCase() + part.slice(1))
-  .join(' ');
-
 export default function ExpressionsOfInterest() {
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<ExpressionOfInterest['status'][]>([]);
-  const [programFilters, setProgramFilters] = useState<string[]>([]);
-  const [filtersReady, setFiltersReady] = useState(false);
-  const [sorting, setSorting] = useState<ListSort<ExpressionOfInterestSortKey>>({ key: 'createdAt', direction: 'desc' });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => filtersReady
-    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
-    : null, [debouncedSearch, filtersReady, statusFilters, programFilters]);
-  const { submissions, upsertSubmission, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage, refetch } = useExpressionsOfInterest(queryFilters, sorting);
-  const { programs, loading: programsLoading } = usePrograms();
-  const { preference, loading: preferenceLoading, error: preferenceError, save } = useUserPreference('expression-interest-filters');
+  // Services and permissions.
+  const queryClient = useQueryClient();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
+
+  // Controls and remote records.
+  const { programs, loading: programsLoading, error: programsError } = usePrograms();
+  const controls = useExpressionOfInterestControls(programs, programsLoading, programsError);
+  const {
+    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    columnWidths, hiddenColumns, error: preferenceError, filterCategories,
+    hasActiveQueryFilters,
+  } = controls;
+  const { submissions, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
+
+  // Selection and mutation state.
   const {
     selectedItem: selectedSubmission,
     selectedKey: selectedSubmissionId,
@@ -57,36 +45,10 @@ export default function ExpressionsOfInterest() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
-    if (filtersReady || preferenceLoading || programsLoading) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(preference?.statuses ?? []);
-    setProgramFilters(preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
-    setSorting(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
-    setColumnWidths(preference?.columnWidths ?? {});
-    setFiltersReady(true);
-  }, [filtersReady, preference, preferenceLoading, programs, programsLoading]);
-
-  const persistFilters = (
-    nextStatuses: ExpressionOfInterest['status'][],
-    nextProgramIds: string[],
-  ) => {
-    void save({ statuses: nextStatuses, programIds: nextProgramIds, sorting, columnWidths });
-  };
-
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'status', label: 'Status', options: submissionStatuses.map(status => ({ value: status, label: statusLabel(status) })) },
-  ], [programs]);
-
+  // Mutations and cache reconciliation.
   const handleStatusUpdate = async (item: ExpressionOfInterest, status: ExpressionOfInterest['status']) => {
-    const updated = await updateExpressionOfInterestStatus(item.id, status);
-    upsertSubmission(updated);
+    await updateExpressionOfInterestStatus(item.id, status);
+    await queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY });
   };
 
   const handleConvert = async (item: ExpressionOfInterest) => {
@@ -94,48 +56,19 @@ export default function ExpressionsOfInterest() {
     setConvertingId(item.id);
     try {
       await convertExpressionOfInterest(item.id);
-      upsertSubmission({ ...item, status: 'converted' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }),
+      ]);
       setConvertingId(null);
     } catch (err) {
       setActionError(getErrorMessage(err, 'Unable to convert this submission'));
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY });
       setConvertingId(null);
     }
   };
 
-  const statusBadge = (status: ExpressionOfInterest['status']) => {
-    const className =
-      status === 'new'
-        ? 'status-badge status-new'
-        : status === 'reviewed'
-          ? 'status-badge status-reviewed'
-        : status === 'converted'
-          ? 'status-badge status-signed-up'
-        : status === 'spam'
-          ? 'status-badge status-lost'
-        : status === 'contacted'
-          ? 'status-badge status-contacted'
-          : status === 'signed_up'
-            ? 'status-badge status-signed-up'
-            : 'status-badge status-lost';
-
-    const label =
-      status === 'new'
-        ? 'New'
-        : status === 'reviewed'
-          ? 'Reviewed'
-        : status === 'converted'
-          ? 'Converted'
-        : status === 'spam'
-          ? 'Spam'
-        : status === 'contacted'
-          ? 'Contacted'
-          : status === 'signed_up'
-            ? 'Signed Up'
-            : 'Lost';
-    return <span className={className}>{label}</span>;
-  };
-
+  // Table presentation.
   const columns: TableColumn<ExpressionOfInterest>[] = [
     { key: 'firstName', sortKey: 'name', header: 'First Name', render: item => item.youthFirstName },
     { key: 'lastName', header: 'Last Name', render: item => item.youthLastName },
@@ -170,32 +103,68 @@ export default function ExpressionsOfInterest() {
       <PageHeader
         title="Outreach"
         search={<SearchInput label="Search expressions of interest" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
-        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths, hiddenColumns })} />}
+        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
         filters={<FilterCard
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
-          onApply={(category, selected) => {
-            if (category === 'status') {
-              const next = selected as ExpressionOfInterest['status'][];
-              setStatusFilters(next);
-              persistFilters(next, programFilters);
-            }
-            if (category === 'program') {
-              setProgramFilters(selected);
-              persistFilters(statusFilters, selected);
-            }
-          }}
-          onClearAll={() => { setStatusFilters([]); setProgramFilters([]); persistFilters([], []); }}
+          onApply={controls.applyFilter}
+          onClearAll={controls.clearFilters}
         />}
       />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
+      {programsError && <p className="form-error" role="alert">{programsError}</p>}
       {actionError && <p className="form-error" role="alert">{actionError}</p>}
 
       <PageBody
         ariaLabel="Expressions of interest"
-        table={<Table ariaLabel="Expressions of interest" columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} data={submissions} loading={loading} refreshing={refreshing} error={error ?? undefined} emptyMessage={search || statusFilters.length || programFilters.length ? 'No expressions of interest match these filters' : 'No expressions of interest yet'} keyExtractor={item => item.id} selectedKey={selectedSubmissionId} onRowSelect={selectSubmission} sorting={sorting} onSortingChange={next => { const value = next as ListSort<ExpressionOfInterestSortKey>; setSorting(value); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths }); }} columnWidths={columnWidths} onColumnWidthsChange={next => { setColumnWidths(next); void save({ statuses: statusFilters, programIds: programFilters, sorting, columnWidths: next }); }} hasNextPage={hasNextPage} loadingNextPage={loadingNextPage} onLoadNextPage={loadNextPage} />}
+        table={<Table
+          ariaLabel="Expressions of interest"
+          columns={columns}
+          hiddenColumnKeys={hiddenColumns}
+          data={submissions}
+          loading={loading}
+          refreshing={refreshing}
+          error={error ?? undefined}
+          emptyMessage={hasActiveQueryFilters
+            ? 'No expressions of interest match these filters'
+            : 'No expressions of interest yet'}
+          keyExtractor={item => item.id}
+          selectedKey={selectedSubmissionId}
+          onRowSelect={selectSubmission}
+          sorting={sorting}
+          onSortingChange={controls.setSorting}
+          columnWidths={columnWidths}
+          onColumnWidthsChange={controls.setColumnWidths}
+          hasNextPage={hasNextPage}
+          loadingNextPage={loadingNextPage}
+          onLoadNextPage={loadNextPage}
+        />}
         dashboard={<ExpressionOfInterestDashboard submission={selectedSubmission} />}
       />
     </main>
   );
+}
+
+function submissionYouthName(submission: ExpressionOfInterest) {
+  return [submission.youthFirstName, submission.youthLastName].filter(Boolean).join(' ');
+}
+
+function submitterRoleLabel(role: ExpressionOfInterest['submittedByRole']) {
+  return role ? role[0].toUpperCase() + role.slice(1) : 'Not recorded';
+}
+
+function statusBadge(status: ExpressionOfInterest['status']) {
+  const className = status === 'new'
+    ? 'status-badge status-new'
+    : status === 'reviewed'
+      ? 'status-badge status-reviewed'
+      : status === 'converted' || status === 'signed_up'
+        ? 'status-badge status-signed-up'
+        : status === 'spam'
+          ? 'status-badge status-lost'
+          : status === 'contacted'
+            ? 'status-badge status-contacted'
+            : 'status-badge status-lost';
+  const label = status.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
+  return <span className={className}>{label}</span>;
 }

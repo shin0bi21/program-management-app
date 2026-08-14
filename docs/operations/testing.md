@@ -103,7 +103,7 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 
 - Backend API suites live under `backend/tests/<domain>/` and share the app/database helpers in `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they exercise.
-- Add new focused runners to the appropriate backend or frontend umbrella script.
+- Add focused-runner paths to `scripts/tests/test-app.sh` changed-file routing. The backend and frontend umbrella runners launch their complete test frameworks once and do not enumerate focused wrappers.
 - When a backend route is added, mount it in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 
 See [`local-development.md`](local-development.md) for container lifecycle, logs, migrations, and reset commands.

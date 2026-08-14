@@ -1,29 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
+import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumn } from '../../../common/components/Table/Table';
-import PageBody from '../../../common/components/PageBody/PageBody';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/features/programming/api/programming.api';
-import { useAuth } from '../../../auth/authContext';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import type { CohortSession } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
+import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
 import { useSessionTypes } from '../common/hooks/useSessionTypes';
+import { COHORT_QUERY_KEY, SESSION_CALENDAR_QUERY_KEY, SESSION_LIST_QUERY_KEY } from '../common/queryKeys';
 import AttendanceModal from './components/AttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
-import SessionListView, { type SessionListMutationCache } from './components/SessionListView/SessionListView';
+import SessionListView from './components/SessionListView/SessionListView';
 import { useSessionControls } from './hooks/useSessionControls';
 import { sessionTypeModifier } from './utils/sessionType';
 import './Sessions.css';
@@ -32,25 +36,28 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
+
 export default function Sessions() {
+  // Application services and route state.
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions, role } = useAuth();
-  const { programs, loading: programsLoading } = usePrograms({ assignedOnly: true });
-  const { cohorts, loading: cohortsLoading, refresh: refreshCohorts } = useCohorts();
+
+  // Shared options used by filters and session forms.
+  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
+  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
   const sessionTypes = useSessionTypes();
+
+  // Page dialogs and selected records.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
   const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
   const [selectedListSession, setSelectedListSession] = useState<CohortSession | null>(null);
-  const emptyListMutationCache = useMemo<SessionListMutationCache>(() => ({
-    remove: () => undefined,
-    refresh: async () => undefined,
-  }), []);
-  const listMutationRef = useRef<SessionListMutationCache>(emptyListMutationCache);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [calendarRefreshToken, setCalendarRefreshToken] = useState(0);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+
+  // URL selection and permission capabilities.
   const selectedSessionId = searchParams.get('session') ?? '';
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
@@ -59,8 +66,10 @@ export default function Sessions() {
     next.delete('session');
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
+
+  // Persisted filters, sorting, and view controls.
   const controls = useSessionControls({
-    role, programs, programsLoading, cohorts, cohortsLoading, sessionTypes,
+    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError, sessionTypes,
     onFiltersChanged: clearSelectedSession,
   });
   const {
@@ -70,7 +79,7 @@ export default function Sessions() {
   } = controls;
 
   const requestSessionDeletion = useCallback(
-    (session: CohortSession, onDeleted: (id: string) => void | Promise<void>) => {
+    (session: CohortSession) => {
       setConfirmAction({
         title: 'Delete Session',
         message: `Delete the ${session.theme} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
@@ -79,20 +88,17 @@ export default function Sessions() {
         successMessage: 'Session deleted',
         onConfirm: async () => {
           await deleteSession(session.id);
-          await onDeleted(session.id);
+          removeInfiniteListRow(queryClient, SESSION_LIST_QUERY_KEY, session.id);
+          setCalendarSessions(current => current.filter(candidate => candidate.id !== session.id));
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
+            queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+          ]);
         },
       });
     },
-    [],
+    [queryClient],
   );
-
-  useEffect(() => {
-    const legacyKeys = ['view', 'program', 'cohort', 'status', 'type'];
-    if (!legacyKeys.some(key => searchParams.has(key))) return;
-    const next = new URLSearchParams(searchParams);
-    legacyKeys.forEach(key => next.delete(key));
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
     const next = new URLSearchParams(searchParams);
@@ -160,7 +166,7 @@ export default function Sessions() {
                             id: 'delete',
                             label: 'Delete Session',
                             variant: 'danger' as const,
-                            onClick: () => requestSessionDeletion(session, listMutationRef.current.remove),
+                            onClick: () => requestSessionDeletion(session),
                           },
                         ]
                       : []),
@@ -178,13 +184,11 @@ export default function Sessions() {
     ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
     : selectedListSession?.id === selectedSessionId ? selectedListSession : null;
 
-  const refreshActiveView = async () => {
-    if (view === 'calendar') {
-      setCalendarRefreshToken((current) => current + 1);
-      return;
-    }
-    await listMutationRef.current.refresh();
-  };
+  const refreshSessionQueries = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: SESSION_LIST_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+  ]).then(() => undefined);
 
   return (
     <>
@@ -237,6 +241,8 @@ export default function Sessions() {
               : undefined}
           />
           {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
+          {programsError && <p className="form-error" role="alert">{programsError}</p>}
+          {cohortsError && <p className="form-error" role="alert">{cohortsError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (
@@ -256,7 +262,6 @@ export default function Sessions() {
                   sorting={sorting}
                   columnWidths={columnWidths}
                   selectedSessionId={selectedSessionId}
-                  mutationCacheRef={listMutationRef}
                   onSelectedSessionResolved={setSelectedListSession}
                   onSessionSelect={selectSession}
                   onSortingChange={controls.setSorting}
@@ -283,7 +288,6 @@ export default function Sessions() {
                   selectedSessionTypeIds={selectedSessionTypeIds}
                   selectedStatuses={statusFilters}
                   search={debouncedSearch}
-                  refreshToken={calendarRefreshToken}
                   onSessionsLoaded={setCalendarSessions}
                   onSessionSelect={(session) => {
                     setCalendarSessions((current) =>
@@ -295,10 +299,7 @@ export default function Sessions() {
                   }}
                   onSessionEdit={canWriteSessions ? setEditTarget : undefined}
                   onSessionDelete={canWriteSessions
-                    ? session => requestSessionDeletion(
-                        session,
-                        id => setCalendarSessions(current => current.filter(session => session.id !== id)),
-                      )
+                    ? session => requestSessionDeletion(session)
                     : undefined}
                 />
               }
@@ -315,9 +316,12 @@ export default function Sessions() {
           <AttendanceModal
             session={attendanceTarget}
             onClose={() => setAttendanceTarget(null)}
-            onSaved={refreshActiveView}
+            onSaved={() => Promise.all([
+              refreshSessionQueries(),
+              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+            ]).then(() => undefined)}
           />
-          <EditSessionModal session={editTarget} onClose={() => setEditTarget(null)} onUpdated={refreshActiveView} />
+          <EditSessionModal session={editTarget} onClose={() => setEditTarget(null)} onUpdated={refreshSessionQueries} />
           <Modal
             isOpen={confirmAction !== null}
             onClose={() => setConfirmAction(null)}
@@ -336,7 +340,7 @@ export default function Sessions() {
             initialCohortId={cohortId || schedulableCohorts[0]?.id}
             onClose={() => setAddSessionsOpen(false)}
             onSuccess={async () => {
-              await Promise.all([refreshActiveView(), refreshCohorts()]);
+              await Promise.all([refreshSessionQueries(), refreshCohorts()]);
             }}
           />
         </div>

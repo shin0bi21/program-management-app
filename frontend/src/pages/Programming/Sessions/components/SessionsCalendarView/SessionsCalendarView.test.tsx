@@ -149,7 +149,6 @@ describe('SessionsCalendarView', () => {
         selectedSessionId="session-1"
         selectedStatuses={[]}
         search=""
-        refreshToken={0}
         onSessionsLoaded={onSessionsLoaded}
         onSessionSelect={onSessionSelect}
         onSessionEdit={onSessionEdit}
@@ -205,7 +204,6 @@ describe('SessionsCalendarView', () => {
         selectedSessionId=""
         selectedStatuses={[]}
         search=""
-        refreshToken={0}
         onSessionSelect={vi.fn()}
       />,
     );
@@ -225,7 +223,6 @@ describe('SessionsCalendarView', () => {
         selectedSessionId=""
         selectedStatuses={[]}
         search=""
-        refreshToken={0}
         onSessionSelect={vi.fn()}
       />,
     );
@@ -252,7 +249,6 @@ describe('SessionsCalendarView', () => {
         selectedSessionId=""
         selectedStatuses={[]}
         search=""
-        refreshToken={0}
         onSessionSelect={vi.fn()}
       />,
     );
@@ -280,7 +276,6 @@ describe('SessionsCalendarView', () => {
         selectedSessionId=""
         selectedStatuses={['upcoming']}
         search=""
-        refreshToken={0}
         onSessionSelect={vi.fn()}
       />,
     );

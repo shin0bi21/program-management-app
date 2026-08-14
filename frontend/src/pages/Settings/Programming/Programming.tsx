@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import { DashboardCard, DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/programming.api';
@@ -18,10 +18,13 @@ import ProgramModal from './components/ProgramModal';
 import './Programming.css';
 
 export default function Programming() {
+  // Remote program and cycle data.
   const { programs, upsertProgram, loading: programsLoading, error: programsError } = usePrograms();
   const [cycles, setCycles] = useState<ProgramCycle[]>([]);
   const [cyclesLoading, setCyclesLoading] = useState(true);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
+
+  // Selection and dialog state.
   const [programTarget, setProgramTarget] = useState<Program | null | undefined>(undefined);
   const [cycleTarget, setCycleTarget] = useState<ProgramCycle | null | undefined>(undefined);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -29,6 +32,7 @@ export default function Programming() {
   const programSelection = useTableSelection(programs);
   const cycleSelection = useTableSelection(cycles);
 
+  // Cycle loading and mutations.
   const refreshCycles = useCallback(async (signal?: AbortSignal) => {
     setCyclesLoading(true);
     try {
@@ -61,6 +65,7 @@ export default function Programming() {
     });
   }, []);
 
+  // Table presentation and row actions.
   const programColumns = useMemo<TableColumn<Program>[]>(() => [
     { key: 'name', header: 'Program', render: program => program.name },
     { key: 'attendance', header: 'Attendance', render: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },

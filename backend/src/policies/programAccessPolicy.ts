@@ -26,7 +26,7 @@ export function programAccessPredicate(
   `;
 }
 
-export async function assertProgramAccess(actor: AccessTokenPayload, programId: string) {
+export async function assertCanAccessProgram(actor: AccessTokenPayload, programId: string) {
   const rows = await sql`
     SELECT 1
     FROM programs p
@@ -37,7 +37,7 @@ export async function assertProgramAccess(actor: AccessTokenPayload, programId: 
   if (!rows.length) throw new ForbiddenError('You do not have access to this program');
 }
 
-export async function assertCohortAccess(actor: AccessTokenPayload, cohortId: string) {
+export async function assertCanAccessCohort(actor: AccessTokenPayload, cohortId: string) {
   const rows = await sql`
     SELECT 1
     FROM program_cohorts pc
@@ -48,7 +48,7 @@ export async function assertCohortAccess(actor: AccessTokenPayload, cohortId: st
   if (!rows.length) throw new ForbiddenError('You do not have access to this cohort');
 }
 
-export async function assertSessionAccess(actor: AccessTokenPayload, sessionId: string) {
+export async function assertCanAccessSession(actor: AccessTokenPayload, sessionId: string) {
   const rows = await sql`
     SELECT 1
     FROM cohort_sessions cs

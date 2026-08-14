@@ -7,9 +7,10 @@ import {
   updateTaskStatus,
 } from '../../../../common/features/tasks/api/tasks.api';
 import type { Task } from '../../../../common/features/tasks/types';
-import { createTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
-
-export const TASKS_QUERY_KEY = ['tasks'] as const;
+import { setTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/api/timeEntries.api';
+import { removeInfiniteListRow } from '../../../../query/infiniteListCache';
+import { TASK_LIST_QUERY_KEY, TASKS_QUERY_KEY } from '../taskQueryKeys';
+import { TIME_ENTRY_QUERY_KEY } from '../../../../common/features/timeEntries/queryKeys';
 
 interface TaskMutationHandlers {
   onUpsert?: (task: Task) => void;
@@ -42,10 +43,11 @@ export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHan
     successMessage: 'Task deleted',
     onConfirm: async () => {
       await deleteTask(task.id);
+      removeInfiniteListRow(queryClient, TASK_LIST_QUERY_KEY, task.id);
       onRemove?.(task.id);
       refreshTasks();
     },
-  }), [onRemove, refreshTasks]);
+  }), [onRemove, queryClient, refreshTasks]);
 
   const runMutation = useCallback(async (mutate: () => Promise<Task>, errorMessage: string) => {
     setStatusError('');
@@ -72,9 +74,12 @@ export default function useTaskMutations({ onUpsert, onRemove }: TaskMutationHan
   ), [runMutation]);
 
   const logHours = useCallback(async (input: SetTimeEntryInput) => {
-    await createTimeEntry(input);
-    refreshTasks();
-  }, [refreshTasks]);
+    await setTimeEntry(input);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: TIME_ENTRY_QUERY_KEY }),
+    ]);
+  }, [queryClient]);
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 
   return {
