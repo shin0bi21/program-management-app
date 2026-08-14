@@ -26,6 +26,7 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
   // Table presentation state.
   const [sorting, setSortingState] = useState<ListSort<YouthSortKey>>({ key: 'firstName', direction: 'asc' });
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference state.
   const { preference, loading: preferenceLoading, error, save } = useUserPreference('youth-profile-filters');
@@ -48,6 +49,7 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
       : role === 'staff' ? programs.map(program => program.id) : []);
     setSortingState(preference?.sorting ?? { key: 'firstName', direction: 'asc' });
     setColumnWidthsState(preference?.columnWidths ?? {});
+    setHiddenColumnsState(preference?.hiddenColumns ?? []);
     setReady(true);
   }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role]);
 
@@ -63,8 +65,8 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
     programIds: next.programIds ?? programFilters,
     sorting: next.sorting ?? sorting,
     columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
-  }), [columnWidths, preference?.hiddenColumns, programFilters, save, sorting, statusFilters]);
+    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
+  }), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
@@ -121,6 +123,7 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
     void persist({ columnWidths: next });
   }, [persist]);
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    setHiddenColumnsState(hiddenColumns);
     void persist({ hiddenColumns });
   }, [persist]);
 
@@ -134,7 +137,7 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
     setSorting,
     columnWidths,
     setColumnWidths,
-    hiddenColumns: preference?.hiddenColumns ?? [],
+    hiddenColumns,
     setHiddenColumns,
     error,
     hasActiveQueryFilters,

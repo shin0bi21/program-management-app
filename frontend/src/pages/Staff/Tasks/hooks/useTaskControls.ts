@@ -28,6 +28,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   const [statusFilters, setStatusFilters] = useState<TaskStatus[]>([]);
   const [sorting, setSorting] = useState<ListSort<TaskSortKey>>({ key: 'startDate', direction: 'asc' });
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const { preference, loading, error, save } = useUserPreference('task-filters');
 
@@ -40,6 +41,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     setStatusFilters(preference?.statuses ?? []);
     setSorting(preference?.sorting ?? { key: 'startDate', direction: 'asc' });
     setColumnWidths(preference?.columnWidths ?? {});
+    setHiddenColumns(preference?.hiddenColumns ?? []);
     setReady(true);
   }, [loading, optionsLoading, preference, ready]);
 
@@ -49,6 +51,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     nextCategories: TaskCategory[],
     nextStatuses: TaskStatus[],
     widths = columnWidths,
+    hidden = hiddenColumns,
   ) => {
     void save({
       view,
@@ -58,8 +61,9 @@ export default function useTaskControls(options: TaskOptions | undefined, option
       statuses: nextStatuses,
       sorting,
       columnWidths: widths,
+      hiddenColumns: hidden,
     });
-  }, [columnWidths, save, sorting, view]);
+  }, [columnWidths, hiddenColumns, save, sorting, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'staff', label: 'Staff', options: (options?.resources ?? []).map(item => ({ value: item.id, label: item.name })) },
@@ -98,13 +102,14 @@ export default function useTaskControls(options: TaskOptions | undefined, option
       statuses: statusFilters,
       sorting,
       columnWidths,
+      hiddenColumns,
     });
-  }, [categories, columnWidths, programIds, save, sorting, staffIds, statusFilters]);
+  }, [categories, columnWidths, hiddenColumns, programIds, save, sorting, staffIds, statusFilters]);
 
   const changeSorting = useCallback((next: ListSort<TaskSortKey>) => {
     setSorting(next);
-    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting: next, columnWidths });
-  }, [categories, columnWidths, programIds, save, staffIds, statusFilters, view]);
+    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting: next, columnWidths, hiddenColumns });
+  }, [categories, columnWidths, hiddenColumns, programIds, save, staffIds, statusFilters, view]);
 
   const changeColumnWidths = useCallback((next: Record<string, number>) => {
     setColumnWidths(next);
@@ -112,6 +117,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   }, [categories, persist, programIds, staffIds, statusFilters]);
 
   const changeHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    setHiddenColumns(hiddenColumns);
     void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting, columnWidths, hiddenColumns });
   }, [categories, columnWidths, programIds, save, sorting, staffIds, statusFilters, view]);
 
@@ -125,7 +131,7 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     statusFilters,
     sorting,
     columnWidths,
-    hiddenColumns: preference?.hiddenColumns ?? [],
+    hiddenColumns,
     ready,
     error,
     filterCategories,

@@ -45,6 +45,28 @@ describe('useUserPreference', () => {
     expect(setPreferenceMock).toHaveBeenCalledWith('youth-profile-filters', filters(['inactive']));
   });
 
+  it('applies consecutive functional updates to the latest optimistic value', async () => {
+    getPreferenceMock.mockResolvedValue({ statuses: [], programIds: [] });
+    setPreferenceMock.mockImplementation(async (_key, value) => value);
+    const { result } = renderHook(() => useUserPreference('youth-profile-filters'), { wrapper: createWrapper() });
+    await act(async () => Promise.resolve());
+
+    await act(async () => {
+      result.current.save(current => ({ ...(current ?? filters([])), statuses: ['active'] }));
+      result.current.save(current => ({ ...(current ?? filters([])), programIds: ['program-1'] }));
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(queryClient.getQueryData(['user-preference', 'youth-profile-filters'])).toEqual({
+      statuses: ['active'],
+      programIds: ['program-1'],
+    });
+    expect(setPreferenceMock).toHaveBeenLastCalledWith('youth-profile-filters', {
+      statuses: ['active'],
+      programIds: ['program-1'],
+    });
+  });
+
   it('queues the newest value while a save is in progress', async () => {
     let finishFirst!: (value: ReturnType<typeof filters>) => void;
     setPreferenceMock

@@ -202,6 +202,20 @@ function checkPaginatedTables(violations, file, source) {
   }
 }
 
+function checkPreferenceControlOwnership(violations, file, source) {
+  if (!file.startsWith('frontend/src/pages/')
+    || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)
+    || !source.includes('useUserPreference')) return;
+
+  addMatches(
+    violations,
+    file,
+    source,
+    /hiddenColumns\s*:\s*(?:next\.hiddenColumns\s*\?\?\s*)?preference\?\.hiddenColumns/g,
+    'persisted hidden columns must come from page-owned control state, not the preference cache.',
+  );
+}
+
 function checkResourceCalendars(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/') || !file.endsWith('.tsx')
     || /\.(?:test|spec|story)\.tsx$/.test(file) || !source.includes('<ResourceCalendar')) return;
@@ -309,6 +323,7 @@ for (const file of files.filter(isReadableSource)) {
   checkBackendControllers(violations, file, source);
   checkFocusedAdapters(violations, file, source);
   checkPaginatedTables(violations, file, source);
+  checkPreferenceControlOwnership(violations, file, source);
   checkResourceCalendars(violations, file, source);
   checkCalendarDataHooks(violations, file);
   checkDashboardNames(violations, file, source);
