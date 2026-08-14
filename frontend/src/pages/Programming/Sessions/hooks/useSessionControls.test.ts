@@ -71,5 +71,10 @@ describe('useSessionControls', () => {
     expect(onFiltersChanged).toHaveBeenCalledTimes(1);
     act(() => result.current.setView('list'));
     expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list', statuses: ['completed'] }));
+
+    act(() => result.current.setHiddenColumns(['status']));
+    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
+      view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'], hiddenColumns: ['status'],
+    }));
   });
 });

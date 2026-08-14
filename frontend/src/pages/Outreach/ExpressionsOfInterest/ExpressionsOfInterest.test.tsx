@@ -74,6 +74,22 @@ describe('ExpressionsOfInterest', () => {
     expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
   });
 
+  it('persists a complete preference when first hiding a column', async () => {
+    renderPage();
+    await screen.findByRole('row', { name: /Avery Interest/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
+
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: [],
+      programIds: [],
+      sorting: { key: 'createdAt', direction: 'desc' },
+      columnWidths: {},
+      hiddenColumns: ['school'],
+    });
+  });
+
   it('stays on expressions of interest and marks the row converted after conversion', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Interest/ });

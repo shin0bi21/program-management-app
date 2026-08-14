@@ -65,6 +65,7 @@ export function useSessionControls({
     statuses?: SessionStatusFilter[];
     sorting?: ListSort<SessionSortKey>;
     columnWidths?: Record<string, number>;
+    hiddenColumns?: string[];
   }) => save({
     view: next.view ?? view,
     programIds: next.programIds ?? programIds,
@@ -73,7 +74,8 @@ export function useSessionControls({
     statuses: next.statuses ?? statuses,
     sorting: next.sorting ?? sorting,
     columnWidths: next.columnWidths ?? columnWidths,
-  }), [cohortId, columnWidths, programIds, save, sessionTypeIds, sorting, statuses, view]);
+    hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
+  }), [cohortId, columnWidths, preference?.hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
 
   const filteredCohorts = useMemo(() => programIds.length
     ? cohorts.filter(cohort => programIds.includes(cohort.programId))
@@ -109,7 +111,7 @@ export function useSessionControls({
   const setView = useCallback((next: SessionsView) => { setViewState(next); void persist({ view: next }); }, [persist]);
   const setSorting = useCallback((next: ListSort<SessionSortKey>) => { setSortingState(next); void persist({ sorting: next }); }, [persist]);
   const setColumnWidths = useCallback((next: Record<string, number>) => { setColumnWidthsState(next); void persist({ columnWidths: next }); }, [persist]);
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { void save({ hiddenColumns }); }, [save]);
+  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { void persist({ hiddenColumns }); }, [persist]);
 
   return {
     search, setSearch, debouncedSearch, view, setView, programIds, cohortId, sessionTypeIds, statuses,

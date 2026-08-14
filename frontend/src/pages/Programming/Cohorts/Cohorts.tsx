@@ -213,7 +213,7 @@ export default function Cohorts() {
                 placeholder="Search cohorts or programs"
               />
             }
-            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ hiddenColumns })} />}
+            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={preference?.hiddenColumns ?? []} onHiddenColumnKeysChange={hiddenColumns => void save({ programId: selectedProgramId || null, status: selectedStatus ? selectedStatus as 'active' | 'upcoming' | 'completed' : null, sorting, columnWidths, hiddenColumns })} />}
             filters={
               <FilterCard
                 categories={filterCategories}

@@ -110,6 +110,18 @@ describe('Youth', () => {
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
   });
 
+  it('persists a complete preference when first hiding a column', async () => {
+    render(<Youth />);
+    await waitFor(() => expect(mockUseYouth).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
+
+    expect(preferenceHook.save).toHaveBeenCalledWith({
+      statuses: ['active'], programIds: ['program-1'], sorting: { key: 'firstName', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['school'],
+    });
+  });
+
   it('defaults staff to active youth in their assigned programs and persists changes', async () => {
     render(<Youth />);
 
