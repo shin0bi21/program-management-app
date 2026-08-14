@@ -39,7 +39,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
         }
       } catch (cause) {
         if (latestValueRef.current === value) {
-          setError(cause instanceof Error ? cause.message : 'Could not save filters');
+          setError(cause instanceof Error ? cause.message : 'Could not save preferences');
         }
       }
     }
@@ -47,15 +47,11 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     savingRef.current = false;
   }, [mutateAsync, queryClient, queryKey]);
 
-  const save = useCallback((value: Partial<PreferenceValues[K]>) => {
-    const mergedValue = {
-      ...(queryClient.getQueryData<PreferenceValues[K]>(queryKey) ?? {}),
-      ...value,
-    } as PreferenceValues[K];
-    queryClient.setQueryData(queryKey, mergedValue);
+  const save = useCallback((value: PreferenceValues[K]) => {
+    queryClient.setQueryData(queryKey, value);
     setError(null);
-    latestValueRef.current = mergedValue;
-    pendingRef.current = mergedValue;
+    latestValueRef.current = value;
+    pendingRef.current = value;
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       debounceRef.current = null;
@@ -76,7 +72,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
 
   const queryError = query.error instanceof Error
     ? query.error.message
-    : query.error ? 'Could not load saved filters' : null;
+    : query.error ? 'Could not load saved preferences' : null;
 
   return {
     preference: query.data ?? null,
