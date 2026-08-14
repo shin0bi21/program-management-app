@@ -86,6 +86,16 @@ Follow the exact [page-shell composition](page-shell.md); do not recreate header
 
 Persist the complete view preference through `useUserPreference`, including filters, sorting, widths, hidden columns, and view selection. When no preference exists, the first change must create a complete valid value. Restore preferences before dependent requests or misleading defaults, and hide controls made redundant by permissions.
 
+Use one control lifecycle across data pages:
+
+1. Keep the search input live so typing remains responsive.
+2. Wait for authentication, saved preferences, and any option data required to validate saved IDs before completing one-time restoration. Name the gate `ready` or `hasRestored`, and keep dependent queries disabled until it is true.
+3. If option loading fails, show the error and preserve saved IDs rather than silently replacing the user's scope with an unfiltered value.
+4. Debounce or defer search into an applied-search value. Build the query and filtered-empty message from that same applied value; never query with debounced search while describing results from the live input.
+5. Save the complete preference object after every control change. Do not create separate persistence flows for filters, sorting, widths, hidden columns, or view selection.
+
+Keep these rules in a page-owned `use*Controls` hook when the page has several persisted controls. Test delayed auth or option resolution whenever restoration depends on them. Test the search application boundary once per distinct debounce/defer implementation; pages that consume the same tested control owner do not need duplicate timing tests.
+
 ## 5. Wire row workflows
 
 Open create and edit forms from the route page or the narrowest owner that coordinates the result. Follow [Forms and modals](forms-and-modals.md) for form lifecycle and mutation ownership.

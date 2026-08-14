@@ -2,37 +2,38 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
+import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import type { TableColumn } from '../../../common/components/Table/Table';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
+import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import type { TableColumn } from '../../../common/components/Table/Table';
+import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
-import type { StaffResource, TimeEntryProgram } from '../../../common/features/timeEntries/types';
 import {
-  setTimeEntry,
   deleteTimeEntry,
   getTimeEntryOptions,
+  setTimeEntry,
   type SetTimeEntryInput,
 } from '../../../common/features/timeEntries/api/timeEntries.api';
 import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
-import { formatShortDate } from '../../../common/utils/date';
-import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
-import { useTimesheetOverview } from './hooks/useTimesheetOverview';
-import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
-import { useTimesheetControls } from './hooks/useTimesheetControls';
-import TimesheetListView from './components/TimesheetListView/TimesheetListView';
-import TimesheetCalendarView, { type TimesheetCalendarMutationCache, type TimesheetEntryTarget } from './components/TimesheetCalendarView/TimesheetCalendarView';
-import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
+import type { StaffResource, TimeEntryProgram } from '../../../common/features/timeEntries/types';
 import { TASKS_QUERY_KEY } from '../../../common/features/tasks/queryKeys';
+import { formatShortDate } from '../../../common/utils/date';
+import TimesheetCalendarView, { type TimesheetCalendarMutationCache, type TimesheetEntryTarget } from './components/TimesheetCalendarView/TimesheetCalendarView';
+import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
+import TimesheetListView from './components/TimesheetListView/TimesheetListView';
+import { useTimesheetControls } from './hooks/useTimesheetControls';
+import { useTimesheetOverview } from './hooks/useTimesheetOverview';
+import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
+import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
 import './Timesheets.css';
 
 export default function Timesheets() {
+  // Application access and page-owned workflows.
   const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const currentUserId = getUser()?.id;
@@ -46,6 +47,8 @@ export default function Timesheets() {
   const [editTarget, setEditTarget] = useState<TimesheetEntryTarget | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+
+  // Remote options and persisted page controls.
   const optionsQuery = useQuery({ queryKey: ['time-entry-options'], queryFn: ({ signal }) => getTimeEntryOptions({ signal }) });
   const resources = useMemo<StaffResource[]>(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
   const programs = useMemo<TimeEntryProgram[]>(() => optionsQuery.data?.programs ?? [], [optionsQuery.data?.programs]);
@@ -54,6 +57,8 @@ export default function Timesheets() {
     columnWidths: listColumnWidths, hiddenColumns, setHiddenColumns, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
     filterCategories, applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
   } = useTimesheetControls({ role, resources, programs });
+
+  // The calendar owns buffered range data outside TanStack Query.
   const emptyCalendarCache = useMemo<TimesheetCalendarMutationCache>(() => ({ upsert: () => undefined, remove: () => undefined }), []);
   const calendarMutationRef = useRef<TimesheetCalendarMutationCache>(emptyCalendarCache);
   const refreshList = useCallback(async () => {
@@ -62,6 +67,8 @@ export default function Timesheets() {
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
   const resourceById = useMemo(() => new Map(resources.map(resource => [resource.id, resource])), [resources]);
   const selectedCycle = cycles.find(cycle => cycle.id === selectedCycleId) ?? null;
+
+  // Selection keeps the list, calendar, and dashboard context aligned.
   const selectListRowWithContext = useCallback((row: TimesheetListRow) => {
     setSelectedListRowId(row.id);
     setSelectedDashboardStaffId(row.resourceId);
@@ -80,6 +87,7 @@ export default function Timesheets() {
   const overviewCycleId = overviewCycle?.id ?? null;
   const dashboardOverview = useTimesheetOverview(dashboardStaffId, overviewCycleId, overviewRefreshToken);
 
+  // Mutations reconcile the calendar first, then refresh server-derived lists and totals.
   const addTimeEntry = async (input: SetTimeEntryInput) => {
     const created = editTarget
       ? await setTimeEntry(input, editTarget.item.id)
@@ -108,8 +116,9 @@ export default function Timesheets() {
         setEditTarget(current => current?.item.id === target.item.id ? null : current);
       },
     });
-  }, [refreshList]);
+  }, [queryClient, refreshList]);
 
+  // Table presentation stays page-owned because its actions open page-owned dialogs.
   const listColumns = useMemo<TableColumn<TimesheetListRow>[]>(() => [
     { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: row => row.staffFirstName },
     { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: row => row.staffLastName },

@@ -11,25 +11,33 @@ interface UseSessionControlsOptions {
   role: string | null;
   programs: Program[];
   programsLoading: boolean;
+  programsError?: string | null;
   cohorts: ProgramCohort[];
   cohortsLoading: boolean;
+  cohortsError?: string | null;
   sessionTypes: SessionType[];
   onFiltersChanged: () => void;
 }
 
 export function useSessionControls({
-  role, programs, programsLoading, cohorts, cohortsLoading, sessionTypes, onFiltersChanged,
+  role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
+  sessionTypes, onFiltersChanged,
 }: UseSessionControlsOptions) {
+  // Search and filters.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [view, setViewState] = useState<SessionsView>('calendar');
   const [programIds, setProgramIds] = useState<string[]>([]);
   const [cohortId, setCohortId] = useState('');
   const [sessionTypeIds, setSessionTypeIds] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<SessionStatusFilter[]>([]);
-  const [ready, setReady] = useState(false);
+
+  // View and table controls.
+  const [view, setViewState] = useState<SessionsView>('calendar');
   const [sorting, setSortingState] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
+
+  // Persisted preference initialization.
+  const [ready, setReady] = useState(false);
   const { preference, loading: preferenceLoading, error, save } = useUserPreference('session-filters');
 
   useEffect(() => {
@@ -41,10 +49,14 @@ export function useSessionControls({
     if (ready || preferenceLoading || programsLoading || cohortsLoading || role === null) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
     if (preference) {
-      const savedProgramIds = preference.programIds.filter(id => availableProgramIds.has(id));
+      const savedProgramIds = programsError
+        ? preference.programIds
+        : preference.programIds.filter(id => availableProgramIds.has(id));
       setViewState(preference.view);
       setProgramIds(savedProgramIds);
-      setCohortId(cohorts.some(cohort => cohort.id === preference.cohortId) ? preference.cohortId ?? '' : '');
+      setCohortId(cohortsError || cohorts.some(cohort => cohort.id === preference.cohortId)
+        ? preference.cohortId ?? ''
+        : '');
       setSessionTypeIds(preference.sessionTypeIds);
       setStatuses(preference.statuses);
       setSortingState(preference.sorting ?? { key: 'date', direction: 'desc' });
@@ -55,8 +67,21 @@ export function useSessionControls({
       setCohortId(assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '');
     }
     setReady(true);
-  }, [cohorts, cohortsLoading, preference, preferenceLoading, programs, programsLoading, ready, role]);
+  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role]);
 
+  // Stable option sets shared by the header and Add Sessions modal.
+  const filteredCohorts = useMemo(() => programIds.length
+    ? cohorts.filter(cohort => programIds.includes(cohort.programId))
+    : cohorts, [cohorts, programIds]);
+  const schedulableCohorts = useMemo(() => filteredCohorts.filter(cohort => cohort.state !== 'completed'), [filteredCohorts]);
+  const filterCategories = useMemo<FilterCardCategory[]>(() => [
+    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
+    { id: 'cohort', label: 'Cohort', selectionMode: 'single', options: filteredCohorts.map(cohort => ({ value: cohort.id, label: `${cohort.programName} · ${cohort.name}` })) },
+    { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
+    { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
+  ], [filteredCohorts, programs, sessionTypes]);
+
+  // UI handlers persist complete preference values.
   const persist = useCallback((next: {
     view?: SessionsView;
     programIds?: string[];
@@ -76,17 +101,6 @@ export function useSessionControls({
     columnWidths: next.columnWidths ?? columnWidths,
     hiddenColumns: next.hiddenColumns ?? preference?.hiddenColumns ?? [],
   }), [cohortId, columnWidths, preference?.hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
-
-  const filteredCohorts = useMemo(() => programIds.length
-    ? cohorts.filter(cohort => programIds.includes(cohort.programId))
-    : cohorts, [cohorts, programIds]);
-  const schedulableCohorts = useMemo(() => filteredCohorts.filter(cohort => cohort.state !== 'completed'), [filteredCohorts]);
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'cohort', label: 'Cohort', selectionMode: 'single', options: filteredCohorts.map(cohort => ({ value: cohort.id, label: `${cohort.programName} · ${cohort.name}` })) },
-    { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
-    { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
-  ], [filteredCohorts, programs, sessionTypes]);
 
   const applyFilter = useCallback((key: string, values: string[]) => {
     const nextProgramIds = key === 'program' ? values : programIds;
