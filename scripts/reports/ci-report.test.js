@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildSegments, isCiPath, parseArgs, summarizeRuns } from './review-ci.js';
+import { buildSegments, isCiPath, parseArgs, summarizeRuns } from './ci-report.js';
 
 test('parses recent and date-range options', () => {
   assert.deepEqual(parseArgs([]), { branch: 'all', last: 5, since: null, until: null, json: false });
@@ -15,6 +15,8 @@ test('parses recent and date-range options', () => {
 test('classifies CI ownership paths without treating application code as CI', () => {
   assert.equal(isCiPath('.github/workflows/ci.yml'), true);
   assert.equal(isCiPath('scripts/tests/frontend/test-ui.sh'), true);
+  assert.equal(isCiPath('scripts/reports/ci-report.js'), true);
+  assert.equal(isCiPath('docs/operations/reports.md'), true);
   assert.equal(isCiPath('frontend/package-lock.json'), true);
   assert.equal(isCiPath('frontend/src/App.tsx'), false);
 });

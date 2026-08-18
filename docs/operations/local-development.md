@@ -48,6 +48,7 @@ docker compose down
 | Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
 | Check changed architecture patterns | `node scripts/agents/check-patterns.js --changed` |
 | Validate repository skills | `node scripts/agents/validate-skills.js` |
+| Report repository lines of code | `npm run report:loc` |
 
 Never edit an applied migration. Add a new migration instead.
 
