@@ -1,3 +1,4 @@
+// Owns school create, edit, delete, and failure behavior at the Youth modal boundary.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSchool, deleteSchool, setSchool } from '../schools/schools.api';
@@ -22,6 +23,15 @@ describe('SchoolActionModal', () => {
     expect(onUpsert).toHaveBeenCalledWith(school);
   });
 
+  it('does not submit a blank name through the form', () => {
+    render(<SchoolActionModal action={{ type: 'add' }} onClose={vi.fn()} onUpsert={vi.fn()} onDelete={vi.fn()} />);
+
+    fireEvent.submit(screen.getByLabelText('School Name *').closest('form') as HTMLFormElement);
+
+    expect(createSchool).not.toHaveBeenCalled();
+    expect(screen.queryByText('Saving school...')).not.toBeInTheDocument();
+  });
+
   it('renames a school', async () => {
     const onUpsert = vi.fn();
     vi.mocked(setSchool).mockResolvedValue({ ...school, name: 'Central Academy' });
@@ -38,5 +48,17 @@ describe('SchoolActionModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(deleteSchool).toHaveBeenCalledWith(school.id));
     expect(onDelete).toHaveBeenCalledWith(school);
+  });
+
+  it('keeps the modal open with an accessible error after a failed save', async () => {
+    vi.mocked(createSchool).mockRejectedValue(new Error('network failed'));
+    render(<SchoolActionModal action={{ type: 'add' }} onClose={vi.fn()} onUpsert={vi.fn()} onDelete={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central High' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('network failed');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
   });
 });
