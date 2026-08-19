@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import CalendarItem from '../../../../../../common/components/ResourceCalendar/items/CalendarItem';
 import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../../../../common/features/tasks/types';
-import { isTaskOverdue } from '../../../taskOverview';
+import { isTaskOverdue } from '../../../utils/taskDates';
 import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import './TaskItem.css';
 

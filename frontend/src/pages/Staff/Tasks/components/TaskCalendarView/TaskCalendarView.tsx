@@ -5,16 +5,23 @@ import type { PeriodRange } from '../../../../../common/components/ResourceCalen
 import { getTasks } from '../../../../../common/features/tasks/api/tasks.api';
 import type { Task, TaskCategory, TaskResource, TaskStatus } from '../../../../../common/features/tasks/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import { canMoveTaskToResource, getTaskCalendarCapabilities } from '../../taskCalendarCapabilities';
-import type { TaskCalendarActions, TaskViewMutationCache } from '../../taskViewTypes';
-import { useTaskCalendarData } from './hooks/useTaskCalendarData';
-import TaskItem from './TaskItem/TaskItem';
-import type { TaskModalTarget } from '../TaskDialogs/TaskDialogs';
+import type { TaskCalendarActions, TaskModalTarget, TaskViewMutationCache } from '../../types';
 import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
-} from '../../taskActionCapabilities';
+} from '../../utils/taskCapabilities';
+import { useTaskCalendarData } from './hooks/useTaskCalendarData';
+import TaskItem from './TaskItem/TaskItem';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
+
+function getTaskCalendarCapabilities(task: Task, canWriteTask: boolean) {
+  const canAdjustDates = canWriteTask && canEditTask(task);
+  return { draggable: canAdjustDates, resizable: canAdjustDates };
+}
+
+function canReassignTask(task: Task) {
+  return task.status === 'todo' && task.hoursLogged === 0;
+}
 
 interface TaskCalendarViewProps {
   resources: TaskResource[];
@@ -97,7 +104,7 @@ export default function TaskCalendarView({
       } : undefined}
       canRangeMove={({ item: task, resource, destinationResource }) => task.writable
         && destinationResource.writable
-        && canMoveTaskToResource(task, resource.id, destinationResource.id)}
+        && (resource.id === destinationResource.id || canReassignTask(task))}
       onRangeMove={canWrite ? ({ item: task, nextRange, destinationResource }) => {
         onResourceSelect(destinationResource.id);
         onTaskSelect(task);

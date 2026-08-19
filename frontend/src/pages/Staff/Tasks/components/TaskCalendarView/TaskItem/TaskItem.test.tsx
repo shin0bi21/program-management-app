@@ -1,3 +1,4 @@
+// Scope: verifies task-item details, selection, status, and available action events.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';

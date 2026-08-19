@@ -1,4 +1,4 @@
-import type { Task } from '../../../common/features/tasks/types';
+import type { Task } from '../../../../common/features/tasks/types';
 
 export function canCancelTask(task: Task) {
   return task.status === 'todo' || task.status === 'in_progress';

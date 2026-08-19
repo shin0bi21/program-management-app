@@ -5,26 +5,28 @@ import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import Modal from '../../../common/components/Modal/Modal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumn } from '../../../common/components/Table/Table';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
+import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
 import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
-import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
 import TaskListView from './components/TaskListView/TaskListView';
+import TaskManagementModal from './components/TaskManagementModal/TaskManagementModal';
 import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
+import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
 import useTaskControls from './hooks/useTaskControls';
 import useTaskMutations from './hooks/useTaskMutations';
+import type { TaskModalTarget, TaskViewMutationCache } from './types';
 import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
-} from './taskActionCapabilities';
-import { TASKS_QUERY_KEY } from './taskQueryKeys';
-import type { TaskViewMutationCache } from './taskViewTypes';
+} from './utils/taskCapabilities';
 import './Tasks.css';
 
 const TASK_COLUMN_KEYS = [
@@ -37,6 +39,9 @@ const TASK_COLUMN_KEYS = [
   'dueDate',
   'status',
 ] as const;
+const TASK_QUERY_KEY = ['tasks'] as const;
+const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
+const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
 
 export default function Tasks() {
   // Application permissions and selected page workflows.
@@ -55,6 +60,9 @@ export default function Tasks() {
   }), []);
   const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
   const mutations = useTaskMutations({
+    taskQueryKey: TASK_QUERY_KEY,
+    taskListQueryKey: TASK_LIST_QUERY_KEY,
+    timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
     onUpsert: task => {
       calendarMutationRef.current.upsert(task);
       setSelectedTaskSnapshot(current => current?.id === task.id ? task : current);
@@ -63,6 +71,10 @@ export default function Tasks() {
       calendarMutationRef.current.remove(taskId);
       setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
     },
+  });
+  const confirmModal = useConfirmModal({
+    action: mutations.confirmAction,
+    onClose: mutations.closeConfirmation,
   });
 
   // Remote options, persisted controls, and selected resource data.
@@ -75,7 +87,7 @@ export default function Tasks() {
   }, [selectedResourceId, writableResources]);
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
   const overviewQuery = useQuery({
-    queryKey: [...TASKS_QUERY_KEY, 'overview', selectedResourceId],
+    queryKey: [...TASK_QUERY_KEY, 'overview', selectedResourceId],
     queryFn: ({ signal }) => getTasks({ staffId: selectedResourceId! }, { signal }),
     enabled: selectedResourceId !== null,
     placeholderData: previous => previous,
@@ -189,6 +201,7 @@ export default function Tasks() {
           onLogHours={logHoursAction}
         /> : null}
         {...(controls.view === 'list' ? { table: <TaskListView
+          queryKey={TASK_LIST_QUERY_KEY}
           columns={columns}
           hiddenColumnKeys={controls.hiddenColumns}
           staffIds={controls.staffIds}
@@ -216,19 +229,40 @@ export default function Tasks() {
         /> })}
       />}
     </main>
-    <TaskDialogs
-      canWrite={canWrite}
-      modalTarget={modalTarget}
-      logHoursTask={logHoursTask}
-      confirmAction={mutations.confirmAction}
-      resources={resources}
-      writableResources={writableResources}
+
+    {canWrite && modalTarget && <TaskManagementModal
+      isOpen
+      task={'id' in modalTarget ? modalTarget : undefined}
+      initialStartDate={'id' in modalTarget ? undefined : modalTarget.startDate}
+      initialDueDate={'id' in modalTarget ? undefined : modalTarget.dueDate}
+      fixedStaffId={'id' in modalTarget ? undefined : modalTarget.fixedStaffId}
+      resources={writableResources}
       programs={optionsQuery.data?.programs ?? []}
-      onTaskSaved={saveTask}
-      onCloseTask={() => setModalTarget(null)}
-      onLogHours={mutations.logHours}
-      onCloseLogHours={() => setLogHoursTask(null)}
-      onCloseConfirmation={mutations.closeConfirmation}
-    />
+      onSaved={saveTask}
+      onClose={() => setModalTarget(null)}
+    />}
+
+    {logHoursTask && <TimeEntryModal
+      isOpen
+      initialSource="task"
+      initialTask={logHoursTask}
+      initialResourceId={logHoursTask.assignee.id}
+      resources={resources}
+      programs={optionsQuery.data?.programs ?? []}
+      onAdd={mutations.logHours}
+      onClose={() => setLogHoursTask(null)}
+    />}
+
+    <Modal
+      isOpen={mutations.confirmAction !== null}
+      onClose={mutations.closeConfirmation}
+      title={mutations.confirmAction?.title ?? ''}
+      status={confirmModal.status}
+      statusMessage={confirmModal.statusMessage}
+      footer={confirmModal.footer}
+      successDelay={confirmModal.successDelay}
+    >
+      {mutations.confirmAction && <p>{mutations.confirmAction.message}</p>}
+    </Modal>
   </>;
 }

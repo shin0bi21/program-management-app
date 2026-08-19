@@ -1,3 +1,4 @@
+// Scope: verifies resource task overview groups and report navigation.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../../../../common/features/tasks/types';
@@ -31,5 +32,29 @@ describe('TaskOverviewDashboardCard', () => {
     expect(within(dialog).getByRole('heading', { name: 'Upcoming' })).toBeInTheDocument();
     expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Aug 12');
     expect(within(dialog).getByText('Prepare workshop').parentElement).toHaveClass('task-overview-card__task--due-this-week');
+  });
+
+  it('excludes closed tasks and sorts active tasks by due date', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-11T12:00:00'));
+    const tasks = [
+      { ...baseTask, id: 'later', title: 'Later', dueDate: '2026-08-20' },
+      { ...baseTask, id: 'overdue', title: 'Overdue', dueDate: '2026-08-09', status: 'in_progress' as const },
+      { ...baseTask, id: 'soon', title: 'Soon', dueDate: '2026-08-12' },
+      { ...baseTask, id: 'closed', title: 'Closed', dueDate: '2026-08-01', status: 'completed' as const },
+    ];
+    render(<TaskOverviewDashboardCard tasks={tasks} resourceName="Zoe Wilson" />);
+
+    expect(screen.getByText('Tasks Assigned').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
+    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
+    expect(within(dialog).queryByText('Closed')).not.toBeInTheDocument();
+    expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'OverdueAug 9',
+      'SoonAug 12',
+      'LaterAug 20',
+    ]);
   });
 });

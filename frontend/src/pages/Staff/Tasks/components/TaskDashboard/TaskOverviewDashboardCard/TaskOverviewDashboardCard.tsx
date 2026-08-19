@@ -3,11 +3,44 @@ import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
 import type { Task } from '../../../../../../common/features/tasks/types';
-import { groupTasksForOverview } from '../../../taskOverview';
+import { isTaskOverdue } from '../../../utils/taskDates';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewDashboardCard.css';
 
+const ACTIVE_TASK_STATUSES = new Set<Task['status']>(['todo', 'in_progress']);
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
+
+function parseCalendarDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function currentWeekEnd(today: string) {
+  const date = parseCalendarDate(today);
+  const daysSinceMonday = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - daysSinceMonday + 6);
+  return dayKey(date);
+}
+
+function sortByDueDate(tasks: readonly Task[]) {
+  return [...tasks].sort((left, right) => (
+    left.dueDate.localeCompare(right.dueDate) || left.title.localeCompare(right.title)
+  ));
+}
+
+function groupTasksForOverview(tasks: readonly Task[], today: string) {
+  const activeTasks = tasks.filter(task => ACTIVE_TASK_STATUSES.has(task.status));
+  const overdueTasks = activeTasks.filter(task => isTaskOverdue(task, today));
+  const upcomingTasks = activeTasks.filter(task => task.dueDate >= today);
+  const weekEnd = currentWeekEnd(today);
+
+  return {
+    activeTasks: sortByDueDate(activeTasks),
+    overdueTasks: sortByDueDate(overdueTasks),
+    upcomingTasks: sortByDueDate(upcomingTasks),
+    dueThisWeekTasks: upcomingTasks.filter(task => task.dueDate <= weekEnd),
+  };
+}
 
 function formatCompactDate(value: string) {
   const [year, month, day] = value.split('-').map(Number);
