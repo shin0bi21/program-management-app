@@ -5,7 +5,7 @@
   "scripts": {
     "report:ci": "node scripts/reports/ci-report.js",
     "report:loc": "bash scripts/reports/loc-report.sh",
-    "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/reports",
+    "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns scripts/reports",
     "lint:fix": "npm run lint -- --fix",
     "validate:skills": "node scripts/agents/validate-skills.js"
   },

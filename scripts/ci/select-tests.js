@@ -115,7 +115,8 @@ export function selectTests(files, { baseRef = 'develop' } = {}) {
       continue;
     }
 
-    if (file.startsWith('scripts/agents/') || file.startsWith('scripts/reports/')) {
+    if (file.startsWith('scripts/agents/') || file.startsWith('scripts/patterns/')
+      || file.startsWith('scripts/reports/')) {
       plan.static = true;
       continue;
     }

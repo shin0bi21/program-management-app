@@ -24,7 +24,7 @@ flowchart LR
 
 - Components render state and delegate meaningful behavior to focused hooks.
 - Endpoint adapters own paths and response types; all network traffic passes through `src/http/client.ts`.
-- TanStack Query owns server state. Page or feature query-key modules define stable prefixes, read hooks own loading and error presentation, and mutation owners invalidate or reconcile the cache.
+- TanStack Query owns server state. Route pages define stable page-owned prefixes and pass them into nested read and mutation owners; reusable feature infrastructure owns its internal keys. Read hooks own loading and error presentation, and mutation owners invalidate or reconcile the cache.
 - Local React state owns transient UI state such as open modals, draft form values, selections, and view controls.
 - Write flows update or invalidate the relevant query cache rather than maintaining a second unsynchronized server-state copy.
 
@@ -81,6 +81,7 @@ This is an ownership map, not an exhaustive file inventory. The source tree rema
 - Common features must not import pages.
 - Common components must not import pages or common features.
 - A page never imports another page's private API, hook, component, or type. Promote a genuinely shared contract to the narrowest common owner.
+- Route-family `common/` code may be consumed by sibling route pages but must not import their private code.
 - The authenticated HTTP client and auth subsystem form an explicit integration boundary: auth endpoints use the HTTP client, while authenticated requests consume auth token and re-authentication primitives.
 
 Local guides refine the two shared-code boundaries:
@@ -123,7 +124,8 @@ components/
   FeatureDashboard/             dashboard composition
     FeatureDashboardCard/
 hooks/                          page-wide controls and cross-view workflows
-featureViewData.ts              contracts or pure helpers shared by sibling views
+types.ts                        contracts shared by the route and sibling views
+utils/                          pure helpers shared by sibling views
 ```
 
 The route owns the header, shared filters and preferences, dialogs, selection context, dashboards, and synchronization between mounted or unmounted views. A `*ListView` owns its remote list hook and table-specific behavior. A `*CalendarView` owns its range loader, buffer adapter, visible-data hook, item component, and calendar-only mutation helpers. A dashboard owns cards used only within that dashboard. Do not move a contract under one child when a sibling view or the route also consumes it; keep that contract at the narrowest shared feature level.
@@ -136,6 +138,8 @@ The same public ownership pattern does not require identical internal algorithms
 - Extract a hook when stateful behavior has a coherent name and owns effects, subscriptions, observers, or coordinated callbacks.
 - Extract pure transforms, constants, date arithmetic, and external-library adapters into utilities.
 - Keep one-off private prop types beside their component; place cross-unit contracts in the feature's type file.
+- When multiple files inside one component share a contract, keep its type file inside that component folder rather than promoting it to the page.
+- Import a component from its named implementation file; do not add an `index.ts` that only re-exports that component.
 - Introduce `components/` or `hooks/` subdirectories when multiple peer units make a flat feature directory unclear.
 - Place focused tests with the narrowest owner. Keep route tests for composition and boundary wiring; move hook policy, persistence, filtering, caching, and reference-stability assertions into the owning hook suite instead of duplicating them in page tests.
 

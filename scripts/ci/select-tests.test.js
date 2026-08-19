@@ -45,7 +45,11 @@ test('frontend dependency changes conservatively run all frontend tests', () => 
 });
 
 test('CI planner changes select only static verification', () => {
-  const plan = selectTests(['scripts/ci/select-tests.js', '.github/workflows/ci.yml']);
+  const plan = selectTests([
+    'scripts/ci/select-tests.js',
+    'scripts/patterns/check-patterns.js',
+    '.github/workflows/ci.yml',
+  ]);
 
   assert.deepEqual(planCommands(plan), [['static', '']]);
 });

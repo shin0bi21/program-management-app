@@ -65,11 +65,13 @@ Check `scripts/tests/backend/` and `scripts/tests/frontend/` for the complete cu
 Use the deterministic repository checks before review or handoff:
 
 ```bash
-node scripts/agents/check-patterns.js --changed
+node scripts/patterns/check-patterns.js --changed
 node scripts/agents/validate-skills.js
 ```
 
-`check-patterns.js` is diff-scoped by default. It catches high-confidence ownership, canonical-vocabulary, centralized-HTTP, route-wrapper, migration, focused-mutation, remote-list hook/page-size/table-wiring, buffered ResourceCalendar lifecycle, CalendarView-owned data hooks, dashboard owner/card naming, and accidental test-marker regressions. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. Use `--all` for an intentional repository-wide scrub; historical findings may need to be scheduled separately. These checks do not generate semantic tests or replace behavior review.
+`check-patterns.js` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.
+
+The checker enforces high-confidence ownership, route-page structure, component/hook/page/API test colocation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, canonical vocabulary, and accidental test markers. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. These checks verify deterministic structure and syntax; they do not generate semantic tests or replace behavior review.
 
 ## Direct package commands
 

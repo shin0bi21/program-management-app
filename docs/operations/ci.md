@@ -59,7 +59,7 @@ Start from the failed GitHub job and run its stable repository command where one
 | Browser component behavior | `bash scripts/tests/frontend/test-browser.sh` |
 | Full local application gate | `bash scripts/tests/test-app.sh` |
 | Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `bash scripts/tests/test-app.sh --changed` |
-| Repository patterns | `node scripts/agents/check-patterns.js --changed` |
+| Repository patterns | `node scripts/patterns/check-patterns.js --changed` |
 
 CI also runs framework and production-specific steps such as backend migrations and generated-type drift checks, frontend builds, image builds, Compose validation, and nginx validation. Inspect the failed workflow step for its exact command. [Testing](testing.md) owns test-runner selection; [Local development](local-development.md) owns Docker, migrations, dependencies, and environment diagnostics.
 

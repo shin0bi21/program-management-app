@@ -11,7 +11,7 @@ Before deep review, decide whether the working tree is one cohesive concern or s
 Review tracked and untracked changes for correctness, regressions, security, authorization, ownership boundaries, maintainability, and test adequacy. Use successful focused test evidence while the exact concern diff remains unchanged. Run:
 
 ```bash
-node scripts/agents/check-patterns.js --changed
+node scripts/patterns/check-patterns.js --changed
 git diff --check
 ```
 
