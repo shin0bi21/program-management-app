@@ -140,6 +140,16 @@ describe('YouthModal', () => {
       expect(screen.getByRole('menuitem', { name: 'Delete Central High' })).toBeInTheDocument();
     });
 
+    it('shows only the school action dialog while managing a school', () => {
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: '+ Add school' }));
+
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+      expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Add Youth Profile' })).not.toBeInTheDocument();
+    });
+
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
       expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();

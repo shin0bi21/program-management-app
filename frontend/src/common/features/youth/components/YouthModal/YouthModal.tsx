@@ -99,7 +99,7 @@ export default function YouthModal({
   return (
     <>
       <Modal
-        isOpen={isOpen}
+        isOpen={isOpen && schoolAction === null}
         onClose={closeYouthModal}
         title={title}
         footer={footer}
