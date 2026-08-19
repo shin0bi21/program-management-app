@@ -155,6 +155,23 @@ describe('ExpressionsOfInterest', () => {
     expect(screen.queryByRole('button', { name: 'More actions for Avery Interest' })).not.toBeInTheDocument();
   });
 
+  it('keeps signed-up submissions terminal in the table', async () => {
+    getExpressions.mockResolvedValueOnce([{
+      id: 'expression-1', youthFirstName: 'Avery', youthLastName: 'Interest', age: 14,
+      school: 'Test School', submittedByRole: 'parent', contactPhoneNumber: '416-555-0100',
+      contactRelationship: 'parent', discoverySource: 'online', notes: null, status: 'signed_up',
+      createdAt: new Date().toISOString(), statusUpdatedAt: new Date().toISOString(),
+      suggestedProgramId: 'program-1', suggestedProgramName: 'Soft Skills',
+    }]);
+
+    renderPage();
+
+    expect(await screen.findByText('Signed Up')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {
+      name: 'More actions for Avery Interest',
+    })).not.toBeInTheDocument();
+  });
+
   it('requests expressions filtered by inferred program', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Interest/ });

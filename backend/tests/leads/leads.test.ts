@@ -17,6 +17,8 @@ describe('Leads API', () => {
   let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
   let convertedYouthWithoutCohortId: string | undefined;
+  let convertedExpressionYouthId: string | undefined;
+  let convertedExpressionId: string | undefined;
 
   const payload = {
     youthFirstName: 'Event',
@@ -60,6 +62,12 @@ describe('Leads API', () => {
     }
     if (convertedYouthWithoutCohortId) {
       await sql`DELETE FROM users WHERE id = ${convertedYouthWithoutCohortId}`;
+    }
+    if (convertedExpressionYouthId) {
+      await sql`DELETE FROM users WHERE id = ${convertedExpressionYouthId}`;
+    }
+    if (convertedExpressionId) {
+      await sql`DELETE FROM expressions_of_interest WHERE id = ${convertedExpressionId}`;
     }
     await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
     await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
@@ -147,6 +155,30 @@ describe('Leads API', () => {
     expect(res.body.details).toEqual(expect.arrayContaining([
       expect.objectContaining({ field: 'body.contactRelationship' }),
     ]));
+  });
+
+  it.each([11, 20])('rejects age %i outside the supported Lead range', async (age) => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, age });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.age' }),
+    ]));
+  });
+
+  it.each([11, 20])('rejects age %i at the database boundary', async (age) => {
+    await expect(sql`
+      INSERT INTO leads (
+        origin, youth_first_name, youth_last_name, age, school,
+        contact_phone_number, contact_relationship, discovery_source, created_by
+      ) VALUES (
+        'staff_created', 'Invalid', ${`Invalid-${age}-${Date.now()}`}, ${age}, 'Test School',
+        '416-555-0190', 'parent', 'online', ${staffUserId}
+      )
+    `).rejects.toMatchObject({ code: '23514' });
   });
 
   it('lists leads for staff', async () => {
@@ -367,6 +399,80 @@ describe('Leads API', () => {
       WHERE youth_id = ${convertedYouthWithoutCohortId!}
     `;
     expect(count).toBe(0);
+  });
+
+  it('preserves the complete expression-of-interest to youth signup lifecycle', async () => {
+    const youthLastName = `Lifecycle-${Date.now()}`;
+    const submitted = await request(app)
+      .post('/api/public/expressions-of-interest')
+      .send({
+        youthFirstName: 'Outreach',
+        youthLastName,
+        age: 14,
+        school: 'Lifecycle School',
+        submittedByRole: 'guardian',
+        discoverySource: 'online',
+        contactPhoneNumber: '416-555-0177',
+        contactRelationship: 'guardian',
+        notes: 'Created through public intake.',
+      });
+    expect(submitted.status).toBe(201);
+
+    const [expression] = await sql<{ id: string }[]>`
+      SELECT id
+      FROM expressions_of_interest
+      WHERE youth_last_name = ${youthLastName}
+      LIMIT 1
+    `;
+    convertedExpressionId = expression.id;
+
+    const converted = await request(app)
+      .post(`/api/expressions-of-interest/${expression.id}/convert`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(converted.status).toBe(201);
+    expect(converted.body).toEqual(expect.objectContaining({
+      expressionOfInterestId: expression.id,
+      programOfInterestId: softSkillsProgramId,
+      programOfInterestName: 'Soft Skills',
+      status: 'new',
+    }));
+    await sql`
+      UPDATE expressions_of_interest
+      SET status_updated_at = TIMESTAMPTZ '2000-01-01 00:00:00+00'
+      WHERE id = ${expression.id}
+    `;
+
+    const signedUp = await request(app)
+      .post(`/api/leads/${converted.body.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ cohortId: null, noteCategory: 'general' });
+    expect(signedUp.status).toBe(201);
+    expect(signedUp.body).toEqual(expect.objectContaining({
+      id: converted.body.id,
+      convertedYouthId: expect.any(String),
+      programOfInterestId: softSkillsProgramId,
+      status: 'signed_up',
+    }));
+    convertedExpressionYouthId = signedUp.body.convertedYouthId;
+
+    const [storedExpression] = await sql<{ status: string; statusUpdatedAt: string }[]>`
+      SELECT status, status_updated_at::text AS "statusUpdatedAt"
+      FROM expressions_of_interest
+      WHERE id = ${expression.id}
+    `;
+    expect(storedExpression.status).toBe('signed_up');
+    expect(new Date(storedExpression.statusUpdatedAt).getUTCFullYear()).toBeGreaterThan(2000);
+
+    const reverted = await request(app)
+      .patch(`/api/expressions-of-interest/${expression.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ status: 'converted' });
+    expect(reverted.status).toBe(409);
+    await expect(sql`
+      UPDATE expressions_of_interest
+      SET status = 'converted'
+      WHERE id = ${expression.id}
+    `).rejects.toMatchObject({ code: '23514' });
   });
 
   it('rolls back conversion when the cohort conflicts with the program of interest', async () => {

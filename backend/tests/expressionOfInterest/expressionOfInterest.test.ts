@@ -200,8 +200,8 @@ describe('Expression of interest API', () => {
       discoverySource: 'online',
       notes: 'Needs follow-up',
       status: 'new',
-      programOfInterestId: null,
-      programOfInterestName: null,
+      programOfInterestId: expect.any(String),
+      programOfInterestName: 'Soft Skills',
       createdBy: adminUserId,
     }));
 
@@ -245,7 +245,7 @@ describe('Expression of interest API', () => {
     `).rejects.toMatchObject({ code: '23514' });
   });
 
-  it('does not automatically assign a program of interest during conversion', async () => {
+  it('carries the inferred program into the Lead as an editable program interest', async () => {
     const [submission] = await sql<{ id: string }[]>`
       SELECT id FROM expressions_of_interest WHERE youth_last_name = ${jobReadinessYouthLastName} LIMIT 1
     `;
@@ -255,7 +255,19 @@ describe('Expression of interest API', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(201);
-    expect(res.body.programOfInterestId).toBeNull();
-    expect(res.body.programOfInterestName).toBeNull();
+    expect(res.body.programOfInterestId).toEqual(expect.any(String));
+    expect(res.body.programOfInterestName).toBe('Job Readiness');
+  });
+
+  it.each([11, 20])('rejects age %i at the database boundary', async (age) => {
+    await expect(sql`
+      INSERT INTO expressions_of_interest (
+        youth_first_name, youth_last_name,
+        contact_phone_number, contact_relationship, age, school, submitted_by_role, discovery_source
+      ) VALUES (
+        'Invalid', ${`Invalid-${age}-${Date.now()}`}, '416-555-0190',
+        'parent', ${age}, 'Test School', 'parent', 'online'
+      )
+    `).rejects.toMatchObject({ code: '23514' });
   });
 });

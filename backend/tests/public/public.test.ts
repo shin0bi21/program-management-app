@@ -86,6 +86,26 @@ describe('Public expression of interest API', () => {
     ]));
   });
 
+  it.each([11, 20])('rejects age %i outside the supported program range', async (age) => {
+    const res = await request(app)
+      .post('/api/public/expressions-of-interest')
+      .send({
+        youthFirstName: 'Age',
+        youthLastName: 'Boundary',
+        age,
+        school: 'Test Secondary',
+        submittedByRole: 'parent',
+        discoverySource: 'online',
+        contactPhoneNumber: '416-555-0199',
+        contactRelationship: 'parent',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'body.age' }),
+    ]));
+  });
+
   it('rejects emergency as an Outreach relationship', async () => {
     const res = await request(app)
       .post('/api/public/expressions-of-interest')

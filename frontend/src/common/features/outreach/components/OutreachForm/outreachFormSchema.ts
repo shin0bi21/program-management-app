@@ -5,7 +5,7 @@ const namePattern = /^[a-zA-Z\s'-]+$/;
 export const outreachFormSchema = z.object({
   youthFirstName: z.string().trim().min(1, 'First name is required').regex(namePattern, 'Enter a valid first name'),
   youthLastName: z.string().trim().min(1, 'Last name is required').regex(namePattern, 'Enter a valid last name'),
-  age: z.number().int('Age must be a whole number').min(5, 'Age must be 5 or higher').max(24, 'Age must be 24 or lower'),
+  age: z.number().int('Age must be a whole number').min(12, 'Age must be 12 or higher').max(19, 'Age must be 19 or lower'),
   school: z.string().trim().min(1, 'School is required'),
   programId: z.string().optional(),
   contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required'),

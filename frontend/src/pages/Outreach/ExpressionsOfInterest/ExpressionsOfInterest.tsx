@@ -100,7 +100,9 @@ export default function ExpressionsOfInterest() {
       resizable: false,
       header: '',
       className: 'col-actions',
-      render: (item: ExpressionOfInterest) => item.status === 'converted' ? null : (
+      render: (item: ExpressionOfInterest) => (
+        item.status === 'converted' || item.status === 'signed_up'
+      ) ? null : (
         <ActionsMenu
           ariaLabel={`More actions for ${submissionYouthName(item)}`}
           items={[

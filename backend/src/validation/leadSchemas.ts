@@ -35,7 +35,7 @@ export const leadQuerySchema = z.object({
 const leadDataSchema = z.object({
     youthFirstName: z.string().trim().min(1, 'Youth first name is required').max(120),
     youthLastName: z.string().trim().min(1, 'Youth last name is required').max(120),
-    age: z.number().int().min(5).max(24),
+    age: z.number().int('Age must be a whole number').min(12, 'Age must be 12 or higher').max(19, 'Age must be 19 or lower'),
     school: z.string().trim().min(1, 'School is required').max(255),
     programOfInterestId: z.string().uuid('Invalid program ID').nullable().optional(),
     contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required').max(40),
