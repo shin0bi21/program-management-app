@@ -11,6 +11,7 @@ import {
   runEnforcementChecks,
   runStructureEnforcement,
 } from './enforce/run.js';
+import { filterDeletedFiles } from './enforce/utils.js';
 import { runPatternReview } from './review/run.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
@@ -61,7 +62,11 @@ function collectChangedFiles(baseRef) {
 }
 
 function collectAllFiles() {
-  return uniqueLines([git(['ls-files']), git(['ls-files', '--others', '--exclude-standard'])].join('\n'));
+  const files = uniqueLines([
+    git(['ls-files']),
+    git(['ls-files', '--others', '--exclude-standard']),
+  ].join('\n'));
+  return filterDeletedFiles(files, uniqueLines(git(['ls-files', '--deleted'])));
 }
 
 function checkAppliedMigrations(violations, baseRef) {

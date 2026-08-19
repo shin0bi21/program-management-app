@@ -11,6 +11,11 @@ export function addMatches(violations, file, source, pattern, message) {
   }
 }
 
+export function filterDeletedFiles(files, deletedFiles) {
+  const deleted = new Set(deletedFiles);
+  return files.filter(file => !deleted.has(file));
+}
+
 export function resolveImport(repoRoot, file, importPath) {
   if (!importPath.startsWith('.')) return null;
   return relative(repoRoot, resolve(dirname(resolve(repoRoot, file)), importPath)).split(sep).join('/');
