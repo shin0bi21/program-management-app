@@ -1,7 +1,7 @@
-import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
-import type { Account, AccountFilters, AccountSortKey, InviteAccountInput, UpdateAccountInput } from '../../../../common/types/account';
-import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
+import { apiClient } from '../../../http/client';
+import type { RequestOptions } from '../../../http/client';
+import type { Account, AccountFilters, AccountSortKey, InviteAccountInput, UpdateAccountInput } from '../../../common/types/account';
+import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
 
 export function getAccounts(filters: AccountFilters = {}, pagination?: CursorRequest<AccountSortKey>, opts?: RequestOptions) {
   const params = new URLSearchParams();

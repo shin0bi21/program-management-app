@@ -1,3 +1,4 @@
+// Scope: verifies Users route permissions, preferences, query wiring, and account action entry points.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,7 +16,9 @@ const preferenceHook = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
-vi.mock('./hooks/useAccounts', () => ({ useAccounts: (filters: unknown) => mockUseAccounts(filters) }));
+vi.mock('./hooks/useAccounts', () => ({
+  useAccounts: (...args: unknown[]) => mockUseAccounts(...args),
+}));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
@@ -94,7 +97,11 @@ describe('Users', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
     act(() => vi.advanceTimersByTime(250));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Yara' }));
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      expect.objectContaining({ search: 'Yara' }),
+      expect.any(Object),
+    );
     vi.useRealTimers();
   });
 
@@ -126,26 +133,39 @@ describe('Users', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Invited' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['active', 'invited'] }));
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      expect.objectContaining({ statuses: ['active', 'invited'] }),
+      expect.any(Object),
+    );
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Role' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Admin' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Staff' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(expect.objectContaining({
-      roles: ['admin', 'staff'],
-      statuses: ['active', 'invited'],
-    }));
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      expect.objectContaining({
+        roles: ['admin', 'staff'],
+        statuses: ['active', 'invited'],
+      }),
+      expect.any(Object),
+    );
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(expect.objectContaining({
-      roles: [],
-      statuses: ['active', 'invited'],
-    }));
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      expect.objectContaining({ roles: [], statuses: ['active', 'invited'] }),
+      expect.any(Object),
+    );
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(expect.objectContaining({ roles: [], statuses: [] }));
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      expect.objectContaining({ roles: [], statuses: [] }),
+      expect.any(Object),
+    );
   });
 });
