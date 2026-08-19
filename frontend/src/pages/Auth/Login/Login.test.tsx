@@ -1,27 +1,29 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import Login from './Login';
+
+import { login } from '../../../auth/auth.api';
 import { rememberAuthPath, setAuthData } from '../../../auth/storage';
+import Login from './Login';
+
+const authState = vi.hoisted(() => ({
+  isAuthenticated: true,
+  loading: false,
+  login: vi.fn(),
+}));
 
 vi.mock('../../../auth/authContext', () => ({
-  useAuth: () => ({ isAuthenticated: true, loading: false }),
+  useAuth: () => authState,
 }));
-
-vi.mock('./hooks/useLogin', () => ({
-  useLogin: () => ({
-    form: {
-      register: vi.fn(() => ({})),
-      handleSubmit: vi.fn(),
-      formState: { errors: {}, isSubmitting: false },
-    },
-    error: '',
-    onSubmit: vi.fn(),
-  }),
-}));
+vi.mock('../../../auth/auth.api', () => ({ login: vi.fn() }));
 
 describe('Login', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    authState.isAuthenticated = true;
+    authState.loading = false;
+  });
 
   it('sends an authenticated user to My Account by default', () => {
     setAuthData('token', { id: 'user-1', firstName: 'Test', lastName: 'User', email: 'test@example.com' });
@@ -51,5 +53,18 @@ describe('Login', () => {
     );
 
     expect(screen.getByText('Sessions page')).toBeInTheDocument();
+  });
+
+  it('blocks invalid credentials before the API boundary', async () => {
+    authState.isAuthenticated = false;
+    render(<MemoryRouter><Login /></MemoryRouter>);
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'not-an-email' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+
+    expect(await screen.findByText('Invalid email address')).toBeInTheDocument();
+    expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
+    expect(login).not.toHaveBeenCalled();
   });
 });
