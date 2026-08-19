@@ -261,6 +261,7 @@ test('leaves a touch gesture that begins on an entry available for calendar scro
 
 test('clips a point-item ghost to the same calendar preview host', async ({ page, mount }) => {
   const component = await mount(storyId);
+  const viewport = component.getByLabel('Browser-tested resource calendar');
   const item = component.getByRole('button', { name: 'Movable entry' });
   const box = await item.boundingBox();
   if (!box) throw new Error('Point drag geometry is unavailable');
@@ -269,11 +270,32 @@ test('clips a point-item ghost to the same calendar preview host', async ({ page
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2 + 10, { steps: 4 });
   await expect(page.locator('.resource-calendar__drag-overlay')).toBeVisible();
+  await expect.poll(() => viewport.evaluate(element => getComputedStyle(element).cursor)).toBe('grabbing');
   await expectPreviewClippedToCalendar(component, page);
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 })));
 
   await expect(page.locator('.resource-calendar__preview-host')).toHaveCount(0);
   await expect(component.getByTestId('drop-record')).toHaveValue('');
+});
+
+test('keeps the point-item ghost under the exact place it was grabbed', async ({ page, mount }) => {
+  const component = await mount(storyId);
+  const item = component.getByRole('button', { name: 'Movable entry' });
+  const box = await item.boundingBox();
+  if (!box) throw new Error('Point drag geometry is unavailable');
+  const pickup = { x: box.x + box.width * .7, y: box.y + box.height * .35 };
+  const destination = { x: pickup.x + 35, y: pickup.y + 18 };
+
+  await page.mouse.move(pickup.x, pickup.y);
+  await page.mouse.down();
+  await page.mouse.move(destination.x, destination.y, { steps: 4 });
+
+  const preview = await page.locator('.resource-calendar__drag-overlay').boundingBox();
+  if (!preview) throw new Error('Point drag preview is unavailable');
+  expect(destination.x - preview.x).toBeCloseTo(pickup.x - box.x, 0);
+  expect(destination.y - preview.y).toBeCloseTo(pickup.y - box.y, 0);
+
+  await page.mouse.up();
 });
 
 test('cancels point drag without committing its last valid target', async ({ page, mount }) => {
@@ -506,6 +528,7 @@ test('cancels ranged movement after genuine pointer capture loss', async ({ page
 
 test('moves a ranged item while preserving its duration and suppressing activation', async ({ page, mount }) => {
   const component = await mount(storyId);
+  const viewport = component.getByLabel('Browser-tested resource calendar');
   const item = component.getByRole('button', { name: 'Ranged task' });
   const box = await item.boundingBox();
   if (!box) throw new Error('Range move geometry is unavailable');
@@ -514,6 +537,8 @@ test('moves a ranged item while preserving its duration and suppressing activati
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + periodWidth, box.y + box.height / 2, { steps: 6 });
   await expect(page.locator('.resource-calendar__range-preview')).toBeVisible();
+  await expect.poll(() => viewport.evaluate(element => getComputedStyle(element).cursor)).toBe('grabbing');
+  await expect(page.locator('.resource-calendar__range-move-preview').getByText('Ranged task')).toBeVisible();
   await expectPreviewClippedToCalendar(component, page);
   await page.mouse.up();
 
@@ -570,8 +595,11 @@ test('opens the real task-item floating menu instead of editing directly', async
   }), pointerX);
   const dayBox = await row.locator('.resource-calendar__item-slot').nth(dayIndex).boundingBox();
   if (!dayBox) throw new Error('Task action day geometry is unavailable');
+  const borderColor = await item.evaluate(element => getComputedStyle(element).borderTopColor);
 
   await page.mouse.click(pointerX, itemBox.y + itemBox.height / 2);
+  await expect(item).toHaveCSS('border-top-width', '2px');
+  await expect(item).toHaveCSS('border-top-color', borderColor);
   await expect(page.getByRole('menuitem', { name: 'View details' })).toHaveCount(0);
   await expect(page.getByRole('menuitem', { name: 'Set Completed' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
@@ -654,6 +682,7 @@ test('shows a geometry-only task resize ghost without expanding its text', async
   await expect(wrapper).toHaveClass(/resource-calendar__item/);
   await expect(wrapper).toHaveClass(/draggable/);
   await expect(wrapper).toHaveClass(/resizable/);
+  await expect.poll(() => item.evaluate(element => getComputedStyle(element).cursor)).toBe('grab');
   await expect.poll(() => handle.evaluate(element => getComputedStyle(element).cursor)).toBe('ew-resize');
   await item.hover();
   const dragHoverBorder = await item.evaluate(element => getComputedStyle(element).borderColor);
@@ -666,8 +695,9 @@ test('shows a geometry-only task resize ghost without expanding its text', async
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 - periodWidth + 1, box.y + box.height / 2, { steps: 5 });
-  const preview = page.locator('.resource-calendar__range-preview');
+  const preview = page.locator('.resource-calendar__range-resize-preview');
   await expect(preview).toBeVisible();
+  await expect.poll(() => viewport.evaluate(element => getComputedStyle(element).cursor)).toBe('ew-resize');
   await expect(preview.getByText('Prepare workshop')).toBeHidden();
   await expect.poll(async () => (await preview.boundingBox())?.width ?? 0).toBeGreaterThan(original.width);
   await expectPreviewClippedToCalendar(component, page);
@@ -683,8 +713,11 @@ test('opens the real time-item action menu without starting a drag', async ({ pa
   const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
   const itemBox = await item.boundingBox();
   if (!itemBox) throw new Error('Time action anchor geometry is unavailable');
+  const borderColor = await item.evaluate(element => getComputedStyle(element).borderTopColor);
 
   await item.click();
+  await expect(item).toHaveCSS('border-top-width', '2px');
+  await expect(item).toHaveCSS('border-top-color', borderColor);
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await expect.poll(async () => (await page.locator('.calendar-item-menu').boundingBox())?.x)

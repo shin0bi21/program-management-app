@@ -12,6 +12,8 @@ export interface CalendarPointerDrag<TResource, TItemData> {
   x: number;
   y: number;
   width: number;
+  grabOffsetX: number;
+  grabOffsetY: number;
   sourceElement: HTMLElement;
   context: BuildItemContext<TResource, TItemData>;
   dragging: boolean;
@@ -64,7 +66,9 @@ export function useCalendarItemDrag<TResource, TItemData>({
 
   const positionOverlay = useCallback((current: CalendarPointerDrag<TResource, TItemData>) => {
     if (!overlayRef.current || !current.previewBounds) return;
-    overlayRef.current.style.transform = `translate3d(${current.x - current.previewBounds.left}px, ${current.y - current.previewBounds.top + 12}px, 0) rotate(1deg)`;
+    const left = current.x - current.previewBounds.left - current.grabOffsetX;
+    const top = current.y - current.previewBounds.top - current.grabOffsetY;
+    overlayRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }, []);
 
   const setCurrentDrag = useCallback((next: CalendarPointerDrag<TResource, TItemData> | null) => {

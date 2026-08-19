@@ -136,7 +136,10 @@ export function useCalendarRangeResize<TResource, TItemData>({
         previewLeft = bounds.left - preview.bounds.left;
         previewWidth = bounds.width;
         previewElement = current.rangeElement.cloneNode(true) as HTMLElement;
-        previewElement.classList.add('resource-calendar__range-preview');
+        previewElement.classList.add(
+          'resource-calendar__range-preview',
+          'resource-calendar__range-resize-preview',
+        );
         previewElement.setAttribute('aria-hidden', 'true');
         Object.assign(previewElement.style, { position: 'absolute', left: `${previewLeft}px`, top: `${bounds.top - preview.bounds.top}px`, width: `${previewWidth}px`, height: `${bounds.height}px`, gridColumn: '' });
         previewHost.appendChild(previewElement);

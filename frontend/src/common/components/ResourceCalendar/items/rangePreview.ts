@@ -23,6 +23,7 @@ export function createCalendarPreviewHost(viewport: HTMLElement) {
   const bounds = getCalendarPreviewBounds(viewport);
   const host = document.createElement('div');
   host.className = 'resource-calendar__preview-host';
+  host.inert = true;
   Object.assign(host.style, getCalendarPreviewHostStyle(bounds));
   document.body.appendChild(host);
   return { host, bounds };
