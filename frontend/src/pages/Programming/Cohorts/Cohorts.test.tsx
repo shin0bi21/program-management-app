@@ -42,9 +42,12 @@ const preferenceHook = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../common/features/programming/api/programming.api', () => ({
+  getSessionTypes: api.getSessionTypes,
+}));
+
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
   getCohortPage: api.getCohorts,
-  getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
   deleteCohort: api.deleteCohort,
   getProgramCycles: api.getProgramCycles,
