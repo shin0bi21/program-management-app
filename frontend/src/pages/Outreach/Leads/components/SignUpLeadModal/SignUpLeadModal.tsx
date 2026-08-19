@@ -1,14 +1,11 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import { getCohorts } from '../../../../../common/features/programming/api/cohorts.api';
-import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../http/clientErrors';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
-import { signUpLead } from '../../leads.api';
+
 import type { Lead } from '../../types';
+
+import useSignUpLeadModal, { type LeadNoteCategory } from './useSignUpLeadModal';
+
 import './SignUpLeadModal.css';
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -18,7 +15,12 @@ const dateFormatter = new Intl.DateTimeFormat('en-CA', {
 });
 
 const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));
-const noCohorts: ProgramCohort[] = [];
+
+const noteCategoryOptions: Array<{ value: LeadNoteCategory; label: string }> = [
+  { value: 'general', label: 'General' },
+  { value: 'health', label: 'Health' },
+  { value: 'preference', label: 'Preference' },
+];
 
 export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: {
   queryKey: readonly unknown[];
@@ -26,92 +28,41 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
   onClose: () => void;
   onSuccess: (lead: Lead) => void | Promise<void>;
 }) {
-  const [cohortId, setCohortId] = useState('');
-  const [noteCategory, setNoteCategory] = useState<'general' | 'health' | 'preference'>('general');
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-
-  const cohortsQuery = useQuery({
-    queryKey: [...queryKey, lead?.programOfInterestId],
-    queryFn: ({ signal }) => getCohorts(
-      lead?.programOfInterestId ?? undefined,
-      {},
-      { signal },
-    ),
-    enabled: Boolean(lead),
-    select: rows => rows.filter(cohort => (
-      cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
-    )),
+  const workflow = useSignUpLeadModal({
+    queryKey,
+    lead,
+    onSuccess,
   });
-  const cohorts = cohortsQuery.data ?? noCohorts;
-  const loading = cohortsQuery.isLoading;
-  const loadError = cohortsQuery.error
-    ? getErrorMessage(cohortsQuery.error, 'Unable to load cohorts')
-    : '';
 
-  useEffect(() => {
-    setSubmitStatus('idle');
-    setStatusMessage('');
-    setCohortId('');
-    setNoteCategory('general');
-  }, [lead]);
-
-  const visibleCohorts = useMemo(() => {
-    if (!lead) return cohorts;
-    return cohorts.filter(cohort => (
-      cohort.minAge == null
-      || cohort.maxAge == null
-      || (lead.age >= cohort.minAge && lead.age <= cohort.maxAge)
-    ));
-  }, [cohorts, lead]);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!lead) return;
-    const youthName = `${lead.youthFirstName} ${lead.youthLastName}`;
-    const selectedCohort = cohorts.find(cohort => cohort.id === cohortId);
-    setSubmitStatus('submitting');
-    setStatusMessage(`Creating youth profile for ${youthName}...`);
-    try {
-      const updatedLead = lead.notes?.trim()
-        ? await signUpLead(lead.id, cohortId || null, noteCategory)
-        : await signUpLead(lead.id, cohortId || null);
-      await onSuccess(updatedLead);
-      setStatusMessage(selectedCohort
-        ? `Youth profile successfully created and added to ${selectedCohort.programName} - ${selectedCohort.name}.`
-        : `Youth profile successfully created for ${youthName}.`);
-      setSubmitStatus('success');
-    } catch (err) {
-      const message = getErrorMessage(err, 'Unable to create youth profile');
-      setStatusMessage(message);
-      setSubmitStatus('error');
-    }
-  };
-
-  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const cohortOptions = [
     { value: '', label: 'Do not enroll yet' },
-    ...visibleCohorts.map(cohort => ({
+    ...workflow.visibleCohorts.map(cohort => ({
       value: cohort.id,
       label: `${cohort.programName} — ${cohort.name} · ${formatDate(cohort.startsOn)}–${formatDate(cohort.endsOn)}`,
     })),
   ];
+  const modalStatus = workflow.submitStatus === 'idle' && workflow.loadError
+    ? 'error'
+    : workflow.submitStatus;
+  const modalStatusMessage = workflow.submitStatus === 'idle'
+    ? workflow.loadError || workflow.statusMessage
+    : workflow.statusMessage;
 
   return (
     <Modal
       isOpen={lead !== null}
       onClose={onClose}
       title="Sign Up Lead"
-      status={loadError ? 'error' : submitStatus}
-      statusMessage={loadError || statusMessage || undefined}
+      status={modalStatus}
+      statusMessage={modalStatusMessage}
       successDelay={1400}
       maxWidth="600px"
       footer={(
         <ModalFormFooter
           formId="sign-up-lead-form"
           submitLabel="Create Profile"
-          submitStatus={submitStatus}
-          submitDisabled={loading}
+          submitStatus={workflow.submitStatus}
+          submitDisabled={workflow.loading}
           onClose={onClose}
         />
       )}
@@ -120,7 +71,10 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
         <form
           id="sign-up-lead-form"
           className="sign-up-lead-form"
-          onSubmit={event => void submit(event)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void workflow.submit();
+          }}
         >
           <section className="sign-up-lead-summary" aria-labelledby="sign-up-lead-name">
             <h3 id="sign-up-lead-name">
@@ -147,15 +101,15 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
             <FloatingSelect
               id="sign-up-cohort"
               ariaLabel="Cohort enrollment"
-              value={cohortId}
-              onChange={setCohortId}
+              value={workflow.cohortId}
+              onChange={workflow.selectCohort}
               options={cohortOptions}
-              placeholder={loading ? 'Loading cohorts...' : 'Do not enroll yet'}
-              disabled={loading || submissionComplete}
+              placeholder={workflow.loading ? 'Loading cohorts...' : 'Do not enroll yet'}
+              disabled={workflow.loading || workflow.submissionComplete}
             />
-            {!loading && visibleCohorts.length === 0 && (
+            {!workflow.loading && workflow.visibleCohorts.length === 0 && (
               <p className="sign-up-lead-empty">
-                {cohorts.length
+                {workflow.cohorts.length
                   ? 'No cohorts match this youth’s age. Create the profile now and manage cohorts later.'
                   : 'No eligible cohorts are available. The youth profile can still be created.'}
               </p>
@@ -168,14 +122,10 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
               <FloatingSelect
                 id="sign-up-note-category"
                 ariaLabel="Type of note"
-                value={noteCategory}
-                onChange={value => setNoteCategory(value as typeof noteCategory)}
-                options={[
-                  { value: 'general', label: 'General' },
-                  { value: 'health', label: 'Health' },
-                  { value: 'preference', label: 'Preference' },
-                ]}
-                disabled={submissionComplete}
+                value={workflow.noteCategory}
+                onChange={value => workflow.selectNoteCategory(value as LeadNoteCategory)}
+                options={noteCategoryOptions}
+                disabled={workflow.submissionComplete}
               />
             </section>
           )}

@@ -1,3 +1,4 @@
+// Owns the rendered signup choices and their wiring to the modal workflow.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCohorts } from '../../../../../common/features/programming/api/cohorts.api';
@@ -69,9 +70,8 @@ describe('SignUpLeadModal', () => {
     vi.mocked(signUpLead).mockResolvedValue(lead);
   });
 
-  it('loads matching cohorts and reports a successful enrollment', async () => {
-    const onSuccess = vi.fn();
-    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={onSuccess} />);
+  it('renders only matching enrollment cohorts', async () => {
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
     await waitFor(() => expect(cohortSelect).toBeEnabled());
@@ -92,13 +92,7 @@ describe('SignUpLeadModal', () => {
     );
 
     fireEvent.click(cohortOption);
-    fireEvent.click(screen.getByRole('button', { name: 'Create Profile' }));
-
-    await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1'));
-    expect(onSuccess).toHaveBeenCalled();
-    expect(await screen.findByText(
-      'Youth profile successfully created and added to Soft Skills - Summer 2026.',
-    )).toBeInTheDocument();
+    expect(cohortSelect).toHaveTextContent('Soft Skills — Summer 2026');
   });
 
   it('quietly excludes cohorts outside the lead age range', async () => {
@@ -130,7 +124,22 @@ describe('SignUpLeadModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Health' }));
     const createProfile = screen.getByRole('button', { name: 'Create Profile' });
     await waitFor(() => expect(createProfile).toBeEnabled());
+    expect(noteType).toHaveTextContent('Health');
+  });
+
+  it('shows successful signup feedback even when optional cohorts failed to load', async () => {
+    vi.mocked(getCohorts).mockRejectedValue(new Error('Cohorts unavailable'));
+    vi.mocked(signUpLead).mockResolvedValue({ ...lead, status: 'signed_up' });
+
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
+
+    const createProfile = screen.getByRole('button', { name: 'Create Profile' });
+    await waitFor(() => expect(createProfile).toBeEnabled());
     fireEvent.click(createProfile);
-    await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'health'));
+
+    expect(await screen.findByText(
+      'Youth profile successfully created for Avery Outreach.',
+    )).toBeInTheDocument();
+    expect(screen.queryByText('Cohorts unavailable')).not.toBeInTheDocument();
   });
 });
