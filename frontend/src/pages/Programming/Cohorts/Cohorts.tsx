@@ -14,14 +14,14 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/programming.api';
+import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import type { ProgramCohort, ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
-import { COHORT_OPTIONS_QUERY_KEY, COHORT_TABLE_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
+import { COHORT_OPTIONS_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
@@ -30,6 +30,7 @@ import useCohortTable from './hooks/useCohortTable';
 import './Cohorts.css';
 
 const COHORT_COLUMN_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
+const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
 
 export default function Cohorts() {
   // Application services and permission capabilities.
@@ -52,7 +53,7 @@ export default function Cohorts() {
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters,
   } = controls;
-  const cohortTable = useCohortTable(tableFilters, sorting);
+  const cohortTable = useCohortTable(COHORT_TABLE_QUERY_KEY, tableFilters, sorting);
   const cohorts = cohortTable.rows;
   const cohortsLoading = cohortTable.loading;
   const error = cohortTable.error;
