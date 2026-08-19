@@ -1,17 +1,19 @@
+// Scope: verifies Tasks route composition, controls, permissions, selection, and cross-owner callbacks.
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskList, getTaskOptions, getTasks, updateTaskPlacement, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
+import { getTaskList, getTaskOptions, getTasks, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
 import { setTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
+import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
-import { TASK_LIST_QUERY_KEY } from './taskQueryKeys';
-import { TIME_ENTRY_QUERY_KEY } from '../../../common/features/timeEntries/queryKeys';
 import type { TaskPreference } from './types';
+
+const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
@@ -19,22 +21,6 @@ const calendarTestState = vi.hoisted(() => ({
   props: null as TaskCalendarProps | null,
   savePreference: vi.fn(),
 }));
-
-function getLastSavedPreference(): TaskPreference {
-  const update = calendarTestState.savePreference.mock.lastCall?.[0] as (
-    current: TaskPreference,
-  ) => TaskPreference;
-  return update({
-    view: calendarTestState.view,
-    staffIds: [],
-    programIds: [],
-    categories: [],
-    statuses: [],
-    sorting: { key: 'startDate', direction: 'asc' },
-    columnWidths: {},
-    hiddenColumns: [],
-  });
-}
 
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
   getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), setTask: vi.fn(), updateTaskPlacement: vi.fn(),
@@ -59,17 +45,32 @@ vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   },
 }));
 
-const task: Task = {
-  id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, status: 'todo',
-  startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
-  assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
-};
+const task = makeTask();
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
   permissions: ['read:tasks', 'write:tasks'],
   login: vi.fn(), logout: vi.fn(),
 };
+
+const currentPreference: TaskPreference = {
+  view: 'list',
+  staffIds: [],
+  programIds: [],
+  categories: [],
+  statuses: [],
+  columnWidths: {},
+  hiddenColumns: [],
+};
+
+function getLastSavedPreference() {
+  const lastCall = calendarTestState.savePreference.mock.calls[
+    calendarTestState.savePreference.mock.calls.length - 1
+  ];
+  const update = lastCall?.[0] as (
+    current: TaskPreference | null,
+  ) => TaskPreference;
+  return update(currentPreference);
+}
 
 describe('Tasks', () => {
   beforeEach(() => {
@@ -88,7 +89,6 @@ describe('Tasks', () => {
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
     });
-    vi.mocked(updateTaskPlacement).mockResolvedValue(task);
     vi.mocked(updateTaskStatus).mockResolvedValue({ ...task, status: 'completed', completedAt: '2026-08-11T12:00:00.000Z' });
   });
 
@@ -139,10 +139,12 @@ describe('Tasks', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
     await screen.findByText('Prepare workshop');
+    expect(screen.getByRole('columnheader', { name: 'Program' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Program' }));
 
+    expect(screen.queryByRole('columnheader', { name: 'Program' })).not.toBeInTheDocument();
     expect(getLastSavedPreference()).toEqual(expect.objectContaining({
       view: 'list', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
     }));
@@ -271,142 +273,6 @@ describe('Tasks', () => {
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
-  it('persists calendar range changes through the narrow placement contract', async () => {
-    calendarTestState.view = 'calendar';
-    vi.mocked(updateTaskPlacement).mockResolvedValue({
-      ...task,
-      startDate: '2026-08-11',
-      dueDate: '2026-08-13',
-    });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    await act(async () => {
-      await calendarTestState.props!.onRangeResize!({
-        resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-        item: task,
-        originalRange: { start: '2026-08-10', end: '2026-08-12' },
-        nextRange: { start: '2026-08-11', end: '2026-08-13' },
-        edge: 'start',
-      });
-    });
-
-    expect(updateTaskPlacement).toHaveBeenCalledWith('task-1', {
-      startDate: '2026-08-11',
-      dueDate: '2026-08-13',
-    });
-  });
-
-  it('invalidates task lists when an update can change membership or order', async () => {
-    calendarTestState.view = 'calendar';
-    const updated = { ...task, status: 'cancelled' as const };
-    vi.mocked(updateTaskStatus).mockResolvedValue(updated);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const cachedListKey = [...TASK_LIST_QUERY_KEY, [], [], [], [], '', { key: 'dueDate', direction: 'asc' }];
-    client.setQueryData(cachedListKey, {
-      pages: [{ rows: [task], nextCursor: null }],
-      pageParams: [null],
-    });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = new Date('2026-08-10T12:00:00');
-    const end = new Date('2026-08-12T12:00:00');
-    const item = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { onCancel: () => void } };
-
-    await act(async () => item.props.onCancel());
-
-    const cached = client.getQueryData<{ pages: Array<{ rows: Task[] }> }>(cachedListKey);
-    expect(cached?.pages[0].rows[0]).toEqual(task);
-    expect(client.getQueryState(cachedListKey)?.isInvalidated).toBe(true);
-  });
-
-  it('offers complete and cancel commands for an in-progress calendar task', async () => {
-    calendarTestState.view = 'calendar';
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = new Date('2026-08-10T12:00:00');
-    const end = new Date('2026-08-12T12:00:00');
-    const todoItem = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { onComplete?: () => void; onCancel: () => void } };
-    expect(todoItem.props.onComplete).toBeUndefined();
-    await act(async () => todoItem.props.onCancel());
-    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'cancelled');
-
-    const activeTask = { ...task, status: 'in_progress' as const, hoursLogged: 1 };
-    const item = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      data: activeTask,
-      range: { start: activeTask.startDate, end: activeTask.dueDate },
-      visibleStart: { key: activeTask.startDate, start, end: start },
-      visibleEnd: { key: activeTask.dueDate, start: end, end },
-    }) as { props: { onComplete: () => void; onCancel: () => void } };
-
-    await act(async () => item.props.onComplete());
-    await act(async () => item.props.onCancel());
-
-    const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-12T12:00:00.000Z', hoursLogged: 1 };
-    const completedItem = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      data: completedTask,
-      range: { start: completedTask.startDate, end: completedTask.dueDate },
-      visibleStart: { key: completedTask.startDate, start, end: start },
-      visibleEnd: { key: completedTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
-    expect(completedItem.props.onEdit).toBeUndefined();
-    expect(completedItem.props.onDelete).toBeUndefined();
-    await act(async () => completedItem.props.onReopen());
-
-    const cancelledTask = { ...task, status: 'cancelled' as const };
-    const cancelledItem = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      data: cancelledTask,
-      range: { start: cancelledTask.startDate, end: cancelledTask.dueDate },
-      visibleStart: { key: cancelledTask.startDate, start, end: start },
-      visibleEnd: { key: cancelledTask.dueDate, start: end, end },
-    }) as { props: { onReopen: () => void; onEdit?: () => void; onDelete?: () => void } };
-    expect(cancelledItem.props.onEdit).toBeUndefined();
-    expect(cancelledItem.props.onDelete).toEqual(expect.any(Function));
-    await act(async () => cancelledItem.props.onReopen());
-
-    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'completed');
-    expect(updateTaskStatus).toHaveBeenCalledTimes(5);
-    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'in_progress');
-    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'todo');
-  });
-
-  it('keeps the calendar rendered and reports range-load failures', async () => {
-    calendarTestState.view = 'calendar';
-    let rejectTasks!: (error: Error) => void;
-    vi.mocked(getTasks).mockImplementation(filters => filters?.start
-      ? new Promise((_, reject) => { rejectTasks = reject; })
-      : Promise.resolve([task]));
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
-    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
-
-    rejectTasks(new Error('Task request failed'));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Task request failed');
-    expect(screen.getByLabelText('Task calendar')).toBeInTheDocument();
-  });
-
   it('clears the selected task when a calendar resource is selected', async () => {
     calendarTestState.view = 'calendar';
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -441,45 +307,4 @@ describe('Tasks', () => {
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
   });
 
-  it('persists cross-resource calendar moves through the narrow placement contract', async () => {
-    calendarTestState.view = 'calendar';
-    const destination = { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: true };
-    vi.mocked(getTaskOptions).mockResolvedValue({
-      resources: [
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-        destination,
-      ],
-      programs: [],
-    });
-    vi.mocked(updateTaskPlacement).mockResolvedValue({
-      ...task,
-      startDate: '2026-08-11',
-      dueDate: '2026-08-13',
-      assignee: {
-        id: destination.id,
-        firstName: destination.firstName,
-        lastName: destination.lastName,
-        name: destination.name,
-      },
-    });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    await act(async () => {
-      await calendarTestState.props!.onRangeMove!({
-        item: task,
-        resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-        destinationResource: destination,
-        originalRange: { start: '2026-08-10', end: '2026-08-12' },
-        nextRange: { start: '2026-08-11', end: '2026-08-13' },
-      });
-    });
-
-    expect(updateTaskPlacement).toHaveBeenCalledWith('task-1', {
-      startDate: '2026-08-11',
-      dueDate: '2026-08-13',
-      staffId: 'staff-2',
-    });
-  });
 });

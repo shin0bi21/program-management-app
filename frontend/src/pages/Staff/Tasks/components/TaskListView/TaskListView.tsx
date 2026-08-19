@@ -1,10 +1,11 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { Task, TaskCategory, TaskStatus } from '../../../../../common/features/tasks/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { TaskSortKey } from '../../taskViewTypes';
+import type { TaskSortKey } from '../../types';
 import useTaskList from './hooks/useTaskList';
 
 interface TaskListViewProps {
+  queryKey: readonly unknown[];
   columns: TableColumn<Task>[];
   hiddenColumnKeys: string[];
   staffIds: string[];
@@ -21,10 +22,10 @@ interface TaskListViewProps {
 }
 
 export default function TaskListView({
-  columns, hiddenColumnKeys, staffIds, programIds, categories, statuses, search, sorting, columnWidths,
+  queryKey, columns, hiddenColumnKeys, staffIds, programIds, categories, statuses, search, sorting, columnWidths,
   selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange,
 }: TaskListViewProps) {
-  const query = useTaskList({ staffIds, programIds, categories, statuses, search }, sorting, true);
+  const query = useTaskList(queryKey, { staffIds, programIds, categories, statuses, search }, sorting, true);
   const hasFilters = staffIds.length > 0 || programIds.length > 0 || categories.length > 0 || statuses.length > 0;
 
   return <Table

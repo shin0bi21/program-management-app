@@ -1,6 +1,7 @@
-import type { TaskCategory, TaskStatus } from '../../../common/features/tasks/types';
+import type { Task, TaskCategory, TaskStatus } from '../../../common/features/tasks/types';
 import type { ListSort } from '../../../common/types/pagination';
-import type { TaskSortKey } from './taskViewTypes';
+
+export type TaskSortKey = 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'startDate' | 'dueDate' | 'status';
 
 export interface TaskPreference {
   view?: 'calendar' | 'list';
@@ -11,4 +12,26 @@ export interface TaskPreference {
   sorting?: ListSort<TaskSortKey>;
   columnWidths?: Record<string, number>;
   hiddenColumns?: string[];
+}
+
+export interface TaskViewMutationCache {
+  upsert: (task: Task) => void;
+  remove: (taskId: string) => void;
+}
+
+export type TaskModalTarget = Task | {
+  startDate: string;
+  dueDate: string;
+  fixedStaffId?: string;
+};
+
+export interface TaskCalendarActions {
+  requestDelete: (task: Task) => void;
+  setStatus: (task: Task, status: Task['status']) => Promise<void>;
+  setTaskRange: (
+    task: Task,
+    nextRange: { start: string; end: string },
+    action: 'move' | 'resize',
+    staffId?: string,
+  ) => Promise<void>;
 }

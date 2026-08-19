@@ -1,3 +1,4 @@
+// Scope: verifies calendar task filtering and stable derived range data.
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../../../../common/features/tasks/types';
