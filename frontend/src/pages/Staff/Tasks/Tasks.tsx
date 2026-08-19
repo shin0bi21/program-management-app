@@ -14,7 +14,7 @@ import type { TableColumn } from '../../../common/components/Table/Table';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
 import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
+import { TASK_CATEGORY_LABELS, type Task, type TaskResource } from '../../../common/features/tasks/types';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
 import TaskListView from './components/TaskListView/TaskListView';
@@ -42,6 +42,7 @@ const TASK_COLUMN_KEYS = [
 const TASK_QUERY_KEY = ['tasks'] as const;
 const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
 const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
+const EMPTY_TASK_RESOURCES: TaskResource[] = [];
 
 export default function Tasks() {
   // Application permissions and selected page workflows.
@@ -82,7 +83,7 @@ export default function Tasks() {
   // Remote options, persisted controls, and selected resource data.
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading, TASK_COLUMN_KEYS);
-  const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
+  const resources = optionsQuery.data?.resources ?? EMPTY_TASK_RESOURCES;
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
 
   useEffect(() => {
