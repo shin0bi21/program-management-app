@@ -58,6 +58,7 @@ export default function Tasks() {
     upsert: (_task: Task) => undefined,
     remove: (_taskId: string) => undefined,
   }), []);
+
   const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
   const mutations = useTaskMutations({
     taskQueryKey: TASK_QUERY_KEY,
@@ -72,6 +73,7 @@ export default function Tasks() {
       setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
     },
   });
+
   const confirmModal = useConfirmModal({
     action: mutations.confirmAction,
     onClose: mutations.closeConfirmation,
@@ -82,6 +84,7 @@ export default function Tasks() {
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading, TASK_COLUMN_KEYS);
   const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
+
   useEffect(() => {
     if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
   }, [selectedResourceId, writableResources]);
@@ -92,6 +95,7 @@ export default function Tasks() {
     enabled: selectedResourceId !== null,
     placeholderData: previous => previous,
   });
+
   const resourceTasks = overviewQuery.data ?? [];
   const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
     ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
