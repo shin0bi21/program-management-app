@@ -1,6 +1,7 @@
 import { asTransactionSql, sql } from '../../../db/client';
-import { ConflictError, NotFoundError } from '../../../errors';
+import { ConflictError, InternalServerError, NotFoundError } from '../../../errors';
 import type { ExpressionOfInterestQuery, UpdateExpressionOfInterestStatusInput } from '../../../validation/expressionOfInterestSchemas';
+import { suggestProgramNameForAge } from '../../programService';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 
 export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuery) {
@@ -53,8 +54,8 @@ export async function getExpressionsOfInterest(filters: ExpressionOfInterestQuer
 export async function updateExpressionOfInterestStatus(id: string, data: UpdateExpressionOfInterestStatusInput) {
   return sql.begin(async rawTx => {
     const tx = asTransactionSql(rawTx);
-    const expressions = await tx<{ id: string; converted: boolean }[]>`
-      SELECT e.id, EXISTS (
+    const expressions = await tx<{ id: string; status: string; converted: boolean }[]>`
+      SELECT e.id, e.status, EXISTS (
         SELECT 1 FROM leads lead WHERE lead.expression_of_interest_id = e.id
       ) AS converted
       FROM expressions_of_interest e
@@ -62,7 +63,7 @@ export async function updateExpressionOfInterestStatus(id: string, data: UpdateE
       FOR UPDATE
     `;
     if (!expressions.length) throw new NotFoundError('Expression of interest not found');
-    if (expressions[0].converted && data.status !== 'converted') {
+    if (expressions[0].converted && data.status !== expressions[0].status) {
       throw new ConflictError('Converted expressions of interest cannot be changed');
     }
     if (!expressions[0].converted && data.status === 'converted') {
@@ -106,6 +107,17 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
     }
 
     const expression = expressions[0];
+    const suggestedProgramName = suggestProgramNameForAge(expression.age);
+    if (!suggestedProgramName) {
+      throw new ConflictError('Expression age must be between 12 and 19 before conversion');
+    }
+    const programs = await tx<{ id: string }[]>`
+      SELECT id FROM programs WHERE name = ${suggestedProgramName} LIMIT 1
+    `;
+    if (!programs.length) {
+      throw new InternalServerError(`Expected program ${suggestedProgramName} to exist.`);
+    }
+    const programOfInterestId = programs[0].id;
     const existingLead = await tx`
       SELECT id
       FROM leads
@@ -138,7 +150,7 @@ export async function convertExpressionOfInterest(id: string, actorId: string) {
         ${expression.youthLastName},
         ${expression.age},
         ${expression.school},
-        ${null},
+        ${programOfInterestId},
         ${expression.contactPhoneNumber},
         ${expression.contactRelationship},
         ${expression.discoverySource},

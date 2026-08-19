@@ -274,7 +274,10 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       `;
       await trx`
         UPDATE expressions_of_interest
-        SET status = 'signed_up', updated_at = NOW(), updated_by = ${actorId}
+        SET status = 'signed_up',
+            status_updated_at = NOW(),
+            updated_at = NOW(),
+            updated_by = ${actorId}
         WHERE id = ${lead.expressionOfInterestId}
       `;
       if (expressions[0]) {

@@ -37,7 +37,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
         <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message as string | undefined}><input id={id('youthLastName')} autoComplete="family-name" {...register(field('youthLastName'))} /></FormField>
       </div>
       <div className="form-row">
-        <FormField id={id('age')} label="Age *" error={errors.age?.message as string | undefined}><input id={id('age')} type="number" min="5" max="24" {...register(field('age'), { valueAsNumber: true })} /></FormField>
+        <FormField id={id('age')} label="Age *" error={errors.age?.message as string | undefined}><input id={id('age')} type="number" min="12" max="19" {...register(field('age'), { valueAsNumber: true })} /></FormField>
         <FormField id={id('school')} label="School *" error={errors.school?.message as string | undefined}><input id={id('school')} {...register(field('school'))} /></FormField>
       </div>
       {programField && <div className="form-row">{programField}</div>}
