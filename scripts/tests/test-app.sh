@@ -35,6 +35,22 @@ run_full_suite() {
   echo "=========================================="
 }
 
+run_selected_backend_tests() {
+  if [ "$#" -eq 0 ]; then
+    echo "ERROR: Selected backend tests require at least one test path." >&2
+    exit 2
+  fi
+
+  source scripts/tests/backend/_docker-health.sh
+  export BACKEND_TEST_ENV_READY=1
+  docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand "$@"
+}
+
+run_related_frontend_tests() {
+  local base_ref="$1"
+  (cd frontend && npm test -- --changed "$base_ref")
+}
+
 default_base_ref() {
   if [ -n "${TEST_APP_BASE_REF:-}" ]; then
     printf '%s\n' "$TEST_APP_BASE_REF"
@@ -78,139 +94,10 @@ run_changed_suites() {
   local base_ref="$1"
   local plan_only="${2:-false}"
   local changed_files
-  local run_deploy=false
-  local run_static=false
-  local run_all_backend=false
-  local run_all_frontend=false
-  local run_full=false
-  local file
-  local runner
-  local backend_runners=()
-  local frontend_runners=()
-
-  add_backend_runner() {
-    local candidate="$1"
-    local existing
-    if [ "${#backend_runners[@]}" -gt 0 ]; then
-      for existing in "${backend_runners[@]}"; do
-        [ "$existing" = "$candidate" ] && return
-      done
-    fi
-    backend_runners+=("$candidate")
-  }
-
-  add_frontend_runner() {
-    local candidate="$1"
-    local existing
-    if [ "${#frontend_runners[@]}" -gt 0 ]; then
-      for existing in "${frontend_runners[@]}"; do
-        [ "$existing" = "$candidate" ] && return
-      done
-    fi
-    frontend_runners+=("$candidate")
-  }
-
-  select_backend_file() {
-    local backend_file="$1"
-    case "$backend_file" in
-      backend/src/controllers/taskController.ts|backend/src/policies/taskPolicy.ts|backend/src/routes/taskRoutes.ts|backend/src/services/staff/tasks/*|backend/src/validation/taskSchemas.ts|backend/tests/tasks/*|backend/db/migrations/*_add_tasks.sql)
-        add_backend_runner scripts/tests/backend/run-task-tests.sh
-        add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
-        ;;
-      backend/src/controllers/timeEntryController.ts|backend/src/policies/timeEntryPolicy.ts|backend/src/routes/timeEntryRoutes.ts|backend/src/services/staff/hours/*|backend/src/validation/timeEntrySchemas.ts|backend/tests/timesheets/*|backend/db/scripts/seed-timesheet-demo.ts)
-        add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
-        add_backend_runner scripts/tests/backend/run-task-tests.sh
-        ;;
-      backend/src/policies/staffResourcePolicy.ts)
-        add_backend_runner scripts/tests/backend/run-task-tests.sh
-        add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
-        ;;
-      backend/tests/auth/*|backend/src/controllers/auth*|backend/src/routes/auth*|backend/src/services/auth*|backend/src/validation/auth*)
-        add_backend_runner scripts/tests/backend/run-auth-tests.sh
-        ;;
-      backend/tests/accounts/*|backend/src/controllers/account*|backend/src/policies/account*|backend/src/routes/account*|backend/src/services/account*|backend/src/validation/account*)
-        add_backend_runner scripts/tests/backend/run-accounts-tests.sh
-        ;;
-      backend/tests/youth/*|backend/src/controllers/youth*|backend/src/routes/youth*|backend/src/services/youth*|backend/src/validation/youth*)
-        add_backend_runner scripts/tests/backend/run-youth-tests.sh
-        ;;
-      backend/tests/schools/*|backend/src/controllers/school*|backend/src/routes/school*|backend/src/services/school*|backend/src/validation/school*)
-        add_backend_runner scripts/tests/backend/run-schools-tests.sh
-        ;;
-      backend/tests/programs/*|backend/src/controllers/program*|backend/src/routes/program*|backend/src/services/programService.ts|backend/src/validation/program*)
-        add_backend_runner scripts/tests/backend/run-programs-tests.sh
-        ;;
-      backend/tests/cohorts/*|backend/src/controllers/cohort*|backend/src/controllers/session*|backend/src/routes/cohort*|backend/src/routes/session*|backend/src/services/cohort*|backend/src/services/session*|backend/src/services/programming/cohorts/*|backend/src/services/programming/sessions/*|backend/src/validation/cohort*|backend/src/validation/session*)
-        add_backend_runner scripts/tests/backend/run-cohorts-tests.sh
-        ;;
-      backend/tests/homepage/*|backend/src/controllers/homepage*|backend/src/routes/homepage*|backend/src/services/homepage*|backend/src/validation/homepage*)
-        add_backend_runner scripts/tests/backend/run-homepage-tests.sh
-        ;;
-      backend/tests/preferences/*|backend/src/controllers/preference*|backend/src/routes/preference*|backend/src/services/preference*|backend/src/validation/preference*)
-        add_backend_runner scripts/tests/backend/run-preferences-tests.sh
-        ;;
-      backend/tests/leads/*|backend/tests/expressionOfInterest/*|backend/tests/public/*|backend/src/controllers/lead*|backend/src/controllers/expressionOfInterest*|backend/src/controllers/public*|backend/src/routes/lead*|backend/src/routes/expressionOfInterest*|backend/src/routes/public*|backend/src/services/lead*|backend/src/services/outreach/*|backend/src/validation/lead*|backend/src/validation/expressionOfInterest*|backend/src/validation/public*)
-        add_backend_runner scripts/tests/backend/run-outreach-tests.sh
-        ;;
-      *)
-        run_all_backend=true
-        ;;
-    esac
-  }
-
-  select_frontend_file() {
-    local frontend_file="$1"
-    case "$frontend_file" in
-      frontend/playwright/*|frontend/playwright.config.ts)
-        ;;
-      frontend/src/common/components/ResourceCalendar/*|frontend/src/common/components/FloatingMenu/*)
-        add_frontend_runner scripts/tests/frontend/run-common-tests.sh
-        add_frontend_runner scripts/tests/frontend/run-task-tests.sh
-        add_frontend_runner scripts/tests/frontend/run-timesheet-tests.sh
-        ;;
-      frontend/src/common/features/tasks/*|frontend/src/common/features/timeEntries/*)
-        add_frontend_runner scripts/tests/frontend/run-features-tests.sh
-        add_frontend_runner scripts/tests/frontend/run-task-tests.sh
-        add_frontend_runner scripts/tests/frontend/run-timesheet-tests.sh
-        ;;
-      frontend/src/pages/Staff/Tasks/*)
-        add_frontend_runner scripts/tests/frontend/run-task-tests.sh
-        ;;
-      frontend/src/pages/Staff/Timesheets/*)
-        add_frontend_runner scripts/tests/frontend/run-timesheet-tests.sh
-        ;;
-      frontend/src/pages/Staff/*)
-        add_frontend_runner scripts/tests/frontend/run-staff-tests.sh
-        ;;
-      frontend/src/pages/Auth/*)
-        add_frontend_runner scripts/tests/frontend/run-auth-tests.sh
-        ;;
-      frontend/src/pages/Homepage/*)
-        add_frontend_runner scripts/tests/frontend/run-homepage-tests.sh
-        ;;
-      frontend/src/pages/Outreach/*)
-        add_frontend_runner scripts/tests/frontend/run-outreach-tests.sh
-        ;;
-      frontend/src/pages/Programming/*)
-        add_frontend_runner scripts/tests/frontend/run-programming-tests.sh
-        ;;
-      frontend/src/pages/Settings/*)
-        add_frontend_runner scripts/tests/frontend/run-settings-tests.sh
-        ;;
-      frontend/src/pages/Youth/*)
-        add_frontend_runner scripts/tests/frontend/run-youth-tests.sh
-        ;;
-      frontend/src/app/*|frontend/src/auth/*|frontend/src/http/*|frontend/src/query/*)
-        add_frontend_runner scripts/tests/frontend/run-platform-tests.sh
-        ;;
-      frontend/src/common/*)
-        add_frontend_runner scripts/tests/frontend/run-common-tests.sh
-        ;;
-      *)
-        run_all_frontend=true
-        ;;
-    esac
-  }
+  local commands
+  local command
+  local value
+  local backend_paths=()
 
   changed_files="$(collect_changed_files "$base_ref")"
   if [ -z "$changed_files" ]; then
@@ -218,47 +105,7 @@ run_changed_suites() {
     return
   fi
 
-  while IFS= read -r file; do
-    case "$file" in
-      scripts/agents/*|scripts/tests/test-static.sh|.agents/skills/*|eslint.config.js|package.json|AGENTS.md)
-        run_static=true
-        ;;
-      docs/*|*.md)
-        ;;
-      backend/*)
-        select_backend_file "$file"
-        ;;
-      frontend/*)
-        select_frontend_file "$file"
-        ;;
-      scripts/deploy.sh|scripts/tests/test-deploy.sh|docker-compose.prod.yml)
-        run_deploy=true
-        ;;
-      scripts/tests/backend/run-task-tests.sh)
-        add_backend_runner scripts/tests/backend/run-task-tests.sh
-        ;;
-      scripts/tests/backend/run-timesheet-tests.sh)
-        add_backend_runner scripts/tests/backend/run-timesheet-tests.sh
-        ;;
-      scripts/tests/backend/*)
-        run_all_backend=true
-        ;;
-      scripts/tests/frontend/run-task-tests.sh)
-        add_frontend_runner scripts/tests/frontend/run-task-tests.sh
-        ;;
-      scripts/tests/frontend/run-timesheet-tests.sh)
-        add_frontend_runner scripts/tests/frontend/run-timesheet-tests.sh
-        ;;
-      scripts/tests/frontend/test-browser.sh)
-        ;;
-      scripts/tests/frontend/*)
-        run_all_frontend=true
-        ;;
-      *)
-        run_full=true
-        ;;
-    esac
-  done <<< "$changed_files"
+  commands="$(printf '%s\n' "$changed_files" | node scripts/ci/select-tests.js --commands)"
 
   echo ""
   echo "=========================================="
@@ -267,62 +114,43 @@ run_changed_suites() {
   echo "=========================================="
   printf '%s\n' "$changed_files" | sed 's/^/  /'
 
-  if [ "$run_full" = true ]; then
-    if [ "$plan_only" = true ]; then
-      echo "Selected: full application suite (cross-cutting or unrecognized change)."
-    else
-      echo "A cross-cutting or unrecognized file changed; running the full suite."
-      run_full_suite
-    fi
-    return
-  fi
-
-  local suite_count=0
-  [ "$run_deploy" = true ] && suite_count=$((suite_count + 1))
-  [ "$run_static" = true ] && suite_count=$((suite_count + 1))
-  [ "$run_all_backend" = true ] && suite_count=$((suite_count + 1))
-  [ "$run_all_frontend" = true ] && suite_count=$((suite_count + 1))
-  [ "${#backend_runners[@]}" -gt 0 ] && suite_count=$((suite_count + 1))
-  [ "${#frontend_runners[@]}" -gt 0 ] && suite_count=$((suite_count + 1))
-
-  if [ "$suite_count" -eq 0 ]; then
+  if [ -z "$commands" ]; then
     echo "Only documentation changed; no tests to run."
     return
   fi
 
   if [ "$plan_only" = true ]; then
     echo "Selected suites:"
-    [ "$run_deploy" = true ] && echo "  scripts/tests/test-deploy.sh"
-    [ "$run_static" = true ] && echo "  scripts/tests/test-static.sh"
-    if [ "$run_all_backend" = true ]; then
-      echo "  scripts/tests/backend/test-apis.sh"
-    elif [ "${#backend_runners[@]}" -gt 0 ]; then
-      printf '  %s\n' "${backend_runners[@]}"
-    fi
-    if [ "$run_all_frontend" = true ]; then
-      echo "  scripts/tests/frontend/test-ui.sh"
-    elif [ "${#frontend_runners[@]}" -gt 0 ]; then
-      printf '  %s\n' "${frontend_runners[@]}"
-    fi
+    while IFS=$'\t' read -r command value; do
+      case "$command" in
+        deploy) echo "  scripts/tests/test-deploy.sh" ;;
+        static) echo "  scripts/tests/test-static.sh" ;;
+        backend-full) echo "  scripts/tests/backend/test-apis.sh" ;;
+        backend-focused) echo "  backend Jest paths: $value" ;;
+        frontend-full) echo "  scripts/tests/frontend/test-ui.sh" ;;
+        frontend-related) echo "  frontend Vitest dependency graph from $base_ref" ;;
+      esac
+    done <<< "$commands"
     return
   fi
 
-  [ "$run_deploy" = true ] && bash scripts/tests/test-deploy.sh
-  [ "$run_static" = true ] && bash scripts/tests/test-static.sh
-  if [ "$run_all_backend" = true ]; then
-    bash scripts/tests/backend/test-apis.sh
-  elif [ "${#backend_runners[@]}" -gt 0 ]; then
-    for runner in "${backend_runners[@]}"; do
-      bash "$runner"
-    done
-  fi
-  if [ "$run_all_frontend" = true ]; then
-    bash scripts/tests/frontend/test-ui.sh
-  elif [ "${#frontend_runners[@]}" -gt 0 ]; then
-    for runner in "${frontend_runners[@]}"; do
-      bash "$runner"
-    done
-  fi
+  while IFS=$'\t' read -r command value; do
+    case "$command" in
+      deploy) bash scripts/tests/test-deploy.sh ;;
+      static) bash scripts/tests/test-static.sh ;;
+      backend-full) bash scripts/tests/backend/test-apis.sh ;;
+      backend-focused)
+        read -r -a backend_paths <<< "$value"
+        run_selected_backend_tests "${backend_paths[@]}"
+        ;;
+      frontend-full) bash scripts/tests/frontend/test-ui.sh ;;
+      frontend-related) run_related_frontend_tests "$base_ref" ;;
+      *)
+        echo "ERROR: Unknown planned test command '$command'." >&2
+        exit 2
+        ;;
+    esac
+  done <<< "$commands"
 
   echo ""
   echo "Selected test suites passed!"

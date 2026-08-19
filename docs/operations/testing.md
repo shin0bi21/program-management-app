@@ -13,7 +13,11 @@ Run test commands from the repository root. The supported test workflow uses the
 | Frontend tests (Vitest: Node + jsdom) | `bash scripts/tests/frontend/test-ui.sh` |
 | Playwright browser components | `bash scripts/tests/frontend/test-browser.sh` |
 
-The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope. Pass `--changed` to select focused domain and consumer suites from committed branch changes plus staged, unstaged, and untracked files. For example, Task backend changes run the Task suite and its Timesheet integration suite; ResourceCalendar changes run common, Task, and Timesheet coverage. Shared or unrecognized changes conservatively escalate to the relevant umbrella or full suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
+The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope.
+
+Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Timesheet tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
+
+Frontend source changes run `vitest --changed` against the comparison base. Vitest follows imports, so changing a component or hook selects its own tests and tests for importing components and route pages. Frontend configuration, dependencies, and test-runner changes run the complete frontend suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
 
 Repository pattern review is separate from ordinary static and application runners. `.github/workflows/pattern-review.yml` runs changed-only reviews on pull requests to `develop` and after merges or other pushes to `develop`. Any detected invariant violation fails the review; violations are not averaged into a score. Each run publishes its output in the GitHub job summary and retains the text report as a workflow artifact for 30 days. Manual dispatch supports either changed scope or an explicitly requested full-repository review.
 
@@ -29,7 +33,7 @@ The frontend layers are:
 - UI components, React hooks, storage, DOM geometry, and browser-global behavior use Vitest with jsdom. jsdom is the configured default, so these tests need no environment annotation.
 - Layout, scrolling, pointer, and real-browser behavior use Playwright.
 
-`test-ui.sh`, focused frontend runners, and the two normal PR-CI frontend shards all execute the same Vitest collection; Vitest selects Node or jsdom per file. The shards divide test files for parallelism rather than assigning one environment to each job. Playwright is not included in those shards or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
+`test-ui.sh`, focused frontend runners, and normal PR CI all use Vitest; Vitest selects Node or jsdom per file. Pull-request CI runs one frontend job: related tests for source changes or the complete collection for configuration, dependency, and runner changes, followed by the frontend build. Playwright is not included in that job or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 
 ## Focused runners
 
@@ -103,7 +107,8 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 
 - Backend API suites live under `backend/tests/<domain>/` and share the app/database helpers in `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they exercise.
-- Add focused-runner paths to `scripts/tests/test-app.sh` changed-file routing. The backend and frontend umbrella runners launch their complete test frameworks once and do not enumerate focused wrappers.
+- Register backend ownership and integration consumers in `scripts/ci/select-tests.js`. Frontend source ownership is derived from Vitest's dependency graph rather than a manually maintained page map.
+- Add or update `scripts/ci/select-tests.test.js` whenever a new repository path category changes routing behavior. Unrecognized paths deliberately select the full application plan.
 - When a backend route is added, mount it in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 
 See [`local-development.md`](local-development.md) for container lifecycle, logs, migrations, and reset commands.
