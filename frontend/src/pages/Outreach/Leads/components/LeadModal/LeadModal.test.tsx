@@ -5,16 +5,16 @@ import LeadModal from './LeadModal';
 const createLead = vi.fn();
 const updateLead = vi.fn();
 
-vi.mock('../api/leads.api', () => ({
+vi.mock('../../leads.api', () => ({
   createLead: (...args: unknown[]) => createLead(...args),
   updateLead: (...args: unknown[]) => updateLead(...args),
 }));
 
-vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
+vi.mock('../../../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], setPrograms: vi.fn(), loading: false, error: '' }),
 }));
 
-vi.mock('../../../../auth/authContext', () => ({
+vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => ({ permissions: ['write:programs'] }),
 }));
 

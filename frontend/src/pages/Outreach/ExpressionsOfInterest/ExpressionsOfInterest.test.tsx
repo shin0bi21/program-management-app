@@ -23,7 +23,7 @@ const preferenceHook = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 
-vi.mock('./api/expressionsOfInterest.api', () => ({
+vi.mock('./expressionsOfInterest.api', () => ({
   getExpressionsOfInterest: (...args: unknown[]) => getExpressions(...args),
   updateExpressionOfInterestStatus: vi.fn(),
   convertExpressionOfInterest: (...args: unknown[]) => convertExpression(...args),

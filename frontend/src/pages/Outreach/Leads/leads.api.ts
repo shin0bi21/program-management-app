@@ -1,10 +1,21 @@
-import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
-import type { CreateLeadInput, Lead, LeadFilters, LeadNote, LeadStatus, UpdateLeadInput } from '../types';
-import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
-import type { LeadSortKey } from '../types';
+import { apiClient } from '../../../http/client';
+import type { RequestOptions } from '../../../http/client';
+import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
+import type {
+  CreateLeadInput,
+  Lead,
+  LeadFilters,
+  LeadNote,
+  LeadSortKey,
+  LeadStatus,
+  UpdateLeadInput,
+} from './types';
 
-export const getLeads = (filters: LeadFilters = {}, pagination?: CursorRequest<LeadSortKey>, opts?: RequestOptions) => {
+export const getLeads = (
+  filters: LeadFilters = {},
+  pagination?: CursorRequest<LeadSortKey>,
+  opts?: RequestOptions,
+) => {
   const params = new URLSearchParams();
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
@@ -17,13 +28,19 @@ export const getLeads = (filters: LeadFilters = {}, pagination?: CursorRequest<L
   }
   const query = params.toString();
   const path = `/leads${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<CursorPage<Lead>>(path, opts) : apiClient.get<CursorPage<Lead>>(path);
+  return opts
+    ? apiClient.get<CursorPage<Lead>>(path, opts)
+    : apiClient.get<CursorPage<Lead>>(path);
 };
 export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/leads', data);
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);
 export const updateLeadStatus = (id: string, status: LeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
-export const signUpLead = (id: string, cohortId: string | null, noteCategory?: 'general' | 'health' | 'preference') =>
+export const signUpLead = (
+  id: string,
+  cohortId: string | null,
+  noteCategory?: 'general' | 'health' | 'preference',
+) =>
   apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }) });
 export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts

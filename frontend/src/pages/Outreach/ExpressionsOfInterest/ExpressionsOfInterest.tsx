@@ -12,8 +12,7 @@ import useTableSelection from '../../../common/components/Table/hooks/useTableSe
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { formatShortDate } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
-import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
-import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './api/expressionsOfInterest.api';
+import { convertExpressionOfInterest, updateExpressionOfInterestStatus } from './expressionsOfInterest.api';
 import ExpressionOfInterestDashboard from './components/ExpressionOfInterestDashboard/ExpressionOfInterestDashboard';
 import { useExpressionOfInterestControls } from './hooks/useExpressionOfInterestControls';
 import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
@@ -30,6 +29,8 @@ const EXPRESSION_INTEREST_COLUMN_KEYS = [
   'submittedAt',
   'status',
 ] as const;
+const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
+const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
 
 export default function ExpressionsOfInterest() {
   // Services and permissions.
@@ -50,7 +51,11 @@ export default function ExpressionsOfInterest() {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters,
   } = controls;
-  const { submissions, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(queryFilters, sorting);
+  const { submissions, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(
+    EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY,
+    queryFilters,
+    sorting,
+  );
 
   // Selection and mutation state.
   const {

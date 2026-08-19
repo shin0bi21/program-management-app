@@ -4,7 +4,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../http/clientErrors';
-import { setLeadNote } from '../../api/leads.api';
+import { setLeadNote } from '../../leads.api';
 import type { Lead, LeadNote } from '../../types';
 
 export default function LeadNoteModal({
