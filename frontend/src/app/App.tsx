@@ -4,11 +4,11 @@ import { AuthProvider } from '../auth/AuthProvider';
 import { ReAuthProvider } from '../auth/reauth/ReAuthProvider';
 import ProtectedRoute from '../common/components/ProtectedRoute/ProtectedRoute';
 import RouteLoading from '../common/components/RouteLoading/RouteLoading';
-import Homepage from '../pages/Homepage/Homepage';
-import { HOMEPAGE_ROUTE_PATHS } from '../pages/Homepage/homepageSections';
+import PublicHomepage from '../pages/Homepage/PublicHomepage/PublicHomepage';
+import { HOMEPAGE_ROUTE_PATHS } from '../pages/Homepage/PublicHomepage/utils/homepageSections';
 import AppNavigation from './components/AppNavigation/AppNavigation';
 
-const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage'));
+const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage/ManageHomepage'));
 const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
@@ -41,7 +41,7 @@ function App() {
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               {HOMEPAGE_ROUTE_PATHS.map((path) => (
-                <Route key={path} path={path} element={<Homepage />} />
+                <Route key={path} path={path} element={<PublicHomepage />} />
               ))}
               <Route element={<AuthenticatedLayout />}>
                 <Route
