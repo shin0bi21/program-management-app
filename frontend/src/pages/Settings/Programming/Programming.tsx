@@ -7,7 +7,7 @@ import { useConfirmModal, type ConfirmAction } from '../../../common/components/
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/programming.api';
+import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../common/types/cohort';
@@ -15,6 +15,7 @@ import { formatShortDate } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
 import CycleModal from './components/CycleModal';
 import ProgramModal from './components/ProgramModal';
+import type { CycleModalTarget, ProgramModalTarget } from './types';
 import './Programming.css';
 
 export default function Programming() {
@@ -25,8 +26,8 @@ export default function Programming() {
   const [cyclesError, setCyclesError] = useState<string | null>(null);
 
   // Selection and dialog state.
-  const [programTarget, setProgramTarget] = useState<Program | null | undefined>(undefined);
-  const [cycleTarget, setCycleTarget] = useState<ProgramCycle | null | undefined>(undefined);
+  const [programTarget, setProgramTarget] = useState<ProgramModalTarget>(undefined);
+  const [cycleTarget, setCycleTarget] = useState<CycleModalTarget>(undefined);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const programSelection = useTableSelection(programs);

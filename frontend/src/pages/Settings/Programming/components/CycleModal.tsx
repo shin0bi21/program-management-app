@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import { setProgramCycle } from '../../../../common/features/programming/api/programming.api';
+import { setProgramCycle } from '../../../../common/features/programming/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../http/clientErrors';
