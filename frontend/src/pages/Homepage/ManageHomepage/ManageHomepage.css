@@ -1,0 +1,25 @@
+.homepage-management-page {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow: hidden;
+}
+
+.homepage-management-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .homepage-management-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .homepage-management-content {
+    flex: initial;
+  }
+}
