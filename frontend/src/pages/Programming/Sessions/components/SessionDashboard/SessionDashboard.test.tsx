@@ -1,3 +1,4 @@
+// Scope: verifies the composed session dashboard states and cross-card action wiring.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,6 +29,12 @@ vi.mock('@panzoom/panzoom', () => ({
 }));
 
 vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
+  createSessionNote: vi.fn(),
+  updateSessionNote: vi.fn(),
+  getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
+}));
+
+vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),
@@ -83,6 +90,7 @@ describe('SessionDashboard', () => {
   it('keeps every card visible before a session is selected', () => {
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={null}
         canWriteAttendance
         canWriteSessions
@@ -100,6 +108,7 @@ describe('SessionDashboard', () => {
     const onAddAttendance = vi.fn();
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -134,6 +143,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -170,6 +180,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -211,6 +222,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions

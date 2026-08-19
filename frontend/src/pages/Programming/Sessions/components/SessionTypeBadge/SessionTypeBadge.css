@@ -1,0 +1,35 @@
+.session-type-badge {
+  display: inline-flex;
+  border-radius: var(--radius-full);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.session-type-badge--table {
+  align-items: center;
+  padding: 4px 9px;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.session-type-badge--calendar {
+  justify-self: start;
+  padding: 2px 5px;
+  font-size: 0.62em;
+  line-height: 1.2;
+}
+
+.session-type-badge--regular {
+  background: var(--ink-08);
+  color: var(--color-body);
+}
+
+.session-type-badge--guest-speaker {
+  background: var(--color-status-warn-bg);
+  color: var(--color-status-warn);
+}
+
+.session-type-badge--field-trip {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}

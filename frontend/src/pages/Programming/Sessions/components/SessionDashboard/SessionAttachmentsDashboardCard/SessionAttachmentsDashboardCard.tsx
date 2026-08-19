@@ -4,19 +4,27 @@ import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
-import { deleteSessionAttachment, getSessionAttachments } from '../../../../../../common/features/programming/api/programming.api';
+import { deleteSessionAttachment, getSessionAttachments } from '../../../../../../common/features/programming/api/sessions.api';
 import type { CohortSession, SessionAttachment } from '../../../../../../common/types/cohort';
 import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentModal';
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';
 
-export default function SessionAttachmentsDashboardCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
+export default function SessionAttachmentsDashboardCard({
+  queryKey,
+  session,
+  canWrite,
+}: {
+  queryKey: readonly unknown[];
+  session: CohortSession | null;
+  canWrite: boolean;
+}) {
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
   const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
   const [detailAttachment, setDetailAttachment] = useState<SessionAttachment | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const query = useQuery({
-    queryKey: ['sessions', session?.id, 'attachments'],
+    queryKey: [...queryKey, session?.id, 'attachments'],
     queryFn: ({ signal }) => getSessionAttachments(session!.id, { signal }),
     enabled: session !== null,
   });
@@ -46,7 +54,7 @@ export default function SessionAttachmentsDashboardCard({ session, canWrite }: {
           }) : undefined}
         />)}</div> : <p className="dashboard-card__empty">No attachments.</p> : undefined}
     </DashboardCard>
-    <SessionAttachmentModal session={attachmentTarget} attachment={editAttachment} onClose={() => { setAttachmentTarget(null); setEditAttachment(null); }} onSaved={loadAttachments} />
+    <SessionAttachmentModal queryKey={queryKey} session={attachmentTarget} attachment={editAttachment} onClose={() => { setAttachmentTarget(null); setEditAttachment(null); }} onSaved={loadAttachments} />
     <SessionAttachmentViewerModal session={session} attachment={detailAttachment} onClose={() => setDetailAttachment(null)} />
     <Modal isOpen={confirmAction !== null} onClose={() => setConfirmAction(null)} title={confirmAction?.title ?? ''} footer={confirmModal.footer} status={confirmModal.status} statusMessage={confirmModal.statusMessage} successDelay={confirmModal.successDelay}>
       <p>{confirmAction?.message}</p>
