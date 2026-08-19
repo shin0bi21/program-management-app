@@ -5,9 +5,11 @@ import { generateToken } from '../shared/tokenHelpers';
 import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriods';
 
 const app = createApp();
-const workDate = '2026-08-09';
 
 describe('Time entries API', () => {
+  let workDate: string;
+  let linkedWorkDate: string;
+  let placementWorkDate: string;
   let adminId: string;
   let adminToken: string;
   let firstStaffId: string;
@@ -23,11 +25,22 @@ describe('Time entries API', () => {
   let activeCycleId: string;
   let upcomingCycleId: string;
   let upcomingWorkDate: string;
-  let sessionId: string;
+  let sessionId: string | null = null;
   let assignedTaskId: string | null = null;
 
   beforeAll(async () => {
     const stamp = Date.now();
+    const [dates] = await sql<Array<{
+      workDate: string;
+      linkedWorkDate: string;
+      placementWorkDate: string;
+    }>>`
+      SELECT
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS work_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_work_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_work_date
+    `;
+    ({ workDate, linkedWorkDate, placementWorkDate } = dates);
     const admin = await seedTestUser({ email: `timesheet-admin-${stamp}@test.local`, role: 'admin' });
     const firstStaff = await seedTestUser({
       email: `timesheet-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
@@ -53,8 +66,12 @@ describe('Time entries API', () => {
       WITH cycles AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
         VALUES
-          (${`Active Timesheet ${stamp}`}, CURRENT_DATE - 7, CURRENT_DATE + 7),
-          (${`Upcoming Timesheet ${stamp}`}, CURRENT_DATE + 14, CURRENT_DATE + 28)
+          (
+            ${`Active Timesheet ${stamp}`},
+            ${workDate}::date - 7,
+            ${workDate}::date + 7
+          ),
+          (${`Upcoming Timesheet ${stamp}`}, ${workDate}::date + 14, ${workDate}::date + 28)
         RETURNING id, starts_on
       )
       INSERT INTO program_cohorts (program_id, cycle_id)
@@ -86,9 +103,9 @@ describe('Time entries API', () => {
   afterAll(async () => {
     await sql`DELETE FROM time_entries WHERE staff_id IN (${adminId}, ${firstStaffId}, ${secondStaffId}, ${unrelatedStaffId})`;
     if (assignedTaskId) await sql`DELETE FROM tasks WHERE id = ${assignedTaskId}`;
-    await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
+    if (sessionId) await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
     await sql`DELETE FROM program_cohorts WHERE id IN (${activeCohortId}, ${upcomingCohortId})`;
-    await sql`DELETE FROM program_cycles WHERE name LIKE 'Active Timesheet %' OR name LIKE 'Upcoming Timesheet %'`;
+    await sql`DELETE FROM program_cycles WHERE id IN (${activeCycleId}, ${upcomingCycleId})`;
     await deleteTestUser(unrelatedStaffId);
     await deleteTestUser(secondStaffId);
     await deleteTestUser(firstStaffId);
@@ -499,7 +516,7 @@ describe('Time entries API', () => {
         source: 'task',
         staffId: firstStaffId,
         taskId: assignedTaskId,
-        workDate: '2026-08-15',
+        workDate: linkedWorkDate,
         hours: 2,
         note: 'Drafted the poster',
       });
@@ -518,7 +535,7 @@ describe('Time entries API', () => {
         id: assignedTaskId,
         status: 'in_progress',
         hoursLogged: 2,
-        loggedHoursByDate: [{ date: '2026-08-15', hours: 2 }],
+        loggedHoursByDate: [{ date: linkedWorkDate, hours: 2 }],
       }),
     ]));
 
@@ -556,9 +573,9 @@ describe('Time entries API', () => {
     expect(linkedDelete.body.error).toBe('Tasks with logged time cannot be deleted');
 
     const entriesAfterRejectedDelete = await request(app)
-      .get('/api/time-entries?start=2026-08-15&end=2026-08-15')
+      .get(`/api/time-entries?start=${linkedWorkDate}&end=${linkedWorkDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(entriesAfterRejectedDelete.body.data[firstStaffId]['2026-08-15']).toEqual(expect.arrayContaining([
+    expect(entriesAfterRejectedDelete.body.data[firstStaffId][linkedWorkDate]).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: linkedEntry.body.id, taskId: assignedTaskId, taskTitle: 'Create marketing poster' }),
     ]));
   });
@@ -699,7 +716,7 @@ describe('Time entries API', () => {
     const placementUpdate = await request(app)
       .patch(`/api/time-entries/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ workDate: '2026-08-10' });
+      .send({ workDate: placementWorkDate });
 
     expect(placementUpdate.status).toBe(200);
     expect(placementUpdate.body).toEqual(expect.objectContaining({
@@ -707,7 +724,7 @@ describe('Time entries API', () => {
       programId: null,
       cycleId: activeCycleId,
       category: 'planning_prep',
-      workDate: '2026-08-10',
+      workDate: placementWorkDate,
       hours: 2.5,
       note: 'Newer saved note',
     }));

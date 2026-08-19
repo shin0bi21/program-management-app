@@ -5,7 +5,12 @@ import console from 'node:console';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import process from 'node:process';
-import { runPatternChecks } from './checks/run.js';
+import {
+  collectRoutePageDirectories,
+  collectStructureCheckFiles,
+  runPatternChecks,
+  runStructureChecks,
+} from './checks/run.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.sh', '.sql', '.ts', '.tsx', '.yaml', '.yml']);
@@ -47,9 +52,9 @@ function collectChangedFiles(baseRef) {
   let mergeBase;
   try { git(['rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`]); mergeBase = git(['merge-base', baseRef, 'HEAD']); } catch { console.error(`ERROR: Base revision '${baseRef}' does not exist.`); process.exit(2); }
   return uniqueLines([
-    git(['diff', '--name-only', '--diff-filter=ACMR', `${mergeBase}...HEAD`]),
-    git(['diff', '--name-only', '--diff-filter=ACMR']),
-    git(['diff', '--cached', '--name-only', '--diff-filter=ACMR']),
+    git(['diff', '--name-only', '--diff-filter=ACMRD', `${mergeBase}...HEAD`]),
+    git(['diff', '--name-only', '--diff-filter=ACMRD']),
+    git(['diff', '--cached', '--name-only', '--diff-filter=ACMRD']),
     git(['ls-files', '--others', '--exclude-standard']),
   ].join('\n'));
 }
@@ -73,12 +78,22 @@ function checkAppliedMigrations(violations, baseRef) {
 
 const options = parseArguments(process.argv.slice(2));
 const files = options.mode === 'all' ? collectAllFiles() : collectChangedFiles(options.baseRef);
+const repositoryFiles = collectAllFiles();
+const routePageDirectories = collectRoutePageDirectories(repositoryFiles);
+const structureFiles = options.mode === 'all'
+  ? files
+  : collectStructureCheckFiles(files, repositoryFiles, routePageDirectories);
 const violations = [];
 for (const file of files) {
   const absolute = resolve(REPO_ROOT, file);
   if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
   const source = readFileSync(absolute, 'utf8');
-  runPatternChecks(violations, file, source, REPO_ROOT);
+  runPatternChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
+}
+for (const file of structureFiles) {
+  const absolute = resolve(REPO_ROOT, file);
+  if (!existsSync(absolute) || !statSync(absolute).isFile()) continue;
+  runStructureChecks(violations, file, { repositoryFiles, routePageDirectories });
 }
 if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);
 if (violations.length) {

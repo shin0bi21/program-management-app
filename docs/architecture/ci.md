@@ -14,7 +14,7 @@ For inspecting runs, reproducing failures, rerunning jobs, and changing workflow
 
 | Workflow | Trigger | Responsibility | Merge role |
 |---|---|---|---|
-| `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, lint and shell analysis, backend verification, sharded frontend tests, frontend build, and conditional production validation | Required merge gate |
+| `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static/backend/frontend verification, and conditional production validation | Required merge gate |
 | `pattern-review.yml` | Pull requests and pushes to `develop`; manual dispatch | Changed-scope repository invariant review, with retained reports | Independent required review on feature PRs |
 | `playwright.yml` | Daily schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
 | `deploy.yml` | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
@@ -33,21 +33,21 @@ Direct feature pull requests to `main` are rejected. Shipping authorization ends
 
 ## Pull-request execution graph
 
-The main CI workflow runs independent work concurrently:
+The main CI workflow classifies the diff once, then runs independent selected work concurrently:
 
 ```text
-merge-path policy
-change classification -> conditional production checks
-quality checks --------> conditional Compose validation
-backend verification --> conditional backend image build
-frontend shard 1 --+
-frontend shard 2 --+--> frontend typecheck/build --> conditional frontend image build
+change classification
+  ├── static checks
+  ├── focused or full backend verification
+  ├── related or full frontend tests + build
+  └── conditional production image and Compose validation
 ```
 
-Frontend Vitest execution is split into two shards to shorten the critical path.
-The frontend build waits for both shards, preventing a successful build from masking
-test failures. Backend verification owns type checking, migrations, migration status,
-generated database types, tests, and the backend build in one database-backed job.
+[`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. The required quality job always runs against `main` so branch-flow enforcement cannot be hidden by a skipped non-required classifier. Unknown paths fail closed to the full application plan.
+
+Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests. This replaces the previous two always-on shards, which reduced wall time but repeated setup and always billed the complete frontend collection.
+
+Backend verification owns type checking, migrations, migration status, generated database types, selected tests, and the backend build in one database-backed job. Recognized domains run focused Jest directories in one invocation; shared infrastructure, migrations, dependencies, and unmapped backend files escalate to the complete backend suite.
 
 Production image and Compose checks are selected by changed production inputs for
 feature pull requests. Release pull requests to `main` run all production checks.
@@ -58,14 +58,14 @@ feature pull requests. Release pull requests to `main` run all production checks
 |---|---|---|---|
 | Static analysis | `bash scripts/tests/test-static.sh` | Node and shell tooling | Yes |
 | Backend API and service behavior | `bash scripts/tests/backend/test-apis.sh` | Docker locally; PostgreSQL service in CI | Yes |
-| Frontend unit/component behavior | `bash scripts/tests/frontend/test-ui.sh` | Vitest using Node or jsdom per test | Yes, sharded remotely |
+| Frontend unit/component behavior | `bash scripts/tests/frontend/test-ui.sh` | Vitest using Node or jsdom per test | Yes, related by dependency graph or full when required |
 | Browser layout and interaction | `bash scripts/tests/frontend/test-browser.sh` | Playwright with Chromium | No; scheduled/manual |
 | Standard full application suite | `bash scripts/tests/test-app.sh` | Deploy checks, backend, and frontend Vitest | Local full-suite contract |
 
 Vitest is the frontend test runner. jsdom is the default environment; browser-independent
 test files explicitly select Node with their file-level Vitest environment annotation.
-Both environments are mixed across each normal PR shard because sharding divides the
-complete test-file collection rather than creating environment-specific jobs. Playwright owns behavior that depends on a real
+Both environments can appear in a related or full run because environment selection is
+per test file. Playwright owns behavior that depends on a real
 browser, including layout geometry, scrolling, pointer behavior, and browser focus.
 See [Testing](../operations/testing.md) for commands and focused-suite routing.
 
@@ -74,6 +74,7 @@ See [Testing](../operations/testing.md) for commands and focused-suite routing.
 Use the narrowest stable layer:
 
 - GitHub workflows orchestrate jobs, services, matrices, permissions, caching, and artifacts.
+- `scripts/ci/` classifies changed ownership paths and produces local commands or GitHub outputs.
 - `scripts/tests/` exposes commands that work from the repository root and composes suites.
 - Package scripts invoke Vitest, Playwright, TypeScript, build tools, and backend test frameworks.
 - Focused runners support implementation feedback; umbrella runners define complete layer coverage.
@@ -103,10 +104,10 @@ For a serial batch of ten otherwise comparable pull requests, a 35-second reduct
 about 5m 50s of merge-gate waiting. It does not imply equal savings in runner consumption
 or total time-to-merge.
 
-`npm run ci:review` is the canonical read-only measurement interface. It derives merge
+`npm run report:ci` is the canonical read-only measurement interface. It derives merge
 intervals and CI-change boundaries from GitHub pull requests, and derives queue, wall,
 runner, reliability, and rerun measurements from workflow and job timestamps. See the
-[CI operations guide](../operations/ci.md#review-ci-performance-over-time) for usage.
+[Reports guide](../operations/reports.md#ci-report) for usage.
 
 ## Change checklist
 

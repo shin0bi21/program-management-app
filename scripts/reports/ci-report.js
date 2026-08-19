@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 const CI_PATHS = [
   /^\.github\/workflows\//,
   /^scripts\/tests\//,
-  /^scripts\/ci\//,
+  /^scripts\/reports\/ci-report(?:\.test)?\.js$/,
   /^docs\/(architecture|operations)\/ci\.md$/,
+  /^docs\/operations\/reports\.md$/,
   /^docs\/operations\/testing\.md$/,
   /(^|\/)package(-lock)?\.json$/,
   /(^|\/)vite\.config\.(js|ts)$/,
@@ -16,7 +17,7 @@ const CI_PATHS = [
 ];
 
 function usage() {
-  return `Usage: npm run ci:review -- [options]
+  return `Usage: npm run report:ci -- [options]
 
 Options:
   --branch <develop|main|all>  Base branch to analyze (default: all)
@@ -27,10 +28,10 @@ Options:
   --help                       Show this help
 
 Examples:
-  npm run ci:review
-  npm run ci:review -- --branch develop --last 20
-  npm run ci:review -- --since 2026-07-01 --until 2026-07-31
-  npm run ci:review -- --since 2026-07-01 --json`;
+  npm run report:ci
+  npm run report:ci -- --branch develop --last 20
+  npm run report:ci -- --since 2026-07-01 --until 2026-07-31
+  npm run report:ci -- --since 2026-07-01 --json`;
 }
 
 export function parseArgs(argv) {
@@ -309,7 +310,7 @@ function date(timestamp) {
 
 function render(report) {
   const lines = [
-    `CI review: ${report.range.start} through ${report.range.end}`,
+    `CI report: ${report.range.start} through ${report.range.end}`,
     `Repository: ${report.repository}`,
     `Branches: ${report.branches.join(', ')}`,
     '',
@@ -366,7 +367,7 @@ async function main() {
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
   main().catch((error) => {
-    console.error(`review-ci: ${error.message}`);
+    console.error(`ci-report: ${error.message}`);
     process.exitCode = 1;
   });
 }

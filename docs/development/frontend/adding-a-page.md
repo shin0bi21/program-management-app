@@ -6,7 +6,9 @@ Read [Frontend architecture](../../architecture/frontend.md), `frontend/src/comm
 
 Place route-specific behavior under `frontend/src/pages/<RouteFamily>/`. Do not import another page's private API, hook, component, or type. Promote behavior reused by multiple route families to `common/features/<domain>/`; keep domain-agnostic primitives under `common/components/`.
 
-A non-trivial page colocates its UI, endpoint adapter, hooks, schemas or types, pure helpers, styles, and tests. Use nested `components/` and `hooks/` ownership when list, calendar, dashboard, or workflow units would otherwise become an unclear flat directory.
+A route-page root contains `Page.tsx`, `Page.css`, `Page.test.tsx`, and `types.ts`. It may also contain one descriptively named page-owned `*.api.ts` adapter with its matching `*.api.test.ts`; use `api/` when the page owns multiple cohesive API modules. Put all other page-owned code under `components/`, `hooks/`, or `utils/`.
+
+A route family with multiple pages gives each route page its own standard folder and keeps genuinely shared family code under the family-level `common/` directory. For example, Homepage may own separate `ManageHomepage/` and `PublicHomepage/` route pages. Keep one-off props beside their component, and keep contracts shared only by one component's internal files inside that component folder rather than promoting them to the page `types.ts`. Import named component implementation files directly; do not add an `index.ts` that only re-exports one component.
 
 ## 2. Register the route and navigation
 
@@ -28,7 +30,7 @@ Follow [Page shell](page-shell.md) for `PageHeader`, `PageBody`, actions, search
 
 Treat the route component as an orchestrator. A reader should be able to scan its setup from dependencies to rendered page without tracing an uninterrupted block of hooks:
 
-1. Group imports as React and third-party libraries, app infrastructure, shared components and features, page-owned code, then styles.
+1. Separate imports into labeled, blank-line-delimited sections in this order: `Packages`; `Components`; `Hooks`; `Data, utilities, and types`; `Styles`. Omit empty sections.
 2. Initialize hooks and derived values in dependency order. Group them under short responsibility comments such as `Application services and permissions`, `Persisted controls and remote data`, and `Selected records and dialogs`.
 3. Put effects and handlers after the state they coordinate, then define derived header, table, calendar, or dashboard presentation.
 4. Keep comments structural and sparse. Do not comment every variable or restate its name.
@@ -66,6 +68,6 @@ The route page owns shared controls, selection context, dashboards, dialogs, and
 
 ## 5. Test and verify
 
-Colocate behavior tests with their narrowest owner. Keep route tests for route composition, permission-dependent controls, navigation, view switching, selection context, dialogs, and consumer wiring. Use Playwright for real layout, focus, scrolling, pointer, observer, and drag behavior.
+Colocate behavior tests with their narrowest owner. Every route page, component, hook, and API adapter owns a same-name test beside its implementation. Keep route tests for route composition, permission-dependent controls, navigation, view switching, selection context, dialogs, and consumer wiring. Use Playwright for real layout, focus, scrolling, pointer, observer, and drag behavior.
 
 Run the appropriate script under `scripts/tests/frontend/`, the frontend build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.

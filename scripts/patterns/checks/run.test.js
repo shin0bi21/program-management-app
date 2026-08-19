@@ -21,9 +21,9 @@ test('keeps dashboard naming checks on common components', () => {
 test('routes page preference controls to their ownership check', () => {
   const violations = violationsFor(
     'frontend/src/pages/Example/hooks/useExampleControls.ts',
-    "const preference = useUserPreference();\nconst value = {\n  programIds: preference?.programIds,\n};",
+    "const { save } = useUserPreference('example-filters');\nsave({ hiddenColumns });",
   );
-  assert.match(violations.join('\n'), /persisted control fields/);
+  assert.match(violations.join('\n'), /page-owned columnKeys/);
 });
 
 test('routes backend route files to async-handler enforcement', () => {

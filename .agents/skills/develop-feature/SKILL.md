@@ -55,6 +55,6 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 
 - During implementation, use the narrow runner under `scripts/tests/backend/` or `scripts/tests/frontend/` that owns the changed feature. Record the tested diff and do not rerun an unchanged suite for the same diff.
 - When affected suites are unclear, run `bash scripts/tests/test-app.sh --plan-changed`, then execute the selected suites. Use `--changed` when that selected set is itself the appropriate verification.
-- Before handoff, run applicable build or type checks, `node scripts/agents/check-patterns.js --changed`, and `git diff --check`.
+- Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.
 - After changing repository skills, run `node scripts/agents/validate-skills.js`.
 - Required pull-request checks provide the full merge gate. Do not treat implementation approval as deployment authorization.

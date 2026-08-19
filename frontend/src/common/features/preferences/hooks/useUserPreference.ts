@@ -48,7 +48,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     }
 
     savingRef.current = false;
-  }, [mutateAsync]);
+  }, [mutateAsync, queryClient, queryKey]);
 
   const save = useCallback((update: PreferenceUpdate<K>) => {
     const current = latestValueRef.current
