@@ -110,6 +110,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       return;
     }
 
+    let savedYouth: YouthProfile;
     try {
       const payload = {
         ...(youthData && { id: youthData.id }),
@@ -123,18 +124,15 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
         contacts: getContactPayload(),
       };
 
-      const savedYouth = await setYouth(payload);
-
-      setSubmitStatus('success');
-
-      setTimeout(() => {
-        resetForm();
-        onSuccess(savedYouth);
-      }, 800);
+      savedYouth = await setYouth(payload);
     } catch (err: unknown) {
       setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
       setSubmitStatus('error');
+      return;
     }
+
+    setSubmitStatus('success');
+    onSuccess(savedYouth);
   };
 
   return {

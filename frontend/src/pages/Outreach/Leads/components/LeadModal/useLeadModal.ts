@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -34,7 +34,6 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   onSuccess: (lead: Lead) => void;
   lead?: Lead;
 }) {
-  const successTimerRef = useRef<number | undefined>(undefined);
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<OutreachFormValues>({
     resolver: zodResolver(outreachFormSchema),
@@ -43,9 +42,6 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
 
   useEffect(() => {
     if (isOpen) reset(valuesForLead(lead));
-    return () => {
-      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
-    };
   }, [isOpen, lead, reset]);
 
   const resetForm = () => {
@@ -53,15 +49,15 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
     resetStatus();
   };
   const handleClose = () => {
-    if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
     resetForm();
     onClose();
   };
 
   const onValid = async (data: OutreachFormValues) => {
-    if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
     setSubmitStatus('submitting');
     setError('');
+
+    let savedLead: Lead;
     try {
       const payload = {
         youthFirstName: data.youthFirstName.trim(),
@@ -74,16 +70,15 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
         discoverySource: data.discoverySource,
         notes: data.notes.trim() || undefined,
       };
-      const savedLead = lead ? await updateLead(lead.id, payload) : await createLead(payload);
-      setSubmitStatus('success');
-      successTimerRef.current = window.setTimeout(() => {
-        resetForm();
-        onSuccess(savedLead);
-      }, 800);
+      savedLead = lead ? await updateLead(lead.id, payload) : await createLead(payload);
     } catch (err) {
       setError(getErrorMessage(err, lead ? 'Unable to update lead' : 'Unable to create lead'));
       setSubmitStatus('error');
+      return;
     }
+
+    setSubmitStatus('success');
+    onSuccess(savedLead);
   };
 
   return { register, control, errors, handleSubmit, onValid, submitStatus, error, handleClose };

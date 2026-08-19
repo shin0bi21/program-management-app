@@ -1,6 +1,6 @@
-// Scope: verifies account-form initialization, payloads, delayed completion, cleanup, and failure recovery.
+// Scope: verifies account-form initialization, payloads, immediate reconciliation, and failure recovery.
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Account } from '../../../../../common/types/account';
 import { inviteAccount, updateAccount } from '../../accounts.api';
@@ -49,12 +49,9 @@ function AccountFormHarness({
 describe('useAccountModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
   });
 
-  afterEach(() => vi.useRealTimers());
-
-  it('normalizes an invitation and completes callbacks after the success delay', async () => {
+  it('normalizes an invitation and immediately reconciles the saved account', async () => {
     vi.mocked(inviteAccount).mockResolvedValue(account);
     const order: string[] = [];
     render(<AccountFormHarness
@@ -77,31 +74,7 @@ describe('useAccountModal', () => {
       programIds: [],
     });
     expect(screen.getByLabelText('Submit status')).toHaveTextContent('success');
-    expect(order).toEqual([]);
-
-    act(() => vi.advanceTimersByTime(800));
-    expect(order).toEqual(['success', 'close']);
-  });
-
-  it('cancels delayed completion when the owner unmounts', async () => {
-    vi.mocked(inviteAccount).mockResolvedValue(account);
-    const onSuccess = vi.fn();
-    const onClose = vi.fn();
-    const view = render(<AccountFormHarness onSuccess={onSuccess} onClose={onClose} />);
-
-    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Sam' } });
-    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Staff' } });
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'sam@example.com' } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole('form', { name: 'Account form' }));
-    });
-    expect(screen.getByLabelText('Submit status')).toHaveTextContent('success');
-
-    view.unmount();
-    act(() => vi.advanceTimersByTime(800));
-
-    expect(onSuccess).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
+    expect(order).toEqual(['success']);
   });
 
   it('initializes edit values and reports update failures without closing', async () => {

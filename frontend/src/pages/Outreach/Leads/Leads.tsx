@@ -158,7 +158,7 @@ export default function Leads() {
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
-      onSuccess={() => { setModalTarget(null); void queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }); }}
+      onSuccess={() => { void queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }); }}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}

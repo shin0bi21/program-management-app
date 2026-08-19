@@ -19,12 +19,13 @@ const discoverySourceOptions = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-export default function OutreachFormFields<T extends OutreachFormValues & FieldValues>({ idPrefix, register, control, errors, programField }: {
+export default function OutreachFormFields<T extends OutreachFormValues & FieldValues>({ idPrefix, register, control, errors, programField, disabled = false }: {
   idPrefix: string;
   register: UseFormRegister<T>;
   control: Control<T>;
   errors: FieldErrors<T>;
   programField?: ReactNode;
+  disabled?: boolean;
 }) {
   const id = (field: keyof OutreachFormValues) => `${idPrefix}-${field}`;
   const field = (name: keyof OutreachFormValues) => name as Path<T>;
@@ -33,12 +34,12 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-youth-title`}>
       <h3 id={`${idPrefix}-youth-title`} className="outreach-form-section-title">Youth Information</h3>
       <div className="form-row">
-        <FormField id={id('youthFirstName')} label="First Name *" error={errors.youthFirstName?.message as string | undefined}><input id={id('youthFirstName')} autoComplete="given-name" {...register(field('youthFirstName'))} /></FormField>
-        <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message as string | undefined}><input id={id('youthLastName')} autoComplete="family-name" {...register(field('youthLastName'))} /></FormField>
+        <FormField id={id('youthFirstName')} label="First Name *" error={errors.youthFirstName?.message as string | undefined}><input id={id('youthFirstName')} autoComplete="given-name" disabled={disabled} {...register(field('youthFirstName'))} /></FormField>
+        <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message as string | undefined}><input id={id('youthLastName')} autoComplete="family-name" disabled={disabled} {...register(field('youthLastName'))} /></FormField>
       </div>
       <div className="form-row">
-        <FormField id={id('age')} label="Age *" error={errors.age?.message as string | undefined}><input id={id('age')} type="number" min="12" max="19" {...register(field('age'), { valueAsNumber: true })} /></FormField>
-        <FormField id={id('school')} label="School *" error={errors.school?.message as string | undefined}><input id={id('school')} {...register(field('school'))} /></FormField>
+        <FormField id={id('age')} label="Age *" error={errors.age?.message as string | undefined}><input id={id('age')} type="number" min="12" max="19" disabled={disabled} {...register(field('age'), { valueAsNumber: true })} /></FormField>
+        <FormField id={id('school')} label="School *" error={errors.school?.message as string | undefined}><input id={id('school')} disabled={disabled} {...register(field('school'))} /></FormField>
       </div>
       {programField && <div className="form-row">{programField}</div>}
     </section>
@@ -58,6 +59,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
                 value={String(relationshipField.value ?? '')}
                 options={contactRelationshipOptions}
                 onChange={relationshipField.onChange}
+                disabled={disabled}
               />
             </FormField>
           )}
@@ -77,6 +79,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
               value={String(discoveryField.value ?? '')}
               options={discoverySourceOptions}
               onChange={discoveryField.onChange}
+              disabled={disabled}
             />
           </FormField>
         )}
@@ -84,7 +87,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
     </div>
 
     <div className="outreach-form-section outreach-form-section--continuation">
-      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message as string | undefined}><textarea id={id('notes')} rows={5} {...register(field('notes'))} /></FormField>
+      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message as string | undefined}><textarea id={id('notes')} rows={5} disabled={disabled} {...register(field('notes'))} /></FormField>
     </div>
   </>;
 }

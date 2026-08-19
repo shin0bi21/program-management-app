@@ -163,6 +163,24 @@ describe('YouthModal', () => {
         expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
       });
     });
+
+    it('keeps successful feedback visible until the shared modal delay closes', async () => {
+      const onClose = vi.fn();
+      const onSuccess = vi.fn();
+      renderModal({ onClose, onSuccess });
+      fillRequiredFields();
+
+      submitForm();
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'youth-1' }),
+      ));
+      expect(screen.getByText('Youth profile created successfully!')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Add Youth Profile' })).toBeInTheDocument();
+      expect(screen.getByLabelText('First Name *')).toBeDisabled();
+      expect(screen.getByLabelText(/Phone Number/)).toBeDisabled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   describe('api calls', () => {

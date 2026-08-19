@@ -86,8 +86,6 @@ export default function Youth() {
 
   // Page actions and table presentation.
   const handleSaveYouth = () => {
-    setModalTarget(null);
-    setContactTarget(null);
     void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 

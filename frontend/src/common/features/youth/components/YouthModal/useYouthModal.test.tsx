@@ -1,6 +1,6 @@
 // Scope: verifies youth form payload ownership and nested-data validation.
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import { setYouth } from '../../youth.api';
@@ -59,16 +59,13 @@ const formData = {
 
 describe('useYouthModal', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.clearAllMocks();
     subEntities.validateAddresses.mockReturnValue(undefined);
     subEntities.validateContacts.mockReturnValue(undefined);
     vi.mocked(setYouth).mockResolvedValue(makeYouthProfile());
   });
 
-  afterEach(() => vi.useRealTimers());
-
-  it('builds the narrow create payload and exposes the saved state', async () => {
+  it('builds the narrow create payload and immediately reconciles the saved youth', async () => {
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useYouthModal({
       isOpen: true,
@@ -90,7 +87,7 @@ describe('useYouthModal', () => {
       contacts: [{ phoneNumber: '4165550100', type: 'parent' }],
     });
     expect(result.current.submitStatus).toBe('success');
-    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'youth-1' }));
   });
 
   it('stops before the API when nested profile data is invalid', async () => {

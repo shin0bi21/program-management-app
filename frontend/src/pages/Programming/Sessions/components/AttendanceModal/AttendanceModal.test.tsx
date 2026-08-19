@@ -17,14 +17,19 @@ vi.mock('../../../../../common/features/youth/youth.api', () => ({ getYouth: api
 vi.mock('../../../../../common/features/youth/components/YouthModal/YouthModal', () => ({
   default: ({
     isOpen,
+    onClose,
     onSuccess,
   }: {
     isOpen: boolean;
+    onClose: () => void;
     onSuccess: (profile: { id: string; firstName: string; lastName: string }) => void;
   }) => isOpen ? (
     <button
       type="button"
-      onClick={() => onSuccess({ id: 'youth-new', firstName: 'New', lastName: 'Visitor' })}
+      onClick={() => {
+        onSuccess({ id: 'youth-new', firstName: 'New', lastName: 'Visitor' });
+        onClose();
+      }}
     >
       Finish creating profile
     </button>
