@@ -1,19 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { createProgram } from '../../api/programs.api';
-import { useAuth } from '../../../../../auth/authContext';
-import { usePrograms } from '../../hooks/usePrograms';
-import { useSubmitStatus } from '../../../../hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../http/clientErrors';
-import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
-import FormField from '../../../../components/FormField/FormField';
-import Modal from '../../../../components/Modal/Modal';
-import ModalFormFooter from '../../../../components/Modal/components/ModalFormFooter';
+import { useState } from 'react';
 
-const schema = z.object({ name: z.string().trim().min(1, 'Program name is required').max(120) });
-type FormValues = z.infer<typeof schema>;
+import { useAuth } from '../../../../../auth/authContext';
+import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
+import { usePrograms } from '../../hooks/usePrograms';
+import type { Program } from '../../types';
+import AddProgramModal from './AddProgramModal/AddProgramModal';
 
 interface ProgramSelectProps {
   id: string;
@@ -25,36 +16,9 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
   const { permissions } = useAuth();
   const { programs, upsertProgram, loading, error: programsError } = usePrograms();
   const [addOpen, setAddOpen] = useState(false);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '' },
-  });
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-
-  useEffect(() => {
-    if (addOpen) {
-      reset({ name: '' });
-      resetStatus();
-    }
-  }, [addOpen, reset, resetStatus]);
-
-  const close = () => {
-    setAddOpen(false);
-    resetStatus();
-  };
-
-  const submit = async ({ name }: FormValues) => {
-    setSubmitStatus('submitting');
-    setError('');
-    try {
-      const program = await createProgram(name.trim());
-      upsertProgram(program);
-      onChange(program.id);
-      setSubmitStatus('success');
-    } catch (err) {
-      setError(getErrorMessage(err, 'Unable to add program'));
-      setSubmitStatus('error');
-    }
+  const handleCreated = (program: Program) => {
+    upsertProgram(program);
+    onChange(program.id);
   };
 
   return <>
@@ -67,20 +31,11 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
       disabled={loading}
       action={permissions.includes('write:programs') ? { label: '+ Add program', onSelect: () => setAddOpen(true) } : undefined}
     />
-    <Modal
+    <AddProgramModal
       isOpen={addOpen}
-      onClose={close}
-      title="Add Program"
-      status={submitStatus}
-      successDelay={500}
-      statusMessage={submitStatus === 'submitting' ? 'Adding program...' : submitStatus === 'success' ? 'Program added!' : submitStatus === 'error' ? error : undefined}
-      footer={<ModalFormFooter formId="add-program-form" submitLabel="Add Program" submitStatus={submitStatus} onClose={close} />}
-    >
-      <form id="add-program-form" onSubmit={handleSubmit(submit)} noValidate>
-        <FormField id="new-program-name" label="Program Name *" error={errors.name?.message || programsError || undefined}>
-          <input id="new-program-name" autoFocus {...register('name')} />
-        </FormField>
-      </form>
-    </Modal>
+      programsError={programsError}
+      onClose={() => setAddOpen(false)}
+      onCreated={handleCreated}
+    />
   </>;
 }
