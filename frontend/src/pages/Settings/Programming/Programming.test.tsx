@@ -1,3 +1,4 @@
+// Scope: verifies Settings Programming route composition, selection, modal entry, and deletion wiring.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -19,7 +20,7 @@ const programState = vi.hoisted<{ programs: Program[]; upsertProgram: ReturnType
   upsertProgram: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => programmingApi);
+vi.mock('../../../common/features/programming/api/cohorts.api', () => programmingApi);
 vi.mock('../../../common/features/programs/api/programs.api', () => programsApi);
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
