@@ -1,13 +1,30 @@
-import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
-import type { YouthFilters, YouthProfile, SetYouthInput, YouthProfileNote, YouthProfileNoteCategory, YouthSortKey } from '../../../types/youth';
-import type { CursorPage, CursorRequest } from '../../../types/pagination';
-import type { YouthSessionNote } from '../../../types/cohort';
+import { apiClient } from '../../../http/client';
+import type { RequestOptions } from '../../../http/client';
+import type { YouthSessionNote } from '../../types/cohort';
+import type { CursorPage, CursorRequest } from '../../types/pagination';
+import type {
+  SetYouthInput,
+  YouthFilters,
+  YouthProfile,
+  YouthProfileNote,
+  YouthProfileNoteCategory,
+  YouthSortKey,
+} from '../../types/youth';
 
 export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
 export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
-export function getYouth(id: undefined, filters: YouthFilters, opts: RequestOptions | undefined, pagination: CursorRequest<YouthSortKey>): Promise<YouthProfile[] | CursorPage<YouthProfile>>;
-export function getYouth(id?: string, filters: YouthFilters = {}, opts?: RequestOptions, pagination?: CursorRequest<YouthSortKey>) {
+export function getYouth(
+  id: undefined,
+  filters: YouthFilters,
+  opts: RequestOptions | undefined,
+  pagination: CursorRequest<YouthSortKey>,
+): Promise<YouthProfile[] | CursorPage<YouthProfile>>;
+export function getYouth(
+  id?: string,
+  filters: YouthFilters = {},
+  opts?: RequestOptions,
+  pagination?: CursorRequest<YouthSortKey>,
+) {
   const params = new URLSearchParams();
   if (id) params.set('id', id);
   if (filters.search?.trim()) params.set('search', filters.search.trim());
@@ -40,16 +57,23 @@ export function inviteYouth(id: string, email: string) {
   return apiClient.post<YouthProfile['account']>(`/youth/${id}/invite`, { email });
 }
 
-export interface SetYouthProfileNoteInput { category: YouthProfileNoteCategory; title: string; details: string | null }
+export interface SetYouthProfileNoteInput {
+  category: YouthProfileNoteCategory;
+  title: string;
+  details: string | null;
+}
+
 export function getYouthProfileNotes(id: string, opts?: RequestOptions) {
   const path = `/youth/${id}/notes`;
   return opts ? apiClient.get<YouthProfileNote[]>(path, opts) : apiClient.get<YouthProfileNote[]>(path);
 }
+
 export function setYouthProfileNote(id: string, data: SetYouthProfileNoteInput, noteId?: string) {
   return noteId
     ? apiClient.put<YouthProfileNote>(`/youth/${id}/notes/${noteId}`, data)
     : apiClient.post<YouthProfileNote>(`/youth/${id}/notes`, data);
 }
+
 export function deleteYouthProfileNote(id: string, noteId: string) {
   return apiClient.delete<void>(`/youth/${id}/notes/${noteId}`);
 }

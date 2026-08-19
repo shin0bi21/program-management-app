@@ -6,8 +6,8 @@ import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import ManageRosterModal from './ManageRosterModal';
 
 const api = vi.hoisted(() => ({ getYouth: vi.fn(), withdrawYouth: vi.fn(), enrollYouth: vi.fn() }));
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({ withdrawYouth: api.withdrawYouth, enrollYouth: api.enrollYouth }));
-vi.mock('../../../../../common/features/youth/api/youth.api', () => ({ getYouth: api.getYouth }));
+vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({ withdrawYouth: api.withdrawYouth, enrollYouth: api.enrollYouth }));
+vi.mock('../../../../../common/features/youth/youth.api', () => ({ getYouth: api.getYouth }));
 
 describe('ManageRosterModal', () => {
   const cohort = {

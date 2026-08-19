@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import Button from '../../../../components/Button/Button';
 import LoadingSpinner from '../../../../components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../../../components/Modal/Modal';
-import { getCohortYouthReportPdf } from '../../api/programming.api';
+import { getCohortYouthReportPdf } from '../../api/cohorts.api';
 import './YouthReportModal.css';
 
 interface ReportCohort {

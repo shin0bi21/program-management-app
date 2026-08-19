@@ -1,4 +1,4 @@
-import { getCohorts } from '../../../../common/features/programming/api/programming.api';
+import { getCohorts } from '../../../../common/features/programming/api/cohorts.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import useListQuery from '../../../../query/hooks/useListQuery';
 import { COHORT_OPTIONS_QUERY_KEY } from '../queryKeys';

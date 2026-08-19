@@ -1,6 +1,6 @@
-import { apiClient } from '../../../../../../../http/client';
-import type { RequestOptions } from '../../../../../../../http/client';
-import type { School } from '../types';
+import { apiClient } from '../../../../../../http/client';
+import type { RequestOptions } from '../../../../../../http/client';
+import type { School } from './types';
 
 export function getSchools(opts?: RequestOptions): Promise<School[]> {
   return opts ? apiClient.get<School[]>('/schools', opts) : apiClient.get<School[]>('/schools');

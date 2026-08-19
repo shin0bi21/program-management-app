@@ -2,11 +2,11 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
-import { getPrograms } from '../api/programs.api';
+import { getPrograms } from '../programs.api';
 import type { Program } from '../types';
 import { usePrograms } from './usePrograms';
 
-vi.mock('../api/programs.api', () => ({ getPrograms: vi.fn() }));
+vi.mock('../programs.api', () => ({ getPrograms: vi.fn() }));
 
 const getProgramsMock = vi.mocked(getPrograms);
 const programs: Program[] = [{

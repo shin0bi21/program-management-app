@@ -1,6 +1,6 @@
-import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
-import type { CreateProgramInput, Program, UpdateProgramInput } from '../types';
+import { apiClient } from '../../../http/client';
+import type { RequestOptions } from '../../../http/client';
+import type { CreateProgramInput, Program, UpdateProgramInput } from './types';
 
 export function getPrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}, opts?: RequestOptions) {
   const path = `/programs${assignedOnly ? '?scope=assigned' : ''}`;

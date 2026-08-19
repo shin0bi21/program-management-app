@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSchool, deleteSchool, setSchool } from '../schools/api/schools.api';
+import { createSchool, deleteSchool, setSchool } from '../schools/schools.api';
 import SchoolActionModal from './SchoolActionModal';
 
-vi.mock('../schools/api/schools.api', () => ({ createSchool: vi.fn(), deleteSchool: vi.fn(), setSchool: vi.fn() }));
+vi.mock('../schools/schools.api', () => ({ createSchool: vi.fn(), deleteSchool: vi.fn(), setSchool: vi.fn() }));
 
 const school = { id: 'school-1', name: 'Central High' };
 

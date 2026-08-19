@@ -10,7 +10,7 @@ const api = vi.hoisted(() => ({
   updateSessionNote: vi.fn(),
 }));
 
-vi.mock('../../../../features/programming/api/programming.api', () => ({
+vi.mock('../../../../features/programming/api/sessions.api', () => ({
   createSessionNote: api.createSessionNote,
   getSessionRoster: api.getSessionRoster,
   updateSessionNote: api.updateSessionNote,

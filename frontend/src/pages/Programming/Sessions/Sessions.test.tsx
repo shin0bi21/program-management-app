@@ -49,18 +49,18 @@ const preferenceHook = vi.hoisted<{
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
-  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
-  createSessionNote: vi.fn(),
-  generateSessions: vi.fn(),
 }));
 
 vi.mock('../../../common/features/programming/api/sessions.api', () => ({
+  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
+  createSessionNote: vi.fn(),
+  generateSessions: vi.fn(),
   setSessionAttendance: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));

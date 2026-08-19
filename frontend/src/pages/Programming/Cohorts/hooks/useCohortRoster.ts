@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
-import { getYouth } from '../../../../common/features/youth/api/youth.api';
+import { getYouth } from '../../../../common/features/youth/youth.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../common/types/youth';
 import { getErrorMessage } from '../../../../http/clientErrors';

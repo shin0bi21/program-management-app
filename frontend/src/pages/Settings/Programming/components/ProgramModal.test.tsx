@@ -3,11 +3,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createProgram, updateProgram } from '../../../../common/features/programs/api/programs.api';
+import { createProgram, updateProgram } from '../../../../common/features/programs/programs.api';
 import type { Program } from '../../../../common/features/programs/types';
 import ProgramModal from './ProgramModal';
 
-vi.mock('../../../../common/features/programs/api/programs.api', () => ({
+vi.mock('../../../../common/features/programs/programs.api', () => ({
   createProgram: vi.fn(),
   updateProgram: vi.fn(),
 }));

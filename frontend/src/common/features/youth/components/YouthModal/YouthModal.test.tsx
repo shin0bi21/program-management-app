@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
 
-vi.mock('../../api/youth.api', () => ({
+vi.mock('../../youth.api', () => ({
   setYouth: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => authState,
 }));
 
-import { setYouth } from '../../api/youth.api';
+import { setYouth } from '../../youth.api';
 
 const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 

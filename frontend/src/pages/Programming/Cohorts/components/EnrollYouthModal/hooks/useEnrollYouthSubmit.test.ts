@@ -1,10 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { enrollYouth } from '../../../../../../common/features/programming/api/programming.api';
+import { enrollYouth } from '../../../../../../common/features/programming/api/cohorts.api';
 import { useEnrollYouthSubmit } from './useEnrollYouthSubmit';
 
-vi.mock('../../../../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({
   enrollYouth: vi.fn(),
 }));
 

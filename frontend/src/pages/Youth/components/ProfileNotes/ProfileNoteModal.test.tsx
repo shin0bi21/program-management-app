@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { setYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
+import { setYouthProfileNote } from '../../../../common/features/youth/youth.api';
 import ProfileNoteModal from './ProfileNoteModal';
 
-vi.mock('../../../../common/features/youth/api/youth.api', () => ({
+vi.mock('../../../../common/features/youth/youth.api', () => ({
   setYouthProfileNote: vi.fn(),
 }));
 

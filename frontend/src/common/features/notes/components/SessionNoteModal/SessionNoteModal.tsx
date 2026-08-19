@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { createSessionNote, getSessionRoster, updateSessionNote } from '../../../../features/programming/api/programming.api';
+import { createSessionNote, getSessionRoster, updateSessionNote } from '../../../../features/programming/api/sessions.api';
 import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../components/FormField/FormField';
 import Modal from '../../../../components/Modal/Modal';

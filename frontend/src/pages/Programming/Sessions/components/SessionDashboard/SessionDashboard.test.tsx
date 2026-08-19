@@ -28,12 +28,6 @@ vi.mock('@panzoom/panzoom', () => ({
   default: (element: unknown, options?: unknown) => initializePanzoom(element, options),
 }));
 
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
-  createSessionNote: vi.fn(),
-  updateSessionNote: vi.fn(),
-  getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
-}));
-
 vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
