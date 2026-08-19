@@ -58,6 +58,7 @@ export default function Tasks() {
     upsert: (_task: Task) => undefined,
     remove: (_taskId: string) => undefined,
   }), []);
+
   const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
   const mutations = useTaskMutations({
     taskQueryKey: TASK_QUERY_KEY,
@@ -72,6 +73,7 @@ export default function Tasks() {
       setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
     },
   });
+
   const confirmModal = useConfirmModal({
     action: mutations.confirmAction,
     onClose: mutations.closeConfirmation,
@@ -80,18 +82,22 @@ export default function Tasks() {
   // Remote options, persisted controls, and selected resource data.
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
   const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading, TASK_COLUMN_KEYS);
-  const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
-  const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
+  const resources = optionsQuery.data?.resources ?? [];
+  const writableResources = resources.filter(resource => resource.writable);
+  const defaultWritableResourceId = writableResources[0]?.id;
+
   useEffect(() => {
-    if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
-  }, [selectedResourceId, writableResources]);
+    if (!selectedResourceId && defaultWritableResourceId) setSelectedResourceId(defaultWritableResourceId);
+  }, [defaultWritableResourceId, selectedResourceId]);
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
+
   const overviewQuery = useQuery({
     queryKey: [...TASK_QUERY_KEY, 'overview', selectedResourceId],
     queryFn: ({ signal }) => getTasks({ staffId: selectedResourceId! }, { signal }),
     enabled: selectedResourceId !== null,
     placeholderData: previous => previous,
   });
+
   const resourceTasks = overviewQuery.data ?? [];
   const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
     ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
