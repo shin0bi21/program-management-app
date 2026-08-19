@@ -252,6 +252,14 @@ export function checkCentralizedHttp(violations, file, source) {
   addMatches(violations, file, source, /\bfetch\s*\(/g, 'frontend requests must use the centralized API client.');
 }
 
+export function checkCentralizedFrontendDocumentation(violations, file) {
+  if (file.startsWith('frontend/src/') && file.endsWith('/README.md')) {
+    violations.push(
+      `${file}:1 frontend architecture and integration guidance belongs under docs/, not beside source code.`,
+    );
+  }
+}
+
 export function checkFocusedAdapters(violations, file, source) {
   if (!file.startsWith('frontend/src/') || !file.endsWith('.api.ts')) return;
   addMatches(violations, file, source, /apiClient\.put(?:<[^>]+>)?\s*\(\s*(?:`[^`]*\/(?:status|placement)(?:[/?][^`]*)?`|'[^']*\/(?:status|placement)(?:[/?][^']*)?')/g, 'focused status/placement endpoints must use PATCH, not PUT.');

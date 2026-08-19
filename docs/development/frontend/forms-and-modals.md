@@ -1,6 +1,17 @@
 # Frontend forms and modals
 
-For new modal data flows, use the [TanStack Query modal recipe](../stack/tanstack-query.md#queries-and-mutations-in-a-modal). TanStack owns remote data; React Hook Form or local React state owns the draft and modal lifecycle.
+TanStack Query owns remote data; React Hook Form or local React state owns the draft and modal lifecycle.
+
+## Use the shared dialog contract
+
+`Modal` owns dialog semantics, its accessible title, initial focus, focus containment, Escape handling, and focus return. The consuming workflow owns open state, submission state, validation, persistence, and safe close behavior.
+
+- Pass a stable `title` and the workflow's `status`. While status is `submitting` or `success`, Modal disables its X button and Escape dismissal; disable footer Cancel and Submit controls consistently.
+- Use `disableClose` only for a non-status state that independently prevents dismissal.
+- Keep `onClose` idempotent. Do not clear server-backed state until its operation completes or is deliberately cancelled.
+- Use `status`, `statusMessage`, and `successDelay` for submission feedback instead of adding another overlay.
+- Use `ModalFormFooter` when its standard Cancel/Submit behavior fits, and give a body form a stable ID when the footer submit button targets it.
+- Use `FormField`, `FloatingSelect`, and `Button` inside forms. Portalled choices use `FloatingSelect` or `FloatingMenuPanel` so positioning, dismissal, keyboard behavior, and focus return remain shared.
 
 ## Define entry paths
 
@@ -16,6 +27,17 @@ For new modal data flows, use the [TanStack Query modal recipe](../stack/tanstac
 - Choose defaults from domain state, such as the active cycle, not incidental array order.
 - Keep create and edit initialization deterministic whenever the modal reopens or its target changes.
 
+## Own remote data and mutations
+
+Use a query only when the modal needs server data that its caller does not already have, such as dependent options. Keep it in the modal's focused hook, include every server input in its key, pass request cancellation through the API adapter, and enable it only while the modal is open and its required context exists. Pass an already-loaded complete edit record into the modal instead of fetching it again.
+
+Use one mutation boundary:
+
+- A form owned by one page may call its typed API and return the authoritative saved record through `onSuccess`; the page then reconciles its list, calendar, and dashboard owners.
+- A shared contextual modal receives an async mutation callback from its consumer when the consumer must coordinate several views or caches.
+
+The modal owns its draft, submit, and error state. One owner controls the mutation and cache reconciliation; never split one write's cache rules between the modal and its caller.
+
 ## Handle lifecycle and errors
 
 - Prevent duplicate submission and keep dismissal behavior correct while submitting.
@@ -25,3 +47,5 @@ For new modal data flows, use the [TanStack Query modal recipe](../stack/tanstac
 ## Verify each path
 
 Test required fields, dependent changes, contextual locked fields, defaults, create/edit reset, failure recovery, duplicate-submit prevention, and each distinct entry path. Add consumer tests when correctness depends on calendar/list/dashboard wiring rather than the modal alone.
+
+Shared Modal tests own generic dialog semantics, focus, Escape, and disabled-close behavior. Workflow tests prove direct form submission cannot bypass validation or submit twice, status and disabled controls are wired correctly, success refreshes or closes the intended owner, and failure keeps the form open with an accessible error. Use Playwright when portal placement or browser focus geometry cannot be established in jsdom.

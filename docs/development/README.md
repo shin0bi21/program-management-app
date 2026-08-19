@@ -2,8 +2,6 @@
 
 Use this handbook when adding or changing application code. It tells you what to change and in what order. Architecture documents explain why the repository is organized that way.
 
-If the feature already has a document under [`docs/features/`](../features/README.md), read it first. It records business rules that must stay consistent across the backend and frontend.
-
 Use the guides in this order:
 
 1. Start with [Adding a feature](adding-a-feature.md) or [Updating a feature](updating-a-feature.md).
@@ -15,11 +13,11 @@ Use the guides in this order:
 
 | Task | Guide |
 |---|---|
-| Understand the application stack | [Stack guide](stack/README.md) |
 | Add an end-to-end capability | [Adding a feature](adding-a-feature.md) |
 | Change an existing capability | [Updating a feature](updating-a-feature.md) |
 | Add a backend domain or API | [Adding a backend domain](backend/adding-a-domain.md) |
 | Add a route page | [Adding a frontend page](frontend/adding-a-page.md) |
+| Choose frontend ownership and extraction patterns | [Frontend ownership patterns](frontend/patterns.md) |
 | Add a list or calendar | [List view](frontend/list-view.md) or [calendar view](frontend/calendar-view.md) |
 | Add a form or modal | [Forms and modals](frontend/forms-and-modals.md) |
 | Choose React state patterns | [React state](frontend/react-state.md) |

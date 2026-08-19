@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   checkApiStructure,
   checkCalendarDataHooks,
+  checkCentralizedFrontendDocumentation,
   checkFrontendOwnership,
   checkPaginatedTables,
   checkPreferenceControlOwnership,
@@ -312,4 +313,17 @@ test('requires calendar-data hooks to live under their CalendarView', () => {
   );
 
   assert.match(violations[0], /CalendarView hooks directory/);
+});
+
+test('requires frontend architecture and integration documentation to remain centralized', () => {
+  const violations = violationsFor(
+    checkCentralizedFrontendDocumentation,
+    'frontend/src/common/components/Example/README.md',
+  );
+
+  assert.match(violations[0], /belongs under docs/);
+  assert.deepEqual(
+    violationsFor(checkCentralizedFrontendDocumentation, 'docs/development/frontend/example.md'),
+    [],
+  );
 });

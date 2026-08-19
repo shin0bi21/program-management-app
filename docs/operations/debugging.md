@@ -53,11 +53,10 @@ same script.
 ## Attach the backend debugger
 
 The development backend starts Node Inspector on container port `9229`, which
-Compose publishes to `localhost:9229`. Start the stack, open the repository in
-VS Code, select **Docker: Debug Backend** from **Run and Debug**, and attach.
-The committed [launch configuration](../../.vscode/launch.json) maps local
-`backend/` sources to `/app` in the container and reconnects after backend
-restarts.
+Compose publishes to `localhost:9229`. Start the stack and attach a Node
+debugger to that port. In VS Code, configure the debugger with `backend/` as
+the local root, `/app` as the remote root, source maps enabled, and automatic
+reconnection after backend restarts.
 
 Set breakpoints in backend TypeScript, reproduce the request in the browser,
 and use the request ID to ensure the paused execution matches the failing

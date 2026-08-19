@@ -2,6 +2,7 @@ import { checkBackendControllers, checkBackendRoutes } from './backend.js';
 import {
   checkApiStructure,
   checkCalendarDataHooks,
+  checkCentralizedFrontendDocumentation,
   checkCentralizedHttp,
   checkFocusedAdapters,
   checkFrontendOwnership,
@@ -29,6 +30,7 @@ export function runEnforcementChecks(
 
   if (file.startsWith('frontend/src/')) {
     checkFrontendOwnership(violations, file, source, routePageDirectories, repoRoot);
+    checkCentralizedFrontendDocumentation(violations, file);
     checkCentralizedHttp(violations, file, source);
     if (file.endsWith('.api.ts')) checkFocusedAdapters(violations, file, source);
     if (file.endsWith('.tsx')) checkDashboardNames(violations, file, source);

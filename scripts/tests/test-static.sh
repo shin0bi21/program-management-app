@@ -36,6 +36,9 @@ if [ -z "$loc_total" ] || [ "$loc_total" -eq 0 ]; then
   exit 1
 fi
 
+echo "Checking documentation links..."
+node scripts/tests/check-doc-links.js
+
 echo "Validating repository skills..."
 node scripts/agents/validate-skills.js
 

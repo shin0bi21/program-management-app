@@ -15,11 +15,13 @@ Run test commands from the repository root. The supported test workflow uses the
 
 The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope.
 
+Static analysis includes shell syntax, ShellCheck, repository lint, script tests, report smoke checks, local Markdown-link validation, and repository-skill validation.
+
 Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Timesheet tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
 
 Frontend source changes run `vitest --changed` against the comparison base. Vitest follows imports, so changing a component or hook selects its own tests and tests for importing components and route pages. Frontend configuration, dependencies, and test-runner changes run the complete frontend suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
 
-Repository pattern review is separate from ordinary static and application runners. `.github/workflows/pattern-review.yml` runs changed-only reviews on pull requests to `develop` and after merges or other pushes to `develop`. Any detected invariant violation fails the review; violations are not averaged into a score. Each run publishes its output in the GitHub job summary and retains the text report as a workflow artifact for 30 days. Manual dispatch supports either changed scope or an explicitly requested full-repository review.
+Repository pattern automation is separate from ordinary static and application runners. `.github/workflows/pattern-review.yml` runs changed-only checks on pull requests to `develop` and after merges or other pushes to `develop`. Deterministic findings from `scripts/patterns/enforce/` fail the job. Lightweight findings from `scripts/patterns/review/` are passed to AI-assisted review and remain non-blocking; they do not score complexity or require extraction. Each run publishes both outputs in the GitHub job summary and retains the text report as a workflow artifact for 30 days. Manual dispatch supports either changed scope or an explicitly requested full-repository review.
 
 Preview the same routing without executing tests with `bash scripts/tests/test-app.sh --plan-changed`. This is useful for verifying that a new feature path is registered before relying on `--changed`.
 
@@ -32,6 +34,32 @@ The frontend layers are:
 - Pure utilities, finite policy/capability rules, transport adapters, and other tests that do not need browser globals run in Vitest's Node environment. Mark these files with `// @vitest-environment node` as their first line.
 - UI components, React hooks, storage, DOM geometry, and browser-global behavior use Vitest with jsdom. jsdom is the configured default, so these tests need no environment annotation.
 - Layout, scrolling, pointer, and real-browser behavior use Playwright.
+
+## Frontend test matrix
+
+Place each behavior at its narrowest authoritative owner. A broader consumer test is required only when correctness depends on wiring across that boundary.
+
+| Owner | Required coverage |
+|---|---|
+| Pure utility or finite policy | Representative inputs, boundaries, invalid values that are part of the contract, and exhaustive finite cases. Use the Node environment. |
+| API adapter | Exact method, path, query/body serialization, typed response shaping, and boundary normalization. Mock the centralized client rather than browser UI. |
+| Stateful hook | Initialization, input changes, loading/error state, reset or reopen behavior, stale-response protection, cache effects, callback ordering, and cleanup on unmount where applicable. |
+| Shared component | Public rendering and accessibility contract, supported states, emitted events, keyboard behavior available in jsdom, and controlled-prop wiring. Test generic behavior once here. |
+| Form or modal workflow | Create/edit initialization, required and dependent fields, direct form submission, submitting and duplicate-submit prevention, success, failure recovery, dismissal rules, reset/reopen behavior, and callback/API payload ordering. |
+| List, table, or calendar view | Initial loading, background refresh, error, empty and filtered-empty states, pagination/range loading, sorting/filter wiring, selection, permission-aware actions, and exact domain callback payloads. Shared mechanics remain covered by their shared owner. |
+| Route page | Route composition, permission-dependent controls, preference restoration and first save, dialog entry paths, view switching, selected-record context, and callback-to-adapter wiring that crosses child owners. Do not repeat internal hook or shared-component tests. |
+| Playwright browser scenario | Real layout, scrolling, sticky positioning, focus geometry and return, portals, observers, pointer capture, drag/resize, virtualization, clipping, cancellation, and responsive behavior that jsdom cannot prove. |
+
+For every applicable owner, cover the meaningful state and event lifecycle rather than only its happy-path snapshot:
+
+1. initial, loading, success, empty, and error presentation;
+2. user actions and their exact emitted or persisted values;
+3. transitions when props, targets, permissions, or dependent inputs change;
+4. repeat, reopen, retry, cancellation, and unmount cleanup paths;
+5. overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation when the owner permits concurrency;
+6. accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
+
+Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
 
 `test-ui.sh`, focused frontend runners, and normal PR CI all use Vitest; Vitest selects Node or jsdom per file. Pull-request CI runs one frontend job: related tests for source changes or the complete collection for configuration, dependency, and runner changes, followed by the frontend build. Playwright is not included in that job or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 
@@ -71,7 +99,7 @@ node scripts/agents/validate-skills.js
 
 `check-patterns.js` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.
 
-The checker enforces high-confidence ownership, route-page structure, component/hook/page/API test colocation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, canonical vocabulary, and accidental test markers. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. These checks verify deterministic structure and syntax; they do not generate semantic tests or replace behavior review.
+The enforcement layer checks high-confidence ownership, route-page structure, component/hook/page/API test colocation, centralized frontend documentation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, canonical vocabulary, and accidental test markers. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. The review layer highlights changed TSX files with inline workflow behavior and defensive normalization outside external boundaries so a reviewer does not overlook a possible ownership issue. Neither layer generates semantic tests or replaces behavior review. See [Frontend ownership patterns](../development/frontend/patterns.md).
 
 ## Direct package commands
 
