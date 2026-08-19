@@ -16,21 +16,23 @@ import {
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import queryClient from '../../../query/queryClient';
 import Timesheets from './Timesheets';
-import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
+import type { TimesheetPreference } from './types';
 import { getTasks } from '../../../common/features/tasks/api/tasks.api';
 import { getUser } from '../../../auth/storage';
 import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['timesheet-filters'] | null;
+  preference: TimesheetPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' },
   loading: false,
   error: null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -97,7 +99,7 @@ describe('Timesheets', () => {
     preferenceHook.loading = false;
     preferenceHook.error = null;
     preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((update: PreferenceValues['timesheet-filters'] | ((current: PreferenceValues['timesheet-filters'] | null) => PreferenceValues['timesheet-filters'])) => {
+    preferenceHook.save.mockImplementation((update: TimesheetPreference | ((current: TimesheetPreference | null) => TimesheetPreference)) => {
       preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
     });
     vi.mocked(getUser).mockReturnValue({

@@ -2,10 +2,17 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
+import type { AccountPreference } from './types';
 
 const mockUseAuth = vi.fn();
 const mockUseAccounts = vi.fn();
-const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as AccountPreference | null,
+  loading: false,
+  error: null,
+  setBaseline: vi.fn(),
+  save: vi.fn(),
+}));
 
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./hooks/useAccounts', () => ({ useAccounts: (filters: unknown) => mockUseAccounts(filters) }));
@@ -42,7 +49,18 @@ const renderPage = () => render(
 
 describe('Users', () => {
   beforeEach(() => {
+    preferenceHook.preference = null;
+    preferenceHook.setBaseline.mockImplementation((value: AccountPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: AccountPreference | ((current: AccountPreference | null) => AccountPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     mockUseAccounts.mockReturnValue({
       accounts,
       loading: false,
@@ -57,7 +75,7 @@ describe('Users', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Email' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: [], roles: [], sorting: { key: 'name', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['email'],
     });
   });

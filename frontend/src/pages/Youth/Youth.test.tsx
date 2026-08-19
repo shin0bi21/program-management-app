@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import render from '../../tests/renderWithQueryClient';
+import type { YouthPreference } from './types';
 
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({
@@ -11,9 +12,10 @@ const youthApi = vi.hoisted(() => ({
   deleteYouthProfileNote: vi.fn(),
 }));
 const preferenceHook = vi.hoisted(() => ({
-  preference: null as { statuses: Array<'active' | 'inactive'>; programIds: string[] } | null,
+  preference: null as YouthPreference | null,
   loading: false,
   error: null as string | null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -67,7 +69,17 @@ describe('Youth', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.setBaseline.mockImplementation((value: YouthPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: YouthPreference | ((current: YouthPreference | null) => YouthPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
       loading: false,
@@ -113,7 +125,7 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: ['active'], programIds: ['program-1'], sorting: { key: 'firstName', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['school'],
     });
   });
@@ -137,7 +149,7 @@ describe('Youth', () => {
       statuses: ['active'],
       programIds: [],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       statuses: ['active'],
       programIds: [],
     }));
@@ -163,7 +175,7 @@ describe('Youth', () => {
       statuses: ['inactive'],
       programIds: ['program-1'],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       statuses: ['inactive'],
       programIds: ['program-1'],
     }));

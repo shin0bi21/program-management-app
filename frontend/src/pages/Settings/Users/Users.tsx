@@ -22,6 +22,8 @@ import { useAccounts } from './hooks/useAccounts';
 import { ACCOUNTS_LIST_QUERY_KEY } from './queryKeys';
 import './Users.css';
 
+const ACCOUNT_COLUMN_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+
 export default function Users() {
   // Services and permissions.
   const queryClient = useQueryClient();
@@ -31,7 +33,7 @@ export default function Users() {
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
   // Controls and remote records.
-  const controls = useAccountControls(isAdmin);
+  const controls = useAccountControls(isAdmin, ACCOUNT_COLUMN_KEYS);
   const {
     search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,

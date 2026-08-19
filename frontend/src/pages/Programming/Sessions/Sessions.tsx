@@ -36,6 +36,7 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
+const SESSION_COLUMN_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 
 export default function Sessions() {
   // Application services and route state.
@@ -71,6 +72,7 @@ export default function Sessions() {
   const controls = useSessionControls({
     role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError, sessionTypes,
     onFiltersChanged: clearSelectedSession,
+    columnKeys: SESSION_COLUMN_KEYS,
   });
   const {
     search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,

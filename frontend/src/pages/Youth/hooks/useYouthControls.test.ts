@@ -1,15 +1,22 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
 import type { Program } from '../../../common/features/programs/types';
+import type { YouthPreference } from '../types';
 import { useYouthControls } from './useYouthControls';
 
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['youth-profile-filters'] | null;
+  preference: YouthPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+}>(() => ({
+  preference: null,
+  loading: false,
+  error: null,
+  setBaseline: vi.fn(),
+  save: vi.fn(),
+}));
 
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -23,6 +30,7 @@ const programs: Program[] = [{
   minAge: 12,
   maxAge: 15,
 }];
+const columnKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'];
 
 describe('useYouthControls', () => {
   beforeEach(() => {
@@ -38,6 +46,7 @@ describe('useYouthControls', () => {
         role,
         programs,
         programsLoading: false,
+        columnKeys,
       }),
       { initialProps: { role: null as string | null } },
     );
@@ -51,5 +60,58 @@ describe('useYouthControls', () => {
       statuses: ['active'],
       programIds: ['program-1'],
     }));
+  });
+
+  it('uses the option-scrubbed preference as the shared save baseline', async () => {
+    preferenceHook.preference = {
+      statuses: ['active'],
+      programIds: ['removed-program'],
+      sorting: { key: 'firstName', direction: 'asc' },
+      columnWidths: {},
+      hiddenColumns: [],
+    };
+    const { result } = renderHook(() => useYouthControls({
+      role: 'staff',
+      programs,
+      programsLoading: false,
+      columnKeys,
+    }));
+
+    await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith({
+      statuses: ['active'],
+      programIds: [],
+      sorting: { key: 'firstName', direction: 'asc' },
+      columnWidths: {},
+      hiddenColumns: [],
+    });
+  });
+
+  it('preserves hidden columns when a resize follows immediately', async () => {
+    const persisted: YouthPreference = {
+      statuses: ['active'],
+      programIds: ['program-1'],
+      sorting: { key: 'firstName', direction: 'asc' },
+      columnWidths: {},
+      hiddenColumns: [],
+    };
+    preferenceHook.save.mockImplementation((update: (current: YouthPreference) => YouthPreference) => {
+      Object.assign(persisted, update(persisted));
+    });
+    const { result } = renderHook(() => useYouthControls({
+      role: 'staff',
+      programs,
+      programsLoading: false,
+      columnKeys,
+    }));
+    await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
+
+    act(() => {
+      result.current.setHiddenColumns(['school']);
+      result.current.setColumnWidths({ firstName: 240 });
+    });
+
+    expect(persisted.hiddenColumns).toEqual(['school']);
+    expect(persisted.columnWidths).toEqual({ firstName: 240 });
   });
 });

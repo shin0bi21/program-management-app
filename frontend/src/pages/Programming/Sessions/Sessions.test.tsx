@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
 import type { Program } from '../../../common/features/programs/types';
+import type { SessionPreference } from './types';
 import Sessions from './Sessions';
 import render from '../../../tests/renderWithQueryClient';
 
@@ -35,14 +35,16 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   }],
 }));
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['session-filters'] | null;
+  preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
   loading: false,
   error: null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -129,7 +131,17 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 describe('Sessions', () => {
   beforeEach(() => {
     preferenceHook.preference = { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceHook.setBaseline.mockImplementation((value: SessionPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: SessionPreference | ((current: SessionPreference | null) => SessionPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     renderCalendar.mockReset();
     auth.role = 'admin';
     auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
@@ -437,7 +449,7 @@ describe('Sessions', () => {
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list' }));
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'list' }));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: List' })).toBeInTheDocument();

@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiClient } from '../../../../http/client';
-import { getPreference, setPreference } from './preferences.api';
-import type { PreferenceValues } from './preferences.api';
+// @vitest-environment node
 
-vi.mock('../../../../http/client', () => ({
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { apiClient } from '../../../http/client';
+import { getPreference, setPreference } from './preferences.api';
+
+vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), put: vi.fn() },
 }));
 
@@ -21,12 +22,9 @@ describe('preferences API', () => {
   });
 
   it('writes the selected preference value', () => {
-    const value: PreferenceValues['youth-profile-filters'] = {
-      statuses: ['active'],
-      programIds: [],
-    };
+    const value = { statuses: ['active'], programIds: [] };
     setPreference('youth-profile-filters', value);
+
     expect(apiClient.put).toHaveBeenCalledWith('/preferences/youth-profile-filters', value);
   });
 });
-// @vitest-environment node

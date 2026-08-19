@@ -25,6 +25,18 @@ import {
 } from './taskActionCapabilities';
 import { TASKS_QUERY_KEY } from './taskQueryKeys';
 import type { TaskViewMutationCache } from './taskViewTypes';
+import './Tasks.css';
+
+const TASK_COLUMN_KEYS = [
+  'title',
+  'category',
+  'firstName',
+  'lastName',
+  'program',
+  'startDate',
+  'dueDate',
+  'status',
+] as const;
 
 export default function Tasks() {
   // Application permissions and selected page workflows.
@@ -55,7 +67,7 @@ export default function Tasks() {
 
   // Remote options, persisted controls, and selected resource data.
   const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
-  const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading);
+  const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading, TASK_COLUMN_KEYS);
   const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
   const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
   useEffect(() => {

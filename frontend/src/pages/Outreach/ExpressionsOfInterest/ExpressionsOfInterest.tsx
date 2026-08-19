@@ -20,6 +20,17 @@ import { useExpressionsOfInterest } from './hooks/useExpressionsOfInterest';
 import type { ExpressionOfInterest } from './types';
 import './ExpressionsOfInterest.css';
 
+const EXPRESSION_INTEREST_COLUMN_KEYS = [
+  'firstName',
+  'lastName',
+  'age',
+  'school',
+  'program',
+  'submittedByRole',
+  'submittedAt',
+  'status',
+] as const;
+
 export default function ExpressionsOfInterest() {
   // Services and permissions.
   const queryClient = useQueryClient();
@@ -28,7 +39,12 @@ export default function ExpressionsOfInterest() {
 
   // Controls and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms();
-  const controls = useExpressionOfInterestControls(programs, programsLoading, programsError);
+  const controls = useExpressionOfInterestControls(
+    programs,
+    programsLoading,
+    programsError,
+    EXPRESSION_INTEREST_COLUMN_KEYS,
+  );
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,

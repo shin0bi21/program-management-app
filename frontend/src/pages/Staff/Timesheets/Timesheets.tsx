@@ -32,6 +32,19 @@ import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
 import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
 import './Timesheets.css';
 
+const TIMESHEET_COLUMN_KEYS = [
+  'date',
+  'firstName',
+  'lastName',
+  'program',
+  'cycle',
+  'category',
+  'session',
+  'hours',
+  'note',
+  'type',
+] as const;
+
 export default function Timesheets() {
   // Application access and page-owned workflows.
   const queryClient = useQueryClient();
@@ -56,7 +69,7 @@ export default function Timesheets() {
     staffFilters, categoryFilters, programFilters, typeFilters, view, ready: preferencesReady,
     columnWidths: listColumnWidths, hiddenColumns, setHiddenColumns, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
     filterCategories, applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
-  } = useTimesheetControls({ role, resources, programs });
+  } = useTimesheetControls({ role, resources, programs, columnKeys: TIMESHEET_COLUMN_KEYS });
 
   // The calendar owns buffered range data outside TanStack Query.
   const emptyCalendarCache = useMemo<TimesheetCalendarMutationCache>(() => ({ upsert: () => undefined, remove: () => undefined }), []);

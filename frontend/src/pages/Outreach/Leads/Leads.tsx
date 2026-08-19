@@ -25,6 +25,7 @@ import type { Lead, LeadStatus } from './types';
 import './Leads.css';
 
 const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
+const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
 
 export default function Leads() {
   // Services and permissions.
@@ -34,7 +35,7 @@ export default function Leads() {
 
   // Controls and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms();
-  const controls = useLeadControls(programs, programsLoading, programsError);
+  const controls = useLeadControls(programs, programsLoading, programsError, LEAD_COLUMN_KEYS);
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,

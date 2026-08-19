@@ -24,6 +24,16 @@ import { useYouthControls } from './hooks/useYouthControls';
 import { useYouth, type YouthProfile } from './hooks/useYouth';
 import './Youth.css';
 
+const YOUTH_COLUMN_KEYS = [
+  'firstName',
+  'lastName',
+  'age',
+  'school',
+  'grade',
+  'program',
+  'status',
+] as const;
+
 export default function Youth() {
   // Application services and permission capabilities.
   const queryClient = useQueryClient();
@@ -39,7 +49,13 @@ export default function Youth() {
 
   // Shared options and persisted page controls.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: role === 'staff' });
-  const controls = useYouthControls({ role, programs, programsLoading, programsError });
+  const controls = useYouthControls({
+    role,
+    programs,
+    programsLoading,
+    programsError,
+    columnKeys: YOUTH_COLUMN_KEYS,
+  });
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferencesError, filterCategories,

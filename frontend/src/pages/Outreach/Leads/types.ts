@@ -53,3 +53,11 @@ export interface LeadFilters {
 }
 
 export type LeadSortKey = 'name' | 'school' | 'program' | 'status' | 'createdAt';
+
+export interface LeadPreference {
+  statuses: LeadStatus[];
+  programIds: string[];
+  sorting?: { key: LeadSortKey; direction: 'asc' | 'desc' };
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}

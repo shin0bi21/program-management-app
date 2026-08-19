@@ -29,6 +29,8 @@ import { useCohortControls } from './hooks/useCohortControls';
 import useCohortTable from './hooks/useCohortTable';
 import './Cohorts.css';
 
+const COHORT_COLUMN_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
+
 export default function Cohorts() {
   // Application services and permission capabilities.
   const queryClient = useQueryClient();
@@ -38,7 +40,13 @@ export default function Cohorts() {
 
   // Shared options, persisted controls, and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const controls = useCohortControls(role, programs, programsLoading, programsError);
+  const controls = useCohortControls(
+    role,
+    programs,
+    programsLoading,
+    COHORT_COLUMN_KEYS,
+    programsError,
+  );
   const {
     search, setSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,

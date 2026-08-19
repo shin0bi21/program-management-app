@@ -1,16 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../../common/features/preferences/api/preferences.api';
 import type { Program } from '../../../../common/features/programs/types';
 import type { ProgramCohort, SessionType } from '../../../../common/types/cohort';
+import type { SessionPreference } from '../types';
 import { useSessionControls } from './useSessionControls';
 
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['session-filters'] | null;
+  preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -27,6 +28,7 @@ const cohorts: ProgramCohort[] = [{
   attendanceAttendedCount: 0, attendanceRecordedCount: 0,
 }];
 const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
+const columnKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'];
 
 describe('useSessionControls', () => {
   beforeEach(() => {
@@ -42,7 +44,8 @@ describe('useSessionControls', () => {
       sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     };
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged: vi.fn(),
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, onFiltersChanged: vi.fn(), columnKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
@@ -53,7 +56,8 @@ describe('useSessionControls', () => {
 
   it('defaults staff with one assigned program to its active cohort', async () => {
     const { result } = renderHook(() => useSessionControls({
-      role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged: vi.fn(),
+      role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, onFiltersChanged: vi.fn(), columnKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.programIds).toEqual(['program-1']);
@@ -61,20 +65,38 @@ describe('useSessionControls', () => {
   });
 
   it('persists filter and view changes and clears the selected session context', async () => {
+    const persisted: SessionPreference = {
+      view: 'calendar',
+      programIds: [],
+      cohortId: null,
+      sessionTypeIds: [],
+      statuses: [],
+      sorting: { key: 'date', direction: 'desc' },
+      columnWidths: {},
+      hiddenColumns: [],
+    };
+    preferenceHook.save.mockImplementation((update: (current: SessionPreference) => SessionPreference) => {
+      Object.assign(persisted, update(persisted));
+    });
     const onFiltersChanged = vi.fn();
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false, sessionTypes, onFiltersChanged,
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, onFiltersChanged, columnKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     act(() => result.current.applyFilter('status', ['completed']));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['completed'] }));
+    expect(persisted.statuses).toEqual(['completed']);
     expect(onFiltersChanged).toHaveBeenCalledTimes(1);
     act(() => result.current.setView('list'));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list', statuses: ['completed'] }));
+    expect(persisted).toEqual(expect.objectContaining({ view: 'list', statuses: ['completed'] }));
 
-    act(() => result.current.setHiddenColumns(['status']));
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({
-      view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'], hiddenColumns: ['status'],
+    act(() => {
+      result.current.setHiddenColumns(['status']);
+      result.current.setColumnWidths({ theme: 240 });
+    });
+    expect(persisted).toEqual(expect.objectContaining({
+      view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'],
+      hiddenColumns: ['status'], columnWidths: { theme: 240 },
     }));
   });
 });
