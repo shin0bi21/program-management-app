@@ -4,12 +4,22 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import type { Program } from '../../../../common/features/programs/types';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import type { ListSort } from '../../../../common/types/pagination';
-import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from '../types';
+import type {
+  ExpressionInterestPreference,
+  ExpressionOfInterest,
+  ExpressionOfInterestFilters,
+  ExpressionOfInterestSortKey,
+} from '../types';
 
 type SubmissionStatus = ExpressionOfInterest['status'];
 const statuses: SubmissionStatus[] = ['new', 'reviewed', 'contacted', 'converted', 'signed_up', 'lost', 'spam'];
 
-export function useExpressionOfInterestControls(programs: Program[], programsLoading: boolean, programsError: string | null) {
+export function useExpressionOfInterestControls(
+  programs: Program[],
+  programsLoading: boolean,
+  programsError: string | null,
+  columnKeys: readonly string[],
+) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -23,7 +33,13 @@ export function useExpressionOfInterestControls(programs: Program[], programsLoa
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference state.
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('expression-interest-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<ExpressionInterestPreference>('expression-interest-filters', columnKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -35,15 +51,27 @@ export function useExpressionOfInterestControls(programs: Program[], programsLoa
   useEffect(() => {
     if (ready || preferenceLoading || programsLoading) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(preference?.statuses ?? []);
-    setProgramFilters(programsError
+    const restoredProgramIds = programsError
       ? preference?.programIds ?? []
-      : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
-    setSortingState(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
+      : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? [];
+    const restoredSorting = preference?.sorting ?? { key: 'createdAt', direction: 'desc' };
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: ExpressionInterestPreference = {
+      statuses: preference?.statuses ?? [],
+      programIds: restoredProgramIds,
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setStatusFilters(restored.statuses);
+    setProgramFilters(restored.programIds);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<ExpressionOfInterestFilters | null>(() => ready
@@ -62,13 +90,13 @@ export function useExpressionOfInterestControls(programs: Program[], programsLoa
     sorting?: ListSort<ExpressionOfInterestSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    statuses: next.statuses ?? statusFilters,
-    programIds: next.programIds ?? programFilters,
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+  }) => save(current => ({
+    statuses: next.statuses ?? current?.statuses ?? statusFilters,
+    programIds: next.programIds ?? current?.programIds ?? programFilters,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
 
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {

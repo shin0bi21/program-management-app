@@ -8,6 +8,7 @@ import type { ProgramCycle } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getErrorMessage } from '../../../../http/clientErrors';
 import type { TimesheetEntryType, TimesheetSortKey } from '../timesheetViewData';
+import type { TimesheetPreference } from '../types';
 
 export type TimesheetView = 'calendar' | 'list';
 
@@ -15,9 +16,15 @@ interface UseTimesheetControlsOptions {
   role: string | null;
   resources: readonly StaffResource[];
   programs: readonly TimeEntryProgram[];
+  columnKeys: readonly string[];
 }
 
-export function useTimesheetControls({ role, resources, programs }: UseTimesheetControlsOptions) {
+export function useTimesheetControls({
+  role,
+  resources,
+  programs,
+  columnKeys,
+}: UseTimesheetControlsOptions) {
   const [staffFilters, setStaffFilters] = useState<string[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<TimeEntryCategory[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
@@ -31,7 +38,13 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
   const [cyclesReady, setCyclesReady] = useState(false);
   const [cyclesError, setCyclesError] = useState<string | null>(null);
   const [selectedCycleId, setSelectedCycleId] = useState('');
-  const { preference, loading, error: preferenceError, save } = useUserPreference('timesheet-filters');
+  const {
+    preference,
+    loading,
+    error: preferenceError,
+    setBaseline,
+    save,
+  } = useUserPreference<TimesheetPreference>('timesheet-filters', columnKeys);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -49,20 +62,36 @@ export function useTimesheetControls({ role, resources, programs }: UseTimesheet
 
   useEffect(() => {
     if (ready || loading || !cyclesReady || role === null) return;
-    setViewState(preference?.view ?? 'calendar');
-    setStaffFilters(role === 'admin' ? preference?.staffIds ?? [] : []);
-    setCategoryFilters(preference?.categories ?? []);
-    setProgramFilters(preference?.programIds ?? []);
-    setTypeFilters(preference?.types ?? []);
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
-    setSortingState(preference?.sorting ?? { key: 'date', direction: 'desc' });
     const savedCycleId = preference?.cycleId ?? '';
-    setSelectedCycleId(preference
-      ? cycles.some(cycle => cycle.id === savedCycleId) ? savedCycleId : ''
-      : cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? '');
+    const restoredCycleId = preference
+      ? (cyclesError || cycles.some(cycle => cycle.id === savedCycleId) ? savedCycleId : '')
+      : cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? '';
+    const restoredSorting = preference?.sorting ?? { key: 'date', direction: 'desc' };
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: TimesheetPreference = {
+      view: preference?.view ?? 'calendar',
+      staffIds: role === 'admin' ? preference?.staffIds ?? [] : [],
+      categories: preference?.categories ?? [],
+      programIds: preference?.programIds ?? [],
+      types: preference?.types ?? [],
+      cycleId: restoredCycleId || null,
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setViewState(restored.view);
+    setStaffFilters(restored.staffIds);
+    setCategoryFilters(restored.categories);
+    setProgramFilters(restored.programIds);
+    setTypeFilters(restored.types ?? []);
+    setSelectedCycleId(restoredCycleId);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setSortingState(restoredSorting);
+    setBaseline(restored);
     setReady(true);
-  }, [cycles, cyclesReady, loading, preference, ready, role]);
+  }, [cycles, cyclesError, cyclesReady, loading, preference, ready, role, setBaseline]);
 
   const persist = useCallback((next: {
     view?: TimesheetView;

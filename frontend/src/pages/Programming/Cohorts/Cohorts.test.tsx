@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import Cohorts from './Cohorts';
+import type { CohortPreference } from './types';
 
 function LocationProbe() {
   const location = useLocation();
@@ -33,9 +34,10 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   }],
 }));
 const preferenceHook = vi.hoisted(() => ({
-  preference: null as { programId: string | null; status: 'active' | 'upcoming' | 'completed' | null } | null,
+  preference: null as CohortPreference | null,
   loading: false,
   error: null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -70,7 +72,17 @@ describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     preferenceHook.preference = null;
+    preferenceHook.setBaseline.mockImplementation((value: CohortPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: CohortPreference | ((current: CohortPreference | null) => CohortPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
     programState.programs = [{
@@ -135,7 +147,7 @@ describe('Cohorts', () => {
     await user.click(screen.getByRole('button', { name: 'Columns' }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       programId: null,
       status: null,
       sorting: { key: 'start', direction: 'desc' },

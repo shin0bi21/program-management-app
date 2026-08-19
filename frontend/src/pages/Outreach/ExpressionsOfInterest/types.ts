@@ -22,3 +22,11 @@ export interface ExpressionOfInterestFilters {
   programIds?: string[];
 }
 export type ExpressionOfInterestSortKey = 'name' | 'age' | 'school' | 'program' | 'submittedByRole' | 'createdAt' | 'status';
+
+export interface ExpressionInterestPreference {
+  statuses: ExpressionOfInterest['status'][];
+  programIds: string[];
+  sorting?: { key: ExpressionOfInterestSortKey; direction: 'asc' | 'desc' };
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}

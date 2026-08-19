@@ -1,15 +1,16 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../../common/features/preferences/api/preferences.api';
+import type { TimesheetPreference } from '../types';
 import { useTimesheetControls } from './useTimesheetControls';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['timesheet-filters'] | null;
+  preference: TimesheetPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/programming/api/programming.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
@@ -22,6 +23,7 @@ const resources = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
 ];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
+const columnKeys = ['date', 'firstName', 'lastName', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'];
 
 describe('useTimesheetControls', () => {
   beforeEach(() => {
@@ -29,7 +31,7 @@ describe('useTimesheetControls', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.save.mockImplementation((update: PreferenceValues['timesheet-filters'] | ((current: PreferenceValues['timesheet-filters'] | null) => PreferenceValues['timesheet-filters'])) => {
+    preferenceHook.save.mockImplementation((update: TimesheetPreference | ((current: TimesheetPreference | null) => TimesheetPreference)) => {
       preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
     });
     programmingApi.getProgramCycles.mockResolvedValue([
@@ -43,7 +45,7 @@ describe('useTimesheetControls', () => {
       view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['task'],
       cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 }, sorting: { key: 'hours', direction: 'asc' },
     };
-    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs }));
+    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs, columnKeys }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
@@ -58,7 +60,7 @@ describe('useTimesheetControls', () => {
       view: 'list', staffIds: ['staff-1'], programIds: [], categories: [], cycleId: 'cycle-1',
     };
     const { result, rerender } = renderHook(
-      ({ role }: { role: string | null }) => useTimesheetControls({ role, resources, programs }),
+      ({ role }: { role: string | null }) => useTimesheetControls({ role, resources, programs, columnKeys }),
       { initialProps: { role: null as string | null } },
     );
 
@@ -75,7 +77,7 @@ describe('useTimesheetControls', () => {
     preferenceHook.preference = {
       view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['session'], cycleId: 'cycle-2',
     };
-    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs }));
+    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs, columnKeys }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => result.current.setView('calendar'));
@@ -99,7 +101,7 @@ describe('useTimesheetControls', () => {
       view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], types: ['session'],
       cycleId: 'cycle-2', hiddenColumns: [], columnWidths: { note: 240 }, sorting: { key: 'hours', direction: 'asc' },
     };
-    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs }));
+    const { result } = renderHook(() => useTimesheetControls({ role: 'admin', resources, programs, columnKeys }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
@@ -115,7 +117,7 @@ describe('useTimesheetControls', () => {
 
   it('removes admin-only staff controls and persistence for staff users', async () => {
     preferenceHook.preference = { view: 'calendar', staffIds: ['staff-1'], programIds: [], categories: [], cycleId: 'cycle-1' };
-    const { result } = renderHook(() => useTimesheetControls({ role: 'staff', resources, programs }));
+    const { result } = renderHook(() => useTimesheetControls({ role: 'staff', resources, programs, columnKeys }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.staffFilters).toEqual([]);

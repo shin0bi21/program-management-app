@@ -9,6 +9,7 @@ import {
   type TaskStatus,
 } from '../../../../common/features/tasks/types';
 import type { TaskSortKey } from '../taskViewTypes';
+import type { TaskPreference } from '../types';
 
 export type TasksView = 'calendar' | 'list';
 
@@ -19,7 +20,11 @@ const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-export default function useTaskControls(options: TaskOptions | undefined, optionsLoading: boolean) {
+export default function useTaskControls(
+  options: TaskOptions | undefined,
+  optionsLoading: boolean,
+  columnKeys: readonly string[],
+) {
   const [view, setView] = useState<TasksView>('calendar');
   const [search, setSearch] = useState('');
   const [staffIds, setStaffIds] = useState<string[]>([]);
@@ -30,40 +35,62 @@ export default function useTaskControls(options: TaskOptions | undefined, option
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
-  const { preference, loading, error, save } = useUserPreference('task-filters');
+  const {
+    preference,
+    loading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<TaskPreference>('task-filters', columnKeys);
 
   useEffect(() => {
     if (ready || loading || optionsLoading) return;
-    setStaffIds(preference?.staffIds ?? []);
-    setProgramIds(preference?.programIds ?? []);
-    setView(preference?.view ?? 'calendar');
-    setCategories(preference?.categories ?? []);
-    setStatusFilters(preference?.statuses ?? []);
-    setSorting(preference?.sorting ?? { key: 'startDate', direction: 'asc' });
-    setColumnWidths(preference?.columnWidths ?? {});
-    setHiddenColumns(preference?.hiddenColumns ?? []);
+    const restoredView = preference?.view ?? 'calendar';
+    const restoredStaffIds = preference?.staffIds ?? [];
+    const restoredSorting = preference?.sorting ?? { key: 'startDate', direction: 'asc' };
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: TaskPreference = {
+      view: restoredView,
+      staffIds: restoredStaffIds,
+      programIds: preference?.programIds ?? [],
+      categories: preference?.categories ?? [],
+      statuses: preference?.statuses ?? [],
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setStaffIds(restoredStaffIds);
+    setProgramIds(restored.programIds);
+    setView(restoredView);
+    setCategories(restored.categories);
+    setStatusFilters(restored.statuses);
+    setSorting(restoredSorting);
+    setColumnWidths(restoredColumnWidths);
+    setHiddenColumns(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [loading, optionsLoading, preference, ready]);
+  }, [loading, optionsLoading, preference, ready, setBaseline]);
 
-  const persist = useCallback((
-    nextStaffIds: string[],
-    nextPrograms: string[],
-    nextCategories: TaskCategory[],
-    nextStatuses: TaskStatus[],
-    widths = columnWidths,
-    hidden = hiddenColumns,
-  ) => {
-    void save({
-      view,
-      staffIds: nextStaffIds,
-      programIds: nextPrograms,
-      categories: nextCategories,
-      statuses: nextStatuses,
-      sorting,
-      columnWidths: widths,
-      hiddenColumns: hidden,
-    });
-  }, [columnWidths, hiddenColumns, save, sorting, view]);
+  const persist = useCallback((next: {
+    view?: TasksView;
+    staffIds?: string[];
+    programIds?: string[];
+    categories?: TaskCategory[];
+    statuses?: TaskStatus[];
+    sorting?: ListSort<TaskSortKey>;
+    columnWidths?: Record<string, number>;
+    hiddenColumns?: string[];
+  }) => save(current => ({
+    view: next.view ?? current?.view ?? view,
+    staffIds: next.staffIds ?? current?.staffIds ?? staffIds,
+    programIds: next.programIds ?? current?.programIds ?? programIds,
+    categories: next.categories ?? current?.categories ?? categories,
+    statuses: next.statuses ?? current?.statuses ?? statusFilters,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [categories, columnWidths, hiddenColumns, programIds, save, sorting, staffIds, statusFilters, view]);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'staff', label: 'Staff', options: (options?.resources ?? []).map(item => ({ value: item.id, label: item.name })) },
@@ -81,7 +108,12 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     setProgramIds(nextPrograms);
     setCategories(nextCategories);
     setStatusFilters(nextStatuses);
-    persist(nextStaffIds, nextPrograms, nextCategories, nextStatuses);
+    persist({
+      staffIds: nextStaffIds,
+      programIds: nextPrograms,
+      categories: nextCategories,
+      statuses: nextStatuses,
+    });
   }, [categories, persist, programIds, staffIds, statusFilters]);
 
   const clearFilters = useCallback(() => {
@@ -89,37 +121,28 @@ export default function useTaskControls(options: TaskOptions | undefined, option
     setProgramIds([]);
     setCategories([]);
     setStatusFilters([]);
-    persist([], [], [], []);
+    persist({ staffIds: [], programIds: [], categories: [], statuses: [] });
   }, [persist]);
 
   const changeView = useCallback((nextView: TasksView) => {
     setView(nextView);
-    void save({
-      view: nextView,
-      staffIds,
-      programIds,
-      categories,
-      statuses: statusFilters,
-      sorting,
-      columnWidths,
-      hiddenColumns,
-    });
-  }, [categories, columnWidths, hiddenColumns, programIds, save, sorting, staffIds, statusFilters]);
+    void persist({ view: nextView });
+  }, [persist]);
 
   const changeSorting = useCallback((next: ListSort<TaskSortKey>) => {
     setSorting(next);
-    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting: next, columnWidths, hiddenColumns });
-  }, [categories, columnWidths, hiddenColumns, programIds, save, staffIds, statusFilters, view]);
+    void persist({ sorting: next });
+  }, [persist]);
 
   const changeColumnWidths = useCallback((next: Record<string, number>) => {
     setColumnWidths(next);
-    persist(staffIds, programIds, categories, statusFilters, next);
-  }, [categories, persist, programIds, staffIds, statusFilters]);
+    persist({ columnWidths: next });
+  }, [persist]);
 
   const changeHiddenColumns = useCallback((hiddenColumns: string[]) => {
     setHiddenColumns(hiddenColumns);
-    void save({ view, staffIds, programIds, categories, statuses: statusFilters, sorting, columnWidths, hiddenColumns });
-  }, [categories, columnWidths, programIds, save, sorting, staffIds, statusFilters, view]);
+    void persist({ hiddenColumns });
+  }, [persist]);
 
   return {
     view,

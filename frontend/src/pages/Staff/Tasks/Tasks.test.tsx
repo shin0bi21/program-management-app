@@ -11,6 +11,7 @@ import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import Tasks from './Tasks';
 import { TASK_LIST_QUERY_KEY } from './taskQueryKeys';
 import { TIME_ENTRY_QUERY_KEY } from '../../../common/features/timeEntries/queryKeys';
+import type { TaskPreference } from './types';
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
@@ -19,13 +20,35 @@ const calendarTestState = vi.hoisted(() => ({
   savePreference: vi.fn(),
 }));
 
+function getLastSavedPreference(): TaskPreference {
+  const update = calendarTestState.savePreference.mock.lastCall?.[0] as (
+    current: TaskPreference,
+  ) => TaskPreference;
+  return update({
+    view: calendarTestState.view,
+    staffIds: [],
+    programIds: [],
+    categories: [],
+    statuses: [],
+    sorting: { key: 'startDate', direction: 'asc' },
+    columnWidths: {},
+    hiddenColumns: [],
+  });
+}
+
 vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
   getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), setTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ setTimeEntry: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => ({ preference: { view: calendarTestState.view }, loading: false, error: null, save: calendarTestState.savePreference }),
+  default: () => ({
+    preference: { view: calendarTestState.view },
+    loading: false,
+    error: null,
+    setBaseline: vi.fn(),
+    save: calendarTestState.savePreference,
+  }),
 }));
 vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   default: (props: TaskCalendarProps) => {
@@ -120,7 +143,7 @@ describe('Tasks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Program' }));
 
-    expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({
+    expect(getLastSavedPreference()).toEqual(expect.objectContaining({
       view: 'list', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
     }));
   });
@@ -149,7 +172,7 @@ describe('Tasks', () => {
       expect.anything(),
       expect.objectContaining({ limit: 25 }),
     ));
-    expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({ staffIds: ['staff-2'] }));
+    expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] }));
 
     fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
@@ -226,7 +249,7 @@ describe('Tasks', () => {
     expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Smith' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
-    await waitFor(() => expect(calendarTestState.savePreference).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({
       sorting: { key: 'firstName', direction: 'asc' },
     })));
     const dataRows = screen.getAllByRole('row').slice(1);

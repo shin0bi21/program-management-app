@@ -6,13 +6,13 @@ import useUserPreference from '../../../../common/features/preferences/hooks/use
 import type { CohortSortKey } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-
-type CohortStatus = 'active' | 'upcoming' | 'completed';
+import type { CohortPreference, CohortStatus } from '../types';
 
 export function useCohortControls(
   role: string | null,
   programs: Program[],
   programsLoading: boolean,
+  columnKeys: readonly string[],
   programsError?: string | null,
 ) {
   // Search and filters.
@@ -26,7 +26,13 @@ export function useCohortControls(
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('cohort-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<CohortPreference>('cohort-filters', columnKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -39,17 +45,29 @@ export function useCohortControls(
     if (ready || preferenceLoading || programsLoading || role === null) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
     const defaultProgram = getSingleAssignedProgram(role, programs)?.id ?? '';
-    setProgramId(
-      preference?.programId && (programsError || availableProgramIds.has(preference.programId))
-        ? preference.programId
-        : preference ? '' : defaultProgram,
-    );
-    setStatus(preference?.status ?? (role === 'staff' ? 'active' : ''));
-    setSortingState(preference?.sorting ?? { key: 'start', direction: 'desc' });
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
+    const restoredProgramId = preference?.programId
+      && (programsError || availableProgramIds.has(preference.programId))
+      ? preference.programId
+      : preference ? '' : defaultProgram;
+    const restoredStatus = preference?.status ?? (role === 'staff' ? 'active' : '');
+    const restoredSorting = preference?.sorting ?? { key: 'start', direction: 'desc' };
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: CohortPreference = {
+      programId: restoredProgramId || null,
+      status: restoredStatus || null,
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setProgramId(restoredProgramId);
+    setStatus(restoredStatus);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline]);
 
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {
@@ -80,13 +98,15 @@ export function useCohortControls(
     sorting?: ListSort<CohortSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    programId: (next.programId ?? programId) || null,
-    status: next.status === undefined ? (status || null) : (next.status || null),
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [columnWidths, hiddenColumns, programId, save, sorting, status]);
+  }) => save(current => ({
+    programId: (next.programId ?? current?.programId ?? programId) || null,
+    status: next.status === undefined
+      ? ((current?.status ?? status) || null)
+      : (next.status || null),
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [columnWidths, hiddenColumns, programId, save, sorting, status]);
 
   const applyFilter = useCallback((category: string, selected: string[]) => {
     if (category === 'program') {

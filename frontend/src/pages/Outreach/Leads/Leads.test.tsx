@@ -5,6 +5,7 @@ import Leads from './Leads';
 import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
+import type { LeadPreference } from './types';
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
@@ -17,7 +18,13 @@ const updateLead = vi.fn();
 const updateLeadStatus = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
-const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as LeadPreference | null,
+  loading: false,
+  error: null,
+  setBaseline: vi.fn(),
+  save: vi.fn(),
+}));
 
 vi.mock('./api/leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
@@ -46,7 +53,17 @@ vi.mock('../../../common/features/programming/api/programming.api', () => ({
 describe('Leads', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.setBaseline.mockImplementation((value: LeadPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: LeadPreference | ((current: LeadPreference | null) => LeadPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     signUpLead.mockResolvedValue({
       id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
@@ -139,7 +156,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: [],
       programIds: [],
       sorting: { key: 'createdAt', direction: 'desc' },

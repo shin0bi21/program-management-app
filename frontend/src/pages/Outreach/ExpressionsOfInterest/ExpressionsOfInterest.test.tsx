@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpressionsOfInterest from './ExpressionsOfInterest';
+import type { ExpressionInterestPreference } from './types';
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
@@ -14,7 +15,13 @@ const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: {
 
 const getExpressions = vi.fn();
 const convertExpression = vi.fn();
-const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as ExpressionInterestPreference | null,
+  loading: false,
+  error: null,
+  setBaseline: vi.fn(),
+  save: vi.fn(),
+}));
 
 vi.mock('./api/expressionsOfInterest.api', () => ({
   getExpressionsOfInterest: (...args: unknown[]) => getExpressions(...args),
@@ -34,7 +41,18 @@ vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
 describe('ExpressionsOfInterest', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.setBaseline.mockImplementation((value: ExpressionInterestPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: ExpressionInterestPreference
+        | ((current: ExpressionInterestPreference | null) => ExpressionInterestPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     convertExpression.mockReset();
     getExpressions.mockReset();
     convertExpression.mockResolvedValue({ id: 'lead-1' });
@@ -81,7 +99,7 @@ describe('ExpressionsOfInterest', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: [],
       programIds: [],
       sorting: { key: 'createdAt', direction: 'desc' },
