@@ -102,6 +102,52 @@ test('rejects nonstandard route-page root files', () => {
   assert.match(violations[0], /route-page root files are limited/);
 });
 
+test('rejects an existing nonstandard root sibling when another page file changes', () => {
+  const extraFile = `${leadsPage}/queryKeys.ts`;
+  const violations = violationsFor(
+    checkRoutePageStructure,
+    `${leadsPage}/Leads.tsx`,
+    routePageDirectories,
+    [...completeLeadPage, extraFile],
+  );
+
+  assert.match(violations[0], new RegExp(`${extraFile}:1`));
+  assert.match(violations[0], /route-page root files are limited/);
+});
+
+test('rejects an existing nonstandard child directory when another page file changes', () => {
+  const extraFile = `${leadsPage}/schema/leadSchema.ts`;
+  const violations = violationsFor(
+    checkRoutePageStructure,
+    `${leadsPage}/Leads.tsx`,
+    routePageDirectories,
+    [...completeLeadPage, extraFile],
+  );
+
+  assert.match(violations[0], new RegExp(`${extraFile}:1`));
+  assert.match(violations[0], /route-page children must be owned/);
+});
+
+test('rejects an unchanged invalid API layout when another page file changes', () => {
+  const rootApis = [`${leadsPage}/leads.api.ts`, `${leadsPage}/notes.api.ts`];
+  const rootViolations = violationsFor(
+    checkRoutePageStructure,
+    `${leadsPage}/Leads.tsx`,
+    routePageDirectories,
+    [...completeLeadPage, ...rootApis],
+  );
+  assert.match(rootViolations[0], /multiple API adapters must group them under api/);
+
+  const nestedApi = `${leadsPage}/api/leads.api.ts`;
+  const nestedViolations = violationsFor(
+    checkRoutePageStructure,
+    `${leadsPage}/Leads.tsx`,
+    routePageDirectories,
+    [...completeLeadPage, nestedApi],
+  );
+  assert.match(nestedViolations[0], /one API adapter keeps it at the page root/);
+});
+
 test('keeps one API adapter at its route-page root', () => {
   const file = `${leadsPage}/leads.api.ts`;
   assert.deepEqual(
