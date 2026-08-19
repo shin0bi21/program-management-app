@@ -194,6 +194,13 @@ function ownerDirectoryContext(file, repositoryFiles, routeDirectory) {
 
 const FILE_RULES = [
   {
+    category: 'review-page-styles',
+    appliesTo: ({ hasPageStyles, routeDirectory }) => routeDirectory && !hasPageStyles,
+    message: () => (
+      'route page has no page-owned CSS; confirm its presentation is fully delegated to styled child components.'
+    ),
+  },
+  {
     category: 'review-owner-boundary',
     appliesTo: ({ metrics, routeDirectory }) => routeDirectory
       && metrics.renderedRouteSurfaces.size > 0,
@@ -228,6 +235,10 @@ export function reviewFrontendPatterns(
   }
 
   const routeDirectory = routeDirectoryFor(file, routePageDirectories);
+  const pageName = routeDirectory?.split('/').at(-1);
+  const hasPageStyles = routeDirectory
+    ? repositoryFiles.includes(`${routeDirectory}/${pageName}.css`)
+    : false;
   const directoryContext = ownerDirectoryContext(file, repositoryFiles, routeDirectory);
   const suppressions = collectSuppressions(source);
   const addAdvisory = (category, line, message) => {
@@ -236,7 +247,7 @@ export function reviewFrontendPatterns(
     }
   };
 
-  const context = { directoryContext, file, metrics, routeDirectory };
+  const context = { directoryContext, file, hasPageStyles, metrics, routeDirectory };
   for (const rule of FILE_RULES) {
     if (rule.appliesTo(context)) addAdvisory(rule.category, 1, rule.message(context));
   }
