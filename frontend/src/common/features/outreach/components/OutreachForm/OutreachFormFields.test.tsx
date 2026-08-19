@@ -1,13 +1,21 @@
+// Scope: verifies outreach field constraints and accessible controlled-select errors.
+import { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
 import OutreachFormFields from './OutreachFormFields';
 import { outreachFormDefaultValues, type OutreachFormValues } from './outreachFormSchema';
 
-function TestForm() {
-  const { control, formState: { errors }, register } = useForm<OutreachFormValues>({
+function TestForm({ showRelationshipError = false }: { showRelationshipError?: boolean }) {
+  const { control, formState: { errors }, register, setError } = useForm<OutreachFormValues>({
     defaultValues: outreachFormDefaultValues,
   });
+
+  useEffect(() => {
+    if (showRelationshipError) {
+      setError('contactRelationship', { message: 'Relationship is required' });
+    }
+  }, [setError, showRelationshipError]);
 
   return (
     <form>
@@ -27,5 +35,15 @@ describe('OutreachFormFields', () => {
 
     expect(screen.getByRole('spinbutton', { name: 'Age *' })).toHaveAttribute('min', '12');
     expect(screen.getByRole('spinbutton', { name: 'Age *' })).toHaveAttribute('max', '19');
+  });
+
+  it('associates controlled select errors with the visible trigger', async () => {
+    render(<TestForm showRelationshipError />);
+
+    const error = await screen.findByRole('alert');
+    const relationship = screen.getByRole('button', { name: 'Relationship' });
+
+    expect(relationship).toHaveAttribute('aria-invalid', 'true');
+    expect(relationship).toHaveAttribute('aria-describedby', error.id);
   });
 });

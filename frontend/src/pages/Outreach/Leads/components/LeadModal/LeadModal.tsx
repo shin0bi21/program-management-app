@@ -57,19 +57,19 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
           control={control}
           errors={errors}
           programField={
-            <FormField id="lead-programId" label="Program of Interest" error={errors.programId?.message}>
-              <Controller
-                name="programId"
-                control={control}
-                render={({ field }) => (
+            <Controller
+              name="programId"
+              control={control}
+              render={({ field }) => (
+                <FormField id="lead-programId" label="Program of Interest" error={errors.programId?.message}>
                   <ProgramSelect
                     id="lead-programId"
                     value={field.value ?? ''}
                     onChange={field.onChange}
                   />
-                )}
-              />
-            </FormField>
+                </FormField>
+              )}
+            />
           }
         />
       </form>

@@ -45,15 +45,15 @@ export default function SignupSection() {
                 <div className="form-error">{error}</div>
               )}
               <div className="outreach-form-section">
-                <FormField
-                  id="cohort-submittedByRole"
-                  label="Who is filling out this form? *"
-                  error={errors.submittedByRole?.message}
-                >
-                  <Controller
-                    name="submittedByRole"
-                    control={control}
-                    render={({ field }) => (
+                <Controller
+                  name="submittedByRole"
+                  control={control}
+                  render={({ field }) => (
+                    <FormField
+                      id="cohort-submittedByRole"
+                      label="Who is filling out this form? *"
+                      error={errors.submittedByRole?.message}
+                    >
                       <FloatingSelect
                         id="cohort-submittedByRole"
                         ariaLabel="Who is filling out this form?"
@@ -61,9 +61,9 @@ export default function SignupSection() {
                         options={submitterOptions}
                         onChange={field.onChange}
                       />
-                    )}
-                  />
-                </FormField>
+                    </FormField>
+                  )}
+                />
               </div>
               <OutreachFormFields idPrefix="cohort" register={register} control={control} errors={errors} />
               <div className="cohort-inline-form-actions">

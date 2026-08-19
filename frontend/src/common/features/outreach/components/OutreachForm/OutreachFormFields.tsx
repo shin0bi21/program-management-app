@@ -47,11 +47,11 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
       <h3 id={`${idPrefix}-contact-title`} className="outreach-form-section-title">Primary Contact</h3>
       <div className="form-row">
         <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message as string | undefined}><input id={id('contactPhoneNumber')} type="tel" {...register(field('contactPhoneNumber'))} /></FormField>
-        <FormField id={id('contactRelationship')} label="Relationship *" error={errors.contactRelationship?.message as string | undefined}>
-          <Controller
-            name={field('contactRelationship')}
-            control={control}
-            render={({ field: relationshipField }) => (
+        <Controller
+          name={field('contactRelationship')}
+          control={control}
+          render={({ field: relationshipField }) => (
+            <FormField id={id('contactRelationship')} label="Relationship *" error={errors.contactRelationship?.message as string | undefined}>
               <FloatingSelect
                 id={id('contactRelationship')}
                 ariaLabel="Relationship"
@@ -59,18 +59,18 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
                 options={contactRelationshipOptions}
                 onChange={relationshipField.onChange}
               />
-            )}
-          />
-        </FormField>
+            </FormField>
+          )}
+        />
       </div>
     </section>
 
     <div className="outreach-form-section">
-      <FormField id={id('discoverySource')} label="How Did You Hear About Us? *" error={errors.discoverySource?.message as string | undefined}>
-        <Controller
-          name={field('discoverySource')}
-          control={control}
-          render={({ field: discoveryField }) => (
+      <Controller
+        name={field('discoverySource')}
+        control={control}
+        render={({ field: discoveryField }) => (
+          <FormField id={id('discoverySource')} label="How Did You Hear About Us? *" error={errors.discoverySource?.message as string | undefined}>
             <FloatingSelect
               id={id('discoverySource')}
               ariaLabel="How Did You Hear About Us?"
@@ -78,9 +78,9 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
               options={discoverySourceOptions}
               onChange={discoveryField.onChange}
             />
-          )}
-        />
-      </FormField>
+          </FormField>
+        )}
+      />
     </div>
 
     <div className="outreach-form-section outreach-form-section--continuation">

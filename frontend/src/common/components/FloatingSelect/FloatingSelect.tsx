@@ -25,6 +25,8 @@ interface FloatingSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean | 'false' | 'true';
   disabled?: boolean;
   className?: string;
   action?: {
@@ -41,6 +43,8 @@ export default function FloatingSelect({
   onChange,
   placeholder = 'Select an option',
   ariaLabel,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
   disabled = false,
   className,
   action,
@@ -70,6 +74,8 @@ export default function FloatingSelect({
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
         disabled={disabled}
         onClick={toggle}
       >

@@ -1,3 +1,4 @@
+// Scope: verifies program selection, add-flow permissions, reconciliation, and ARIA forwarding.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -72,6 +73,22 @@ describe('ProgramSelect', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
 
     expect(onChange).toHaveBeenCalledWith('program-1');
+  });
+
+  it('forwards field error semantics to its visible trigger', () => {
+    render(
+      <ProgramSelect
+        id="program"
+        value=""
+        onChange={() => undefined}
+        aria-describedby="program-error"
+        aria-invalid
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Select a program' });
+    expect(trigger).toHaveAttribute('aria-describedby', 'program-error');
+    expect(trigger).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('opens the add flow only with write permission and reconciles the created program', () => {
