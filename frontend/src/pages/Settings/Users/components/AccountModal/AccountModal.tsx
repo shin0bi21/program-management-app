@@ -49,11 +49,11 @@ export default function AccountModal(props: AccountModalProps) {
           <FormField id="email" label="Email *" error={errors.email?.message}>
             <input id="email" type="email" {...register('email')} />
           </FormField>
-          <FormField id="role" label="Role" error={errors.role?.message}>
-            <Controller
-              name="role"
-              control={control}
-              render={({ field }) => (
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <FormField id="role" label="Role" error={errors.role?.message}>
                 <FloatingSelect
                   id="role"
                   ariaLabel="Role"
@@ -65,9 +65,9 @@ export default function AccountModal(props: AccountModalProps) {
                   onChange={field.onChange}
                   disabled={submitStatus === 'submitting' || submitStatus === 'success'}
                 />
-              )}
-            />
-          </FormField>
+              </FormField>
+            )}
+          />
         </div>
         <fieldset className="account-programs">
             <legend>Programs</legend>

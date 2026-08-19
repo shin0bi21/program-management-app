@@ -10,9 +10,17 @@ interface ProgramSelectProps {
   id: string;
   value: string;
   onChange: (value: string) => void;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean | 'false' | 'true';
 }
 
-export default function ProgramSelect({ id, value, onChange }: ProgramSelectProps) {
+export default function ProgramSelect({
+  id,
+  value,
+  onChange,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
+}: ProgramSelectProps) {
   const { permissions } = useAuth();
   const { programs, upsertProgram, loading, error: programsError } = usePrograms();
   const [addOpen, setAddOpen] = useState(false);
@@ -27,6 +35,8 @@ export default function ProgramSelect({ id, value, onChange }: ProgramSelectProp
       value={value}
       options={programs.map(program => ({ value: program.id, label: program.name }))}
       onChange={onChange}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={ariaInvalid}
       placeholder={loading ? 'Loading programs...' : 'Select a program'}
       disabled={loading}
       action={permissions.includes('write:programs') ? { label: '+ Add program', onSelect: () => setAddOpen(true) } : undefined}

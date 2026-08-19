@@ -1,4 +1,9 @@
-import { useState, useEffect, ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import Button from '../../Button/Button';
 import { getErrorMessage } from '../../../../http/clientErrors';
 
@@ -25,23 +30,26 @@ export function useConfirmModal({
   action: ConfirmAction | null;
   onClose: () => void;
 }): UseConfirmModalResult {
-  const isOpen = !!action;
+  const isOpen = action !== null;
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState('');
   const [confirmSuccess, setConfirmSuccess] = useState(false);
+  const confirmingRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setConfirming(false);
-      setConfirmError('');
-      setConfirmSuccess(false);
-    }
+    confirmingRef.current = false;
+    setConfirming(false);
+    setConfirmError('');
+    setConfirmSuccess(false);
   }, [isOpen]);
 
   const handleConfirm = async () => {
-    if (!action) return;
+    if (!action || confirmingRef.current) return;
+
+    confirmingRef.current = true;
     setConfirming(true);
     setConfirmError('');
+
     try {
       await action.onConfirm();
       if (action.successMessage) {
@@ -52,6 +60,7 @@ export function useConfirmModal({
     } catch (err) {
       setConfirmError(getErrorMessage(err, 'Action failed'));
     } finally {
+      confirmingRef.current = false;
       setConfirming(false);
     }
   };
