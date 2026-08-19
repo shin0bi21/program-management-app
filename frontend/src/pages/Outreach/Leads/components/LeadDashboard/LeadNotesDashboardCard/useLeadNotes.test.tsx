@@ -1,3 +1,4 @@
+// Owns selected-lead note loading, editor reset, and cache reconciliation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -60,6 +61,10 @@ describe('useLeadNotes', () => {
     const saved = { ...note, id: 'note-2', details: 'Meeting booked.' };
     act(() => result.current.reconcileSavedNote(saved));
     await waitFor(() => expect(result.current.notes).toEqual([saved, note]));
+
+    const updated = { ...note, details: 'Follow-up scheduled.' };
+    act(() => result.current.reconcileSavedNote(updated));
+    await waitFor(() => expect(result.current.notes).toEqual([saved, updated]));
 
     act(() => result.current.requestDelete(note));
     await act(() => result.current.confirmAction!.onConfirm());

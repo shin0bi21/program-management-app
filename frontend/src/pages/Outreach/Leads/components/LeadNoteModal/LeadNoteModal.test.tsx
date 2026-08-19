@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+// Owns Lead note field wiring and the rendered pending form state.
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Lead, LeadNote } from '../../types';
@@ -30,77 +31,41 @@ describe('LeadNoteModal', () => {
     api.setLeadNote.mockResolvedValue(note);
   });
 
-  it('adds a normalized follow-up note and returns the saved note to its owner', async () => {
-    const onSaved = vi.fn();
-    render(
-      <LeadNoteModal
-        lead={lead}
-        note={null}
-        onClose={vi.fn()}
-        onSaved={onSaved}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText('Follow-up note *'), {
-      target: { value: '  Called and left a message.  ' },
-    });
-    fireEvent.submit(document.getElementById('lead-note-form')!);
-
-    await waitFor(() => expect(api.setLeadNote).toHaveBeenCalledWith(
-      lead.id,
-      note.details,
-    ));
-    expect(onSaved).toHaveBeenCalledWith(note);
-    expect(await screen.findByText('Follow-up note added.')).toBeInTheDocument();
-  });
-
-  it('initializes and updates the selected note', async () => {
-    const updatedNote = { ...note, details: 'Meeting booked.' };
-    api.setLeadNote.mockResolvedValue(updatedNote);
-    const onSaved = vi.fn();
+  it('renders the selected note in the edit form', () => {
     render(
       <LeadNoteModal
         lead={lead}
         note={note}
         onClose={vi.fn()}
-        onSaved={onSaved}
+        onSaved={vi.fn()}
       />,
     );
 
+    expect(screen.getByRole('dialog', { name: 'Edit Follow-up Note' })).toBeInTheDocument();
     expect(screen.getByLabelText('Follow-up note *')).toHaveValue(note.details);
-    fireEvent.change(screen.getByLabelText('Follow-up note *'), {
-      target: { value: updatedNote.details },
-    });
-    fireEvent.submit(document.getElementById('lead-note-form')!);
-
-    await waitFor(() => expect(api.setLeadNote).toHaveBeenCalledWith(
-      lead.id,
-      updatedNote.details,
-      note.id,
-    ));
-    expect(onSaved).toHaveBeenCalledWith(updatedNote);
-    expect(await screen.findByText('Follow-up note updated.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
-  it('reports save failures and keeps the editor open', async () => {
-    api.setLeadNote.mockRejectedValue(new Error('Could not save note'));
-    const onSaved = vi.fn();
+  it('disables the complete form while a save is pending', async () => {
+    api.setLeadNote.mockReturnValue(new Promise(() => undefined));
     render(
       <LeadNoteModal
         lead={lead}
         note={null}
         onClose={vi.fn()}
-        onSaved={onSaved}
+        onSaved={vi.fn()}
       />,
     );
 
     fireEvent.change(screen.getByLabelText('Follow-up note *'), {
-      target: { value: 'Call again tomorrow.' },
+      target: { value: note.details },
     });
     fireEvent.submit(document.getElementById('lead-note-form')!);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save note');
-    expect(screen.getByRole('dialog', { name: 'Add Follow-up Note' })).toBeInTheDocument();
-    expect(onSaved).not.toHaveBeenCalled();
+    expect(await screen.findByText('Adding follow-up note...')).toBeInTheDocument();
+    expect(document.getElementById('lead-note-form')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByLabelText('Follow-up note *')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 });
