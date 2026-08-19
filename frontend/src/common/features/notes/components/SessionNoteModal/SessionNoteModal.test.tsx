@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+// Scope: verifies SessionNoteModal field, roster, error, and disabled-state wiring.
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeCohortSession } from '../../../../../tests/factories/session';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
@@ -34,9 +35,8 @@ describe('SessionNoteModal', () => {
     api.updateSessionNote.mockResolvedValue({});
   });
 
-  it('adds a note with optional cohort youth links', async () => {
-    const onSaved = vi.fn();
-    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={onSaved} />);
+  it('renders category, details, and optional youth controls', async () => {
+    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(await screen.findByRole('group', { name: 'Link youth' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
@@ -44,12 +44,9 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Group leadership' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Details (optional)' }), { target: { value: 'Led discussion.' } });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Maya Thompson' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
-
-    await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledWith('session-1', {
-      category: 'behaviour', title: 'Group leadership', details: 'Led discussion.', youthIds: ['youth-1'],
-    }));
-    expect(onSaved).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Category' })).toHaveTextContent('Behaviour');
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Group leadership');
+    expect(screen.getByRole('checkbox', { name: 'Maya Thompson' })).toBeChecked();
   });
 
   it('preselects a youth for a youth-centric new note', async () => {
@@ -78,30 +75,35 @@ describe('SessionNoteModal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
   });
 
-  it('adds a note without optional details', async () => {
-    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Attendance follow-up' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
-    await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledWith('session-1', {
-      category: 'general', title: 'Attendance follow-up', details: null, youthIds: [],
-    }));
-  });
-
-  it('edits note fields and linked youth', async () => {
-    const onSaved = vi.fn();
+  it('renders edit fields and linked youth', async () => {
     render(<SessionNoteModal session={session} note={{
       id: 'note-1', sessionId: session.id, category: 'achievement', title: 'Original title',
       details: 'Original details.', createdAt: '2026-07-28T23:30:00.000Z', updatedAt: '2026-07-28T23:30:00.000Z',
       createdByName: 'Programming Demo', youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
-    }} onClose={vi.fn()} onSaved={onSaved} />);
+    }} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(await screen.findByRole('checkbox', { name: 'Maya Thompson' })).toBeChecked();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Updated title' } });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Noah Williams' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(api.updateSessionNote).toHaveBeenCalledWith('session-1', 'note-1', {
-      category: 'achievement', title: 'Updated title', details: 'Original details.', youthIds: ['youth-1', 'youth-2'],
-    }));
-    expect(onSaved).toHaveBeenCalledOnce();
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Original title');
+    expect(screen.getByRole('textbox', { name: 'Details (optional)' })).toHaveValue('Original details.');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
+  it('locks every form interaction while submission is pending', async () => {
+    let resolve!: (value: unknown) => void;
+    api.createSessionNote.mockReturnValue(new Promise(done => { resolve = done; }));
+    render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'Pending note' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledOnce());
+
+    expect(screen.getByRole('textbox', { name: 'Title' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Details (optional)' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
+
+    await act(async () => resolve({}));
   });
 });

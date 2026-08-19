@@ -1,124 +1,103 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { createSessionNote, getSessionRoster, updateSessionNote } from '../../../../features/programming/api/sessions.api';
+import type { FormEvent } from 'react';
+
 import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../components/FormField/FormField';
 import Modal from '../../../../components/Modal/Modal';
 import ModalFormFooter from '../../../../components/Modal/components/ModalFormFooter';
-import type { SubmitStatus } from '../../../../hooks/useSubmitStatus';
-import type { CohortSession, SessionNote, SessionNoteCategory, SessionRosterMember } from '../../../../types/cohort';
+import type { SessionNoteCategory } from '../../../../types/cohort';
 import { sessionNoteCategoryOptions } from '../../sessionNoteCategories';
+import useSessionNoteModal, { type UseSessionNoteModalOptions } from './hooks/useSessionNoteModal';
+import SessionYouthChecklist from './SessionYouthChecklist';
 import './SessionNoteModal.css';
+
+type SessionNoteModalProps = UseSessionNoteModalOptions & {
+  onClose: () => void;
+};
 
 export default function SessionNoteModal({
   session,
   note = null,
   initialYouthId,
   hideYouthSelection = false,
-  closeOnSuccess = false,
   onClose,
   onSaved,
-}: {
-  session: Pick<CohortSession, 'id' | 'rosterMode'> | null;
-  note?: SessionNote | null;
-  initialYouthId?: string;
-  hideYouthSelection?: boolean;
-  closeOnSuccess?: boolean;
-  onClose: () => void;
-  onSaved: () => void | Promise<void>;
-}) {
-  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
-  const [category, setCategory] = useState<SessionNoteCategory>('general');
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-  const rosterQuery = useQuery<SessionRosterMember[]>({
-    queryKey: ['sessions', session?.id, 'roster'],
-    queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
-    enabled: session !== null && !hideYouthSelection,
+}: SessionNoteModalProps) {
+  const workflow = useSessionNoteModal({
+    session,
+    note,
+    initialYouthId,
+    hideYouthSelection,
+    onSaved,
   });
-  const roster = rosterQuery.data ?? [];
 
-  useEffect(() => {
-    if (!session) return;
-    setSelectedYouthIds(note?.youth.map(youth => youth.youthId) ?? (initialYouthId ? [initialYouthId] : []));
-    setCategory(note?.category ?? 'general');
-    setSubmitStatus('idle');
-    setStatusMessage('');
-  }, [initialYouthId, session, note]);
-
-  const toggleYouth = (youthId: string) => {
-    setSelectedYouthIds(current => current.includes(youthId)
-      ? current.filter(id => id !== youthId)
-      : [...current, youthId]);
-  };
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!session) return;
-    const form = new FormData(event.currentTarget);
-    setSubmitStatus('submitting');
-    setStatusMessage(note ? 'Saving session note...' : 'Adding session note...');
-    try {
-      const details = form.get('details');
-      const data = {
-        category,
-        title: String(form.get('title')).trim(),
-        details: typeof details === 'string' && details.trim() ? details.trim() : null,
-        youthIds: selectedYouthIds,
-      };
-      if (note) await updateSessionNote(session.id, note.id, data);
-      else await createSessionNote(session.id, data);
-      await onSaved();
-      if (closeOnSuccess) {
-        onClose();
-        return;
-      }
-      setStatusMessage(note ? 'Session note successfully updated.' : 'Session note successfully added.');
-      setSubmitStatus('success');
-    } catch (cause) {
-      setStatusMessage(cause instanceof Error ? cause.message : `Could not ${note ? 'update' : 'add'} session note`);
-      setSubmitStatus('error');
-    }
+    void workflow.submit();
   };
 
-  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+  const footer = (
+    <ModalFormFooter
+      formId="session-note-form"
+      submitLabel={note ? 'Save' : 'Add Note'}
+      submitStatus={workflow.submitStatus}
+      onClose={onClose}
+    />
+  );
 
   return (
     <Modal
       isOpen={session !== null}
       onClose={onClose}
       title={note ? 'Edit Note' : 'Add Note'}
-      status={submitStatus}
-      statusMessage={statusMessage || undefined}
+      status={workflow.submitStatus}
+      statusMessage={workflow.statusMessage}
       successDelay={1200}
-      footer={<ModalFormFooter formId="session-note-form" submitLabel={note ? 'Save' : 'Add Note'} submitStatus={submitStatus} onClose={onClose} />}
+      footer={footer}
     >
-      <form id="session-note-form" onSubmit={event => void submit(event)}>
+      <form id="session-note-form" onSubmit={submit}>
         <FormField id="session-note-title" label="Title">
-          <input key={`${note?.id ?? 'new'}-title`} id="session-note-title" name="title" maxLength={160} defaultValue={note?.title ?? ''} required />
+          <input
+            id="session-note-title"
+            maxLength={160}
+            value={workflow.draft.title}
+            onChange={event => workflow.updateTitle(event.target.value)}
+            required
+            disabled={workflow.submissionComplete}
+          />
         </FormField>
+
         <FormField id="session-note-category" label="Category">
-          <FloatingSelect id="session-note-category" ariaLabel="Category" value={category} options={sessionNoteCategoryOptions} onChange={value => setCategory(value as SessionNoteCategory)} />
+          <FloatingSelect
+            id="session-note-category"
+            ariaLabel="Category"
+            value={workflow.draft.category}
+            options={sessionNoteCategoryOptions}
+            onChange={value => workflow.updateCategory(value as SessionNoteCategory)}
+            disabled={workflow.submissionComplete}
+          />
         </FormField>
+
         <FormField id="session-note-details" label="Details (optional)">
-          <textarea key={`${note?.id ?? 'new'}-details`} id="session-note-details" name="details" rows={5} maxLength={5000} defaultValue={note?.details ?? ''} />
+          <textarea
+            id="session-note-details"
+            rows={5}
+            maxLength={5000}
+            value={workflow.draft.details}
+            onChange={event => workflow.updateDetails(event.target.value)}
+            disabled={workflow.submissionComplete}
+          />
         </FormField>
+
         {session && !hideYouthSelection && (
-          <fieldset className="session-note-youth" disabled={submissionComplete}>
-            <legend>Link youth</legend>
-            {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
-              <p className="form-error" role="alert">{rosterQuery.error instanceof Error ? rosterQuery.error.message : 'Could not load session roster'}</p>
-            ) : roster.length > 0 ? (
-              <div className="session-note-youth__checklist">
-                {roster.map(youth => (
-                  <label key={youth.youthId}>
-                    <input type="checkbox" checked={selectedYouthIds.includes(youth.youthId)} onChange={() => toggleYouth(youth.youthId)} />
-                    <span>{youth.firstName} {youth.lastName}</span>
-                  </label>
-                ))}
-              </div>
-            ) : <p>{session.rosterMode === 'open' ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
-          </fieldset>
+          <SessionYouthChecklist
+            rosterMode={session.rosterMode}
+            roster={workflow.roster}
+            selectedYouthIds={workflow.draft.selectedYouthIds}
+            loading={workflow.rosterLoading}
+            error={workflow.rosterError}
+            disabled={workflow.submissionComplete}
+            onToggle={workflow.toggleYouth}
+          />
         )}
       </form>
     </Modal>

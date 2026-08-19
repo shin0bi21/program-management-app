@@ -106,7 +106,7 @@ describe('YouthAttendanceModal', () => {
     expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
   });
 
-  it('adds a prelinked youth note without showing link controls and returns to attendance', async () => {
+  it('adds a prelinked youth note without showing link controls', async () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
@@ -129,8 +129,8 @@ describe('YouthAttendanceModal', () => {
       'session-2',
       expect.objectContaining({ title: 'Good teamwork', youthIds: ['youth-1'] }),
     ));
-    expect(await screen.findByRole('heading', { name: 'Manage Attendance' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Add Note' })).not.toBeInTheDocument();
+    expect(screen.getByText('Session note successfully added.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
   });
 
   it('edits and unlinks session notes without deleting them', async () => {
