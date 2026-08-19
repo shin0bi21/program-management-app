@@ -30,6 +30,7 @@ import useCohortTable from './hooks/useCohortTable';
 import './Cohorts.css';
 
 const COHORT_COLUMN_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
+const COHORT_SORT_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
 const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
 
 export default function Cohorts() {
@@ -46,12 +47,13 @@ export default function Cohorts() {
     programs,
     programsLoading,
     COHORT_COLUMN_KEYS,
+    COHORT_SORT_KEYS,
     programsError,
   );
   const {
     search, setSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters,
+    hasActiveQueryFilters, ready: controlsReady,
   } = controls;
   const cohortTable = useCohortTable(COHORT_TABLE_QUERY_KEY, tableFilters, sorting);
   const cohorts = cohortTable.rows;
@@ -176,8 +178,8 @@ export default function Cohorts() {
                 placeholder="Search cohorts or programs"
               />
             }
-            columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
-            filters={
+            columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+            filters={controlsReady ? (
               <FilterCard
                 categories={filterCategories}
                 values={{
@@ -187,13 +189,13 @@ export default function Cohorts() {
                 onApply={controls.applyFilter}
                 onClearAll={controls.clearFilters}
               />
-            }
+            ) : undefined}
           />
 
           {programsError && <p className="form-error">{programsError}</p>}
           {cyclesError && <p className="form-error">{cyclesError}</p>}
           {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
-          <PageBody
+          {!controlsReady ? <p role="status">Loading saved cohort preferences…</p> : <PageBody
             ariaLabel="Programming cohorts and overview"
             table={
               <Table
@@ -242,7 +244,7 @@ export default function Cohorts() {
                 ) : undefined}
               </DashboardCard>
             }
-          />
+          />}
 
           <AddCohortModal
             isOpen={cohortModalOpen}

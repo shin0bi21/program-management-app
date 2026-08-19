@@ -25,6 +25,7 @@ const programs: Program[] = [{
   maxAge: 15,
 }];
 const columnKeys = ['program', 'cohort', 'start', 'end', 'status'];
+const sortKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
 
 describe('useCohortControls', () => {
   beforeEach(() => {
@@ -44,16 +45,38 @@ describe('useCohortControls', () => {
       Object.assign(persisted, update(persisted));
     });
     const { result } = renderHook(() => (
-      useCohortControls('admin', programs, false, columnKeys, null)
+      useCohortControls('admin', programs, false, columnKeys, sortKeys, null)
     ));
     await waitFor(() => expect(preferenceHook.setBaseline).toHaveBeenCalled());
 
     act(() => {
       result.current.setHiddenColumns(['status']);
       result.current.setColumnWidths({ cohort: 240 });
+      result.current.setSorting({ key: 'program', direction: 'asc' });
     });
 
     expect(persisted.hiddenColumns).toEqual(['status']);
     expect(persisted.columnWidths).toEqual({ cohort: 240 });
+    expect(persisted.sorting).toEqual({ key: 'program', direction: 'asc' });
+  });
+
+  it('scrubs removed programs and obsolete sorting before establishing the baseline', async () => {
+    preferenceHook.preference = {
+      programId: 'removed-program',
+      status: 'active',
+      sorting: { key: 'removedColumn' as never, direction: 'asc' },
+    };
+    const { result } = renderHook(() => (
+      useCohortControls('admin', programs, false, columnKeys, sortKeys, null)
+    ));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.programId).toBe('');
+    expect(result.current.sorting).toEqual({ key: 'start', direction: 'desc' });
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+      programId: null,
+      sorting: { key: 'start', direction: 'desc' },
+    }));
   });
 });

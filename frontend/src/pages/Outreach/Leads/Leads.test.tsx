@@ -55,6 +55,8 @@ vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
 describe('Leads', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: LeadPreference) => {
       preferenceHook.preference = value;
     });
@@ -165,6 +167,27 @@ describe('Leads', () => {
       columnWidths: {},
       hiddenColumns: ['school'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved lead preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Leads' })).not.toBeInTheDocument();
+    expect(getLeads).not.toHaveBeenCalled();
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <Leads />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Leads' })).toBeInTheDocument();
   });
 
   it('shows primary contact details when a lead row is selected', async () => {

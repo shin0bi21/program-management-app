@@ -50,7 +50,7 @@ export default function GenerateSessionsModal({
 }: GenerateSessionsModalProps) {
   const open = isOpen ?? cohort !== null;
   const [selectedCohortId, setSelectedCohortId] = useState('');
-  const sessionTypes = useSessionTypes();
+  const { sessionTypes } = useSessionTypes();
   const [sessionTypeId, setSessionTypeId] = useState(REGULAR_SESSION_TYPE_ID);
   const [frequency, setFrequency] = useState<GenerateSessionsInput['frequency']>('weekly');
   const [dayOfWeek, setDayOfWeek] = useState<NonNullable<GenerateSessionsInput['dayOfWeek']>>('tuesday');

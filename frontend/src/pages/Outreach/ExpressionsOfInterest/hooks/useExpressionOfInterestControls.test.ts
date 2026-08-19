@@ -27,6 +27,7 @@ const programs: Program[] = [{
 const columnKeys = [
   'firstName', 'lastName', 'age', 'school', 'program', 'submittedByRole', 'submittedAt', 'status',
 ];
+const sortKeys = ['name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status'] as const;
 
 describe('useExpressionOfInterestControls', () => {
   beforeEach(() => {
@@ -48,16 +49,38 @@ describe('useExpressionOfInterestControls', () => {
       Object.assign(persisted, update(persisted));
     });
     const { result } = renderHook(() => (
-      useExpressionOfInterestControls(programs, false, null, columnKeys)
+      useExpressionOfInterestControls(programs, false, null, columnKeys, sortKeys)
     ));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
     act(() => {
       result.current.setHiddenColumns(['school']);
       result.current.setColumnWidths({ firstName: 240 });
+      result.current.setSorting({ key: 'school', direction: 'asc' });
     });
 
     expect(persisted.hiddenColumns).toEqual(['school']);
     expect(persisted.columnWidths).toEqual({ firstName: 240 });
+    expect(persisted.sorting).toEqual({ key: 'school', direction: 'asc' });
+  });
+
+  it('scrubs removed programs and obsolete sorting before establishing the baseline', async () => {
+    preferenceHook.preference = {
+      statuses: ['new'],
+      programIds: ['removed-program'],
+      sorting: { key: 'removedColumn' as never, direction: 'asc' },
+    };
+    const { result } = renderHook(() => (
+      useExpressionOfInterestControls(programs, false, null, columnKeys, sortKeys)
+    ));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.programFilters).toEqual([]);
+    expect(result.current.sorting).toEqual({ key: 'createdAt', direction: 'desc' });
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+      programIds: [],
+      sorting: { key: 'createdAt', direction: 'desc' },
+    }));
   });
 });

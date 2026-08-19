@@ -135,6 +135,8 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 describe('Sessions', () => {
   beforeEach(() => {
     preferenceHook.preference = { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: SessionPreference) => {
       preferenceHook.preference = value;
     });
@@ -332,6 +334,31 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Upcoming' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
   });
 
   it('preserves applied filters when switching session views', async () => {

@@ -18,6 +18,7 @@ vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () =>
 }));
 
 const columnKeys = ['name', 'email', 'role', 'status', 'createdAt'];
+const sortKeys = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 
 describe('useAccountControls', () => {
   beforeEach(() => {
@@ -32,7 +33,7 @@ describe('useAccountControls', () => {
       statuses: ['active'], roles: ['staff'], sorting: { key: 'email', direction: 'desc' },
       columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     };
-    const { result } = renderHook(() => useAccountControls(true, columnKeys));
+    const { result } = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
 
     await waitFor(() => expect(result.current.queryFilters).toEqual({
       search: '', roles: ['staff'], statuses: ['active'],
@@ -44,8 +45,8 @@ describe('useAccountControls', () => {
   });
 
   it('limits role filters to administrators', async () => {
-    const admin = renderHook(() => useAccountControls(true, columnKeys));
-    const staff = renderHook(() => useAccountControls(false, columnKeys));
+    const admin = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
+    const staff = renderHook(() => useAccountControls(false, columnKeys, sortKeys));
     await waitFor(() => expect(admin.result.current.queryFilters).not.toBeNull());
     await waitFor(() => expect(staff.result.current.queryFilters).not.toBeNull());
 
@@ -61,7 +62,7 @@ describe('useAccountControls', () => {
     preferenceHook.save.mockImplementation((update: (current: AccountPreference) => AccountPreference) => {
       Object.assign(persisted, update(persisted));
     });
-    const { result } = renderHook(() => useAccountControls(true, columnKeys));
+    const { result } = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
     act(() => {
@@ -72,6 +73,25 @@ describe('useAccountControls', () => {
 
     expect(persisted).toEqual(expect.objectContaining({
       statuses: ['active'], hiddenColumns: ['email'], columnWidths: { name: 240 },
+    }));
+  });
+
+  it('removes admin-only roles and obsolete sorting from a staff baseline', async () => {
+    preferenceHook.preference = {
+      statuses: ['active'],
+      roles: ['admin'],
+      sorting: { key: 'removedColumn' as never, direction: 'desc' },
+    };
+    const { result } = renderHook(() => useAccountControls(false, columnKeys, sortKeys));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.queryFilters).toEqual({
+      search: '', roles: [], statuses: ['active'],
+    });
+    expect(result.current.sorting).toEqual({ key: 'name', direction: 'asc' });
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+      roles: [], sorting: { key: 'name', direction: 'asc' },
     }));
   });
 });

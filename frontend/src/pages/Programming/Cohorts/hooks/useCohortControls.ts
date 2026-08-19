@@ -2,17 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { CohortSortKey } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
 import type { CohortPreference, CohortStatus } from '../types';
+
+const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
 
 export function useCohortControls(
   role: string | null,
   programs: Program[],
   programsLoading: boolean,
   columnKeys: readonly string[],
+  sortKeys: readonly CohortSortKey[],
   programsError?: string | null,
 ) {
   // Search and filters.
@@ -22,7 +27,7 @@ export function useCohortControls(
   const [status, setStatus] = useState<CohortStatus | ''>('');
 
   // Table controls and persisted initialization.
-  const [sorting, setSortingState] = useState<ListSort<CohortSortKey>>({ key: 'start', direction: 'desc' });
+  const [sorting, setSortingState] = useState<ListSort<CohortSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -50,7 +55,7 @@ export function useCohortControls(
       ? preference.programId
       : preference ? '' : defaultProgram;
     const restoredStatus = preference?.status ?? (role === 'staff' ? 'active' : '');
-    const restoredSorting = preference?.sorting ?? { key: 'start', direction: 'desc' };
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: CohortPreference = {
@@ -67,7 +72,7 @@ export function useCohortControls(
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, sortKeys]);
 
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {
@@ -108,6 +113,22 @@ export function useCohortControls(
     hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
   })), [columnWidths, hiddenColumns, programId, save, sorting, status]);
 
+  const selectedProgramIds = useMemo(() => programId ? [programId] : [], [programId]);
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const reconcileProgram = useCallback((nextProgramIds: string[]) => {
+    const nextProgramId = nextProgramIds[0] ?? '';
+    setProgramId(nextProgramId);
+    void persist({ programId: nextProgramId });
+  }, [persist]);
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: selectedProgramIds,
+    availableIds: availableProgramIds,
+    onReconcile: reconcileProgram,
+  });
+
   const applyFilter = useCallback((category: string, selected: string[]) => {
     if (category === 'program') {
       const nextProgramId = selected[0] ?? '';
@@ -141,6 +162,6 @@ export function useCohortControls(
   return {
     search, setSearch, tableFilters, programId, status, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };
 }

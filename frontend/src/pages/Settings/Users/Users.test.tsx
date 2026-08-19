@@ -53,6 +53,8 @@ const renderPage = () => render(
 describe('Users', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: AccountPreference) => {
       preferenceHook.preference = value;
     });
@@ -81,6 +83,32 @@ describe('Users', () => {
     expect(preferenceHook.preference).toEqual({
       statuses: [], roles: [], sorting: { key: 'name', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['email'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
+    preferenceHook.loading = true;
+    const rendered = renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved account preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Accounts' })).not.toBeInTheDocument();
+    expect(mockUseAccounts).toHaveBeenLastCalledWith(
+      ['accounts', 'list'],
+      null,
+      expect.any(Object),
+    );
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <Users />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Accounts' })).toBeInTheDocument();
   });
 
   it('shows admin account controls and sends search state to the accounts query', async () => {

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../common/components/Table/Table.types';
 import type { Program } from '../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../common/types/pagination';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
 import type { YouthPreference, YouthStatusFilter } from '../types';
@@ -13,7 +15,10 @@ interface UseYouthControlsOptions {
   programsLoading: boolean;
   programsError?: string | null;
   columnKeys: readonly string[];
+  sortKeys: readonly YouthSortKey[];
 }
+
+const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
 
 export function useYouthControls({
   role,
@@ -21,6 +26,7 @@ export function useYouthControls({
   programsLoading,
   programsError,
   columnKeys,
+  sortKeys,
 }: UseYouthControlsOptions) {
   // Search and filter state.
   const [search, setSearch] = useState('');
@@ -30,7 +36,7 @@ export function useYouthControls({
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<YouthSortKey>>({ key: 'firstName', direction: 'asc' });
+  const [sorting, setSortingState] = useState<ListSort<YouthSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
@@ -58,7 +64,7 @@ export function useYouthControls({
         ? preference.programIds
         : preference.programIds.filter(programId => availableProgramIds.has(programId))
       : role === 'staff' ? programs.map(program => program.id) : [];
-    const restoredSorting = preference?.sorting ?? { key: 'firstName', direction: 'asc' };
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: YouthPreference = {
@@ -75,7 +81,7 @@ export function useYouthControls({
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, sortKeys]);
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {
@@ -91,6 +97,20 @@ export function useYouthControls({
     columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
     hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
   })), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const reconcileProgramFilters = useCallback((nextProgramFilters: string[]) => {
+    setProgramFilters(nextProgramFilters);
+    void persist({ programIds: nextProgramFilters });
+  }, [persist]);
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: programFilters,
+    availableIds: availableProgramIds,
+    onReconcile: reconcileProgramFilters,
+  });
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
@@ -163,6 +183,7 @@ export function useYouthControls({
     setColumnWidths,
     hiddenColumns,
     setHiddenColumns,
+    ready,
     error,
     hasActiveQueryFilters,
     filterCategories,

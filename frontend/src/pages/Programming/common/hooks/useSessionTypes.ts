@@ -8,5 +8,9 @@ export function useSessionTypes() {
     queryFn: ({ signal }) => getSessionTypes({ signal }),
   });
 
-  return query.data ?? [];
+  return {
+    sessionTypes: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? 'Could not load session types.' : null,
+  };
 }

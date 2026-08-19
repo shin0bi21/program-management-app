@@ -4,9 +4,16 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import type { AccountRole, AccountSortKey, AccountStatus } from '../../../../common/types/account';
 import type { ListSort } from '../../../../common/types/pagination';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { AccountPreference } from '../types';
 
-export function useAccountControls(isAdmin: boolean, columnKeys: readonly string[]) {
+const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
+
+export function useAccountControls(
+  isAdmin: boolean,
+  columnKeys: readonly string[],
+  sortKeys: readonly AccountSortKey[],
+) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -15,7 +22,7 @@ export function useAccountControls(isAdmin: boolean, columnKeys: readonly string
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>({ key: 'name', direction: 'asc' });
+  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
@@ -37,12 +44,12 @@ export function useAccountControls(isAdmin: boolean, columnKeys: readonly string
   // Restore preferences before enabling the account query.
   useEffect(() => {
     if (ready || preferenceLoading) return;
-    const restoredSorting = preference?.sorting ?? { key: 'name', direction: 'asc' };
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: AccountPreference = {
       statuses: preference?.statuses ?? [],
-      roles: preference?.roles ?? [],
+      roles: isAdmin ? preference?.roles ?? [] : [],
       sorting: restoredSorting,
       columnWidths: restoredColumnWidths,
       hiddenColumns: restoredHiddenColumns,
@@ -54,7 +61,7 @@ export function useAccountControls(isAdmin: boolean, columnKeys: readonly string
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, ready, setBaseline]);
+  }, [isAdmin, preference, preferenceLoading, ready, setBaseline, sortKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({
@@ -126,6 +133,6 @@ export function useAccountControls(isAdmin: boolean, columnKeys: readonly string
   return {
     search, setSearch, queryFilters, statusFilters, roleFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };
 }
