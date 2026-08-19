@@ -87,7 +87,7 @@ export default function ResourceCalendar<TResource, TItemData>({
 
   const gridColumns = `${RESOURCE_WIDTH}px ${leadingPeriodWidth}px repeat(${periods.length}, ${PERIOD_WIDTH}px) ${trailingPeriodWidth}px`;
   const [today] = useState(() => new Date());
-  const interactionCoordinator = useCalendarInteractionCoordinator();
+  const { coordinator: interactionCoordinator, activeType: activeInteraction } = useCalendarInteractionCoordinator();
 
   const { drag, beginDrag, overlayRef, suppressClickRef } = useCalendarItemDrag({
     viewportRef,
@@ -139,7 +139,7 @@ export default function ResourceCalendar<TResource, TItemData>({
       )}
       <div
         ref={viewportRef}
-        className="resource-calendar"
+        className={`resource-calendar${activeInteraction ? ` resource-calendar--${activeInteraction}` : ''}`}
         role="grid"
         aria-label={ariaLabel}
       >
@@ -185,7 +185,13 @@ export default function ResourceCalendar<TResource, TItemData>({
         />
       </div>
       {drag?.dragging && createPortal(
-        <div className="resource-calendar__preview-host" style={getCalendarPreviewHostStyle(drag.previewBounds!)}>
+        <div
+          className="resource-calendar__preview-host"
+          style={getCalendarPreviewHostStyle(drag.previewBounds!)}
+          ref={(host) => {
+            if (host) host.inert = true;
+          }}
+        >
           <div
             ref={overlayRef}
             className="resource-calendar__drag-overlay"

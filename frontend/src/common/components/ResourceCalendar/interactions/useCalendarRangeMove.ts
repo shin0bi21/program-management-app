@@ -132,7 +132,10 @@ export function useCalendarRangeMove<TResource, TItemData>({
         const preview = createCalendarPreviewHost(viewport);
         previewHost = preview.host;
         previewElement = current.sourceElement.cloneNode(true) as HTMLElement;
-        previewElement.classList.add('resource-calendar__range-preview');
+        previewElement.classList.add(
+          'resource-calendar__range-preview',
+          'resource-calendar__range-move-preview',
+        );
         previewElement.setAttribute('aria-hidden', 'true');
         Object.assign(previewElement.style, { position: 'absolute', left: `${bounds.left - preview.bounds.left}px`, top: `${bounds.top - preview.bounds.top}px`, width: `${bounds.width}px`, height: `${bounds.height}px`, transform: '' });
         previewHost.appendChild(previewElement);
