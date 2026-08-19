@@ -15,14 +15,14 @@ import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import type { Account, AccountStatus } from '../../../common/types/account';
 import { formatShortDate } from '../../../common/utils/date';
 import { removeInfiniteListRow } from '../../../query/infiniteListCache';
-import { revokeAccountInvite, toggleAccountStatus } from './api/accounts.api';
+import { revokeAccountInvite, toggleAccountStatus } from './accounts.api';
 import AccountModal from './components/AccountModal/AccountModal';
 import { useAccountControls } from './hooks/useAccountControls';
 import { useAccounts } from './hooks/useAccounts';
-import { ACCOUNTS_LIST_QUERY_KEY } from './queryKeys';
 import './Users.css';
 
 const ACCOUNT_COLUMN_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+const ACCOUNTS_LIST_QUERY_KEY = ['accounts', 'list'] as const;
 
 export default function Users() {
   // Services and permissions.
@@ -39,7 +39,11 @@ export default function Users() {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters,
   } = controls;
-  const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(queryFilters, sorting);
+  const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(
+    ACCOUNTS_LIST_QUERY_KEY,
+    queryFilters,
+    sorting,
+  );
 
   // Dialog state.
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);

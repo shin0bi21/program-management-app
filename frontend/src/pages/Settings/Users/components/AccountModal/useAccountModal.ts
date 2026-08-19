@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { inviteAccount, updateAccount } from '../../api/accounts.api';
+import { inviteAccount, updateAccount } from '../../accounts.api';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Account } from '../../../../../common/types/account';
@@ -23,6 +23,7 @@ interface AccountModalControllerProps {
 }
 
 export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
+  const completionTimerRef = useRef<number | null>(null);
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const {
     register,
@@ -32,7 +33,21 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     formState: { errors },
   } = useForm<AccountFormData>({ resolver: zodResolver(accountSchema), defaultValues });
 
+  const clearCompletionTimer = useCallback(() => {
+    if (completionTimerRef.current === null) return;
+    window.clearTimeout(completionTimerRef.current);
+    completionTimerRef.current = null;
+  }, []);
+
+  const handleClose = useCallback(() => {
+    clearCompletionTimer();
+    reset(defaultValues);
+    resetStatus();
+    onClose();
+  }, [clearCompletionTimer, onClose, reset, resetStatus]);
+
   useEffect(() => {
+    clearCompletionTimer();
     if (!isOpen) return;
     reset(account ? {
       firstName: account.firstName,
@@ -42,13 +57,8 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();
-  }, [account, isOpen, reset, resetStatus]);
-
-  const handleClose = () => {
-    reset(defaultValues);
-    resetStatus();
-    onClose();
-  };
+    return clearCompletionTimer;
+  }, [account, clearCompletionTimer, isOpen, reset, resetStatus]);
 
   const onValid = async (data: AccountFormData) => {
     setSubmitStatus('submitting');
@@ -65,7 +75,8 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
         ? await updateAccount({ id: account.id, ...payload })
         : await inviteAccount(payload);
       setSubmitStatus('success');
-      setTimeout(() => {
+      completionTimerRef.current = window.setTimeout(() => {
+        completionTimerRef.current = null;
         onSuccess(result);
         handleClose();
       }, 800);

@@ -1,8 +1,12 @@
+// @vitest-environment node
+
+// Scope: verifies account adapter query serialization and omission of empty filters.
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAccounts } from './accounts.api';
-import { apiClient } from '../../../../http/client';
+import { apiClient } from '../../../http/client';
 
-vi.mock('../../../../http/client', () => ({
+vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
@@ -22,4 +26,3 @@ describe('accounts API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/accounts');
   });
 });
-// @vitest-environment node
