@@ -37,6 +37,7 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   minute: '2-digit',
 });
 const SESSION_COLUMN_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+const SESSION_SORT_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 const SESSION_LIST_QUERY_KEY = [...SESSION_QUERY_KEY, 'list'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
@@ -49,7 +50,11 @@ export default function Sessions() {
   // Shared options used by filters and session forms.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
-  const sessionTypes = useSessionTypes();
+  const {
+    sessionTypes,
+    loading: sessionTypesLoading,
+    error: sessionTypesError,
+  } = useSessionTypes();
 
   // Page dialogs and selected records.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -72,9 +77,11 @@ export default function Sessions() {
 
   // Persisted filters, sorting, and view controls.
   const controls = useSessionControls({
-    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError, sessionTypes,
+    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
+    sessionTypes, sessionTypesLoading, sessionTypesError,
     onFiltersChanged: clearSelectedSession,
     columnKeys: SESSION_COLUMN_KEYS,
+    sortKeys: SESSION_SORT_KEYS,
   });
   const {
     search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
@@ -213,7 +220,7 @@ export default function Sessions() {
                 placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
-            filters={
+            filters={filtersReady ? (
               <FilterCard
                 categories={filterCategories}
                 values={{
@@ -225,8 +232,8 @@ export default function Sessions() {
                 onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
                 onClearAll={controls.clearFilters}
               />
-            }
-            view={(
+            ) : undefined}
+            view={filtersReady ? (
               <ViewMenu
                 value={view}
                 options={[
@@ -235,14 +242,15 @@ export default function Sessions() {
                 ]}
                 onChange={controls.setView}
               />
-            )}
-            columns={view === 'list'
+            ) : undefined}
+            columns={filtersReady && view === 'list'
               ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
               : undefined}
           />
           {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
           {programsError && <p className="form-error" role="alert">{programsError}</p>}
           {cohortsError && <p className="form-error" role="alert">{cohortsError}</p>}
+          {sessionTypesError && <p className="form-error" role="alert">{sessionTypesError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (

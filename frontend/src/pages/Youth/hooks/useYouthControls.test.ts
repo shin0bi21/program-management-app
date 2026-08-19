@@ -31,6 +31,7 @@ const programs: Program[] = [{
   maxAge: 15,
 }];
 const columnKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'];
+const sortKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
 
 describe('useYouthControls', () => {
   beforeEach(() => {
@@ -47,6 +48,7 @@ describe('useYouthControls', () => {
         programs,
         programsLoading: false,
         columnKeys,
+        sortKeys,
       }),
       { initialProps: { role: null as string | null } },
     );
@@ -75,6 +77,7 @@ describe('useYouthControls', () => {
       programs,
       programsLoading: false,
       columnKeys,
+      sortKeys,
     }));
 
     await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
@@ -103,6 +106,7 @@ describe('useYouthControls', () => {
       programs,
       programsLoading: false,
       columnKeys,
+      sortKeys,
     }));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
@@ -113,5 +117,23 @@ describe('useYouthControls', () => {
 
     expect(persisted.hiddenColumns).toEqual(['school']);
     expect(persisted.columnWidths).toEqual({ firstName: 240 });
+  });
+
+  it('replaces an obsolete saved sort key in the canonical baseline', async () => {
+    preferenceHook.preference = {
+      statuses: ['active'],
+      programIds: ['program-1'],
+      sorting: { key: 'removedColumn' as never, direction: 'desc' },
+    };
+    const { result } = renderHook(() => useYouthControls({
+      role: 'staff', programs, programsLoading: false, columnKeys, sortKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.sorting).toEqual({ key: 'firstName', direction: 'asc' });
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+      sorting: { key: 'firstName', direction: 'asc' },
+    }));
   });
 });

@@ -25,6 +25,7 @@ import './Leads.css';
 
 const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
 const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
+const LEAD_SORT_KEYS = ['name', 'school', 'program', 'status', 'createdAt'] as const;
 const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
 const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
@@ -37,11 +38,17 @@ export default function Leads() {
 
   // Controls and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms();
-  const controls = useLeadControls(programs, programsLoading, programsError, LEAD_COLUMN_KEYS);
+  const controls = useLeadControls(
+    programs,
+    programsLoading,
+    programsError,
+    LEAD_COLUMN_KEYS,
+    LEAD_SORT_KEYS,
+  );
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters,
+    hasActiveQueryFilters, ready: controlsReady,
   } = controls;
   const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(
     LEADS_LIST_QUERY_KEY,
@@ -113,21 +120,21 @@ export default function Leads() {
           onChange={event => setSearch(event.target.value)}
           placeholder="Search youth or school"
         />}
-        columns={<ColumnVisibilityMenu
+        columns={controlsReady ? <ColumnVisibilityMenu
           columns={columns}
           hiddenColumnKeys={hiddenColumns}
           onHiddenColumnKeysChange={controls.setHiddenColumns}
-        />}
-        filters={<FilterCard
+        /> : undefined}
+        filters={controlsReady ? <FilterCard
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
           onApply={controls.applyFilter}
           onClearAll={controls.clearFilters}
-        />}
+        /> : undefined}
       />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
       {programsError && <p className="form-error" role="alert">{programsError}</p>}
-      <PageBody
+      {!controlsReady ? <p role="status">Loading saved lead preferences…</p> : <PageBody
         ariaLabel="Leads"
         table={<Table
           ariaLabel="Leads"
@@ -152,7 +159,7 @@ export default function Leads() {
           onLoadNextPage={loadNextPage}
         />}
         dashboard={<LeadDashboard lead={selectedLead} canWrite={canWrite} />}
-      />
+      />}
     </main>
     <LeadModal
       isOpen={modalTarget !== null}

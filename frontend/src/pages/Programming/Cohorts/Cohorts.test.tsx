@@ -75,6 +75,8 @@ describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: CohortPreference) => {
       preferenceHook.preference = value;
     });
@@ -157,6 +159,22 @@ describe('Cohorts', () => {
       columnWidths: {},
       hiddenColumns: ['status'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(<MemoryRouter><Cohorts /></MemoryRouter>);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved cohort preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Cohorts' })).not.toBeInTheDocument();
+
+    preferenceHook.loading = false;
+    rendered.rerender(<MemoryRouter><Cohorts /></MemoryRouter>);
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Cohorts' })).toBeInTheDocument();
   });
 
   it('shows all cohorts by default and can display a selected program', async () => {

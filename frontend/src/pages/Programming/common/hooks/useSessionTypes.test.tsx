@@ -1,4 +1,3 @@
-// Scope: verifies session-type loading and request cancellation wiring.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,9 +22,10 @@ describe('useSessionTypes', () => {
       wrapper: createQueryClientWrapper(queryClient),
     });
 
-    await waitFor(() => expect(result.current).toEqual([
+    await waitFor(() => expect(result.current.sessionTypes).toEqual([
       expect.objectContaining({ name: 'Regular' }),
     ]));
+    expect(result.current).toMatchObject({ loading: false, error: null });
     expect(getSessionTypes).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
   });
 });

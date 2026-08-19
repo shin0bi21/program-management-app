@@ -22,6 +22,7 @@ import { useAccounts } from './hooks/useAccounts';
 import './Users.css';
 
 const ACCOUNT_COLUMN_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+const ACCOUNT_SORT_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 const ACCOUNTS_LIST_QUERY_KEY = ['accounts', 'list'] as const;
 
 export default function Users() {
@@ -33,11 +34,11 @@ export default function Users() {
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
   // Controls and remote records.
-  const controls = useAccountControls(isAdmin, ACCOUNT_COLUMN_KEYS);
+  const controls = useAccountControls(isAdmin, ACCOUNT_COLUMN_KEYS, ACCOUNT_SORT_KEYS);
   const {
     search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters,
+    hasActiveQueryFilters, ready: controlsReady,
   } = controls;
   const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(
     ACCOUNTS_LIST_QUERY_KEY,
@@ -153,17 +154,17 @@ export default function Users() {
             </div>
           )}
           search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
-          columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
-          filters={<FilterCard
+          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+          filters={controlsReady ? <FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, role: roleFilters }}
             onApply={controls.applyFilter}
             onClearAll={controls.clearFilters}
-          />}
+          /> : undefined}
         />
         {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
 
-        <section className="accounts-panel" aria-label="Accounts">
+        {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <section className="accounts-panel" aria-label="Accounts">
           <Table
             ariaLabel="Accounts"
             columns={columns}
@@ -182,7 +183,7 @@ export default function Users() {
             loadingNextPage={loadingNextPage}
             onLoadNextPage={loadNextPage}
           />
-        </section>
+        </section>}
       </main>
 
       {isAdmin && canWrite && modalTarget !== null && (

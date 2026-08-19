@@ -2,17 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../../common/types/pagination';
 import type { LeadFilters, LeadPreference, LeadSortKey, LeadStatus } from '../types';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
+const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'createdAt', direction: 'desc' };
 
 export function useLeadControls(
   programs: Program[],
   programsLoading: boolean,
   programsError: string | null,
   columnKeys: readonly string[],
+  sortKeys: readonly LeadSortKey[],
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
@@ -22,7 +26,7 @@ export function useLeadControls(
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
+  const [sorting, setSortingState] = useState<ListSort<LeadSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
@@ -48,7 +52,7 @@ export function useLeadControls(
     const restoredProgramIds = programsError
       ? preference?.programIds ?? []
       : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? [];
-    const restoredSorting = preference?.sorting ?? { key: 'createdAt', direction: 'desc' };
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: LeadPreference = {
@@ -65,7 +69,7 @@ export function useLeadControls(
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline, sortKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<LeadFilters | null>(() => ready
@@ -91,6 +95,20 @@ export function useLeadControls(
     columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
     hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
   })), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const reconcileProgramFilters = useCallback((nextProgramFilters: string[]) => {
+    setProgramFilters(nextProgramFilters);
+    void persist({ programIds: nextProgramFilters });
+  }, [persist]);
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: programFilters,
+    availableIds: availableProgramIds,
+    onReconcile: reconcileProgramFilters,
+  });
 
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {
@@ -126,7 +144,7 @@ export function useLeadControls(
   return {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };
 }
 

@@ -29,6 +29,9 @@ const EXPRESSION_INTEREST_COLUMN_KEYS = [
   'submittedAt',
   'status',
 ] as const;
+const EXPRESSION_INTEREST_SORT_KEYS = [
+  'name', 'age', 'school', 'program', 'submittedByRole', 'createdAt', 'status',
+] as const;
 const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
 const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
 
@@ -45,11 +48,12 @@ export default function ExpressionsOfInterest() {
     programsLoading,
     programsError,
     EXPRESSION_INTEREST_COLUMN_KEYS,
+    EXPRESSION_INTEREST_SORT_KEYS,
   );
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters,
+    hasActiveQueryFilters, ready: controlsReady,
   } = controls;
   const { submissions, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useExpressionsOfInterest(
     EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY,
@@ -126,19 +130,19 @@ export default function ExpressionsOfInterest() {
       <PageHeader
         title="Outreach"
         search={<SearchInput label="Search expressions of interest" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search youth, school, or program" />}
-        columns={<ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />}
-        filters={<FilterCard
+        columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+        filters={controlsReady ? <FilterCard
           categories={filterCategories}
           values={{ status: statusFilters, program: programFilters }}
           onApply={controls.applyFilter}
           onClearAll={controls.clearFilters}
-        />}
+        /> : undefined}
       />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
       {programsError && <p className="form-error" role="alert">{programsError}</p>}
       {actionError && <p className="form-error" role="alert">{actionError}</p>}
 
-      <PageBody
+      {!controlsReady ? <p role="status">Loading saved outreach preferences…</p> : <PageBody
         ariaLabel="Expressions of interest"
         table={<Table
           ariaLabel="Expressions of interest"
@@ -163,7 +167,7 @@ export default function ExpressionsOfInterest() {
           onLoadNextPage={loadNextPage}
         />}
         dashboard={<ExpressionOfInterestDashboard submission={selectedSubmission} />}
-      />
+      />}
     </main>
   );
 }

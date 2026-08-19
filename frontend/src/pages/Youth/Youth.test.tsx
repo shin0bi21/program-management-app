@@ -130,6 +130,23 @@ describe('Youth', () => {
     });
   });
 
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(<Youth />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved youth preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Youth profiles' })).not.toBeInTheDocument();
+    expect(mockUseYouth).toHaveBeenLastCalledWith(null);
+
+    preferenceHook.loading = false;
+    rendered.rerender(<Youth />);
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Youth profiles' })).toBeInTheDocument();
+  });
+
   it('defaults staff to active youth in their assigned programs and persists changes', async () => {
     render(<Youth />);
 

@@ -41,6 +41,8 @@ vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
 describe('ExpressionsOfInterest', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: ExpressionInterestPreference) => {
       preferenceHook.preference = value;
     });
@@ -106,6 +108,27 @@ describe('ExpressionsOfInterest', () => {
       columnWidths: {},
       hiddenColumns: ['school'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved outreach preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Expressions of interest' })).not.toBeInTheDocument();
+    expect(getExpressions).not.toHaveBeenCalled();
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter><ExpressionsOfInterest /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Expressions of interest' })).toBeInTheDocument();
   });
 
   it('stays on expressions of interest and marks the row converted after conversion', async () => {

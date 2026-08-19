@@ -29,6 +29,7 @@ const cohorts: ProgramCohort[] = [{
 }];
 const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
 const columnKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'];
+const sortKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 
 describe('useSessionControls', () => {
   beforeEach(() => {
@@ -45,7 +46,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, onFiltersChanged: vi.fn(), columnKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
@@ -57,7 +58,7 @@ describe('useSessionControls', () => {
   it('defaults staff with one assigned program to its active cohort', async () => {
     const { result } = renderHook(() => useSessionControls({
       role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, onFiltersChanged: vi.fn(), columnKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.programIds).toEqual(['program-1']);
@@ -81,7 +82,7 @@ describe('useSessionControls', () => {
     const onFiltersChanged = vi.fn();
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, onFiltersChanged, columnKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged, columnKeys, sortKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     act(() => result.current.applyFilter('status', ['completed']));
@@ -98,5 +99,53 @@ describe('useSessionControls', () => {
       view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'],
       hiddenColumns: ['status'], columnWidths: { theme: 240 },
     }));
+  });
+
+  it('scrubs removed session types and obsolete sorting before establishing the baseline', async () => {
+    preferenceHook.preference = {
+      view: 'list',
+      programIds: ['program-1'],
+      cohortId: 'cohort-1',
+      sessionTypeIds: ['removed-type'],
+      statuses: [],
+      sorting: { key: 'removedColumn' as never, direction: 'asc' },
+    };
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.sessionTypeIds).toEqual([]);
+    expect(result.current.sorting).toEqual({ key: 'date', direction: 'desc' });
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+      sessionTypeIds: [],
+      sorting: { key: 'date', direction: 'desc' },
+    }));
+  });
+
+  it('preserves saved dependency IDs when session options fail to load', async () => {
+    preferenceHook.preference = {
+      view: 'list',
+      programIds: ['saved-program'],
+      cohortId: 'saved-cohort',
+      sessionTypeIds: ['saved-type'],
+      statuses: [],
+    };
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs: [], programsLoading: false, programsError: 'Could not load programs.',
+      cohorts: [], cohortsLoading: false, cohortsError: 'Could not load cohorts.',
+      sessionTypes: [], sessionTypesLoading: false, sessionTypesError: 'Could not load session types.',
+      onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current).toMatchObject({
+      programIds: ['saved-program'],
+      cohortId: 'saved-cohort',
+      sessionTypeIds: ['saved-type'],
+    });
   });
 });

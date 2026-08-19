@@ -23,7 +23,7 @@ interface EditSessionModalProps {
 export default function EditSessionModal({ session, onClose, onUpdated }: EditSessionModalProps) {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const sessionTypes = useSessionTypes();
+  const { sessionTypes } = useSessionTypes();
   const [sessionTypeId, setSessionTypeId] = useState('');
 
   useEffect(() => {
