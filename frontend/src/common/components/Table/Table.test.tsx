@@ -134,6 +134,43 @@ describe('Table', () => {
     expect(onColumnWidthsChange).toHaveBeenLastCalledWith({ name: 320, status: 290 });
   });
 
+  it('preserves hidden column widths while a visible column is resized', () => {
+    const onWidthsChange = vi.fn();
+
+    function ControlledTable() {
+      const [widths, setWidths] = useState({ name: 150, status: 240 });
+      const [hiddenColumnKeys, setHiddenColumnKeys] = useState(['status']);
+
+      return <>
+        <button type="button" onClick={() => setHiddenColumnKeys([])}>Show status</button>
+        <Table
+          ariaLabel="Accounts"
+          columns={columns}
+          data={[]}
+          keyExtractor={row => row.id}
+          hiddenColumnKeys={hiddenColumnKeys}
+          columnWidths={widths}
+          onColumnWidthsChange={next => {
+            onWidthsChange(next);
+            setWidths(next as typeof widths);
+          }}
+        />
+      </>;
+    }
+
+    render(<ControlledTable />);
+    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
+    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 150 } as DOMRect);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Name column' }), { clientX: 150 });
+    fireEvent.mouseMove(document, { clientX: 170 });
+    fireEvent.mouseUp(document);
+
+    expect(onWidthsChange).toHaveBeenLastCalledWith({ name: 170, status: 240 });
+    fireEvent.click(screen.getByRole('button', { name: 'Show status' }));
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveStyle({ width: '240px' });
+  });
+
   it('clamps transient drag widths before exposing them to preference persistence', () => {
     const onColumnWidthsChange = vi.fn();
     const dragColumns: TableColumn<Row>[] = [

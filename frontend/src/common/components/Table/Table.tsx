@@ -37,6 +37,16 @@ export default function Table<T>({
     () => columns.filter(column => column.hideable === false || column.resizable === false || !hiddenColumnKeys.includes(column.key)),
     [columns, hiddenColumnKeys],
   );
+  const updateVisibleColumnWidths = useCallback((nextWidths: Record<string, number>) => {
+    if (!onColumnWidthsChange) return;
+
+    const hiddenWidths = Object.fromEntries(columns.flatMap((column) => {
+      if (column.resizable === false || !hiddenColumnKeys.includes(column.key)) return [];
+      const width = columnWidths[column.key];
+      return Number.isFinite(width) ? [[column.key, clampColumnWidth(width)]] : [];
+    }));
+    onColumnWidthsChange({ ...hiddenWidths, ...nextWidths });
+  }, [columnWidths, columns, hiddenColumnKeys, onColumnWidthsChange]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { navigateRows, tabbableIndex } = useTableNavigation({
     data,
@@ -59,25 +69,33 @@ export default function Table<T>({
     sorting,
     onSortingChange,
     columnWidths,
-    onColumnWidthsChange,
+    onColumnWidthsChange: onColumnWidthsChange ? updateVisibleColumnWidths : undefined,
   });
   const lockRenderedColumnWidths = useCallback(() => {
     if (!onColumnWidthsChange) return undefined;
     const headerCells = wrapperRef.current?.querySelectorAll<HTMLTableCellElement>('thead th');
     if (!headerCells) return undefined;
 
-    const lockedWidths = Object.fromEntries(visibleColumns.flatMap((column, index) => {
+    const preservedWidths = Object.fromEntries(columns.flatMap((column) => {
       if (column.resizable === false) return [];
-      const renderedWidth = headerCells[index]?.getBoundingClientRect().width;
-      return [[
-        column.key,
-        clampColumnWidth(renderedWidth && renderedWidth > 0 ? renderedWidth : resolvedColumnWidths[column.key]),
-      ]];
+      const width = columnWidths[column.key];
+      return Number.isFinite(width) ? [[column.key, clampColumnWidth(width)]] : [];
     }));
+    const lockedWidths = {
+      ...preservedWidths,
+      ...Object.fromEntries(visibleColumns.flatMap((column, index) => {
+        if (column.resizable === false) return [];
+        const renderedWidth = headerCells[index]?.getBoundingClientRect().width;
+        return [[
+          column.key,
+          clampColumnWidth(renderedWidth && renderedWidth > 0 ? renderedWidth : resolvedColumnWidths[column.key]),
+        ]];
+      })),
+    };
 
     onColumnWidthsChange(lockedWidths);
     return lockedWidths;
-  }, [onColumnWidthsChange, resolvedColumnWidths, visibleColumns]);
+  }, [columnWidths, columns, onColumnWidthsChange, resolvedColumnWidths, visibleColumns]);
   const sentinelRef = useTableInfiniteScroll({
     rootRef: wrapperRef,
     dataLength: data.length,
