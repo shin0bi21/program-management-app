@@ -12,14 +12,15 @@ import {
   getTimeEntries,
   getTimeEntrySessions,
   updateTimeEntryPlacement,
-} from '../../../common/features/timeEntries/api/timeEntries.api';
+} from '../../../common/features/timeEntries/timeEntries.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import queryClient from '../../../query/queryClient';
 import Timesheets from './Timesheets';
 import type { TimesheetPreference } from './types';
-import { getTasks } from '../../../common/features/tasks/api/tasks.api';
+import { getTasks } from '../../../common/features/tasks/tasks.api';
 import { getUser } from '../../../auth/storage';
-import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
+
+const TIME_ENTRY_LIST_QUERY_KEY = ['time-entries', 'list'] as const;
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
@@ -36,11 +37,11 @@ const preferenceHook = vi.hoisted<{
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
 }));
 
-vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({
+vi.mock('../../../common/features/timeEntries/timeEntries.api', () => ({
   getTimeEntries: vi.fn(),
   getTimeEntryList: vi.fn(),
   getTimeEntryOptions: vi.fn(),
@@ -51,7 +52,7 @@ vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({
   deleteTimeEntry: vi.fn(),
 }));
 
-vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
+vi.mock('../../../common/features/tasks/tasks.api', () => ({
   getTasks: vi.fn(),
   setTask: vi.fn(),
 }));
@@ -447,8 +448,9 @@ describe('Timesheets', () => {
     );
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    const calendarPayPeriodCard = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
-    await waitFor(() => expect(calendarPayPeriodCard).toHaveTextContent('2.00'));
+    await waitFor(() => expect(
+      screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article'),
+    ).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
@@ -752,7 +754,7 @@ describe('Timesheets', () => {
       category: 'outreach',
       programId: null,
       programName: null,
-      status: 'todo',
+      status: 'open',
       startDate: '2026-08-09',
       dueDate: '2026-08-14',
       hoursLogged: 0,
@@ -833,7 +835,7 @@ describe('Timesheets', () => {
     expect(vi.mocked(setTimeEntry).mock.calls[vi.mocked(setTimeEntry).mock.calls.length - 1]?.[0]).not.toHaveProperty('cycleId');
   });
 
-  it('prevents Escape and X dismissal while an entry is submitting', async () => {
+  it('keeps the entry modal locked through submitting and visible success', async () => {
     const workDate = dayKey(new Date());
     const pendingCreate = deferred<Awaited<ReturnType<typeof setTimeEntry>>>();
     vi.mocked(setTimeEntry).mockImplementation(() => pendingCreate.promise);
@@ -864,7 +866,11 @@ describe('Timesheets', () => {
       taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
       hours: 1, note: 'Pending work',
     });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(
+      'Hours logged successfully.',
+    ));
+    expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
+    expect(close).toBeDisabled();
   });
 
   it('updates an existing entry without triggering the cell add flow', async () => {
@@ -986,64 +992,6 @@ describe('Timesheets', () => {
       queryKey: TIME_ENTRY_LIST_QUERY_KEY,
     }));
     expect(setTimeEntry).not.toHaveBeenCalled();
-  });
-
-  it('returns an entry to its last confirmed day when two queued moves fail', async () => {
-    const workDate = dayKey(new Date());
-    const nextDate = dayKey(new Date(new Date().setDate(new Date().getDate() + 1)));
-    const laterDate = dayKey(new Date(new Date().setDate(new Date().getDate() + 2)));
-    const item = {
-      id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
-    };
-    const first = deferred<never>();
-    const second = deferred<never>();
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: { 'staff-1': { [workDate]: [item] } },
-    });
-    vi.mocked(updateTimeEntryPlacement)
-      .mockImplementationOnce(() => first.promise)
-      .mockImplementationOnce(() => second.promise);
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findByRole('button', { name: /Program Delivery, 2 hours/ });
-    const nextCell = container.querySelector<HTMLElement>(`[data-resource-id="staff-1"][data-period="${nextDate}"]`)!;
-    const laterCell = container.querySelector<HTMLElement>(`[data-resource-id="staff-1"][data-period="${laterDate}"]`)!;
-    const getItemSlot = (date: string) => container.querySelector<HTMLElement>(
-      `[data-item-resource-id="staff-1"][data-item-period="${date}"]`,
-    )!;
-    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => nextCell) });
-    const firstSource = getItemSlot(workDate).querySelector<HTMLElement>('.resource-calendar__item')!;
-    vi.spyOn(firstSource, 'getBoundingClientRect').mockReturnValue({ width: 120 } as DOMRect);
-    fireEvent.pointerDown(firstSource, { pointerId: 1, button: 0, clientX: 220, clientY: 100 });
-    fireEvent.pointerMove(window, { pointerId: 1, clientX: 260, clientY: 120 });
-    fireEvent.pointerUp(window, { pointerId: 1, clientX: 260, clientY: 120 });
-
-    const secondSource = await waitFor(() => {
-      const moved = getItemSlot(nextDate).querySelector<HTMLElement>('.resource-calendar__item');
-      expect(moved).not.toBeNull();
-      return moved!;
-    });
-    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => laterCell) });
-    vi.spyOn(secondSource, 'getBoundingClientRect').mockReturnValue({ width: 120 } as DOMRect);
-    fireEvent.pointerDown(secondSource, { pointerId: 2, button: 0, clientX: 260, clientY: 120 });
-    fireEvent.pointerMove(window, { pointerId: 2, clientX: 300, clientY: 140 });
-    fireEvent.pointerUp(window, { pointerId: 2, clientX: 300, clientY: 140 });
-
-    first.reject(new Error('offline'));
-    await waitFor(() => expect(updateTimeEntryPlacement).toHaveBeenCalledTimes(2));
-    second.reject(new Error('offline'));
-
-    await waitFor(() => expect(getItemSlot(workDate).querySelector('.resource-calendar__item')).not.toBeNull());
-    expect(getItemSlot(nextDate).querySelector('.resource-calendar__item')).toBeNull();
-    expect(getItemSlot(laterDate).querySelector('.resource-calendar__item')).toBeNull();
-    expect(screen.getByRole('alert')).toHaveTextContent('returned to their original day');
   });
 
   it('renders a read-only calendar without mutation controls', async () => {

@@ -8,7 +8,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     category: 'planning_prep',
     programId: null,
     programName: null,
-    status: 'todo',
+    status: 'open',
     startDate: '2026-08-10',
     dueDate: '2026-08-12',
     hoursLogged: 0,

@@ -2,23 +2,32 @@ import type { StaffResource } from '../../../../../common/features/timeEntries/t
 import type { ProgramCycle } from '../../../../../common/types/cohort';
 import { formatShortDateRange } from '../../../../../common/utils/date';
 import TimesheetDashboardCard from './TimesheetDashboardCard/TimesheetDashboardCard';
-import type { TimesheetOverviewState } from '../../hooks/useTimesheetOverview';
+import useTimesheetOverviewData from './hooks/useTimesheetOverviewData';
 
 interface TimesheetDashboardProps {
+  queryKey: readonly unknown[];
   staff: StaffResource | null;
   cycle: ProgramCycle | null;
-  overview: TimesheetOverviewState;
 }
 
-export default function TimesheetDashboard({ staff, cycle, overview }: TimesheetDashboardProps) {
+export default function TimesheetDashboard({
+  queryKey,
+  staff,
+  cycle,
+}: TimesheetDashboardProps) {
+  const overviewData = useTimesheetOverviewData(
+    queryKey,
+    staff?.id ?? null,
+    cycle?.id ?? null,
+  );
   const unavailableMessage = staff && cycle
     ? 'Hours overview is unavailable.'
     : 'Select a staff member to view their hours overview.';
-  const stateMessage = overview.status === 'loading'
+  const stateMessage = overviewData.status === 'loading'
     ? 'Loading hours overview…'
-    : overview.status === 'error' ? overview.message : unavailableMessage;
+    : overviewData.status === 'error' ? overviewData.message : unavailableMessage;
 
-  if (overview.status !== 'ready') {
+  if (overviewData.status !== 'ready') {
     const showTitles = Boolean(staff);
     return <>
       <TimesheetDashboardCard title={showTitles ? 'Hours This Pay Period' : undefined} emptyMessage={stateMessage} />
@@ -29,7 +38,7 @@ export default function TimesheetDashboard({ staff, cycle, overview }: Timesheet
     </>;
   }
 
-  const { payPeriod, biweeklyAverage } = overview.data;
+  const { payPeriod, biweeklyAverage } = overviewData.data;
   const payPeriodLabel = formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd);
   return <>
     <TimesheetDashboardCard

@@ -4,10 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getTaskList, getTaskOptions, getTasks, updateTaskStatus } from '../../../common/features/tasks/api/tasks.api';
-import { setTimeEntry } from '../../../common/features/timeEntries/api/timeEntries.api';
+import { getTaskList, getTaskOptions, getTasks, updateTaskStatus } from '../../../common/features/tasks/tasks.api';
+import { setTimeEntry } from '../../../common/features/timeEntries/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
-import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
+import { buildInitialDayPeriods, dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
@@ -22,11 +22,11 @@ const calendarTestState = vi.hoisted(() => ({
   savePreference: vi.fn(),
 }));
 
-vi.mock('../../../common/features/tasks/api/tasks.api', () => ({
+vi.mock('../../../common/features/tasks/tasks.api', () => ({
   getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), setTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
-vi.mock('../../../common/features/timeEntries/api/timeEntries.api', () => ({ setTimeEntry: vi.fn() }));
+vi.mock('../../../common/features/timeEntries/timeEntries.api', () => ({ setTimeEntry: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => ({
     preference: { view: calendarTestState.view },
@@ -45,7 +45,8 @@ vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   },
 }));
 
-const task = makeTask();
+const today = dayKey(new Date());
+const task = makeTask({ startDate: today, dueDate: today });
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
   permissions: ['read:tasks', 'write:tasks'],
@@ -92,6 +93,38 @@ describe('Tasks', () => {
     vi.mocked(updateTaskStatus).mockResolvedValue({ ...task, status: 'completed', completedAt: '2026-08-11T12:00:00.000Z' });
   });
 
+  it('opens a new task form with today as its initial range', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
+
+    const today = dayKey(new Date());
+    expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Start date *')).toHaveValue(today);
+    expect(screen.getByLabelText('Due date *')).toHaveValue(today);
+  });
+
+  it('keeps persisted controls unavailable until task options and preferences are restored', async () => {
+    let resolveOptions: (value: Awaited<ReturnType<typeof getTaskOptions>>) => void = () => undefined;
+    vi.mocked(getTaskOptions).mockReturnValue(new Promise(resolve => { resolveOptions = resolve; }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved task preferences…');
+    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+
+    await act(async () => resolveOptions({
+      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
+      programs: [],
+    }));
+
+    expect(await screen.findByRole('button', { name: 'View: List' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
+  });
+
   it('opens contextual task time from the selected task dashboard', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
@@ -132,7 +165,7 @@ describe('Tasks', () => {
     const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
     expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
     expect(await screen.findByRole('cell', { name: '—' })).toBeInTheDocument();
-    expect((await screen.findByRole('cell', { name: 'To do' })).querySelector('.task-status-badge--todo')).not.toBeNull();
+    expect((await screen.findByRole('cell', { name: 'Active' })).querySelector('.task-status-badge--active')).not.toBeNull();
   });
 
   it('persists a complete preference when first hiding a column', async () => {
@@ -186,8 +219,8 @@ describe('Tasks', () => {
     vi.mocked(getTasks).mockResolvedValue([completedTask]);
     vi.mocked(getTaskList)
       .mockResolvedValueOnce({ rows: [completedTask], nextCursor: null })
-      .mockResolvedValue({ rows: [{ ...completedTask, status: 'in_progress', completedAt: null }], nextCursor: null });
-    vi.mocked(updateTaskStatus).mockResolvedValue({ ...completedTask, status: 'in_progress', completedAt: null });
+      .mockResolvedValue({ rows: [{ ...completedTask, status: 'open', completedAt: null }], nextCursor: null });
+    vi.mocked(updateTaskStatus).mockResolvedValue({ ...completedTask, status: 'open', completedAt: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
@@ -198,7 +231,7 @@ describe('Tasks', () => {
     expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
-    await waitFor(() => expect(screen.getByRole('cell', { name: 'In progress' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Actions for Prepare workshop' }));
     expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
@@ -266,7 +299,7 @@ describe('Tasks', () => {
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Complete administration'));
-    const overviewCard = screen.getByRole('heading', { name: 'Task Overview' }).closest('article')!;
+    const overviewCard = (await screen.findByRole('heading', { name: 'Task Overview' })).closest('article')!;
     fireEvent.click(within(overviewCard).getByRole('button', { name: 'See Breakdown' }));
 
     expect(screen.getByRole('dialog', { name: 'Alex Smith' })).toBeInTheDocument();

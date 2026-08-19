@@ -24,7 +24,7 @@ export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
         : sql`TRUE`}
       AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${query.category ? sql`task.category = ${query.category}` : sql`TRUE`}
-      AND ${query.includeClosed ? sql`TRUE` : sql`task.status IN ('todo', 'in_progress')`}
+      AND ${query.includeClosed ? sql`TRUE` : sql`task.status = 'open'`}
     ORDER BY task.start_date, task.due_date, task.title, task.id
   `;
   const taskIds = rows.map(row => row.id);
@@ -44,7 +44,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
       INSERT INTO tasks (
         title, details, category, staff_id, program_id, status, start_date, due_date, completed_at, created_by, updated_by
       ) VALUES (
-        ${input.title}, ${input.details}, ${input.category}, ${input.staffId}, ${input.programId}, 'todo', ${input.startDate}, ${input.dueDate},
+        ${input.title}, ${input.details}, ${input.category}, ${input.staffId}, ${input.programId}, 'open', ${input.startDate}, ${input.dueDate},
         null, ${actor.userId}, ${actor.userId}
       )
       RETURNING id, title, details, category, staff_id,
@@ -89,8 +89,8 @@ export async function updateTaskPlacement(
     const assigneeChanged = nextStaffId !== existing.staffId;
     if (assigneeChanged) {
       await assertActiveStaffResource(nextStaffId, trx);
-      if (existing.status !== 'todo' || existing.hoursLogged > 0) {
-        throw new ConflictError('Only to-do tasks without logged time can be reassigned');
+      if (existing.hoursLogged > 0) {
+        throw new ConflictError('Only open tasks without logged time can be reassigned');
       }
     }
 
@@ -120,7 +120,7 @@ export async function updateTaskPlacement(
   return attachTaskDetails([updated], await loadTaskLoggedHours([id]), actor)[0];
 }
 
-export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
+export async function updateTaskStatus(id: string, status: 'open' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
   let updated!: TaskRow;
   await sql.begin(async tx => {
@@ -133,23 +133,17 @@ export async function updateTaskStatus(id: string, status: 'todo' | 'in_progress
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
-    if (status === 'completed' && existingRows[0].status !== 'in_progress') {
-      throw new ConflictError('Only in-progress tasks can be completed');
+    if (status === 'completed' && existingRows[0].status !== 'open') {
+      throw new ConflictError('Only open tasks can be completed');
     }
     if (status === 'completed' && existingRows[0].hoursLogged === 0) {
       throw new ConflictError('Tasks need logged time before they can be completed');
     }
-    if (status === 'cancelled' && !['todo', 'in_progress'].includes(existingRows[0].status)) {
+    if (status === 'cancelled' && existingRows[0].status !== 'open') {
       throw new ConflictError('Only open tasks can be cancelled');
     }
-    if (status === 'todo' && (existingRows[0].status !== 'cancelled' || existingRows[0].hoursLogged > 0)) {
-      throw new ConflictError('Only cancelled tasks without logged time can be reopened as to do');
-    }
-    if (status === 'in_progress' && !(
-      existingRows[0].status === 'completed'
-      || (existingRows[0].status === 'cancelled' && existingRows[0].hoursLogged > 0)
-    )) {
-      throw new ConflictError('Only completed tasks or cancelled tasks with logged time can be reopened as in progress');
+    if (status === 'open' && !['completed', 'cancelled'].includes(existingRows[0].status)) {
+      throw new ConflictError('Only completed or cancelled tasks can be reopened');
     }
     const rows = await trx<TaskRow[]>`
       UPDATE tasks SET status = ${status},
@@ -239,8 +233,8 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
     }
     const oldStaffId = existingRows[0].staffId;
     const assigneeChanged = oldStaffId !== input.staffId;
-    if (assigneeChanged && (existingRows[0].status !== 'todo' || existingRows[0].hoursLogged > 0)) {
-      throw new ConflictError('Only to-do tasks without logged time can be reassigned');
+    if (assigneeChanged && existingRows[0].hoursLogged > 0) {
+      throw new ConflictError('Only open tasks without logged time can be reassigned');
     }
     const rows = await trx<TaskRow[]>`
       UPDATE tasks

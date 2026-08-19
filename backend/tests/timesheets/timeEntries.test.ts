@@ -484,7 +484,7 @@ describe('Time entries API', () => {
     expect(coworkerDelete.status).toBe(403);
   });
 
-  it('derives task scope for assigned staff time and starts the task', async () => {
+  it('derives task scope for assigned staff time without changing its open lifecycle', async () => {
     const createdTask = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -527,13 +527,13 @@ describe('Time entries API', () => {
       category: 'outreach', programId,
     }));
 
-    const startedTask = await request(app)
+    const taskWithHours = await request(app)
       .get('/api/tasks?category=outreach')
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(startedTask.body).toEqual(expect.arrayContaining([
+    expect(taskWithHours.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: assignedTaskId,
-        status: 'in_progress',
+        status: 'open',
         hoursLogged: 2,
         loggedHoursByDate: [{ date: linkedWorkDate, hours: 2 }],
       }),
@@ -553,7 +553,7 @@ describe('Time entries API', () => {
     const reopened = await request(app)
       .patch(`/api/tasks/${assignedTaskId}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'in_progress' });
+      .send({ status: 'open' });
     expect(reopened.status).toBe(200);
     const cancelled = await request(app)
       .patch(`/api/tasks/${assignedTaskId}/status`)
@@ -621,6 +621,46 @@ describe('Time entries API', () => {
 
     await request(app).delete(`/api/time-entries/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  it('requires task-write permission to complete a task while logging time', async () => {
+    const task = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Protected task completion', category: 'planning_prep', programId,
+        startDate: workDate, dueDate: workDate, staffId: firstStaffId,
+      });
+    expect(task.status).toBe(201);
+
+    const timesheetOnlyToken = generateToken(
+      firstStaffId,
+      'staff',
+      'timesheet-write-only@test.local',
+      ['write:timesheets'],
+    );
+    const entry = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${timesheetOnlyToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
+        workDate, hours: 1, note: 'Should not complete task',
+      });
+
+    expect(entry.status).toBe(403);
+    const [savedTask] = await sql<Array<{ status: string }>>`
+      SELECT status FROM tasks WHERE id = ${task.body.id}
+    `;
+    const savedEntries = await sql<Array<{ id: string }>>`
+      SELECT id FROM time_entries
+      WHERE task_id = ${task.body.id} AND note = 'Should not complete task'
+    `;
+    expect(savedTask.status).toBe('open');
+    expect(savedEntries).toHaveLength(0);
+
+    await request(app)
+      .delete(`/api/tasks/${task.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
   });
 
   it('rejects work dates that are not covered by a cycle', async () => {

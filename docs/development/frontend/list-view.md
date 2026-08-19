@@ -2,26 +2,25 @@
 
 Use this guide to add a remote list or table to a page. The [page-shell guide](page-shell.md) owns `PageHeader` and `PageBody` layout.
 
-## 1. Create the page-owned ListView
+## 1. Create the page-owned TableView
 
 Keep a substantial list and its remote-data behavior together:
 
 ```text
-ExamplePage.tsx                 # controls, columns, dialogs, and coordination
-exampleQueryKeys.ts             # stable domain/list key prefixes
+ExamplePage.tsx                 # page-owned query/column keys, controls, dialogs, and coordination
 components/
-  ExampleListView/
-    ExampleListView.tsx
+  ExampleTableView/
+    ExampleTableView.tsx
     hooks/
       useExampleList.ts
-    ExampleListView.test.tsx
+    ExampleTableView.test.tsx
 hooks/
-  useExampleMutations.ts        # transport and cache invalidation/reconciliation
+  useExampleActions.ts          # mutations and cross-owner cache reconciliation
 ```
 
-The route page owns header controls, action-aware columns, dashboards, dialogs, selection context, and coordination with sibling views. `ExampleListView` owns the list query, table rendering, pagination, and list-specific states. Keep a column or row helper inside the ListView only when no route control, dialog, calendar, or sibling view consumes it.
+The route page owns header controls, dashboards, dialogs, selection context, and coordination with sibling views. `ExampleTableView` owns the list query, table rendering, pagination, and table-specific states. Keep table columns and row-action presentation in that view when no route control, dialog, calendar, or sibling view consumes them; pass page-owned action callbacks into its focused table hook.
 
-Use [TaskListView](../../../frontend/src/pages/Staff/Tasks/components/TaskListView/TaskListView.tsx) or [TimesheetListView](../../../frontend/src/pages/Staff/Timesheets/components/TimesheetListView/TimesheetListView.tsx) as the complete page-owned pattern.
+Use [TaskTableView](../../../frontend/src/pages/Staff/Tasks/components/TaskTableView/TaskTableView.tsx) or [TimesheetTableView](../../../frontend/src/pages/Staff/Timesheets/components/TimesheetTableView/TimesheetTableView.tsx) as the complete page-owned pattern.
 
 ## 2. Add the list API and query hook
 
@@ -29,7 +28,7 @@ Use [TaskListView](../../../frontend/src/pages/Staff/Tasks/components/TaskListVi
 2. Send search, filters, sorting, cursor, and limit to the backend.
 3. Wrap the request with `useInfiniteListQuery` in `useExampleList`.
 4. Include every server-owned input in the query key so changing a control starts the correct result set.
-5. Return the query's rows, loading states, error, and pagination state to the ListView.
+5. Return the query's rows, loading states, error, and pagination state to the TableView.
 
 Request 25 rows unless the domain documents another size. The backend should apply permissions, search, filters, and sorting before cursor pagination; fetch `limit + 1` and return `{ rows, nextCursor }` with a deterministic secondary ID sort.
 
@@ -51,7 +50,7 @@ Use permission-aware `ActionsMenu` row actions. Route sorting to the backend; ne
 
 ## 4. Connect page-header controls
 
-Create search, filter, column-visibility, sorting, and view state in the route page or a focused controls hook. Pass the rendered controls into the named `PageHeader` slots and pass their values into the ListView:
+Create search, filter, column-visibility, and sorting state through their focused owners. Read and update a simple view value through the preference owner rather than adding a pass-through view hook. Pass the rendered controls into the named `PageHeader` slots and pass their values into the TableView:
 
 ```tsx
 <PageHeader
@@ -84,7 +83,7 @@ Create search, filter, column-visibility, sorting, and view state in the route p
 <PageBody
   ariaLabel="Examples"
   dashboard={<ExampleDashboard selectedId={selectedId} />}
-  table={<ExampleListView search={search} filters={filters} sorting={sorting} />}
+  table={<ExampleTableView search={search} filters={filters} sorting={sorting} />}
 />
 ```
 
@@ -100,13 +99,13 @@ Use one control lifecycle across data pages:
 4. Debounce or defer search into an applied-search value. Build the query and filtered-empty message from that same applied value; never query with debounced search while describing results from the live input.
 5. Save the complete preference object after every control change. Do not create separate persistence flows for filters, sorting, widths, hidden columns, or view selection. Each persisted control must also have page-owned React state after restoration; do not compose a new preference from a stale `preference` cache field. Each handler receives its next value, updates the matching local state, and saves the resulting complete snapshot.
 
-Keep these rules in a page-owned `use*Controls` hook when the page has several persisted controls. Test delayed auth or option resolution whenever restoration depends on them. Test the search application boundary once per distinct debounce/defer implementation; pages that consume the same tested control owner do not need duplicate timing tests.
+Keep restoration, canonical defaults, baselining, and atomic saves in a page-owned `use*Preferences` hook. Project filter behavior through a focused `use*Filters` hook when option mapping and events form a real responsibility. Keep a simple view value and update with the preference owner; do not create a pass-through view hook. Do not collect unrelated data, selection, table, and mutation behavior in one `use*Controls` owner. Test delayed auth or option resolution whenever restoration depends on them. Test the search application boundary once per distinct debounce/defer implementation; pages that consume the same tested owner do not need duplicate timing tests. See [Frontend ownership patterns](patterns.md#split-page-wide-behavior-by-responsibility).
 
 ## 5. Wire row workflows
 
 Open create and edit forms from the route page or the narrowest owner that coordinates the result. Follow [Forms and modals](forms-and-modals.md) for form lifecycle and mutation ownership.
 
-The mutation owner addresses TanStack Query through a stable list-key prefix; it does not reach into the mounted ListView. Invalidate that prefix by default so the backend reapplies permissions, filters, sorting, and cursor pagination across every cached variant.
+The mutation owner addresses TanStack Query through a stable list-key prefix; it does not reach into the mounted TableView. Invalidate that prefix by default so the backend reapplies permissions, filters, sorting, and cursor pagination across every cached variant.
 
 Use `replaceInfiniteListRow` only when the response is the complete canonical list row and the mutation cannot change list membership or sorted position. Use `removeInfiniteListRow` after a confirmed delete. These helpers update every cached variant under the prefix while preserving page boundaries and unaffected references. Never append a created row unless the owner can prove it belongs at the correct position in every cache being changed.
 

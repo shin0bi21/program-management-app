@@ -1,30 +1,42 @@
 // Scope: verifies task-item details, selection, status, and available action events.
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';
 import type { Task } from '../../../../../../common/features/tasks/types';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, status: 'todo',
+  programId: null, programName: null, status: 'open',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
+const today = '2026-08-11';
+
+function showDetails() {
+  fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+  act(() => vi.advanceTimersByTime(120));
+  return screen.getByRole('tooltip');
+}
 
 describe('TaskItem', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-11T12:00:00'));
+  });
+
+  afterEach(() => vi.useRealTimers());
+
   it('shows task details through the shared calendar-item hover behavior', async () => {
-    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} today={today} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
     expect(item).toHaveTextContent('Prepare workshop · Planning / Prep');
     expect(item).not.toHaveTextContent('1.5h');
     expect(item).not.toHaveTextContent('Soft Skills');
-    fireEvent.mouseEnter(item);
-
-    const tooltip = await screen.findByRole('tooltip');
+    const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect(tooltip).toHaveTextContent('To do');
+    expect(tooltip).toHaveTextContent('Active');
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Logged');
@@ -37,11 +49,9 @@ describe('TaskItem', () => {
   });
 
   it('shows a dash when the task has no program', async () => {
-    render(<TaskItem task={task} />);
+    render(<TaskItem task={task} today={today} />);
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
-
-    const tooltip = await screen.findByRole('tooltip');
+    const tooltip = showDetails();
     expect(within(tooltip).getByText('—')).toBeInTheDocument();
     expect(tooltip).not.toHaveTextContent('General');
   });
@@ -51,9 +61,9 @@ describe('TaskItem', () => {
     const onComplete = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
-    render(<div onClick={onActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
+    render(<div onClick={onActivate}><TaskItem task={task} today={today} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, 2026-08-10 to 2026-08-12. Open actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, Active, 2026-08-10 to 2026-08-12. Open actions' }));
     expect(onActivate).not.toHaveBeenCalled();
     expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
@@ -65,7 +75,7 @@ describe('TaskItem', () => {
 
   it('invokes mark complete from the task action menu', () => {
     const onComplete = vi.fn();
-    render(<TaskItem task={task} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={task} today={today} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Set Completed' }));
@@ -76,7 +86,7 @@ describe('TaskItem', () => {
 
   it('notifies the page when the task item is activated', () => {
     const onActivate = vi.fn();
-    render(<TaskItem task={task} onActivate={onActivate} />);
+    render(<TaskItem task={task} today={today} onActivate={onActivate} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop/ }));
 
@@ -84,58 +94,57 @@ describe('TaskItem', () => {
   });
 
   it('keeps selected task styling independent of the transient action menu', () => {
-    render(<TaskItem task={task} selected onComplete={vi.fn()} />);
+    render(<TaskItem task={task} today={today} selected onComplete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
-    expect(item).toHaveClass('task-item--selected');
+    expect(item).toHaveClass('calendar-item--selected');
     fireEvent.click(item);
-    expect(item).toHaveClass('task-item--selected', 'calendar-item--menu-open');
+    expect(item).toHaveClass('calendar-item--selected', 'calendar-item--menu-open');
   });
 
-  it('shows an overdue status at the end of an active task item', async () => {
-    render(<TaskItem task={{ ...task, dueDate: '2000-01-01' }} />);
+  it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {
+    render(<TaskItem task={{ ...task, dueDate: '2000-01-01' }} today={today} />);
 
-    const overdue = screen.getByLabelText('Overdue');
-    expect(overdue).toHaveTextContent('!');
-    expect(overdue).toHaveAttribute('title', 'Overdue');
+    const item = screen.getByRole('button', { name: /Prepare workshop/ });
+    expect(item).toHaveClass('task-item--overdue');
+    expect(item.querySelector('.calendar-item__trailing')).toBeNull();
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
-    const tooltip = await screen.findByRole('tooltip');
+    const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect(tooltip.querySelector('.task-item__overdue-badge')).toHaveTextContent('Overdue');
     expect([...tooltip.querySelectorAll('.task-item__detail-badges > span')].map(badge => badge.textContent)).toEqual([
-      'To do', 'Overdue',
+      'Overdue',
     ]);
   });
 
-  it('shows completed status without marking the task overdue', async () => {
+  it('uses the full task bar for completed feedback instead of a trailing symbol', async () => {
     render(<TaskItem task={{
       ...task,
       status: 'completed',
       dueDate: '2000-01-01',
       completedAt: '2000-01-02T12:00:00.000Z',
-    }} />);
+    }} today={today} />);
 
-    expect(screen.queryByLabelText('Overdue')).not.toBeInTheDocument();
-    const completed = screen.getByLabelText('Completed');
-    expect(completed).toHaveTextContent('✓');
-    expect(completed).toHaveAttribute('title', 'Completed');
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
-    const tooltip = await screen.findByRole('tooltip');
+    const item = screen.getByRole('button', { name: /Prepare workshop/ });
+    expect(item).toHaveClass('task-item--completed');
+    expect(item.querySelector('.calendar-item__trailing')).toBeNull();
+    const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Completed');
     expect(tooltip).not.toHaveTextContent('Overdue');
   });
 
   it.each([
-    ['todo', 'To do'],
-    ['in_progress', 'In progress'],
-    ['completed', 'Completed'],
-    ['cancelled', 'Cancelled'],
-  ] as const)('styles the %s status as a title badge', async (status, label) => {
-    render(<TaskItem task={{ ...task, status }} />);
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
+    ['Upcoming', { startDate: '2026-08-12', dueDate: '2026-08-13' }, 'upcoming'],
+    ['Active', { startDate: '2026-08-10', dueDate: '2026-08-12' }, 'active'],
+    ['Overdue', { startDate: '2026-08-08', dueDate: '2026-08-10' }, 'overdue'],
+    ['Completed', { status: 'completed' as const }, 'completed'],
+    ['Cancelled', { status: 'cancelled' as const }, 'cancelled'],
+  ])('styles the task as %s', async (label, overrides, modifier) => {
+    render(<TaskItem task={{ ...task, ...overrides }} today={today} />);
+    const item = screen.getByRole('button', { name: /Prepare workshop/ });
+    expect(item).toHaveClass(`task-item--${modifier}`);
+    showDetails();
 
-    const badge = await screen.findByText(label, { selector: '.task-status-badge' });
-    expect(badge).toHaveClass(`task-status-badge--${status}`);
+    const badge = screen.getByText(label, { selector: '.task-status-badge' });
+    expect(badge).toHaveClass(`task-status-badge--${modifier}`);
   });
 });

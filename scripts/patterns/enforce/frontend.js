@@ -329,7 +329,7 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 
   if (!source.includes('useUserPreference')) return;
   const ownsTablePreferences = /\b(?:columnWidths|hiddenColumns)\b/.test(source);
-  const passesColumnKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*['"][^'"]+['"]\s*,\s*columnKeys\s*\)/
+  const passesColumnKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*['"][^'"]+['"]\s*,\s*columnKeys\s*,?\s*\)/
     .test(source);
   if (ownsTablePreferences && !passesColumnKeys) {
     violations.push(`${file}:1 table preference hooks must receive page-owned columnKeys and pass them to useUserPreference.`);
@@ -352,10 +352,10 @@ export function checkPaginatedTables(violations, file, source) {
     );
   }
 
-  const listViewHook = /\/components\/[^/]*ListView\/hooks\//.test(file);
-  if (usesInfiniteList && file.includes('ListView/') && !listViewHook) {
+  const tableViewHook = /\/components\/[^/]*(?:List|Table)View\/hooks\//.test(file);
+  if (usesInfiniteList && /(?:List|Table)View\//.test(file) && !tableViewHook) {
     violations.push(
-      `${file}:1 a *ListView remote-list hook must be colocated under that view's hooks directory.`,
+      `${file}:1 a remote-table view hook must be colocated under that view's hooks directory.`,
     );
   }
 

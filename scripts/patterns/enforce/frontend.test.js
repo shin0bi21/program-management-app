@@ -272,6 +272,26 @@ test('accepts the normalized functional preference lifecycle', () => {
   );
 });
 
+test('accepts formatted page-owned column keys with a trailing argument comma', () => {
+  const source = `
+    const { setBaseline, save } = useUserPreference<LeadPreference>(
+      'lead-filters',
+      columnKeys,
+    );
+    setBaseline(restored);
+    save(current => ({ ...current, hiddenColumns }));
+  `;
+
+  assert.deepEqual(
+    violationsFor(
+      checkPreferenceControlOwnership,
+      `${leadsPage}/hooks/useLeadPreferences.ts`,
+      source,
+    ),
+    [],
+  );
+});
+
 test('allows filter-only preferences without table column keys', () => {
   const source = `
     const { setBaseline, save } = useUserPreference('lead-filters');
@@ -305,14 +325,14 @@ test('requires page-owned column keys and functional preference saves', () => {
   assert.match(violations.join('\n'), /functional saves/);
 });
 
-test('requires infinite-list queries to use the owning ListView hook and page size', () => {
+test('requires infinite-list queries to use the owning table-view hook and page size', () => {
   const violations = violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskListView/useTasks.ts',
     'useInfiniteListQuery({ limit: 50 });',
   );
 
-  assert.match(violations.join('\n'), /ListView remote-list hook/);
+  assert.match(violations.join('\n'), /remote-table view hook/);
   assert.match(violations.join('\n'), /25-row cursor page size/);
 });
 
@@ -320,6 +340,14 @@ test('accepts a standard infinite-list hook', () => {
   assert.deepEqual(violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskListView/hooks/useTasks.ts',
+    'useInfiniteListQuery({ limit: 25 });',
+  ), []);
+});
+
+test('accepts a standard TableView infinite-list hook', () => {
+  assert.deepEqual(violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTableView/hooks/useTasks.ts',
     'useInfiniteListQuery({ limit: 25 });',
   ), []);
 });

@@ -1,7 +1,11 @@
 import { useMemo, useRef } from 'react';
 import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
 import type { TimesheetItem } from '../../../../../../common/features/timeEntries/types';
-import { timesheetEntryTypeKey, type TimesheetEntryType } from '../../../timesheetViewData';
+import type { TimesheetEntryType } from '../../../types';
+
+function getEntryType(item: TimesheetItem): TimesheetEntryType {
+  return item.taskId ? 'task' : item.sessionId ? 'session' : 'other';
+}
 
 const DEFAULT_PROGRAM_ID = 'general';
 const KEY_SEPARATOR = '\u0000';
@@ -42,7 +46,7 @@ function matchesFilters(
   const matchesProgram = !programFilters.length
     || programFilters.includes(item.programId ?? DEFAULT_PROGRAM_ID);
   const matchesCycle = !cycleId || item.cycleId === cycleId;
-  const matchesType = !typeFilters.length || typeFilters.includes(timesheetEntryTypeKey(item));
+  const matchesType = !typeFilters.length || typeFilters.includes(getEntryType(item));
   return matchesCategory && matchesProgram && matchesType && matchesCycle;
 }
 

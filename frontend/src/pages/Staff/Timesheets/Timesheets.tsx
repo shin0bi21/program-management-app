@@ -1,36 +1,39 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../../auth/authContext';
-import { getUser } from '../../../auth/storage';
+import { useCallback, useState } from 'react';
+
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { TableColumn } from '../../../common/components/Table/Table';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
-import {
-  deleteTimeEntry,
-  getTimeEntryOptions,
-  setTimeEntry,
-  type SetTimeEntryInput,
-} from '../../../common/features/timeEntries/api/timeEntries.api';
-import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../common/features/timeEntries/timeEntryOptions';
-import type { StaffResource, TimeEntryProgram } from '../../../common/features/timeEntries/types';
-import { TASKS_QUERY_KEY } from '../../../common/features/tasks/queryKeys';
-import { formatShortDate } from '../../../common/utils/date';
-import TimesheetCalendarView, { type TimesheetCalendarMutationCache, type TimesheetEntryTarget } from './components/TimesheetCalendarView/TimesheetCalendarView';
+import TimesheetCalendarView from './components/TimesheetCalendarView/TimesheetCalendarView';
 import TimesheetDashboard from './components/TimesheetDashboard/TimesheetDashboard';
-import TimesheetListView from './components/TimesheetListView/TimesheetListView';
-import { useTimesheetControls } from './hooks/useTimesheetControls';
-import { useTimesheetOverview } from './hooks/useTimesheetOverview';
-import { TIME_ENTRY_LIST_QUERY_KEY } from './timesheetQueryKeys';
-import { timesheetEntryType, type TimesheetListRow } from './timesheetViewData';
+import TimesheetTableView from './components/TimesheetTableView/TimesheetTableView';
+
+import { useAuth } from '../../../auth/authContext';
+import { getUser } from '../../../auth/storage';
+import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
+import useTimesheetTable from './components/TimesheetTableView/hooks/useTimesheetTable';
+import useTimesheetActions from './hooks/useTimesheetActions';
+import useTimesheetData from './hooks/useTimesheetData';
+import useTimesheetFilters from './hooks/useTimesheetFilters';
+import useTimesheetPreferences from './hooks/useTimesheetPreferences';
+import useTimesheetSelection from './hooks/useTimesheetSelection';
+
+import type { SetTimeEntryInput } from '../../../common/features/timeEntries/timeEntries.api';
+import type { TimesheetAddTarget, TimesheetEntryTarget } from './types';
+
 import './Timesheets.css';
+
+// Page-owned cache and persisted-column contracts.
+const TASK_QUERY_KEY = ['tasks'] as const;
+const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
+const TIME_ENTRY_LIST_QUERY_KEY = [...TIME_ENTRY_QUERY_KEY, 'list'] as const;
+const TIME_ENTRY_OPTIONS_QUERY_KEY = ['time-entry-options'] as const;
+const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 const TIMESHEET_COLUMN_KEYS = [
   'date',
@@ -44,254 +47,242 @@ const TIMESHEET_COLUMN_KEYS = [
   'note',
   'type',
 ] as const;
+const TIMESHEET_SORT_KEYS = [
+  'firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type',
+] as const;
+
+function getTimesheetError(
+  optionsError: unknown,
+  cyclesError: unknown,
+  preferenceError: string | null,
+) {
+  return (optionsError ? 'Could not load hour options.' : '')
+    || (cyclesError ? 'Could not load cycles.' : '')
+    || preferenceError;
+}
 
 export default function Timesheets() {
-  // Application access and page-owned workflows.
-  const queryClient = useQueryClient();
+  // Permissions.
   const { permissions, role } = useAuth();
   const currentUserId = getUser()?.id;
-  const canWriteTimesheets = permissions.includes('write:timesheets');
-  const [listSearch, setListSearch] = useState('');
-  const [selectedListRowId, setSelectedListRowId] = useState<string | null>(null);
-  const [selectedDashboardStaffId, setSelectedDashboardStaffId] = useState<string | null>(null);
-  const [overviewRefreshToken, setOverviewRefreshToken] = useState(0);
-  const [addOpen, setAddOpen] = useState(false);
-  const [addTarget, setAddTarget] = useState<{ resourceId?: string; date?: string; source?: 'regular' | 'task' | 'session' }>({});
+  const canWrite = permissions.includes('write:timesheets');
+  const canCompleteTask = permissions.includes('write:tasks');
+
+  // Modal state.
+  const [modalOpen, setModalOpen] = useState(false);
+  const [addTarget, setAddTarget] = useState<TimesheetAddTarget>({});
   const [editTarget, setEditTarget] = useState<TimesheetEntryTarget | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
-  // Remote options and persisted page controls.
-  const optionsQuery = useQuery({ queryKey: ['time-entry-options'], queryFn: ({ signal }) => getTimeEntryOptions({ signal }) });
-  const resources = useMemo<StaffResource[]>(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
-  const programs = useMemo<TimeEntryProgram[]>(() => optionsQuery.data?.programs ?? [], [optionsQuery.data?.programs]);
-  const {
-    staffFilters, categoryFilters, programFilters, typeFilters, view, ready: preferencesReady,
-    columnWidths: listColumnWidths, hiddenColumns, setHiddenColumns, sorting, cycles, cyclesError, selectedCycleId, preferenceError,
-    filterCategories, applyFilter, clearFilters, setView, setColumnWidths, setSorting, selectCycle,
-  } = useTimesheetControls({ role, resources, programs, columnKeys: TIMESHEET_COLUMN_KEYS });
-
-  // The calendar owns buffered range data outside TanStack Query.
-  const emptyCalendarCache = useMemo<TimesheetCalendarMutationCache>(() => ({ upsert: () => undefined, remove: () => undefined }), []);
-  const calendarMutationRef = useRef<TimesheetCalendarMutationCache>(emptyCalendarCache);
-  const refreshList = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: TIME_ENTRY_LIST_QUERY_KEY });
-  }, [queryClient]);
-  const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
-  const resourceById = useMemo(() => new Map(resources.map(resource => [resource.id, resource])), [resources]);
-  const selectedCycle = cycles.find(cycle => cycle.id === selectedCycleId) ?? null;
-
-  // Selection keeps the list, calendar, and dashboard context aligned.
-  const selectListRowWithContext = useCallback((row: TimesheetListRow) => {
-    setSelectedListRowId(row.id);
-    setSelectedDashboardStaffId(row.resourceId);
-    if (row.item.cycleId === selectedCycleId) return;
-    selectCycle(row.item.cycleId);
-  }, [selectCycle, selectedCycleId]);
-
-  const currentUserResource = resources.find(resource => resource.id === currentUserId) ?? null;
-  const dashboardStaff = resources.find(resource => resource.id === selectedDashboardStaffId)
-    ?? currentUserResource;
-  const overviewCycle = selectedCycle
-    ?? cycles.find(cycle => cycle.state === 'active')
-    ?? cycles[0]
-    ?? null;
-  const dashboardStaffId = dashboardStaff?.id ?? null;
-  const overviewCycleId = overviewCycle?.id ?? null;
-  const dashboardOverview = useTimesheetOverview(dashboardStaffId, overviewCycleId, overviewRefreshToken);
-
-  // Mutations reconcile the calendar first, then refresh server-derived lists and totals.
-  const addTimeEntry = async (input: SetTimeEntryInput) => {
-    const created = editTarget
-      ? await setTimeEntry(input, editTarget.item.id)
-      : await setTimeEntry(input);
-    const categoryLabel = TIME_ENTRY_CATEGORY_OPTIONS.find(option => option.value === created.category)?.label ?? created.category;
-    calendarMutationRef.current.upsert(created.staffId, created.workDate, { ...created, categoryLabel });
-    setOverviewRefreshToken(current => current + 1);
-    const refreshes = [refreshList()];
-    if (created.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }));
-    await Promise.all(refreshes);
-  };
-
-  const requestDelete = useCallback((target: TimesheetEntryTarget) => {
-    setConfirmAction({
-      title: 'Delete logged hours',
-      message: `Delete these ${target.item.categoryLabel.toLowerCase()} hours?`,
-      confirmLabel: 'Delete',
-      confirmVariant: 'danger',
-      onConfirm: async () => {
-        await deleteTimeEntry(target.item.id);
-        calendarMutationRef.current.remove(target.item.id);
-        setOverviewRefreshToken(current => current + 1);
-        const refreshes = [refreshList()];
-        if (target.item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }));
-        await Promise.all(refreshes);
-        setEditTarget(current => current?.item.id === target.item.id ? null : current);
-      },
-    });
-  }, [queryClient, refreshList]);
-
-  // Table presentation stays page-owned because its actions open page-owned dialogs.
-  const listColumns = useMemo<TableColumn<TimesheetListRow>[]>(() => [
-    { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: row => row.staffFirstName },
-    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: row => row.staffLastName },
-    { key: 'date', sortKey: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
-    { key: 'cycle', sortKey: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
-    { key: 'program', sortKey: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
-    { key: 'category', sortKey: 'category', header: 'Category', render: row => row.item.categoryLabel },
-    { key: 'session', sortKey: 'session', header: 'Session', render: row => row.item.sessionLabel ?? '—' },
-    { key: 'hours', sortKey: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
-    { key: 'note', sortKey: 'note', header: 'Note', render: row => row.item.note },
-    { key: 'type', sortKey: 'type', header: 'Type', width: 110, render: row => {
-      const type = timesheetEntryType(row.item);
-      return <span className={`time-item__type time-item__type--${type.toLowerCase()}`}>{type}</span>;
-    } },
-    ...(canWriteTimesheets ? [{
-      key: 'actions', header: '', width: 40, resizable: false, className: 'col-actions',
-      render: (row: TimesheetListRow) => resourceById.get(row.resourceId)?.writable ? (
-        <ActionsMenu
-          ariaLabel={`Actions for ${row.item.taskTitle ?? row.item.categoryLabel} on ${row.date}`}
-          items={[
-            { id: 'edit', label: 'Edit', onClick: () => {
-              setEditTarget(row);
-              setAddTarget({ resourceId: row.resourceId, date: row.date });
-              setAddOpen(true);
-            } },
-            { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => requestDelete(row) },
-          ]}
-        />
-      ) : null,
-    }] : []),
-  ], [canWriteTimesheets, requestDelete, resourceById]);
-
-  return (
-    <>
-      <main className="page-container page-container--data timesheets-page">
-        <PageHeader
-          title="Hours"
-          actions={canWriteTimesheets && writableResources.length ? (
-            <ActionsMenu
-              triggerLabel="+ Add"
-              ariaLabel="Add hours"
-              items={[
-                { id: 'session', label: 'Session Hours', onClick: () => {
-                  setEditTarget(null);
-                  setAddTarget({ source: 'session' });
-                  setAddOpen(true);
-                } },
-                { id: 'task', label: 'Task Hours', onClick: () => {
-                  setEditTarget(null);
-                  setAddTarget({ source: 'task' });
-                  setAddOpen(true);
-                } },
-                { id: 'regular', label: 'Regular Hours', onClick: () => {
-                  setEditTarget(null);
-                  setAddTarget({ source: 'regular' });
-                  setAddOpen(true);
-                } },
-              ]}
-            />
-          ) : undefined}
-          filters={(
-            <FilterCard
-              categories={filterCategories}
-              values={{ staff: staffFilters, entryType: categoryFilters, program: programFilters, type: typeFilters, cycle: selectedCycleId ? [selectedCycleId] : [] }}
-              onApply={applyFilter}
-              onClearAll={clearFilters}
-            />
-          )}
-          view={preferencesReady ? (
-            <ViewMenu
-              label="View"
-              value={view}
-              onChange={setView}
-              options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
-            />
-          ) : undefined}
-          columns={view === 'list'
-            ? <ColumnVisibilityMenu columns={listColumns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={setHiddenColumns} />
-            : undefined}
-          search={view === 'list' ? (
-            <SearchInput
-              label="Search hours"
-              value={listSearch}
-              onChange={event => setListSearch(event.target.value)}
-              placeholder="Search hours"
-            />
-          ) : undefined}
-        />
-        {(optionsQuery.error || cyclesError || preferenceError) && (
-          <div className="timesheets-page__error" role="alert">
-            <span>{(optionsQuery.error ? 'Could not load hour options.' : null) ?? cyclesError ?? preferenceError}</span>
-          </div>
-        )}
-        {!preferencesReady ? <p role="status">Loading saved filters…</p> : <PageBody
-          ariaLabel="Hours overview and entries"
-          dashboard={<TimesheetDashboard staff={dashboardStaff} cycle={overviewCycle} overview={dashboardOverview} />}
-          {...(view === 'calendar' ? { calendar: <TimesheetCalendarView
-            resources={resources}
-            staffIds={staffFilters}
-            categories={categoryFilters}
-            programIds={programFilters}
-            types={typeFilters}
-            cycleId={selectedCycleId}
-            canWrite={canWriteTimesheets}
-            selectedStaffId={dashboardStaff?.id}
-            mutationCacheRef={calendarMutationRef}
-            onStaffSelect={setSelectedDashboardStaffId}
-            onEdit={target => {
-              setEditTarget(target);
-              setAddTarget({ resourceId: target.resourceId, date: target.date });
-              setAddOpen(true);
-            }}
-            onDelete={requestDelete}
-            onAdd={target => {
-              setAddTarget(target);
-              setEditTarget(null);
-              setAddOpen(true);
-            }}
-            onOverviewRefresh={() => setOverviewRefreshToken(current => current + 1)}
-          /> } : { table: <TimesheetListView
-            columns={listColumns}
-            hiddenColumnKeys={hiddenColumns}
-            staffIds={staffFilters}
-            categories={categoryFilters}
-            programIds={programFilters}
-            types={typeFilters}
-            cycleId={selectedCycleId || undefined}
-            search={listSearch}
-            sorting={sorting}
-            columnWidths={listColumnWidths}
-            selectedRowId={selectedListRowId}
-            onRowSelect={selectListRowWithContext}
-            onSortingChange={setSorting}
-            onColumnWidthsChange={setColumnWidths}
-          /> })}
-        />}
-      </main>
-      <TimeEntryModal
-        isOpen={addOpen}
-        resources={writableResources}
-        programs={programs}
-        onClose={() => setAddOpen(false)}
-        onAdd={addTimeEntry}
-        initialResourceId={addTarget.resourceId ?? (!editTarget ? currentUserId : undefined)}
-        initialDate={addTarget.date}
-        initialSource={addTarget.source}
-        staffLocked={Boolean(addTarget.resourceId)}
-        initialItem={editTarget?.item}
-      />
-      <Modal
-        isOpen={!!confirmAction}
-        onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        <p>{confirmAction?.message}</p>
-      </Modal>
-    </>
+  // Page data and persisted controls.
+  const pageData = useTimesheetData(
+    TIME_ENTRY_OPTIONS_QUERY_KEY,
+    PROGRAM_CYCLES_QUERY_KEY,
+    currentUserId,
   );
+
+  const timesheetPreferences = useTimesheetPreferences({
+    role,
+    resources: pageData.resources,
+    programs: pageData.programs,
+    cycles: pageData.cycles,
+    loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
+    optionsError: Boolean(pageData.optionsError),
+    cyclesError: Boolean(pageData.cyclesError),
+    columnKeys: TIMESHEET_COLUMN_KEYS,
+    sortKeys: TIMESHEET_SORT_KEYS,
+  });
+
+  const filters = useTimesheetFilters({
+    role,
+    preferences: timesheetPreferences.preferences,
+    resources: pageData.resources,
+    programs: pageData.programs,
+    cycles: pageData.cycles,
+    updatePreferences: timesheetPreferences.updatePreferences,
+  });
+
+  const view = timesheetPreferences.preferences.view;
+
+  // Selection, actions, and modal workflows.
+  const selection = useTimesheetSelection({
+    resources: pageData.resources,
+    currentUserResource: pageData.currentUserResource,
+    cycleId: filters.cycleId,
+    onCycleSelect: filters.selectCycle,
+  });
+
+  const actions = useTimesheetActions({
+    timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
+    timeEntryListQueryKey: TIME_ENTRY_LIST_QUERY_KEY,
+    taskQueryKey: TASK_QUERY_KEY,
+    onEntryRemoved: entryId => {
+      setEditTarget(current => current?.item.id === entryId ? null : current);
+    },
+  });
+
+  const openAddTarget = useCallback((target: TimesheetAddTarget) => {
+    setEditTarget(null);
+    setAddTarget(target);
+    setModalOpen(true);
+  }, []);
+
+  const openEditTarget = useCallback((target: TimesheetEntryTarget) => {
+    setEditTarget(target);
+    setAddTarget({ resourceId: target.resourceId, date: target.date });
+    setModalOpen(true);
+  }, []);
+
+  const table = useTimesheetTable({
+    canWrite,
+    resourcesById: pageData.resourcesById,
+    preferences: timesheetPreferences.preferences,
+    updatePreferences: timesheetPreferences.updatePreferences,
+    isEntryPending: actions.isEntryPending,
+    onEdit: openEditTarget,
+    onDelete: actions.requestDelete,
+  });
+
+  const confirmModal = useConfirmModal({
+    action: actions.confirmAction,
+    onClose: actions.closeConfirmation,
+  });
+
+  // View configuration.
+  const selectedCycle = pageData.cycles.find(cycle => cycle.id === filters.cycleId) ?? null;
+  const overviewCycle = selectedCycle
+    ?? pageData.cycles.find(cycle => cycle.state === 'active')
+    ?? pageData.cycles[0]
+    ?? null;
+  const timesheetError = getTimesheetError(
+    pageData.optionsError,
+    pageData.cyclesError,
+    timesheetPreferences.error,
+  );
+  const viewContent = view === 'list'
+    ? { table: <TimesheetTableView
+      queryKey={TIME_ENTRY_LIST_QUERY_KEY}
+      columns={table.columns}
+      hiddenColumnKeys={table.hiddenColumns}
+      staffIds={filters.staffIds}
+      categories={filters.categories}
+      programIds={filters.programIds}
+      types={filters.types}
+      cycleId={filters.cycleId ?? undefined}
+      search={filters.search}
+      sorting={table.sorting}
+      columnWidths={table.columnWidths}
+      selectedRowId={selection.selectedRowId}
+      onRowSelect={selection.selectRow}
+      onSortingChange={table.updateSorting}
+      onColumnWidthsChange={table.updateColumnWidths}
+    /> }
+    : { calendar: <TimesheetCalendarView
+      resources={pageData.resources}
+      staffIds={filters.staffIds}
+      categories={filters.categories}
+      programIds={filters.programIds}
+      types={filters.types}
+      cycleId={filters.cycleId ?? ''}
+      canWrite={canWrite}
+      moveError={actions.moveError}
+      selectedStaffId={selection.selectedStaff?.id}
+      mutationCacheRef={actions.calendarCacheRef}
+      isEntryPending={actions.isEntryPending}
+      onStaffSelect={selection.selectStaff}
+      onEdit={openEditTarget}
+      onDelete={actions.requestDelete}
+      onAdd={openAddTarget}
+      onMove={actions.moveTimeEntry}
+    /> };
+
+  const submitTimeEntry = (input: SetTimeEntryInput) => (
+    actions.saveTimeEntry(input, editTarget?.item.id)
+  );
+
+  // Render.
+  return <>
+    <main className="page-container page-container--data timesheets-page">
+      <PageHeader
+        title="Hours"
+        actions={canWrite && pageData.writableResources.length ? <ActionsMenu
+          triggerLabel="+ Add"
+          ariaLabel="Add hours"
+          items={[
+            { id: 'session', label: 'Session Hours', onClick: () => openAddTarget({ source: 'session' }) },
+            { id: 'task', label: 'Task Hours', onClick: () => openAddTarget({ source: 'task' }) },
+            { id: 'regular', label: 'Regular Hours', onClick: () => openAddTarget({ source: 'regular' }) },
+          ]}
+        /> : undefined}
+
+        search={timesheetPreferences.ready && view === 'list' ? <SearchInput
+          label="Search hours"
+          value={filters.search}
+          onChange={event => filters.setSearch(event.target.value)}
+          placeholder="Search hours"
+        /> : undefined}
+
+        view={timesheetPreferences.ready ? <ViewMenu
+          label="View"
+          value={view}
+          onChange={nextView => timesheetPreferences.updatePreferences({ view: nextView })}
+          options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
+        /> : undefined}
+
+        columns={timesheetPreferences.ready && view === 'list' ? <ColumnVisibilityMenu
+          columns={table.columns}
+          hiddenColumnKeys={table.hiddenColumns}
+          onHiddenColumnKeysChange={table.updateHiddenColumns}
+        /> : undefined}
+
+        filters={timesheetPreferences.ready ? <FilterCard
+          categories={filters.filterCategories}
+          values={{
+            staff: filters.staffIds,
+            entryType: filters.categories,
+            program: filters.programIds,
+            type: filters.types,
+            cycle: filters.cycleId ? [filters.cycleId] : [],
+          }}
+          onApply={filters.applyFilter}
+          onClearAll={filters.clearFilters}
+        /> : undefined}
+      />
+      {timesheetError && <p className="timesheets-page__error" role="alert">{timesheetError}</p>}
+      {!timesheetPreferences.ready ? <p role="status">Loading saved filters…</p> : <PageBody
+        ariaLabel="Hours overview and entries"
+        dashboard={<TimesheetDashboard
+          queryKey={TIME_ENTRY_QUERY_KEY}
+          staff={selection.selectedStaff}
+          cycle={overviewCycle}
+        />}
+        {...viewContent}
+      />}
+    </main>
+
+    <TimeEntryModal
+      isOpen={modalOpen}
+      resources={pageData.writableResources}
+      programs={pageData.programs}
+      onClose={() => setModalOpen(false)}
+      onAdd={submitTimeEntry}
+      initialResourceId={addTarget.resourceId ?? (!editTarget ? currentUserId : undefined)}
+      initialDate={addTarget.date}
+      initialSource={addTarget.source}
+      canCompleteTask={canCompleteTask}
+      staffLocked={Boolean(addTarget.resourceId)}
+      initialItem={editTarget?.item}
+    />
+
+    <Modal
+      isOpen={actions.confirmAction !== null}
+      onClose={actions.closeConfirmation}
+      title={actions.confirmAction?.title ?? ''}
+      status={confirmModal.status}
+      statusMessage={confirmModal.statusMessage}
+      footer={confirmModal.footer}
+      successDelay={confirmModal.successDelay}
+    >
+      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
+    </Modal>
+  </>;
 }

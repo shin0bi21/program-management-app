@@ -203,6 +203,45 @@ describe('useUserPreference', () => {
     expect(queryClient.getQueryData(['user-preference', 'youth-profile-filters'])).toEqual(filters(['inactive']));
   });
 
+  it('keeps a newer optimistic choice when an older preference load completes', async () => {
+    let finishLoad!: (value: TestPreference) => void;
+    getPreferenceMock.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+    setPreferenceMock.mockImplementation(async (_key, value) => value);
+    const { result } = renderHook(useTestPreference, { wrapper: createWrapper() });
+
+    act(() => result.current.save(filters(['inactive'])));
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    await act(async () => finishLoad(filters(['active'])));
+
+    expect(result.current.preference).toEqual(filters(['inactive']));
+    expect(queryClient.getQueryData(['user-preference', 'youth-profile-filters'])).toEqual(
+      filters(['inactive']),
+    );
+  });
+
+  it('keeps a normalized baseline when an older background load completes', async () => {
+    let finishLoad!: (value: TestPreference) => void;
+    getPreferenceMock.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+    const wrapper = createWrapper();
+    queryClient.setQueryData(
+      ['user-preference', 'youth-profile-filters'],
+      { statuses: [], programIds: ['removed-program'] },
+    );
+    const { result } = renderHook(useTestPreference, { wrapper });
+
+    await act(async () => {
+      result.current.setBaseline(filters(['inactive']));
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(result.current.preference).toEqual(filters(['inactive']));
+    await act(async () => finishLoad(filters(['active'])));
+
+    expect(result.current.preference).toEqual(filters(['inactive']));
+    expect(queryClient.getQueryData(['user-preference', 'youth-profile-filters'])).toEqual(
+      filters(['inactive']),
+    );
+  });
+
   it('flushes a pending preference when the page unmounts', async () => {
     setPreferenceMock.mockImplementation(async (_key, value) => value);
     const { result, unmount } = renderHook(useTestPreference, { wrapper: createWrapper() });

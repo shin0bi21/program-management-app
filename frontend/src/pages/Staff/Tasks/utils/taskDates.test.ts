@@ -1,20 +1,24 @@
-// Scope: verifies overdue dates apply only to active tasks.
+// Scope: verifies mutually exclusive date-derived states for open tasks and terminal-state precedence.
 import { describe, expect, it } from 'vitest';
 
 import type { Task } from '../../../../common/features/tasks/types';
-import { isTaskOverdue } from './taskDates';
+import { getTaskListStatus, getTaskTiming } from './taskDates';
 
-const task = { status: 'todo', dueDate: '2026-08-10' } as Task;
+const task = {
+  status: 'open', startDate: '2026-08-10', dueDate: '2026-08-12',
+} as Task;
 
 describe('task dates', () => {
-  it('marks active tasks before today as overdue', () => {
-    expect(isTaskOverdue(task, '2026-08-11')).toBe(true);
-    expect(isTaskOverdue({ ...task, status: 'in_progress' }, '2026-08-11')).toBe(true);
+  it('derives upcoming, active, and overdue from inclusive task dates', () => {
+    expect(getTaskTiming(task, '2026-08-09')).toBe('upcoming');
+    expect(getTaskTiming(task, '2026-08-10')).toBe('active');
+    expect(getTaskTiming(task, '2026-08-12')).toBe('active');
+    expect(getTaskTiming(task, '2026-08-13')).toBe('overdue');
   });
 
-  it('does not mark current, future, or closed tasks overdue', () => {
-    expect(isTaskOverdue(task, '2026-08-10')).toBe(false);
-    expect(isTaskOverdue({ ...task, status: 'completed' }, '2026-08-11')).toBe(false);
-    expect(isTaskOverdue({ ...task, status: 'cancelled' }, '2026-08-11')).toBe(false);
+  it('preserves terminal lifecycle states instead of deriving timing', () => {
+    expect(getTaskListStatus(task, '2026-08-13')).toBe('overdue');
+    expect(getTaskListStatus({ ...task, status: 'completed' }, '2026-08-13')).toBe('completed');
+    expect(getTaskListStatus({ ...task, status: 'cancelled' }, '2026-08-13')).toBe('cancelled');
   });
 });

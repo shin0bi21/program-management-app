@@ -1,10 +1,21 @@
-export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskStatus = 'open' | 'completed' | 'cancelled';
+export type TaskTiming = 'upcoming' | 'active' | 'overdue';
+export type TaskListStatus = TaskTiming | Exclude<TaskStatus, 'open'>;
 export type TaskCategory = 'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other';
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
+  open: 'Open',
   completed: 'Completed',
   cancelled: 'Cancelled',
+};
+export const TASK_TIMING_LABELS: Record<TaskTiming, string> = {
+  upcoming: 'Upcoming',
+  active: 'Active',
+  overdue: 'Overdue',
+};
+export const TASK_LIST_STATUS_LABELS: Record<TaskListStatus, string> = {
+  ...TASK_TIMING_LABELS,
+  completed: TASK_STATUS_LABELS.completed,
+  cancelled: TASK_STATUS_LABELS.cancelled,
 };
 export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
   program_delivery: 'Program Delivery',

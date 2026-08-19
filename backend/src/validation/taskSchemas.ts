@@ -11,7 +11,8 @@ const calendarDate = (label: string) => z.string()
     return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
   }, `${label} must be a valid calendar date`);
 
-export const taskStatusSchema = z.enum(['todo', 'in_progress', 'completed', 'cancelled']);
+export const taskStatusSchema = z.enum(['open', 'completed', 'cancelled']);
+export const taskListStatusSchema = z.enum(['upcoming', 'active', 'overdue', 'completed', 'cancelled']);
 
 export const taskParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid task ID') }),
@@ -42,7 +43,7 @@ export const taskListQuerySchema = z.object({
     staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
     programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
     categories: commaSeparated(timeEntryCategorySchema),
-    statuses: commaSeparated(taskStatusSchema),
+    statuses: commaSeparated(taskListStatusSchema),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
   }),
@@ -64,7 +65,7 @@ export const setTaskSchema = z.object({
 });
 
 export const updateTaskStatusSchema = z.object({
-  body: z.object({ status: z.enum(['todo', 'in_progress', 'completed', 'cancelled']) }),
+  body: z.object({ status: taskStatusSchema }),
 });
 
 export const updateTaskPlacementSchema = z.object({

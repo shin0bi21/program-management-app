@@ -122,20 +122,19 @@ async function main() {
     if (!decisionMakingSession) throw new Error('Decision Making session fixture is missing');
     await tx`
       INSERT INTO tasks (
-        id, title, details, category, staff_id, program_id, cycle_id, status,
+        id, title, details, category, staff_id, program_id, status,
         start_date, due_date, created_by, updated_by
       ) VALUES
-        (${primaryDeliveryTaskId}, 'Deliver healthy relationships workshop', 'Facilitate the scheduled Soft Skills workshop.', 'program_delivery', ${primaryStaffId}, ${softSkillsId}, ${cycle.id}, 'in_progress', '2026-08-01', '2026-08-14', ${primaryStaffId}, ${primaryStaffId}),
-        (${secondDeliveryTaskId}, 'Run mock interview session', 'Lead the Job Readiness mock interview rotation.', 'program_delivery', ${secondStaffId}, ${jobReadinessId}, ${cycle.id}, 'in_progress', '2026-08-06', '2026-08-14', ${secondStaffId}, ${secondStaffId}),
-        (${primaryOutreachTaskId}, 'Confirm community partner visit', 'Coordinate the upcoming partner visit and participant list.', 'outreach', ${primaryStaffId}, NULL, ${cycle.id}, 'todo', '2026-08-11', '2026-08-18', ${primaryStaffId}, ${primaryStaffId}),
-        (${secondPlanningTaskId}, 'Prepare workplace tour materials', 'Prepare participant handouts and facilitator notes.', 'planning_prep', ${secondStaffId}, ${jobReadinessId}, ${cycle.id}, 'todo', '2026-08-12', '2026-08-20', ${secondStaffId}, ${secondStaffId})
+        (${primaryDeliveryTaskId}, 'Deliver healthy relationships workshop', 'Facilitate the scheduled Soft Skills workshop.', 'program_delivery', ${primaryStaffId}, ${softSkillsId}, 'open', '2026-08-01', '2026-08-14', ${primaryStaffId}, ${primaryStaffId}),
+        (${secondDeliveryTaskId}, 'Run mock interview session', 'Lead the Job Readiness mock interview rotation.', 'program_delivery', ${secondStaffId}, ${jobReadinessId}, 'open', '2026-08-06', '2026-08-14', ${secondStaffId}, ${secondStaffId}),
+        (${primaryOutreachTaskId}, 'Confirm community partner visit', 'Coordinate the upcoming partner visit and participant list.', 'outreach', ${primaryStaffId}, NULL, 'open', '2026-08-11', '2026-08-18', ${primaryStaffId}, ${primaryStaffId}),
+        (${secondPlanningTaskId}, 'Prepare workplace tour materials', 'Prepare participant handouts and facilitator notes.', 'planning_prep', ${secondStaffId}, ${jobReadinessId}, 'open', '2026-08-12', '2026-08-20', ${secondStaffId}, ${secondStaffId})
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
         details = EXCLUDED.details,
         category = EXCLUDED.category,
         staff_id = EXCLUDED.staff_id,
         program_id = EXCLUDED.program_id,
-        cycle_id = EXCLUDED.cycle_id,
         status = EXCLUDED.status,
         start_date = EXCLUDED.start_date,
         due_date = EXCLUDED.due_date,

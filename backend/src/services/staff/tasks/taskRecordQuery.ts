@@ -14,7 +14,7 @@ export interface TaskRow {
   staffName: string;
   programId: string | null;
   programName: string | null;
-  status: 'todo' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'open' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
   hoursLogged: number;

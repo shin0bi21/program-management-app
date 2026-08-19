@@ -8,14 +8,19 @@
   font-weight: 700;
 }
 
-.task-status-badge--todo {
-  background: var(--color-status-todo-bg);
-  color: var(--color-status-todo);
+.task-status-badge--upcoming {
+  background: var(--color-status-upcoming-bg);
+  color: var(--color-status-upcoming);
 }
 
-.task-status-badge--in_progress {
+.task-status-badge--active {
   background: var(--color-status-warn-bg);
   color: var(--color-status-warn);
+}
+
+.task-status-badge--overdue {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-dark);
 }
 
 .task-status-badge--completed {

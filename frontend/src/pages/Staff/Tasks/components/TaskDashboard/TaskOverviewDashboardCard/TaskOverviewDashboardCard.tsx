@@ -3,11 +3,10 @@ import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
 import type { Task } from '../../../../../../common/features/tasks/types';
-import { isTaskOverdue } from '../../../utils/taskDates';
+import { getTaskTiming } from '../../../utils/taskDates';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewDashboardCard.css';
 
-const ACTIVE_TASK_STATUSES = new Set<Task['status']>(['todo', 'in_progress']);
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
 
 function parseCalendarDate(value: string) {
@@ -29,16 +28,20 @@ function sortByDueDate(tasks: readonly Task[]) {
 }
 
 function groupTasksForOverview(tasks: readonly Task[], today: string) {
-  const activeTasks = tasks.filter(task => ACTIVE_TASK_STATUSES.has(task.status));
-  const overdueTasks = activeTasks.filter(task => isTaskOverdue(task, today));
-  const upcomingTasks = activeTasks.filter(task => task.dueDate >= today);
+  const assignedTasks = tasks.filter(task => task.status === 'open');
+  const upcomingTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'upcoming');
+  const activeTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'active');
+  const overdueTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'overdue');
   const weekEnd = currentWeekEnd(today);
+  const dueThisWeekTasks = [...upcomingTasks, ...activeTasks]
+    .filter(task => task.dueDate >= today && task.dueDate <= weekEnd);
 
   return {
+    assignedTasks: sortByDueDate(assignedTasks),
+    upcomingTasks: sortByDueDate(upcomingTasks),
     activeTasks: sortByDueDate(activeTasks),
     overdueTasks: sortByDueDate(overdueTasks),
-    upcomingTasks: sortByDueDate(upcomingTasks),
-    dueThisWeekTasks: upcomingTasks.filter(task => task.dueDate <= weekEnd),
+    dueThisWeekTasks,
   };
 }
 
@@ -68,16 +71,18 @@ function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeek
   </section>;
 }
 
-export default function TaskOverviewDashboardCard({ tasks, resourceName }: {
+export default function TaskOverviewDashboardCard({ tasks, resourceName, today }: {
   tasks: readonly Task[];
   resourceName: string;
+  today: string;
 }) {
   const [open, setOpen] = useState(false);
-  const overview = useMemo(() => groupTasksForOverview(tasks, dayKey(new Date())), [tasks]);
+  const overview = useMemo(() => groupTasksForOverview(tasks, today), [tasks, today]);
   const summary = {
-    assigned: overview.activeTasks.length,
-    overdue: overview.overdueTasks.length,
+    assigned: overview.assignedTasks.length,
     upcoming: overview.upcomingTasks.length,
+    active: overview.activeTasks.length,
+    overdue: overview.overdueTasks.length,
   };
   const dueThisWeekIds = new Set(overview.dueThisWeekTasks.map(task => task.id));
 
@@ -87,8 +92,9 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName }: {
       <div className="dashboard-card__compact-layout task-overview-card__layout">
         <dl className="task-overview-card__metrics">
           <div><dt>Tasks Assigned</dt><dd>{summary.assigned}</dd></div>
-          <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
           <div><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
+          <div><dt>Active</dt><dd>{summary.active}</dd></div>
+          <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
         </dl>
         <div className="dashboard-card__compact-action task-overview-card__action">
           <Button
@@ -103,17 +109,24 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName }: {
     <Modal isOpen={open} onClose={() => setOpen(false)} title={resourceName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
-        <div className="task-overview-card__report-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
         <div><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
+        <div><dt>Active</dt><dd>{summary.active}</dd></div>
+        <div className="task-overview-card__report-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
       </dl>
       <div className="task-overview-card__task-lists">
-        <TaskDueList title="Overdue" tasks={overview.overdueTasks} emptyMessage="No overdue tasks." tone="danger" />
         <TaskDueList
           title="Upcoming"
           tasks={overview.upcomingTasks}
           emptyMessage="No upcoming tasks."
           dueThisWeekIds={dueThisWeekIds}
         />
+        <TaskDueList
+          title="Active"
+          tasks={overview.activeTasks}
+          emptyMessage="No active tasks."
+          dueThisWeekIds={dueThisWeekIds}
+        />
+        <TaskDueList title="Overdue" tasks={overview.overdueTasks} emptyMessage="No overdue tasks." tone="danger" />
       </div>
     </Modal>
   </>;
