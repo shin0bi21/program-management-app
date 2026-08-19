@@ -8,6 +8,7 @@ import process from 'node:process';
 import {
   collectRoutePageDirectories,
   collectStructureCheckFiles,
+  runAdvisoryChecks,
   runPatternChecks,
   runStructureChecks,
 } from './checks/run.js';
@@ -84,11 +85,13 @@ const structureFiles = options.mode === 'all'
   ? files
   : collectStructureCheckFiles(files, repositoryFiles, routePageDirectories);
 const violations = [];
+const advisories = [];
 for (const file of files) {
   const absolute = resolve(REPO_ROOT, file);
   if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
   const source = readFileSync(absolute, 'utf8');
   runPatternChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
+  runAdvisoryChecks(advisories, file, source, { repositoryFiles, routePageDirectories });
 }
 for (const file of structureFiles) {
   const absolute = resolve(REPO_ROOT, file);
@@ -96,6 +99,10 @@ for (const file of structureFiles) {
   runStructureChecks(violations, file, { repositoryFiles, routePageDirectories });
 }
 if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);
+if (advisories.length) {
+  console.warn(`Pattern advisories (${advisories.length}, non-blocking):`);
+  for (const advisory of advisories) console.warn(`  - ${advisory}`);
+}
 if (violations.length) {
   console.error(`Pattern checks failed (${violations.length}):`);
   for (const violation of violations) console.error(`  - ${violation}`);

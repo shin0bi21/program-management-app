@@ -15,6 +15,7 @@ import {
   checkPaginatedTables,
   checkResourceCalendars,
 } from './frontend-views.js';
+import { checkFrontendAdvisories } from './frontend-advisories.js';
 import { checkDashboardNames, checkFocusedTests, checkVocabulary } from './quality.js';
 
 export { collectRoutePageDirectories, collectStructureCheckFiles };
@@ -44,6 +45,20 @@ export function runPatternChecks(
 
   if (file.startsWith('backend/src/routes/')) checkBackendRoutes(violations, file, source);
   if (file.startsWith('backend/src/controllers/')) checkBackendControllers(violations, file, source);
+}
+
+export function runAdvisoryChecks(
+  advisories,
+  file,
+  source,
+  { repositoryFiles = [], routePageDirectories = [] } = {},
+) {
+  if (file.startsWith('frontend/src/')) {
+    checkFrontendAdvisories(advisories, file, source, {
+      repositoryFiles,
+      routePageDirectories,
+    });
+  }
 }
 
 export function runStructureChecks(

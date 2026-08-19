@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { runPatternChecks } from './run.js';
+import { runAdvisoryChecks, runPatternChecks } from './run.js';
 
 const repoRoot = '/repo';
 
@@ -35,5 +35,18 @@ test('routes backend route files to async-handler enforcement', () => {
 });
 
 test('does not run application-specific rules for documentation files', () => {
+  assert.deepEqual(violationsFor('docs/example.md', 'A documentation change.'), []);
+});
+
+test('keeps advisories separate from blocking pattern violations', () => {
+  const advisories = [];
+  runAdvisoryChecks(
+    advisories,
+    'frontend/src/pages/Example/Example.tsx',
+    'export default function Example() { return <Table />; }',
+    { routePageDirectories: ['frontend/src/pages/Example'] },
+  );
+
+  assert.match(advisories.join('\n'), /\[review-owner-boundary\]/);
   assert.deepEqual(violationsFor('docs/example.md', 'A documentation change.'), []);
 });
