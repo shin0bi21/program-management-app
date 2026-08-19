@@ -213,7 +213,7 @@ classify_infrastructure_changes() {
         ;;
       docker-compose.yml|eslint.config.js|package.json|package-lock.json)
         ;;
-      scripts/tests/*|scripts/dev/*|scripts/loc-breakdown.sh)
+      scripts/tests/*|scripts/dev/*|scripts/reports/*)
         ;;
       "")
         ;;

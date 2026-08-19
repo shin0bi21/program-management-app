@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# loc-breakdown.sh — lines of code breakdown by type (excludes node_modules, dist, .git)
+# loc-report.sh — lines of code breakdown by type (excludes node_modules, dist, .git)
 #
 # Usage:
-#   ./scripts/loc-breakdown.sh              # app: ts + tsx only (default)
-#   ./scripts/loc-breakdown.sh app          # same as above
-#   ./scripts/loc-breakdown.sh all          # all types: ts tsx css sql md
-#   ./scripts/loc-breakdown.sh ts tsx sql   # any combination of: ts tsx css sql md
+#   npm run report:loc              # app: ts + tsx only (default)
+#   npm run report:loc -- all       # all types: ts tsx css sql md
+#   npm run report:loc -- ts tsx sql
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # Array form — no eval needed
 EXCLUDES=( ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" )

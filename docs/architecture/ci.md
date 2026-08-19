@@ -103,10 +103,10 @@ For a serial batch of ten otherwise comparable pull requests, a 35-second reduct
 about 5m 50s of merge-gate waiting. It does not imply equal savings in runner consumption
 or total time-to-merge.
 
-`npm run ci:review` is the canonical read-only measurement interface. It derives merge
+`npm run report:ci` is the canonical read-only measurement interface. It derives merge
 intervals and CI-change boundaries from GitHub pull requests, and derives queue, wall,
 runner, reliability, and rerun measurements from workflow and job timestamps. See the
-[CI operations guide](../operations/ci.md#review-ci-performance-over-time) for usage.
+[Reports guide](../operations/reports.md#ci-report) for usage.
 
 ## Change checklist
 
