@@ -6,7 +6,7 @@ Read [Frontend architecture](../../architecture/frontend.md) and [Frontend owner
 
 Place route-specific behavior under `frontend/src/pages/<RouteFamily>/`. Do not import another page's private API, hook, component, or type. Promote behavior reused by multiple route families to `common/features/<domain>/`; keep domain-agnostic primitives under `common/components/`.
 
-A route-page root contains `Page.tsx`, `Page.css`, `Page.test.tsx`, and `types.ts`. It may also contain one descriptively named page-owned `*.api.ts` adapter with its matching `*.api.test.ts`; use `api/` when the page owns multiple cohesive API modules. Put all other page-owned code under `components/`, `hooks/`, or `utils/`.
+A route-page root contains `Page.tsx`, `Page.test.tsx`, and `types.ts`. Add `Page.css` only when the route itself owns styles; omit it when presentation is fully delegated to styled child components. It may also contain one descriptively named page-owned `*.api.ts` adapter with its matching `*.api.test.ts`; use `api/` when the page owns multiple cohesive API modules. Put all other page-owned code under `components/`, `hooks/`, or `utils/`.
 
 A route family with multiple pages gives each route page its own standard folder and keeps genuinely shared family code under the family-level `common/` directory. For example, Homepage may own separate `ManageHomepage/` and `PublicHomepage/` route pages. Keep one-off props beside their component, and keep contracts shared only by one component's internal files inside that component folder rather than promoting them to the page `types.ts`. Import named component implementation files directly; do not add an `index.ts` that only re-exports one component.
 

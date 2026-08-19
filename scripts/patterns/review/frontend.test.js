@@ -18,6 +18,26 @@ test('flags a route entry that renders a table instead of delegating to a view',
   assert.match(findings.join('\n'), /\[review-owner-boundary\].*renders Table directly/);
 });
 
+test('advises review when a route page delegates all styling', () => {
+  const file = 'frontend/src/pages/Login/Login.tsx';
+  const findings = findingsFor(file, 'export default function Login() { return <AuthLayout />; }', {
+    repositoryFiles: [file],
+    routePageDirectories: ['frontend/src/pages/Login'],
+  });
+
+  assert.match(findings.join('\n'), /\[review-page-styles\].*no page-owned CSS/);
+});
+
+test('does not advise style review when the route owns CSS', () => {
+  const file = 'frontend/src/pages/Login/Login.tsx';
+  const findings = findingsFor(file, 'export default function Login() { return <AuthLayout />; }', {
+    repositoryFiles: [file, 'frontend/src/pages/Login/Login.css'],
+    routePageDirectories: ['frontend/src/pages/Login'],
+  });
+
+  assert.deepEqual(findings, []);
+});
+
 test('reports inline workflow behavior without scoring its complexity', () => {
   const source = `
     import { useEffect, useState } from 'react';
@@ -86,6 +106,7 @@ test('allows a reviewed finding to be suppressed only with a documented reason',
   `;
 
   assert.deepEqual(findingsFor('frontend/src/pages/Things/Things.tsx', source, {
+    repositoryFiles: ['frontend/src/pages/Things/Things.css'],
     routePageDirectories: ['frontend/src/pages/Things'],
   }), []);
 });
@@ -114,6 +135,7 @@ test('does not warn for a lean page orchestrator composed from owned hooks and v
   assert.deepEqual(findingsFor(file, source, {
     repositoryFiles: [
       file,
+      'frontend/src/pages/Things/Things.css',
       'frontend/src/pages/Things/components/ThingListView/ThingListView.tsx',
       'frontend/src/pages/Things/hooks/useThings.ts',
     ],

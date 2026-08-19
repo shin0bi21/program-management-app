@@ -138,6 +138,11 @@ export function checkRoutePageStructure(
     `${pageName}.test.tsx`,
     'types.ts',
   ]);
+  const requiredFiles = new Set([
+    `${pageName}.tsx`,
+    `${pageName}.test.tsx`,
+    'types.ts',
+  ]);
   const isPageApi = path => /^[a-z][A-Za-z0-9]*\.api\.ts$/.test(path);
   const isPageApiTest = path => /^[a-z][A-Za-z0-9]*\.api\.test\.ts$/.test(path);
   const pageApi = isPageApi(relativePath);
@@ -149,18 +154,18 @@ export function checkRoutePageStructure(
     if (!violations.includes(message)) violations.push(message);
   };
   const reportNonstandardRootFile = rootFile => reportUnique(
-    `${rootFile}:1 route-page root files are limited to the page TSX, CSS, test, types.ts, and one descriptively named *.api.ts adapter with its colocated test.`,
+    `${rootFile}:1 route-page root files are limited to the page TSX, optional CSS, test, types.ts, and one descriptively named *.api.ts adapter with its colocated test.`,
   );
   const reportNonstandardChild = childFile => reportUnique(
     `${childFile}:1 route-page children must be owned by api/, components/, hooks/, or utils/.`,
   );
 
   if (relativePath === `${pageName}.tsx`) {
-    const missing = [...standardFiles].filter(
+    const missing = [...requiredFiles].filter(
       required => !repositoryFiles.includes(`${routeDirectory}/${required}`),
     );
     if (missing.length) {
-      violations.push(`${file}:1 route pages require TSX, CSS, test, and types files; missing ${missing.join(', ')}.`);
+      violations.push(`${file}:1 route pages require TSX, test, and types files; missing ${missing.join(', ')}.`);
     }
 
     const rootPrefix = `${routeDirectory}/`;

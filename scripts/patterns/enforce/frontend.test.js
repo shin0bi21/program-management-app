@@ -75,7 +75,19 @@ test('requires the standard route-page files', () => {
     [`${leadsPage}/Leads.tsx`],
   );
 
-  assert.match(violations[0], /Leads\.css, Leads\.test\.tsx, types\.ts/);
+  assert.match(violations[0], /Leads\.test\.tsx, types\.ts/);
+});
+
+test('allows a route page to delegate all styling without owning CSS', () => {
+  assert.deepEqual(
+    violationsFor(
+      checkRoutePageStructure,
+      `${leadsPage}/Leads.tsx`,
+      routePageDirectories,
+      completeLeadPage.filter(file => !file.endsWith('.css')),
+    ),
+    [],
+  );
 });
 
 test('accepts a complete route-page root', () => {
