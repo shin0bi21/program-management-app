@@ -1,4 +1,3 @@
-// Scope: verifies profile-note selection, deletion, cache updates, and youth changes.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -75,4 +74,24 @@ describe('useProfileNotes', () => {
     });
   });
 
+  it('reconciles a saved edit without closing the editor before its success lifecycle completes', async () => {
+    const queryClient = createTestQueryClient();
+    const { result } = renderHook(() => useProfileNotes('youth-1'), {
+      wrapper: createQueryClientWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.notes).toEqual([note]));
+
+    const savedNote = { ...note, title: 'Updated allergy plan' };
+    act(() => result.current.openEditor(note));
+    act(() => result.current.handleSaved(savedNote));
+
+    expect(result.current.notes).toEqual([savedNote]);
+    expect(result.current.editorTarget).toEqual({ youthId: 'youth-1', note });
+    expect(result.current.selectedNote).toEqual(savedNote);
+
+    act(() => result.current.closeEditor());
+
+    expect(result.current.editorTarget).toBeNull();
+    expect(result.current.selectedNote).toEqual(savedNote);
+  });
 });
