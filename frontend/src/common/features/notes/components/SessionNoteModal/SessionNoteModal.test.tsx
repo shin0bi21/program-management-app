@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../../tests/renderWithQueryClient';
-import type { CohortSession } from '../../../../types/cohort';
+import { makeCohortSession } from '../../../../../tests/factories/session';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import SessionNoteModal from './SessionNoteModal';
 
 const api = vi.hoisted(() => ({
@@ -16,13 +16,12 @@ vi.mock('../../../../features/programming/api/programming.api', () => ({
   updateSessionNote: api.updateSessionNote,
 }));
 
-const session: CohortSession = {
-  id: 'session-1', cohortId: 'cohort-1', sessionTypeId: 'type-regular', sessionTypeName: 'Regular',
-  theme: 'Communication', cohortName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
-  rosterMode: 'enrolled', startsAt: '2026-07-28T21:00:00.000Z', endsAt: '2026-07-28T23:30:00.000Z',
-  cancelledAt: null, description: 'Planned communication exercise', attendanceMarkedCount: 0,
-  attendedCount: 0, attendanceRate: null, state: 'upcoming',
-};
+const session = makeCohortSession({
+  sessionTypeId: 'type-regular',
+  startsAt: '2026-07-28T21:00:00.000Z',
+  endsAt: '2026-07-28T23:30:00.000Z',
+  description: 'Planned communication exercise',
+});
 
 describe('SessionNoteModal', () => {
   beforeEach(() => {

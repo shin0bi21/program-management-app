@@ -99,6 +99,8 @@ node scripts/agents/validate-skills.js
 
 `check-patterns.js` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.
 
+When any file inside a route page changes, the structural pass also checks the page entry and its current root files. Existing loose query-key, capability, utility, or view-type files therefore cannot remain hidden merely because the changed file was already one of the standard page files.
+
 The enforcement layer checks high-confidence ownership, route-page structure, component/hook/page/API test colocation, centralized frontend documentation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, canonical vocabulary, and accidental test markers. Existing unsplit list pages remain an explicit migration boundary: once a page has a `*ListView`, keep its remote-list hook under that view's `hooks/` directory. The review layer highlights changed TSX files with inline workflow behavior and defensive normalization outside external boundaries so a reviewer does not overlook a possible ownership issue. Neither layer generates semantic tests or replaces behavior review. See [Frontend ownership patterns](../development/frontend/patterns.md).
 
 ## Direct package commands
@@ -137,6 +139,8 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 
 - Backend API suites live under `backend/tests/<domain>/` and share the app/database helpers in `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they exercise.
+- Frontend tests that need TanStack Query use `frontend/src/tests/queryClientTestUtils.tsx`. Create a fresh client per test, use `renderWithQueryClient` for components, and use `createQueryClientWrapper` for hooks so cache state and retry behavior cannot leak between tests.
+- Repeated, structurally complete domain fixtures live under `frontend/src/tests/factories/`. Factories provide one valid canonical object and accept typed overrides; keep scenario-specific values in the owning test instead of adding one-off factory variants.
 - Register backend ownership and integration consumers in `scripts/ci/select-tests.js`. Frontend source ownership is derived from Vitest's dependency graph rather than a manually maintained page map.
 - Add or update `scripts/ci/select-tests.test.js` whenever a new repository path category changes routing behavior. Unrecognized paths deliberately select the full application plan.
 - When a backend route is added, mount it in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
