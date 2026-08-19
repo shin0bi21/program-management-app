@@ -1,3 +1,4 @@
+// Owns enrollment command locking, errors, target reset, and refresh reconciliation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -56,5 +57,23 @@ describe('useEnrollYouthSubmit', () => {
     rerender({ cohortId: 'cohort-2' });
     await waitFor(() => expect(result.current.submitStatus).toBe('idle'));
     expect(result.current.submitError).toBeNull();
+  });
+
+  it('does not make completed enrollment retryable when roster refresh fails', async () => {
+    vi.mocked(enrollYouth).mockResolvedValue([]);
+    const { result } = renderHook(() => useEnrollYouthSubmit({
+      cohortId: 'cohort-1',
+      selectedYouthIds: ['youth-1'],
+      onSuccess: vi.fn().mockRejectedValue(new Error('Refresh failed')),
+    }));
+
+    await act(() => result.current.submit());
+
+    expect(enrollYouth).toHaveBeenCalledOnce();
+    expect(result.current.submitStatus).toBe('success');
+    expect(result.current.submitError).toContain('Reload to see them');
+
+    await act(() => result.current.submit());
+    expect(enrollYouth).toHaveBeenCalledOnce();
   });
 });

@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+// Owns enrollment status and empty-state copy selection.
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,6 +16,12 @@ describe('Enroll Youth modal messages', () => {
     expect(getEnrollmentStatusMessage('success', null, 2, 'Soft Skills')).toBe(
       '2 youth successfully added to Soft Skills.',
     );
+    expect(getEnrollmentStatusMessage(
+      'success',
+      'Youth were enrolled, but the roster could not refresh. Reload to see them.',
+      2,
+      'Soft Skills',
+    )).toContain('Reload to see them');
     expect(getEnrollmentStatusMessage('error', 'Enrollment failed', 2, 'Soft Skills')).toBe(
       'Enrollment failed',
     );

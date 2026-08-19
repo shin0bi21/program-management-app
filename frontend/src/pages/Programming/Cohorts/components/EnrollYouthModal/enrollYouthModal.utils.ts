@@ -19,7 +19,7 @@ export function getEnrollmentStatusMessage(
     return `Adding ${selectedCount} youth to ${cohortLabel}...`;
   }
   if (status === 'success') {
-    return `${selectedCount} youth successfully added to ${cohortLabel}.`;
+    return error ?? `${selectedCount} youth successfully added to ${cohortLabel}.`;
   }
   return error ?? undefined;
 }

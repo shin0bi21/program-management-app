@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { enrollYouth } from '../../../../../../common/features/programming/api/cohorts.api';
+import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/clientErrors';
 
@@ -15,7 +16,7 @@ export function useEnrollYouthSubmit({
   selectedYouthIds,
   onSuccess,
 }: UseEnrollYouthSubmitOptions) {
-  const submittingRef = useRef(false);
+  const { tryLock, unlock } = useSubmitLock();
   const {
     submitStatus,
     setSubmitStatus,
@@ -26,25 +27,32 @@ export function useEnrollYouthSubmit({
 
   useEffect(() => {
     if (!cohortId) return;
-    submittingRef.current = false;
+    unlock();
     resetStatus();
-  }, [cohortId, resetStatus]);
+  }, [cohortId, resetStatus, unlock]);
 
   const submit = async () => {
-    if (!cohortId || !selectedYouthIds.length || submittingRef.current) return;
+    if (!cohortId || !selectedYouthIds.length || !tryLock()) return;
 
-    submittingRef.current = true;
     setSubmitStatus('submitting');
     setError('');
+
     try {
       await enrollYouth(cohortId, { youthIds: selectedYouthIds });
-      await onSuccess();
-      setSubmitStatus('success');
     } catch (cause) {
-      submittingRef.current = false;
       setError(getErrorMessage(cause, 'Could not enroll youth'));
       setSubmitStatus('error');
+      unlock();
+      return;
     }
+
+    try {
+      await onSuccess();
+    } catch {
+      setError('Youth were enrolled, but the roster could not refresh. Reload to see them.');
+    }
+
+    setSubmitStatus('success');
   };
 
   return { submitStatus, submitError: error || null, submit };
