@@ -2,13 +2,11 @@
 
 Start with the part of the application that owns the behavior. If the change affects stored data, API output, or permissions, start with the backend. Otherwise, jump to [Update the frontend](#3-update-the-frontend).
 
-Use the [Stack guide](stack/README.md) when you need an example of the React, TanStack, form, validation, Express, or SQL API used by that owner.
-
 ## 1. Find the current behavior
 
-Read the feature document under [`docs/features/`](../features/README.md) when one exists. Then follow the request from the page's API file to the backend route, controller, and service. You only need to inspect the layers involved in this change.
+Follow the request from the page's API file to the backend route, controller, service, policy, and authoritative tests. Inspect only the layers involved in the behavior, but keep their executable contracts aligned.
 
-Before editing a shared component, read its local README and inspect one existing consumer that uses the same pattern.
+Before editing a shared component, read the applicable centralized frontend guide and inspect one existing consumer that uses the same pattern.
 
 ## 2. Update the backend when needed
 
@@ -46,4 +44,4 @@ node scripts/patterns/check-patterns.js --changed
 git diff --check
 ```
 
-Update the feature document when business behavior changed. Then follow [Review and shipping](review-and-shipping.md). Deployment remains a separate step.
+Then follow [Review and shipping](review-and-shipping.md). Deployment remains a separate step.

@@ -9,7 +9,6 @@ React + Vite frontend for the app.
 | Frontend architecture | [`../docs/architecture/frontend.md`](../docs/architecture/frontend.md) |
 | Full HTTP lifecycle | [`../docs/architecture/http.mmd`](../docs/architecture/http.mmd) |
 | Development handbook | [`../docs/development/README.md`](../docs/development/README.md) |
-| Product features | [`../docs/features/README.md`](../docs/features/README.md) |
 | Local setup | [`../docs/operations/setup.md`](../docs/operations/setup.md) |
 | Local development and builds | [`../docs/operations/local-development.md`](../docs/operations/local-development.md) |
 | Testing | [`../docs/operations/testing.md`](../docs/operations/testing.md) |

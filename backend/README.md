@@ -11,7 +11,6 @@ Express + TypeScript + PostgreSQL API for the youth services application.
 | Database and migrations | [`../docs/architecture/database.md`](../docs/architecture/database.md) |
 | Error handling | [`../docs/architecture/errors.md`](../docs/architecture/errors.md) |
 | Full HTTP lifecycle | [`../docs/architecture/http.mmd`](../docs/architecture/http.mmd) |
-| Product features | [`../docs/features/README.md`](../docs/features/README.md) |
 | Development handbook | [`../docs/development/README.md`](../docs/development/README.md) |
 | Local setup | [`../docs/operations/setup.md`](../docs/operations/setup.md) |
 | Local development | [`../docs/operations/local-development.md`](../docs/operations/local-development.md) |
@@ -75,7 +74,7 @@ Paths below are relative to `/api`. Protected endpoints require the permissions 
 
 Staff writes are self-scoped while reads include policy-visible coworker resources; administrators can manage entries for active staff and administrators.
 
-The complete entry, cycle, task-integration, and resource-scope contract is documented in [Time entries and timesheets](../docs/features/staff/timesheets.md).
+Time-entry validation, policies, services, and `backend/tests/timesheets/` are authoritative for entry, cycle, task-integration, and resource-scope behavior.
 
 ### Assigned tasks — `/tasks`
 
@@ -90,7 +89,7 @@ The complete entry, cycle, task-integration, and resource-scope contract is docu
 | `PATCH` | `/:id/status` | Update an assigned task's status |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
 
-The complete lifecycle, assignment, placement, deletion, time-entry integration, and resource-scope contract is documented in [Assigned tasks](../docs/features/staff/tasks.md).
+Task validation, policies, services, and `backend/tests/tasks/` are authoritative for lifecycle, assignment, placement, deletion, time-entry integration, and resource-scope behavior.
 
 ### Youth — `/youth`
 

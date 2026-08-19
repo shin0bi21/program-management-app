@@ -20,7 +20,6 @@ Full-stack youth services management system.
 | Area | Documentation |
 |---|---|
 | Architecture | [docs/architecture/README.md](docs/architecture/README.md) |
-| Product features | [docs/features/README.md](docs/features/README.md) |
 | Frontend | [frontend/README.md](frontend/README.md) |
 | Backend and API | [backend/README.md](backend/README.md) |
 | Development handbook | [docs/development/README.md](docs/development/README.md) |

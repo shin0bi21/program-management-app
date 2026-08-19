@@ -84,10 +84,7 @@ This is an ownership map, not an exhaustive file inventory. The source tree rema
 - Route-family `common/` code may be consumed by sibling route pages but must not import their private code.
 - The authenticated HTTP client and auth subsystem form an explicit integration boundary: auth endpoints use the HTTP client, while authenticated requests consume auth token and re-authentication primitives.
 
-Local guides refine the two shared-code boundaries:
-
-- [`common/components/README.md`](../../frontend/src/common/components/README.md)
-- [`common/features/README.md`](../../frontend/src/common/features/README.md)
+The [frontend ownership patterns](../development/frontend/patterns.md) guide explains component, hook, API, utility, and defensive-boundary decisions.
 
 Data pages compose one route-level `PageHeader` followed by `PageBody`. `PageBody`
 owns the shared `page-dashboard` region and exactly one `page-table` or

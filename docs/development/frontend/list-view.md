@@ -1,6 +1,6 @@
 # Frontend list views
 
-Use this guide to add a remote list or table to a page. The [page-shell guide](page-shell.md) owns `PageHeader` and `PageBody` layout. The [TanStack Query](../stack/tanstack-query.md) and [TanStack data-surface](../stack/tanstack-data-surfaces.md) guides explain the underlying APIs.
+Use this guide to add a remote list or table to a page. The [page-shell guide](page-shell.md) owns `PageHeader` and `PageBody` layout.
 
 ## 1. Create the page-owned ListView
 
@@ -39,7 +39,13 @@ The shared query wrapper deduplicates stable row IDs and preserves loaded rows w
 
 Define stable declarative columns and durable row keys. Make user-facing data columns resizable unless a specific interaction requires fixed width; keep action columns fixed with `resizable: false`.
 
+Pass a descriptive `ariaLabel`, stable `columns` and `data`, and a `keyExtractor` that returns durable row identity. Route sortable columns through controlled `sorting` and `onSortingChange`, and give each one a backend-supported `sortKey`; never sort a remote cursor list inside a cell renderer.
+
 Pass the query output to the shared `Table`, including `hasNextPage`, `loadingNextPage`, and `onLoadNextPage`. Pass controlled `columnWidths` and `onColumnWidthsChange`, and use `useTableSelection` when row selection has product meaning.
+
+Use `loading` only for an initial empty load and `refreshing` when existing rows must remain mounted. Persist the complete widths object emitted by Table; it clamps resized values while preserving unaffected columns. Render `ActionsMenu` for multiple row actions. When users need to identify or return to a row, keep `selectedKey` and `onRowSelect` controlled through `useTableSelection` so pointer, Enter/Space, and arrow navigation share one selected row. Omit selection only when it has no meaningful application state; rows remain keyboard-focusable.
+
+Preserve unaffected row object references during cache reconciliation so focused and memoized rows do not perform unrelated work.
 
 Use permission-aware `ActionsMenu` row actions. Route sorting to the backend; never client-sort a cursor-paginated result. Preserve rows during background refresh and represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
 
@@ -108,8 +114,9 @@ Keep non-TanStack state separate. A mounted ResourceCalendar may expose a narrow
 
 ## 6. Verify the list
 
+- Shared Table tests own generic rendering, sorting events, resizing, keyboard navigation, selection presentation, loading states, and intersection-observer behavior.
 - Test query keys, filter wiring, cursor advancement, append behavior, deduplication, cancellation, and row shaping beside `useExampleList`.
-- Test columns, sorting, selection, row actions, loading/error/empty states, and cache behavior beside their narrowest owners.
+- Test columns, API sort-key wiring, selection, permission-aware rows/actions, persisted widths, loading/error/empty states, and cache behavior beside their narrowest owners.
 - Test page-header controls, preference restoration and first save, dialogs, view switching, and cross-view coordination in the route test.
-- Use browser tests for resizing, horizontal overflow, sticky behavior, load-more scrolling, focus geometry, and the shared `768px` mobile layout.
+- Use browser tests for pointer resizing, horizontal overflow, sticky behavior, real scrolling and load-more observation, focus geometry, large-list rendering, and the shared `768px` mobile layout.
 - For a direct cache replacement, assert that every matching list variant changes without a list request. For invalidation, assert the correct key prefix and the authoritative reloaded result.

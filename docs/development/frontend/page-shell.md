@@ -7,6 +7,7 @@
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.
 - Put `SearchInput`, `FilterCard`, and view-switching controls in the named `search`, `filters`, and `view` slots. Keep row actions and content-specific controls with their owning content.
+- Put `ColumnVisibilityMenu` in `columns` and render it only while the table view is active. Keep table pagination and row-specific status or actions out of the header.
 - Keep data loading, filtering, preference persistence, and action workflows in the page or focused hooks rather than in `PageHeader`.
 
 Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*ListView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper.
@@ -91,4 +92,5 @@ For calendar view, `PageBody` replaces `div.page-table` with `div.page-calendar`
 ## Verify the shell
 
 - Test permission-dependent primary actions and wiring from search, filters, and view controls to page state.
+- Shared `PageHeader` tests own generic slot placement; shared `PageBody` tests own its stable dashboard and single-content-slot structure. Consumer tests own only permission and state wiring.
 - Confirm header wrapping, mobile search and filters, dashboard stacking, long titles/actions, content height, and modal fit at the shared `768px` breakpoint.

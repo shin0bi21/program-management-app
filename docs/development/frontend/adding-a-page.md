@@ -1,6 +1,6 @@
 # Adding a frontend page
 
-Read [Frontend architecture](../../architecture/frontend.md), `frontend/src/common/components/README.md`, and the README for every shared component the page consumes. Choose the route-family owner before creating files.
+Read [Frontend architecture](../../architecture/frontend.md) and [Frontend ownership patterns](patterns.md). Choose the route-family owner before creating files, then follow the focused guide for each shared surface the page consumes.
 
 ## 1. Choose page ownership and structure
 
@@ -14,7 +14,11 @@ A route family with multiple pages gives each route page its own standard folder
 
 Lazy-load authenticated application pages and mount their routes in `frontend/src/app/App.tsx`. Wrap protected pages in `ProtectedRoute` with the backend-aligned read permission. Add redirects only when a route family needs a canonical landing destination.
 
-For an authenticated destination, read `frontend/src/app/components/AppNavigation/README.md`, then update its navigation hook, rendered menu, active route-family state, permission-derived visibility, and tests together. Never expose a destination the route does not mount or authorize.
+For an authenticated destination, update the navigation hook, rendered menu, active route-family state, permission-derived visibility, and tests together. Never expose a destination the route does not mount or authorize.
+
+`AppNavigation` owns authenticated navigation across desktop and mobile layouts. Derive destination visibility from granted permissions rather than role names, and keep every destination aligned with a route mounted by `App.tsx`. Grouped destinations use `useFloatingMenu` and `FloatingMenuPanel`; route through the navigation hook so navigation closes mobile and floating menus consistently. Mark both the owning route family and exact child destination active where applicable, and preserve the mobile backdrop, menu-toggle semantics, and homepage logo behavior.
+
+Navigation tests own destination order and permission visibility, route-family active state, exact child state, and mobile open/close wiring. Shared floating-menu tests own generic keyboard, dismissal, positioning, and focus-return behavior.
 
 ## 3. Add the typed data workflow
 
@@ -35,6 +39,8 @@ Treat the route component as an orchestrator. A reader should be able to scan it
 3. Put effects and handlers after the state they coordinate, then define derived header, table, calendar, or dashboard presentation.
 4. Keep comments structural and sparse. Do not comment every variable or restate its name.
 5. Extract a focused hook or component when a section owns a coherent workflow; comments must not become a substitute for ownership boundaries.
+
+Use [Frontend ownership patterns](patterns.md) when deciding whether an inline workflow remains cohesive or belongs in a hook or child component.
 
 ```tsx
 export default function ExamplePage() {
