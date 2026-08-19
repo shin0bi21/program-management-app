@@ -4,9 +4,10 @@ import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
-const taskDate = '2026-08-09';
 
 describe('Tasks API', () => {
+  let taskDate: string;
+  let loggedWorkDate: string;
   let adminId: string;
   let adminToken: string;
   let firstStaffId: string;
@@ -27,6 +28,12 @@ describe('Tasks API', () => {
 
   beforeAll(async () => {
     const stamp = Date.now();
+    const [dates] = await sql<Array<{ taskDate: string; loggedWorkDate: string }>>`
+      SELECT
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS task_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS logged_work_date
+    `;
+    ({ taskDate, loggedWorkDate } = dates);
     const admin = await seedTestUser({ email: `tasks-admin-${stamp}@test.local`, role: 'admin' });
     const firstStaff = await seedTestUser({
       email: `tasks-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
@@ -49,7 +56,11 @@ describe('Tasks API', () => {
     programId = programs[0].id;
     const cycles = await sql<Array<{ id: string }>>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
-      VALUES (${`Tasks API ${stamp}`}, CURRENT_DATE - 7, CURRENT_DATE + 28)
+      VALUES (
+        ${`Tasks API ${stamp}`},
+        ${taskDate}::date - 7,
+        ${taskDate}::date + 28
+      )
       RETURNING id
     `;
     cycleId = cycles[0].id;
@@ -384,7 +395,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id,
-        workDate: '2026-08-15', hours: 2, note: 'Worked outside the planned task dates',
+        workDate: loggedWorkDate, hours: 2, note: 'Worked outside the planned task dates',
       });
     expect(linkedTime.status).toBe(201);
 
@@ -394,7 +405,7 @@ describe('Tasks API', () => {
     expect(started.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: task.body.id, status: 'in_progress', hoursLogged: 2,
-        loggedHoursByDate: [{ date: '2026-08-15', hours: 2 }],
+        loggedHoursByDate: [{ date: loggedWorkDate, hours: 2 }],
       }),
     ]));
 
