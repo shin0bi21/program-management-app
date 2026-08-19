@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { runEnforcementChecks } from './run.js';
+import { filterDeletedFiles } from './utils.js';
 
 const repoRoot = '/repo';
 
@@ -36,4 +37,14 @@ test('routes backend route files to async-handler enforcement', () => {
 
 test('does not run application-specific rules for documentation files', () => {
   assert.deepEqual(violationsFor('docs/example.md', 'A documentation change.'), []);
+});
+
+test('removes unstaged deletions from the current repository inventory', () => {
+  assert.deepEqual(
+    filterDeletedFiles(
+      ['frontend/src/pages/Leads/Leads.tsx', 'frontend/src/pages/Leads/api/leads.api.ts'],
+      ['frontend/src/pages/Leads/api/leads.api.ts'],
+    ),
+    ['frontend/src/pages/Leads/Leads.tsx'],
+  );
 });
