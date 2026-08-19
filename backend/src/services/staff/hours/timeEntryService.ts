@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { sql, asTransactionSql } from '../../../db/client';
 import { audit } from '../../shared/auditService';
-import { ConflictError, InternalServerError, NotFoundError } from '../../../errors';
+import { ConflictError, ForbiddenError, InternalServerError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   SetTimeEntryInput,
@@ -12,6 +12,7 @@ import type {
   UpdateTimeEntryPlacementInput,
 } from '../../../validation/timeEntrySchemas';
 import { assertCanSetTimeEntry, timeEntryReadScopePredicate, timeEntryResourceReadScopePredicate, timeEntryWriteScopePredicate } from '../../../policies/timeEntryPolicy';
+import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getBiweeklyPayPeriod } from './payPeriods';
 import {
   timeEntryCategoryLabels,
@@ -82,7 +83,7 @@ export async function setTimeEntry(
       ? await updateTimeEntryRecord(trx, id, input, scope, cycleId, actor.userId)
       : await insertTimeEntryRecord(trx, input, scope, cycleId, actor.userId);
     const completeTask = !id && input.source === 'task' && input.completeTask;
-    await updateTaskStatus(scope.taskId, scope.taskStatus, completeTask, input.staffId, trx, actor, transactionId);
+    await completeTaskFromTimeEntry(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
     await audit(
       trx,
       actor.userId,
@@ -320,7 +321,7 @@ async function updateTimeEntryRecord(
 async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
   if (input.source === 'regular') return {
     programId: input.programId, category: input.category,
-    taskId: null, taskStatus: null, sessionId: null, workDate: input.workDate,
+    taskId: null, sessionId: null, workDate: input.workDate,
   };
   if (input.source === 'session') {
     const rows = await db<Array<{ programId: string; workDate: string }>>`
@@ -343,16 +344,16 @@ async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
     if (!rows.length) throw new NotFoundError('Assigned session not found');
     return {
       ...rows[0], category: 'program_delivery' as const,
-      taskId: null, taskStatus: null, sessionId: input.sessionId,
+      taskId: null, sessionId: input.sessionId,
     };
   }
-  const rows = await db<Array<{ category: string; programId: string | null; status: 'todo' | 'in_progress' | 'completed'; startDate: string; dueDate: string }>>`
-    SELECT task.category, task.program_id, task.status,
+  const rows = await db<Array<{ category: string; programId: string | null; startDate: string; dueDate: string }>>`
+    SELECT task.category, task.program_id,
       task.start_date::text, task.due_date::text
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}
-      AND task.status IN ('todo', 'in_progress')
+      AND task.status = 'open'
     LIMIT 1
     FOR UPDATE OF task
   `;
@@ -360,28 +361,29 @@ async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
   const task = rows[0];
   return {
     programId: task.programId, category: task.category as TimeEntryCategory,
-    taskId: input.taskId, taskStatus: task.status, sessionId: null, workDate: input.workDate,
+    taskId: input.taskId, sessionId: null, workDate: input.workDate,
   };
 }
 
-async function updateTaskStatus(
+async function completeTaskFromTimeEntry(
   taskId: string | null,
-  status: 'todo' | 'in_progress' | 'completed' | null,
   completeTask: boolean,
   staffId: string,
   trx: typeof sql,
   actor: AccessTokenPayload,
   transactionId: string,
 ) {
-  if (!taskId || (!completeTask && status !== 'todo')) return;
-  const nextStatus = completeTask ? 'completed' : 'in_progress';
+  if (!taskId || !completeTask) return;
+  if (!canWriteTaskFor(actor, staffId)) {
+    throw new ForbiddenError('Task write permission is required to complete a task');
+  }
   await trx`
     UPDATE tasks
-    SET status = ${nextStatus}, completed_at = ${completeTask ? sql`NOW()` : null}, updated_by = ${actor.userId}, updated_at = NOW()
+    SET status = 'completed', completed_at = NOW(), updated_by = ${actor.userId}, updated_at = NOW()
     WHERE id = ${taskId}
   `;
   await audit(trx, actor.userId, transactionId, 'tasks', taskId, 'UPDATE',
-    { status, staffId }, { status: nextStatus, staffId });
+    { status: 'open', staffId }, { status: 'completed', staffId });
 }
 
 // Domain validation

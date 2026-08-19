@@ -64,6 +64,7 @@ export default function useUserPreference<T extends object>(
 
   const setBaseline = useCallback((value: T) => {
     const normalized = sanitizeColumns(value, columnKeys)!;
+    void queryClient.cancelQueries({ queryKey, exact: true });
     latestValueRef.current = normalized;
     queryClient.setQueryData(queryKey, normalized);
   }, [columnKeys, queryClient, queryKey]);
@@ -96,6 +97,7 @@ export default function useUserPreference<T extends object>(
       ?? null;
     const updated = typeof update === 'function' ? update(current) : update;
     const value = sanitizeColumns(updated, columnKeys)!;
+    void queryClient.cancelQueries({ queryKey, exact: true });
     queryClient.setQueryData(queryKey, value);
     setError(null);
     latestValueRef.current = value;

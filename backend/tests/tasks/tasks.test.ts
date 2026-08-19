@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import request from 'supertest';
+import { asTransactionSql } from '../../src/db/client';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
@@ -24,6 +27,12 @@ describe('Tasks API', () => {
   const rememberTask = <T extends { body: { id?: string } }>(response: T) => {
     if (response.body.id) taskIds.add(response.body.id);
     return response;
+  };
+
+  const shiftDate = (date: string, days: number) => {
+    const shifted = new Date(`${date}T12:00:00.000Z`);
+    shifted.setUTCDate(shifted.getUTCDate() + days);
+    return shifted.toISOString().slice(0, 10);
   };
 
   beforeAll(async () => {
@@ -89,6 +98,72 @@ describe('Tasks API', () => {
     await deleteTestUser(secondStaffId);
     await deleteTestUser(firstStaffId);
     await deleteTestUser(adminId);
+  });
+
+  it('migrates legacy progress states and saved status filters to the open timing model', async () => {
+    const rollback = new Error('rollback task status migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-08-19_2_replace_task_progress_statuses.sql',
+    ), 'utf8');
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      await trx`ALTER TABLE tasks DROP CONSTRAINT tasks_status_check`;
+      await trx`UPDATE tasks SET status = 'todo' WHERE status = 'open'`;
+      await trx`
+        ALTER TABLE tasks
+          ALTER COLUMN status SET DEFAULT 'todo',
+          ADD CONSTRAINT tasks_status_check
+            CHECK (status IN ('todo', 'in_progress', 'completed', 'cancelled'))
+      `;
+      const legacyTasks = await trx<Array<{ id: string }>>`
+        INSERT INTO tasks (title, category, staff_id, status, start_date, due_date)
+        VALUES
+          ('Legacy to-do task', 'outreach', ${firstStaffId}, 'todo', ${taskDate}, ${taskDate}),
+          ('Legacy in-progress task', 'outreach', ${firstStaffId}, 'in_progress', ${taskDate}, ${taskDate})
+        RETURNING id
+      `;
+      await trx`
+        INSERT INTO user_preferences (user_id, preference_key, value)
+        VALUES (
+          ${firstStaffId},
+          'task-filters',
+          ${trx.json({ statuses: ['todo', 'in_progress', 'cancelled'] })}
+        )
+        ON CONFLICT (user_id, preference_key)
+        DO UPDATE SET value = EXCLUDED.value
+      `;
+
+      for (const statement of migration.split(';').map(value => value.trim()).filter(Boolean)) {
+        await trx.unsafe(statement);
+      }
+
+      const migratedTasks = await trx<Array<{ status: string }>>`
+        SELECT status
+        FROM tasks
+        WHERE id IN ${trx(legacyTasks.map(task => task.id))}
+        ORDER BY title
+      `;
+      const [preference] = await trx<Array<{ statuses: string[] }>>`
+        SELECT value->'statuses' AS statuses
+        FROM user_preferences
+        WHERE user_id = ${firstStaffId}
+          AND preference_key = 'task-filters'
+      `;
+      const [statusColumn] = await trx<Array<{ columnDefault: string }>>`
+        SELECT column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'tasks'
+          AND column_name = 'status'
+      `;
+
+      expect(migratedTasks.map(task => task.status)).toEqual(['open', 'open']);
+      expect(preference.statuses).toEqual(['cancelled', 'upcoming', 'active', 'overdue']);
+      expect(statusColumn.columnDefault).toContain('open');
+      throw rollback;
+    })).rejects.toBe(rollback);
   });
 
   it('returns policy-scoped task options', async () => {
@@ -254,6 +329,40 @@ describe('Tasks API', () => {
     ]);
   });
 
+  it('filters open tasks by their date-derived timing state', async () => {
+    const marker = `Timing-filtered task ${firstStaffId}`;
+    const cases = [
+      { status: 'upcoming', title: `${marker} upcoming`, startDate: shiftDate(taskDate, 1), dueDate: shiftDate(taskDate, 2) },
+      { status: 'active', title: `${marker} active`, startDate: shiftDate(taskDate, -1), dueDate: shiftDate(taskDate, 1) },
+      { status: 'overdue', title: `${marker} overdue`, startDate: shiftDate(taskDate, -2), dueDate: shiftDate(taskDate, -1) },
+    ] as const;
+
+    for (const taskCase of cases) {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          title: taskCase.title,
+          category: 'outreach',
+          startDate: taskCase.startDate,
+          dueDate: taskCase.dueDate,
+          staffId: firstStaffId,
+        }));
+      expect(created.status).toBe(201);
+    }
+
+    for (const taskCase of cases) {
+      const response = await request(app)
+        .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&statuses=${taskCase.status}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.rows).toEqual([
+        expect.objectContaining({ title: taskCase.title, status: 'open' }),
+      ]);
+    }
+  });
+
   it('validates required task dates and date boundaries', async () => {
     const missingDates = await request(app)
       .post('/api/tasks')
@@ -275,7 +384,7 @@ describe('Tasks API', () => {
 
     await expect(sql`
       INSERT INTO tasks (title, category, status, start_date, due_date)
-      VALUES ('Ownerless task', 'outreach', 'todo', ${taskDate}, ${taskDate})
+      VALUES ('Ownerless task', 'outreach', 'open', ${taskDate}, ${taskDate})
     `).rejects.toMatchObject({ code: '23502' });
 
     const malformedId = await request(app)
@@ -341,7 +450,7 @@ describe('Tasks API', () => {
       title: 'Newer task title',
       details: 'Newer task details',
       category: 'planning_prep',
-      status: 'todo',
+      status: 'open',
       startDate: '2026-08-10',
       dueDate: '2026-08-12',
     }));
@@ -356,9 +465,9 @@ describe('Tasks API', () => {
     const reopened = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'todo' });
+      .send({ status: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body.status).toBe('todo');
+    expect(reopened.body.status).toBe('open');
   });
 
   it('supports admin assignment and flexible date changes before or after logged time', async () => {
@@ -399,12 +508,12 @@ describe('Tasks API', () => {
       });
     expect(linkedTime.status).toBe(201);
 
-    const started = await request(app)
+    const taskWithHours = await request(app)
       .get('/api/tasks')
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(started.body).toEqual(expect.arrayContaining([
+    expect(taskWithHours.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        id: task.body.id, status: 'in_progress', hoursLogged: 2,
+        id: task.body.id, status: 'open', hoursLogged: 2,
         loggedHoursByDate: [{ date: loggedWorkDate, hours: 2 }],
       }),
     ]));
@@ -417,7 +526,7 @@ describe('Tasks API', () => {
     expect(changedDates.body).toEqual(expect.objectContaining({
       title: 'Create marketing poster',
       details: 'Prepare the outreach poster',
-      status: 'in_progress',
+      status: 'open',
       startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 2,
     }));
 
@@ -431,9 +540,9 @@ describe('Tasks API', () => {
     const reopened = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'in_progress' });
+      .send({ status: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body.status).toBe('in_progress');
+    expect(reopened.body.status).toBe('open');
 
     const changedAssignee = await request(app)
       .patch(`/api/tasks/${task.body.id}/placement`)
@@ -442,7 +551,7 @@ describe('Tasks API', () => {
         startDate: taskDate, dueDate: taskDate, staffId: secondStaffId,
       });
     expect(changedAssignee.status).toBe(409);
-    expect(changedAssignee.body.error).toBe('Only to-do tasks without logged time can be reassigned');
+    expect(changedAssignee.body.error).toBe('Only open tasks without logged time can be reassigned');
 
     const deleted = await request(app)
       .delete(`/api/tasks/${task.body.id}`)
@@ -538,14 +647,6 @@ describe('Tasks API', () => {
     }));
     expect(task.status).toBe(201);
 
-    const prematureCompletion = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
-      .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'completed' });
-    expect(prematureCompletion.status).toBe(409);
-    expect(prematureCompletion.body.error).toBe('Only in-progress tasks can be completed');
-
-    await sql`UPDATE tasks SET status = 'in_progress' WHERE id = ${task.body.id}`;
     const zeroHourCompletion = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
@@ -574,9 +675,9 @@ describe('Tasks API', () => {
     const reopened = await request(app)
       .patch(`/api/tasks/${task.body.id}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'in_progress' });
+      .send({ status: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body).toEqual(expect.objectContaining({ status: 'in_progress', completedAt: null }));
+    expect(reopened.body).toEqual(expect.objectContaining({ status: 'open', completedAt: null }));
 
     const deleted = await request(app)
       .delete(`/api/tasks/${task.body.id}`)
@@ -591,10 +692,10 @@ describe('Tasks API', () => {
       ORDER BY created_at
     `;
     expect(audits).toEqual([
-      expect.objectContaining({ action: 'INSERT', oldStatus: null, newStatus: 'todo' }),
-      expect.objectContaining({ action: 'UPDATE', oldStatus: 'in_progress', newStatus: 'completed' }),
-      expect.objectContaining({ action: 'UPDATE', oldStatus: 'completed', newStatus: 'in_progress' }),
-      expect.objectContaining({ action: 'DELETE', oldStatus: 'in_progress', newStatus: null }),
+      expect.objectContaining({ action: 'INSERT', oldStatus: null, newStatus: 'open' }),
+      expect.objectContaining({ action: 'UPDATE', oldStatus: 'open', newStatus: 'completed' }),
+      expect.objectContaining({ action: 'UPDATE', oldStatus: 'completed', newStatus: 'open' }),
+      expect.objectContaining({ action: 'DELETE', oldStatus: 'open', newStatus: null }),
     ]);
     await sql`DELETE FROM audit_log WHERE table_name = 'tasks' AND record_id = ${task.body.id}`;
   });

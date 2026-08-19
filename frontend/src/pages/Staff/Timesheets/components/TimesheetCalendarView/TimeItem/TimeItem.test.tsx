@@ -120,6 +120,7 @@ describe('TimeItem', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
+    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('calendar-item--menu-open');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();
