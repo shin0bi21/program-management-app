@@ -91,14 +91,14 @@ export default function Tasks() {
   }, [defaultWritableResourceId, selectedResourceId]);
   const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
 
-  const overviewQuery = useQuery({
+  const selectedResourceTasksQuery = useQuery({
     queryKey: [...TASK_QUERY_KEY, 'overview', selectedResourceId],
     queryFn: ({ signal }) => getTasks({ staffId: selectedResourceId! }, { signal }),
     enabled: selectedResourceId !== null,
     placeholderData: previous => previous,
   });
 
-  const resourceTasks = overviewQuery.data ?? [];
+  const resourceTasks = selectedResourceTasksQuery.data ?? [];
   const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
     ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
 
@@ -163,7 +163,7 @@ export default function Tasks() {
   const taskError = mutations.statusError
     || controls.error
     || (optionsQuery.error ? 'Unable to load task form options.' : '')
-    || (overviewQuery.error ? 'Unable to load task overview.' : '');
+    || (selectedResourceTasksQuery.error ? 'Unable to load task overview.' : '');
   const logHoursAction = canWrite && selectedTask?.writable && (selectedTask.status === 'todo' || selectedTask.status === 'in_progress')
     ? () => setLogHoursTask(selectedTask)
     : undefined;
