@@ -2,13 +2,20 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
 import { verify2FA, resend2FA } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../auth/deviceFingerprint';
 import { getErrorMessage } from '../../../../http/clientErrors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import { formatTime } from '../../../../common/utils/time';
-import { verifyPasswordSchema, type VerifyPasswordFormData } from '../../common/validation/authSchemas';
+import type { VerifyPasswordFormData } from '../types';
+
+const verifyPasswordSchema = z.object({
+  code: z.string().length(6, 'Code must be 6 digits').regex(/^\d{6}$/, 'Code must be numeric'),
+  trustDevice: z.boolean().optional(),
+}) satisfies z.ZodType<VerifyPasswordFormData, VerifyPasswordFormData>;
 
 export const useVerifyPassword = () => {
   const [error, setError] = useState('');
