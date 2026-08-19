@@ -1,6 +1,8 @@
 import type { SessionSortKey } from '../../../common/types/cohort';
 import type { ListSort } from '../../../common/types/pagination';
-import type { SessionStatusFilter, SessionsView } from './sessionViewTypes';
+
+export type SessionStatusFilter = 'upcoming' | 'completed';
+export type SessionsView = 'list' | 'calendar';
 
 export interface SessionPreference {
   view: SessionsView;

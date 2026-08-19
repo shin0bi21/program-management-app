@@ -1,3 +1,4 @@
+// Scope: verifies Sessions route composition, permissions, controls, selection, and cross-owner callbacks.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -50,14 +51,17 @@ const preferenceHook = vi.hoisted<{
 
 vi.mock('../../../common/features/programming/api/programming.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
+  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
+  createSessionNote: vi.fn(),
+  generateSessions: vi.fn(),
+}));
+
+vi.mock('../../../common/features/programming/api/sessions.api', () => ({
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
-  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
-  createSessionNote: vi.fn(),
   setSessionAttendance: vi.fn(),
-  generateSessions: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));
 
@@ -253,7 +257,7 @@ describe('Sessions', () => {
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(screen.getByText('Field Trip')).toHaveClass('session-type--field-trip');
+    expect(screen.getByText('Field Trip')).toHaveClass('session-type-badge--field-trip');
     const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
     expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
   });

@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import { getSessionRoster, setSessionAttendance } from '../../../../../common/features/programming/api/programming.api';
+import { getSessionRoster, setSessionAttendance } from '../../../../../common/features/programming/api/sessions.api';
 import { getYouth } from '../../../../../common/features/youth/api/youth.api';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type {

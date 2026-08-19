@@ -7,16 +7,24 @@ import { useConfirmModal, type ConfirmAction } from '../../../../../../common/co
 import SessionNoteDetails from '../../../../../../common/features/notes/components/SessionNoteDetails/SessionNoteDetails';
 import SessionNoteModal from '../../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
 import SessionNoteRow from '../../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
-import { deleteSessionNote, getSessionNotes } from '../../../../../../common/features/programming/api/programming.api';
+import { deleteSessionNote, getSessionNotes } from '../../../../../../common/features/programming/api/sessions.api';
 import type { CohortSession, SessionNote } from '../../../../../../common/types/cohort';
 
-export default function SessionNotesDashboardCard({ session, canWrite }: { session: CohortSession | null; canWrite: boolean }) {
+export default function SessionNotesDashboardCard({
+  queryKey,
+  session,
+  canWrite,
+}: {
+  queryKey: readonly unknown[];
+  session: CohortSession | null;
+  canWrite: boolean;
+}) {
   const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const query = useQuery({
-    queryKey: ['sessions', session?.id, 'notes'],
+    queryKey: [...queryKey, session?.id, 'notes'],
     queryFn: ({ signal }) => getSessionNotes(session!.id, { signal }),
     enabled: session !== null,
   });

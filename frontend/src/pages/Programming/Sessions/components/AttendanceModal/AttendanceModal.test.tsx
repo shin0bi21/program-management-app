@@ -1,3 +1,4 @@
+// Scope: verifies attendance loading, enrolled/open roster actions, submission feedback, and youth creation wiring.
 import { screen } from '@testing-library/react';
 import render from '../../../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
@@ -11,7 +12,7 @@ const api = vi.hoisted(() => ({
   getYouth: vi.fn(),
 }));
 
-vi.mock('../../../../../common/features/programming/api/programming.api', () => api);
+vi.mock('../../../../../common/features/programming/api/sessions.api', () => api);
 vi.mock('../../../../../common/features/youth/api/youth.api', () => ({ getYouth: api.getYouth }));
 vi.mock('../../../../../common/features/youth/components/YouthModal/YouthModal', () => ({
   default: ({

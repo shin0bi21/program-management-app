@@ -1,10 +1,9 @@
-import { getSessions } from '../../../../../../common/features/programming/api/programming.api';
+import { getSessions } from '../../../../../../common/features/programming/api/sessions.api';
 import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../../../common/types/cohort';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../../../common/types/pagination';
-import { SESSION_LIST_QUERY_KEY } from '../../../../common/queryKeys';
 
-export function useSessions({
+export function useSessions(queryKey: readonly unknown[], {
   programIds = [],
   cohortId,
   sessionTypeIds = [],
@@ -19,7 +18,7 @@ export function useSessions({
         search,
   };
   const query = useInfiniteListQuery<CohortSession>({
-    queryKey: [...SESSION_LIST_QUERY_KEY, filters, sorting],
+    queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: 25 }),
     errorMessage: 'Could not load sessions',
     enabled,

@@ -5,8 +5,7 @@ import useUserPreference from '../../../../common/features/preferences/hooks/use
 import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-import type { SessionStatusFilter, SessionsView } from '../sessionViewTypes';
-import type { SessionPreference } from '../types';
+import type { SessionPreference, SessionStatusFilter, SessionsView } from '../types';
 
 interface UseSessionControlsOptions {
   role: string | null;

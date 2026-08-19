@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateSession } from '../../../../../common/features/programming/api/programming.api';
+import { updateSession } from '../../../../../common/features/programming/api/sessions.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';

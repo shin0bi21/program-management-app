@@ -4,6 +4,7 @@ import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/Ses
 import SessionNotesDashboardCard from './SessionNotesDashboardCard/SessionNotesDashboardCard';
 
 interface SessionDashboardProps {
+  sessionQueryKey: readonly unknown[];
   session: CohortSession | null;
   canWriteAttendance: boolean;
   canWriteSessions: boolean;
@@ -11,11 +12,11 @@ interface SessionDashboardProps {
 }
 
 export default function SessionDashboard({
-  session, canWriteAttendance, canWriteSessions, onAddAttendance,
+  sessionQueryKey, session, canWriteAttendance, canWriteSessions, onAddAttendance,
 }: SessionDashboardProps) {
   return <>
     <SessionAttendanceDashboardCard session={session} canWrite={canWriteAttendance} onManage={onAddAttendance} />
-    <SessionNotesDashboardCard session={session} canWrite={canWriteSessions} />
-    <SessionAttachmentsDashboardCard session={session} canWrite={canWriteSessions} />
+    <SessionNotesDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} />
+    <SessionAttachmentsDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} />
   </>;
 }

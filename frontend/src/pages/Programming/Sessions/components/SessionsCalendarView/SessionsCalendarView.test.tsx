@@ -1,3 +1,4 @@
+// Scope: verifies calendar range loading, filters, selection, actions, and responsive view behavior.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,7 +37,7 @@ interface MockFullCalendarHandle {
   };
 }
 
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   getSessions: (...args: unknown[]) => getSessions(...args),
 }));
 
@@ -144,6 +145,7 @@ describe('SessionsCalendarView', () => {
     const onSessionsLoaded = vi.fn();
     render(
       <SessionsCalendarView
+        queryKey={['sessions', 'calendar']}
         selectedProgramIds={[]}
         selectedCohortId=""
         selectedSessionId="session-1"
@@ -199,6 +201,7 @@ describe('SessionsCalendarView', () => {
 
     render(
       <SessionsCalendarView
+        queryKey={['sessions', 'calendar']}
         selectedProgramIds={[]}
         selectedCohortId=""
         selectedSessionId=""
@@ -218,6 +221,7 @@ describe('SessionsCalendarView', () => {
   it('updates the available views when the viewport crosses the mobile breakpoint', () => {
     render(
       <SessionsCalendarView
+        queryKey={['sessions', 'calendar']}
         selectedProgramIds={[]}
         selectedCohortId=""
         selectedSessionId=""
@@ -244,6 +248,7 @@ describe('SessionsCalendarView', () => {
   it('shows sessions from each selected program', async () => {
     render(
       <SessionsCalendarView
+        queryKey={['sessions', 'calendar']}
         selectedProgramIds={['program-1', 'program-2']}
         selectedCohortId=""
         selectedSessionId=""
@@ -259,7 +264,7 @@ describe('SessionsCalendarView', () => {
       name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
     })).toBeInTheDocument();
     expect(screen.getByText('Guest Speaker')).toHaveClass(
-      'programming-calendar-event__type--guest-speaker',
+      'session-type-badge--guest-speaker',
     );
     expect(screen.getByRole('button', {
       name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
@@ -271,6 +276,7 @@ describe('SessionsCalendarView', () => {
     getSessions.mockResolvedValue([sessions[0]]);
     render(
       <SessionsCalendarView
+        queryKey={['sessions', 'calendar']}
         selectedProgramIds={[]}
         selectedCohortId=""
         selectedSessionId=""

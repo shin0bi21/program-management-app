@@ -4,7 +4,7 @@ import {
   createSessionAttachment,
   getSessionRoster,
   updateSessionAttachment,
-} from '../../../../../../../common/features/programming/api/programming.api';
+} from '../../../../../../../common/features/programming/api/sessions.api';
 import FormField from '../../../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
@@ -17,21 +17,24 @@ import type {
 import './SessionAttachmentModal.css';
 
 export default function SessionAttachmentModal({
+  queryKey,
   session,
   attachment = null,
   onClose,
   onSaved,
 }: {
+  queryKey: readonly unknown[];
   session: CohortSession | null;
   attachment?: SessionAttachment | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
   const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const rosterQuery = useQuery<SessionRosterMember[]>({
-    queryKey: ['sessions', session?.id, 'roster'],
+    queryKey: [...queryKey, session?.id, 'roster'],
     queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
     enabled: session !== null,
   });
@@ -40,6 +43,7 @@ export default function SessionAttachmentModal({
   useEffect(() => {
     if (!session) return;
     setSelectedYouthIds(attachment?.youth.map(youth => youth.youthId) ?? []);
+    setSelectedFile(null);
     setSubmitStatus('idle');
     setStatusMessage('');
   }, [attachment, session]);
@@ -48,8 +52,7 @@ export default function SessionAttachmentModal({
     event.preventDefault();
     if (!session) return;
     const form = new FormData(event.currentTarget);
-    const file = form.get('file');
-    if (!attachment && (!(file instanceof File) || !file.size)) return;
+    if (!attachment && !selectedFile?.size) return;
     setSubmitStatus('submitting');
     setStatusMessage(attachment ? 'Saving attachment...' : 'Uploading attachment...');
     try {
@@ -60,7 +63,7 @@ export default function SessionAttachmentModal({
         youthIds: selectedYouthIds,
       };
       if (attachment) await updateSessionAttachment(session.id, attachment.id, data);
-      else await createSessionAttachment(session.id, { ...data, file: file as File });
+      else await createSessionAttachment(session.id, { ...data, file: selectedFile! });
       await onSaved();
       setStatusMessage(attachment ? 'Attachment successfully updated.' : 'Attachment successfully added.');
       setSubmitStatus('success');
@@ -92,6 +95,7 @@ export default function SessionAttachmentModal({
             name="file"
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.docx"
+            onChange={event => setSelectedFile(event.currentTarget.files?.[0] ?? null)}
             required
           />
         </FormField>}
