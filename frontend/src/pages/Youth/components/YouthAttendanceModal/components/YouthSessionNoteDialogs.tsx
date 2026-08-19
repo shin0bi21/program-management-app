@@ -34,7 +34,6 @@ export default function YouthSessionNoteDialogs({
         note={noteTarget?.note ?? null}
         initialYouthId={noteTarget?.note ? undefined : youth?.id}
         hideYouthSelection
-        closeOnSuccess
         onClose={onCloseNote}
         onSaved={onNoteSaved}
       />
