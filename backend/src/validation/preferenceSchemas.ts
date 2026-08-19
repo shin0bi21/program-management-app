@@ -12,10 +12,10 @@ const preferenceKeys = [
 ] as const;
 
 export type PreferenceKey = (typeof preferenceKeys)[number];
-export type PreferenceValue = Record<string, unknown>;
 
 export const preferenceKeySchema = z.enum(preferenceKeys);
-const preferenceValueSchema = z.record(z.string().min(1), z.unknown());
+const preferenceValueSchema = z.record(z.string().min(1), z.json());
+export type PreferenceValue = z.infer<typeof preferenceValueSchema>;
 
 export const getPreferenceSchema = z.object({
   params: z.object({ preferenceKey: preferenceKeySchema }),
