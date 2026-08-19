@@ -39,7 +39,9 @@ describe('LeadModal', () => {
   });
 
   it('validates and submits a normalized direct lead', async () => {
-    render(<LeadModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
+    render(<LeadModal isOpen onClose={onClose} onSuccess={onSuccess} />);
 
     fireEvent.change(document.getElementById('lead-youthFirstName')!, { target: { value: ' Avery ' } });
     fireEvent.change(document.getElementById('lead-youthLastName')!, { target: { value: ' Outreach ' } });
@@ -56,6 +58,12 @@ describe('LeadModal', () => {
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'parent', discoverySource: 'online',
     })));
+    expect(onSuccess).toHaveBeenCalledWith({ id: 'lead-1' });
+    expect(screen.getByText('Lead created successfully!')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Create Lead' })).toBeInTheDocument();
+    expect(document.getElementById('lead-youthFirstName')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Program of Interest' })).toBeDisabled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('prefills and updates an existing Lead', async () => {

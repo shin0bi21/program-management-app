@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteAccount, updateAccount } from '../../accounts.api';
@@ -23,7 +23,6 @@ interface AccountModalControllerProps {
 }
 
 export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
-  const completionTimerRef = useRef<number | null>(null);
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const {
     register,
@@ -33,21 +32,13 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     formState: { errors },
   } = useForm<AccountFormData>({ resolver: zodResolver(accountSchema), defaultValues });
 
-  const clearCompletionTimer = useCallback(() => {
-    if (completionTimerRef.current === null) return;
-    window.clearTimeout(completionTimerRef.current);
-    completionTimerRef.current = null;
-  }, []);
-
   const handleClose = useCallback(() => {
-    clearCompletionTimer();
     reset(defaultValues);
     resetStatus();
     onClose();
-  }, [clearCompletionTimer, onClose, reset, resetStatus]);
+  }, [onClose, reset, resetStatus]);
 
   useEffect(() => {
-    clearCompletionTimer();
     if (!isOpen) return;
     reset(account ? {
       firstName: account.firstName,
@@ -57,12 +48,13 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();
-    return clearCompletionTimer;
-  }, [account, clearCompletionTimer, isOpen, reset, resetStatus]);
+  }, [account, isOpen, reset, resetStatus]);
 
   const onValid = async (data: AccountFormData) => {
     setSubmitStatus('submitting');
     setError('');
+
+    let savedAccount: Account;
     try {
       const payload = {
         firstName: data.firstName.trim(),
@@ -71,19 +63,17 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
         role: data.role,
         programIds: data.programIds,
       };
-      const result = account
+      savedAccount = account
         ? await updateAccount({ id: account.id, ...payload })
         : await inviteAccount(payload);
-      setSubmitStatus('success');
-      completionTimerRef.current = window.setTimeout(() => {
-        completionTimerRef.current = null;
-        onSuccess(result);
-        handleClose();
-      }, 800);
     } catch (err) {
       setError(getErrorMessage(err, account ? 'Failed to update account' : 'Failed to send invitation'));
       setSubmitStatus('error');
+      return;
     }
+
+    setSubmitStatus('success');
+    onSuccess(savedAccount);
   };
 
   return {

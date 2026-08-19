@@ -133,7 +133,6 @@ export default function AttendanceModal({ session, onClose, onSaved }: Attendanc
 
   const handleYouthCreated = (profile: YouthProfile) => {
     addOpenAttendee(profile);
-    setCreatingYouth(false);
     void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 

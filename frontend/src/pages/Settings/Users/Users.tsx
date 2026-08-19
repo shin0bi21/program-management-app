@@ -206,7 +206,6 @@ export default function Users() {
               queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY }),
               queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
             ]);
-            setYouthInviteOpen(false);
           }}
         />
       )}

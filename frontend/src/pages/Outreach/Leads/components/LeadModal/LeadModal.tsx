@@ -24,6 +24,8 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
     error,
     handleClose,
   } = useLeadModal({ isOpen, onClose, onSuccess, lead });
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+
   let statusMessage: string | undefined;
   if (submitStatus === 'submitting') {
     statusMessage = isEdit ? 'Updating lead...' : 'Creating lead...';
@@ -49,6 +51,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
       footer={footer}
       status={submitStatus}
       statusMessage={statusMessage}
+      successDelay={800}
     >
       <form id="lead-form" onSubmit={handleSubmit(onValid)}>
         <OutreachFormFields
@@ -56,6 +59,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
           register={register}
           control={control}
           errors={errors}
+          disabled={submissionComplete}
           programField={
             <Controller
               name="programId"
@@ -66,6 +70,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
                     id="lead-programId"
                     value={field.value ?? ''}
                     onChange={field.onChange}
+                    disabled={submissionComplete}
                   />
                 </FormField>
               )}
