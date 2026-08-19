@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { runPatternChecks } from './run.js';
+import { runEnforcementChecks } from './run.js';
 
 const repoRoot = '/repo';
 
 function violationsFor(file, source) {
   const violations = [];
-  runPatternChecks(violations, file, source, repoRoot);
+  runEnforcementChecks(violations, file, source, repoRoot);
   return violations;
 }
 

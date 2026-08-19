@@ -5,7 +5,7 @@ const RETIRED_VOCABULARY = [
 ];
 
 export function checkVocabulary(violations, file, source) {
-  if (file === 'scripts/patterns/checks/quality.js') return;
+  if (file === 'scripts/patterns/enforce/quality.js') return;
   for (const rule of RETIRED_VOCABULARY) addMatches(violations, file, source, rule.pattern, `retired domain vocabulary; use canonical ${rule.replacement} terminology.`);
 }
 
