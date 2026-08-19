@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
-import { deleteLeadNote, getLeadNotes } from '../../../api/leads.api';
+import { deleteLeadNote, getLeadNotes } from '../../../leads.api';
 import type { Lead, LeadNote } from '../../../types';
 
 const leadNotesQueryKey = (leadId: string | null) => ['leads', leadId, 'notes'] as const;

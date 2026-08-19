@@ -1,14 +1,14 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
-import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import { getCohorts } from '../../../../common/features/programming/api/programming.api';
-import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../http/clientErrors';
-import type { ProgramCohort } from '../../../../common/types/cohort';
-import { signUpLead } from '../api/leads.api';
-import type { Lead } from '../types';
+import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
+import Modal from '../../../../../common/components/Modal/Modal';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
+import { getCohorts } from '../../../../../common/features/programming/api/cohorts.api';
+import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+import { getErrorMessage } from '../../../../../http/clientErrors';
+import type { ProgramCohort } from '../../../../../common/types/cohort';
+import { signUpLead } from '../../leads.api';
+import type { Lead } from '../../types';
 import './SignUpLeadModal.css';
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -20,7 +20,8 @@ const dateFormatter = new Intl.DateTimeFormat('en-CA', {
 const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));
 const noCohorts: ProgramCohort[] = [];
 
-export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
+export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: {
+  queryKey: readonly unknown[];
   lead: Lead | null;
   onClose: () => void;
   onSuccess: (lead: Lead) => void | Promise<void>;
@@ -31,7 +32,7 @@ export default function SignUpLeadModal({ lead, onClose, onSuccess }: {
   const [statusMessage, setStatusMessage] = useState('');
 
   const cohortsQuery = useQuery({
-    queryKey: ['lead-signup-cohorts', lead?.programOfInterestId],
+    queryKey: [...queryKey, lead?.programOfInterestId],
     queryFn: ({ signal }) => getCohorts(
       lead?.programOfInterestId ?? undefined,
       {},

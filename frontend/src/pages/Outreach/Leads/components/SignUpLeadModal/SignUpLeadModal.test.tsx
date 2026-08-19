@@ -1,16 +1,18 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCohorts } from '../../../../common/features/programming/api/programming.api';
-import { signUpLead } from '../api/leads.api';
-import type { Lead } from '../types';
+import { getCohorts } from '../../../../../common/features/programming/api/cohorts.api';
+import { signUpLead } from '../../leads.api';
+import type { Lead } from '../../types';
 import SignUpLeadModal from './SignUpLeadModal';
-import render from '../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 
-vi.mock('../../../../common/features/programming/api/programming.api', () => ({
+const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
+
+vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: vi.fn(),
 }));
 
-vi.mock('../api/leads.api', () => ({
+vi.mock('../../leads.api', () => ({
   signUpLead: vi.fn(),
 }));
 
@@ -69,7 +71,7 @@ describe('SignUpLeadModal', () => {
 
   it('loads matching cohorts and reports a successful enrollment', async () => {
     const onSuccess = vi.fn();
-    render(<SignUpLeadModal lead={lead} onClose={vi.fn()} onSuccess={onSuccess} />);
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={onSuccess} />);
 
     const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
     await waitFor(() => expect(cohortSelect).toBeEnabled());
@@ -104,7 +106,7 @@ describe('SignUpLeadModal', () => {
       ...lead,
       age: 16,
     };
-    render(<SignUpLeadModal lead={user} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={user} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByRole('button', {
       name: 'Cohort enrollment',
@@ -122,7 +124,7 @@ describe('SignUpLeadModal', () => {
   });
 
   it('asks for a note type when the lead has notes', async () => {
-    render(<SignUpLeadModal lead={{ ...lead, notes: 'Avoid peanuts' }} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={{ ...lead, notes: 'Avoid peanuts' }} onClose={vi.fn()} onSuccess={vi.fn()} />);
     const noteType = screen.getByRole('button', { name: 'Type of note' });
     fireEvent.click(noteType);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Health' }));

@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({
   deleteLeadNote: vi.fn(),
 }));
 
-vi.mock('../../../api/leads.api', () => api);
+vi.mock('../../../leads.api', () => api);
 
 const lead: Lead = {
   id: 'lead-1',

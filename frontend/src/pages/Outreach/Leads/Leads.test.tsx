@@ -2,10 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
-import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import type { LeadPreference } from './types';
+
+const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
+const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
@@ -26,7 +28,7 @@ const preferenceHook = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 
-vi.mock('./api/leads.api', () => ({
+vi.mock('./leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
@@ -46,7 +48,7 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: vi.fn().mockResolvedValue([]),
 }));
 

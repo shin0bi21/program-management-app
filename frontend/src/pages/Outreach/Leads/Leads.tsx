@@ -14,11 +14,10 @@ import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { formatShortDate } from '../../../common/utils/date';
-import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
-import { updateLeadStatus } from './api/leads.api';
+import { updateLeadStatus } from './leads.api';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
-import LeadModal from './components/LeadModal';
-import SignUpLeadModal from './components/SignUpLeadModal';
+import LeadModal from './components/LeadModal/LeadModal';
+import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import { useLeadControls } from './hooks/useLeadControls';
 import { useLeads } from './hooks/useLeads';
 import type { Lead, LeadStatus } from './types';
@@ -26,6 +25,9 @@ import './Leads.css';
 
 const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
 const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
+const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
+const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
+const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 
 export default function Leads() {
   // Services and permissions.
@@ -41,7 +43,11 @@ export default function Leads() {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters,
   } = controls;
-  const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(queryFilters, sorting);
+  const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(
+    LEADS_LIST_QUERY_KEY,
+    queryFilters,
+    sorting,
+  );
 
   // Selection and dialogs.
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
@@ -155,6 +161,7 @@ export default function Leads() {
       onSuccess={() => { setModalTarget(null); void queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }); }}
     />
     <SignUpLeadModal
+      queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}
       lead={signUpTarget}
       onClose={() => setSignUpTarget(null)}
       onSuccess={reconcileSignUp}

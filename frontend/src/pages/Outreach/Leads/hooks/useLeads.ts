@@ -1,12 +1,15 @@
 import useInfiniteListQuery from '../../../../query/hooks/useInfiniteListQuery';
-import { getLeads } from '../api/leads.api';
+import { getLeads } from '../leads.api';
 import type { Lead, LeadFilters, LeadSortKey } from '../types';
 import type { ListSort } from '../../../../common/types/pagination';
-import { LEADS_LIST_QUERY_KEY } from '../../queryKeys';
 
-export function useLeads(filters: LeadFilters | null, sorting: ListSort<LeadSortKey>) {
+export function useLeads(
+  queryKey: readonly unknown[],
+  filters: LeadFilters | null,
+  sorting: ListSort<LeadSortKey>,
+) {
   const query = useInfiniteListQuery<Lead>({
-    queryKey: [...LEADS_LIST_QUERY_KEY, filters, sorting],
+    queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => getLeads(filters ?? {}, { ...sorting, cursor: pageParam ?? undefined, limit: 25 }, { signal }),
     errorMessage: 'Failed to load leads',
     enabled: filters !== null,

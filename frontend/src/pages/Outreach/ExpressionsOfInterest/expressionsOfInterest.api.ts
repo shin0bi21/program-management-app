@@ -1,10 +1,17 @@
-import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
-import type { ExpressionOfInterest, ExpressionOfInterestFilters, ExpressionOfInterestSortKey } from '../types';
-import type { CursorPage, CursorRequest } from '../../../../common/types/pagination';
-import type { Lead } from '../../Leads/types';
+import { apiClient } from '../../../http/client';
+import type { RequestOptions } from '../../../http/client';
+import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
+import type {
+  ExpressionOfInterest,
+  ExpressionOfInterestFilters,
+  ExpressionOfInterestSortKey,
+} from './types';
 
-export function getExpressionsOfInterest(filters: ExpressionOfInterestFilters = {}, pagination: CursorRequest<ExpressionOfInterestSortKey>, opts?: RequestOptions) {
+export function getExpressionsOfInterest(
+  filters: ExpressionOfInterestFilters = {},
+  pagination: CursorRequest<ExpressionOfInterestSortKey>,
+  opts?: RequestOptions,
+) {
   const params = new URLSearchParams();
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
@@ -15,7 +22,9 @@ export function getExpressionsOfInterest(filters: ExpressionOfInterestFilters = 
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   const query = params.toString();
   const path = `/expressions-of-interest${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<CursorPage<ExpressionOfInterest>>(path, opts) : apiClient.get<CursorPage<ExpressionOfInterest>>(path);
+  return opts
+    ? apiClient.get<CursorPage<ExpressionOfInterest>>(path, opts)
+    : apiClient.get<CursorPage<ExpressionOfInterest>>(path);
 }
 
 export function updateExpressionOfInterestStatus(id: string, status: ExpressionOfInterest['status']) {
@@ -23,5 +32,5 @@ export function updateExpressionOfInterestStatus(id: string, status: ExpressionO
 }
 
 export function convertExpressionOfInterest(id: string) {
-  return apiClient.post<Lead>(`/expressions-of-interest/${id}/convert`, {});
+  return apiClient.post<unknown>(`/expressions-of-interest/${id}/convert`, {});
 }
