@@ -4,7 +4,7 @@ import render from '../../../../../tests/renderWithQueryClient';
 import YouthReportModal from './YouthReportModal';
 
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
-vi.mock('../../api/programming.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
+vi.mock('../../api/cohorts.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
 
 const cohort = { id: 'cohort-1', programName: 'Soft Skills', name: 'Summer 2026' };
 

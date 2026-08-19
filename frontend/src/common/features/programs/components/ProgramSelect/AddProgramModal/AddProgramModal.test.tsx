@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createProgram } from '../../../api/programs.api';
+import { createProgram } from '../../../programs.api';
 import AddProgramModal from './AddProgramModal';
 
-vi.mock('../../../api/programs.api', () => ({ createProgram: vi.fn() }));
+vi.mock('../../../programs.api', () => ({ createProgram: vi.fn() }));
 
 const createProgramMock = vi.mocked(createProgram);
 

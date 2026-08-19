@@ -21,7 +21,7 @@ const programState = vi.hoisted<{ programs: Program[]; upsertProgram: ReturnType
 }));
 
 vi.mock('../../../common/features/programming/api/cohorts.api', () => programmingApi);
-vi.mock('../../../common/features/programs/api/programs.api', () => programsApi);
+vi.mock('../../../common/features/programs/programs.api', () => programsApi);
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
     programs: programState.programs,

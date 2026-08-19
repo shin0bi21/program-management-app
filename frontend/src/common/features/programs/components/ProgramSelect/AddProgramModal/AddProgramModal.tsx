@@ -8,7 +8,7 @@ import Modal from '../../../../../components/Modal/Modal';
 import ModalFormFooter from '../../../../../components/Modal/components/ModalFormFooter';
 import { useSubmitStatus, type SubmitStatus } from '../../../../../hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/clientErrors';
-import { createProgram } from '../../../api/programs.api';
+import { createProgram } from '../../../programs.api';
 import type { Program } from '../../../types';
 
 const addProgramSchema = z.object({

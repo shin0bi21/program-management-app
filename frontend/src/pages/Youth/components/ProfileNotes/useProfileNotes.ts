@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   deleteYouthProfileNote,
   getYouthProfileNotes,
-} from '../../../../common/features/youth/api/youth.api';
+} from '../../../../common/features/youth/youth.api';
 import type { YouthProfileNote } from '../../../../common/types/youth';
 import { getErrorMessage } from '../../../../http/clientErrors';
 

@@ -1,5 +1,5 @@
 import useInfiniteListQuery from '../../../query/hooks/useInfiniteListQuery';
-import { getYouth } from '../../../common/features/youth/api/youth.api';
+import { getYouth } from '../../../common/features/youth/youth.api';
 import type { YouthProfile } from '../types';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
 import type { ListSort } from '../../../common/types/pagination';

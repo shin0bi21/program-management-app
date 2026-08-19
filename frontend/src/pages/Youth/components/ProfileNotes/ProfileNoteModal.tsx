@@ -3,7 +3,7 @@ import Button from '../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
-import { setYouthProfileNote } from '../../../../common/features/youth/api/youth.api';
+import { setYouthProfileNote } from '../../../../common/features/youth/youth.api';
 import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../../common/types/youth';
 import { getErrorMessage } from '../../../../http/clientErrors';
 

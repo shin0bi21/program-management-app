@@ -13,7 +13,7 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../../../common/features/programming/api/sessions.api', () => api);
-vi.mock('../../../../../common/features/youth/api/youth.api', () => ({ getYouth: api.getYouth }));
+vi.mock('../../../../../common/features/youth/youth.api', () => ({ getYouth: api.getYouth }));
 vi.mock('../../../../../common/features/youth/components/YouthModal/YouthModal', () => ({
   default: ({
     isOpen,

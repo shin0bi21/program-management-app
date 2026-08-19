@@ -2,12 +2,12 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getPrograms } from '../../../../../common/features/programs/api/programs.api';
+import { getPrograms } from '../../../../../common/features/programs/programs.api';
 import { inviteAccount, updateAccount } from '../../accounts.api';
 import renderWithQueryClient from '../../../../../tests/renderWithQueryClient';
 import AccountModal from './AccountModal';
 
-vi.mock('../../../../../common/features/programs/api/programs.api', () => ({
+vi.mock('../../../../../common/features/programs/programs.api', () => ({
   getPrograms: vi.fn(),
 }));
 

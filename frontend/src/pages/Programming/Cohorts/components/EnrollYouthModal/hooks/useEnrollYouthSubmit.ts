@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { enrollYouth } from '../../../../../../common/features/programming/api/programming.api';
+import { enrollYouth } from '../../../../../../common/features/programming/api/cohorts.api';
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/clientErrors';
 

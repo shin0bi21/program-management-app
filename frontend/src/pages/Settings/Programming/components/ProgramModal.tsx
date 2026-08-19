@@ -3,7 +3,7 @@ import FloatingSelect from '../../../../common/components/FloatingSelect/Floatin
 import FormField from '../../../../common/components/FormField/FormField';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import { createProgram, updateProgram } from '../../../../common/features/programs/api/programs.api';
+import { createProgram, updateProgram } from '../../../../common/features/programs/programs.api';
 import type { Program } from '../../../../common/features/programs/types';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../http/clientErrors';

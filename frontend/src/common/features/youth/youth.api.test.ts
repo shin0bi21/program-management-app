@@ -1,9 +1,11 @@
+// Scope: verifies youth adapter list serialization and single-profile typing.
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { apiClient } from '../../../../http/client';
-import { getYouth } from './youth.api';
-import type { YouthProfile } from '../../../types/youth';
 
-vi.mock('../../../../http/client', () => ({
+import { apiClient } from '../../../http/client';
+import type { YouthProfile } from '../../types/youth';
+import { getYouth } from './youth.api';
+
+vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
@@ -39,4 +41,5 @@ describe('youth API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/youth?id=youth-1');
   });
 });
+
 // @vitest-environment node

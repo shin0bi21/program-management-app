@@ -1,0 +1,65 @@
+// Scope: verifies youth-session note expansion and unlink coordination.
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/sessions.api';
+import type { SessionNote } from '../../../../../common/types/cohort';
+import type { YouthAttendanceSession } from '../types';
+import useYouthSessionNotes from './useYouthSessionNotes';
+
+vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+  unlinkSessionNoteYouth: vi.fn(),
+}));
+
+const note: SessionNote = {
+  id: 'note-1',
+  sessionId: 'session-1',
+  category: 'general',
+  title: 'Follow up',
+  details: null,
+  createdAt: '2026-08-19T12:00:00.000Z',
+  updatedAt: '2026-08-19T12:00:00.000Z',
+  createdByName: 'Admin User',
+  youth: [],
+};
+const session: YouthAttendanceSession = {
+  id: 'session-1',
+  sessionTypeName: 'Regular',
+  theme: 'Communication',
+  startsAt: '2026-08-19T17:00:00.000Z',
+  endsAt: '2026-08-19T19:00:00.000Z',
+  cancelledAt: null,
+  status: null,
+  notes: null,
+  sessionNotes: [note],
+};
+
+describe('useYouthSessionNotes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(unlinkSessionNoteYouth).mockResolvedValue(undefined);
+  });
+
+  it('coordinates expansion and the unlink lifecycle', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useYouthSessionNotes({
+      youthId: 'youth-1',
+      sessions: [session],
+      refresh,
+    }));
+
+    expect(result.current.allExpanded).toBe(true);
+    act(() => result.current.toggleAll());
+    expect(result.current.isExpanded('session-1')).toBe(false);
+
+    act(() => result.current.requestUnlink(session, note));
+    expect(result.current.isChildOpen).toBe(true);
+
+    await act(async () => result.current.confirmUnlink());
+
+    expect(unlinkSessionNoteYouth).toHaveBeenCalledWith('session-1', 'note-1', 'youth-1');
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(result.current.unlinkTarget).toBeNull();
+    expect(result.current.unlinking).toBe(false);
+  });
+});

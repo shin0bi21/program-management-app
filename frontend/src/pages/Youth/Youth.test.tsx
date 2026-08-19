@@ -22,7 +22,7 @@ const preferenceHook = vi.hoisted(() => ({
 vi.mock('./hooks/useYouth', () => ({
   useYouth: (filters: unknown) => mockUseYouth(filters),
 }));
-vi.mock('../../common/features/youth/api/youth.api', () => youthApi);
+vi.mock('../../common/features/youth/youth.api', () => youthApi);
 vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../common/features/programs/hooks/usePrograms', () => ({

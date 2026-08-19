@@ -41,7 +41,7 @@ const preferenceHook = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/sessions.api', () => ({
   getSessionTypes: api.getSessionTypes,
 }));
 

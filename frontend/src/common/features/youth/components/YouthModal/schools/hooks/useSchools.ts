@@ -1,4 +1,4 @@
-import { getSchools } from '../api/schools.api';
+import { getSchools } from '../schools.api';
 import type { School } from '../types';
 import useListQuery from '../../../../../../../query/hooks/useListQuery';
 
