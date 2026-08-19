@@ -1,25 +1,23 @@
 import { checkBackendControllers, checkBackendRoutes } from './backend.js';
 import {
   checkApiStructure,
+  checkCalendarDataHooks,
   checkCentralizedHttp,
   checkFocusedAdapters,
   checkFrontendOwnership,
+  checkPaginatedTables,
   checkPreferenceControlOwnership,
+  checkResourceCalendars,
   checkRoutePageStructure,
   checkTestOwnership,
   collectRoutePageDirectories,
   collectStructureCheckFiles,
 } from './frontend.js';
-import {
-  checkCalendarDataHooks,
-  checkPaginatedTables,
-  checkResourceCalendars,
-} from './frontend-views.js';
 import { checkDashboardNames, checkFocusedTests, checkVocabulary } from './quality.js';
 
 export { collectRoutePageDirectories, collectStructureCheckFiles };
 
-export function runPatternChecks(
+export function runEnforcementChecks(
   violations,
   file,
   source,
@@ -46,7 +44,7 @@ export function runPatternChecks(
   if (file.startsWith('backend/src/controllers/')) checkBackendControllers(violations, file, source);
 }
 
-export function runStructureChecks(
+export function runStructureEnforcement(
   violations,
   file,
   { repositoryFiles, routePageDirectories },

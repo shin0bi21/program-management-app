@@ -8,9 +8,10 @@ import process from 'node:process';
 import {
   collectRoutePageDirectories,
   collectStructureCheckFiles,
-  runPatternChecks,
-  runStructureChecks,
-} from './checks/run.js';
+  runEnforcementChecks,
+  runStructureEnforcement,
+} from './enforce/run.js';
+import { runPatternReview } from './review/run.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.sh', '.sql', '.ts', '.tsx', '.yaml', '.yml']);
@@ -84,18 +85,24 @@ const structureFiles = options.mode === 'all'
   ? files
   : collectStructureCheckFiles(files, repositoryFiles, routePageDirectories);
 const violations = [];
+const reviewFindings = [];
 for (const file of files) {
   const absolute = resolve(REPO_ROOT, file);
   if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
   const source = readFileSync(absolute, 'utf8');
-  runPatternChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
+  runEnforcementChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
+  runPatternReview(reviewFindings, file, source, { repositoryFiles, routePageDirectories });
 }
 for (const file of structureFiles) {
   const absolute = resolve(REPO_ROOT, file);
   if (!existsSync(absolute) || !statSync(absolute).isFile()) continue;
-  runStructureChecks(violations, file, { repositoryFiles, routePageDirectories });
+  runStructureEnforcement(violations, file, { repositoryFiles, routePageDirectories });
 }
 if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);
+if (reviewFindings.length) {
+  console.warn(`Pattern review (${reviewFindings.length}, non-blocking):`);
+  for (const finding of reviewFindings) console.warn(`  - ${finding}`);
+}
 if (violations.length) {
   console.error(`Pattern checks failed (${violations.length}):`);
   for (const violation of violations) console.error(`  - ${violation}`);
