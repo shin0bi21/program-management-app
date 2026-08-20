@@ -1,10 +1,10 @@
 .calendar-item.task-item--active {
-  border-color: var(--color-status-warn);
-  background: var(--color-status-warn-bg);
+  border-color: var(--color-task-active-border);
+  background: var(--color-task-active-bg);
 }
 
 .calendar-item.task-item--overdue {
-  border-color: var(--color-danger);
+  border-color: var(--color-danger-dark);
   background: var(--color-danger-bg);
 }
 

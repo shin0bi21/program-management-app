@@ -27,6 +27,9 @@ describe('TaskOverviewDashboardCard', () => {
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Active').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Upcoming').parentElement).toHaveClass('task-overview-card__metric-upcoming');
+    expect(screen.getByText('Active').parentElement).toHaveClass('task-overview-card__metric-active');
+    expect(screen.getByText('Overdue').parentElement).toHaveClass('task-overview-card__metric-overdue');
     expect(screen.getByRole('heading', { name: 'Task Overview' })).toHaveClass('task-overview-card__accessible-title');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
@@ -58,8 +61,12 @@ describe('TaskOverviewDashboardCard', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
     expect(within(dialog).queryByText('Closed')).not.toBeInTheDocument();
+    const upcomingSection = within(dialog).getByRole('heading', { name: 'Upcoming' }).closest('section')!;
     const activeSection = within(dialog).getByRole('heading', { name: 'Active' }).closest('section')!;
     const overdueSection = within(dialog).getByRole('heading', { name: 'Overdue' }).closest('section')!;
+    expect(upcomingSection).toHaveClass('task-overview-card__task-section--info');
+    expect(activeSection).toHaveClass('task-overview-card__task-section--warn');
+    expect(overdueSection).toHaveClass('task-overview-card__task-section--danger');
     expect(within(activeSection).getAllByRole('listitem').map(item => item.textContent)).toEqual([
       'SoonAug 12', 'LaterAug 20',
     ]);

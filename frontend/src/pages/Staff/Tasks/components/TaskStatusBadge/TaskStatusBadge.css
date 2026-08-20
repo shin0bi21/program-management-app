@@ -9,13 +9,13 @@
 }
 
 .task-status-badge--upcoming {
-  background: var(--color-status-upcoming-bg);
-  color: var(--color-status-upcoming);
+  background: var(--color-info-bg);
+  color: var(--color-info);
 }
 
 .task-status-badge--active {
-  background: var(--color-status-warn-bg);
-  color: var(--color-status-warn);
+  background: var(--color-task-active-bg);
+  color: var(--color-task-active);
 }
 
 .task-status-badge--overdue {
