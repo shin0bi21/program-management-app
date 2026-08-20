@@ -38,7 +38,7 @@ export default function SignupSection() {
               {submitStatus === 'error' && error && (
                 <div className="form-error">{error}</div>
               )}
-              <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="visually-hidden" {...register('website')} />
+              <input type="text" hidden tabIndex={-1} autoComplete="off" aria-hidden="true" {...register('website')} />
               <div className="outreach-form-section">
                 <Controller
                   name="submittedByRole"
