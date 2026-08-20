@@ -6,6 +6,7 @@ interface OpenAttendancePickerProps {
   search: string;
   searchResults: YouthProfile[];
   searching: boolean;
+  disabled: boolean;
   onSearchChange: (value: string) => void;
   onCreateProfile: () => void;
   onCheckIn: (profile: YouthProfile) => void;
@@ -15,6 +16,7 @@ export default function OpenAttendancePicker({
   search,
   searchResults,
   searching,
+  disabled,
   onSearchChange,
   onCreateProfile,
   onCheckIn,
@@ -29,8 +31,9 @@ export default function OpenAttendancePicker({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search youth profiles"
+          disabled={disabled}
         />
-        <Button variant="secondary" onClick={onCreateProfile}>
+        <Button variant="secondary" onClick={onCreateProfile} disabled={disabled}>
           + Create Profile
         </Button>
       </div>
@@ -44,7 +47,12 @@ export default function OpenAttendancePicker({
           {!searching && searchResults.map(profile => (
             <div className="open-attendance-results__row" key={profile.id}>
               <span>{profile.firstName} {profile.lastName}</span>
-              <Button size="sm" variant="secondary" onClick={() => onCheckIn(profile)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onCheckIn(profile)}
+                disabled={disabled}
+              >
                 Check in
               </Button>
             </div>

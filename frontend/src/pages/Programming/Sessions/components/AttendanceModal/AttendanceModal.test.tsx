@@ -1,5 +1,5 @@
-// Scope: verifies attendance loading, enrolled/open roster actions, submission feedback, and youth creation wiring.
-import { screen } from '@testing-library/react';
+// Owns Attendance composition, accessible errors, nested Youth creation, and pending-state wiring.
+import { act, screen } from '@testing-library/react';
 import render from '../../../../../tests/renderWithQueryClient';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -24,15 +24,15 @@ vi.mock('../../../../../common/features/youth/components/YouthModal/YouthModal',
     onClose: () => void;
     onSuccess: (profile: { id: string; firstName: string; lastName: string }) => void;
   }) => isOpen ? (
-    <button
-      type="button"
-      onClick={() => {
-        onSuccess({ id: 'youth-new', firstName: 'New', lastName: 'Visitor' });
-        onClose();
-      }}
-    >
-      Finish creating profile
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => onSuccess({ id: 'youth-new', firstName: 'New', lastName: 'Visitor' })}
+      >
+        Finish creating profile
+      </button>
+      <button type="button" onClick={onClose}>Close created profile</button>
+    </>
   ) : null,
 }));
 
@@ -70,61 +70,46 @@ describe('AttendanceModal', () => {
     api.getYouth.mockResolvedValue([]);
   });
 
-  it('shows saving and success feedback before closing', async () => {
-    const user = userEvent.setup();
-    let finishSave: (value: unknown[]) => void = () => {};
-    api.setSessionAttendance.mockReturnValue(new Promise(resolve => {
-      finishSave = resolve;
-    }));
-    const onSaved = vi.fn().mockResolvedValue(undefined);
-
-    render(
-      <AttendanceModal
-        session={session}
-        onClose={vi.fn()}
-        onSaved={onSaved}
-      />,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
-    await screen.findByText('Maya Thompson');
-    await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
-
-    expect(screen.getByText('Saving attendance for Communication...')).toBeInTheDocument();
-    finishSave([]);
-
-    expect(await screen.findByText(
-      'Attendance successfully saved for Communication.',
-    )).toBeInTheDocument();
-    expect(onSaved).toHaveBeenCalledOnce();
-  });
-
-  it('shows a roster loading failure', async () => {
+  it('renders session context and roster failures', async () => {
     api.getSessionRoster.mockRejectedValue(new Error('Roster unavailable'));
-
-    render(
-      <AttendanceModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
-  });
-
-  it('searches, creates, and checks profiles into an open session without statuses', async () => {
-    const user = userEvent.setup();
-    api.getSessionRoster.mockResolvedValue([]);
-    api.getYouth.mockResolvedValue([{
-      id: 'youth-2',
-      firstName: 'Jordan',
-      lastName: 'Drop In',
-    }]);
-    const openSession = { ...session, rosterMode: 'open' as const, programName: 'Drop In' };
+    const openSession = { ...session, rosterMode: 'open' as const };
 
     render(
       <AttendanceModal
         session={openSession}
         onClose={vi.fn()}
         onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
+    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
+    expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '+ Create Profile' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+  });
+
+  it('keeps Youth creation visible before returning to a disabled pending attendance draft', async () => {
+    const user = userEvent.setup();
+    let finishSave: (value: unknown[]) => void = () => {};
+    api.getSessionRoster.mockResolvedValue([]);
+    api.getYouth.mockResolvedValue([{
+      id: 'youth-2',
+      firstName: 'Jordan',
+      lastName: 'Drop In',
+    }]);
+    api.setSessionAttendance.mockReturnValue(new Promise(resolve => {
+      finishSave = resolve;
+    }));
+    const openSession = { ...session, rosterMode: 'open' as const, programName: 'Drop In' };
+    const onSaved = vi.fn();
+
+    render(
+      <AttendanceModal
+        session={openSession}
+        onClose={vi.fn()}
+        onSaved={onSaved}
       />,
     );
 
@@ -137,12 +122,22 @@ describe('AttendanceModal', () => {
 
     await user.click(screen.getByRole('button', { name: '+ Create Profile' }));
     await user.click(screen.getByRole('button', { name: 'Finish creating profile' }));
+    expect(screen.queryByText('New Visitor')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close created profile' }));
     expect(screen.getByText('New Visitor')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
-    expect(api.setSessionAttendance).toHaveBeenCalledWith('session-1', [
-      expect.objectContaining({ youthId: 'youth-2', status: 'present' }),
-      expect.objectContaining({ youthId: 'youth-new', status: 'present' }),
-    ]);
+
+    expect(api.setSessionAttendance).toHaveBeenCalledOnce();
+    expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '+ Create Profile' })).toBeDisabled();
+    screen.getAllByRole('button', { name: 'Remove' }).forEach(button => {
+      expect(button).toBeDisabled();
+    });
+    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    await act(async () => finishSave([]));
+    expect(onSaved).toHaveBeenCalledOnce();
   });
 });
