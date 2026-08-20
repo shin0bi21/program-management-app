@@ -1,4 +1,4 @@
-// Scope: verifies task placement, status, deletion, synchronization, errors, and time-entry invalidation.
+// Scope: verifies task placement, status, deletion, synchronization, errors, and hours invalidation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,7 +26,7 @@ function renderActions(client = createTestQueryClient()) {
   const onTaskSynced = vi.fn();
   const onTaskRemoved = vi.fn();
   const result = renderHook(() => useTaskActions({
-    taskQueryKey: ['tasks'], taskListQueryKey: ['tasks', 'list'], hoursQueryKey: ['time-entries'],
+    taskQueryKey: ['tasks'], taskListQueryKey: ['tasks', 'list'], hoursQueryKey: ['hours'],
     onTaskSynced, onTaskRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
   const upsertCalendarTask = vi.fn();
@@ -155,7 +155,7 @@ describe('useTaskActions', () => {
     expect(rendered.onTaskRemoved).not.toHaveBeenCalled();
   });
 
-  it('invalidates both task and time-entry domains after logging hours', async () => {
+  it('invalidates both task and hours domains after logging hours', async () => {
     vi.mocked(setHours).mockResolvedValue({} as never);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -167,6 +167,6 @@ describe('useTaskActions', () => {
 
     expect(setHours).toHaveBeenCalledWith(input);
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] }));
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['time-entries'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
   });
 });

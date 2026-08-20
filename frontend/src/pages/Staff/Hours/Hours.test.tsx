@@ -194,7 +194,7 @@ describe('Hours', () => {
     expect(screen.getByRole('menuitem', { name: /Staff/ })).toBeInTheDocument();
   });
 
-  it('shows a readable coworker row without exposing time-entry write controls', async () => {
+  it('shows a readable coworker row without exposing hours write controls', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
     vi.mocked(getHours).mockResolvedValue({
       resources: [
@@ -545,7 +545,7 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Route bridge' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
+    fireEvent.submit(document.getElementById('hours-form')!);
 
     await waitFor(() => expect(setHours).toHaveBeenCalledOnce());
     expect(vi.mocked(setHours).mock.calls[0]).toHaveLength(1);
@@ -591,7 +591,7 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(2);
     expect(screen.getByLabelText('Note')).toHaveValue('Planning meeting');
-    fireEvent.submit(document.getElementById('time-entry-form')!);
+    fireEvent.submit(document.getElementById('hours-form')!);
 
     await waitFor(() => expect(setHours).toHaveBeenCalledWith(
       expect.any(Object),

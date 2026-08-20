@@ -180,7 +180,7 @@ async function main() {
     }
   });
 
-  console.log(`Staff demo ready: ${entries.length} time entries and 4 tasks across 2 active staff accounts`);
+  console.log(`Staff demo ready: ${entries.length} logged hours and 4 tasks across 2 active staff accounts`);
 }
 
 main()

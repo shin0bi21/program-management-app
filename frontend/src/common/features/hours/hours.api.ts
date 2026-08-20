@@ -54,11 +54,11 @@ export function getHours(filters: HoursFilters = {}, opts?: RequestOptions) {
   if (filters.start && filters.end) { params.set('start', filters.start); params.set('end', filters.end); }
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   const query = params.size ? `?${params}` : '';
-  return apiClient.get<HoursRangeResponse>(`/time-entries${query}`, opts);
+  return apiClient.get<HoursRangeResponse>(`/hours${query}`, opts);
 }
 
 export function getHoursOptions(opts?: RequestOptions) {
-  return apiClient.get<{ resources: StaffResource[]; programs: HoursProgram[] }>('/time-entries/options', opts);
+  return apiClient.get<{ resources: StaffResource[]; programs: HoursProgram[] }>('/hours/options', opts);
 }
 
 export function getHoursList(
@@ -76,24 +76,24 @@ export function getHoursList(
   if (filters.types.length) params.set('types', filters.types.join(','));
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   if (filters.search) params.set('search', filters.search);
-  return apiClient.get<CursorPage<HoursListRowResponse>>(`/time-entries/list?${params}`, opts);
+  return apiClient.get<CursorPage<HoursListRowResponse>>(`/hours/list?${params}`, opts);
 }
 
 export function getHoursOverview(staffId: string, cycleId: string, opts?: RequestOptions) {
   const params = new URLSearchParams({ staffId, cycleId });
-  return apiClient.get<HoursOverviewResponse>(`/time-entries/overview?${params}`, opts);
+  return apiClient.get<HoursOverviewResponse>(`/hours/overview?${params}`, opts);
 }
 
 export function getHoursSessions(staffId: string, workDate: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ staffId, workDate });
-  return apiClient.get<HoursSession[]>(`/time-entries/sessions?${params}`, { signal });
+  return apiClient.get<HoursSession[]>(`/hours/sessions?${params}`, { signal });
 }
 export function setHours(input: SetHoursInput, id?: string) {
   return id
-    ? apiClient.put<HoursResponse>(`/time-entries/${id}`, input)
-    : apiClient.post<HoursResponse>('/time-entries', input);
+    ? apiClient.put<HoursResponse>(`/hours/${id}`, input)
+    : apiClient.post<HoursResponse>('/hours', input);
 }
 export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
-  return apiClient.patch<HoursResponse>(`/time-entries/${id}/placement`, input);
+  return apiClient.patch<HoursResponse>(`/hours/${id}/placement`, input);
 }
-export function deleteHours(id: string) { return apiClient.delete<{ message: string }>(`/time-entries/${id}`); }
+export function deleteHours(id: string) { return apiClient.delete<{ message: string }>(`/hours/${id}`); }

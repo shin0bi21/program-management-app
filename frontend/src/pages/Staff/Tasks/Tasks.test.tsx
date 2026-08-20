@@ -14,7 +14,7 @@ import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
 import type { TaskPreference } from './types';
 
-const HOURS_QUERY_KEY = ['time-entries'] as const;
+const HOURS_QUERY_KEY = ['hours'] as const;
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
@@ -135,12 +135,12 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    const hoursForm = document.getElementById('time-entry-form')!;
+    const hoursForm = document.getElementById('hours-form')!;
     expect(within(hoursForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(within(hoursForm).getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
+    fireEvent.submit(document.getElementById('hours-form')!);
 
     await waitFor(() => expect(setHours).toHaveBeenCalledWith(expect.objectContaining({
       source: 'task', taskId: 'task-1', staffId: 'staff-1', note: 'Prepared materials',

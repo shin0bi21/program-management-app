@@ -159,7 +159,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
 
   // Source-specific remote options.
   const taskQuery = useQuery({
-    queryKey: ['tasks', draft.resourceId, 'time-entry'],
+    queryKey: ['tasks', draft.resourceId, 'hours'],
     queryFn: ({ signal }) => getTasks({ staffId: draft.resourceId }, { signal }),
     enabled: isOpen && draft.source === 'task' && Boolean(draft.resourceId) && !taskLocked,
   });
@@ -168,7 +168,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     : (taskQuery.data ?? []).filter(task => task.status === 'open');
 
   const sessionQuery = useQuery({
-    queryKey: ['time-entry-sessions', draft.resourceId, draft.date],
+    queryKey: ['hours-sessions', draft.resourceId, draft.date],
     queryFn: ({ signal }) => getHoursSessions(draft.resourceId, draft.date, signal),
     enabled: isOpen && draft.source === 'session' && Boolean(draft.resourceId) && Boolean(draft.date),
   });

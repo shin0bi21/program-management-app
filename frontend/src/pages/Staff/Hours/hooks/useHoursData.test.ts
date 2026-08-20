@@ -31,7 +31,7 @@ describe('useHoursData', () => {
   it('loads each page-wide option once and exposes derived resource owners', async () => {
     const client = createTestQueryClient();
     const { result } = renderHook(
-      () => useHoursData(['time-entry-options'], ['program-cycles'], 'staff-1'),
+      () => useHoursData(['hours-options'], ['program-cycles'], 'staff-1'),
       { wrapper: createQueryClientWrapper(client) },
     );
 

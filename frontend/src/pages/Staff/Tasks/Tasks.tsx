@@ -47,7 +47,7 @@ const TASK_SORT_KEYS = [
 const TASK_QUERY_KEY = ['tasks'] as const;
 const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
 const TASK_OPTIONS_QUERY_KEY = ['task-options'] as const;
-const HOURS_QUERY_KEY = ['time-entries'] as const;
+const HOURS_QUERY_KEY = ['hours'] as const;
 
 // Page helpers.
 function getTaskError(

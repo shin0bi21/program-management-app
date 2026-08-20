@@ -34,7 +34,7 @@ export function createApp() {
   app.use('/api/cohorts', cohortRoutes);
   app.use('/api/homepage', homepageRoutes);
   app.use('/api/preferences', preferenceRoutes);
-  app.use('/api/time-entries', hoursRoutes);
+  app.use('/api/hours', hoursRoutes);
   app.use('/api/tasks', taskRoutes);
   app.use(handleError);
   return app;

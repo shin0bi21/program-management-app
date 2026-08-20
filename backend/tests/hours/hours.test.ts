@@ -6,7 +6,7 @@ import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriods'
 
 const app = createApp();
 
-describe('Time entries API', () => {
+describe('Hours API', () => {
   let workDate: string;
   let linkedWorkDate: string;
   let placementWorkDate: string;
@@ -114,7 +114,7 @@ describe('Time entries API', () => {
 
   it('allows staff to create and read their own regular-time entry', async () => {
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 2.5, note: 'Program meeting' });
 
@@ -122,7 +122,7 @@ describe('Time entries API', () => {
     expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', taskId: null, sessionId: null, hours: 2.5 }));
 
     const listed = await request(app)
-      .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(listed.status).toBe(200);
     expect(listed.body.resources).toEqual(expect.arrayContaining([
@@ -153,21 +153,21 @@ describe('Time entries API', () => {
     const marker = `Paginated hours ${firstStaffId}`;
     for (const hours of [1, 2]) {
       const created = await request(app)
-        .post('/api/time-entries')
+        .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
         .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours, note: `${marker} ${hours}` });
       expect(created.status).toBe(201);
     }
 
     const options = await request(app)
-      .get('/api/time-entries/options')
+      .get('/api/hours/options')
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(options.status).toBe(200);
     expect(options.body.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstStaffId })]));
     expect(options.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
 
     const first = await request(app)
-      .get(`/api/time-entries/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
+      .get(`/api/hours/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({
@@ -176,7 +176,7 @@ describe('Time entries API', () => {
     });
 
     const second = await request(app)
-      .get(`/api/time-entries/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .get(`/api/hours/list?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(second.status).toBe(200);
     expect(second.body).toEqual({
@@ -187,7 +187,7 @@ describe('Time entries API', () => {
 
   it('lists assigned sessions and derives session time metadata', async () => {
     const sessions = await request(app)
-      .get(`/api/time-entries/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
+      .get(`/api/hours/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(sessions.status).toBe(200);
     expect(sessions.body).toEqual([
@@ -197,7 +197,7 @@ describe('Time entries API', () => {
     ]);
 
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'session', staffId: firstStaffId, sessionId, hours: 2, note: 'Delivered workshop' });
 
@@ -212,7 +212,7 @@ describe('Time entries API', () => {
     }));
 
     const adminSessions = await request(app)
-      .get(`/api/time-entries/sessions?staffId=${adminId}&workDate=${workDate}`)
+      .get(`/api/hours/sessions?staffId=${adminId}&workDate=${workDate}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminSessions.status).toBe(200);
     expect(adminSessions.body).toEqual([
@@ -220,7 +220,7 @@ describe('Time entries API', () => {
     ]);
 
     const adminEntry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ source: 'session', staffId: adminId, sessionId, hours: 1, note: 'Admin delivered workshop' });
     expect(adminEntry.status).toBe(201);
@@ -231,7 +231,7 @@ describe('Time entries API', () => {
 
   it('rejects Program Delivery through the Regular workflow', async () => {
     const response = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'program_delivery', workDate, hours: 1, note: 'Wrong workflow' });
     expect(response.status).toBe(400);
@@ -267,7 +267,7 @@ describe('Time entries API', () => {
       `;
 
       const overview = await request(app)
-        .get(`/api/time-entries/overview?staffId=${adminId}&cycleId=${activeCycleId}`)
+        .get(`/api/hours/overview?staffId=${adminId}&cycleId=${activeCycleId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(overview.status).toBe(200);
@@ -308,7 +308,7 @@ describe('Time entries API', () => {
     const expected = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
 
     const response = await request(app)
-      .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${upcomingCycleId}`)
+      .get(`/api/hours/overview?staffId=${firstStaffId}&cycleId=${upcomingCycleId}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(200);
@@ -326,7 +326,7 @@ describe('Time entries API', () => {
 
     try {
       const response = await request(app)
-        .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
+        .get(`/api/hours/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
         .set('Authorization', `Bearer ${firstStaffToken}`);
 
       expect(response.status).toBe(200);
@@ -341,7 +341,7 @@ describe('Time entries API', () => {
 
   it('conceals dashboard overview data for an unreadable staff resource', async () => {
     const response = await request(app)
-      .get(`/api/time-entries/overview?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`)
+      .get(`/api/hours/overview?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(404);
@@ -355,7 +355,7 @@ describe('Time entries API', () => {
     `;
     try {
       const response = await request(app)
-        .get(`/api/time-entries/overview?staffId=${secondStaffId}&cycleId=${activeCycleId}`)
+        .get(`/api/hours/overview?staffId=${secondStaffId}&cycleId=${activeCycleId}`)
         .set('Authorization', `Bearer ${firstStaffToken}`);
 
       expect(response.status).toBe(200);
@@ -369,7 +369,7 @@ describe('Time entries API', () => {
   it('requires the read hours permission for dashboard overview data', async () => {
     const token = generateToken(firstStaffId, 'staff', 'hours-no-read@test.local', []);
     const response = await request(app)
-      .get(`/api/time-entries/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
+      .get(`/api/hours/overview?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(403);
@@ -383,7 +383,7 @@ describe('Time entries API', () => {
       ['read:hours'],
     );
     const listed = await request(app)
-      .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${readOnlyToken}`);
 
     expect(listed.status).toBe(200);
@@ -394,7 +394,7 @@ describe('Time entries API', () => {
 
   it('derives a cycle for general time without a program', async () => {
     const response = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, category: 'maintenance', workDate, hours: 1, note: 'Office maintenance' });
 
@@ -404,7 +404,7 @@ describe('Time entries API', () => {
 
   it('returns the derived cycle for time without a program', async () => {
     const response = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular',
@@ -424,7 +424,7 @@ describe('Time entries API', () => {
 
   it('rejects missing notes', async () => {
     const response = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: ' ' });
     expect(response.status).toBe(400);
@@ -432,7 +432,7 @@ describe('Time entries API', () => {
 
   it('prevents staff from creating entries for another staff member', async () => {
     const response = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: secondStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Team meeting' });
     expect(response.status).toBe(403);
@@ -440,14 +440,14 @@ describe('Time entries API', () => {
 
   it('allows admins to create entries for staff and list all staff resources', async () => {
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', workDate, hours: 1, note: 'Created campaign materials' });
     expect(created.status).toBe(201);
     expect(created.body.category).toBe('outreach');
 
     const listed = await request(app)
-      .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(listed.status).toBe(200);
     expect(listed.body.resources).toEqual(expect.arrayContaining([
@@ -456,7 +456,7 @@ describe('Time entries API', () => {
     ]));
 
     const coworkerRead = await request(app)
-      .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(coworkerRead.status).toBe(200);
     expect(coworkerRead.body.data[secondStaffId][workDate]).toEqual(expect.arrayContaining([
@@ -464,7 +464,7 @@ describe('Time entries API', () => {
     ]));
 
     const unrelatedRead = await request(app)
-      .get(`/api/time-entries?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${unrelatedStaffToken}`);
     expect(unrelatedRead.status).toBe(200);
     expect(unrelatedRead.body.resources).toEqual([
@@ -473,13 +473,13 @@ describe('Time entries API', () => {
     expect(unrelatedRead.body.data[secondStaffId]).toBeUndefined();
 
     const coworkerUpdate = await request(app)
-      .put(`/api/time-entries/${created.body.id}`)
+      .put(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', workDate, hours: 2, note: 'Unauthorized edit' });
     expect(coworkerUpdate.status).toBe(403);
 
     const coworkerDelete = await request(app)
-      .delete(`/api/time-entries/${created.body.id}`)
+      .delete(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(coworkerDelete.status).toBe(403);
   });
@@ -501,7 +501,7 @@ describe('Time entries API', () => {
     assignedTaskId = createdTask.body.id;
 
     const unassignedEntry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${secondStaffToken}`)
       .send({
         source: 'task', staffId: secondStaffId, taskId: assignedTaskId,
@@ -510,7 +510,7 @@ describe('Time entries API', () => {
     expect(unassignedEntry.status).toBe(404);
 
     const linkedEntry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task',
@@ -545,7 +545,7 @@ describe('Time entries API', () => {
       .send({ status: 'completed' });
     expect(completed.status).toBe(200);
     const completedTime = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, workDate, hours: 1, note: 'Closed task time' });
     expect(completedTime.status).toBe(404);
@@ -561,7 +561,7 @@ describe('Time entries API', () => {
       .send({ status: 'cancelled' });
     expect(cancelled.status).toBe(200);
     const cancelledTime = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, workDate, hours: 1, note: 'Cancelled task time' });
     expect(cancelledTime.status).toBe(404);
@@ -573,7 +573,7 @@ describe('Time entries API', () => {
     expect(linkedDelete.body.error).toBe('Tasks with logged time cannot be deleted');
 
     const entriesAfterRejectedDelete = await request(app)
-      .get(`/api/time-entries?start=${linkedWorkDate}&end=${linkedWorkDate}`)
+      .get(`/api/hours?start=${linkedWorkDate}&end=${linkedWorkDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(entriesAfterRejectedDelete.body.data[firstStaffId][linkedWorkDate]).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: linkedEntry.body.id, taskId: assignedTaskId, taskTitle: 'Create marketing poster' }),
@@ -582,7 +582,7 @@ describe('Time entries API', () => {
 
   it('lists all accessible cycle data when no date range is provided', async () => {
     const response = await request(app)
-      .get('/api/time-entries')
+      .get('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(200);
@@ -605,7 +605,7 @@ describe('Time entries API', () => {
     expect(task.status).toBe(201);
 
     const entry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
@@ -619,7 +619,7 @@ describe('Time entries API', () => {
       expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
     ]));
 
-    await request(app).delete(`/api/time-entries/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
+    await request(app).delete(`/api/hours/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
   });
 
@@ -640,7 +640,7 @@ describe('Time entries API', () => {
       ['write:hours'],
     );
     const entry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${hoursOnlyToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
@@ -666,7 +666,7 @@ describe('Time entries API', () => {
   it('rejects work dates that are not covered by a cycle', async () => {
     const outsideCycleDate = '2025-01-15';
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular',
@@ -697,7 +697,7 @@ describe('Time entries API', () => {
     `;
     try {
       const response = await request(app)
-        .post('/api/time-entries')
+        .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
         .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Ambiguous cycle' });
 
@@ -711,14 +711,14 @@ describe('Time entries API', () => {
 
   it('updates the stored cycle atomically when placement crosses a cycle boundary', async () => {
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Move across cycles' });
     expect(created.status).toBe(201);
     expect(created.body.cycleId).toBe(activeCycleId);
 
     const moved = await request(app)
-      .patch(`/api/time-entries/${created.body.id}/placement`)
+      .patch(`/api/hours/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ workDate: upcomingWorkDate });
 
@@ -728,7 +728,7 @@ describe('Time entries API', () => {
 
   it('requires range dates to be provided together', async () => {
     const response = await request(app)
-      .get(`/api/time-entries?start=${workDate}`)
+      .get(`/api/hours?start=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(400);
@@ -736,7 +736,7 @@ describe('Time entries API', () => {
 
   it('preserves newer entry content when calendar placement changes', async () => {
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular', staffId: firstStaffId, programId,
@@ -745,7 +745,7 @@ describe('Time entries API', () => {
     expect(created.status).toBe(201);
 
     const contentUpdate = await request(app)
-      .put(`/api/time-entries/${created.body.id}`)
+      .put(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular', staffId: firstStaffId, programId: null,
@@ -754,7 +754,7 @@ describe('Time entries API', () => {
     expect(contentUpdate.status).toBe(200);
 
     const placementUpdate = await request(app)
-      .patch(`/api/time-entries/${created.body.id}/placement`)
+      .patch(`/api/hours/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ workDate: placementWorkDate });
 
@@ -772,38 +772,38 @@ describe('Time entries API', () => {
 
   it('allows staff to update and delete their own entry', async () => {
     const created = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Initial note' });
 
     const updated = await request(app)
-      .put(`/api/time-entries/${created.body.id}`)
+      .put(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({ source: 'regular', staffId: firstStaffId, programId: null, category: 'planning_prep', workDate, hours: 1.5, note: 'Updated note' });
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(expect.objectContaining({ programId: null, category: 'planning_prep', hours: 1.5, note: 'Updated note' }));
 
     const deleted = await request(app)
-      .delete(`/api/time-entries/${created.body.id}`)
+      .delete(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(deleted.status).toBe(200);
   });
 
   it('rejects malformed dates and entry IDs as validation errors', async () => {
     const invalidDate = await request(app)
-      .get('/api/time-entries?start=2026-99-99&end=2026-99-99')
+      .get('/api/hours?start=2026-99-99&end=2026-99-99')
       .set('Authorization', `Bearer ${firstStaffToken}`);
     const invalidId = await request(app)
-      .delete('/api/time-entries/not-a-uuid')
+      .delete('/api/hours/not-a-uuid')
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(invalidDate.status).toBe(400);
     expect(invalidId.status).toBe(400);
   });
 
-  it('rejects time-entry ranges larger than one year', async () => {
+  it('rejects hours ranges larger than one year', async () => {
     const response = await request(app)
-      .get('/api/time-entries?start=2025-01-01&end=2026-01-02')
+      .get('/api/hours?start=2025-01-01&end=2026-01-02')
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(400);

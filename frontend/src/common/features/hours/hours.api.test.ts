@@ -7,7 +7,7 @@ vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 
-describe('time-entry API', () => {
+describe('hours API', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('serializes list filters and cursor pagination', () => {
@@ -26,7 +26,7 @@ describe('time-entry API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/time-entries/list?sort=date&direction=desc&limit=25&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleId=cycle-1&search=follow+up',
+      '/hours/list?sort=date&direction=desc&limit=25&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleId=cycle-1&search=follow+up',
       undefined,
     );
   });
@@ -45,9 +45,9 @@ describe('time-entry API', () => {
     setHours(input, 'entry-1');
     updateHoursPlacement('entry-1', { workDate: '2026-08-20' });
 
-    expect(apiClient.post).toHaveBeenCalledWith('/time-entries', input);
-    expect(apiClient.put).toHaveBeenCalledWith('/time-entries/entry-1', input);
-    expect(apiClient.patch).toHaveBeenCalledWith('/time-entries/entry-1/placement', {
+    expect(apiClient.post).toHaveBeenCalledWith('/hours', input);
+    expect(apiClient.put).toHaveBeenCalledWith('/hours/entry-1', input);
+    expect(apiClient.patch).toHaveBeenCalledWith('/hours/entry-1/placement', {
       workDate: '2026-08-20',
     });
   });
