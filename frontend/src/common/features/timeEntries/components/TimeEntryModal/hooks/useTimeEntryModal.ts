@@ -12,7 +12,7 @@ import type {
   StaffResource,
   TimeEntryCategory,
   TimeEntryProgram,
-  TimesheetItem,
+  HoursItem,
 } from '../../../types';
 
 type TimeEntrySource = 'regular' | 'task' | 'session';
@@ -39,7 +39,7 @@ export interface UseTimeEntryModalOptions {
   initialDate?: string;
   initialSource?: TimeEntrySource;
   initialTask?: Task;
-  initialItem?: TimesheetItem;
+  initialItem?: HoursItem;
   canCompleteTask?: boolean;
 }
 

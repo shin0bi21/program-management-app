@@ -172,7 +172,7 @@ export async function getTimeEntrySessions(actor: AccessTokenPayload, query: Tim
 export async function getTimeEntryOverview(actor: AccessTokenPayload, query: TimeEntryOverviewQuery) {
   const readableStaff = await getTimeEntryResources(actor);
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
-    throw new NotFoundError('Timesheet overview not found');
+    throw new NotFoundError('Hours overview not found');
   }
   const [payPeriodCycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
     SELECT starts_on::text AS starts_on,
@@ -244,7 +244,7 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
     LEFT JOIN categories category ON TRUE
     ORDER BY category.category
   `;
-  if (!rows.length) throw new NotFoundError('Timesheet overview not found');
+  if (!rows.length) throw new NotFoundError('Hours overview not found');
 
   const payPeriodBreakdown = rows.flatMap(row => row.category && Number(row.periodHours) > 0
     ? [{ label: timeEntryCategoryLabels[row.category], hours: Number(row.periodHours) }]

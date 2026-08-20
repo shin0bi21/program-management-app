@@ -13,7 +13,7 @@ export interface TimeEntrySession {
   id: string; label: string; programId: string; programName: string; workDate: string; startsAt: string;
 }
 
-export interface TimesheetItem {
+export interface HoursItem {
   id: string;
   programId: string | null;
   programName: string | null;

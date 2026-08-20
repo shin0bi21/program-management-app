@@ -172,7 +172,7 @@ describe('AppNavigation', () => {
   });
 
   it('places Staff before Youth in application navigation', () => {
-    authState.permissions = ['read:timesheets', 'read:youth_profiles'];
+    authState.permissions = ['read:hours', 'read:youth_profiles'];
     authState.role = 'staff';
 
     render(
@@ -200,7 +200,7 @@ describe('AppNavigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Tasks' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Hours' })).not.toBeInTheDocument();
 
-    authState.permissions = ['read:timesheets'];
+    authState.permissions = ['read:hours'];
     rerender(
       <MemoryRouter>
         <AppNavigation />
@@ -220,7 +220,7 @@ describe('AppNavigation', () => {
   });
 
   it('places Hours before Tasks in the Staff menu', () => {
-    authState.permissions = ['read:timesheets', 'read:tasks'];
+    authState.permissions = ['read:hours', 'read:tasks'];
     authState.role = 'staff';
 
     render(
@@ -235,7 +235,7 @@ describe('AppNavigation', () => {
   });
 
   it('uses the canonical Hours URL from Staff navigation', async () => {
-    authState.permissions = ['read:timesheets'];
+    authState.permissions = ['read:hours'];
     authState.role = 'staff';
     const user = userEvent.setup();
 

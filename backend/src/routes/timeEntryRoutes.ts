@@ -24,14 +24,14 @@ import {
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryQuerySchema), asyncHandler(handleGetTimeEntries));
-router.get('/list', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryListQuerySchema), asyncHandler(handleGetTimeEntryList));
-router.get('/options', authenticateToken, requirePermission('read:timesheets'), generalLimiter, asyncHandler(handleGetTimeEntryOptions));
-router.get('/overview', authenticateToken, requirePermission('read:timesheets'), generalLimiter, validateRequest(timeEntryOverviewQuerySchema), asyncHandler(handleGetTimeEntryOverview));
-router.get('/sessions', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntrySessionQuerySchema), asyncHandler(handleGetTimeEntrySessions));
-router.post('/', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
-router.put('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
-router.patch('/:id/placement', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(updateTimeEntryPlacementSchema), asyncHandler(handleUpdateTimeEntryPlacement));
-router.delete('/:id', authenticateToken, requirePermission('write:timesheets'), generalLimiter, validateRequest(timeEntryParamsSchema), asyncHandler(handleDeleteTimeEntry));
+router.get('/', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(timeEntryQuerySchema), asyncHandler(handleGetTimeEntries));
+router.get('/list', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(timeEntryListQuerySchema), asyncHandler(handleGetTimeEntryList));
+router.get('/options', authenticateToken, requirePermission('read:hours'), generalLimiter, asyncHandler(handleGetTimeEntryOptions));
+router.get('/overview', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(timeEntryOverviewQuerySchema), asyncHandler(handleGetTimeEntryOverview));
+router.get('/sessions', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(timeEntrySessionQuerySchema), asyncHandler(handleGetTimeEntrySessions));
+router.post('/', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
+router.put('/:id', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(setTimeEntrySchema), asyncHandler(handleSetTimeEntry));
+router.patch('/:id/placement', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(timeEntryParamsSchema), validateRequest(updateTimeEntryPlacementSchema), asyncHandler(handleUpdateTimeEntryPlacement));
+router.delete('/:id', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(timeEntryParamsSchema), asyncHandler(handleDeleteTimeEntry));
 
 export default router;

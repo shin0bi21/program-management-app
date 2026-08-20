@@ -101,7 +101,7 @@ Authorization has two layers: route permissions define the capability an actor m
 
 | Role | Permissions |
 |------|-------------|
-| `admin` | All currently defined permissions, including account, youth, programming, outreach, homepage, settings, and timesheet access |
+| `admin` | All currently defined permissions, including account, youth, programming, outreach, homepage, settings, and hours access |
 | `staff` | Operational permissions assigned by migrations; account results and some workflows remain policy-scoped |
 | `youth` | *(none)* |
 
@@ -129,8 +129,8 @@ Authorization has two layers: route permissions define the capability an actor m
 | `write:homepage` | Manage homepage images and programming content |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
-| `read:timesheets` | Read timesheet resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete time-entry row; administrators see all |
-| `write:timesheets` | Create, update, move, and delete policy-scoped time entries; staff are self-scoped and administrators may act for any staff member |
+| `read:hours` | Read hours resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete time-entry row; administrators see all |
+| `write:hours` | Create, update, move, and delete policy-scoped time entries; staff are self-scoped and administrators may act for any staff member |
 | `read:tasks` | Read task resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete task row; administrators see all |
 | `write:tasks` | Create, update, change status, and delete policy-scoped tasks; staff are self-scoped and administrators may act for any staff member |
 

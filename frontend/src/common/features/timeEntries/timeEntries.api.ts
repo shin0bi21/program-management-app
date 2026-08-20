@@ -2,7 +2,7 @@ import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { ResourcePeriodData } from '../../components/ResourceCalendar/types';
 import type { CursorPage, CursorRequest } from '../../types/pagination';
-import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimeEntrySession, TimesheetItem } from './types';
+import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimeEntrySession, HoursItem } from './types';
 
 export interface TimeEntryResponse {
   id: string; staffId: string; programId: string | null; programName: string | null;
@@ -22,7 +22,7 @@ export interface UpdateTimeEntryPlacementInput { workDate: string }
 export interface TimeEntryRangeResponse {
   resources: StaffResource[];
   programs: TimeEntryProgram[];
-  data: ResourcePeriodData<TimesheetItem>;
+  data: ResourcePeriodData<HoursItem>;
 }
 
 export interface TimeEntryOverviewResponse {
@@ -45,7 +45,7 @@ export interface TimeEntryListFilters {
   types: Array<'task' | 'session' | 'other'>; cycleId?: string; search?: string;
 }
 export interface TimeEntryListRowResponse {
-  id: string; resourceId: string; date: string; item: TimesheetItem;
+  id: string; resourceId: string; date: string; item: HoursItem;
   staffFirstName: string; staffLastName: string; staffName: string;
 }
 

@@ -69,7 +69,7 @@ export function useAppNavigation() {
   const canViewCohorts = grantedPermissions.includes('read:cohorts');
   const canViewSessions = grantedPermissions.includes('read:sessions');
   const canViewTasks = grantedPermissions.includes('read:tasks');
-  const canViewTimesheets = grantedPermissions.includes('read:timesheets');
+  const canViewHours = grantedPermissions.includes('read:hours');
 
   return {
     isAuthenticated,
@@ -88,8 +88,8 @@ export function useAppNavigation() {
       canManageAccounts: grantedPermissions.includes('read:accounts'),
       canManageProgramming: grantedPermissions.includes('write:programs'),
       canViewTasks,
-      canViewTimesheets,
-      canViewStaff: canViewTasks || canViewTimesheets,
+      canViewHours,
+      canViewStaff: canViewTasks || canViewHours,
     },
     active: {
       settings: location.pathname.startsWith('/settings'),
