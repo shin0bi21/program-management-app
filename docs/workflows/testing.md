@@ -17,7 +17,7 @@ The full application runner executes deployment checks, backend API tests, and f
 
 Static analysis includes shell syntax, ShellCheck, repository lint, script tests, report smoke checks, local Markdown-link validation, and repository-skill validation.
 
-Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Timesheet tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
+Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Hours tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
 
 Frontend source changes run `vitest --changed` against the comparison base. Vitest follows imports, so changing a component or hook selects its own tests and tests for importing components and route pages. Frontend configuration, dependencies, and test-runner changes run the complete frontend suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
 
@@ -73,14 +73,14 @@ bash scripts/tests/backend/run-accounts-tests.sh
 bash scripts/tests/backend/run-youth-tests.sh
 bash scripts/tests/backend/run-schools-tests.sh
 bash scripts/tests/backend/run-outreach-tests.sh
-bash scripts/tests/backend/run-timesheet-tests.sh
+bash scripts/tests/backend/run-hours-tests.sh
 bash scripts/tests/backend/run-task-tests.sh
 
 bash scripts/tests/frontend/run-platform-tests.sh
 bash scripts/tests/frontend/run-homepage-tests.sh
 bash scripts/tests/frontend/run-youth-tests.sh
 bash scripts/tests/frontend/run-staff-tests.sh
-bash scripts/tests/frontend/run-timesheet-tests.sh
+bash scripts/tests/frontend/run-hours-tests.sh
 bash scripts/tests/frontend/run-task-tests.sh
 bash scripts/tests/frontend/run-common-tests.sh
 bash scripts/tests/frontend/test-browser.sh

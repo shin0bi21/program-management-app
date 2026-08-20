@@ -222,7 +222,7 @@ Current example:
 | `youth/youthAddressService.ts` | `addresses` (UPDATE + INSERT), `user_has_addresses` (DELETE) |
 | `youth/youthContactService.ts` | `contacts` (UPDATE + INSERT), `user_has_contacts` (DELETE) |
 | `outreach/leads/leadService.ts` | Lead signup transaction across `users`, `youth_profiles`, `contacts`, `leads`, and originating `expressions_of_interest` |
-| `staff/hours/timeEntryService.ts` | `time_entries` create, update, and delete operations |
+| `staff/hours/hoursService.ts` | `time_entries` create, update, and delete operations |
 | `staff/tasks/taskService.ts` | `tasks` create, detail/status update, and delete operations, including assignment snapshots |
 
 ### `transactionId`

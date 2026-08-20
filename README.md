@@ -1,6 +1,6 @@
 # Youth Services Application
 
-A full-stack youth-services platform for outreach, youth profiles, programming, attendance, staff tasks, timesheets, reporting, accounts, and public website content. This README is the single application entry point; focused documents own their subsystem implementation contracts.
+A full-stack youth-services platform for outreach, youth profiles, programming, attendance, staff tasks, hours, reporting, accounts, and public website content. This README is the single application entry point; focused documents own their subsystem implementation contracts.
 
 ## Architecture
 
@@ -217,7 +217,7 @@ All paths are under `/api`; route files remain authoritative for exact validatio
 | `/youth` | Youth profiles, invitations, attendance, and notes |
 | `/programs`, `/cohorts`, `/schools` | Programming, enrollment, sessions, attendance, reports, and lookups |
 | `/tasks` | Staff task lists, placement, status, and lifecycle |
-| `/time-entries` | Timesheets, range/list views, placement, and overview data |
+| `/time-entries` | Hours, range/list views, placement, and overview data |
 
 See the [backend API reference](docs/backend/api.md) for endpoint-level details.
 

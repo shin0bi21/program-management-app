@@ -50,8 +50,8 @@ echo "Seeding programming demo data..."
 docker compose exec -T backend npm run seed:programming-demo
 
 echo ""
-echo "Seeding Timesheet demo data..."
-docker compose exec -T backend npm run seed:timesheet-demo
+echo "Seeding Hours demo data..."
+docker compose exec -T backend npm run seed:hours-demo
 
 # Regenerate TypeScript database types from the live schema.
 echo ""

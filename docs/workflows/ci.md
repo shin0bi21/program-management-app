@@ -60,7 +60,7 @@ The shared selector applies these rules locally and in CI:
 
 - Documentation-only changes skip paid application jobs.
 - Repository automation changes run static checks.
-- Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Timesheets for Task changes.
+- Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
 - Shared backend infrastructure, migrations, dependencies, and unmapped backend paths run the full backend suite.
 - Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
 - Changed production inputs select deployment planning, image builds, and Compose validation.

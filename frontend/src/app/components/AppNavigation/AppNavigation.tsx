@@ -16,7 +16,7 @@ export default function AppNavigation() {
   const {
     canManageHomepage, canViewYouth, canViewOutreach, canViewCohorts,
     canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming,
-    canViewTasks, canViewTimesheets, canViewStaff,
+    canViewTasks, canViewHours, canViewStaff,
   } = permissions;
 
   return (
@@ -190,7 +190,7 @@ export default function AppNavigation() {
 
       {canViewStaff && menus.staff.position && (
         <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
-          {canViewTimesheets && <button role="menuitem" onClick={() => go('/staff/hours')} className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}>Hours</button>}
+          {canViewHours && <button role="menuitem" onClick={() => go('/staff/hours')} className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}>Hours</button>}
           {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
         </FloatingMenuPanel>
       )}
