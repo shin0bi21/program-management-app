@@ -1,5 +1,5 @@
 import { act, screen } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';

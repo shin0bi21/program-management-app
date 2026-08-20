@@ -1,6 +1,6 @@
 // Scope: verifies the composed session dashboard states and cross-card action wiring.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import SessionDashboard from './SessionDashboard';

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import type { SessionPreference } from './types';
 import Sessions from './Sessions';
-import render from '../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
 function LocationProbe() {
   const location = useLocation();

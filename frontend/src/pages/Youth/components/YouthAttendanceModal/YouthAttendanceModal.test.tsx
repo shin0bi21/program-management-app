@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../tests/queryClientTestUtils';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
 

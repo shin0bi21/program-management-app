@@ -1,6 +1,6 @@
 // Scope: verifies calendar range loading, filters, selection, actions, and responsive view behavior.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionsCalendarView from './SessionsCalendarView';
 
