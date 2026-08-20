@@ -25,7 +25,7 @@ const resources = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
-const sortKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'] as const;
+const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'] as const;
 
 describe('useHoursPreferences', () => {
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe('useHoursPreferences', () => {
     const { result, rerender } = renderHook(
       ({ loading }) => useHoursPreferences({
         role: 'admin', resources, programs, cycles, loadingDependencies: loading,
-        optionsError: false, cyclesError: false, columnKeys: ['note'], sortKeys,
+        optionsError: false, cyclesError: false, tableKeys,
       }),
       { initialProps: { loading: true } },
     );
@@ -66,7 +66,7 @@ describe('useHoursPreferences', () => {
   it('merges immediate owned patches without losing sibling controls', async () => {
     const { result } = renderHook(() => useHoursPreferences({
       role: 'admin', resources, programs, cycles, loadingDependencies: false,
-      optionsError: false, cyclesError: false, columnKeys: ['note'], sortKeys,
+      optionsError: false, cyclesError: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
@@ -90,7 +90,7 @@ describe('useHoursPreferences', () => {
     };
     const { result } = renderHook(() => useHoursPreferences({
       role: 'staff', resources, programs, cycles, loadingDependencies: false,
-      optionsError: false, cyclesError: false, columnKeys: [], sortKeys,
+      optionsError: false, cyclesError: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -108,7 +108,7 @@ describe('useHoursPreferences', () => {
     };
     const { result } = renderHook(() => useHoursPreferences({
       role: 'admin', resources, programs, cycles, loadingDependencies: false,
-      optionsError: false, cyclesError: false, columnKeys: ['note'], sortKeys,
+      optionsError: false, cyclesError: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -131,7 +131,7 @@ describe('useHoursPreferences', () => {
     };
     const { result } = renderHook(() => useHoursPreferences({
       role: 'admin', resources: [], programs: [], cycles: [], loadingDependencies: false,
-      optionsError: true, cyclesError: true, columnKeys: ['note'], sortKeys,
+      optionsError: true, cyclesError: true, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));

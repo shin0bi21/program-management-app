@@ -27,7 +27,8 @@ export interface ProgramCycle {
   endsOn: string;
   state: 'upcoming' | 'active' | 'completed';
 }
-export type CohortSortKey = 'program' | 'cohort' | 'start' | 'end' | 'status';
+export const COHORT_TABLE_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
+export type CohortSortKey = typeof COHORT_TABLE_KEYS[number];
 
 export interface CohortSession {
   id: string;
@@ -94,7 +95,8 @@ export interface SessionListFilters {
   statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
 }
-export type SessionSortKey = 'program' | 'cohort' | 'theme' | 'date' | 'time' | 'type' | 'status';
+export const SESSION_TABLE_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
 
 export interface SessionCalendarFilters extends SessionListFilters {
   start: string;

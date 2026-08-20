@@ -24,8 +24,7 @@ const programs: Program[] = [{
   minAge: 12,
   maxAge: 15,
 }];
-const columnKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'created'];
-const sortKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'createdAt'] as const;
+const tableKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
 
 describe('useLeadControls', () => {
   beforeEach(() => {
@@ -38,14 +37,14 @@ describe('useLeadControls', () => {
       statuses: [],
       programIds: [],
       origins: [],
-      sorting: { key: 'createdAt', direction: 'desc' },
+      sorting: { key: 'created', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: [],
     };
     preferenceHook.save.mockImplementation((update: (current: LeadPreference) => LeadPreference) => {
       Object.assign(persisted, update(persisted));
     });
-    const { result } = renderHook(() => useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, columnKeys, sortKeys));
+    const { result } = renderHook(() => useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, tableKeys));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
     act(() => {
@@ -67,16 +66,16 @@ describe('useLeadControls', () => {
       sorting: { key: 'name' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => (
-      useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, columnKeys, sortKeys)
+      useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
     ));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.programFilters).toEqual([]);
-    expect(result.current.sorting).toEqual({ key: 'createdAt', direction: 'desc' });
+    expect(result.current.sorting).toEqual({ key: 'created', direction: 'desc' });
     expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
       programIds: [],
-      sorting: { key: 'createdAt', direction: 'desc' },
+      sorting: { key: 'created', direction: 'desc' },
     }));
   });
 });

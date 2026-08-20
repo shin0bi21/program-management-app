@@ -29,7 +29,7 @@ function resolveHoursPreference(
   cycles: readonly ProgramCycle[],
   preserveSavedOptions: boolean,
   preserveSavedCycle: boolean,
-  sortKeys: readonly HoursSortKey[],
+  tableKeys: readonly HoursSortKey[],
 ): HoursPreferences {
   const savedCycleId = preference?.cycleId ?? null;
   const cycleId = preference
@@ -51,7 +51,7 @@ function resolveHoursPreference(
     categories: preference?.categories ?? [],
     types: preference?.types ?? [],
     cycleId,
-    sorting: resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING),
+    sorting: resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING),
     columnWidths: preference?.columnWidths ?? {},
     hiddenColumns: preference?.hiddenColumns ?? [],
   };
@@ -65,8 +65,7 @@ export default function useHoursPreferences({
   loadingDependencies,
   optionsError,
   cyclesError,
-  columnKeys,
-  sortKeys,
+  tableKeys,
 }: {
   role: string | null;
   resources: readonly StaffResource[];
@@ -75,14 +74,13 @@ export default function useHoursPreferences({
   loadingDependencies: boolean;
   optionsError: boolean;
   cyclesError: boolean;
-  columnKeys: readonly string[];
-  sortKeys: readonly HoursSortKey[];
+  tableKeys: readonly HoursSortKey[];
 }) {
   const [preferences, setPreferences] = useState<HoursPreferences>(DEFAULT_HOURS_PREFERENCES);
   const [ready, setReady] = useState(false);
   const { preference, loading, error, setBaseline, save } = useUserPreference<HoursPreference>(
     'hours-filters',
-    columnKeys,
+    tableKeys,
   );
 
   useEffect(() => {
@@ -95,12 +93,12 @@ export default function useHoursPreferences({
       cycles,
       optionsError,
       cyclesError,
-      sortKeys,
+      tableKeys,
     );
     setPreferences(restored);
     setBaseline(restored);
     setReady(true);
-  }, [cycles, cyclesError, loading, loadingDependencies, optionsError, preference, programs, ready, resources, role, setBaseline, sortKeys]);
+  }, [cycles, cyclesError, loading, loadingDependencies, optionsError, preference, programs, ready, resources, role, setBaseline, tableKeys]);
 
   const applyPreferencePatch = useCallback((patch: Partial<HoursPreferences>) => {
     setPreferences(current => ({ ...current, ...patch }));
@@ -113,11 +111,11 @@ export default function useHoursPreferences({
         cycles,
         optionsError,
         cyclesError,
-        sortKeys,
+        tableKeys,
       ),
       ...patch,
     }));
-  }, [cycles, cyclesError, optionsError, programs, resources, role, save, sortKeys]);
+  }, [cycles, cyclesError, optionsError, programs, resources, role, save, tableKeys]);
 
   const availableResourceIds = useMemo(() => resources.map(resource => resource.id), [resources]);
   const availableProgramIds = useMemo(

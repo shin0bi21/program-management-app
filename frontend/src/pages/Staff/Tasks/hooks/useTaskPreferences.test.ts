@@ -22,8 +22,7 @@ describe('useTaskPreferences', () => {
     resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
     programs: [{ id: 'program-1', name: 'Soft Skills' }],
   };
-  const columnKeys = ['title', 'program'];
-  const sortKeys = ['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'] as const;
+  const tableKeys = ['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'] as const;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,7 +38,7 @@ describe('useTaskPreferences', () => {
     preferenceHook.preference = { programIds: ['program-1'], categories: [], statuses: [] };
     const { result, rerender } = renderHook(
       ({ loading }) => useTaskPreferences({
-        options, optionsLoading: loading, optionsError: false, columnKeys, sortKeys,
+        options, optionsLoading: loading, optionsError: false, tableKeys,
       }),
       { initialProps: { loading: true } },
     );
@@ -63,7 +62,7 @@ describe('useTaskPreferences', () => {
 
   it('merges immediate filter and presentation patches into the latest complete preference', async () => {
     const { result } = renderHook(() => useTaskPreferences({
-      options, optionsLoading: false, optionsError: false, columnKeys, sortKeys,
+      options, optionsLoading: false, optionsError: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
@@ -98,7 +97,7 @@ describe('useTaskPreferences', () => {
       sorting: { key: 'removedColumn' as never, direction: 'desc' },
     };
     const { result } = renderHook(() => useTaskPreferences({
-      options, optionsLoading: false, optionsError: false, columnKeys, sortKeys,
+      options, optionsLoading: false, optionsError: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -119,7 +118,7 @@ describe('useTaskPreferences', () => {
       statuses: [],
     };
     const { result } = renderHook(() => useTaskPreferences({
-      options: undefined, optionsLoading: false, optionsError: true, columnKeys, sortKeys,
+      options: undefined, optionsLoading: false, optionsError: true, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -142,8 +141,7 @@ describe('useTaskPreferences', () => {
         options: currentOptions,
         optionsLoading: false,
         optionsError,
-        columnKeys,
-        sortKeys,
+        tableKeys,
       }),
       { initialProps: { currentOptions: undefined as typeof options | undefined, optionsError: true } },
     );

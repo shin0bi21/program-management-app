@@ -35,16 +35,16 @@ export default function useHoursTable({
   onDelete: (target: HoursEntryTarget) => void;
 }) {
   const columns = useMemo<TableColumn<HoursListRow>[]>(() => [
-    { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: row => row.staffFirstName },
-    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: row => row.staffLastName },
-    { key: 'date', sortKey: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
-    { key: 'cycle', sortKey: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
-    { key: 'program', sortKey: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
-    { key: 'category', sortKey: 'category', header: 'Category', render: row => row.item.categoryLabel },
-    { key: 'session', sortKey: 'session', header: 'Session', render: row => row.item.sessionLabel ?? '—' },
-    { key: 'hours', sortKey: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
-    { key: 'note', sortKey: 'note', header: 'Note', render: row => row.item.note },
-    { key: 'type', sortKey: 'type', header: 'Type', width: 110, render: row => {
+    { key: 'firstName', header: 'First Name', render: row => row.staffFirstName },
+    { key: 'lastName', header: 'Last Name', render: row => row.staffLastName },
+    { key: 'date', header: 'Date', width: 140, render: row => formatShortDate(row.date) },
+    { key: 'cycle', header: 'Cycle', render: row => row.item.cycleName ?? '—' },
+    { key: 'program', header: 'Program', render: row => row.item.programName ?? '—' },
+    { key: 'category', header: 'Category', render: row => row.item.categoryLabel },
+    { key: 'session', header: 'Session', render: row => row.item.sessionLabel ?? '—' },
+    { key: 'hours', header: 'Hours', width: 100, render: row => row.item.hours },
+    { key: 'note', header: 'Note', render: row => row.item.note },
+    { key: 'type', header: 'Type', width: 110, render: row => {
       const label = getEntryTypeLabel(row.item);
       return <span className={`time-item__type time-item__type--${label.toLowerCase()}`}>{label}</span>;
     } },

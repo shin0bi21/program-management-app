@@ -11,8 +11,7 @@ const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc
 
 export function useAccountControls(
   isAdmin: boolean,
-  columnKeys: readonly string[],
-  sortKeys: readonly AccountSortKey[],
+  tableKeys: readonly AccountSortKey[],
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
@@ -33,7 +32,7 @@ export function useAccountControls(
     error,
     setBaseline,
     save,
-  } = useUserPreference<AccountPreference>('account-filters', columnKeys);
+  } = useUserPreference<AccountPreference>('account-filters', tableKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -44,7 +43,7 @@ export function useAccountControls(
   // Restore preferences before enabling the account query.
   useEffect(() => {
     if (ready || preferenceLoading) return;
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: AccountPreference = {
@@ -61,7 +60,7 @@ export function useAccountControls(
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [isAdmin, preference, preferenceLoading, ready, setBaseline, sortKeys]);
+  }, [isAdmin, preference, preferenceLoading, ready, setBaseline, tableKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({

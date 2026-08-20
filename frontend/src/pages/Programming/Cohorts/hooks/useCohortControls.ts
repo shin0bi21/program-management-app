@@ -16,8 +16,7 @@ export function useCohortControls(
   role: string | null,
   programs: Program[],
   programsLoading: boolean,
-  columnKeys: readonly string[],
-  sortKeys: readonly CohortSortKey[],
+  tableKeys: readonly CohortSortKey[],
   programsError?: string | null,
 ) {
   // Search and filters.
@@ -37,7 +36,7 @@ export function useCohortControls(
     error,
     setBaseline,
     save,
-  } = useUserPreference<CohortPreference>('cohort-filters', columnKeys);
+  } = useUserPreference<CohortPreference>('cohort-filters', tableKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -55,7 +54,7 @@ export function useCohortControls(
       ? preference.programId
       : preference ? '' : defaultProgram;
     const restoredStatus = preference?.status ?? (role === 'staff' ? 'active' : '');
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: CohortPreference = {
@@ -72,7 +71,7 @@ export function useCohortControls(
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, sortKeys]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, tableKeys]);
 
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {

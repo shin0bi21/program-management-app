@@ -2,7 +2,8 @@ import type { HoursListRowResponse } from '../../../common/features/hours/hours.
 import type { HoursCategory, HoursItem } from '../../../common/features/hours/types';
 import type { ListSort } from '../../../common/types/pagination';
 
-export type HoursSortKey = 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type';
+export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'] as const;
+export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursEntryType = 'task' | 'session' | 'other';
 export type HoursListRow = HoursListRowResponse;
 export type HoursView = 'calendar' | 'list';

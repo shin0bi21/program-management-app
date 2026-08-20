@@ -19,9 +19,9 @@ describe('Table', () => {
   it('emits controlled backend sorting from sortable headers', () => {
     const onSortingChange = vi.fn();
     const sortableColumns: TableColumn<Row>[] = [
-      { key: 'name', sortKey: 'name', header: 'Name', render: row => row.name },
+      { key: 'name', header: 'Name', render: row => row.name },
     ];
-    render(<Table ariaLabel="Accounts" columns={sortableColumns} data={[]} keyExtractor={row => row.id} sorting={{ key: 'name', direction: 'asc' }} onSortingChange={onSortingChange} />);
+    render(<Table ariaLabel="Accounts" columns={sortableColumns} data={[]} keyExtractor={row => row.id} sorting={{ key: 'name', direction: 'asc' }} sortableColumns={['name']} onSortingChange={onSortingChange} />);
 
     expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveAttribute('aria-sort', 'ascending');
     fireEvent.click(screen.getByRole('button', { name: 'Name' }));

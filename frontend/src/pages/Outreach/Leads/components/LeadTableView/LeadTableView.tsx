@@ -1,6 +1,6 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { Lead, LeadFilters, LeadSortKey } from '../../types';
+import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadSortKey } from '../../types';
 import { useLeads } from './hooks/useLeads';
 
 interface LeadTableViewProps {
@@ -41,6 +41,7 @@ export default function LeadTableView({
     selectedKey={selectedLeadId ?? undefined}
     onRowSelect={onLeadSelect}
     sorting={sorting}
+    sortableColumns={LEAD_TABLE_KEYS}
     onSortingChange={next => onSortingChange(next as ListSort<LeadSortKey>)}
     columnWidths={columnWidths}
     onColumnWidthsChange={onColumnWidthsChange}

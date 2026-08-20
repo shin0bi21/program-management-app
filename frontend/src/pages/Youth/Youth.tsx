@@ -15,6 +15,7 @@ import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/progr
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
 import { YOUTH_QUERY_KEY } from '../../common/features/youth/queryKeys';
+import { YOUTH_TABLE_KEYS } from '../../common/types/youth';
 import { calculateAge } from '../../common/utils/time';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
@@ -23,17 +24,6 @@ import YouthDashboard from './components/YouthDashboard/YouthDashboard';
 import { useYouthControls } from './hooks/useYouthControls';
 import { useYouth, type YouthProfile } from './hooks/useYouth';
 import './Youth.css';
-
-const YOUTH_COLUMN_KEYS = [
-  'firstName',
-  'lastName',
-  'age',
-  'school',
-  'grade',
-  'program',
-  'status',
-] as const;
-const YOUTH_SORT_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
 
 export default function Youth() {
   // Application services and permission capabilities.
@@ -55,8 +45,7 @@ export default function Youth() {
     programs,
     programsLoading,
     programsError,
-    columnKeys: YOUTH_COLUMN_KEYS,
-    sortKeys: YOUTH_SORT_KEYS,
+    tableKeys: YOUTH_TABLE_KEYS,
   });
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
@@ -94,39 +83,33 @@ export default function Youth() {
   const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
     {
       key: 'firstName',
-      sortKey: 'firstName',
       header: 'First Name',
       render: (profile) => profile.firstName,
     },
     {
       key: 'lastName',
-      sortKey: 'lastName',
       header: 'Last Name',
       render: (profile) => profile.lastName,
     },
     {
       key: 'age',
-      sortKey: 'age',
       header: 'Age',
       render: (profile) => calculateAge(profile.dateOfBirth),
       width: 100,
     },
     {
       key: 'school',
-      sortKey: 'school',
       header: 'School',
       render: (profile) => profile.schoolName ?? '—',
     },
     {
       key: 'grade',
-      sortKey: 'grade',
       header: 'Grade',
       render: (profile) => profile.gradeLevel ?? '—',
       width: 100,
     },
     {
       key: 'program',
-      sortKey: 'program',
       header: 'Program',
       render: (profile) => {
         const names = [...new Set(profile.cohorts.filter(cohort => cohort.withdrawnOn === null).map(cohort => cohort.programName))];
@@ -135,7 +118,6 @@ export default function Youth() {
     },
     {
       key: 'status',
-      sortKey: 'status',
       header: 'Status',
       width: 110,
       render: profile => (
@@ -206,6 +188,7 @@ export default function Youth() {
             selectedKey={selectedProfileId}
             onRowSelect={selectProfile}
             sorting={sorting}
+            sortableColumns={YOUTH_TABLE_KEYS}
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}

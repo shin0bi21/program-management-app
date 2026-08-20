@@ -1,7 +1,7 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { HoursCategory } from '../../../../../common/features/hours/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { HoursEntryType, HoursListRow, HoursSortKey } from '../../types';
+import { HOURS_TABLE_KEYS, type HoursEntryType, type HoursListRow, type HoursSortKey } from '../../types';
 import useHoursList from './hooks/useHoursList';
 
 interface HoursTableViewProps {
@@ -45,6 +45,7 @@ export default function HoursTableView({
     selectedKey={selectedRowId}
     onRowSelect={onRowSelect}
     sorting={sorting}
+    sortableColumns={HOURS_TABLE_KEYS}
     onSortingChange={next => onSortingChange(next as ListSort<HoursSortKey>)}
     columnWidths={columnWidths}
     onColumnWidthsChange={onColumnWidthsChange}

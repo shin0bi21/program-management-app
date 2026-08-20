@@ -343,18 +343,18 @@ export function checkPreferenceControlOwnership(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/') || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)) return;
 
   if (file.endsWith('.tsx') && source.includes('<ColumnVisibilityMenu')) {
-    const columnKeys = source.match(/const\s+([A-Z][A-Z0-9_]*_COLUMN_KEYS)\s*=\s*\[/)?.[1];
-    if (!columnKeys || source.split(columnKeys).length < 3) {
-      violations.push(`${file}:1 pages with column visibility must define and pass a page-owned *_COLUMN_KEYS runtime list.`);
+    const tableKeys = source.match(/\b([A-Z][A-Z0-9_]*_TABLE_KEYS)\b/)?.[1];
+    if (!tableKeys || source.split(tableKeys).length < 2) {
+      violations.push(`${file}:1 pages with column visibility must import and pass an owning *_TABLE_KEYS runtime list.`);
     }
   }
 
   if (!source.includes('useUserPreference')) return;
   const ownsTablePreferences = /\b(?:columnWidths|hiddenColumns)\b/.test(source);
-  const passesColumnKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*[^,]+,\s*columnKeys\s*,?\s*\)/
+  const passesTableKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*[^,]+,\s*tableKeys\s*,?\s*\)/
     .test(source);
-  if (ownsTablePreferences && !passesColumnKeys) {
-    violations.push(`${file}:1 table preference hooks must receive page-owned columnKeys and pass them to useUserPreference.`);
+  if (ownsTablePreferences && !passesTableKeys) {
+    violations.push(`${file}:1 table preference hooks must receive owning tableKeys and pass them to useUserPreference.`);
   }
   if (!/\bsetBaseline\s*\(/.test(source)) {
     violations.push(`${file}:1 preference hooks must initialize the shared save baseline from their normalized restored state.`);

@@ -23,7 +23,7 @@ function resolveTaskPreference(
   preference: TaskPreference | null,
   options: TaskOptions | undefined,
   preserveSavedOptions: boolean,
-  sortKeys: readonly TaskSortKey[],
+  tableKeys: readonly TaskSortKey[],
 ): TaskPreferences {
   const resourceIds = new Set(options?.resources.map(resource => resource.id) ?? []);
   const programIds = new Set(options?.programs.map(program => program.id) ?? []);
@@ -38,7 +38,7 @@ function resolveTaskPreference(
       : preference?.programIds?.filter(id => programIds.has(id)) ?? [],
     categories: preference?.categories ?? [],
     statuses: preference?.statuses ?? [],
-    sorting: resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING),
+    sorting: resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING),
     columnWidths: preference?.columnWidths ?? {},
     hiddenColumns: preference?.hiddenColumns ?? [],
   };
@@ -48,14 +48,12 @@ export default function useTaskPreferences({
   options,
   optionsLoading,
   optionsError,
-  columnKeys,
-  sortKeys,
+  tableKeys,
 }: {
   options: TaskOptions | undefined;
   optionsLoading: boolean;
   optionsError: boolean;
-  columnKeys: readonly string[];
-  sortKeys: readonly TaskSortKey[];
+  tableKeys: readonly TaskSortKey[];
 }) {
   // State and persistence dependency.
   const [preferences, setPreferences] = useState<TaskPreferences>(DEFAULT_TASK_PREFERENCES);
@@ -66,25 +64,25 @@ export default function useTaskPreferences({
     error,
     setBaseline,
     save,
-  } = useUserPreference<TaskPreference>('task-filters', columnKeys);
+  } = useUserPreference<TaskPreference>('task-filters', tableKeys);
 
   // Restore one complete canonical value before preferences become interactive.
   useEffect(() => {
     if (ready || loading || optionsLoading) return;
-    const restored = resolveTaskPreference(preference, options, optionsError, sortKeys);
+    const restored = resolveTaskPreference(preference, options, optionsError, tableKeys);
     setPreferences(restored);
     setBaseline(restored);
     setReady(true);
-  }, [loading, options, optionsError, optionsLoading, preference, ready, setBaseline, sortKeys]);
+  }, [loading, options, optionsError, optionsLoading, preference, ready, setBaseline, tableKeys]);
 
   // Every section patches only its owned fields into the latest complete value.
   const updatePreferences = useCallback((patch: Partial<TaskPreferences>) => {
     setPreferences(current => ({ ...current, ...patch }));
     save(current => ({
-      ...resolveTaskPreference(current, options, optionsError, sortKeys),
+      ...resolveTaskPreference(current, options, optionsError, tableKeys),
       ...patch,
     }));
-  }, [options, optionsError, save, sortKeys]);
+  }, [options, optionsError, save, tableKeys]);
 
   const availableStaffIds = useMemo(
     () => options?.resources.map(resource => resource.id) ?? [],
