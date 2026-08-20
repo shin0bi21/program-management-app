@@ -4,14 +4,14 @@ import test from 'node:test';
 import { planCommands, selectTests } from './select-tests.js';
 
 test('documentation-only changes do not select paid application jobs', () => {
-  assert.deepEqual(planCommands(selectTests(['docs/operations/testing.md'])), []);
+  assert.deepEqual(planCommands(selectTests(['docs/workflows/testing.md'])), []);
 });
 
-test('Task backend changes select Task and Timesheet integration suites', () => {
+test('Task backend changes select Task and Hours integration suites', () => {
   const plan = selectTests(['backend/src/services/staff/tasks/taskService.ts']);
 
   assert.equal(plan.backendMode, 'focused');
-  assert.deepEqual(plan.backendTestPaths, ['tests/tasks', 'tests/timesheets']);
+  assert.deepEqual(plan.backendTestPaths, ['tests/tasks', 'tests/hours']);
   assert.equal(plan.frontend, false);
   assert.equal(plan.static, true);
 });

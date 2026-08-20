@@ -50,6 +50,16 @@
   font-weight: 750;
 }
 
+.task-overview-card__metric-upcoming dt,
+.task-overview-card__metric-upcoming dd {
+  color: var(--color-info);
+}
+
+.task-overview-card__metric-active dt,
+.task-overview-card__metric-active dd {
+  color: var(--color-task-active);
+}
+
 .task-overview-card__metric-overdue dt,
 .task-overview-card__metric-overdue dd {
   color: var(--color-danger-dark);
@@ -82,6 +92,16 @@
   line-height: 1;
 }
 
+.task-overview-card__report-upcoming dt,
+.task-overview-card__report-upcoming dd {
+  color: var(--color-info);
+}
+
+.task-overview-card__report-active dt,
+.task-overview-card__report-active dd {
+  color: var(--color-task-active);
+}
+
 .task-overview-card__report-overdue dt,
 .task-overview-card__report-overdue dd {
   color: var(--color-danger-dark);
@@ -111,8 +131,26 @@
   list-style: none;
 }
 
+.task-overview-card__task-section--info ul {
+  border-left-color: var(--color-info);
+}
+
+.task-overview-card__task-section--info h3,
+.task-overview-card__task-section--info li span {
+  color: var(--color-info);
+}
+
+.task-overview-card__task-section--warn ul {
+  border-left-color: var(--color-task-active-border);
+}
+
+.task-overview-card__task-section--warn h3,
+.task-overview-card__task-section--warn li span {
+  color: var(--color-task-active);
+}
+
 .task-overview-card__task-section--danger ul {
-  border-left-color: var(--color-danger-border);
+  border-left-color: var(--color-danger-dark);
 }
 
 .task-overview-card__task-section--danger h3 {
@@ -147,8 +185,12 @@
 }
 
 .task-overview-card__task--due-this-week span {
-  color: var(--color-status-warn);
+  color: var(--color-task-active);
   font-weight: 700;
+}
+
+.task-overview-card__task-section--info .task-overview-card__task--due-this-week span {
+  color: var(--color-info);
 }
 
 .task-overview-card__task-section p {

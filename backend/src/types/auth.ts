@@ -20,8 +20,8 @@ export type Permission =
   | 'write:homepage'
   | 'read:settings'
   | 'write:settings'
-  | 'read:timesheets'
-  | 'write:timesheets'
+  | 'read:hours'
+  | 'write:hours'
   | 'read:tasks'
   | 'write:tasks';
 

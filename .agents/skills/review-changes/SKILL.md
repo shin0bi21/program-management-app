@@ -9,12 +9,12 @@ Review the current working tree without creating issues, branches, commits, pull
 
 ## 1. Establish scope
 
-1. Read repository instructions and relevant architecture documentation.
+1. Read repository instructions and the relevant owner documentation.
 2. Reuse the latest `split-changes` concern map when one exists. If the working tree is large or mixed and no map exists, run the split workflow before deep review.
 3. Inspect branch state and the complete tracked and untracked diff only to verify that the selected concern and map are current.
 4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
 5. Identify affected features, ownership layers, and execution paths.
-6. For dependency, environment, migration, or container changes, read `docs/operations/local-development.md` and verify required refresh or migration steps.
+6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development.md` and verify required refresh or migration steps.
 7. Reuse and refine the selected concern's acceptance ledger. Mark every item implemented, intentionally deferred, contradicted, or unverified.
 8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area. If repository skills changed, also run `node scripts/agents/validate-skills.js` once.
 
@@ -40,9 +40,9 @@ Read only the references required by the current diff, and read each selected fi
 - Read [`references/structure-and-ownership.md`](references/structure-and-ownership.md) for non-trivial implementation changes, shared extractions, or directory/ownership changes.
 - Read [`references/react-rendering-and-state.md`](references/react-rendering-and-state.md) for React UI, grids, calendars, drag/drop, optimistic state, realtime state, or render-sensitive work.
 - Read [`references/testing.md`](references/testing.md) whenever behavior, tests, runners, APIs, persistence, or asynchronous flows change.
-- For frontend changes, read [`docs/development/frontend/adding-a-page.md`](../../../docs/development/frontend/adding-a-page.md) and every applicable React-state, page-shell, form, interaction, list, or calendar guide beside it. Review must enforce the same integration contract implementation was supposed to follow.
-- For backend changes, read [`docs/development/backend/adding-a-domain.md`](../../../docs/development/backend/adding-a-domain.md) and every applicable service, policy, database, and testing guide beside it.
-- For permissions, ownership, assignments, resource visibility, or writable capabilities, also read [`authorization-and-scope.md`](../../../docs/development/backend/authorization-and-scope.md).
+- For frontend changes, read the frontend architecture and development section in the root [`README.md`](../../../README.md), then read only the focused guides under `docs/frontend/` for the surfaces changed. Review must enforce the same owning contract implementation was supposed to follow without routing through unrelated component guides.
+- For backend changes, read the backend architecture and development section in the root [`README.md`](../../../README.md), then read every applicable focused middleware, service, policy, database, testing, error, auth, API, or integration guide under `docs/backend/`.
+- For permissions, ownership, assignments, resource visibility, or writable capabilities, also read [`authorization.md`](../../../docs/backend/authorization.md).
 
 For a cross-stack or repository-wide review, read all applicable references. Do not skip a reference merely because the diff is large.
 

@@ -500,7 +500,7 @@ describe('Tasks API', () => {
     expect(returned.status).toBe(200);
 
     const linkedTime = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id,
@@ -570,7 +570,7 @@ describe('Tasks API', () => {
       }));
     expect(completedTask.status).toBe(201);
     const completedEntry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: completedTask.body.id, completeTask: true,
@@ -655,7 +655,7 @@ describe('Tasks API', () => {
     expect(zeroHourCompletion.body.error).toBe('Tasks need logged time before they can be completed');
 
     const completedEntry = await request(app)
-      .post('/api/time-entries')
+      .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,

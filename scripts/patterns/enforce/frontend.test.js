@@ -288,7 +288,7 @@ test('checks an owner when its test is deleted', () => {
 
 test('accepts the normalized functional preference lifecycle', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference('lead-filters', columnKeys);
+    const { setBaseline, save } = useUserPreference('lead-filters', tableKeys);
     setBaseline(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
@@ -303,9 +303,9 @@ test('accepts the normalized functional preference lifecycle', () => {
   );
 });
 
-test('accepts a route-selected preference key with page-owned column keys', () => {
+test('accepts a route-selected preference key with owning table keys', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference(preferenceKey, columnKeys);
+    const { setBaseline, save } = useUserPreference(preferenceKey, tableKeys);
     setBaseline(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
@@ -320,11 +320,11 @@ test('accepts a route-selected preference key with page-owned column keys', () =
   );
 });
 
-test('accepts formatted page-owned column keys with a trailing argument comma', () => {
+test('accepts formatted owning table keys with a trailing argument comma', () => {
   const source = `
     const { setBaseline, save } = useUserPreference<LeadPreference>(
       'lead-filters',
-      columnKeys,
+      tableKeys,
     );
     setBaseline(restored);
     save(current => ({ ...current, hiddenColumns }));
@@ -357,7 +357,7 @@ test('allows filter-only preferences without table column keys', () => {
   );
 });
 
-test('requires page-owned column keys and functional preference saves', () => {
+test('requires owning table keys and functional preference saves', () => {
   const source = `
     const { save } = useUserPreference('lead-filters');
     save({ hiddenColumns });
@@ -368,7 +368,7 @@ test('requires page-owned column keys and functional preference saves', () => {
     source,
   );
 
-  assert.match(violations.join('\n'), /page-owned columnKeys/);
+  assert.match(violations.join('\n'), /owning tableKeys/);
   assert.match(violations.join('\n'), /normalized restored state/);
   assert.match(violations.join('\n'), /functional saves/);
 });
@@ -457,7 +457,7 @@ test('requires frontend architecture and integration documentation to remain cen
 
   assert.match(violations[0], /belongs under docs/);
   assert.deepEqual(
-    violationsFor(checkCentralizedFrontendDocumentation, 'docs/development/frontend/example.md'),
+    violationsFor(checkCentralizedFrontendDocumentation, 'docs/frontend/example.md'),
     [],
   );
 });

@@ -12,7 +12,7 @@ import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import Table, { type TableColumn } from '../../../common/components/Table/Table';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
-import type { Account, AccountStatus } from '../../../common/types/account';
+import { ACCOUNT_TABLE_KEYS, type Account, type AccountStatus } from '../../../common/types/account';
 import { formatShortDate } from '../../../common/utils/date';
 import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import { revokeAccountInvite, toggleAccountStatus } from './accounts.api';
@@ -21,8 +21,6 @@ import { useAccountControls } from './hooks/useAccountControls';
 import { useAccounts } from './hooks/useAccounts';
 import './Users.css';
 
-const ACCOUNT_COLUMN_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
-const ACCOUNT_SORT_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 const ACCOUNTS_LIST_QUERY_KEY = ['accounts', 'list'] as const;
 
 export default function Users() {
@@ -34,7 +32,7 @@ export default function Users() {
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
   // Controls and remote records.
-  const controls = useAccountControls(isAdmin, ACCOUNT_COLUMN_KEYS, ACCOUNT_SORT_KEYS);
+  const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
   const {
     search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
@@ -85,16 +83,14 @@ export default function Users() {
     const accountColumns: TableColumn<Account>[] = [
       {
         key: 'name',
-        sortKey: 'name',
         header: 'Name',
         render: account => `${account.firstName} ${account.lastName}`,
       },
-      { key: 'email', sortKey: 'email', header: 'Email', render: account => account.email },
-      { key: 'role', sortKey: 'role', header: 'Role', width: 110, render: account => titleCase(account.role) },
-      { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: account => statusBadge(account.status) },
+      { key: 'email', header: 'Email', render: account => account.email },
+      { key: 'role', header: 'Role', width: 110, render: account => titleCase(account.role) },
+      { key: 'status', header: 'Status', width: 120, render: account => statusBadge(account.status) },
       {
         key: 'createdAt',
-        sortKey: 'createdAt',
         header: 'Created',
         width: 150,
         render: account => formatShortDate(account.createdAt),
@@ -176,6 +172,7 @@ export default function Users() {
             emptyMessage={hasActiveQueryFilters ? 'No accounts match these filters' : 'No accounts found'}
             keyExtractor={account => account.id}
             sorting={sorting}
+            sortableColumns={ACCOUNT_TABLE_KEYS}
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}

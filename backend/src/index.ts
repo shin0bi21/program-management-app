@@ -13,7 +13,7 @@ import leadRoutes from './routes/leadRoutes';
 import cohortRoutes from './routes/cohortRoutes';
 import homepageRoutes from './routes/homepageRoutes';
 import preferenceRoutes from './routes/preferenceRoutes';
-import timeEntryRoutes from './routes/timeEntryRoutes';
+import hoursRoutes from './routes/hoursRoutes';
 import taskRoutes from './routes/taskRoutes';
 import { requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
@@ -71,7 +71,7 @@ app.use('/api/programs', programRoutes);
 app.use('/api/cohorts', cohortRoutes);
 app.use('/api/homepage', homepageRoutes);
 app.use('/api/preferences', preferenceRoutes);
-app.use('/api/time-entries', timeEntryRoutes);
+app.use('/api/hours', hoursRoutes);
 app.use('/api/tasks', taskRoutes);
 
 // 404 handler — catches all unmatched routes; forwards to errorHandler

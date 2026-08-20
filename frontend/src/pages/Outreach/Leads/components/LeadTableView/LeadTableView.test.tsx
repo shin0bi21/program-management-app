@@ -16,7 +16,7 @@ it('owns the paginated lead table and filtered empty state', () => {
     columns={[]}
     hiddenColumnKeys={[]}
     filters={{ statuses: ['new'] }}
-    sorting={{ key: 'createdAt', direction: 'desc' }}
+    sorting={{ key: 'created', direction: 'desc' }}
     columnWidths={{}}
     selectedLeadId={null}
     onLeadSelect={vi.fn()}
@@ -27,6 +27,6 @@ it('owns the paginated lead table and filtered empty state', () => {
   expect(useLeads).toHaveBeenCalledWith(
     ['leads', 'list'],
     { statuses: ['new'] },
-    { key: 'createdAt', direction: 'desc' },
+    { key: 'created', direction: 'desc' },
   );
 });

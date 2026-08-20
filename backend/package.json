@@ -16,7 +16,7 @@
     "test:cohorts": "jest --testPathPatterns=tests/cohorts",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
-    "test:timesheets": "jest --testPathPatterns=tests/timesheets",
+    "test:hours": "jest --testPathPatterns=tests/hours",
     "test:tasks": "jest --testPathPatterns=tests/tasks",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
     "db:migrate:test": "sh -c 'set -a && . ./.env.test && set +a && npx tsx db/scripts/update_schemas.ts'",
@@ -30,7 +30,7 @@
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
     "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
     "seed:programming-demo": "npx tsx db/scripts/seed-programming-demo.ts",
-    "seed:timesheet-demo": "npx tsx db/scripts/seed-timesheet-demo.ts",
+    "seed:hours-demo": "npx tsx db/scripts/seed-hours-demo.ts",
     "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },

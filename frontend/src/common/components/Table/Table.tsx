@@ -25,6 +25,7 @@ export default function Table<T>({
   scrollToSelected = false,
   onRowSelect,
   sorting,
+  sortableColumns = [],
   onSortingChange,
   hasNextPage = false,
   loadingNextPage = false,
@@ -59,7 +60,7 @@ export default function Table<T>({
   const {
     headers,
     isResizing,
-    nudgeColumnWidth,
+    resizeColumnByStep,
     resolvedColumnWidths,
     toggleSort,
     totalWidth,
@@ -67,6 +68,7 @@ export default function Table<T>({
     data,
     columns: visibleColumns,
     sorting,
+    sortableColumns,
     onSortingChange,
     columnWidths,
     onColumnWidthsChange: onColumnWidthsChange ? updateVisibleColumnWidths : undefined,
@@ -130,7 +132,7 @@ export default function Table<T>({
           canResize={Boolean(onColumnWidthsChange)}
           onResizeStart={lockRenderedColumnWidths}
           onToggleSort={toggleSort}
-          onNudgeWidth={nudgeColumnWidth}
+          onResizeByStep={resizeColumnByStep}
         />
         <TableBody
           columns={visibleColumns}

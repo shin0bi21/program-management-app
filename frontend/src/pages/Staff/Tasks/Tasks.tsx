@@ -8,7 +8,7 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
+import HoursModal from '../../../common/features/hours/components/HoursModal/HoursModal';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
 import TaskTableView from './components/TaskTableView/TaskTableView';
@@ -25,29 +25,15 @@ import useTaskPreferences from './hooks/useTaskPreferences';
 import useTaskSelection from './hooks/useTaskSelection';
 
 import type { Task } from '../../../common/features/tasks/types';
-import type { AddTaskModalInitialValues, TaskModalState } from './types';
+import { TASK_TABLE_KEYS, type AddTaskModalInitialValues, type TaskModalState } from './types';
 
 import './Tasks.css';
 
-// Page-owned cache and persisted-column contracts.
-const TASK_COLUMN_KEYS = [
-  'title',
-  'category',
-  'firstName',
-  'lastName',
-  'program',
-  'startDate',
-  'dueDate',
-  'status',
-] as const;
-const TASK_SORT_KEYS = [
-  'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
-] as const;
-
+// Page-owned cache contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
 const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
 const TASK_OPTIONS_QUERY_KEY = ['task-options'] as const;
-const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
+const HOURS_QUERY_KEY = ['hours'] as const;
 
 // Page helpers.
 function getTaskError(
@@ -82,8 +68,7 @@ export default function Tasks() {
     options: pageData.options,
     optionsLoading: pageData.optionsLoading,
     optionsError: Boolean(pageData.optionsError),
-    columnKeys: TASK_COLUMN_KEYS,
-    sortKeys: TASK_SORT_KEYS,
+    tableKeys: TASK_TABLE_KEYS,
   });
 
   const filters = useTaskFilters({
@@ -100,7 +85,7 @@ export default function Tasks() {
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
     taskListQueryKey: TASK_LIST_QUERY_KEY,
-    timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
+    hoursQueryKey: HOURS_QUERY_KEY,
     onTaskSynced: selection.updateSelectedTask,
     onTaskRemoved: selection.removeSelectedTask,
   });
@@ -264,7 +249,7 @@ export default function Tasks() {
       onClose={closeTaskModal}
     />}
 
-    {selectedLogHoursTask && <TimeEntryModal
+    {selectedLogHoursTask && <HoursModal
       isOpen
       initialSource="task"
       initialTask={selectedLogHoursTask}

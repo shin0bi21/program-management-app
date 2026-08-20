@@ -17,7 +17,7 @@ import { deleteSession } from '../../../common/features/programming/api/sessions
 import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
-import type { CohortSession } from '../../../common/types/cohort';
+import { SESSION_TABLE_KEYS, type CohortSession } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
@@ -36,8 +36,6 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
-const SESSION_COLUMN_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
-const SESSION_SORT_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 const SESSION_LIST_QUERY_KEY = [...SESSION_QUERY_KEY, 'list'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
@@ -80,8 +78,7 @@ export default function Sessions() {
     role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
     onFiltersChanged: clearSelectedSession,
-    columnKeys: SESSION_COLUMN_KEYS,
-    sortKeys: SESSION_SORT_KEYS,
+    tableKeys: SESSION_TABLE_KEYS,
   });
   const {
     search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
@@ -123,13 +120,12 @@ export default function Sessions() {
 
   const columns = useMemo<TableColumn<CohortSession>[]>(
     () => [
-      { key: 'program', sortKey: 'program', header: 'Program', render: (session) => session.programName },
-      { key: 'cohort', sortKey: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
-      { key: 'theme', sortKey: 'theme', header: 'Title / Theme', render: (session) => session.theme },
-      { key: 'date', sortKey: 'date', header: 'Date', width: 135, render: (session) => formatShortDate(session.startsAt) },
+      { key: 'program', header: 'Program', render: (session) => session.programName },
+      { key: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
+      { key: 'theme', header: 'Title / Theme', render: (session) => session.theme },
+      { key: 'date', header: 'Date', width: 135, render: (session) => formatShortDate(session.startsAt) },
       {
         key: 'time',
-        sortKey: 'time',
         header: 'Time',
         width: 165,
         render: (session) =>
@@ -137,14 +133,12 @@ export default function Sessions() {
       },
       {
         key: 'type',
-        sortKey: 'type',
         header: 'Type',
         width: 135,
         render: (session) => <SessionTypeBadge name={session.sessionTypeName} />,
       },
       {
         key: 'status',
-        sortKey: 'status',
         header: 'Status',
         width: 110,
         render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,

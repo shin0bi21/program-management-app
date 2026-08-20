@@ -23,7 +23,7 @@ describe('useLeads', () => {
     vi.mocked(getLeads).mockResolvedValue({ rows: [lead], nextCursor: null });
     const client = createTestQueryClient();
     const filters = { search: 'avery', statuses: ['new' as const], programIds: ['program-1'] };
-    const sorting = { key: 'createdAt' as const, direction: 'desc' as const };
+    const sorting = { key: 'created' as const, direction: 'desc' as const };
     const { result, rerender } = renderHook(
       ({ readyFilters }: { readyFilters: typeof filters | null }) => (
         useLeads(['leads', 'list'], readyFilters, sorting)
@@ -47,7 +47,7 @@ describe('useLeads', () => {
     ));
     const client = createTestQueryClient();
     const { result } = renderHook(
-      () => useLeads(['leads', 'list'], {}, { key: 'createdAt', direction: 'desc' }),
+      () => useLeads(['leads', 'list'], {}, { key: 'created', direction: 'desc' }),
       { wrapper: createQueryClientWrapper(client) },
     );
     await waitFor(() => expect(result.current.leads).toEqual([lead]));

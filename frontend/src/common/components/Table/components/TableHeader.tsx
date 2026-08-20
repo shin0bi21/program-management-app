@@ -10,7 +10,7 @@ interface TableHeaderProps<T> {
   canResize: boolean;
   onResizeStart: () => ColumnSizingState | undefined;
   onToggleSort: (column: TableColumn<T>) => void;
-  onNudgeWidth: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight', lockedWidths?: ColumnSizingState) => void;
+  onResizeByStep: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight', lockedWidths?: ColumnSizingState) => void;
 }
 
 interface TableHeaderCellProps<T> extends Omit<TableHeaderProps<T>, 'headers'> {
@@ -22,7 +22,7 @@ function TableHeaderCell<T>({
   canResize,
   onResizeStart,
   onToggleSort,
-  onNudgeWidth,
+  onResizeByStep,
 }: TableHeaderCellProps<T>) {
   const column = header.column.columnDef.meta as TableColumn<T>;
   const sortDirection = header.column.getIsSorted();
@@ -33,7 +33,7 @@ function TableHeaderCell<T>({
     event.preventDefault();
     let lockedWidths: ColumnSizingState | undefined;
     flushSync(() => { lockedWidths = onResizeStart(); });
-    onNudgeWidth(
+    onResizeByStep(
       header.column.id,
       lockedWidths?.[header.column.id] ?? header.getSize(),
       event.key,
@@ -78,7 +78,7 @@ export default function TableHeader<T>({
   canResize,
   onResizeStart,
   onToggleSort,
-  onNudgeWidth,
+  onResizeByStep,
 }: TableHeaderProps<T>) {
   return (
     <thead>
@@ -90,7 +90,7 @@ export default function TableHeader<T>({
             canResize={canResize}
             onResizeStart={onResizeStart}
             onToggleSort={onToggleSort}
-            onNudgeWidth={onNudgeWidth}
+            onResizeByStep={onResizeByStep}
           />
         ))}
       </tr>

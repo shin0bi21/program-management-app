@@ -17,7 +17,8 @@ export interface AccountFilters {
   roles?: AccountRole[];
   statuses?: AccountStatus[];
 }
-export type AccountSortKey = 'name' | 'email' | 'role' | 'status' | 'createdAt';
+export const ACCOUNT_TABLE_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+export type AccountSortKey = typeof ACCOUNT_TABLE_KEYS[number];
 
 export interface InviteAccountInput {
   firstName: string;

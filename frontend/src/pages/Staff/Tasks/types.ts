@@ -1,7 +1,8 @@
 import type { Task, TaskCategory, TaskListStatus } from '../../../common/features/tasks/types';
 import type { ListSort } from '../../../common/types/pagination';
 
-export type TaskSortKey = 'firstName' | 'lastName' | 'title' | 'category' | 'program' | 'startDate' | 'dueDate' | 'status';
+export const TASK_TABLE_KEYS = ['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'] as const;
+export type TaskSortKey = typeof TASK_TABLE_KEYS[number];
 export type TasksView = 'calendar' | 'list';
 
 export interface TaskPreferences {

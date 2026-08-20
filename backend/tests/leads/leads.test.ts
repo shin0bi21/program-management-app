@@ -208,34 +208,45 @@ describe('Leads API', () => {
     ]));
   });
 
-  it('sorts and cursor-paginates lead batches without a total count', async () => {
+  it('sorts independently by first and last name and cursor-paginates without a total count', async () => {
     const marker = `Cursor${Date.now()}`;
-    for (const youthFirstName of [`${marker}B`, `${marker}A`]) {
+    for (const leadName of [
+      { youthFirstName: `${marker}B`, youthLastName: `${marker}A` },
+      { youthFirstName: `${marker}A`, youthLastName: `${marker}B` },
+    ]) {
       const created = await request(app)
         .post('/api/leads')
         .set('Authorization', `Bearer ${staffToken}`)
-        .send({ ...payload, youthFirstName });
+        .send({ ...payload, ...leadName });
       expect(created.status).toBe(201);
     }
 
     const first = await request(app)
-      .get(`/api/leads?search=${marker}&sort=name&direction=asc&limit=1`)
+      .get(`/api/leads?search=${marker}&sort=firstName&direction=asc&limit=1`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({
-      rows: [expect.objectContaining({ youthFirstName: `${marker}A` })],
+      rows: [expect.objectContaining({ youthFirstName: `${marker}A`, youthLastName: `${marker}B` })],
       nextCursor: expect.any(String),
     });
     expect(first.body).not.toHaveProperty('totalRows');
 
     const second = await request(app)
-      .get(`/api/leads?search=${marker}&sort=name&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .get(`/api/leads?search=${marker}&sort=firstName&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(second.status).toBe(200);
     expect(second.body).toEqual({
-      rows: [expect.objectContaining({ youthFirstName: `${marker}B` })],
+      rows: [expect.objectContaining({ youthFirstName: `${marker}B`, youthLastName: `${marker}A` })],
       nextCursor: null,
     });
+
+    const byLastName = await request(app)
+      .get(`/api/leads?search=${marker}&sort=lastName&direction=asc&limit=1`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(byLastName.status).toBe(200);
+    expect(byLastName.body.rows).toEqual([
+      expect.objectContaining({ youthFirstName: `${marker}B`, youthLastName: `${marker}A` }),
+    ]);
   });
 
   it('filters leads by status and youth or school search', async () => {
