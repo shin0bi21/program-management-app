@@ -36,7 +36,7 @@ export const leadQuerySchema = z.object({
     statuses: commaSeparatedStatuses,
     programIds: commaSeparatedProgramIds,
     origins: commaSeparatedOrigins,
-    ...cursorListFields(['name', 'school', 'program', 'status', 'createdAt'], 'createdAt', 'desc'),
+    ...cursorListFields(['firstName', 'lastName', 'school', 'program', 'status', 'createdAt'], 'createdAt', 'desc'),
   }),
 });
 

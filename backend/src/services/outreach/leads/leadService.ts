@@ -41,7 +41,8 @@ export async function getLeads(filters: LeadQuery) {
   const where = applyLeadFilters(filters);
   const cursor = decodeCursor(filters.cursor);
   const sortValue = {
-    name: sql`LOWER(youth_first_name || ' ' || youth_last_name)`,
+    firstName: sql`LOWER(youth_first_name)`,
+    lastName: sql`LOWER(youth_last_name)`,
     school: sql`LOWER(school)`,
     program: sql`LOWER(CASE WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE '' END)`,
     status: sql`status::text`,
