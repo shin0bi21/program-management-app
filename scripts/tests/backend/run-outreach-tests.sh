@@ -10,4 +10,4 @@ echo ""
 echo "Running OUTREACH tests..."
 echo "------------------------------------------"
 
-docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand tests/public tests/expressionOfInterest tests/leads
+docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand tests/public tests/leads

@@ -14,6 +14,7 @@ export interface LeadNoteTarget {
 export default function useLeadNotes(lead: Lead | null) {
   const queryClient = useQueryClient();
   const [noteTarget, setNoteTarget] = useState<LeadNoteTarget | null>(null);
+  const [selectedNote, setSelectedNote] = useState<LeadNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const leadId = lead?.id ?? null;
   const query = useQuery({
@@ -28,6 +29,7 @@ export default function useLeadNotes(lead: Lead | null) {
   useEffect(() => {
     setNoteTarget(current => current?.lead.id === leadId ? current : null);
     setConfirmAction(null);
+    setSelectedNote(null);
   }, [leadId]);
 
   const openCreate = useCallback(() => {
@@ -40,7 +42,10 @@ export default function useLeadNotes(lead: Lead | null) {
       throw new Error('The follow-up note must belong to the selected lead');
     }
     setNoteTarget({ lead, note });
+    setSelectedNote(null);
   }, [lead]);
+  const openDetails = useCallback((note: LeadNote) => setSelectedNote(note), []);
+  const closeDetails = useCallback(() => setSelectedNote(null), []);
 
   const reconcileSavedNote = useCallback((savedNote: LeadNote) => {
     if (!noteTarget) throw new Error('An open follow-up-note editor is required to save a note');
@@ -84,9 +89,12 @@ export default function useLeadNotes(lead: Lead | null) {
     loading: query.isLoading,
     error: query.error,
     noteTarget,
+    selectedNote,
     confirmAction,
     openCreate,
     openEdit,
+    openDetails,
+    closeDetails,
     closeEditor,
     reconcileSavedNote,
     requestDelete,

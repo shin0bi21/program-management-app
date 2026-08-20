@@ -303,6 +303,23 @@ test('accepts the normalized functional preference lifecycle', () => {
   );
 });
 
+test('accepts a route-selected preference key with page-owned column keys', () => {
+  const source = `
+    const { setBaseline, save } = useUserPreference(preferenceKey, columnKeys);
+    setBaseline(restored);
+    save(current => ({ ...current, hiddenColumns }));
+  `;
+
+  assert.deepEqual(
+    violationsFor(
+      checkPreferenceControlOwnership,
+      `${leadsPage}/hooks/useLeadPreferences.ts`,
+      source,
+    ),
+    [],
+  );
+});
+
 test('accepts formatted page-owned column keys with a trailing argument comma', () => {
   const source = `
     const { setBaseline, save } = useUserPreference<LeadPreference>(

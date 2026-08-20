@@ -173,17 +173,17 @@ export default function AppNavigation() {
         >
           <button
             role="menuitem"
-            onClick={() => go('/outreach/expressions-of-interest')}
-            className={`settings-flyout-item${isActive('/outreach/expressions-of-interest') ? ' active' : ''}`}
+            onClick={() => go('/outreach/leads/external')}
+            className={`settings-flyout-item${isActive('/outreach/leads/external') ? ' active' : ''}`}
           >
-            Expression of Interest
+            External Leads
           </button>
           <button
             role="menuitem"
-            onClick={() => go('/outreach/leads')}
-            className={`settings-flyout-item${isActive('/outreach/leads') ? ' active' : ''}`}
+            onClick={() => go('/outreach/leads/internal')}
+            className={`settings-flyout-item${isActive('/outreach/leads/internal') ? ' active' : ''}`}
           >
-            Leads
+            Internal Leads
           </button>
         </FloatingMenuPanel>
       )}

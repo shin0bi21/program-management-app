@@ -6,12 +6,11 @@ import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import type { LeadPreference } from './types';
 
-const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
-const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
+const LEADS_LIST_QUERY_KEY = ['leads', 'external', 'list'] as const;
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
-    <QueryClientProvider client={queryClient}><Leads /></QueryClientProvider>,
+    <QueryClientProvider client={queryClient}><Leads origin="external" /></QueryClientProvider>,
   );
 };
 
@@ -69,9 +68,9 @@ describe('Leads', () => {
         : update;
     });
     signUpLead.mockResolvedValue({
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: 'youth-1',
+      id: 'lead-1', origin: 'external', convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -80,9 +79,9 @@ describe('Leads', () => {
     getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
+      id: 'lead-1', origin: 'external', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -91,9 +90,9 @@ describe('Leads', () => {
 
   it('refetches Leads after a status change', async () => {
     const contactedLead = {
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
+      id: 'lead-1', origin: 'external', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'contacted', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -129,7 +128,6 @@ describe('Leads', () => {
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
     for (const queryKey of [
       LEADS_LIST_QUERY_KEY,
-      EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY,
       YOUTH_QUERY_KEY,
       COHORT_QUERY_KEY,
     ]) {
@@ -149,8 +147,8 @@ describe('Leads', () => {
     expect(screen.getByRole('cell', { name: 'Avery' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Outreach' })).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'External Leads' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
   });
 
   it('persists a complete preference when first hiding a column', async () => {
@@ -163,6 +161,7 @@ describe('Leads', () => {
     expect(preferenceHook.preference).toEqual({
       statuses: [],
       programIds: [],
+      origins: ['external'],
       sorting: { key: 'createdAt', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: ['school'],
@@ -182,7 +181,7 @@ describe('Leads', () => {
     preferenceHook.loading = false;
     rendered.rerender(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <Leads />
+        <Leads origin="external" />
       </QueryClientProvider>,
     );
 
@@ -197,7 +196,7 @@ describe('Leads', () => {
 
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
-    expect(screen.getByText('No notes recorded.')).toBeInTheDocument();
+    expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
   });
 
   it('requests filtered lead data from the API', async () => {
@@ -210,7 +209,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
-      { search: '', statuses: ['new'], programIds: [] },
+      { search: '', statuses: ['new'], programIds: [], origins: ['external'] },
       expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
@@ -229,7 +228,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
-      { search: '', statuses: [], programIds: ['program-1'] },
+      { search: '', statuses: [], programIds: ['program-1'], origins: ['external'] },
       expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
@@ -248,10 +247,10 @@ describe('Leads', () => {
 
   it('does not offer edit actions for a signed-up lead', async () => {
     getLeads.mockResolvedValueOnce([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1',
+      id: 'lead-1', origin: 'external',
       convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),

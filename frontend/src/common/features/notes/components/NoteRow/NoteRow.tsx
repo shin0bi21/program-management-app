@@ -9,26 +9,35 @@ interface NoteRowProps {
   title: string;
   categoryBadge: ReactNode;
   date: string;
+  author?: string | null;
   onView: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  compact?: boolean;
+  emphasizeTitle?: boolean;
 }
 
 export default function NoteRow({
   title,
   categoryBadge,
   date,
+  author,
   onView,
   onEdit,
   onDelete,
+  compact = false,
+  emphasizeTitle = true,
 }: NoteRowProps) {
   const canManage = Boolean(onEdit && onDelete);
 
   return (
-    <article className="note-row">
+    <article className={`note-row${compact ? ' note-row--compact' : ''}`}>
       <div className="note-row__summary">
-        <strong>{title}</strong>
+        {emphasizeTitle
+          ? <strong className="note-row__title" title={title}>{title}</strong>
+          : <span className="note-row__title" title={title}>{title}</span>}
         {categoryBadge}
+        {author && <span className="note-row__author" title={author}>{author}</span>}
         <span className="note-row__date">{formatShortDate(date)}</span>
       </div>
       <div className="note-row__actions">

@@ -48,7 +48,7 @@ export default function LeadNoteModal({
           <textarea
             id="lead-note-details"
             rows={5}
-            maxLength={5000}
+            maxLength={500}
             value={workflow.details}
             required
             disabled={workflow.submissionComplete}

@@ -11,3 +11,9 @@
 .actions-menu-item--danger:hover {
   background: var(--color-danger-bg);
 }
+
+.actions-menu-item--group-start {
+  border-top: var(--border-line-soft);
+  margin-top: var(--space-1);
+  padding-top: calc(var(--space-2) + var(--space-1));
+}

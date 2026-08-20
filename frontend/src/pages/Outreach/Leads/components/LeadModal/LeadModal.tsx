@@ -1,9 +1,6 @@
-import { Controller } from 'react-hook-form';
-import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import OutreachFormFields from '../../../../../common/features/outreach/components/OutreachForm/OutreachFormFields';
-import ProgramSelect from '../../../../../common/features/programs/components/ProgramSelect/ProgramSelect';
 import type { Lead } from '../../types';
 import { useLeadModal } from './useLeadModal';
 
@@ -60,22 +57,6 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
           control={control}
           errors={errors}
           disabled={submissionComplete}
-          programField={
-            <Controller
-              name="programId"
-              control={control}
-              render={({ field }) => (
-                <FormField id="lead-programId" label="Program of Interest" error={errors.programId?.message}>
-                  <ProgramSelect
-                    id="lead-programId"
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    disabled={submissionComplete}
-                  />
-                </FormField>
-              )}
-            />
-          }
         />
       </form>
     </Modal>

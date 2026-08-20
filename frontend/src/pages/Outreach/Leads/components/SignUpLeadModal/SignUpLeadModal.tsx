@@ -1,4 +1,5 @@
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
+import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 
@@ -90,8 +91,8 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
                 <dd>{lead.school}</dd>
               </div>
               <div>
-                <dt>Program interest</dt>
-                <dd>{lead.programOfInterestName || 'Not specified'}</dd>
+                <dt>Eligible Program</dt>
+                <dd>{lead.recommendedProgramName || 'Not available'}</dd>
               </div>
             </dl>
           </section>
@@ -107,6 +108,9 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
               placeholder={workflow.loading ? 'Loading cohorts...' : 'Do not enroll yet'}
               disabled={workflow.loading || workflow.submissionComplete}
             />
+            <Button type="button" size="sm" variant="secondary" onClick={() => workflow.setShowAllPrograms(!workflow.showAllPrograms)} disabled={workflow.loading || workflow.submissionComplete}>
+              {workflow.showAllPrograms ? 'Show eligible program' : 'View all programs'}
+            </Button>
             {!workflow.loading && workflow.visibleCohorts.length === 0 && (
               <p className="sign-up-lead-empty">
                 {workflow.cohorts.length
@@ -118,7 +122,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
 
           {lead.notes?.trim() && (
             <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-note-title">
-              <h3 id="sign-up-lead-note-title">Lead note</h3>
+              <h3 id="sign-up-lead-note-title">Intake Information</h3>
               <FloatingSelect
                 id="sign-up-note-category"
                 ariaLabel="Type of note"

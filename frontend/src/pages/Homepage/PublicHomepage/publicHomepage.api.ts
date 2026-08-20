@@ -4,10 +4,10 @@ import type { RequestOptions } from '../../../http/client';
 import { api } from '../../../http/config';
 import type { HomepageImage, HomepageSession } from './types';
 
-export type ExpressionOfInterestPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
+export type PublicLeadPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
 
-export function submitExpressionOfInterest(payload: ExpressionOfInterestPayload) {
-  return apiClient.post<{ message: string }>('/public/expressions-of-interest', payload, { auth: false });
+export function submitPublicLead(payload: PublicLeadPayload) {
+  return apiClient.post<{ message: string }>('/public/leads', payload, { auth: false });
 }
 
 function resolveImageUrl(image: HomepageImage): HomepageImage {

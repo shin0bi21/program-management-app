@@ -87,7 +87,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
     </div>
 
     <div className="outreach-form-section outreach-form-section--continuation">
-      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message as string | undefined}><textarea id={id('notes')} rows={5} disabled={disabled} {...register(field('notes'))} /></FormField>
+      <FormField id={id('notes')} label="Anything else we should know?" error={errors.notes?.message as string | undefined}><textarea id={id('notes')} rows={5} maxLength={500} disabled={disabled} {...register(field('notes'))} /></FormField>
     </div>
   </>;
 }

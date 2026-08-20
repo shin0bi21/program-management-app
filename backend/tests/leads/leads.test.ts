@@ -17,8 +17,9 @@ describe('Leads API', () => {
   let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
   let convertedYouthWithoutCohortId: string | undefined;
-  let convertedExpressionYouthId: string | undefined;
-  let convertedExpressionId: string | undefined;
+  let convertedExternalYouthId: string | undefined;
+  let externalLeadId: string | undefined;
+  let crossProgramYouthId: string | undefined;
 
   const payload = {
     youthFirstName: 'Event',
@@ -46,7 +47,7 @@ describe('Leads API', () => {
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE id != ${softSkillsProgramId} ORDER BY name LIMIT 1
+      SELECT id FROM programs WHERE id != ${softSkillsProgramId} AND roster_mode = 'enrolled' ORDER BY name LIMIT 1
     `;
     ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
       programId: otherProgram.id,
@@ -63,11 +64,11 @@ describe('Leads API', () => {
     if (convertedYouthWithoutCohortId) {
       await sql`DELETE FROM users WHERE id = ${convertedYouthWithoutCohortId}`;
     }
-    if (convertedExpressionYouthId) {
-      await sql`DELETE FROM users WHERE id = ${convertedExpressionYouthId}`;
-    }
-    if (convertedExpressionId) {
-      await sql`DELETE FROM expressions_of_interest WHERE id = ${convertedExpressionId}`;
+    if (convertedExternalYouthId) await sql`DELETE FROM users WHERE id = ${convertedExternalYouthId}`;
+    if (externalLeadId) await sql`DELETE FROM leads WHERE id = ${externalLeadId}`;
+    if (crossProgramYouthId) {
+      await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId}`;
+      await sql`DELETE FROM users WHERE id = ${crossProgramYouthId}`;
     }
     await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
     await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
@@ -79,17 +80,16 @@ describe('Leads API', () => {
     const res = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, programOfInterestId: softSkillsProgramId });
+      .send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
-      origin: 'staff_created',
-      expressionOfInterestId: null,
+      origin: 'internal',
       youthFirstName: 'Event',
       youthLastName: 'Prospect',
       status: 'new',
-      programOfInterestId: softSkillsProgramId,
-      programOfInterestName: 'Soft Skills',
+      recommendedProgramId: softSkillsProgramId,
+      recommendedProgramName: 'Soft Skills',
       createdBy: staffUserId,
     }));
   });
@@ -145,6 +145,22 @@ describe('Leads API', () => {
     expect(invalid.status).toBe(400);
   });
 
+  it('lets staff delete an unsigned lead and its follow-up notes', async () => {
+    const created = await request(app).post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'Delete', youthLastName: `Flow-${Date.now()}` });
+    const note = await request(app).post(`/api/leads/${created.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`).send({ details: 'Delete with parent.' });
+
+    const removed = await request(app).delete(`/api/leads/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(removed.status).toBe(200);
+    const [remainingNote] = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int AS count FROM lead_notes WHERE id = ${note.body.id}
+    `;
+    expect(remainingNote.count).toBe(0);
+  });
+
   it('rejects emergency as a Lead relationship', async () => {
     const res = await request(app)
       .post('/api/leads')
@@ -175,7 +191,7 @@ describe('Leads API', () => {
         origin, youth_first_name, youth_last_name, age, school,
         contact_phone_number, contact_relationship, discovery_source, created_by
       ) VALUES (
-        'staff_created', 'Invalid', ${`Invalid-${age}-${Date.now()}`}, ${age}, 'Test School',
+        'internal', 'Invalid', ${`Invalid-${age}-${Date.now()}`}, ${age}, 'Test School',
         '416-555-0190', 'parent', 'online', ${staffUserId}
       )
     `).rejects.toMatchObject({ code: '23514' });
@@ -188,7 +204,7 @@ describe('Leads API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ contactPhoneNumber: payload.contactPhoneNumber, origin: 'staff_created' }),
+      expect.objectContaining({ contactPhoneNumber: payload.contactPhoneNumber, origin: 'internal' }),
     ]));
   });
 
@@ -240,9 +256,9 @@ describe('Leads API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ youthFirstName: 'Event', programOfInterestId: softSkillsProgramId }),
+      expect.objectContaining({ youthFirstName: 'Event', recommendedProgramId: softSkillsProgramId }),
     ]));
-    expect(res.body.every((lead: { programOfInterestId: string }) => lead.programOfInterestId === softSkillsProgramId)).toBe(true);
+    expect(res.body.every((lead: { recommendedProgramId: string }) => lead.recommendedProgramId === softSkillsProgramId)).toBe(true);
   });
 
   it('rejects unsupported lead filters', async () => {
@@ -291,13 +307,13 @@ describe('Leads API', () => {
     const res = await request(app)
       .put(`/api/leads/${lead.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, school: 'Updated Community School', programOfInterestId: softSkillsProgramId });
+      .send({ ...payload, school: 'Updated Community School' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.objectContaining({
       id: lead.id,
       school: 'Updated Community School',
-      programOfInterestId: softSkillsProgramId,
+      recommendedProgramId: softSkillsProgramId,
       origin: lead.origin,
       status: lead.status,
       updatedBy: staffUserId,
@@ -370,7 +386,7 @@ describe('Leads API', () => {
     const edit = await request(app)
       .put(`/api/leads/${lead.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, school: 'Should Not Change', programOfInterestId: softSkillsProgramId });
+      .send({ ...payload, school: 'Should Not Change' });
     expect(edit.status).toBe(409);
     expect(edit.body.error).toBe('Signed-up leads must be edited through their youth profile');
   });
@@ -383,7 +399,6 @@ describe('Leads API', () => {
         ...payload,
         youthFirstName: 'Optional',
         youthLastName: `Enrollment-${Date.now()}`,
-        programOfInterestId: softSkillsProgramId,
       });
 
     const res = await request(app)
@@ -401,10 +416,10 @@ describe('Leads API', () => {
     expect(count).toBe(0);
   });
 
-  it('preserves the complete expression-of-interest to youth signup lifecycle', async () => {
+  it('preserves the complete external lead to youth signup lifecycle', async () => {
     const youthLastName = `Lifecycle-${Date.now()}`;
     const submitted = await request(app)
-      .post('/api/public/expressions-of-interest')
+      .post('/api/public/leads')
       .send({
         youthFirstName: 'Outreach',
         youthLastName,
@@ -418,64 +433,29 @@ describe('Leads API', () => {
       });
     expect(submitted.status).toBe(201);
 
-    const [expression] = await sql<{ id: string }[]>`
+    const [externalLead] = await sql<{ id: string }[]>`
       SELECT id
-      FROM expressions_of_interest
+      FROM leads
       WHERE youth_last_name = ${youthLastName}
       LIMIT 1
     `;
-    convertedExpressionId = expression.id;
-
-    const converted = await request(app)
-      .post(`/api/expressions-of-interest/${expression.id}/convert`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(converted.status).toBe(201);
-    expect(converted.body).toEqual(expect.objectContaining({
-      expressionOfInterestId: expression.id,
-      programOfInterestId: softSkillsProgramId,
-      programOfInterestName: 'Soft Skills',
-      status: 'new',
-    }));
-    await sql`
-      UPDATE expressions_of_interest
-      SET status_updated_at = TIMESTAMPTZ '2000-01-01 00:00:00+00'
-      WHERE id = ${expression.id}
-    `;
+    externalLeadId = externalLead.id;
 
     const signedUp = await request(app)
-      .post(`/api/leads/${converted.body.id}/sign-up`)
+      .post(`/api/leads/${externalLead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ cohortId: null, noteCategory: 'general' });
     expect(signedUp.status).toBe(201);
     expect(signedUp.body).toEqual(expect.objectContaining({
-      id: converted.body.id,
+      id: externalLead.id,
       convertedYouthId: expect.any(String),
-      programOfInterestId: softSkillsProgramId,
+      recommendedProgramId: softSkillsProgramId,
       status: 'signed_up',
     }));
-    convertedExpressionYouthId = signedUp.body.convertedYouthId;
-
-    const [storedExpression] = await sql<{ status: string; statusUpdatedAt: string }[]>`
-      SELECT status, status_updated_at::text AS "statusUpdatedAt"
-      FROM expressions_of_interest
-      WHERE id = ${expression.id}
-    `;
-    expect(storedExpression.status).toBe('signed_up');
-    expect(new Date(storedExpression.statusUpdatedAt).getUTCFullYear()).toBeGreaterThan(2000);
-
-    const reverted = await request(app)
-      .patch(`/api/expressions-of-interest/${expression.id}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'converted' });
-    expect(reverted.status).toBe(409);
-    await expect(sql`
-      UPDATE expressions_of_interest
-      SET status = 'converted'
-      WHERE id = ${expression.id}
-    `).rejects.toMatchObject({ code: '23514' });
+    convertedExternalYouthId = signedUp.body.convertedYouthId;
   });
 
-  it('rolls back conversion when the cohort conflicts with the program of interest', async () => {
+  it('allows staff to choose an age-eligible cohort outside the recommended program', async () => {
     const youthLastName = `Rollback-${Date.now()}`;
     const created = await request(app)
       .post('/api/leads')
@@ -484,7 +464,6 @@ describe('Leads API', () => {
         ...payload,
         youthFirstName: 'Transactional',
         youthLastName,
-        programOfInterestId: softSkillsProgramId,
       });
 
     const res = await request(app)
@@ -492,20 +471,12 @@ describe('Leads API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ cohortId: otherProgramCohortId });
 
-    expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Selected cohort does not belong to the lead program of interest');
-    const [lead] = await sql<{ status: string; convertedYouthId: string | null }[]>`
-      SELECT status, converted_youth_id
-      FROM leads
-      WHERE id = ${created.body.id}
+    expect(res.status).toBe(201);
+    crossProgramYouthId = res.body.convertedYouthId;
+    const [enrollment] = await sql<{ cohortId: string }[]>`
+      SELECT cohort_id FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId!}
     `;
-    expect(lead).toEqual({ status: 'new', convertedYouthId: null });
-    const [{ count }] = await sql<{ count: number }[]>`
-      SELECT COUNT(*)::int AS count
-      FROM users
-      WHERE first_name = 'Transactional' AND last_name = ${youthLastName}
-    `;
-    expect(count).toBe(0);
+    expect(enrollment.cohortId).toBe(otherProgramCohortId);
   });
 
   it('rejects youth accounts', async () => {

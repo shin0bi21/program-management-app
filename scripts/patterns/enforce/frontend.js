@@ -351,7 +351,7 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 
   if (!source.includes('useUserPreference')) return;
   const ownsTablePreferences = /\b(?:columnWidths|hiddenColumns)\b/.test(source);
-  const passesColumnKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*['"][^'"]+['"]\s*,\s*columnKeys\s*,?\s*\)/
+  const passesColumnKeys = /useUserPreference(?:<[^>]+>)?\s*\(\s*[^,]+,\s*columnKeys\s*,?\s*\)/
     .test(source);
   if (ownsTablePreferences && !passesColumnKeys) {
     violations.push(`${file}:1 table preference hooks must receive page-owned columnKeys and pass them to useUserPreference.`);

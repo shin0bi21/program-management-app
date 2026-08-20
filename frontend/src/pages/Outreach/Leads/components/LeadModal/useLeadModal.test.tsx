@@ -45,7 +45,6 @@ describe('useLeadModal', () => {
       youthLastName: 'Outreach',
       age: 14,
       school: 'Test School',
-      programOfInterestId: 'program-1',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian',
       discoverySource: 'online',

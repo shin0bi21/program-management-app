@@ -7,17 +7,17 @@ export const outreachFormSchema = z.object({
   youthLastName: z.string().trim().min(1, 'Last name is required').regex(namePattern, 'Enter a valid last name'),
   age: z.number().int('Age must be a whole number').min(12, 'Age must be 12 or higher').max(19, 'Age must be 19 or lower'),
   school: z.string().trim().min(1, 'School is required'),
-  programId: z.string().optional(),
   contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
   contactRelationship: z.enum(['parent', 'guardian', 'sibling'], { error: 'Relationship is required' }),
   discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], { error: 'Discovery source is required' }),
-  notes: z.string().max(5000, 'Notes must be 5000 characters or fewer'),
+  notes: z.string().max(500, 'Intake information must be 500 characters or fewer'),
 });
 
 export type OutreachFormValues = z.infer<typeof outreachFormSchema>;
 
 export const publicOutreachFormSchema = outreachFormSchema.extend({
-  submittedByRole: z.enum(['youth', 'parent', 'guardian'], { error: 'Select who is filling out the form' }),
+  submittedByRole: z.enum(['youth', 'parent', 'guardian'], { error: 'Submitter is required' }),
+  website: z.literal('').optional(),
 });
 
 export type PublicOutreachFormValues = z.infer<typeof publicOutreachFormSchema>;
@@ -27,7 +27,6 @@ export const outreachFormDefaultValues: OutreachFormValues = {
   youthLastName: '',
   age: Number.NaN,
   school: '',
-  programId: '',
   contactPhoneNumber: '',
   contactRelationship: 'parent',
   discoverySource: 'online',
@@ -37,4 +36,5 @@ export const outreachFormDefaultValues: OutreachFormValues = {
 export const publicOutreachFormDefaultValues: PublicOutreachFormValues = {
   ...outreachFormDefaultValues,
   submittedByRole: 'parent',
+  website: '',
 };

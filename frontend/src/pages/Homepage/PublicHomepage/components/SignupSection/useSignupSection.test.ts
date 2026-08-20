@@ -1,15 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { submitExpressionOfInterest } from '../../publicHomepage.api';
+import { submitPublicLead } from '../../publicHomepage.api';
 import { useSignupSection } from './useSignupSection';
 
-vi.mock('../../publicHomepage.api', () => ({ submitExpressionOfInterest: vi.fn() }));
+vi.mock('../../publicHomepage.api', () => ({ submitPublicLead: vi.fn() }));
 
 describe('useSignupSection', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('owns the successful submission lifecycle and normalized API payload', async () => {
-    vi.mocked(submitExpressionOfInterest).mockResolvedValue({ message: 'ok' });
+    vi.mocked(submitPublicLead).mockResolvedValue({ message: 'ok' });
     const { result } = renderHook(useSignupSection);
 
     await act(async () => result.current.onValid({
@@ -17,23 +17,25 @@ describe('useSignupSection', () => {
       youthLastName: ' Test ',
       age: 14,
       school: ' Westview ',
-      submittedByRole: 'youth',
+      submittedByRole: 'guardian',
       contactPhoneNumber: ' 519-555-0100 ',
       contactRelationship: 'guardian',
       discoverySource: 'online',
       notes: ' Call after school. ',
+      website: '',
     }));
 
-    expect(submitExpressionOfInterest).toHaveBeenCalledWith({
+    expect(submitPublicLead).toHaveBeenCalledWith({
       youthFirstName: 'Jamie',
       youthLastName: 'Test',
       age: 14,
       school: 'Westview',
-      submittedByRole: 'youth',
+      submittedByRole: 'guardian',
       contactPhoneNumber: '519-555-0100',
       contactRelationship: 'guardian',
       discoverySource: 'online',
       notes: 'Call after school.',
+      website: '',
     });
     await waitFor(() => expect(result.current.submitStatus).toBe('success'));
   });

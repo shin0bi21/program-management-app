@@ -1,17 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getLeads } from '../leads.api';
-import type { Lead } from '../types';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
+import { getLeads } from '../../../leads.api';
+import type { Lead } from '../../../types';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { useLeads } from './useLeads';
 
-vi.mock('../leads.api', () => ({ getLeads: vi.fn() }));
+vi.mock('../../../leads.api', () => ({ getLeads: vi.fn() }));
 
 const lead: Lead = {
-  id: 'lead-1', origin: 'staff_created', expressionOfInterestId: null, convertedYouthId: null,
+  id: 'lead-1', origin: 'internal', submittedByRole: 'staff', convertedYouthId: null,
   youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
-  programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills', contactPhoneNumber: '416-555-0142',
+  recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills', contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null, status: 'new',
   statusUpdatedAt: '2026-08-01T12:00:00.000Z', createdAt: '2026-08-01T12:00:00.000Z',
 };

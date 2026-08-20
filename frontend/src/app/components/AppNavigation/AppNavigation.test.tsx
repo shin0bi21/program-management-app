@@ -101,9 +101,8 @@ describe('AppNavigation', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Outreach' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Expression of Interest' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Leads' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Expressions of Interest' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'External Leads' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Internal Leads' })).toBeInTheDocument();
   });
 
   it('keeps the Youth navigation focused on profiles', () => {

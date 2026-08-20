@@ -52,6 +52,11 @@ export default function useLeadNoteModal({
       setSubmitStatus('error');
       return;
     }
+    if (normalizedDetails.length > 500) {
+      setError('Follow-up note must be 500 characters or fewer.');
+      setSubmitStatus('error');
+      return;
+    }
     if (!submitLock.tryLock()) return;
 
     setError('');

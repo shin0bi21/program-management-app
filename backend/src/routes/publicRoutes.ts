@@ -4,10 +4,10 @@ import {
   handleGetPublicHomepageImages,
   handleGetPublicHomepageSessions,
 } from '../controllers/homepageController';
-import { handleExpressionOfInterest } from '../controllers/publicController';
+import { handlePublicLead } from '../controllers/publicController';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { generalLimiter, strictLimiter } from '../middleware/rateLimiter';
-import { expressionOfInterestSchema } from '../validation/publicSchemas';
+import { publicLeadSchema } from '../validation/publicSchemas';
 import { homepageImageFileParamsSchema, homepageImageParamsSchema } from '../validation/homepageSchemas';
 
 const router = Router();
@@ -26,6 +26,6 @@ router.get(
   validateRequest(homepageImageFileParamsSchema),
   asyncHandler(handleGetHomepageImageFile),
 );
-router.post('/expressions-of-interest', strictLimiter, validateRequest(expressionOfInterestSchema), asyncHandler(handleExpressionOfInterest));
+router.post('/leads', strictLimiter, validateRequest(publicLeadSchema), asyncHandler(handlePublicLead));
 
 export default router;

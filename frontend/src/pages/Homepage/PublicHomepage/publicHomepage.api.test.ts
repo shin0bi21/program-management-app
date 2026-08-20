@@ -5,7 +5,7 @@ import { apiClient } from '../../../http/client';
 import {
   getPublicHomepageImages,
   getPublicHomepageSessions,
-  submitExpressionOfInterest,
+  submitPublicLead,
 } from './publicHomepage.api';
 
 vi.mock('../../../http/client', () => ({
@@ -55,9 +55,9 @@ describe('publicHomepage API', () => {
       contactRelationship: 'guardian' as const,
       discoverySource: 'online' as const,
     };
-    submitExpressionOfInterest(payload);
+    submitPublicLead(payload);
 
     expect(get).toHaveBeenCalledWith('/public/homepage/sessions', { auth: false });
-    expect(post).toHaveBeenCalledWith('/public/expressions-of-interest', payload, { auth: false });
+    expect(post).toHaveBeenCalledWith('/public/leads', payload, { auth: false });
   });
 });
