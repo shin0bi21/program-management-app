@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import render from '../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

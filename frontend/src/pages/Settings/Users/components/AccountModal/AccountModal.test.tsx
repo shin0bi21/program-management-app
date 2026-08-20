@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPrograms } from '../../../../../common/features/programs/programs.api';
 import { inviteAccount, updateAccount } from '../../accounts.api';
-import renderWithQueryClient from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import AccountModal from './AccountModal';
 
 vi.mock('../../../../../common/features/programs/programs.api', () => ({

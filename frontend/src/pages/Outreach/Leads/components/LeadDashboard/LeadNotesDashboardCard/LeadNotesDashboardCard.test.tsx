@@ -1,7 +1,7 @@
 // Owns Lead note dashboard rendering and representative save/delete integration wiring.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../../tests/queryClientTestUtils';
 import type { Lead } from '../../../types';
 import LeadNotesDashboardCard from './LeadNotesDashboardCard';
 

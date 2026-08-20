@@ -1,6 +1,6 @@
 // Owns Attendance composition, accessible errors, nested Youth creation, and pending-state wiring.
 import { act, screen } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';

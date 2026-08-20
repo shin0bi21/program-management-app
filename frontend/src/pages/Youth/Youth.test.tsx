@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
-import render from '../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 import type { YouthPreference } from './types';
 
 const mockUseYouth = vi.fn();

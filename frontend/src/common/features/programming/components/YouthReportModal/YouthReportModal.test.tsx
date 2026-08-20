@@ -1,7 +1,7 @@
 // Owns report loading, failure presentation, and generated object-URL cleanup.
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import YouthReportModal from './YouthReportModal';
 
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
