@@ -12,6 +12,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  merge_path:
+    name: Enforce develop → main only
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify release source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "develop" ]; then
+            echo "PRs to main must come from develop, not '$HEAD_REF'."
+            exit 1
+          fi
+
   changes:
     name: Classify changes
     runs-on: ubuntu-latest
@@ -50,12 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Enforce develop → main only
-        if: github.base_ref == 'main' && github.head_ref != 'develop'
-        run: |
-          echo "PRs to main must come from develop, not '${{ github.head_ref }}'."
-          exit 1
-
       - name: Checkout code
         uses: actions/checkout@v7
         with:

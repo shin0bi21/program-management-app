@@ -10,7 +10,7 @@ feature PR → develop
   └── Pattern Review: changed repository invariants
 
 develop PR → main
-  └── CI: merge-path enforcement plus affected application and all production checks
+  └── CI: standalone merge-path enforcement plus affected application and all production checks
 
 push to main
   └── Deploy Production: SSH deployment plus public smoke checks
@@ -45,7 +45,7 @@ The CI workflow first sends the pull request's changed paths to [`scripts/ci/sel
 - Deployment inputs select deployment planning, image builds, and Compose validation.
 - Unrecognized repository paths fail closed to the full local application plan until they are deliberately classified.
 
-Jobs use job-level conditions rather than workflow path filters. This keeps required check names present while avoiding application runners that do not own the diff. The required quality job always runs for pull requests to `main` so it can enforce the `develop → main` branch rule. Pull requests to `main` also always validate both production images and the production Compose configuration.
+Jobs use job-level conditions rather than workflow path filters. This keeps required check names present while avoiding application runners that do not own the diff. A standalone `Enforce develop → main only` job publishes the required merge-path check for pull requests to `main`; the required quality job also always runs for those release pull requests. Pull requests to `main` always validate both production images and the production Compose configuration.
 
 ## Reproduce a failed check
 
