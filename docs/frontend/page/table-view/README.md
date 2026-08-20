@@ -2,18 +2,6 @@
 
 A page-owned `*TableView` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the TableView owns fetching, pagination, table states, and the `Table` integration.
 
-## Component structure
-
-```text
-components/
-  ExampleTableView/
-    ExampleTableView.tsx
-    ExampleTableView.test.tsx
-    hooks/
-      useExampleList.ts           remote query and row shaping
-      useExampleTable.tsx         columns and table-only preference adapters, when substantial
-```
-
 Keep columns in the TableView owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the TableView.
 
 ## Remote-list hook

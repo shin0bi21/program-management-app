@@ -2,33 +2,23 @@
 
 A route page is the orchestration owner. It connects permissions, options, persisted controls, selection, cross-view actions, and dialogs while delegating substantial rendering and remote-data behavior to child components.
 
-## Page structure
-
-Use the route page's name at the feature root:
+## Page hierarchy
 
 ```text
-ExamplePage/
-  ExamplePage.tsx
-  ExamplePage.test.tsx
-  ExamplePage.css                 only for route-owned styles
-  examplePage.api.ts              one page-owned endpoint group, when needed
-  examplePage.api.test.ts
-  types.ts                        contracts shared by sibling page units
-  hooks/
-    useExampleData.ts             remote options and derived option collections
-    useExamplePreferences.ts      restoration and complete preference saves
-    useExampleFilters.ts          filter projection and events
-    useExampleSelection.ts        selected resource/record synchronization
-    useExampleActions.ts          mutations and cross-child reconciliation
-  components/
-    ExampleTableView/
-    ExampleCalendarView/
-    ExampleDashboard/
-    ExampleModal/
-  utils/                          pure helpers shared by sibling page units
+app route
+  → page
+      → TableView → rows
+      → CalendarView → items
+      → Dashboard → cards
+      → Modal → form workflow
+  → common/features
+  → common/components, hooks, and utilities
+  → auth, http, and query infrastructure
 ```
 
-Use only the files the page needs. Do not create empty hooks or child folders to complete the shape. A route family with multiple pages gives each route its own page folder and keeps genuinely shared family behavior under the route-family `common/` directory.
+The page selects and coordinates its route-specific views. Shared product capabilities, generic UI, and application infrastructure remain downstream dependencies rather than page-private owners.
+
+A route family with multiple pages gives each route its own page owner and keeps genuinely shared family behavior under the route-family `common/` directory.
 
 ## Page-owned hooks
 
@@ -141,4 +131,4 @@ Route tests own permission-dependent actions, control wiring, preference restora
 - [Dashboard](dashboard/README.md): dashboard composition, cards, and overview data.
 - [Modal](modal/README.md): form state, validation, submission, and dialog lifecycle.
 
-General extraction and state rules live under [shared ownership](../shared/ownership.md), [shared state](../shared/state.md), and [shared interactions](../shared/interactions.md).
+General extraction rules live under [shared ownership](../shared/ownership.md). Frontend-wide state and hook rules live in the [frontend guide](../README.md#state-and-hook-patterns).
