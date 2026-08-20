@@ -25,7 +25,7 @@ const programs: Program[] = [{
   maxAge: 15,
 }];
 const columnKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'created'];
-const sortKeys = ['name', 'school', 'program', 'status', 'createdAt'] as const;
+const sortKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'createdAt'] as const;
 
 describe('useLeadControls', () => {
   beforeEach(() => {
@@ -59,12 +59,12 @@ describe('useLeadControls', () => {
     expect(persisted.sorting).toEqual({ key: 'school', direction: 'asc' });
   });
 
-  it('scrubs removed programs and obsolete sorting before establishing the baseline', async () => {
+  it('scrubs removed programs and resets legacy name sorting before establishing the baseline', async () => {
     preferenceHook.preference = {
       statuses: ['new'],
       programIds: ['removed-program'],
       origins: [],
-      sorting: { key: 'removedColumn' as never, direction: 'asc' },
+      sorting: { key: 'name' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => (
       useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, columnKeys, sortKeys)
