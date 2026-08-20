@@ -5,14 +5,14 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
-  deleteTimeEntry,
-  getTimeEntryOverview,
-  getTimeEntryList,
-  getTimeEntryOptions,
-  getTimeEntries,
-  setTimeEntry,
-  updateTimeEntryPlacement,
-} from '../../../common/features/timeEntries/timeEntries.api';
+  deleteHours,
+  getHoursOverview,
+  getHoursList,
+  getHoursOptions,
+  getHours,
+  setHours,
+  updateHoursPlacement,
+} from '../../../common/features/hours/hours.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
@@ -38,15 +38,15 @@ vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
 }));
 
-vi.mock('../../../common/features/timeEntries/timeEntries.api', () => ({
-  getTimeEntries: vi.fn(),
-  getTimeEntryList: vi.fn(),
-  getTimeEntryOptions: vi.fn(),
-  getTimeEntryOverview: vi.fn(),
-  getTimeEntrySessions: vi.fn(),
-  setTimeEntry: vi.fn(),
-  updateTimeEntryPlacement: vi.fn(),
-  deleteTimeEntry: vi.fn(),
+vi.mock('../../../common/features/hours/hours.api', () => ({
+  getHours: vi.fn(),
+  getHoursList: vi.fn(),
+  getHoursOptions: vi.fn(),
+  getHoursOverview: vi.fn(),
+  getHoursSessions: vi.fn(),
+  setHours: vi.fn(),
+  updateHoursPlacement: vi.fn(),
+  deleteHours: vi.fn(),
 }));
 
 vi.mock('../../../common/features/tasks/tasks.api', () => ({
@@ -121,17 +121,17 @@ describe('Hours', () => {
         if (options?.top !== undefined) this.scrollTop = options.top;
       },
     });
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: {},
     });
-    vi.mocked(getTimeEntryOptions).mockResolvedValue({
+    vi.mocked(getHoursOptions).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
     });
-    vi.mocked(getTimeEntryList).mockImplementation(async (filters, opts, pagination) => {
-      const response = await getTimeEntries({}, opts);
+    vi.mocked(getHoursList).mockImplementation(async (filters, opts, pagination) => {
+      const response = await getHours({}, opts);
       const resources = new Map(response.resources.map(resource => [resource.id, resource]));
       const search = filters.search?.toLowerCase() ?? '';
       const rows = Object.entries(response.data).flatMap(([resourceId, periods]) => Object.entries(periods).flatMap(([date, items]) => items.map(item => {
@@ -147,7 +147,7 @@ describe('Hours', () => {
         nextCursor: null,
       };
     });
-    vi.mocked(getTimeEntryOverview).mockResolvedValue({
+    vi.mocked(getHoursOverview).mockResolvedValue({
       payPeriod: {
         periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
       },
@@ -196,7 +196,7 @@ describe('Hours', () => {
 
   it('shows a readable coworker row without exposing time-entry write controls', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
@@ -215,14 +215,14 @@ describe('Hours', () => {
         }] },
       },
     });
-    vi.mocked(getTimeEntryOptions).mockResolvedValue({
+    vi.mocked(getHoursOptions).mockResolvedValue({
       resources: [
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
     });
-    vi.mocked(getTimeEntryOverview).mockImplementation(async staffId => (
+    vi.mocked(getHoursOverview).mockImplementation(async staffId => (
       staffId === 'staff-2' ? dashboardOverview(4, 'Administration') : dashboardOverview(1)
     ));
 
@@ -253,7 +253,7 @@ describe('Hours', () => {
 
     expect(await screen.findByRole('button', { name: 'View: List' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
     ));
@@ -264,7 +264,7 @@ describe('Hours', () => {
 
   it('clears the persisted cycle with the other Hours filters', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
         programs: [{ id: 'program-1', name: 'Soft Skills' }],
         data: { 'staff-1': { '2026-08-09': [{
@@ -273,7 +273,7 @@ describe('Hours', () => {
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Entry from another cycle',
         }] } },
     });
-    vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
+    vi.mocked(getHoursOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -285,7 +285,7 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
 
     expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
     ));
@@ -302,7 +302,7 @@ describe('Hours', () => {
 
   it('reloads cycle-aware overview data when the cycle filter changes', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': { '2026-08-09': [{
@@ -317,21 +317,21 @@ describe('Hours', () => {
       </MemoryRouter></QueryClientProvider>,
     );
 
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
     ));
-    await waitFor(() => expect(getTimeEntryOverview).toHaveBeenCalled());
-    vi.mocked(getTimeEntryOverview).mockClear();
+    await waitFor(() => expect(getHoursOverview).toHaveBeenCalled());
+    vi.mocked(getHoursOverview).mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
     expect(await screen.findByText('Current response')).toBeInTheDocument();
-    expect(getTimeEntryOverview).toHaveBeenCalledTimes(1);
+    expect(getHoursOverview).toHaveBeenCalledTimes(1);
   });
 
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
       data: { 'staff-1': {
@@ -347,7 +347,7 @@ describe('Hours', () => {
         }],
       } },
     });
-    vi.mocked(getTimeEntryOverview).mockResolvedValue({
+    vi.mocked(getHoursOverview).mockResolvedValue({
       payPeriod: {
         periodStart: '2026-09-02', periodEnd: '2026-09-15', totalHours: 4,
         breakdown: [{ label: 'Outreach', hours: 4 }],
@@ -372,7 +372,7 @@ describe('Hours', () => {
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(screen.queryByText('Current pay-period work')).not.toBeInTheDocument();
     expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
-    expect(getTimeEntryOverview).toHaveBeenCalledWith(
+    expect(getHoursOverview).toHaveBeenCalledWith(
       'staff-1',
       'cycle-fall',
       { signal: expect.any(AbortSignal) },
@@ -380,7 +380,7 @@ describe('Hours', () => {
   });
 
   it('always shows searchable list overview cards for staff', async () => {
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { '2026-08-09': [{
@@ -389,7 +389,7 @@ describe('Hours', () => {
         categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
       }] } },
     });
-    vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
+    vi.mocked(getHoursOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -421,7 +421,7 @@ describe('Hours', () => {
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
     auth.role = 'admin';
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -440,10 +440,10 @@ describe('Hours', () => {
         }] },
       },
     });
-    vi.mocked(getTimeEntryOverview).mockImplementation(async staffId => (
+    vi.mocked(getHoursOverview).mockImplementation(async staffId => (
       staffId === 'staff-2' ? dashboardOverview(7) : dashboardOverview(2, 'Program Delivery')
     ));
-    vi.mocked(getTimeEntryOptions).mockResolvedValue({
+    vi.mocked(getHoursOptions).mockResolvedValue({
       resources: [
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -488,7 +488,7 @@ describe('Hours', () => {
       categories: [],
       cycleId: 'cycle-1',
     };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{
         id: 'staff-1',
         firstName: 'Zoe',
@@ -522,7 +522,7 @@ describe('Hours', () => {
 
   it('bridges the page Add action to the shared entry modal', async () => {
     const workDate = dayKey(new Date());
-    vi.mocked(setTimeEntry).mockResolvedValue({
+    vi.mocked(setHours).mockResolvedValue({
       id: 'entry-new', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'planning_prep', taskId: null, taskTitle: null, sessionId: null,
@@ -547,8 +547,8 @@ describe('Hours', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Route bridge' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledOnce());
-    expect(vi.mocked(setTimeEntry).mock.calls[0]).toHaveLength(1);
+    await waitFor(() => expect(setHours).toHaveBeenCalledOnce());
+    expect(vi.mocked(setHours).mock.calls[0]).toHaveLength(1);
   });
 
   it('bridges a calendar cell target to a locked, dated entry modal', async () => {
@@ -571,7 +571,7 @@ describe('Hours', () => {
 
   it('bridges a table Edit action to the shared entry modal', async () => {
     mockWritableListEntry();
-    vi.mocked(setTimeEntry).mockResolvedValue({
+    vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'meeting', taskId: null, taskTitle: null, sessionId: null,
@@ -593,7 +593,7 @@ describe('Hours', () => {
     expect(screen.getByLabelText('Note')).toHaveValue('Planning meeting');
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(
+    await waitFor(() => expect(setHours).toHaveBeenCalledWith(
       expect.any(Object),
       'entry-1',
     ));
@@ -608,12 +608,12 @@ describe('Hours', () => {
       categoryLabel: 'Program Delivery', taskId: null, taskTitle: null,
       sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
-    vi.mocked(getTimeEntries).mockResolvedValue({
+    vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
       data: { 'staff-1': { [workDate]: [item] } },
     });
-    vi.mocked(updateTimeEntryPlacement).mockResolvedValue({
+    vi.mocked(updateHoursPlacement).mockResolvedValue({
       ...item,
       staffId: 'staff-1',
       workDate: nextDate,
@@ -640,14 +640,14 @@ describe('Hours', () => {
     fireEvent.pointerMove(window, { pointerId: 1, clientX: 260, clientY: 120 });
     fireEvent.pointerUp(window, { pointerId: 1, clientX: 260, clientY: 120 });
 
-    await waitFor(() => expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', {
+    await waitFor(() => expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', {
       workDate: nextDate,
     }));
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {
     mockWritableListEntry();
-    vi.mocked(deleteTimeEntry).mockResolvedValue({ message: 'Deleted' });
+    vi.mocked(deleteHours).mockResolvedValue({ message: 'Deleted' });
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -660,6 +660,6 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    await waitFor(() => expect(deleteTimeEntry).toHaveBeenCalledWith('entry-1'));
+    await waitFor(() => expect(deleteHours).toHaveBeenCalledWith('entry-1'));
   });
 });

@@ -4,7 +4,7 @@ import { cursorListFields } from './listQuerySchemas';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RANGE_DAYS = 366;
 
-export const timeEntryCategorySchema = z.enum([
+export const hoursCategorySchema = z.enum([
   'program_delivery',
   'planning_prep',
   'meeting',
@@ -24,11 +24,11 @@ const dateSchema = z.string()
       && parsed.getUTCDate() === day;
   }, 'Date must be a valid calendar date');
 
-export const timeEntryParamsSchema = z.object({
+export const hoursParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid time entry ID') }),
 });
 
-export const timeEntryQuerySchema = z.object({
+export const hoursQuerySchema = z.object({
   query: z.object({
     start: dateSchema.optional(),
     end: dateSchema.optional(),
@@ -51,10 +51,10 @@ const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value
   typeof value === 'string' && value ? value.split(',') : []
 ), z.array(schema));
 
-export const timeEntryListQuerySchema = z.object({
+export const hoursListQuerySchema = z.object({
   query: z.object({
     staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
-    categories: commaSeparated(timeEntryCategorySchema),
+    categories: commaSeparated(hoursCategorySchema),
     programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
     types: commaSeparated(z.enum(['task', 'session', 'other'])),
     cycleId: z.string().uuid('Invalid cycle ID').optional(),
@@ -63,58 +63,58 @@ export const timeEntryListQuerySchema = z.object({
   }),
 });
 
-export const timeEntrySessionQuerySchema = z.object({
+export const hoursSessionQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
     workDate: dateSchema,
   }),
 });
 
-export const timeEntryOverviewQuerySchema = z.object({
+export const hoursOverviewQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
     cycleId: z.string().uuid('Invalid cycle ID'),
   }),
 });
 
-const sharedTimeEntryFields = {
+const sharedHoursFields = {
   staffId: z.string().uuid('Invalid staff ID'),
   hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),
   note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
 };
 
-const datedTimeEntryFields = { ...sharedTimeEntryFields, workDate: dateSchema };
+const datedHoursFields = { ...sharedHoursFields, workDate: dateSchema };
 
-export const setTimeEntrySchema = z.object({
+export const setHoursSchema = z.object({
   body: z.discriminatedUnion('source', [
     z.object({
-      ...datedTimeEntryFields,
+      ...datedHoursFields,
       source: z.literal('regular'),
       programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
-      category: timeEntryCategorySchema.exclude(['program_delivery']),
+      category: hoursCategorySchema.exclude(['program_delivery']),
     }),
     z.object({
-      ...datedTimeEntryFields,
+      ...datedHoursFields,
       source: z.literal('task'),
       taskId: z.string().uuid('Invalid task ID'),
       completeTask: z.boolean().optional().default(false),
     }),
     z.object({
-      ...sharedTimeEntryFields,
+      ...sharedHoursFields,
       source: z.literal('session'),
       sessionId: z.string().uuid('Invalid session ID'),
     }),
   ]),
 });
 
-export const updateTimeEntryPlacementSchema = z.object({
+export const updateHoursPlacementSchema = z.object({
   body: z.object({ workDate: dateSchema }),
 });
 
-export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema.shape.query>;
-export type TimeEntryListQuery = z.infer<typeof timeEntryListQuerySchema.shape.query>;
-export type TimeEntryOverviewQuery = z.infer<typeof timeEntryOverviewQuerySchema.shape.query>;
-export type TimeEntrySessionQuery = z.infer<typeof timeEntrySessionQuerySchema.shape.query>;
-export type SetTimeEntryInput = z.infer<typeof setTimeEntrySchema.shape.body>;
-export type UpdateTimeEntryPlacementInput = z.infer<typeof updateTimeEntryPlacementSchema.shape.body>;
-export type TimeEntryCategory = z.infer<typeof timeEntryCategorySchema>;
+export type HoursQuery = z.infer<typeof hoursQuerySchema.shape.query>;
+export type HoursListQuery = z.infer<typeof hoursListQuerySchema.shape.query>;
+export type HoursOverviewQuery = z.infer<typeof hoursOverviewQuerySchema.shape.query>;
+export type HoursSessionQuery = z.infer<typeof hoursSessionQuerySchema.shape.query>;
+export type SetHoursInput = z.infer<typeof setHoursSchema.shape.body>;
+export type UpdateHoursPlacementInput = z.infer<typeof updateHoursPlacementSchema.shape.body>;
+export type HoursCategory = z.infer<typeof hoursCategorySchema>;

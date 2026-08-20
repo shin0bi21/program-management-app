@@ -26,7 +26,7 @@ function backendSuitesFor(file) {
   if (/backend\/(?:tests\/tasks\/|src\/(?:controllers\/taskController|policies\/taskPolicy|routes\/taskRoutes|services\/staff\/tasks\/|validation\/taskSchemas))/.test(file)) {
     return ['tasks', 'hours'];
   }
-  if (/backend\/(?:tests\/hours\/|src\/(?:controllers\/timeEntryController|policies\/timeEntryPolicy|routes\/timeEntryRoutes|services\/staff\/hours\/|validation\/timeEntrySchemas)|db\/scripts\/seed-hours-demo)/.test(file)) {
+  if (/backend\/(?:tests\/hours\/|src\/(?:controllers\/hoursController|policies\/hoursPolicy|routes\/hoursRoutes|services\/staff\/hours\/|validation\/hoursSchemas)|db\/scripts\/seed-hours-demo)/.test(file)) {
     return ['hours', 'tasks'];
   }
   if (file === 'backend/src/policies/staffResourcePolicy.ts') return ['tasks', 'hours'];

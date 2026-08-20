@@ -4,8 +4,8 @@ import ResourceCalendar from '../../../../../common/components/ResourceCalendar/
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
 import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../../../common/components/ResourceCalendar/types';
-import { getTimeEntries } from '../../../../../common/features/timeEntries/timeEntries.api';
-import type { StaffResource, TimeEntryCategory, HoursItem } from '../../../../../common/features/timeEntries/types';
+import { getHours } from '../../../../../common/features/hours/hours.api';
+import type { StaffResource, HoursCategory, HoursItem } from '../../../../../common/features/hours/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type {
   HoursCalendarCache,
@@ -30,7 +30,7 @@ const summarizeOverflow = ({ items, itemCount }: { items: readonly HoursItem[]; 
 interface HoursCalendarViewProps {
   resources: StaffResource[];
   staffIds: string[];
-  categories: TimeEntryCategory[];
+  categories: HoursCategory[];
   programIds: string[];
   types: HoursEntryType[];
   cycleId: string;
@@ -51,7 +51,7 @@ export default function HoursCalendarView({
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove,
 }: HoursCalendarViewProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    (await getTimeEntries({ start: start.key, end: end.key })).data
+    (await getHours({ start: start.key, end: end.key })).data
   ), []);
   const calendar = usePeriodDataBuffer({
     load: loadRange,
@@ -67,7 +67,7 @@ export default function HoursCalendarView({
     : resources, [resources, staffIds]);
   const visibleData = useHoursCalendarData(calendar.data, categories, programIds, types, cycleId);
 
-  const moveTimeEntry = ({ item, source, destination }: ItemDropContext<StaffResource, HoursItem>) => onMove({
+  const moveHours = ({ item, source, destination }: ItemDropContext<StaffResource, HoursItem>) => onMove({
     item,
     source: { resourceId: source.resource.id, date: source.period.key },
     destination: { resourceId: destination.resource.id, date: destination.period.key },
@@ -106,7 +106,7 @@ export default function HoursCalendarView({
       onPeriodsBuilt={calendar.onPeriodsBuilt}
       onInitialPeriods={calendar.initialize}
       onPeriodsReset={calendar.reset}
-      onItemDrop={canWrite ? moveTimeEntry : undefined}
+      onItemDrop={canWrite ? moveHours : undefined}
       canDropItem={canDropWithinStaff}
       getItemCapabilities={({ resource, data: item }) => ({
         draggable: canWrite && resource.writable && !item.sessionId && !isEntryPending(item.id),

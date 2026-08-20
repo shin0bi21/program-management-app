@@ -1,6 +1,6 @@
-import type { TimeEntryCategory } from './types';
+import type { HoursCategory } from './types';
 
-export const TIME_ENTRY_CATEGORY_OPTIONS: Array<{ value: TimeEntryCategory; label: string }> = [
+export const HOURS_CATEGORY_OPTIONS: Array<{ value: HoursCategory; label: string }> = [
   { value: 'program_delivery', label: 'Program Delivery' },
   { value: 'planning_prep', label: 'Planning / Prep' },
   { value: 'meeting', label: 'Meeting' },
@@ -10,6 +10,6 @@ export const TIME_ENTRY_CATEGORY_OPTIONS: Array<{ value: TimeEntryCategory; labe
   { value: 'other', label: 'Other' },
 ];
 
-export const OTHER_TIME_ENTRY_CATEGORY_OPTIONS = TIME_ENTRY_CATEGORY_OPTIONS.filter(
+export const OTHER_HOURS_CATEGORY_OPTIONS = HOURS_CATEGORY_OPTIONS.filter(
   option => option.value !== 'program_delivery',
 );

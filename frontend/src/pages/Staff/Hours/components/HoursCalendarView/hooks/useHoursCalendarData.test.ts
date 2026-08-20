@@ -2,7 +2,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
-import type { HoursItem } from '../../../../../../common/features/timeEntries/types';
+import type { HoursItem } from '../../../../../../common/features/hours/types';
 import { useHoursCalendarData } from './useHoursCalendarData';
 
 const entry = (id: string, category: HoursItem['category']): HoursItem => ({

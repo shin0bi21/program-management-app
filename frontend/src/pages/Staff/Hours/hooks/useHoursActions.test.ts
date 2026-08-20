@@ -3,10 +3,10 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  deleteTimeEntry,
-  setTimeEntry,
-  updateTimeEntryPlacement,
-} from '../../../../common/features/timeEntries/timeEntries.api';
+  deleteHours,
+  setHours,
+  updateHoursPlacement,
+} from '../../../../common/features/hours/hours.api';
 import { makeHoursItem } from '../../../../tests/factories/hours';
 import {
   createQueryClientWrapper,
@@ -14,10 +14,10 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 import useHoursActions from './useHoursActions';
 
-vi.mock('../../../../common/features/timeEntries/timeEntries.api', () => ({
-  deleteTimeEntry: vi.fn(),
-  setTimeEntry: vi.fn(),
-  updateTimeEntryPlacement: vi.fn(),
+vi.mock('../../../../common/features/hours/hours.api', () => ({
+  deleteHours: vi.fn(),
+  setHours: vi.fn(),
+  updateHoursPlacement: vi.fn(),
 }));
 
 function deferred<T>() {
@@ -34,8 +34,8 @@ function renderActions() {
   const client = createTestQueryClient();
   const onEntryRemoved = vi.fn();
   const rendered = renderHook(() => useHoursActions({
-    timeEntryQueryKey: ['time-entries'],
-    timeEntryListQueryKey: ['time-entries', 'list'],
+    hoursQueryKey: ['time-entries'],
+    hoursListQueryKey: ['time-entries', 'list'],
     taskQueryKey: ['tasks'],
     onEntryRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
@@ -56,17 +56,17 @@ describe('useHoursActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('creates and edits through the exact adapter signatures then refreshes every affected owner', async () => {
-    vi.mocked(setTimeEntry).mockResolvedValue(saved);
+    vi.mocked(setHours).mockResolvedValue(saved);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const input = {
       source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', workDate: '2026-08-19', hours: 2, note: 'Planning',
     };
 
-    await act(async () => rendered.result.current.saveTimeEntry(input));
-    expect(setTimeEntry).toHaveBeenLastCalledWith(input);
-    await act(async () => rendered.result.current.saveTimeEntry(input, 'entry-1'));
-    expect(setTimeEntry).toHaveBeenLastCalledWith(input, 'entry-1');
+    await act(async () => rendered.result.current.saveHours(input));
+    expect(setHours).toHaveBeenLastCalledWith(input);
+    await act(async () => rendered.result.current.saveHours(input, 'entry-1'));
+    expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
     expect(rendered.upsert).toHaveBeenCalledWith(
       'staff-1',
       '2026-08-19',
@@ -79,7 +79,7 @@ describe('useHoursActions', () => {
   });
 
   it('owns confirmation and deletion reconciliation together', async () => {
-    vi.mocked(deleteTimeEntry).mockResolvedValue({ message: 'deleted' });
+    vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted' });
     const rendered = renderActions();
     const target = {
       resourceId: 'staff-1', date: '2026-08-19', item: makeHoursItem({ id: 'entry-1', taskId: 'task-1' }),
@@ -89,15 +89,15 @@ describe('useHoursActions', () => {
     expect(rendered.result.current.confirmAction).toEqual(expect.objectContaining({ title: 'Delete logged hours' }));
     await act(async () => rendered.result.current.confirmAction?.onConfirm());
 
-    expect(deleteTimeEntry).toHaveBeenCalledWith('entry-1');
+    expect(deleteHours).toHaveBeenCalledWith('entry-1');
     expect(rendered.remove).toHaveBeenCalledWith('entry-1');
     expect(rendered.onEntryRemoved).toHaveBeenCalledWith('entry-1');
   });
 
   it('blocks another action for the same entry while one is pending', async () => {
     const moveRequest = deferred<typeof saved>();
-    vi.mocked(updateTimeEntryPlacement).mockReturnValue(moveRequest.promise);
-    vi.mocked(setTimeEntry).mockResolvedValue(saved);
+    vi.mocked(updateHoursPlacement).mockReturnValue(moveRequest.promise);
+    vi.mocked(setHours).mockResolvedValue(saved);
     const rendered = renderActions();
     const item = makeHoursItem({ id: 'entry-1', taskId: 'task-1' });
     const input = {
@@ -111,7 +111,7 @@ describe('useHoursActions', () => {
 
     let moving!: Promise<void>;
     act(() => {
-      moving = rendered.result.current.moveTimeEntry({
+      moving = rendered.result.current.moveHours({
         item,
         source: { resourceId: 'staff-1', date: '2026-08-18' },
         destination: { resourceId: 'staff-1', date: '2026-08-19' },
@@ -119,8 +119,8 @@ describe('useHoursActions', () => {
     });
 
     expect(rendered.result.current.isEntryPending(item.id)).toBe(true);
-    await act(async () => rendered.result.current.saveTimeEntry(input, item.id));
-    expect(setTimeEntry).not.toHaveBeenCalled();
+    await act(async () => rendered.result.current.saveHours(input, item.id));
+    expect(setHours).not.toHaveBeenCalled();
 
     await act(async () => {
       moveRequest.resolve(saved);
@@ -128,15 +128,15 @@ describe('useHoursActions', () => {
     });
 
     expect(rendered.result.current.isEntryPending(item.id)).toBe(false);
-    expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', { workDate: '2026-08-19' });
+    expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', { workDate: '2026-08-19' });
   });
 
   it('restores an optimistic move and releases the entry after placement fails', async () => {
-    vi.mocked(updateTimeEntryPlacement).mockRejectedValue(new Error('move failed'));
+    vi.mocked(updateHoursPlacement).mockRejectedValue(new Error('move failed'));
     const rendered = renderActions();
     const item = makeHoursItem({ id: 'entry-1' });
 
-    await act(async () => rendered.result.current.moveTimeEntry({
+    await act(async () => rendered.result.current.moveHours({
       item,
       source: { resourceId: 'staff-1', date: '2026-08-18' },
       destination: { resourceId: 'staff-1', date: '2026-08-19' },
@@ -153,8 +153,8 @@ describe('useHoursActions', () => {
   });
 
   it('does not reconcile failed save or delete actions', async () => {
-    vi.mocked(setTimeEntry).mockRejectedValueOnce(new Error('save failed'));
-    vi.mocked(deleteTimeEntry).mockRejectedValueOnce(new Error('delete failed'));
+    vi.mocked(setHours).mockRejectedValueOnce(new Error('save failed'));
+    vi.mocked(deleteHours).mockRejectedValueOnce(new Error('delete failed'));
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const item = makeHoursItem({ id: 'entry-1', taskId: 'task-1' });
@@ -168,7 +168,7 @@ describe('useHoursActions', () => {
     };
 
     await act(async () => {
-      await expect(rendered.result.current.saveTimeEntry(input, 'entry-1')).rejects.toThrow('save failed');
+      await expect(rendered.result.current.saveHours(input, 'entry-1')).rejects.toThrow('save failed');
     });
     act(() => rendered.result.current.requestDelete({
       resourceId: 'staff-1', date: '2026-08-19', item,

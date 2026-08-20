@@ -6,10 +6,10 @@ export interface StaffResource {
   role: string;
   writable: boolean;
 }
-export interface TimeEntryProgram { id: string; name: string }
-export interface TimeEntryCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
-export type TimeEntryCategory = 'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other';
-export interface TimeEntrySession {
+export interface HoursProgram { id: string; name: string }
+export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
+export type HoursCategory = 'program_delivery' | 'planning_prep' | 'meeting' | 'administration' | 'outreach' | 'maintenance' | 'other';
+export interface HoursSession {
   id: string; label: string; programId: string; programName: string; workDate: string; startsAt: string;
 }
 
@@ -19,7 +19,7 @@ export interface HoursItem {
   programName: string | null;
   cycleId: string;
   cycleName: string;
-  category: TimeEntryCategory;
+  category: HoursCategory;
   categoryLabel: string;
   taskId: string | null;
   taskTitle: string | null;

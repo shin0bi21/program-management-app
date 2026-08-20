@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
-import { setTimeEntry, type SetTimeEntryInput } from '../../../../common/features/timeEntries/timeEntries.api';
+import { setHours, type SetHoursInput } from '../../../../common/features/hours/hours.api';
 import {
   deleteTask,
   updateTaskPlacement,
@@ -21,7 +21,7 @@ const EMPTY_CALENDAR_CACHE: TaskCalendarCache = {
 interface TaskActionHandlers {
   taskQueryKey: readonly unknown[];
   taskListQueryKey: readonly unknown[];
-  timeEntryQueryKey: readonly unknown[];
+  hoursQueryKey: readonly unknown[];
   onTaskSynced?: (task: Task) => void;
   onTaskRemoved?: (taskId: string) => void;
 }
@@ -29,7 +29,7 @@ interface TaskActionHandlers {
 export default function useTaskActions({
   taskQueryKey,
   taskListQueryKey,
-  timeEntryQueryKey,
+  hoursQueryKey,
   onTaskSynced,
   onTaskRemoved,
 }: TaskActionHandlers) {
@@ -133,13 +133,13 @@ export default function useTaskActions({
     }
   }, [finishTaskAction, startTaskAction, syncTask]);
 
-  const logHours = useCallback(async (input: SetTimeEntryInput) => {
-    await setTimeEntry(input);
+  const logHours = useCallback(async (input: SetHoursInput) => {
+    await setHours(input);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: taskQueryKey }),
-      queryClient.invalidateQueries({ queryKey: timeEntryQueryKey }),
+      queryClient.invalidateQueries({ queryKey: hoursQueryKey }),
     ]);
-  }, [queryClient, taskQueryKey, timeEntryQueryKey]);
+  }, [queryClient, taskQueryKey, hoursQueryKey]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 

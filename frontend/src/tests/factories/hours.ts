@@ -1,4 +1,4 @@
-import type { HoursItem } from '../../common/features/timeEntries/types';
+import type { HoursItem } from '../../common/features/hours/types';
 
 export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
   return {

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
-import type { StaffResource, TimeEntryProgram } from '../../../../common/features/timeEntries/types';
+import type { StaffResource, HoursProgram } from '../../../../common/features/hours/types';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 
 import type { HoursPreference, HoursPreferences, HoursSortKey } from '../types';
@@ -25,7 +25,7 @@ function resolveHoursPreference(
   preference: HoursPreference | null,
   role: string,
   resources: readonly StaffResource[],
-  programs: readonly TimeEntryProgram[],
+  programs: readonly HoursProgram[],
   cycles: readonly ProgramCycle[],
   preserveSavedOptions: boolean,
   preserveSavedCycle: boolean,
@@ -70,7 +70,7 @@ export default function useHoursPreferences({
 }: {
   role: string | null;
   resources: readonly StaffResource[];
-  programs: readonly TimeEntryProgram[];
+  programs: readonly HoursProgram[];
   cycles: readonly ProgramCycle[];
   loadingDependencies: boolean;
   optionsError: boolean;

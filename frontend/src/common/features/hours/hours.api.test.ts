@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
-import { getTimeEntryList, setTimeEntry, updateTimeEntryPlacement } from './timeEntries.api';
+import { getHoursList, setHours, updateHoursPlacement } from './hours.api';
 
 vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn() },
@@ -11,7 +11,7 @@ describe('time-entry API', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('serializes list filters and cursor pagination', () => {
-    getTimeEntryList({
+    getHoursList({
       staffIds: ['staff-1'],
       categories: ['outreach'],
       programIds: ['program-1'],
@@ -41,9 +41,9 @@ describe('time-entry API', () => {
       note: '',
     };
 
-    setTimeEntry(input);
-    setTimeEntry(input, 'entry-1');
-    updateTimeEntryPlacement('entry-1', { workDate: '2026-08-20' });
+    setHours(input);
+    setHours(input, 'entry-1');
+    updateHoursPlacement('entry-1', { workDate: '2026-08-20' });
 
     expect(apiClient.post).toHaveBeenCalledWith('/time-entries', input);
     expect(apiClient.put).toHaveBeenCalledWith('/time-entries/entry-1', input);

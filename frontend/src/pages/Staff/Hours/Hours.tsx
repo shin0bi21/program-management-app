@@ -8,7 +8,7 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
+import HoursModal from '../../../common/features/hours/components/HoursModal/HoursModal';
 import HoursCalendarView from './components/HoursCalendarView/HoursCalendarView';
 import HoursDashboard from './components/HoursDashboard/HoursDashboard';
 import HoursTableView from './components/HoursTableView/HoursTableView';
@@ -23,16 +23,16 @@ import useHoursFilters from './hooks/useHoursFilters';
 import useHoursPreferences from './hooks/useHoursPreferences';
 import useHoursSelection from './hooks/useHoursSelection';
 
-import type { SetTimeEntryInput } from '../../../common/features/timeEntries/timeEntries.api';
-import type { TimeEntryModalState, HoursAddTarget, HoursEntryTarget } from './types';
+import type { SetHoursInput } from '../../../common/features/hours/hours.api';
+import type { HoursModalState, HoursAddTarget, HoursEntryTarget } from './types';
 
 import './Hours.css';
 
 // Page-owned cache and persisted-column contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
-const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
-const TIME_ENTRY_LIST_QUERY_KEY = [...TIME_ENTRY_QUERY_KEY, 'list'] as const;
-const TIME_ENTRY_OPTIONS_QUERY_KEY = ['time-entry-options'] as const;
+const HOURS_QUERY_KEY = ['time-entries'] as const;
+const HOURS_LIST_QUERY_KEY = [...HOURS_QUERY_KEY, 'list'] as const;
+const HOURS_OPTIONS_QUERY_KEY = ['time-entry-options'] as const;
 const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 const HOURS_COLUMN_KEYS = [
@@ -69,11 +69,11 @@ export default function Hours() {
   const canCompleteTask = permissions.includes('write:tasks');
 
   // Modal state.
-  const [timeEntryModalState, setTimeEntryModalState] = useState<TimeEntryModalState>(null);
+  const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
   // Page data and persisted controls.
   const pageData = useHoursData(
-    TIME_ENTRY_OPTIONS_QUERY_KEY,
+    HOURS_OPTIONS_QUERY_KEY,
     PROGRAM_CYCLES_QUERY_KEY,
     currentUserId,
   );
@@ -110,25 +110,25 @@ export default function Hours() {
   });
 
   const actions = useHoursActions({
-    timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
-    timeEntryListQueryKey: TIME_ENTRY_LIST_QUERY_KEY,
+    hoursQueryKey: HOURS_QUERY_KEY,
+    hoursListQueryKey: HOURS_LIST_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
     onEntryRemoved: entryId => {
-      setTimeEntryModalState(current => (
+      setHoursModalState(current => (
         current?.mode === 'edit' && current.target.item.id === entryId ? null : current
       ));
     },
   });
 
-  const openAddTimeEntryModal = useCallback((initialValues: HoursAddTarget) => {
-    setTimeEntryModalState({ mode: 'add', initialValues });
+  const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
+    setHoursModalState({ mode: 'add', initialValues });
   }, []);
 
-  const openEditTimeEntryModal = useCallback((target: HoursEntryTarget) => {
-    setTimeEntryModalState({ mode: 'edit', target });
+  const openEditHoursModal = useCallback((target: HoursEntryTarget) => {
+    setHoursModalState({ mode: 'edit', target });
   }, []);
 
-  const closeTimeEntryModal = useCallback(() => setTimeEntryModalState(null), []);
+  const closeHoursModal = useCallback(() => setHoursModalState(null), []);
 
   const table = useHoursTable({
     canWrite,
@@ -136,7 +136,7 @@ export default function Hours() {
     preferences: hoursPreferences.preferences,
     updatePreferences: hoursPreferences.updatePreferences,
     isEntryPending: actions.isEntryPending,
-    onEdit: openEditTimeEntryModal,
+    onEdit: openEditHoursModal,
     onDelete: actions.requestDelete,
   });
 
@@ -158,7 +158,7 @@ export default function Hours() {
   );
   const hoursTableView = (
     <HoursTableView
-      queryKey={TIME_ENTRY_LIST_QUERY_KEY}
+      queryKey={HOURS_LIST_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={table.hiddenColumns}
       staffIds={filters.staffIds}
@@ -190,10 +190,10 @@ export default function Hours() {
       calendarCacheRef={actions.calendarCacheRef}
       isEntryPending={actions.isEntryPending}
       onStaffSelect={selection.selectStaff}
-      onEdit={openEditTimeEntryModal}
+      onEdit={openEditHoursModal}
       onDelete={actions.requestDelete}
-      onAdd={openAddTimeEntryModal}
-      onMove={actions.moveTimeEntry}
+      onAdd={openAddHoursModal}
+      onMove={actions.moveHours}
     />
   );
 
@@ -201,10 +201,10 @@ export default function Hours() {
     ? { table: hoursTableView }
     : { calendar: hoursCalendarView };
 
-  const submitTimeEntry = (input: SetTimeEntryInput) => (
-    actions.saveTimeEntry(
+  const submitHours = (input: SetHoursInput) => (
+    actions.saveHours(
       input,
-      timeEntryModalState?.mode === 'edit' ? timeEntryModalState.target.item.id : undefined,
+      hoursModalState?.mode === 'edit' ? hoursModalState.target.item.id : undefined,
     )
   );
 
@@ -217,9 +217,9 @@ export default function Hours() {
           triggerLabel="+ Add"
           ariaLabel="Add hours"
           items={[
-            { id: 'session', label: 'Session Hours', onClick: () => openAddTimeEntryModal({ source: 'session' }) },
-            { id: 'task', label: 'Task Hours', onClick: () => openAddTimeEntryModal({ source: 'task' }) },
-            { id: 'regular', label: 'Regular Hours', onClick: () => openAddTimeEntryModal({ source: 'regular' }) },
+            { id: 'session', label: 'Session Hours', onClick: () => openAddHoursModal({ source: 'session' }) },
+            { id: 'task', label: 'Task Hours', onClick: () => openAddHoursModal({ source: 'task' }) },
+            { id: 'regular', label: 'Regular Hours', onClick: () => openAddHoursModal({ source: 'regular' }) },
           ]}
         /> : undefined}
 
@@ -260,7 +260,7 @@ export default function Hours() {
       {!hoursPreferences.ready ? <p role="status">Loading saved filters…</p> : <PageBody
         ariaLabel="Hours overview and entries"
         dashboard={<HoursDashboard
-          queryKey={TIME_ENTRY_QUERY_KEY}
+          queryKey={HOURS_QUERY_KEY}
           staff={selection.selectedStaff}
           cycle={overviewCycle}
         />}
@@ -268,25 +268,25 @@ export default function Hours() {
       />}
     </main>
 
-    <TimeEntryModal
-      isOpen={timeEntryModalState !== null}
+    <HoursModal
+      isOpen={hoursModalState !== null}
       resources={pageData.writableResources}
       programs={pageData.programs}
-      onClose={closeTimeEntryModal}
-      onAdd={submitTimeEntry}
-      initialResourceId={timeEntryModalState?.mode === 'edit'
-        ? timeEntryModalState.target.resourceId
-        : timeEntryModalState?.initialValues.resourceId ?? currentUserId}
-      initialDate={timeEntryModalState?.mode === 'edit'
-        ? timeEntryModalState.target.date
-        : timeEntryModalState?.initialValues.date}
-      initialSource={timeEntryModalState?.mode === 'add'
-        ? timeEntryModalState.initialValues.source
+      onClose={closeHoursModal}
+      onAdd={submitHours}
+      initialResourceId={hoursModalState?.mode === 'edit'
+        ? hoursModalState.target.resourceId
+        : hoursModalState?.initialValues.resourceId ?? currentUserId}
+      initialDate={hoursModalState?.mode === 'edit'
+        ? hoursModalState.target.date
+        : hoursModalState?.initialValues.date}
+      initialSource={hoursModalState?.mode === 'add'
+        ? hoursModalState.initialValues.source
         : undefined}
       canCompleteTask={canCompleteTask}
-      staffLocked={timeEntryModalState?.mode === 'edit'
-        || Boolean(timeEntryModalState?.initialValues.resourceId)}
-      initialItem={timeEntryModalState?.mode === 'edit' ? timeEntryModalState.target.item : undefined}
+      staffLocked={hoursModalState?.mode === 'edit'
+        || Boolean(hoursModalState?.initialValues.resourceId)}
+      initialItem={hoursModalState?.mode === 'edit' ? hoursModalState.target.item : undefined}
     />
 
     <Modal

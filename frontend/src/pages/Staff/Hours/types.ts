@@ -1,10 +1,10 @@
-import type { TimeEntryListRowResponse } from '../../../common/features/timeEntries/timeEntries.api';
-import type { TimeEntryCategory, HoursItem } from '../../../common/features/timeEntries/types';
+import type { HoursListRowResponse } from '../../../common/features/hours/hours.api';
+import type { HoursCategory, HoursItem } from '../../../common/features/hours/types';
 import type { ListSort } from '../../../common/types/pagination';
 
 export type HoursSortKey = 'firstName' | 'lastName' | 'date' | 'program' | 'cycle' | 'category' | 'session' | 'hours' | 'note' | 'type';
 export type HoursEntryType = 'task' | 'session' | 'other';
-export type HoursListRow = TimeEntryListRowResponse;
+export type HoursListRow = HoursListRowResponse;
 export type HoursView = 'calendar' | 'list';
 export type HoursEntryTarget = { resourceId: string; date: string; item: HoursItem };
 export type HoursEntryMove = {
@@ -17,7 +17,7 @@ export type HoursAddTarget = {
   date?: string;
   source?: 'regular' | 'task' | 'session';
 };
-export type TimeEntryModalState =
+export type HoursModalState =
   | { mode: 'add'; initialValues: HoursAddTarget }
   | { mode: 'edit'; target: HoursEntryTarget }
   | null;
@@ -31,7 +31,7 @@ export interface HoursPreference {
   view: HoursView;
   staffIds: string[];
   programIds: string[];
-  categories: TimeEntryCategory[];
+  categories: HoursCategory[];
   types?: HoursEntryType[];
   cycleId: string | null;
   sorting?: ListSort<HoursSortKey>;
@@ -43,7 +43,7 @@ export interface HoursPreferences {
   view: HoursView;
   staffIds: string[];
   programIds: string[];
-  categories: TimeEntryCategory[];
+  categories: HoursCategory[];
   types: HoursEntryType[];
   cycleId: string | null;
   sorting: ListSort<HoursSortKey>;

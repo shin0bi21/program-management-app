@@ -1,5 +1,5 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
-import type { TimeEntryCategory } from '../../../../../common/features/timeEntries/types';
+import type { HoursCategory } from '../../../../../common/features/hours/types';
 import type { ListSort } from '../../../../../common/types/pagination';
 import type { HoursEntryType, HoursListRow, HoursSortKey } from '../../types';
 import useHoursList from './hooks/useHoursList';
@@ -9,7 +9,7 @@ interface HoursTableViewProps {
   columns: TableColumn<HoursListRow>[];
   hiddenColumnKeys: string[];
   staffIds: string[];
-  categories: TimeEntryCategory[];
+  categories: HoursCategory[];
   programIds: string[];
   types: HoursEntryType[];
   cycleId?: string;

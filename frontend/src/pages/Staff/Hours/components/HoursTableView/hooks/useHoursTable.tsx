@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumn } from '../../../../../../common/components/Table/Table';
-import type { StaffResource, HoursItem } from '../../../../../../common/features/timeEntries/types';
+import type { StaffResource, HoursItem } from '../../../../../../common/features/hours/types';
 import type { ListSort } from '../../../../../../common/types/pagination';
 import { formatShortDate } from '../../../../../../common/utils/date';
 

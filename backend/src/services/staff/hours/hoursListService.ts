@@ -1,16 +1,16 @@
 import { sql } from '../../../db/client';
-import { timeEntryReadScopePredicate } from '../../../policies/timeEntryPolicy';
+import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type { TimeEntryListQuery } from '../../../validation/timeEntrySchemas';
+import type { HoursListQuery } from '../../../validation/hoursSchemas';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 import {
-  timeEntryCategoryLabels,
-  timeEntryRecordColumns,
-  timeEntryRecordFrom,
-  type TimeEntryRow,
-} from './timeEntryRecordQuery';
+  hoursCategoryLabels,
+  hoursRecordColumns,
+  hoursRecordFrom,
+  type HoursRow,
+} from './hoursRecordQuery';
 
-export async function getTimeEntryList(actor: AccessTokenPayload, query: TimeEntryListQuery) {
+export async function getHoursList(actor: AccessTokenPayload, query: HoursListQuery) {
   const cursor = decodeCursor(query.cursor);
   const direction = query.direction;
   const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
@@ -21,15 +21,15 @@ export async function getTimeEntryList(actor: AccessTokenPayload, query: TimeEnt
     note: sql`LOWER(entry.note)`, type: entryType,
   }[query.sort]!;
   const search = query.search ? `%${query.search}%` : null;
-  const rows = await sql<Array<TimeEntryRow & { staffFirstName: string; staffLastName: string; staffName: string; cursorValue: string }>>`
-    SELECT * FROM (SELECT ${timeEntryRecordColumns},
+  const rows = await sql<Array<HoursRow & { staffFirstName: string; staffLastName: string; staffName: string; cursorValue: string }>>`
+    SELECT * FROM (SELECT ${hoursRecordColumns},
       staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
       CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
       ${sortValue} AS cursor_value,
       CONCAT_WS(' ', staff.first_name, staff.last_name, program.name, cycle.name, entry.category::text,
         task.title, session.theme, entry.note, entry.work_date::text) AS search_value
-    ${timeEntryRecordFrom}
-    WHERE ${timeEntryReadScopePredicate(actor, sql`entry.staff_id`)}
+    ${hoursRecordFrom}
+    WHERE ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
       AND ${query.staffIds.length ? sql`entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql`TRUE`}
       AND ${query.categories.length ? sql`entry.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}
       AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`entry.program_id IS NULL OR` : sql``}
@@ -50,7 +50,7 @@ export async function getTimeEntryList(actor: AccessTokenPayload, query: TimeEnt
     item: {
       id: row.id, programId: row.programId, programName: row.programName, cycleId: row.cycleId,
       cycleName: row.cycleName, cycleStartsOn: row.cycleStartsOn, cycleEndsOn: row.cycleEndsOn,
-      category: row.category, categoryLabel: timeEntryCategoryLabels[row.category], taskId: row.taskId,
+      category: row.category, categoryLabel: hoursCategoryLabels[row.category], taskId: row.taskId,
       taskTitle: row.taskTitle, sessionId: row.sessionId, sessionLabel: row.sessionLabel,
       hours: Number(row.hours), note: row.note,
     },

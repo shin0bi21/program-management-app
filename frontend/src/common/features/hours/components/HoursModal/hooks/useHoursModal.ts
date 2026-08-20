@@ -7,22 +7,22 @@ import useSubmitLock from '../../../../../hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/clientErrors';
 import { getTasks } from '../../../../tasks/tasks.api';
 import type { Task } from '../../../../tasks/types';
-import { getTimeEntrySessions, type SetTimeEntryInput } from '../../../timeEntries.api';
+import { getHoursSessions, type SetHoursInput } from '../../../hours.api';
 import type {
   StaffResource,
-  TimeEntryCategory,
-  TimeEntryProgram,
+  HoursCategory,
+  HoursProgram,
   HoursItem,
 } from '../../../types';
 
-type TimeEntrySource = 'regular' | 'task' | 'session';
+type HoursSource = 'regular' | 'task' | 'session';
 
-interface TimeEntryDraft {
+interface HoursDraft {
   resourceId: string;
-  source: TimeEntrySource;
+  source: HoursSource;
   programId: string;
   date: string;
-  category: Exclude<TimeEntryCategory, 'program_delivery'>;
+  category: Exclude<HoursCategory, 'program_delivery'>;
   taskId: string;
   completeTask: boolean;
   sessionId: string;
@@ -30,20 +30,20 @@ interface TimeEntryDraft {
   note: string;
 }
 
-export interface UseTimeEntryModalOptions {
+export interface UseHoursModalOptions {
   isOpen: boolean;
   resources: readonly StaffResource[];
-  programs: readonly TimeEntryProgram[];
-  onAdd: (input: SetTimeEntryInput) => Promise<void>;
+  programs: readonly HoursProgram[];
+  onAdd: (input: SetHoursInput) => Promise<void>;
   initialResourceId?: string;
   initialDate?: string;
-  initialSource?: TimeEntrySource;
+  initialSource?: HoursSource;
   initialTask?: Task;
   initialItem?: HoursItem;
   canCompleteTask?: boolean;
 }
 
-type InitialDraftOptions = Pick<UseTimeEntryModalOptions,
+type InitialDraftOptions = Pick<UseHoursModalOptions,
   | 'resources'
   | 'programs'
   | 'initialResourceId'
@@ -60,7 +60,7 @@ function buildInitialDraft({
   initialSource = 'regular',
   initialTask,
   initialItem,
-}: InitialDraftOptions): TimeEntryDraft {
+}: InitialDraftOptions): HoursDraft {
   const preferredResourceId = initialTask?.assignee.id ?? initialResourceId;
   const resourceId = preferredResourceId
     && resources.some(resource => resource.id === preferredResourceId)
@@ -92,7 +92,7 @@ function buildInitialDraft({
   };
 }
 
-function getDraftError(draft: TimeEntryDraft) {
+function getDraftError(draft: HoursDraft) {
   if (!draft.resourceId) return 'Select a staff member.';
   if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
   if (draft.source === 'session' && !draft.sessionId) return 'Select a session.';
@@ -105,7 +105,7 @@ function getDraftError(draft: TimeEntryDraft) {
   return '';
 }
 
-export default function useTimeEntryModal(options: UseTimeEntryModalOptions) {
+export default function useHoursModal(options: UseHoursModalOptions) {
   const {
     isOpen,
     resources,
@@ -169,7 +169,7 @@ export default function useTimeEntryModal(options: UseTimeEntryModalOptions) {
 
   const sessionQuery = useQuery({
     queryKey: ['time-entry-sessions', draft.resourceId, draft.date],
-    queryFn: ({ signal }) => getTimeEntrySessions(draft.resourceId, draft.date, signal),
+    queryFn: ({ signal }) => getHoursSessions(draft.resourceId, draft.date, signal),
     enabled: isOpen && draft.source === 'session' && Boolean(draft.resourceId) && Boolean(draft.date),
   });
   const sessionOptions = sessionQuery.data ?? [];
@@ -181,7 +181,7 @@ export default function useTimeEntryModal(options: UseTimeEntryModalOptions) {
   const selectProgram = (programId: string) => {
     setDraft(current => ({ ...current, programId }));
   };
-  const selectCategory = (category: Exclude<TimeEntryCategory, 'program_delivery'>) => {
+  const selectCategory = (category: Exclude<HoursCategory, 'program_delivery'>) => {
     setDraft(current => ({ ...current, category }));
   };
   const selectTask = (taskId: string) => {
@@ -234,7 +234,7 @@ export default function useTimeEntryModal(options: UseTimeEntryModalOptions) {
     };
 
     try {
-      const input: SetTimeEntryInput = draft.source === 'task'
+      const input: SetHoursInput = draft.source === 'task'
         ? {
           ...shared,
           source: 'task',

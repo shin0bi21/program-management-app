@@ -3,12 +3,12 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
 import {
-  deleteTimeEntry,
-  setTimeEntry,
-  type SetTimeEntryInput,
-  updateTimeEntryPlacement,
-} from '../../../../common/features/timeEntries/timeEntries.api';
-import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../../common/features/timeEntries/timeEntryOptions';
+  deleteHours,
+  setHours,
+  type SetHoursInput,
+  updateHoursPlacement,
+} from '../../../../common/features/hours/hours.api';
+import { HOURS_CATEGORY_OPTIONS } from '../../../../common/features/hours/hoursOptions';
 
 import type {
   HoursCalendarCache,
@@ -22,13 +22,13 @@ const EMPTY_CALENDAR_CACHE: HoursCalendarCache = {
 };
 
 export default function useHoursActions({
-  timeEntryQueryKey,
-  timeEntryListQueryKey,
+  hoursQueryKey,
+  hoursListQueryKey,
   taskQueryKey,
   onEntryRemoved,
 }: {
-  timeEntryQueryKey: readonly unknown[];
-  timeEntryListQueryKey: readonly unknown[];
+  hoursQueryKey: readonly unknown[];
+  hoursListQueryKey: readonly unknown[];
   taskQueryKey: readonly unknown[];
   onEntryRemoved?: (entryId: string) => void;
 }) {
@@ -57,23 +57,23 @@ export default function useHoursActions({
   );
 
   const refreshOverview = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: [...timeEntryQueryKey, 'overview'] });
-  }, [queryClient, timeEntryQueryKey]);
+    void queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'overview'] });
+  }, [queryClient, hoursQueryKey]);
 
   const refreshRelatedData = useCallback(async (taskId: string | null) => {
-    const refreshes = [queryClient.invalidateQueries({ queryKey: timeEntryQueryKey })];
+    const refreshes = [queryClient.invalidateQueries({ queryKey: hoursQueryKey })];
     if (taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: taskQueryKey }));
     await Promise.all(refreshes);
-  }, [queryClient, taskQueryKey, timeEntryQueryKey]);
+  }, [queryClient, taskQueryKey, hoursQueryKey]);
 
-  const saveTimeEntry = useCallback(async (input: SetTimeEntryInput, entryId?: string) => {
+  const saveHours = useCallback(async (input: SetHoursInput, entryId?: string) => {
     if (entryId && !startEntryAction(entryId)) return;
 
     try {
       const saved = entryId
-        ? await setTimeEntry(input, entryId)
-        : await setTimeEntry(input);
-      const categoryLabel = TIME_ENTRY_CATEGORY_OPTIONS.find(
+        ? await setHours(input, entryId)
+        : await setHours(input);
+      const categoryLabel = HOURS_CATEGORY_OPTIONS.find(
         option => option.value === saved.category,
       )?.label ?? saved.category;
 
@@ -85,7 +85,7 @@ export default function useHoursActions({
     }
   }, [finishEntryAction, refreshOverview, refreshRelatedData, startEntryAction]);
 
-  const moveTimeEntry = useCallback(async ({
+  const moveHours = useCallback(async ({
     item,
     source,
     destination,
@@ -96,8 +96,8 @@ export default function useHoursActions({
     calendarCacheRef.current.upsert(destination.resourceId, destination.date, item);
 
     try {
-      const updated = await updateTimeEntryPlacement(item.id, { workDate: destination.date });
-      const categoryLabel = TIME_ENTRY_CATEGORY_OPTIONS.find(
+      const updated = await updateHoursPlacement(item.id, { workDate: destination.date });
+      const categoryLabel = HOURS_CATEGORY_OPTIONS.find(
         option => option.value === updated.category,
       )?.label ?? updated.category;
 
@@ -107,7 +107,7 @@ export default function useHoursActions({
       });
       refreshOverview();
 
-      const refreshes = [queryClient.invalidateQueries({ queryKey: timeEntryListQueryKey })];
+      const refreshes = [queryClient.invalidateQueries({ queryKey: hoursListQueryKey })];
       if (item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: taskQueryKey }));
       await Promise.all(refreshes);
     } catch {
@@ -116,7 +116,7 @@ export default function useHoursActions({
     } finally {
       finishEntryAction(item.id);
     }
-  }, [finishEntryAction, queryClient, refreshOverview, startEntryAction, taskQueryKey, timeEntryListQueryKey]);
+  }, [finishEntryAction, queryClient, refreshOverview, startEntryAction, taskQueryKey, hoursListQueryKey]);
 
   const requestDelete = useCallback((target: HoursEntryTarget) => setConfirmAction({
     title: 'Delete logged hours',
@@ -127,7 +127,7 @@ export default function useHoursActions({
       if (!startEntryAction(target.item.id)) return;
 
       try {
-        await deleteTimeEntry(target.item.id);
+        await deleteHours(target.item.id);
         calendarCacheRef.current.remove(target.item.id);
         onEntryRemoved?.(target.item.id);
         refreshOverview();
@@ -145,8 +145,8 @@ export default function useHoursActions({
     moveError,
     calendarCacheRef,
     isEntryPending,
-    saveTimeEntry,
-    moveTimeEntry,
+    saveHours,
+    moveHours,
     requestDelete,
     closeConfirmation,
   };

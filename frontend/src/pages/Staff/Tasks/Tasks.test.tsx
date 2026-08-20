@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getTaskList, getTaskOptions, getTasks, updateTaskStatus } from '../../../common/features/tasks/tasks.api';
-import { setTimeEntry } from '../../../common/features/timeEntries/timeEntries.api';
+import { setHours } from '../../../common/features/hours/hours.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
@@ -14,7 +14,7 @@ import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
 import type { TaskPreference } from './types';
 
-const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
+const HOURS_QUERY_KEY = ['time-entries'] as const;
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
@@ -27,7 +27,7 @@ vi.mock('../../../common/features/tasks/tasks.api', () => ({
   getTaskList: vi.fn(), getTaskOptions: vi.fn(), getTasks: vi.fn(), setTask: vi.fn(), updateTaskPlacement: vi.fn(),
   updateTaskStatus: vi.fn(), deleteTask: vi.fn(),
 }));
-vi.mock('../../../common/features/timeEntries/timeEntries.api', () => ({ setTimeEntry: vi.fn() }));
+vi.mock('../../../common/features/hours/hours.api', () => ({ setHours: vi.fn() }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => ({
     preference: { view: calendarTestState.view },
@@ -86,7 +86,7 @@ describe('Tasks', () => {
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
     });
-    vi.mocked(setTimeEntry).mockResolvedValue({
+    vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
       category: 'planning_prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
@@ -135,17 +135,17 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    const timeEntryForm = document.getElementById('time-entry-form')!;
-    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(within(timeEntryForm).getByRole('button', { name: 'Task' })).toBeDisabled();
+    const hoursForm = document.getElementById('time-entry-form')!;
+    expect(within(hoursForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
+    expect(within(hoursForm).getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(setHours).toHaveBeenCalledWith(expect.objectContaining({
       source: 'task', taskId: 'task-1', staffId: 'staff-1', note: 'Prepared materials',
     })));
-    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: TIME_ENTRY_QUERY_KEY }));
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: HOURS_QUERY_KEY }));
   });
 
   it('places dashboard cards directly in the shared page dashboard', async () => {

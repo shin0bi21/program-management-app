@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { getTasks } from '../../../../tasks/tasks.api';
-import { getTimeEntrySessions } from '../../../timeEntries.api';
-import useTimeEntryModal, { type UseTimeEntryModalOptions } from './useTimeEntryModal';
+import { getHoursSessions } from '../../../hours.api';
+import useHoursModal, { type UseHoursModalOptions } from './useHoursModal';
 
 vi.mock('../../../../tasks/tasks.api', () => ({ getTasks: vi.fn() }));
-vi.mock('../../../timeEntries.api', () => ({ getTimeEntrySessions: vi.fn() }));
+vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const resources = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -17,8 +17,8 @@ const resources = [
 ] as const;
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
 
-function renderWorkflow(overrides: Partial<UseTimeEntryModalOptions> = {}) {
-  const options: UseTimeEntryModalOptions = {
+function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
+  const options: UseHoursModalOptions = {
     isOpen: true,
     resources,
     programs,
@@ -27,7 +27,7 @@ function renderWorkflow(overrides: Partial<UseTimeEntryModalOptions> = {}) {
     ...overrides,
   };
   const queryClient = createTestQueryClient();
-  const hook = renderHook(() => useTimeEntryModal(options), {
+  const hook = renderHook(() => useHoursModal(options), {
     wrapper: createQueryClientWrapper(queryClient),
   });
   return { ...hook, options };
@@ -37,11 +37,11 @@ function submitEvent() {
   return { preventDefault: vi.fn() } as unknown as FormEvent;
 }
 
-describe('useTimeEntryModal', () => {
+describe('useHoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getTasks).mockResolvedValue([]);
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([]);
+    vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
   it('owns regular-time field transitions and reaches success after the command', async () => {
@@ -121,7 +121,7 @@ describe('useTimeEntryModal', () => {
   });
 
   it('reloads sessions by staff and date before submitting the selected session', async () => {
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([{
+    vi.mocked(getHoursSessions).mockResolvedValue([{
       id: 'session-1',
       label: 'Leadership',
       programId: 'program-1',
@@ -170,7 +170,7 @@ describe('useTimeEntryModal', () => {
   });
 
   it('preserves the draft when equal target data is recreated', () => {
-    const options: UseTimeEntryModalOptions = {
+    const options: UseHoursModalOptions = {
       isOpen: true,
       resources,
       programs,
@@ -178,7 +178,7 @@ describe('useTimeEntryModal', () => {
       initialDate: '2026-08-19',
     };
     const { result, rerender } = renderHook(
-      (props: UseTimeEntryModalOptions) => useTimeEntryModal(props),
+      (props: UseHoursModalOptions) => useHoursModal(props),
       {
         initialProps: options,
         wrapper: createQueryClientWrapper(createTestQueryClient()),

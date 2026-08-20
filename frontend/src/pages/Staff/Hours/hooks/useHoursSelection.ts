@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import type { StaffResource } from '../../../../common/features/timeEntries/types';
+import type { StaffResource } from '../../../../common/features/hours/types';
 
 import type { HoursListRow } from '../types';
 

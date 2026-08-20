@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getProgramCycles } from '../../../../common/features/programming/api/cohorts.api';
-import { getTimeEntryOptions } from '../../../../common/features/timeEntries/timeEntries.api';
+import { getHoursOptions } from '../../../../common/features/hours/hours.api';
 
 export default function useHoursData(
   optionsQueryKey: readonly unknown[],
@@ -11,7 +11,7 @@ export default function useHoursData(
 ) {
   const optionsData = useQuery({
     queryKey: optionsQueryKey,
-    queryFn: ({ signal }) => getTimeEntryOptions({ signal }),
+    queryFn: ({ signal }) => getHoursOptions({ signal }),
   });
   const cyclesData = useQuery({
     queryKey: cyclesQueryKey,

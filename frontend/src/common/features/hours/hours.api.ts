@@ -2,30 +2,30 @@ import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { ResourcePeriodData } from '../../components/ResourceCalendar/types';
 import type { CursorPage, CursorRequest } from '../../types/pagination';
-import type { StaffResource, TimeEntryCategory, TimeEntryProgram, TimeEntrySession, HoursItem } from './types';
+import type { StaffResource, HoursCategory, HoursProgram, HoursSession, HoursItem } from './types';
 
-export interface TimeEntryResponse {
+export interface HoursResponse {
   id: string; staffId: string; programId: string | null; programName: string | null;
   cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string;
-  category: TimeEntryCategory; taskId: string | null; taskTitle: string | null;
+  category: HoursCategory; taskId: string | null; taskTitle: string | null;
   sessionId: string | null; sessionLabel: string | null;
   workDate: string; hours: number; note: string;
 }
 
-interface SharedTimeEntryInput { staffId: string; hours: number; note: string }
-export type SetTimeEntryInput = SharedTimeEntryInput & ({
-  source: 'regular'; workDate: string; programId: string | null; category: Exclude<TimeEntryCategory, 'program_delivery'>;
+interface SharedHoursInput { staffId: string; hours: number; note: string }
+export type SetHoursInput = SharedHoursInput & ({
+  source: 'regular'; workDate: string; programId: string | null; category: Exclude<HoursCategory, 'program_delivery'>;
 } | { source: 'task'; workDate: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: string });
-export interface UpdateTimeEntryPlacementInput { workDate: string }
+export interface UpdateHoursPlacementInput { workDate: string }
 
-export interface TimeEntryRangeResponse {
+export interface HoursRangeResponse {
   resources: StaffResource[];
-  programs: TimeEntryProgram[];
+  programs: HoursProgram[];
   data: ResourcePeriodData<HoursItem>;
 }
 
-export interface TimeEntryOverviewResponse {
+export interface HoursOverviewResponse {
   payPeriod: {
     periodStart: string;
     periodEnd: string;
@@ -39,30 +39,30 @@ export interface TimeEntryOverviewResponse {
   };
 }
 
-export interface TimeEntryFilters { start?: string; end?: string; cycleId?: string }
-export interface TimeEntryListFilters {
-  staffIds: string[]; categories: TimeEntryCategory[]; programIds: string[];
+export interface HoursFilters { start?: string; end?: string; cycleId?: string }
+export interface HoursListFilters {
+  staffIds: string[]; categories: HoursCategory[]; programIds: string[];
   types: Array<'task' | 'session' | 'other'>; cycleId?: string; search?: string;
 }
-export interface TimeEntryListRowResponse {
+export interface HoursListRowResponse {
   id: string; resourceId: string; date: string; item: HoursItem;
   staffFirstName: string; staffLastName: string; staffName: string;
 }
 
-export function getTimeEntries(filters: TimeEntryFilters = {}, opts?: RequestOptions) {
+export function getHours(filters: HoursFilters = {}, opts?: RequestOptions) {
   const params = new URLSearchParams();
   if (filters.start && filters.end) { params.set('start', filters.start); params.set('end', filters.end); }
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   const query = params.size ? `?${params}` : '';
-  return apiClient.get<TimeEntryRangeResponse>(`/time-entries${query}`, opts);
+  return apiClient.get<HoursRangeResponse>(`/time-entries${query}`, opts);
 }
 
-export function getTimeEntryOptions(opts?: RequestOptions) {
-  return apiClient.get<{ resources: StaffResource[]; programs: TimeEntryProgram[] }>('/time-entries/options', opts);
+export function getHoursOptions(opts?: RequestOptions) {
+  return apiClient.get<{ resources: StaffResource[]; programs: HoursProgram[] }>('/time-entries/options', opts);
 }
 
-export function getTimeEntryList(
-  filters: TimeEntryListFilters,
+export function getHoursList(
+  filters: HoursListFilters,
   opts: RequestOptions | undefined,
   pagination: CursorRequest,
 ) {
@@ -76,24 +76,24 @@ export function getTimeEntryList(
   if (filters.types.length) params.set('types', filters.types.join(','));
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   if (filters.search) params.set('search', filters.search);
-  return apiClient.get<CursorPage<TimeEntryListRowResponse>>(`/time-entries/list?${params}`, opts);
+  return apiClient.get<CursorPage<HoursListRowResponse>>(`/time-entries/list?${params}`, opts);
 }
 
-export function getTimeEntryOverview(staffId: string, cycleId: string, opts?: RequestOptions) {
+export function getHoursOverview(staffId: string, cycleId: string, opts?: RequestOptions) {
   const params = new URLSearchParams({ staffId, cycleId });
-  return apiClient.get<TimeEntryOverviewResponse>(`/time-entries/overview?${params}`, opts);
+  return apiClient.get<HoursOverviewResponse>(`/time-entries/overview?${params}`, opts);
 }
 
-export function getTimeEntrySessions(staffId: string, workDate: string, signal?: AbortSignal) {
+export function getHoursSessions(staffId: string, workDate: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ staffId, workDate });
-  return apiClient.get<TimeEntrySession[]>(`/time-entries/sessions?${params}`, { signal });
+  return apiClient.get<HoursSession[]>(`/time-entries/sessions?${params}`, { signal });
 }
-export function setTimeEntry(input: SetTimeEntryInput, id?: string) {
+export function setHours(input: SetHoursInput, id?: string) {
   return id
-    ? apiClient.put<TimeEntryResponse>(`/time-entries/${id}`, input)
-    : apiClient.post<TimeEntryResponse>('/time-entries', input);
+    ? apiClient.put<HoursResponse>(`/time-entries/${id}`, input)
+    : apiClient.post<HoursResponse>('/time-entries', input);
 }
-export function updateTimeEntryPlacement(id: string, input: UpdateTimeEntryPlacementInput) {
-  return apiClient.patch<TimeEntryResponse>(`/time-entries/${id}/placement`, input);
+export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
+  return apiClient.patch<HoursResponse>(`/time-entries/${id}/placement`, input);
 }
-export function deleteTimeEntry(id: string) { return apiClient.delete<{ message: string }>(`/time-entries/${id}`); }
+export function deleteHours(id: string) { return apiClient.delete<{ message: string }>(`/time-entries/${id}`); }

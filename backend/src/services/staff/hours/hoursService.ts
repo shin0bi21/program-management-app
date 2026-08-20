@@ -4,37 +4,37 @@ import { audit } from '../../shared/auditService';
 import { ConflictError, ForbiddenError, InternalServerError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
-  SetTimeEntryInput,
-  TimeEntryCategory,
-  TimeEntryOverviewQuery,
-  TimeEntryQuery,
-  TimeEntrySessionQuery,
-  UpdateTimeEntryPlacementInput,
-} from '../../../validation/timeEntrySchemas';
-import { assertCanSetTimeEntry, timeEntryReadScopePredicate, timeEntryResourceReadScopePredicate, timeEntryWriteScopePredicate } from '../../../policies/timeEntryPolicy';
+  SetHoursInput,
+  HoursCategory,
+  HoursOverviewQuery,
+  HoursQuery,
+  HoursSessionQuery,
+  UpdateHoursPlacementInput,
+} from '../../../validation/hoursSchemas';
+import { assertCanSetHours, hoursReadScopePredicate, hoursResourceReadScopePredicate, hoursWriteScopePredicate } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getBiweeklyPayPeriod } from './payPeriods';
 import {
-  timeEntryCategoryLabels,
-  timeEntryMutationColumns,
-  timeEntryRecordColumns,
-  timeEntryRecordFrom,
-  type TimeEntryRow,
-} from './timeEntryRecordQuery';
+  hoursCategoryLabels,
+  hoursMutationColumns,
+  hoursRecordColumns,
+  hoursRecordFrom,
+  type HoursRow,
+} from './hoursRecordQuery';
 
-export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntryQuery) {
+export async function getHours(actor: AccessTokenPayload, query: HoursQuery) {
   const programs = await sql<Array<{ id: string; name: string }>>`
     SELECT id, name FROM programs ORDER BY name, id
   `;
-  const resources = await getTimeEntryResources(actor);
-  const rows = await sql<TimeEntryRow[]>`
-    SELECT ${timeEntryRecordColumns}
-    ${timeEntryRecordFrom}
+  const resources = await getHoursResources(actor);
+  const rows = await sql<HoursRow[]>`
+    SELECT ${hoursRecordColumns}
+    ${hoursRecordFrom}
     WHERE ${query.start && query.end
       ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
       : sql`TRUE`}
       AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
-      AND ${timeEntryReadScopePredicate(actor, sql`entry.staff_id`)}
+      AND ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
     ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
 
@@ -51,7 +51,7 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
       cycleStartsOn: row.cycleStartsOn,
       cycleEndsOn: row.cycleEndsOn,
       category: row.category,
-      categoryLabel: timeEntryCategoryLabels[row.category],
+      categoryLabel: hoursCategoryLabels[row.category],
       taskId: row.taskId,
       taskTitle: row.taskTitle,
       sessionId: row.sessionId,
@@ -64,26 +64,26 @@ export async function getTimeEntries(actor: AccessTokenPayload, query: TimeEntry
   return { resources, programs, data };
 }
 
-export async function setTimeEntry(
-  input: SetTimeEntryInput,
+export async function setHours(
+  input: SetHoursInput,
   actor: AccessTokenPayload,
   id?: string,
 ) {
-  assertCanSetTimeEntry(actor, input.staffId);
+  assertCanSetHours(actor, input.staffId);
   await assertActiveStaffResource(input.staffId);
   const transactionId = crypto.randomUUID();
-  let saved!: TimeEntryRow;
+  let saved!: HoursRow;
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const scope = await resolveTimeEntryScope(input, trx);
+    const scope = await resolveHoursScope(input, trx);
     await assertProgramExists(scope.programId, trx);
     const cycleId = await resolveCycleForWorkDate(scope.workDate, scope.programId, trx);
     const existing = id ? await getOwnedEntry(trx, id, actor) : null;
     saved = id
-      ? await updateTimeEntryRecord(trx, id, input, scope, cycleId, actor.userId)
-      : await insertTimeEntryRecord(trx, input, scope, cycleId, actor.userId);
+      ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
+      : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
     const completeTask = !id && input.source === 'task' && input.completeTask;
-    await completeTaskFromTimeEntry(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
+    await completeTaskFromHours(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
     await audit(
       trx,
       actor.userId,
@@ -98,13 +98,13 @@ export async function setTimeEntry(
   return { ...saved, hours: Number(saved.hours) };
 }
 
-export async function updateTimeEntryPlacement(
+export async function updateHoursPlacement(
   id: string,
-  input: UpdateTimeEntryPlacementInput,
+  input: UpdateHoursPlacementInput,
   actor: AccessTokenPayload,
 ) {
   const transactionId = crypto.randomUUID();
-  let updated!: TimeEntryRow;
+  let updated!: HoursRow;
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const existing = await getOwnedEntry(trx, id, actor);
@@ -112,11 +112,11 @@ export async function updateTimeEntryPlacement(
       throw new ConflictError('Session time must stay on the session date');
     }
     const cycleId = await resolveCycleForWorkDate(input.workDate, existing.programId, trx);
-    const rows = await trx<TimeEntryRow[]>`
+    const rows = await trx<HoursRow[]>`
       UPDATE time_entries
       SET work_date = ${input.workDate}, cycle_id = ${cycleId}, updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
-      RETURNING ${timeEntryMutationColumns}
+      RETURNING ${hoursMutationColumns}
     `;
     updated = rows[0];
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
@@ -124,7 +124,7 @@ export async function updateTimeEntryPlacement(
   return { ...updated, hours: Number(updated.hours) };
 }
 
-export async function deleteTimeEntry(id: string, actor: AccessTokenPayload) {
+export async function deleteHours(id: string, actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
@@ -134,16 +134,16 @@ export async function deleteTimeEntry(id: string, actor: AccessTokenPayload) {
   });
 }
 
-export async function getTimeEntryOptions(actor: AccessTokenPayload) {
+export async function getHoursOptions(actor: AccessTokenPayload) {
   const [resources, programs] = await Promise.all([
-    getTimeEntryResources(actor),
+    getHoursResources(actor),
     sql<Array<{ id: string; name: string }>>`SELECT id, name FROM programs ORDER BY name, id`,
   ]);
   return { resources, programs };
 }
 
-export async function getTimeEntrySessions(actor: AccessTokenPayload, query: TimeEntrySessionQuery) {
-  assertCanSetTimeEntry(actor, query.staffId);
+export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
+  assertCanSetHours(actor, query.staffId);
   await assertActiveStaffResource(query.staffId);
   return sql<Array<{
     id: string; label: string; programId: string; programName: string; workDate: string; startsAt: string;
@@ -169,8 +169,8 @@ export async function getTimeEntrySessions(actor: AccessTokenPayload, query: Tim
   `;
 }
 
-export async function getTimeEntryOverview(actor: AccessTokenPayload, query: TimeEntryOverviewQuery) {
-  const readableStaff = await getTimeEntryResources(actor);
+export async function getHoursOverview(actor: AccessTokenPayload, query: HoursOverviewQuery) {
+  const readableStaff = await getHoursResources(actor);
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
     throw new NotFoundError('Hours overview not found');
   }
@@ -191,7 +191,7 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
     periodStart: string;
     periodEnd: string;
     periodCount: number;
-    category: TimeEntryCategory | null;
+    category: HoursCategory | null;
     periodHours: string;
     cycleHours: string;
   }>>`
@@ -247,11 +247,11 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
   if (!rows.length) throw new NotFoundError('Hours overview not found');
 
   const payPeriodBreakdown = rows.flatMap(row => row.category && Number(row.periodHours) > 0
-    ? [{ label: timeEntryCategoryLabels[row.category], hours: Number(row.periodHours) }]
+    ? [{ label: hoursCategoryLabels[row.category], hours: Number(row.periodHours) }]
     : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
   const periodCount = Number(rows[0].periodCount);
   const biweeklyBreakdown = rows.flatMap(row => row.category && Number(row.cycleHours) > 0
-    ? [{ label: timeEntryCategoryLabels[row.category], hours: Number(row.cycleHours) / periodCount }]
+    ? [{ label: hoursCategoryLabels[row.category], hours: Number(row.cycleHours) / periodCount }]
     : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
   return {
     payPeriod: {
@@ -268,16 +268,16 @@ export async function getTimeEntryOverview(actor: AccessTokenPayload, query: Tim
   };
 }
 
-type ResolvedTimeEntryScope = Awaited<ReturnType<typeof resolveTimeEntryScope>>;
+type ResolvedHoursScope = Awaited<ReturnType<typeof resolveHoursScope>>;
 
-async function insertTimeEntryRecord(
+async function insertHoursRecord(
   trx: typeof sql,
-  input: SetTimeEntryInput,
-  scope: ResolvedTimeEntryScope,
+  input: SetHoursInput,
+  scope: ResolvedHoursScope,
   cycleId: string,
   actorId: string,
 ) {
-  const [created] = await trx<TimeEntryRow[]>`
+  const [created] = await trx<HoursRow[]>`
     INSERT INTO time_entries (
       staff_id, program_id, cycle_id, category, task_id, session_id,
       work_date, hours, note, created_by, updated_by
@@ -286,20 +286,20 @@ async function insertTimeEntryRecord(
       ${input.staffId}, ${scope.programId}, ${cycleId}, ${scope.category}, ${scope.taskId},
       ${scope.sessionId}, ${scope.workDate}, ${input.hours}, ${input.note}, ${actorId}, ${actorId}
     )
-    RETURNING ${timeEntryMutationColumns}
+    RETURNING ${hoursMutationColumns}
   `;
   return created;
 }
 
-async function updateTimeEntryRecord(
+async function updateHoursRecord(
   trx: typeof sql,
   id: string,
-  input: SetTimeEntryInput,
-  scope: ResolvedTimeEntryScope,
+  input: SetHoursInput,
+  scope: ResolvedHoursScope,
   cycleId: string,
   actorId: string,
 ) {
-  const [updated] = await trx<TimeEntryRow[]>`
+  const [updated] = await trx<HoursRow[]>`
     UPDATE time_entries
     SET staff_id = ${input.staffId},
       program_id = ${scope.programId},
@@ -313,12 +313,12 @@ async function updateTimeEntryRecord(
       updated_by = ${actorId},
       updated_at = NOW()
     WHERE id = ${id}
-    RETURNING ${timeEntryMutationColumns}
+    RETURNING ${hoursMutationColumns}
   `;
   return updated;
 }
 
-async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
+async function resolveHoursScope(input: SetHoursInput, db: typeof sql) {
   if (input.source === 'regular') return {
     programId: input.programId, category: input.category,
     taskId: null, sessionId: null, workDate: input.workDate,
@@ -360,12 +360,12 @@ async function resolveTimeEntryScope(input: SetTimeEntryInput, db: typeof sql) {
   if (!rows.length) throw new NotFoundError('Assigned task not found');
   const task = rows[0];
   return {
-    programId: task.programId, category: task.category as TimeEntryCategory,
+    programId: task.programId, category: task.category as HoursCategory,
     taskId: input.taskId, sessionId: null, workDate: input.workDate,
   };
 }
 
-async function completeTaskFromTimeEntry(
+async function completeTaskFromHours(
   taskId: string | null,
   completeTask: boolean,
   staffId: string,
@@ -408,16 +408,16 @@ async function assertProgramExists(programId: string | null, db: typeof sql = sq
 }
 
 // Resource queries
-function getTimeEntryResources(actor: AccessTokenPayload) {
+function getHoursResources(actor: AccessTokenPayload) {
   return sql<Array<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }>>`
     SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
-      (${timeEntryWriteScopePredicate(actor, sql`u.id`)}) AS writable
+      (${hoursWriteScopePredicate(actor, sql`u.id`)}) AS writable
     FROM users u
     INNER JOIN user_roles role ON role.id = u.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = u.id
     WHERE role.name IN ('admin', 'staff')
       AND credentials.status = 'active'
-      AND ${timeEntryResourceReadScopePredicate(actor, sql`u.id`)}
+      AND ${hoursResourceReadScopePredicate(actor, sql`u.id`)}
     ORDER BY u.first_name, u.last_name, u.id
   `;
 }
@@ -440,14 +440,14 @@ async function resolveCycleForWorkDate(workDate: string, programId: string | nul
 }
 
 async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayload) {
-  const rows = await trx<TimeEntryRow[]>`
-    SELECT ${timeEntryRecordColumns}
-    ${timeEntryRecordFrom}
+  const rows = await trx<HoursRow[]>`
+    SELECT ${hoursRecordColumns}
+    ${hoursRecordFrom}
     WHERE entry.id = ${id}
     LIMIT 1
     FOR UPDATE OF entry
   `;
   if (!rows.length) throw new NotFoundError('Time entry not found');
-  assertCanSetTimeEntry(actor, rows[0].staffId);
+  assertCanSetHours(actor, rows[0].staffId);
   return rows[0];
 }

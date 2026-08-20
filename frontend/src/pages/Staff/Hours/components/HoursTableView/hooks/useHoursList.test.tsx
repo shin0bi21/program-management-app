@@ -2,13 +2,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTimeEntryList } from '../../../../../../common/features/timeEntries/timeEntries.api';
+import { getHoursList } from '../../../../../../common/features/hours/hours.api';
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import useHoursList from './useHoursList';
 
-vi.mock('../../../../../../common/features/timeEntries/timeEntries.api', () => ({
-  getTimeEntryList: vi.fn(),
+vi.mock('../../../../../../common/features/hours/hours.api', () => ({
+  getHoursList: vi.fn(),
 }));
 
 const row = {
@@ -25,7 +25,7 @@ describe('useHoursList', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('sends the complete list controls through the cursor API', async () => {
-    vi.mocked(getTimeEntryList).mockResolvedValue({ rows: [row], nextCursor: null });
+    vi.mocked(getHoursList).mockResolvedValue({ rows: [row], nextCursor: null });
     const client = createTestQueryClient();
     const filters = {
       staffIds: ['staff-1'], categories: ['meeting' as const], programIds: ['program-1'],
@@ -39,7 +39,7 @@ describe('useHoursList', () => {
 
     await waitFor(() => expect(result.current.rows).toEqual([row]));
     expect(result.current.appliedSearch).toBe(' team ');
-    expect(getTimeEntryList).toHaveBeenCalledWith(
+    expect(getHoursList).toHaveBeenCalledWith(
       { ...filters, search: ' team ' },
       { signal: expect.any(AbortSignal) },
       { ...sorting, cursor: undefined, limit: 25 },
@@ -47,7 +47,7 @@ describe('useHoursList', () => {
   });
 
   it('loads the next cursor without replacing the first page', async () => {
-    vi.mocked(getTimeEntryList).mockImplementation(async (_filters, _options, pagination) => (
+    vi.mocked(getHoursList).mockImplementation(async (_filters, _options, pagination) => (
       pagination.cursor
         ? { rows: [{ ...row, id: 'entry-2' }], nextCursor: null }
         : { rows: [row], nextCursor: 'cursor-2' }
@@ -65,7 +65,7 @@ describe('useHoursList', () => {
     await waitFor(() => expect(result.current.rows).toEqual([row]));
     act(() => result.current.loadNextPage());
     await waitFor(() => expect(result.current.rows.map(item => item.id)).toEqual(['entry-1', 'entry-2']));
-    expect(getTimeEntryList).toHaveBeenLastCalledWith(
+    expect(getHoursList).toHaveBeenLastCalledWith(
       expect.any(Object),
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ cursor: 'cursor-2' }),

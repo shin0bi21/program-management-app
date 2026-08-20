@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
-import { TIME_ENTRY_CATEGORY_OPTIONS } from '../../../../common/features/timeEntries/timeEntryOptions';
+import { HOURS_CATEGORY_OPTIONS } from '../../../../common/features/hours/hoursOptions';
 import type {
   StaffResource,
-  TimeEntryCategory,
-  TimeEntryProgram,
-} from '../../../../common/features/timeEntries/types';
+  HoursCategory,
+  HoursProgram,
+} from '../../../../common/features/hours/types';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 
 import type { HoursEntryType, HoursPreferences } from '../types';
@@ -22,7 +22,7 @@ export default function useHoursFilters({
   role: string | null;
   preferences: HoursPreferences;
   resources: readonly StaffResource[];
-  programs: readonly TimeEntryProgram[];
+  programs: readonly HoursProgram[];
   cycles: readonly ProgramCycle[];
   updatePreferences: (patch: Partial<HoursPreferences>) => void;
 }) {
@@ -42,7 +42,7 @@ export default function useHoursFilters({
         ...programs.map(program => ({ value: program.id, label: program.name })),
       ],
     },
-    { id: 'entryType', label: 'Category', options: TIME_ENTRY_CATEGORY_OPTIONS },
+    { id: 'entryType', label: 'Category', options: HOURS_CATEGORY_OPTIONS },
     { id: 'type', label: 'Type', options: [
       { value: 'task', label: 'Task' },
       { value: 'session', label: 'Session' },
@@ -59,7 +59,7 @@ export default function useHoursFilters({
   const applyFilter = useCallback((id: string, selected: string[]) => {
     if (id === 'staff') updatePreferences({ staffIds: selected });
     if (id === 'program') updatePreferences({ programIds: selected });
-    if (id === 'entryType') updatePreferences({ categories: selected as TimeEntryCategory[] });
+    if (id === 'entryType') updatePreferences({ categories: selected as HoursCategory[] });
     if (id === 'type') updatePreferences({ types: selected as HoursEntryType[] });
     if (id === 'cycle') updatePreferences({ cycleId: selected[0] ?? null });
   }, [updatePreferences]);

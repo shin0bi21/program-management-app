@@ -12,9 +12,9 @@ import type {
   ResourcePeriodData,
 } from '../../../../../common/components/ResourceCalendar/types';
 import {
-  getTimeEntries,
-} from '../../../../../common/features/timeEntries/timeEntries.api';
-import type { StaffResource, HoursItem } from '../../../../../common/features/timeEntries/types';
+  getHours,
+} from '../../../../../common/features/hours/hours.api';
+import type { StaffResource, HoursItem } from '../../../../../common/features/hours/types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarCache } from '../../types';
 
@@ -51,8 +51,8 @@ vi.mock('../../../../../common/components/ResourceCalendar/ResourceCalendar', ()
   },
 }));
 
-vi.mock('../../../../../common/features/timeEntries/timeEntries.api', () => ({
-  getTimeEntries: vi.fn(),
+vi.mock('../../../../../common/features/hours/hours.api', () => ({
+  getHours: vi.fn(),
 }));
 
 function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
@@ -89,7 +89,7 @@ function renderCalendar({
   onStaffSelect?: ReturnType<typeof vi.fn>;
   onMove?: ReturnType<typeof vi.fn>;
 } = {}) {
-  vi.mocked(getTimeEntries).mockResolvedValue({ resources, programs: [], data });
+  vi.mocked(getHours).mockResolvedValue({ resources, programs: [], data });
   const calendarCacheRef: MutableRefObject<HoursCalendarCache> = {
     current: { upsert: vi.fn(), remove: vi.fn() },
   };
@@ -126,7 +126,7 @@ function renderCalendar({
 
 async function initializeCalendar(periods: CalendarPeriod[]) {
   act(() => calendarState.props?.onInitialPeriods?.(periods));
-  await waitFor(() => expect(getTimeEntries).toHaveBeenCalled());
+  await waitFor(() => expect(getHours).toHaveBeenCalled());
 }
 
 describe('HoursCalendarView', () => {
@@ -173,7 +173,7 @@ describe('HoursCalendarView', () => {
 
     await initializeCalendar(periods);
 
-    expect(getTimeEntries).toHaveBeenCalledWith({
+    expect(getHours).toHaveBeenCalledWith({
       start: expect.any(String),
       end: expect.any(String),
     });
@@ -238,7 +238,7 @@ describe('HoursCalendarView', () => {
 
   it('shows a load error and retries the failed calendar range', async () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
-    vi.mocked(getTimeEntries)
+    vi.mocked(getHours)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({ resources: [resource], programs: [], data: {} });
     renderCalendar();
@@ -247,7 +247,7 @@ describe('HoursCalendarView', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('offline');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(getHours).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 });

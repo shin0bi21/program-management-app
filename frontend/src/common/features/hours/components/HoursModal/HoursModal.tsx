@@ -3,17 +3,17 @@ import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect
 import FormField from '../../../../components/FormField/FormField';
 import Modal from '../../../../components/Modal/Modal';
 import { getSubmitStatusMessage } from '../../../../hooks/useSubmitStatus';
-import { OTHER_TIME_ENTRY_CATEGORY_OPTIONS } from '../../timeEntryOptions';
-import type { TimeEntryCategory } from '../../types';
-import useTimeEntryModal, { type UseTimeEntryModalOptions } from './hooks/useTimeEntryModal';
-import './TimeEntryModal.css';
+import { OTHER_HOURS_CATEGORY_OPTIONS } from '../../hoursOptions';
+import type { HoursCategory } from '../../types';
+import useHoursModal, { type UseHoursModalOptions } from './hooks/useHoursModal';
+import './HoursModal.css';
 
-interface TimeEntryModalProps extends UseTimeEntryModalOptions {
+interface HoursModalProps extends UseHoursModalOptions {
   onClose: () => void;
   staffLocked?: boolean;
 }
 
-export default function TimeEntryModal({
+export default function HoursModal({
   isOpen,
   resources,
   programs,
@@ -26,8 +26,8 @@ export default function TimeEntryModal({
   initialTask,
   initialItem,
   canCompleteTask = false,
-}: TimeEntryModalProps) {
-  const workflow = useTimeEntryModal({
+}: HoursModalProps) {
+  const workflow = useHoursModal({
     isOpen,
     resources,
     programs,
@@ -172,9 +172,9 @@ export default function TimeEntryModal({
             <FloatingSelect
               id="time-entry-category"
               value={draft.category}
-              options={OTHER_TIME_ENTRY_CATEGORY_OPTIONS}
+              options={OTHER_HOURS_CATEGORY_OPTIONS}
               onChange={value => workflow.selectCategory(
-                value as Exclude<TimeEntryCategory, 'program_delivery'>,
+                value as Exclude<HoursCategory, 'program_delivery'>,
               )}
               ariaLabel="Category"
               disabled={submissionComplete}

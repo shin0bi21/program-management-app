@@ -1,4 +1,4 @@
-import type { StaffResource } from '../../../../../common/features/timeEntries/types';
+import type { StaffResource } from '../../../../../common/features/hours/types';
 import type { ProgramCycle } from '../../../../../common/types/cohort';
 import { formatShortDateRange } from '../../../../../common/utils/date';
 import HoursDashboardCard from './HoursDashboardCard/HoursDashboardCard';

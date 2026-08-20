@@ -1,7 +1,7 @@
 import { sql } from '../../../db/client';
-import type { TimeEntryCategory } from '../../../validation/timeEntrySchemas';
+import type { HoursCategory } from '../../../validation/hoursSchemas';
 
-export interface TimeEntryRow {
+export interface HoursRow {
   id: string;
   staffId: string;
   programId: string | null;
@@ -10,7 +10,7 @@ export interface TimeEntryRow {
   cycleName: string;
   cycleStartsOn: string;
   cycleEndsOn: string;
-  category: TimeEntryCategory;
+  category: HoursCategory;
   taskId: string | null;
   taskTitle: string | null;
   sessionId: string | null;
@@ -20,7 +20,7 @@ export interface TimeEntryRow {
   note: string;
 }
 
-export const timeEntryCategoryLabels: Record<TimeEntryCategory, string> = {
+export const hoursCategoryLabels: Record<HoursCategory, string> = {
   program_delivery: 'Program Delivery',
   planning_prep: 'Planning / Prep',
   meeting: 'Meeting',
@@ -31,7 +31,7 @@ export const timeEntryCategoryLabels: Record<TimeEntryCategory, string> = {
 };
 
 /** Canonical time-entry fields shared by collection and direct-record reads. */
-export const timeEntryRecordColumns = sql`
+export const hoursRecordColumns = sql`
   entry.id,
   entry.staff_id,
   entry.program_id,
@@ -51,7 +51,7 @@ export const timeEntryRecordColumns = sql`
 `;
 
 /** Canonical time-entry relationships shared by collection and direct-record reads. */
-export const timeEntryRecordFrom = sql`
+export const hoursRecordFrom = sql`
   FROM time_entries entry
   INNER JOIN users staff ON staff.id = entry.staff_id
   LEFT JOIN programs program ON program.id = entry.program_id
@@ -61,7 +61,7 @@ export const timeEntryRecordFrom = sql`
 `;
 
 /** Canonical time-entry response returned by insert and update commands. */
-export const timeEntryMutationColumns = sql`
+export const hoursMutationColumns = sql`
   id,
   staff_id,
   program_id,

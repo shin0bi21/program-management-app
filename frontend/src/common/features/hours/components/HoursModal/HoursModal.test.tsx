@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
 import { getTasks } from '../../../tasks/tasks.api';
-import { getTimeEntrySessions } from '../../timeEntries.api';
-import TimeEntryModal from './TimeEntryModal';
+import { getHoursSessions } from '../../hours.api';
+import HoursModal from './HoursModal';
 
 vi.mock('../../../tasks/tasks.api', () => ({ getTasks: vi.fn() }));
-vi.mock('../../timeEntries.api', () => ({ getTimeEntrySessions: vi.fn() }));
+vi.mock('../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const resources = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -18,8 +18,8 @@ const resources = [
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
 const task = makeTask();
 
-function renderModal(overrides: Partial<ComponentProps<typeof TimeEntryModal>> = {}) {
-  const props: ComponentProps<typeof TimeEntryModal> = {
+function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {}) {
+  const props: ComponentProps<typeof HoursModal> = {
     isOpen: true,
     resources,
     programs,
@@ -28,7 +28,7 @@ function renderModal(overrides: Partial<ComponentProps<typeof TimeEntryModal>> =
     ...overrides,
   };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><TimeEntryModal {...props} /></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><HoursModal {...props} /></QueryClientProvider>);
   return props;
 }
 
@@ -36,16 +36,16 @@ function submitForm() {
   fireEvent.submit(document.getElementById('time-entry-form')!);
 }
 
-describe('TimeEntryModal', () => {
+describe('HoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getTasks).mockResolvedValue([]);
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([]);
+    vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
   it('puts general-time fields in workflow order', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><TimeEntryModal
+    render(<QueryClientProvider client={client}><HoursModal
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[{ id: 'program-1', name: 'Program one' }]}
@@ -92,7 +92,7 @@ describe('TimeEntryModal', () => {
 
   it('puts session selection before its date and hours', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><TimeEntryModal
+    render(<QueryClientProvider client={client}><HoursModal
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[]}
@@ -108,7 +108,7 @@ describe('TimeEntryModal', () => {
   });
 
   it('reloads rendered session options for an editable date', async () => {
-    vi.mocked(getTimeEntrySessions).mockImplementation(async (_staffId, workDate) => (
+    vi.mocked(getHoursSessions).mockImplementation(async (_staffId, workDate) => (
       workDate === '2099-01-01'
         ? [{
           id: 'session-future',
@@ -123,7 +123,7 @@ describe('TimeEntryModal', () => {
     renderModal({ initialSource: 'session' });
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
-    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
       'staff-1', '2099-01-01', expect.any(AbortSignal),
     ));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
@@ -133,7 +133,7 @@ describe('TimeEntryModal', () => {
   });
 
   it('locks a calendar-context date while loading sessions for that day', async () => {
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([{
+    vi.mocked(getHoursSessions).mockResolvedValue([{
       id: 'session-1',
       label: 'Confidence',
       programId: 'program-1',
@@ -143,7 +143,7 @@ describe('TimeEntryModal', () => {
     }]);
     renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialResourceId: 'staff-2' });
 
-    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
       'staff-2', '2026-08-18', expect.any(AbortSignal),
     ));
     expect(screen.getByLabelText('Date')).toHaveValue('2026-08-18');
@@ -152,7 +152,7 @@ describe('TimeEntryModal', () => {
 
   it('locks a contextual task and its assigned staff while logging task time', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><TimeEntryModal
+    render(<QueryClientProvider client={client}><HoursModal
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[]}

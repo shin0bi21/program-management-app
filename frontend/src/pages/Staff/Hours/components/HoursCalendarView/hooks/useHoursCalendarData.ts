@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
-import type { HoursItem } from '../../../../../../common/features/timeEntries/types';
+import type { HoursItem } from '../../../../../../common/features/hours/types';
 import type { HoursEntryType } from '../../../types';
 
 function getEntryType(item: HoursItem): HoursEntryType {

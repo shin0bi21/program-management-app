@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 
 import {
-  getTimeEntryOverview,
-  type TimeEntryOverviewResponse,
-} from '../../../../../../common/features/timeEntries/timeEntries.api';
+  getHoursOverview,
+  type HoursOverviewResponse,
+} from '../../../../../../common/features/hours/hours.api';
 import { getErrorMessage } from '../../../../../../http/clientErrors';
 
 export type HoursOverviewState =
   | { status: 'unavailable' }
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; data: TimeEntryOverviewResponse };
+  | { status: 'ready'; data: HoursOverviewResponse };
 
 export default function useHoursOverviewData(
   queryKey: readonly unknown[],
@@ -19,7 +19,7 @@ export default function useHoursOverviewData(
 ): HoursOverviewState {
   const { data, error, isLoading } = useQuery({
     queryKey: [...queryKey, 'overview', staffId, cycleId],
-    queryFn: ({ signal }) => getTimeEntryOverview(staffId!, cycleId!, { signal }),
+    queryFn: ({ signal }) => getHoursOverview(staffId!, cycleId!, { signal }),
     enabled: Boolean(staffId && cycleId),
   });
 
