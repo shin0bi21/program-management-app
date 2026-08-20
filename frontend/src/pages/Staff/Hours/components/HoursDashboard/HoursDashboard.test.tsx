@@ -14,7 +14,7 @@ const staff = {
 const cycle = {
   id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 } as const;
-const baseProps = { queryKey: ['time-entries'] as const, staff, cycle };
+const baseProps = { queryKey: ['hours'] as const, staff, cycle };
 
 describe('HoursDashboard', () => {
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('HoursDashboard', () => {
   it('loads data for the selected staff and cycle', () => {
     render(<HoursDashboard {...baseProps} />);
 
-    expect(overviewData).toHaveBeenCalledWith(['time-entries'], 'staff-1', 'cycle-1');
+    expect(overviewData).toHaveBeenCalledWith(['hours'], 'staff-1', 'cycle-1');
   });
 
   it('renders unavailable composition without card titles until staff is selected', () => {

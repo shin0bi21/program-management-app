@@ -26,7 +26,7 @@ vi.mock('../../../../../common/components/Table/Table', () => ({
 }));
 
 const baseProps = {
-  queryKey: ['time-entries', 'list'] as const,
+  queryKey: ['hours', 'list'] as const,
   columns: [],
   hiddenColumnKeys: [],
   staffIds: ['staff-1'],

@@ -33,7 +33,7 @@ function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {})
 }
 
 function submitForm() {
-  fireEvent.submit(document.getElementById('time-entry-form')!);
+  fireEvent.submit(document.getElementById('hours-form')!);
 }
 
 describe('HoursModal', () => {
@@ -53,7 +53,7 @@ describe('HoursModal', () => {
       onClose={vi.fn()}
     /></QueryClientProvider>);
 
-    expect(Array.from(document.getElementById('time-entry-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
+    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
       'Staff member', 'Program (optional)', 'Category *', 'Date', 'Hours', 'Note',
     ]);
   });
@@ -101,10 +101,10 @@ describe('HoursModal', () => {
       onClose={vi.fn()}
     /></QueryClientProvider>);
 
-    expect(Array.from(document.getElementById('time-entry-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
+    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
       'Staff member', 'Session *', 'Date', 'Hours', 'Note',
     ]);
-    expect(document.getElementById('time-entry-session')?.closest('.time-entry-form__source')).not.toBeNull();
+    expect(document.getElementById('hours-session')?.closest('.hours-form__source')).not.toBeNull();
   });
 
   it('reloads rendered session options for an editable date', async () => {
@@ -165,9 +165,9 @@ describe('HoursModal', () => {
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.getByRole('button', { name: 'Task' })).not.toHaveTextContent('Planning / Prep');
     expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
-    expect(document.getElementById('time-entry-assigned-task')?.closest('.time-entry-form__source')).not.toBeNull();
+    expect(document.getElementById('hours-assigned-task')?.closest('.hours-form__source')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-    expect(Array.from(document.getElementById('time-entry-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
+    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
       'Staff member', 'Task *', 'Mark task complete', 'Date', 'Hours', 'Note',
     ]);
   });

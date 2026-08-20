@@ -33,7 +33,7 @@ describe('useHoursList', () => {
     };
     const sorting = { key: 'date' as const, direction: 'desc' as const };
     const { result } = renderHook(
-      () => useHoursList(['time-entries', 'list'], filters, sorting),
+      () => useHoursList(['hours', 'list'], filters, sorting),
       { wrapper: createQueryClientWrapper(client) },
     );
 
@@ -55,7 +55,7 @@ describe('useHoursList', () => {
     const client = createTestQueryClient();
     const { result } = renderHook(
       () => useHoursList(
-        ['time-entries', 'list'],
+        ['hours', 'list'],
         { staffIds: [], categories: [], programIds: [], types: [], search: '' },
         { key: 'date', direction: 'desc' },
       ),

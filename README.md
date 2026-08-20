@@ -217,7 +217,7 @@ All paths are under `/api`; route files remain authoritative for exact validatio
 | `/youth` | Youth profiles, invitations, attendance, and notes |
 | `/programs`, `/cohorts`, `/schools` | Programming, enrollment, sessions, attendance, reports, and lookups |
 | `/tasks` | Staff task lists, placement, status, and lifecycle |
-| `/time-entries` | Hours, range/list views, placement, and overview data |
+| `/hours` | Hours, range/list views, placement, and overview data |
 
 See the [backend API reference](docs/backend/api.md) for endpoint-level details.
 

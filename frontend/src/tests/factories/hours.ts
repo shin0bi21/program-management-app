@@ -2,7 +2,7 @@ import type { HoursItem } from '../../common/features/hours/types';
 
 export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
   return {
-    id: 'time-entry-1',
+    id: 'hours-1',
     programId: null,
     programName: null,
     cycleId: 'cycle-1',

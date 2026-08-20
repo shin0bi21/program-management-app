@@ -23,6 +23,6 @@ export function hoursReadScopePredicate(actor: AccessTokenPayload, staffId: Retu
 
 export function assertCanSetHours(actor: AccessTokenPayload, staffId: string) {
   if (!canSetHours(actor, staffId)) {
-    throw new ForbiddenError('Staff can only manage their own time entries');
+    throw new ForbiddenError('Staff can only manage their own logged hours');
   }
 }

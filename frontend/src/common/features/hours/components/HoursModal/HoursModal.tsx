@@ -57,7 +57,7 @@ export default function HoursModal({
     </Button>
     <Button
       type="submit"
-      form="time-entry-form"
+      form="hours-form"
       disabled={submissionComplete || !resources.length || (
         draft.source === 'task'
           ? !draft.taskId
@@ -79,11 +79,11 @@ export default function HoursModal({
       successDelay={1200}
       footer={footer}
     >
-      <form id="time-entry-form" className="time-entry-form" onSubmit={workflow.submit}>
-        <div className="time-entry-form__staff">
-          <FormField id="time-entry-staff" label="Staff member">
+      <form id="hours-form" className="hours-form" onSubmit={workflow.submit}>
+        <div className="hours-form__staff">
+          <FormField id="hours-staff" label="Staff member">
             <FloatingSelect
-              id="time-entry-staff"
+              id="hours-staff"
               value={draft.resourceId}
               options={resources.map(resource => ({ value: resource.id, label: resource.name }))}
               onChange={workflow.selectResource}
@@ -98,14 +98,14 @@ export default function HoursModal({
         </div>
 
         {draft.source === 'task' && (
-          <div className="time-entry-form__source">
+          <div className="hours-form__source">
             <FormField
-              id="time-entry-assigned-task"
+              id="hours-assigned-task"
               label="Task *"
               error={workflow.tasksError}
             >
               <FloatingSelect
-                id="time-entry-assigned-task"
+                id="hours-assigned-task"
                 value={draft.taskId}
                 options={workflow.taskOptions.map(task => ({ value: task.id, label: task.title }))}
                 onChange={workflow.selectTask}
@@ -118,7 +118,7 @@ export default function HoursModal({
         )}
 
         {draft.source === 'task' && !initialItem && canCompleteTask && (
-          <label className="time-entry-form__complete-task">
+          <label className="hours-form__complete-task">
             <input
               type="checkbox"
               checked={draft.completeTask}
@@ -130,10 +130,10 @@ export default function HoursModal({
         )}
 
         {draft.source === 'session' && (
-          <div className="time-entry-form__source">
-            <FormField id="time-entry-session" label="Session *" error={workflow.sessionsError}>
+          <div className="hours-form__source">
+            <FormField id="hours-session" label="Session *" error={workflow.sessionsError}>
               <FloatingSelect
-                id="time-entry-session"
+                id="hours-session"
                 value={draft.sessionId}
                 options={workflow.sessionOptions.map(session => ({
                   value: session.id,
@@ -153,9 +153,9 @@ export default function HoursModal({
         )}
 
         {draft.source === 'regular' && <>
-          <FormField id="time-entry-program" label="Program (optional)">
+          <FormField id="hours-program" label="Program (optional)">
             <FloatingSelect
-              id="time-entry-program"
+              id="hours-program"
               value={draft.programId}
               options={programs.map(program => ({ value: program.id, label: program.name }))}
               onChange={workflow.selectProgram}
@@ -168,9 +168,9 @@ export default function HoursModal({
             />
           </FormField>
 
-          <FormField id="time-entry-category" label="Category *">
+          <FormField id="hours-category" label="Category *">
             <FloatingSelect
-              id="time-entry-category"
+              id="hours-category"
               value={draft.category}
               options={OTHER_HOURS_CATEGORY_OPTIONS}
               onChange={value => workflow.selectCategory(
@@ -182,9 +182,9 @@ export default function HoursModal({
           </FormField>
         </>}
 
-        <FormField id="time-entry-date" label="Date">
+        <FormField id="hours-date" label="Date">
           <input
-            id="time-entry-date"
+            id="hours-date"
             type="date"
             value={draft.date}
             onChange={event => workflow.updateDate(event.target.value)}
@@ -193,9 +193,9 @@ export default function HoursModal({
           />
         </FormField>
 
-        <FormField id="time-entry-hours" label="Hours">
+        <FormField id="hours-duration" label="Hours">
           <input
-            id="time-entry-hours"
+            id="hours-duration"
             type="number"
             min="0.25"
             max="24"
@@ -207,10 +207,10 @@ export default function HoursModal({
           />
         </FormField>
 
-        <div className="time-entry-form__note">
-          <FormField id="time-entry-note" label="Note">
+        <div className="hours-form__note">
+          <FormField id="hours-note" label="Note">
             <textarea
-              id="time-entry-note"
+              id="hours-note"
               value={draft.note}
               onChange={event => workflow.updateNote(event.target.value)}
               rows={5}

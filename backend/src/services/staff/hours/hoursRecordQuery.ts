@@ -30,7 +30,7 @@ export const hoursCategoryLabels: Record<HoursCategory, string> = {
   other: 'Other',
 };
 
-/** Canonical time-entry fields shared by collection and direct-record reads. */
+/** Canonical hours fields shared by collection and direct-record reads. */
 export const hoursRecordColumns = sql`
   entry.id,
   entry.staff_id,
@@ -50,7 +50,7 @@ export const hoursRecordColumns = sql`
   entry.note
 `;
 
-/** Canonical time-entry relationships shared by collection and direct-record reads. */
+/** Canonical hours relationships shared by collection and direct-record reads. */
 export const hoursRecordFrom = sql`
   FROM time_entries entry
   INNER JOIN users staff ON staff.id = entry.staff_id
@@ -60,7 +60,7 @@ export const hoursRecordFrom = sql`
   LEFT JOIN cohort_sessions session ON session.id = entry.session_id
 `;
 
-/** Canonical time-entry response returned by insert and update commands. */
+/** Canonical hours response returned by insert and update commands. */
 export const hoursMutationColumns = sql`
   id,
   staff_id,

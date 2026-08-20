@@ -447,7 +447,7 @@ async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayl
     LIMIT 1
     FOR UPDATE OF entry
   `;
-  if (!rows.length) throw new NotFoundError('Time entry not found');
+  if (!rows.length) throw new NotFoundError('Logged hours not found');
   assertCanSetHours(actor, rows[0].staffId);
   return rows[0];
 }
