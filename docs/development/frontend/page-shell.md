@@ -10,7 +10,7 @@
 - Put `ColumnVisibilityMenu` in `columns` and render it only while the table view is active. Keep table pagination and row-specific status or actions out of the header.
 - Keep data loading, filtering, preference persistence, and action workflows in the page or focused hooks rather than in `PageHeader`.
 
-Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*ListView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper.
+Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*TableView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper. Existing `*ListView` owners are a migration boundary, not the template for new pages.
 
 ```tsx
 <main className="page-container page-container--data">
@@ -32,7 +32,7 @@ Use this route-level composition. Omit an optional prop rather than passing an e
       <DashboardCard title="Details" action={optionalCardAction}>...</DashboardCard>
     </>}
     {...(view === 'list'
-      ? { table: <ExampleListView {...listProps} /> }
+      ? { table: <ExampleTableView {...tableProps} /> }
       : { calendar: <ExampleCalendarView {...calendarProps} /> })}
   />}
 </main>

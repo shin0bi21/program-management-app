@@ -95,9 +95,7 @@ export default function Tasks() {
   const view = taskPreferences.preferences.view;
 
   // Selection, actions, and modal workflows.
-  const selection = useTaskSelection({
-    onResourceSelect: pageData.setSelectedResourceId,
-  });
+  const selection = useTaskSelection({ resources: pageData.resources });
 
   const taskActions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
@@ -164,7 +162,7 @@ export default function Tasks() {
         statuses: filters.statusFilters,
       }}
       canWrite={canWrite}
-      selectedResourceId={pageData.selectedResourceId}
+      selectedResourceId={selection.selectedResourceId}
       selectedTaskId={selection.selectedTaskId}
       today={today}
       actions={taskActions}
@@ -218,10 +216,10 @@ export default function Tasks() {
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
       {!taskPreferences.ready ? <p role="status">Loading saved task preferences…</p> : <PageBody
         ariaLabel="Task overview and assignments"
-        dashboard={pageData.selectedResource ? <TaskDashboard
+        dashboard={selection.selectedResource ? <TaskDashboard
           queryKey={TASK_QUERY_KEY}
-          resourceId={pageData.selectedResource.id}
-          resourceName={pageData.selectedResource.name}
+          resourceId={selection.selectedResource.id}
+          resourceName={selection.selectedResource.name}
           today={today}
           selectedTask={selection.selectedTask}
           onLogHours={logHoursAction}

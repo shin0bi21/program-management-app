@@ -48,24 +48,40 @@ export default function ExamplePage() {
   const queryClient = useQueryClient();
   const { permissions } = useAuth();
 
-  // Persisted preferences, filters, and remote data.
+  // Page options, persisted preferences, and filters.
+  const data = useExampleData();
   const preferences = useExamplePreferences();
   const filters = useExampleFilters({
     preferences: preferences.value,
+    options: data.options,
     updatePreferences: preferences.update,
   });
-  const records = useExamples(filters.applied, preferences.value.sorting);
 
-  // Selected records and page-owned dialogs.
-  const selection = useTableSelection(records.data);
+  // Selection, actions, and page-owned dialogs.
+  const selection = useExampleSelection({ resources: data.resources });
+  const actions = useExampleActions({ onRecordSaved: selection.updateSelectedRecord });
   const [editorTarget, setEditorTarget] = useState<Example | 'new' | null>(null);
 
-  // Page actions and presentation.
-  const columns = useMemo(() => buildExampleColumns({ setEditorTarget }), []);
+  // View-specific presentation.
+  const table = useExampleTable({
+    preferences: preferences.value,
+    updatePreferences: preferences.update,
+    actions,
+  });
 
-  return <main className="page-container page-container--data">...</main>;
+  return <main className="page-container page-container--data">
+    <ExampleTableView
+      queryKey={EXAMPLE_LIST_QUERY_KEY}
+      filters={filters.applied}
+      sorting={table.sorting}
+      columns={table.columns}
+      onRecordSelect={selection.selectRecord}
+    />
+  </main>;
 }
 ```
+
+Use this dependency flow only for responsibilities the page actually has: page-owned keys and constants → page options/data → preferences → filters → selection → actions → view presentation. A `*TableView` owns its remote list hook, a `*CalendarView` owns range-data behavior, a dashboard owns its overview-data hook, and a modal owns its form workflow. A route may initialize a table hook colocated under `*TableView` when page-header column controls and row actions also need that table configuration. Do not generate empty hooks merely to complete the sequence.
 
 Route specialized content to the applicable guide:
 
