@@ -22,3 +22,8 @@
   background: var(--color-success-bg);
   color: var(--color-success);
 }
+
+.lead-view-controls {
+  display: flex;
+  gap: 8px;
+}

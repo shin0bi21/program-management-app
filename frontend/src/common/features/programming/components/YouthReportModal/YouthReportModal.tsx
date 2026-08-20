@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+
 import Button from '../../../../components/Button/Button';
 import LoadingSpinner from '../../../../components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../../../components/Modal/Modal';
-import { getCohortYouthReportPdf } from '../../api/programming.api';
+
+import { getCohortYouthReportPdf } from '../../api/cohorts.api';
+
 import './YouthReportModal.css';
 
 interface ReportCohort {
@@ -35,7 +38,6 @@ export default function YouthReportModal({ cohort, youthId, onClose }: YouthRepo
     setPdfUrl(objectUrl);
     return () => {
       URL.revokeObjectURL(objectUrl);
-      setPdfUrl(null);
     };
   }, [reportPdf.data]);
 

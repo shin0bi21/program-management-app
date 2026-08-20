@@ -11,6 +11,7 @@ export interface ActionItem {
   label: string;
   onClick: () => void;
   variant?: 'default' | 'danger';
+  groupStart?: boolean;
 }
 
 interface ActionsMenuProps {
@@ -64,7 +65,7 @@ export default function ActionsMenu({ items, disabled = false, triggerLabel, ari
             <button
               key={item.id}
               role="menuitem"
-              className={`actions-menu-item${
+              className={`actions-menu-item${item.groupStart ? ' actions-menu-item--group-start' : ''}${
                 item.variant === 'danger' ? ' actions-menu-item--danger' : ''
               }`}
               onClick={() => handleActionClick(item)}

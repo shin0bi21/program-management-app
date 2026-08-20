@@ -1,10 +1,9 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { useConfirmModal } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
-import { formatShortDate } from '../../../../../../common/utils/date';
+import NoteDetails from '../../../../../../common/features/notes/components/NoteDetails/NoteDetails';
+import NoteRow from '../../../../../../common/features/notes/components/NoteRow/NoteRow';
 import type { Lead } from '../../../types';
 import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
 import useLeadNotes from './useLeadNotes';
@@ -16,8 +15,8 @@ export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead 
 
   return <>
     <DashboardCard
-      title="Follow-up notes"
-      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>+ Add</Button> : undefined}
+      title="Follow-up Notes"
+      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>Add follow-up</Button> : undefined}
     >
       {!lead ? (
         <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>
@@ -26,29 +25,20 @@ export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead 
       ) : notes.error ? (
         <p role="alert">Could not load follow-up notes.</p>
       ) : notes.notes.length ? (
-        <div className="lead-notes-list">
+        <div className="note-list">
           {notes.notes.map(note => (
-            <article className="lead-note-row" key={note.id}>
-              <strong className="lead-note-row__title" title={note.details}>{note.details}</strong>
-              <span className="lead-note-row__author" title={note.createdByName || 'Former staff member'}>
-                {note.createdByName || 'Former staff member'}
-              </span>
-              <span className="lead-note-row__date">{formatShortDate(note.createdAt)}</span>
-              {canWrite && <span className="lead-note-row__actions">
-                <Button size="sm" variant="ghost" aria-label={`Edit follow-up note from ${formatShortDate(note.createdAt)}`} onClick={() => notes.openEdit(note)}>
-                  <FontAwesomeIcon icon={faPen} aria-hidden="true" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="lead-note-row__delete"
-                  aria-label={`Delete follow-up note from ${formatShortDate(note.createdAt)}`}
-                  onClick={() => notes.requestDelete(note)}
-                >
-                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-                </Button>
-              </span>}
-            </article>
+            <NoteRow
+              key={note.id}
+              title={note.details}
+              compact
+              emphasizeTitle={false}
+              categoryBadge={null}
+              author={note.createdByName || 'Former staff member'}
+              date={note.createdAt}
+              onView={() => notes.openDetails(note)}
+              onEdit={canWrite ? () => notes.openEdit(note) : undefined}
+              onDelete={canWrite ? () => notes.requestDelete(note) : undefined}
+            />
           ))}
         </div>
       ) : (
@@ -61,6 +51,19 @@ export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead 
       onClose={notes.closeEditor}
       onSaved={notes.reconcileSavedNote}
     />
+    <Modal
+      isOpen={notes.selectedNote !== null}
+      onClose={notes.closeDetails}
+      title="Follow-up Note"
+      footer={<Button variant="secondary" onClick={notes.closeDetails}>Close</Button>}
+    >
+      {notes.selectedNote && <NoteDetails
+        categoryBadge={null}
+        createdAt={notes.selectedNote.createdAt}
+        createdByName={notes.selectedNote.createdByName}
+        details={notes.selectedNote.details}
+      />}
+    </Modal>
     <Modal
       isOpen={notes.confirmAction !== null}
       onClose={notes.closeConfirmation}

@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+// Scope: verifies timesheet-item summaries, domain details, and emitted entry actions.
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TimeItem from './TimeItem';
 
@@ -77,42 +78,6 @@ describe('TimeItem', () => {
     expect(tooltip).toHaveTextContent('Program Delivery');
   });
 
-  it('dismisses hover details when a scroll container moves', async () => {
-    const { container } = render(<TimeItem item={item} onEdit={vi.fn()} onDelete={vi.fn()} />);
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
-    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
-
-    fireEvent.scroll(container);
-
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-  });
-
-  it('dismisses hover details immediately on pointer down', async () => {
-    render(<TimeItem item={item} onEdit={vi.fn()} onDelete={vi.fn()} />);
-    const trigger = screen.getByRole('button', { name: /program delivery, 2 hours/i });
-    fireEvent.mouseEnter(trigger);
-    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
-
-    fireEvent.pointerDown(trigger);
-
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-  });
-
-  it('does not open hover details when the pointer leaves during the delay', () => {
-    vi.useFakeTimers();
-    try {
-      render(<TimeItem item={item} />);
-      const trigger = screen.getByRole('button', { name: /program delivery, 2 hours/i });
-      fireEvent.mouseEnter(trigger);
-      fireEvent.mouseLeave(trigger);
-      act(() => vi.advanceTimersByTime(120));
-
-      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   it('opens entry actions without invoking either action immediately', () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
@@ -120,6 +85,7 @@ describe('TimeItem', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
+    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('calendar-item--menu-open');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();

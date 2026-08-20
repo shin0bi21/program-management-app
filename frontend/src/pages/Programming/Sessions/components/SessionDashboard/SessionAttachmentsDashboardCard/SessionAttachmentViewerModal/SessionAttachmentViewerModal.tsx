@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   downloadSessionAttachment,
   getSessionAttachmentFile,
-} from '../../../../../../../common/features/programming/api/programming.api';
+} from '../../../../../../../common/features/programming/api/sessions.api';
 import Button from '../../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';

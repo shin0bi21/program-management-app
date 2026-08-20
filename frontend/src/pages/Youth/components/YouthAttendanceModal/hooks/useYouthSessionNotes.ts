@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/programming.api';
+import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/sessions.api';
 import type { SessionNote } from '../../../../../common/types/cohort';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 import type {

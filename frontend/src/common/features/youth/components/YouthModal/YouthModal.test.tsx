@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
 
-vi.mock('../../api/youth.api', () => ({
+vi.mock('../../youth.api', () => ({
   setYouth: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => authState,
 }));
 
-import { setYouth } from '../../api/youth.api';
+import { setYouth } from '../../youth.api';
 
 const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 
@@ -140,6 +140,16 @@ describe('YouthModal', () => {
       expect(screen.getByRole('menuitem', { name: 'Delete Central High' })).toBeInTheDocument();
     });
 
+    it('shows only the school action dialog while managing a school', () => {
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: '+ Add school' }));
+
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+      expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Add Youth Profile' })).not.toBeInTheDocument();
+    });
+
     it('does not render when closed', () => {
       renderModal({ isOpen: false });
       expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();
@@ -162,6 +172,24 @@ describe('YouthModal', () => {
       await waitFor(() => {
         expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
       });
+    });
+
+    it('keeps successful feedback visible until the shared modal delay closes', async () => {
+      const onClose = vi.fn();
+      const onSuccess = vi.fn();
+      renderModal({ onClose, onSuccess });
+      fillRequiredFields();
+
+      submitForm();
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'youth-1' }),
+      ));
+      expect(screen.getByText('Youth profile created successfully!')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Add Youth Profile' })).toBeInTheDocument();
+      expect(screen.getByLabelText('First Name *')).toBeDisabled();
+      expect(screen.getByLabelText(/Phone Number/)).toBeDisabled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 

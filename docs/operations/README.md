@@ -9,4 +9,5 @@ These guides cover preparing, running, verifying, and deploying the application 
 | Trace client/API errors or attach the backend debugger | [Debugging](debugging.md) |
 | Select and run repository tests | [Testing](testing.md) |
 | Understand, inspect, rerun, or change CI | [Continuous integration](ci.md) |
+| Measure CI performance or repository size | [Reports](reports.md) |
 | Deploy and operate production | [Deployment](deployment.md) |

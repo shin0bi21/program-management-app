@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { inviteAccount, updateAccount } from '../../api/accounts.api';
+import { inviteAccount, updateAccount } from '../../accounts.api';
 import { getErrorMessage } from '../../../../../http/clientErrors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Account } from '../../../../../common/types/account';
@@ -32,6 +32,12 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     formState: { errors },
   } = useForm<AccountFormData>({ resolver: zodResolver(accountSchema), defaultValues });
 
+  const handleClose = useCallback(() => {
+    reset(defaultValues);
+    resetStatus();
+    onClose();
+  }, [onClose, reset, resetStatus]);
+
   useEffect(() => {
     if (!isOpen) return;
     reset(account ? {
@@ -44,15 +50,11 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     resetStatus();
   }, [account, isOpen, reset, resetStatus]);
 
-  const handleClose = () => {
-    reset(defaultValues);
-    resetStatus();
-    onClose();
-  };
-
   const onValid = async (data: AccountFormData) => {
     setSubmitStatus('submitting');
     setError('');
+
+    let savedAccount: Account;
     try {
       const payload = {
         firstName: data.firstName.trim(),
@@ -61,18 +63,17 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
         role: data.role,
         programIds: data.programIds,
       };
-      const result = account
+      savedAccount = account
         ? await updateAccount({ id: account.id, ...payload })
         : await inviteAccount(payload);
-      setSubmitStatus('success');
-      setTimeout(() => {
-        onSuccess(result);
-        handleClose();
-      }, 800);
     } catch (err) {
       setError(getErrorMessage(err, account ? 'Failed to update account' : 'Failed to send invitation'));
       setSubmitStatus('error');
+      return;
     }
+
+    setSubmitStatus('success');
+    onSuccess(savedAccount);
   };
 
   return {

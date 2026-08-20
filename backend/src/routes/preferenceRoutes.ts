@@ -3,11 +3,11 @@ import { handleGetPreference, handleSetPreference } from '../controllers/prefere
 import { authenticateToken } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { getPreferenceSchema, keyedSetPreferenceSchema } from '../validation/preferenceSchemas';
+import { getPreferenceSchema, setPreferenceSchema } from '../validation/preferenceSchemas';
 
 const router = Router();
 
 router.get('/:preferenceKey', authenticateToken, generalLimiter, validateRequest(getPreferenceSchema), asyncHandler(handleGetPreference));
-router.put('/:preferenceKey', authenticateToken, generalLimiter, validateRequest(keyedSetPreferenceSchema), asyncHandler(handleSetPreference));
+router.put('/:preferenceKey', authenticateToken, generalLimiter, validateRequest(setPreferenceSchema), asyncHandler(handleSetPreference));
 
 export default router;

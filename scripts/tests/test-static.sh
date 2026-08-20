@@ -26,6 +26,19 @@ shellcheck "${shell_files[@]}"
 echo "Running ESLint..."
 npm run lint
 
+echo "Running script tests..."
+node --test scripts/ci/*.test.js scripts/patterns/enforce/*.test.js scripts/patterns/review/*.test.js scripts/reports/*.test.js
+
+echo "Checking report commands..."
+loc_total=$(bash scripts/reports/loc-report.sh app | awk '/^TOTAL/{print $2}')
+if [ -z "$loc_total" ] || [ "$loc_total" -eq 0 ]; then
+  echo "ERROR: LOC report did not count repository source files"
+  exit 1
+fi
+
+echo "Checking documentation links..."
+node scripts/tests/check-doc-links.js
+
 echo "Validating repository skills..."
 node scripts/agents/validate-skills.js
 

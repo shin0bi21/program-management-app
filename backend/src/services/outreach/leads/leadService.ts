@@ -9,14 +9,22 @@ import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 const leadColumns = sql`
   id,
   origin,
-  expression_of_interest_id,
+  submitted_by_role,
   converted_youth_id,
   youth_first_name,
   youth_last_name,
   age,
   school,
-  program_of_interest_id,
-  (SELECT name FROM programs WHERE id = program_of_interest_id) AS program_of_interest_name,
+  (SELECT id FROM programs WHERE name = CASE
+    WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills'
+    WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness'
+    ELSE NULL
+  END LIMIT 1) AS recommended_program_id,
+  CASE
+    WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills'
+    WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness'
+    ELSE NULL
+  END AS recommended_program_name,
   contact_phone_number,
   contact_relationship,
   discovery_source,
@@ -35,7 +43,7 @@ export async function getLeads(filters: LeadQuery) {
   const sortValue = {
     name: sql`LOWER(youth_first_name || ' ' || youth_last_name)`,
     school: sql`LOWER(school)`,
-    program: sql`LOWER(COALESCE((SELECT name FROM programs WHERE id = program_of_interest_id), ''))`,
+    program: sql`LOWER(CASE WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE '' END)`,
     status: sql`status::text`,
     createdAt: sql`created_at::text`,
   }[filters.sort]!;
@@ -56,11 +64,11 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
   const rows = await sql`
     INSERT INTO leads (
       origin,
+      submitted_by_role,
       youth_first_name,
       youth_last_name,
       age,
       school,
-      program_of_interest_id,
       contact_phone_number,
       contact_relationship,
       discovery_source,
@@ -68,18 +76,48 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       created_by,
       updated_by
     ) VALUES (
-      'staff_created',
+      'internal',
+      'staff',
       ${data.youthFirstName},
       ${data.youthLastName},
       ${data.age},
       ${data.school},
-      ${data.programOfInterestId ?? null},
       ${data.contactPhoneNumber},
       ${data.contactRelationship},
       ${data.discoverySource},
       ${data.notes ?? null},
       ${actorId},
       ${actorId}
+    )
+    RETURNING ${leadColumns}
+  `;
+  return rows[0];
+}
+
+export async function createExternalLead(data: CreateLeadInput, submittedByRole: 'youth' | 'parent' | 'guardian') {
+  const rows = await sql`
+    INSERT INTO leads (
+      origin,
+      submitted_by_role,
+      youth_first_name,
+      youth_last_name,
+      age,
+      school,
+      contact_phone_number,
+      contact_relationship,
+      discovery_source,
+      notes
+    ) VALUES (
+      'external',
+      ${submittedByRole},
+      ${data.youthFirstName},
+      ${data.youthLastName},
+      ${data.age},
+      ${data.school},
+      ${data.contactPhoneNumber},
+      ${data.contactRelationship},
+      ${data.discoverySource},
+      ${data.notes ?? null}
     )
     RETURNING ${leadColumns}
   `;
@@ -93,7 +131,6 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
         youth_last_name = ${data.youthLastName},
         age = ${data.age},
         school = ${data.school},
-        program_of_interest_id = ${data.programOfInterestId ?? null},
         contact_phone_number = ${data.contactPhoneNumber},
         contact_relationship = ${data.contactRelationship},
         discovery_source = ${data.discoverySource},
@@ -137,6 +174,26 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
   return rows[0];
 }
 
+export async function deleteLead(id: string, actorId: string) {
+  const transactionId = crypto.randomUUID();
+  return sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const rows = await tx<Record<string, unknown>[]>`
+      SELECT ${leadColumns} FROM leads
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new NotFoundError('Lead not found');
+    const lead = rows[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+    if (lead.status === 'signed_up' || lead.convertedYouthId) {
+      throw new ConflictError('Signed-up leads cannot be deleted');
+    }
+    await tx`DELETE FROM leads WHERE id = ${id}`;
+    await audit(tx, actorId, transactionId, 'leads', id, 'DELETE', lead, null);
+    return { id };
+  });
+}
+
 export async function signUpLead(id: string, data: SignUpLeadInput, actorId: string) {
   const transactionId = crypto.randomUUID();
 
@@ -144,19 +201,17 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     const trx = asTransactionSql(tx);
     const leads = await trx<{
       id: string;
-      expressionOfInterestId: string | null;
       convertedYouthId: string | null;
       youthFirstName: string;
       youthLastName: string;
       school: string;
-      programOfInterestId: string | null;
       contactPhoneNumber: string;
       contactRelationship: string;
       notes: string | null;
       status: string;
     }[]>`
-      SELECT id, expression_of_interest_id, converted_youth_id,
-             youth_first_name, youth_last_name, school, program_of_interest_id,
+      SELECT id, converted_youth_id,
+             youth_first_name, youth_last_name, school,
              contact_phone_number,
              contact_relationship, notes, status
       FROM leads
@@ -169,7 +224,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
       throw new ConflictError('Lead has already been signed up');
     }
-
     if (data.cohortId) {
       const cohorts = await trx<{
         id: string;
@@ -185,9 +239,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
         FOR UPDATE OF pc
       `;
       if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');
-      if (lead.programOfInterestId && cohorts[0].programId !== lead.programOfInterestId) {
-        throw new ConflictError('Selected cohort does not belong to the lead program of interest');
-      }
       if (cohorts[0].rosterMode === 'open') {
         throw new ConflictError('Open attendance cohorts do not use enrollment');
       }
@@ -265,25 +316,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       { status: lead.status, convertedYouthId: null },
       { status: 'signed_up', convertedYouthId: youthId });
 
-    if (lead.expressionOfInterestId) {
-      const expressions = await trx<{ id: string; status: string }[]>`
-        SELECT id, status
-        FROM expressions_of_interest
-        WHERE id = ${lead.expressionOfInterestId}
-        FOR UPDATE
-      `;
-      await trx`
-        UPDATE expressions_of_interest
-        SET status = 'signed_up', updated_at = NOW(), updated_by = ${actorId}
-        WHERE id = ${lead.expressionOfInterestId}
-      `;
-      if (expressions[0]) {
-        await audit(trx, actorId, transactionId, 'expressions_of_interest', lead.expressionOfInterestId, 'UPDATE',
-          { status: expressions[0].status },
-          { status: 'signed_up' });
-      }
-    }
-
     return youthId;
   });
 
@@ -300,10 +332,12 @@ function applyLeadFilters(filters: LeadQuery) {
     ? sql`CONCAT_WS(' ', youth_first_name, youth_last_name, school) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'`
     : sql`TRUE`;
   const programFilter = filters.programIds.length
-    ? sql`program_of_interest_id = ANY(${sql.array(filters.programIds)}::uuid[])`
+    ? sql`(SELECT id FROM programs WHERE name = CASE WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE NULL END LIMIT 1) = ANY(${sql.array(filters.programIds)}::uuid[])`
     : sql`TRUE`;
-
-  return sql`${statusFilter} AND ${programFilter} AND ${searchFilter}`;
+  const originFilter = filters.origins.length
+    ? sql`origin = ANY(${sql.array(filters.origins)}::lead_origin[])`
+    : sql`TRUE`;
+  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${searchFilter}`;
 }
 
 function escapeLikePattern(value: string) {

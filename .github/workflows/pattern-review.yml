@@ -49,13 +49,13 @@ jobs:
           CHECK_PATTERNS_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || 'HEAD^' }}
         run: |
           mkdir -p artifacts/pattern-review
-          node scripts/agents/check-patterns.js --changed 2>&1 | tee artifacts/pattern-review/report.txt
+          node scripts/patterns/check-patterns.js --changed 2>&1 | tee artifacts/pattern-review/report.txt
 
       - name: Review all patterns
         if: github.event_name == 'workflow_dispatch' && inputs.scope == 'full'
         run: |
           mkdir -p artifacts/pattern-review
-          node scripts/agents/check-patterns.js --all 2>&1 | tee artifacts/pattern-review/report.txt
+          node scripts/patterns/check-patterns.js --all 2>&1 | tee artifacts/pattern-review/report.txt
 
       - name: Publish pattern review summary
         if: always()

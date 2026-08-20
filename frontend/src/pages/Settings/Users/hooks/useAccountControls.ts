@@ -4,8 +4,16 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import type { AccountRole, AccountSortKey, AccountStatus } from '../../../../common/types/account';
 import type { ListSort } from '../../../../common/types/pagination';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
+import type { AccountPreference } from '../types';
 
-export function useAccountControls(isAdmin: boolean) {
+const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
+
+export function useAccountControls(
+  isAdmin: boolean,
+  columnKeys: readonly string[],
+  sortKeys: readonly AccountSortKey[],
+) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -14,12 +22,18 @@ export function useAccountControls(isAdmin: boolean) {
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>({ key: 'name', direction: 'asc' });
+  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preferences.
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('account-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<AccountPreference>('account-filters', columnKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -30,13 +44,24 @@ export function useAccountControls(isAdmin: boolean) {
   // Restore preferences before enabling the account query.
   useEffect(() => {
     if (ready || preferenceLoading) return;
-    setStatusFilters(preference?.statuses ?? []);
-    setRoleFilters(preference?.roles ?? []);
-    setSortingState(preference?.sorting ?? { key: 'name', direction: 'asc' });
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: AccountPreference = {
+      statuses: preference?.statuses ?? [],
+      roles: isAdmin ? preference?.roles ?? [] : [],
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setStatusFilters(restored.statuses);
+    setRoleFilters(restored.roles);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, ready]);
+  }, [isAdmin, preference, preferenceLoading, ready, setBaseline, sortKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({
@@ -65,13 +90,13 @@ export function useAccountControls(isAdmin: boolean) {
     sorting?: ListSort<AccountSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    statuses: next.statuses ?? statusFilters,
-    roles: next.roles ?? roleFilters,
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [columnWidths, hiddenColumns, roleFilters, save, sorting, statusFilters]);
+  }) => save(current => ({
+    statuses: next.statuses ?? current?.statuses ?? statusFilters,
+    roles: next.roles ?? current?.roles ?? roleFilters,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [columnWidths, hiddenColumns, roleFilters, save, sorting, statusFilters]);
 
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {
@@ -108,6 +133,6 @@ export function useAccountControls(isAdmin: boolean) {
   return {
     search, setSearch, queryFilters, statusFilters, roleFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };
 }

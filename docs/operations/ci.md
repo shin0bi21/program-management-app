@@ -6,11 +6,11 @@ GitHub Actions runs the repository's remote merge checks automatically. This gui
 
 ```text
 feature PR → develop
-  ├── CI: quality, backend, frontend tests/build, conditional production validation
+  ├── CI: classify changes, then run affected quality/application/production checks
   └── Pattern Review: changed repository invariants
 
 develop PR → main
-  └── CI: merge-path enforcement plus every standard and production check
+  └── CI: standalone merge-path enforcement plus affected application and all production checks
 
 push to main
   └── Deploy Production: SSH deployment plus public smoke checks
@@ -32,6 +32,21 @@ CI validates pull requests; deployment is the separate CD path documented in [Pr
 
 Repository rulesets determine which named jobs are required. If a workflow job name changes, update the corresponding branch-protection requirement in GitHub; changing YAML does not update rulesets automatically.
 
+### Changed-path routing
+
+The CI workflow first sends the pull request's changed paths to [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). That shared selector also powers `test-app.sh --changed`, so local and remote routing follow one policy:
+
+- Documentation-only changes skip paid application jobs.
+- Repository automation changes run static checks.
+- A recognized backend domain runs its authoritative Jest directories in one invocation. Known integration boundaries add their consumers; for example, Task changes also run Timesheet tests.
+- Shared backend infrastructure, migrations, backend dependencies, and unmapped backend paths run the full backend suite.
+- Frontend source changes use Vitest's dependency graph. This selects tests for the changed component or hook and tests belonging to importing owners, including route pages.
+- Frontend dependency, configuration, or runner changes run all frontend tests.
+- Deployment inputs select deployment planning, image builds, and Compose validation.
+- Unrecognized repository paths fail closed to the full local application plan until they are deliberately classified.
+
+Jobs use job-level conditions rather than workflow path filters. This keeps required check names present while avoiding application runners that do not own the diff. A standalone `Enforce develop → main only` job publishes the required merge-path check for pull requests to `main`; the required quality job also always runs for those release pull requests. Pull requests to `main` always validate both production images and the production Compose configuration.
+
 ## Reproduce a failed check
 
 Start from the failed GitHub job and run its stable repository command where one exists:
@@ -43,8 +58,8 @@ Start from the failed GitHub job and run its stable repository command where one
 | Frontend Vitest behavior | `bash scripts/tests/frontend/test-ui.sh` |
 | Browser component behavior | `bash scripts/tests/frontend/test-browser.sh` |
 | Full local application gate | `bash scripts/tests/test-app.sh` |
-| Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `--changed` |
-| Repository patterns | `node scripts/agents/check-patterns.js --changed` |
+| Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `bash scripts/tests/test-app.sh --changed` |
+| Repository patterns | `node scripts/patterns/check-patterns.js --changed` |
 
 CI also runs framework and production-specific steps such as backend migrations and generated-type drift checks, frontend builds, image builds, Compose validation, and nginx validation. Inspect the failed workflow step for its exact command. [Testing](testing.md) owns test-runner selection; [Local development](local-development.md) owns Docker, migrations, dependencies, and environment diagnostics.
 
@@ -54,22 +69,9 @@ Open the pull request's **Checks** section or the repository's **Actions** tab, 
 
 Pattern Review publishes its report in the job summary and retains the text artifact. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented separately in [Production deployment](deployment.md).
 
-## Review CI performance over time
+## Reports
 
-Use the read-only CI report to compare recent merge-gate behavior or inspect a UTC date range:
-
-```bash
-npm run ci:review
-npm run ci:review -- --branch develop --last 20
-npm run ci:review -- --since 2026-07-01 --until 2026-07-31
-npm run ci:review -- --since 2026-07-01 --json
-```
-
-The default report examines the five most recent pull requests merged to `develop` or `main`. Date-range mode examines all matching merges. It retrieves pull requests, workflow runs, and jobs through the authenticated GitHub CLI, then reports queue time, merge-gate wall time, summed runner time, success rate, and reruns separately. Each pull request is one pipeline sample: wall time runs from its earliest required workflow execution to its last required workflow completion.
-
-Pull requests that change workflows, repository test runners, CI configuration, dependency manifests, or the canonical CI/testing documentation become timeline boundaries. The report shows the measurements before and after each boundary and identifies the pull request, commit, linked issue from its closing statement, and relevant files. Use `--json` when preserving samples or building another visualization. Run `gh auth status` if the command cannot read Actions data.
-
-Timing summaries use successful first attempts. Cancelled runs are excluded, and reruns remain visible but do not distort comparable medians. Release pull requests to `main` are labeled by branch and should be compared separately from feature pull requests when their production-check shape differs.
+Use [`npm run report:ci`](reports.md#ci-report) to measure merge-gate performance and [`npm run report:loc`](reports.md#loc-report) for repository-size breakdowns. The [Reports guide](reports.md) owns commands, report scope, and interpretation.
 
 ## Change CI safely
 
@@ -81,4 +83,4 @@ Timing summaries use successful first attempts. Cancelled runs are excluded, and
 6. Update CI architecture when topology, gates, test ownership, or performance assumptions change; update this guide when operational steps or failure routing change.
 7. Inspect the first GitHub run because triggers, services, permissions, caches, and rulesets cannot be fully verified locally.
 
-Workflow files should orchestrate. Reusable developer and CI behavior belongs in `scripts/tests/`; package scripts remain framework-level commands.
+Workflow files should orchestrate. Changed-path policy belongs in `scripts/ci/`, reusable test execution belongs in `scripts/tests/`, and package scripts remain framework-level commands.

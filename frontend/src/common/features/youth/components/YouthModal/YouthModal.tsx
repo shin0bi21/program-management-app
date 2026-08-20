@@ -53,6 +53,7 @@ export default function YouthModal({
   } = useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail: showLoginEmail });
 
   const contactOnly = mode === 'contact';
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   let title = 'Add Youth Profile';
   let submitLabel = 'Add Profile';
 
@@ -98,12 +99,13 @@ export default function YouthModal({
   return (
     <>
       <Modal
-        isOpen={isOpen}
+        isOpen={isOpen && schoolAction === null}
         onClose={closeYouthModal}
         title={title}
         footer={footer}
         status={submitStatus}
         statusMessage={modalStatusMessage}
+        successDelay={800}
       >
         <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
           {!contactOnly && (
@@ -114,19 +116,19 @@ export default function YouthModal({
               </div>
               <div className="form-row">
                 <FormField id="firstName" label="First Name *" error={errors.firstName?.message}>
-                  <input id="firstName" type="text" {...register('firstName')} />
+                  <input id="firstName" type="text" disabled={submissionComplete} {...register('firstName')} />
                 </FormField>
                 <FormField id="lastName" label="Last Name *" error={errors.lastName?.message}>
-                  <input id="lastName" type="text" {...register('lastName')} />
+                  <input id="lastName" type="text" disabled={submissionComplete} {...register('lastName')} />
                 </FormField>
               </div>
 
               <div className="form-row">
                 <FormField id="dateOfBirth" label="Date of Birth">
-                  <input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+                  <input id="dateOfBirth" type="date" disabled={submissionComplete} {...register('dateOfBirth')} />
                 </FormField>
                 <FormField id="gradeLevel" label="Grade" error={errors.gradeLevel?.message}>
-                  <input id="gradeLevel" type="number" min="0" max="12" placeholder="0–12" {...register('gradeLevel', { valueAsNumber: true })} />
+                  <input id="gradeLevel" type="number" min="0" max="12" placeholder="0–12" disabled={submissionComplete} {...register('gradeLevel', { valueAsNumber: true })} />
                 </FormField>
               </div>
 
@@ -136,7 +138,7 @@ export default function YouthModal({
                     id="email"
                     type="email"
                     placeholder="youth@example.com"
-                    disabled={!!youthData?.account}
+                    disabled={submissionComplete || !!youthData?.account}
                     {...register('email')}
                   />
                 </FormField>
@@ -149,7 +151,7 @@ export default function YouthModal({
                   options={schools.map(school => ({ value: school.id, label: school.name }))}
                   onChange={setSchoolId}
                   placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
-                  disabled={schoolsLoading}
+                  disabled={submissionComplete || schoolsLoading}
                   action={canManageSchools ? { label: '+ Add school', onSelect: () => setSchoolAction({ type: 'add' }) } : undefined}
                   optionActions={canManageSchools ? option => {
                     const school = schools.find(item => item.id === option.value)!;
@@ -169,6 +171,7 @@ export default function YouthModal({
                     value={address.address}
                     onChange={event => handleAddressChange(index, 'address', event.target.value)}
                     placeholder="123 Main Street"
+                    disabled={submissionComplete}
                   />
                 </FormField>
               ))}
@@ -192,6 +195,7 @@ export default function YouthModal({
                         value={contact.phoneNumber}
                         onChange={(e) => handleContactChange(index, 'phoneNumber', e.target.value)}
                         placeholder="(416) 555-1234"
+                        disabled={submissionComplete}
                       />
                     </FormField>
                     <FormField id={`type-${index}`} label="Relationship *">
@@ -205,7 +209,7 @@ export default function YouthModal({
                           { value: 'sibling', label: 'Sibling' },
                         ]}
                         onChange={value => handleContactChange(index, 'type', value)}
-                        disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+                        disabled={submissionComplete}
                       />
                     </FormField>
                   </div>

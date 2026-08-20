@@ -1,33 +1,26 @@
-import type { ReactNode } from 'react';
 import CalendarItem from '../../../../../../common/components/ResourceCalendar/items/CalendarItem';
-import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../../../../common/features/tasks/types';
-import { isTaskOverdue } from '../../../taskOverview';
+import { TASK_CATEGORY_LABELS, TASK_LIST_STATUS_LABELS, type Task } from '../../../../../../common/features/tasks/types';
+import { getTaskListStatus } from '../../../utils/taskDates';
 import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import './TaskItem.css';
 
-export default function TaskItem({ task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete, onActivate }: { task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void; onActivate?: () => void }) {
+export default function TaskItem({ task, today, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete, onActivate }: { task: Task; today: string; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void; onActivate?: () => void }) {
   const category = TASK_CATEGORY_LABELS[task.category];
-  const overdue = isTaskOverdue(task, dayKey(new Date()));
-  const completed = task.status === 'completed';
+  const status = getTaskListStatus(task, today);
+  const statusLabel = TASK_LIST_STATUS_LABELS[status];
   const loggedHours = `${task.hoursLogged.toLocaleString('en-CA', { maximumFractionDigits: 2 })} ${task.hoursLogged === 1 ? 'hour' : 'hours'}`;
-  let trailingStatus: ReactNode;
-  if (completed) {
-    trailingStatus = <strong className="task-item__completed" aria-label="Completed" title="Completed">✓</strong>;
-  } else if (overdue) {
-    trailingStatus = <strong className="task-item__overdue" aria-label="Overdue" title="Overdue">!</strong>;
-  }
+  const className = `task-item--${status}`;
+
   return <CalendarItem
     id={task.id}
-    ariaLabel={`${task.title}, ${task.startDate} to ${task.dueDate}`}
+    selected={selected}
+    ariaLabel={`${task.title}, ${statusLabel}, ${task.startDate} to ${task.dueDate}`}
     summary={<>{task.title} · {category}</>}
-    trailing={trailingStatus}
     detailTitle={(
       <span className="task-item__detail-title">
         <span>{task.title}</span>
         <span className="task-item__detail-badges">
-          <TaskStatusBadge status={task.status} />
-          {overdue && <span className="task-item__overdue-badge">Overdue</span>}
+          <TaskStatusBadge task={task} today={today} />
         </span>
       </span>
     )}
@@ -47,6 +40,6 @@ export default function TaskItem({ task, selected = false, onComplete, onCancel,
     onEdit={onEdit}
     onDelete={onDelete}
     onActivate={onActivate}
-    className={selected ? 'task-item--selected' : undefined}
+    className={className}
   />;
 }

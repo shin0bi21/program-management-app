@@ -4,16 +4,15 @@ import { AuthProvider } from '../auth/AuthProvider';
 import { ReAuthProvider } from '../auth/reauth/ReAuthProvider';
 import ProtectedRoute from '../common/components/ProtectedRoute/ProtectedRoute';
 import RouteLoading from '../common/components/RouteLoading/RouteLoading';
-import Homepage from '../pages/Homepage/Homepage';
-import { HOMEPAGE_ROUTE_PATHS } from '../pages/Homepage/homepageSections';
+import PublicHomepage from '../pages/Homepage/PublicHomepage/PublicHomepage';
+import { HOMEPAGE_ROUTE_PATHS } from '../pages/Homepage/PublicHomepage/utils/homepageSections';
 import AppNavigation from './components/AppNavigation/AppNavigation';
 
-const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage'));
+const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage/ManageHomepage'));
 const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
 const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
-const ExpressionsOfInterest = lazy(() => import('../pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'));
 const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
 const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
 const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
@@ -41,7 +40,7 @@ function App() {
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               {HOMEPAGE_ROUTE_PATHS.map((path) => (
-                <Route key={path} path={path} element={<Homepage />} />
+                <Route key={path} path={path} element={<PublicHomepage />} />
               ))}
               <Route element={<AuthenticatedLayout />}>
                 <Route
@@ -109,20 +108,22 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/outreach" element={<Navigate to="/outreach/expressions-of-interest" replace />} />
+              <Route path="/outreach" element={<Navigate to="/outreach/leads/external" replace />} />
+              <Route path="/outreach/expressions-of-interest" element={<Navigate to="/outreach/leads/external" replace />} />
+              <Route path="/outreach/leads" element={<Navigate to="/outreach/leads/external" replace />} />
               <Route
-                path="/outreach/expressions-of-interest"
+                path="/outreach/leads/external"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
-                    <ExpressionsOfInterest />
+                    <Leads key="external" origin="external" />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/outreach/leads"
+                path="/outreach/leads/internal"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
-                    <Leads />
+                    <Leads key="internal" origin="internal" />
                   </ProtectedRoute>
                 }
               />

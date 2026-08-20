@@ -1,11 +1,12 @@
+// Scope: verifies Sessions route composition, permissions, controls, selection, and cross-owner callbacks.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceValues } from '../../../common/features/preferences/api/preferences.api';
 import type { Program } from '../../../common/features/programs/types';
+import type { SessionPreference } from './types';
 import Sessions from './Sessions';
-import render from '../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
 function LocationProbe() {
   const location = useLocation();
@@ -35,27 +36,32 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   }],
 }));
 const preferenceHook = vi.hoisted<{
-  preference: PreferenceValues['session-filters'] | null;
+  preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
+  setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
   loading: false,
   error: null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
+}));
+
+vi.mock('../../../common/features/programming/api/sessions.api', () => ({
+  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
-  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   createSessionNote: vi.fn(),
-  setSessionAttendance: vi.fn(),
   generateSessions: vi.fn(),
+  setSessionAttendance: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));
 
@@ -129,7 +135,19 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 describe('Sessions', () => {
   beforeEach(() => {
     preferenceHook.preference = { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
+    preferenceHook.setBaseline.mockImplementation((value: SessionPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: SessionPreference | ((current: SessionPreference | null) => SessionPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     renderCalendar.mockReset();
     auth.role = 'admin';
     auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
@@ -241,7 +259,7 @@ describe('Sessions', () => {
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(screen.getByText('Field Trip')).toHaveClass('session-type--field-trip');
+    expect(screen.getByText('Field Trip')).toHaveClass('session-type-badge--field-trip');
     const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
     expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
   });
@@ -276,14 +294,19 @@ describe('Sessions', () => {
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
   });
 
-  it('removes a deleted session without refetching the table', async () => {
+  it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
         <Sessions />
+        <LocationProbe />
       </MemoryRouter>,
     );
     await screen.findByText('Communication');
+    expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent(
+      'No attendance.',
+    );
     const initialRequestCount = getSessions.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
@@ -292,6 +315,8 @@ describe('Sessions', () => {
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
+    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
     expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
@@ -316,6 +341,31 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Upcoming' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Completed' }));
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <MemoryRouter initialEntries={['/programming/sessions']}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
   });
 
   it('preserves applied filters when switching session views', async () => {
@@ -437,7 +487,7 @@ describe('Sessions', () => {
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
-    expect(preferenceHook.save).toHaveBeenLastCalledWith(expect.objectContaining({ view: 'list' }));
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'list' }));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: List' })).toBeInTheDocument();

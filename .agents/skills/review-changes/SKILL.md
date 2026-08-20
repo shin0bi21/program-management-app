@@ -46,7 +46,7 @@ Read only the references required by the current diff, and read each selected fi
 
 For a cross-stack or repository-wide review, read all applicable references. Do not skip a reference merely because the diff is large.
 
-When an established business capability changes, read its canonical contract under `docs/features/` and verify that implementation, tests, API documentation, and the feature document remain aligned.
+When an established business capability changes, verify its types, validation, policies, persistence, APIs, consumers, and authoritative tests remain aligned. Treat executable contracts as the source of truth rather than maintaining parallel feature prose.
 
 ## 3. Review behavior end to end
 

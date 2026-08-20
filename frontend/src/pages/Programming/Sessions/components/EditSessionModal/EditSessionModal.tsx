@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateSession } from '../../../../../common/features/programming/api/programming.api';
+import { updateSession } from '../../../../../common/features/programming/api/sessions.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -23,7 +23,7 @@ interface EditSessionModalProps {
 export default function EditSessionModal({ session, onClose, onUpdated }: EditSessionModalProps) {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const sessionTypes = useSessionTypes();
+  const { sessionTypes } = useSessionTypes();
   const [sessionTypeId, setSessionTypeId] = useState('');
 
   useEffect(() => {

@@ -104,7 +104,7 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
-  it('persists bounded column widths and validated hidden columns', async () => {
+  it('persists frontend-owned table presentation values', async () => {
     const value = {
       statuses: [],
       roles: [],
@@ -118,19 +118,57 @@ describe('User preferences API', () => {
     expect(saved.status).toBe(200);
     expect(saved.body).toEqual(value);
 
-    for (const columnWidths of [{ actions: 120 }, { name: 99 }, { name: 501 }, { name: 120.5 }]) {
-      const rejected = await request(app)
-        .put('/api/preferences/account-filters')
-        .set('Authorization', `Bearer ${firstToken}`)
-        .send({ statuses: [], roles: [], columnWidths });
-      expect(rejected.status).toBe(400);
-    }
-
-    const rejectedHiddenColumns = await request(app)
+    const presentationColumns = await request(app)
       .put('/api/preferences/account-filters')
       .set('Authorization', `Bearer ${firstToken}`)
-      .send({ statuses: [], roles: [], hiddenColumns: ['actions'] });
-    expect(rejectedHiddenColumns.status).toBe(400);
+      .send({ statuses: [], roles: [], columnWidths: { actions: 120 }, hiddenColumns: ['actions'] });
+    expect(presentationColumns.status).toBe(200);
+    expect(presentationColumns.body).toEqual({
+      statuses: [],
+      roles: [],
+      columnWidths: { actions: 120 },
+      hiddenColumns: ['actions'],
+    });
+  });
+
+  it('stores preference contents as frontend-owned JSON', async () => {
+    const legacyValue = {
+      statuses: [],
+      programIds: [],
+      columnWidths: { youthName: 260, school: 220 },
+      hiddenColumns: ['youthName', 'school'],
+    };
+    await sql`
+      INSERT INTO user_preferences (user_id, preference_key, value)
+      VALUES (${firstUserId}, 'expression-interest-filters', ${sql.json(legacyValue)})
+      ON CONFLICT (user_id, preference_key) DO UPDATE
+      SET value = EXCLUDED.value, updated_at = NOW()
+    `;
+
+    const restored = await request(app)
+      .get('/api/preferences/expression-interest-filters')
+      .set('Authorization', `Bearer ${firstToken}`);
+    expect(restored.status).toBe(200);
+    expect(restored.body).toEqual(legacyValue);
+
+    const saved = await request(app)
+      .put('/api/preferences/expression-interest-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(legacyValue);
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual(legacyValue);
+
+    const futureValue = {
+      ...legacyValue,
+      futureFilter: { enabled: true },
+      columnWidths: { futureColumn: 99 },
+    };
+    const savedFutureValue = await request(app)
+      .put('/api/preferences/expression-interest-filters')
+      .set('Authorization', `Bearer ${firstToken}`)
+      .send(futureValue);
+    expect(savedFutureValue.status).toBe(200);
+    expect(savedFutureValue.body).toEqual(futureValue);
   });
 
   it('persists separate Outreach first and last name column widths', async () => {
@@ -170,7 +208,7 @@ describe('User preferences API', () => {
     expect(saved.body).toEqual(value);
   });
 
-  it('rejects unknown preference keys and malformed filter values', async () => {
+  it('rejects unknown preference keys and non-object preference values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')
       .set('Authorization', `Bearer ${firstToken}`)).status).toBe(400);
@@ -178,6 +216,6 @@ describe('User preferences API', () => {
     expect((await request(app)
       .put('/api/preferences/youth-profile-filters')
       .set('Authorization', `Bearer ${firstToken}`)
-      .send({ statuses: ['unknown'], programIds: [] })).status).toBe(400);
+      .send([])).status).toBe(400);
   });
 });

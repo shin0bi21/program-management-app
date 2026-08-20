@@ -4,29 +4,70 @@ import {
   getPreference,
   setPreference,
   type PreferenceKey,
-  type PreferenceValues,
-} from '../api/preferences.api';
+} from '../preferences.api';
 
-type PreferenceUpdate<K extends PreferenceKey> = PreferenceValues[K]
-  | ((current: PreferenceValues[K] | null) => PreferenceValues[K]);
+interface TablePreferenceFields {
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}
 
-export default function useUserPreference<K extends PreferenceKey>(key: K) {
+type PreferenceUpdate<T> = T | ((current: T | null) => T);
+
+function sanitizeColumns<T extends object>(
+  value: T | null,
+  columnKeys?: readonly string[],
+): T | null {
+  if (!value || !columnKeys) return value;
+
+  const allowedKeys = new Set(columnKeys);
+  const tablePreference = value as T & TablePreferenceFields;
+
+  return {
+    ...value,
+    ...(tablePreference.columnWidths ? {
+      columnWidths: Object.fromEntries(
+        Object.entries(tablePreference.columnWidths)
+          .filter(([columnKey]) => allowedKeys.has(columnKey)),
+      ),
+    } : {}),
+    ...(tablePreference.hiddenColumns ? {
+      hiddenColumns: tablePreference.hiddenColumns.filter(columnKey => allowedKeys.has(columnKey)),
+    } : {}),
+  };
+}
+
+export default function useUserPreference<T extends object>(
+  key: PreferenceKey,
+  columnKeys?: readonly string[],
+) {
   const queryClient = useQueryClient();
   const queryKey = useMemo(() => ['user-preference', key] as const, [key]);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
-  const pendingRef = useRef<PreferenceValues[K] | null>(null);
-  const queuedRef = useRef<PreferenceValues[K] | null>(null);
-  const latestValueRef = useRef<PreferenceValues[K] | null>(null);
+  const pendingRef = useRef<T | null>(null);
+  const queuedRef = useRef<T | null>(null);
+  const latestValueRef = useRef<T | null>(null);
   const savingRef = useRef(false);
+  const selectPreference = useCallback(
+    (value: T | null) => sanitizeColumns(value, columnKeys),
+    [columnKeys],
+  );
 
   const query = useQuery({
     queryKey,
-    queryFn: ({ signal }) => getPreference(key, { signal }),
+    queryFn: ({ signal }) => getPreference<T>(key, { signal }),
+    select: selectPreference,
   });
   const { mutateAsync } = useMutation({
-    mutationFn: (value: PreferenceValues[K]) => setPreference(key, value),
+    mutationFn: (value: T) => setPreference(key, value),
   });
+
+  const setBaseline = useCallback((value: T) => {
+    const normalized = sanitizeColumns(value, columnKeys)!;
+    void queryClient.cancelQueries({ queryKey, exact: true });
+    latestValueRef.current = normalized;
+    queryClient.setQueryData(queryKey, normalized);
+  }, [columnKeys, queryClient, queryKey]);
 
   const flushQueue = useCallback(async () => {
     if (savingRef.current) return;
@@ -48,13 +89,15 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     }
 
     savingRef.current = false;
-  }, [mutateAsync, queryClient, queryKey]);
+  }, [mutateAsync]);
 
-  const save = useCallback((update: PreferenceUpdate<K>) => {
+  const save = useCallback((update: PreferenceUpdate<T>) => {
     const current = latestValueRef.current
-      ?? queryClient.getQueryData<PreferenceValues[K] | null>(queryKey)
+      ?? sanitizeColumns(queryClient.getQueryData<T | null>(queryKey) ?? null, columnKeys)
       ?? null;
-    const value = typeof update === 'function' ? update(current) : update;
+    const updated = typeof update === 'function' ? update(current) : update;
+    const value = sanitizeColumns(updated, columnKeys)!;
+    void queryClient.cancelQueries({ queryKey, exact: true });
     queryClient.setQueryData(queryKey, value);
     setError(null);
     latestValueRef.current = value;
@@ -66,7 +109,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
       pendingRef.current = null;
       void flushQueue();
     }, 250);
-  }, [flushQueue, queryClient, queryKey]);
+  }, [columnKeys, flushQueue, queryClient, queryKey]);
 
   useEffect(() => () => {
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
@@ -85,6 +128,7 @@ export default function useUserPreference<K extends PreferenceKey>(key: K) {
     preference: query.data ?? null,
     loading: query.isLoading,
     error: error ?? queryError,
+    setBaseline,
     save,
   };
 }

@@ -13,7 +13,8 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumn } from '../../../common/components/Table/Table';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { deleteSession } from '../../../common/features/programming/api/programming.api';
+import { deleteSession } from '../../../common/features/programming/api/sessions.api';
+import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import type { CohortSession } from '../../../common/types/cohort';
@@ -22,20 +23,23 @@ import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
 import { useSessionTypes } from '../common/hooks/useSessionTypes';
-import { COHORT_QUERY_KEY, SESSION_CALENDAR_QUERY_KEY, SESSION_LIST_QUERY_KEY } from '../common/queryKeys';
-import AttendanceModal from './components/AttendanceModal';
+import AttendanceModal from './components/AttendanceModal/AttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
 import SessionListView from './components/SessionListView/SessionListView';
+import SessionTypeBadge from './components/SessionTypeBadge/SessionTypeBadge';
 import { useSessionControls } from './hooks/useSessionControls';
-import { sessionTypeModifier } from './utils/sessionType';
 import './Sessions.css';
 
 const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
+const SESSION_COLUMN_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+const SESSION_SORT_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+const SESSION_LIST_QUERY_KEY = [...SESSION_QUERY_KEY, 'list'] as const;
+const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Sessions() {
   // Application services and route state.
@@ -46,7 +50,11 @@ export default function Sessions() {
   // Shared options used by filters and session forms.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
-  const sessionTypes = useSessionTypes();
+  const {
+    sessionTypes,
+    loading: sessionTypesLoading,
+    error: sessionTypesError,
+  } = useSessionTypes();
 
   // Page dialogs and selected records.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -69,8 +77,11 @@ export default function Sessions() {
 
   // Persisted filters, sorting, and view controls.
   const controls = useSessionControls({
-    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError, sessionTypes,
+    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
+    sessionTypes, sessionTypesLoading, sessionTypesError,
     onFiltersChanged: clearSelectedSession,
+    columnKeys: SESSION_COLUMN_KEYS,
+    sortKeys: SESSION_SORT_KEYS,
   });
   const {
     search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
@@ -90,6 +101,10 @@ export default function Sessions() {
           await deleteSession(session.id);
           removeInfiniteListRow(queryClient, SESSION_LIST_QUERY_KEY, session.id);
           setCalendarSessions(current => current.filter(candidate => candidate.id !== session.id));
+          if (selectedSessionId === session.id) {
+            setSelectedListSession(null);
+            clearSelectedSession();
+          }
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
             queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
@@ -97,7 +112,7 @@ export default function Sessions() {
         },
       });
     },
-    [queryClient],
+    [clearSelectedSession, queryClient, selectedSessionId],
   );
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
@@ -125,11 +140,7 @@ export default function Sessions() {
         sortKey: 'type',
         header: 'Type',
         width: 135,
-        render: (session) => (
-          <span className={`session-type session-type--${sessionTypeModifier(session.sessionTypeName)}`}>
-            {session.sessionTypeName}
-          </span>
-        ),
+        render: (session) => <SessionTypeBadge name={session.sessionTypeName} />,
       },
       {
         key: 'status',
@@ -213,7 +224,7 @@ export default function Sessions() {
                 placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
-            filters={
+            filters={filtersReady ? (
               <FilterCard
                 categories={filterCategories}
                 values={{
@@ -225,8 +236,8 @@ export default function Sessions() {
                 onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
                 onClearAll={controls.clearFilters}
               />
-            }
-            view={(
+            ) : undefined}
+            view={filtersReady ? (
               <ViewMenu
                 value={view}
                 options={[
@@ -235,14 +246,15 @@ export default function Sessions() {
                 ]}
                 onChange={controls.setView}
               />
-            )}
-            columns={view === 'list'
+            ) : undefined}
+            columns={filtersReady && view === 'list'
               ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
               : undefined}
           />
           {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
           {programsError && <p className="form-error" role="alert">{programsError}</p>}
           {cohortsError && <p className="form-error" role="alert">{cohortsError}</p>}
+          {sessionTypesError && <p className="form-error" role="alert">{sessionTypesError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'list' ? (
@@ -250,6 +262,7 @@ export default function Sessions() {
               ariaLabel="Sessions and overview"
               table={
                 <SessionListView
+                  queryKey={SESSION_LIST_QUERY_KEY}
                   columns={columns}
                   hiddenColumnKeys={controls.hiddenColumns}
                   filters={{
@@ -270,6 +283,7 @@ export default function Sessions() {
               }
               dashboard={
                 <SessionDashboard
+                  sessionQueryKey={SESSION_QUERY_KEY}
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}
@@ -282,6 +296,7 @@ export default function Sessions() {
               ariaLabel="Sessions calendar and overview"
               calendar={
                 <SessionsCalendarView
+                  queryKey={SESSION_CALENDAR_QUERY_KEY}
                   selectedProgramIds={selectedProgramIds}
                   selectedCohortId={cohortId}
                   selectedSessionId={selectedSessionId}
@@ -305,6 +320,7 @@ export default function Sessions() {
               }
               dashboard={
                 <SessionDashboard
+                  sessionQueryKey={SESSION_QUERY_KEY}
                   session={selectedSession}
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}

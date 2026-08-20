@@ -1,3 +1,4 @@
+// Scope: verifies Hours calendar filtering and stable derived range data.
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';

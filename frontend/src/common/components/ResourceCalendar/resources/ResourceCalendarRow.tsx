@@ -131,7 +131,10 @@ function ResourceCalendarRow<TResource, TItemData>({
         onPointerDown={draggable ? event => {
           if (event.pointerType === 'touch') return;
           if (event.button !== 0) return;
-          const bounds = event.currentTarget.getBoundingClientRect();
+          const renderedItem = event.currentTarget.firstElementChild;
+          const bounds = renderedItem instanceof HTMLElement
+            ? renderedItem.getBoundingClientRect()
+            : event.currentTarget.getBoundingClientRect();
           beginDrag({
             pointerId: event.pointerId,
             startX: event.clientX,
@@ -139,6 +142,8 @@ function ResourceCalendarRow<TResource, TItemData>({
             x: event.clientX,
             y: event.clientY,
             width: bounds.width,
+            grabOffsetX: event.clientX - bounds.left,
+            grabOffsetY: event.clientY - bounds.top,
             sourceElement: event.currentTarget,
             context: itemContext,
             dragging: false,

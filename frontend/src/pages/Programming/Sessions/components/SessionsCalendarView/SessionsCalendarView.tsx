@@ -7,6 +7,7 @@ import './SessionsCalendarView.css';
 const noSessionTypeIds: string[] = [];
 
 interface SessionsCalendarViewProps {
+  queryKey: readonly unknown[];
   selectedProgramIds: string[];
   selectedCohortId: string;
   selectedSessionId: string;
@@ -20,6 +21,7 @@ interface SessionsCalendarViewProps {
 }
 
 export default function SessionsCalendarView({
+  queryKey,
   selectedProgramIds,
   selectedCohortId,
   selectedSessionId,
@@ -31,7 +33,7 @@ export default function SessionsCalendarView({
   onSessionEdit,
   onSessionDelete,
 }: SessionsCalendarViewProps) {
-  const calendar = useSessionCalendarData({
+  const calendar = useSessionCalendarData(queryKey, {
     programIds: selectedProgramIds,
     cohortId: selectedCohortId,
     sessionTypeIds: selectedSessionTypeIds,

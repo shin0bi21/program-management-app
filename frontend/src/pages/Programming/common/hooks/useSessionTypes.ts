@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getSessionTypes } from '../../../../common/features/programming/api/programming.api';
+import { getSessionTypes } from '../../../../common/features/programming/api/sessions.api';
 import type { SessionType } from '../../../../common/types/cohort';
 
 export function useSessionTypes() {
@@ -8,5 +8,9 @@ export function useSessionTypes() {
     queryFn: ({ signal }) => getSessionTypes({ signal }),
   });
 
-  return query.data ?? [];
+  return {
+    sessionTypes: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? 'Could not load session types.' : null,
+  };
 }

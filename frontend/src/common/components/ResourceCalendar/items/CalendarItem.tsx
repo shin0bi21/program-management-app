@@ -34,10 +34,11 @@ interface CalendarItemProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onActivate?: () => void;
+  selected?: boolean;
   className?: string;
 }
 
-export default function CalendarItem({ id, ariaLabel, leading, summary, trailing, detailTitle, details, actions = [], onEdit, onDelete, onActivate, className = '' }: CalendarItemProps) {
+export default function CalendarItem({ id, ariaLabel, leading, summary, trailing, detailTitle, details, actions = [], onEdit, onDelete, onActivate, selected = false, className = '' }: CalendarItemProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const detailAnchorRef = useRef<DOMRect | null>(null);
@@ -143,7 +144,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     <button
       ref={triggerRef}
       type="button"
-      className={`calendar-item${isOpen ? ' calendar-item--menu-open' : ''}${className ? ` ${className}` : ''}`}
+      className={`calendar-item${selected ? ' calendar-item--selected' : ''}${isOpen ? ' calendar-item--menu-open' : ''}${className ? ` ${className}` : ''}`}
       aria-label={`${ariaLabel}${hasActions ? '. Open actions' : ''}`}
       aria-haspopup={hasActions ? 'menu' : undefined}
       aria-expanded={hasActions ? isOpen : undefined}

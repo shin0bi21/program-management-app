@@ -2,13 +2,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
-import { EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY, LEADS_LIST_QUERY_KEY } from '../queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
+import type { LeadPreference } from './types';
+
+const LEADS_LIST_QUERY_KEY = ['leads', 'external', 'list'] as const;
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
-    <QueryClientProvider client={queryClient}><Leads /></QueryClientProvider>,
+    <QueryClientProvider client={queryClient}><Leads origin="external" /></QueryClientProvider>,
   );
 };
 
@@ -17,9 +19,15 @@ const updateLead = vi.fn();
 const updateLeadStatus = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
-const preferenceHook = vi.hoisted(() => ({ preference: null, loading: false, error: null, save: vi.fn() }));
+const preferenceHook = vi.hoisted(() => ({
+  preference: null as LeadPreference | null,
+  loading: false,
+  error: null,
+  setBaseline: vi.fn(),
+  save: vi.fn(),
+}));
 
-vi.mock('./api/leads.api', () => ({
+vi.mock('./leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
@@ -39,18 +47,30 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: vi.fn().mockResolvedValue([]),
 }));
 
 describe('Leads', () => {
   beforeEach(() => {
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
+    preferenceHook.setBaseline.mockImplementation((value: LeadPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: LeadPreference | ((current: LeadPreference | null) => LeadPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     signUpLead.mockResolvedValue({
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: 'youth-1',
+      id: 'lead-1', origin: 'external', convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -59,9 +79,9 @@ describe('Leads', () => {
     getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
+      id: 'lead-1', origin: 'external', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -70,9 +90,9 @@ describe('Leads', () => {
 
   it('refetches Leads after a status change', async () => {
     const contactedLead = {
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1', convertedYouthId: null,
+      id: 'lead-1', origin: 'external', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'contacted', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -108,7 +128,6 @@ describe('Leads', () => {
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
     for (const queryKey of [
       LEADS_LIST_QUERY_KEY,
-      EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY,
       YOUTH_QUERY_KEY,
       COHORT_QUERY_KEY,
     ]) {
@@ -128,8 +147,8 @@ describe('Leads', () => {
     expect(screen.getByRole('cell', { name: 'Avery' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Outreach' })).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'External Leads' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
   });
 
   it('persists a complete preference when first hiding a column', async () => {
@@ -139,13 +158,35 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: [],
       programIds: [],
+      origins: ['external'],
       sorting: { key: 'createdAt', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: ['school'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved lead preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Leads' })).not.toBeInTheDocument();
+    expect(getLeads).not.toHaveBeenCalled();
+
+    preferenceHook.loading = false;
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <Leads origin="external" />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Leads' })).toBeInTheDocument();
   });
 
   it('shows primary contact details when a lead row is selected', async () => {
@@ -155,7 +196,7 @@ describe('Leads', () => {
 
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
-    expect(screen.getByText('No notes recorded.')).toBeInTheDocument();
+    expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
   });
 
   it('requests filtered lead data from the API', async () => {
@@ -168,7 +209,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
-      { search: '', statuses: ['new'], programIds: [] },
+      { search: '', statuses: ['new'], programIds: [], origins: ['external'] },
       expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
@@ -187,7 +228,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
-      { search: '', statuses: [], programIds: ['program-1'] },
+      { search: '', statuses: [], programIds: ['program-1'], origins: ['external'] },
       expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
@@ -206,10 +247,10 @@ describe('Leads', () => {
 
   it('does not offer edit actions for a signed-up lead', async () => {
     getLeads.mockResolvedValueOnce([{
-      id: 'lead-1', origin: 'expression_of_interest', expressionOfInterestId: 'submission-1',
+      id: 'lead-1', origin: 'external',
       convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      programOfInterestId: 'program-1', programOfInterestName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),

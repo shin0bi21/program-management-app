@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../tests/queryClientTestUtils';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
 
@@ -16,7 +16,7 @@ const sessionNoteApi = vi.hoisted(() => ({
 }));
 
 vi.mock('./youthAttendance.api', () => api);
-vi.mock('../../../../common/features/programming/api/programming.api', () => sessionNoteApi);
+vi.mock('../../../../common/features/programming/api/sessions.api', () => sessionNoteApi);
 
 const cohort = {
   id: 'cohort-1',
@@ -106,7 +106,7 @@ describe('YouthAttendanceModal', () => {
     expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
   });
 
-  it('adds a prelinked youth note without showing link controls and returns to attendance', async () => {
+  it('adds a prelinked youth note without showing link controls', async () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
@@ -129,8 +129,8 @@ describe('YouthAttendanceModal', () => {
       'session-2',
       expect.objectContaining({ title: 'Good teamwork', youthIds: ['youth-1'] }),
     ));
-    expect(await screen.findByRole('heading', { name: 'Manage Attendance' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Add Note' })).not.toBeInTheDocument();
+    expect(screen.getByText('Session note successfully added.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
   });
 
   it('edits and unlinks session notes without deleting them', async () => {

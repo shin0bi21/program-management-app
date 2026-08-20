@@ -20,6 +20,7 @@ export default function AccountModal(props: AccountModalProps) {
   const { programs, loading: programsLoading } = usePrograms();
   const { register, control, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
   const isEdit = account !== undefined;
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const assignablePrograms = programs.filter(program => program.rosterMode === 'enrolled');
   const openPrograms = programs.filter(program => program.rosterMode === 'open');
 
@@ -29,6 +30,7 @@ export default function AccountModal(props: AccountModalProps) {
       onClose={handleClose}
       title={isEdit ? 'Edit Account' : 'Invite Staff Account'}
       status={submitStatus}
+      successDelay={800}
       statusMessage={
         submitStatus === 'submitting' ? (isEdit ? 'Updating account...' : 'Sending invitation...') :
         submitStatus === 'success' ? (isEdit ? 'Account updated!' : 'Invitation sent!') :
@@ -39,21 +41,21 @@ export default function AccountModal(props: AccountModalProps) {
       <form id="account-form" onSubmit={onSubmit}>
         <div className="form-row">
           <FormField id="firstName" label="First Name *" error={errors.firstName?.message}>
-            <input id="firstName" type="text" {...register('firstName')} />
+            <input id="firstName" type="text" disabled={submissionComplete} {...register('firstName')} />
           </FormField>
           <FormField id="lastName" label="Last Name *" error={errors.lastName?.message}>
-            <input id="lastName" type="text" {...register('lastName')} />
+            <input id="lastName" type="text" disabled={submissionComplete} {...register('lastName')} />
           </FormField>
         </div>
         <div className="form-row">
           <FormField id="email" label="Email *" error={errors.email?.message}>
-            <input id="email" type="email" {...register('email')} />
+            <input id="email" type="email" disabled={submissionComplete} {...register('email')} />
           </FormField>
-          <FormField id="role" label="Role" error={errors.role?.message}>
-            <Controller
-              name="role"
-              control={control}
-              render={({ field }) => (
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <FormField id="role" label="Role" error={errors.role?.message}>
                 <FloatingSelect
                   id="role"
                   ariaLabel="Role"
@@ -63,11 +65,11 @@ export default function AccountModal(props: AccountModalProps) {
                     { value: 'admin', label: 'Admin' },
                   ]}
                   onChange={field.onChange}
-                  disabled={submitStatus === 'submitting' || submitStatus === 'success'}
+                  disabled={submissionComplete}
                 />
-              )}
-            />
-          </FormField>
+              </FormField>
+            )}
+          />
         </div>
         <fieldset className="account-programs">
             <legend>Programs</legend>
@@ -76,7 +78,12 @@ export default function AccountModal(props: AccountModalProps) {
                 <span className="account-programs__empty">Loading programs…</span>
               ) : assignablePrograms.length ? assignablePrograms.map(program => (
                 <label key={program.id} className="account-programs__option">
-                  <input type="checkbox" value={program.id} {...register('programIds')} />
+                  <input
+                    type="checkbox"
+                    value={program.id}
+                    disabled={submissionComplete}
+                    {...register('programIds')}
+                  />
                   <span>{program.name}</span>
                 </label>
               )) : (

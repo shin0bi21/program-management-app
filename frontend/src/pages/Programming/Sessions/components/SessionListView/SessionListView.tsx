@@ -5,6 +5,7 @@ import type { ListSort } from '../../../../../common/types/pagination';
 import { useSessions } from './hooks/useSessions';
 
 interface SessionListViewProps {
+  queryKey: readonly unknown[];
   columns: TableColumn<CohortSession>[];
   hiddenColumnKeys: string[];
   filters: SessionListFilters;
@@ -18,10 +19,10 @@ interface SessionListViewProps {
 }
 
 export default function SessionListView({
-  columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
+  queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
   onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved,
 }: SessionListViewProps) {
-  const query = useSessions(filters, sorting, true);
+  const query = useSessions(queryKey, filters, sorting, true);
   const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)

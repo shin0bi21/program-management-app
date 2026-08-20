@@ -2,13 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../../common/types/pagination';
-import type { LeadFilters, LeadSortKey, LeadStatus } from '../types';
+import type { LeadFilters, LeadOrigin, LeadPreference, LeadSortKey, LeadStatus } from '../types';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
+const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'createdAt', direction: 'desc' };
 
-export function useLeadControls(programs: Program[], programsLoading: boolean, programsError: string | null) {
+export function useLeadControls(
+  origin: LeadOrigin,
+  preferenceKey: 'outreach-external-leads-filters' | 'outreach-internal-leads-filters',
+  programs: Program[],
+  programsLoading: boolean,
+  programsError: string | null,
+  columnKeys: readonly string[],
+  sortKeys: readonly LeadSortKey[],
+) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -17,12 +28,18 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<LeadSortKey>>({ key: 'createdAt', direction: 'desc' });
+  const [sorting, setSortingState] = useState<ListSort<LeadSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference state.
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('lead-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<LeadPreference>(preferenceKey, columnKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -34,21 +51,33 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
   useEffect(() => {
     if (ready || preferenceLoading || programsLoading) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(preference?.statuses ?? []);
-    setProgramFilters(programsError
+    const restoredProgramIds = programsError
       ? preference?.programIds ?? []
-      : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? []);
-    setSortingState(preference?.sorting ?? { key: 'createdAt', direction: 'desc' });
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
+      : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? [];
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: LeadPreference = {
+      statuses: preference?.statuses ?? [],
+      programIds: restoredProgramIds,
+      origins: [origin],
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setStatusFilters(restored.statuses);
+    setProgramFilters(restored.programIds);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready]);
+  }, [origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline, sortKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<LeadFilters | null>(() => ready
-    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters })
-    : null, [debouncedSearch, programFilters, ready, statusFilters]);
-  const hasActiveQueryFilters = Boolean(debouncedSearch || statusFilters.length || programFilters.length);
+    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters, origins: [origin] })
+    : null, [debouncedSearch, origin, programFilters, ready, statusFilters]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
     { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
@@ -61,13 +90,29 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
     sorting?: ListSort<LeadSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    statuses: next.statuses ?? statusFilters,
-    programIds: next.programIds ?? programFilters,
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+    origins?: LeadOrigin[];
+  }) => save(current => ({
+    statuses: next.statuses ?? current?.statuses ?? statusFilters,
+    programIds: next.programIds ?? current?.programIds ?? programFilters,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+    origins: [origin],
+  })), [columnWidths, hiddenColumns, origin, programFilters, save, sorting, statusFilters]);
+
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const reconcileProgramFilters = useCallback((nextProgramFilters: string[]) => {
+    setProgramFilters(nextProgramFilters);
+    void persist({ programIds: nextProgramFilters });
+  }, [persist]);
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: programFilters,
+    availableIds: availableProgramIds,
+    onReconcile: reconcileProgramFilters,
+  });
 
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {
@@ -99,11 +144,11 @@ export function useLeadControls(programs: Program[], programsLoading: boolean, p
     void persist({ columnWidths: next });
   }, [persist]);
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
-
   return {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    origins: [origin] as LeadOrigin[],
+    ready, error, filterCategories, applyFilter, clearFilters,
   };
 }
 

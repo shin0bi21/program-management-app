@@ -2,20 +2,32 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../common/components/Table/Table.types';
 import type { Program } from '../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../common/types/pagination';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
-
-type YouthStatusFilter = 'active' | 'inactive';
+import type { YouthPreference, YouthStatusFilter } from '../types';
 
 interface UseYouthControlsOptions {
   role: string | null;
   programs: Program[];
   programsLoading: boolean;
   programsError?: string | null;
+  columnKeys: readonly string[];
+  sortKeys: readonly YouthSortKey[];
 }
 
-export function useYouthControls({ role, programs, programsLoading, programsError }: UseYouthControlsOptions) {
+const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
+
+export function useYouthControls({
+  role,
+  programs,
+  programsLoading,
+  programsError,
+  columnKeys,
+  sortKeys,
+}: UseYouthControlsOptions) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -24,12 +36,18 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<YouthSortKey>>({ key: 'firstName', direction: 'asc' });
+  const [sorting, setSortingState] = useState<ListSort<YouthSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference state.
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('youth-profile-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<YouthPreference>('youth-profile-filters', columnKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -41,17 +59,29 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
   useEffect(() => {
     if (ready || preferenceLoading || programsLoading || role === null) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
-    setStatusFilters(preference?.statuses ?? ['active']);
-    setProgramFilters(preference
+    const restoredProgramIds = preference
       ? programsError
         ? preference.programIds
         : preference.programIds.filter(programId => availableProgramIds.has(programId))
-      : role === 'staff' ? programs.map(program => program.id) : []);
-    setSortingState(preference?.sorting ?? { key: 'firstName', direction: 'asc' });
-    setColumnWidthsState(preference?.columnWidths ?? {});
-    setHiddenColumnsState(preference?.hiddenColumns ?? []);
+      : role === 'staff' ? programs.map(program => program.id) : [];
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: YouthPreference = {
+      statuses: preference?.statuses ?? ['active'],
+      programIds: restoredProgramIds,
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setStatusFilters(restored.statuses);
+    setProgramFilters(restored.programIds);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, sortKeys]);
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {
@@ -60,13 +90,27 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
     sorting?: ListSort<YouthSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    statuses: next.statuses ?? statusFilters,
-    programIds: next.programIds ?? programFilters,
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+  }) => save(current => ({
+    statuses: next.statuses ?? current?.statuses ?? statusFilters,
+    programIds: next.programIds ?? current?.programIds ?? programFilters,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [columnWidths, hiddenColumns, programFilters, save, sorting, statusFilters]);
+
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const reconcileProgramFilters = useCallback((nextProgramFilters: string[]) => {
+    setProgramFilters(nextProgramFilters);
+    void persist({ programIds: nextProgramFilters });
+  }, [persist]);
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: programFilters,
+    availableIds: availableProgramIds,
+    onReconcile: reconcileProgramFilters,
+  });
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
@@ -139,6 +183,7 @@ export function useYouthControls({ role, programs, programsLoading, programsErro
     setColumnWidths,
     hiddenColumns,
     setHiddenColumns,
+    ready,
     error,
     hasActiveQueryFilters,
     filterCategories,

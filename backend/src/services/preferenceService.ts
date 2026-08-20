@@ -1,8 +1,8 @@
 import { sql } from '../db/client';
-import type { PreferenceKey, SetPreferenceInput } from '../validation/preferenceSchemas';
+import type { PreferenceKey, PreferenceValue } from '../validation/preferenceSchemas';
 
 export async function getPreference(userId: string, preferenceKey: PreferenceKey) {
-  const rows = await sql<{ value: SetPreferenceInput }[]>`
+  const rows = await sql<{ value: PreferenceValue }[]>`
     SELECT value
     FROM user_preferences
     WHERE user_id = ${userId} AND preference_key = ${preferenceKey}
@@ -13,9 +13,9 @@ export async function getPreference(userId: string, preferenceKey: PreferenceKey
 export async function setPreference(
   userId: string,
   preferenceKey: PreferenceKey,
-  value: SetPreferenceInput,
+  value: PreferenceValue,
 ) {
-  const rows = await sql<{ value: SetPreferenceInput }[]>`
+  const rows = await sql<{ value: PreferenceValue }[]>`
     INSERT INTO user_preferences (user_id, preference_key, value)
     VALUES (${userId}, ${preferenceKey}, ${sql.json(value)})
     ON CONFLICT (user_id, preference_key) DO UPDATE

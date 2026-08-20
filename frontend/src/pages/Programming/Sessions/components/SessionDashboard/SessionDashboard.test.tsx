@@ -1,5 +1,6 @@
+// Scope: verifies the composed session dashboard states and cross-card action wiring.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import SessionDashboard from './SessionDashboard';
@@ -27,7 +28,7 @@ vi.mock('@panzoom/panzoom', () => ({
   default: (element: unknown, options?: unknown) => initializePanzoom(element, options),
 }));
 
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),
@@ -83,6 +84,7 @@ describe('SessionDashboard', () => {
   it('keeps every card visible before a session is selected', () => {
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={null}
         canWriteAttendance
         canWriteSessions
@@ -100,6 +102,7 @@ describe('SessionDashboard', () => {
     const onAddAttendance = vi.fn();
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -134,6 +137,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -170,6 +174,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions
@@ -211,6 +216,7 @@ describe('SessionDashboard', () => {
 
     render(
       <SessionDashboard
+        sessionQueryKey={['sessions']}
         session={session}
         canWriteAttendance
         canWriteSessions

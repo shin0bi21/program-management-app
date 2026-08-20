@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
-import render from '../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
+import type { YouthPreference } from './types';
 
 const mockUseYouth = vi.fn();
 const youthApi = vi.hoisted(() => ({
@@ -11,16 +12,17 @@ const youthApi = vi.hoisted(() => ({
   deleteYouthProfileNote: vi.fn(),
 }));
 const preferenceHook = vi.hoisted(() => ({
-  preference: null as { statuses: Array<'active' | 'inactive'>; programIds: string[] } | null,
+  preference: null as YouthPreference | null,
   loading: false,
   error: null as string | null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
 vi.mock('./hooks/useYouth', () => ({
   useYouth: (filters: unknown) => mockUseYouth(filters),
 }));
-vi.mock('../../common/features/youth/api/youth.api', () => youthApi);
+vi.mock('../../common/features/youth/youth.api', () => youthApi);
 vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
@@ -67,7 +69,17 @@ describe('Youth', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.setBaseline.mockImplementation((value: YouthPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: YouthPreference | ((current: YouthPreference | null) => YouthPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     mockUseYouth.mockReturnValue({
       youth: [makeYouthProfile({ account: null })],
       loading: false,
@@ -75,7 +87,7 @@ describe('Youth', () => {
     });
   });
 
-  it('closes a newly saved profile note without opening its details', async () => {
+  it('shows success feedback after saving a new profile note without opening its details', async () => {
     youthApi.setYouthProfileNote.mockResolvedValue({
       id: 'profile-note-new', youthId: 'youth-1', category: 'general', title: 'New profile note',
       details: null, createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
@@ -88,7 +100,8 @@ describe('Youth', () => {
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'New profile note' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Profile Note' })).not.toBeInTheDocument());
+    await screen.findByText('Profile note added.');
+    expect(screen.getByRole('dialog', { name: 'Add Profile Note' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
     expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
       title: 'New profile note',
@@ -113,9 +126,26 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       statuses: ['active'], programIds: ['program-1'], sorting: { key: 'firstName', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['school'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(<Youth />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved youth preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Youth profiles' })).not.toBeInTheDocument();
+    expect(mockUseYouth).toHaveBeenLastCalledWith(null);
+
+    preferenceHook.loading = false;
+    rendered.rerender(<Youth />);
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Youth profiles' })).toBeInTheDocument();
   });
 
   it('defaults staff to active youth in their assigned programs and persists changes', async () => {
@@ -137,7 +167,7 @@ describe('Youth', () => {
       statuses: ['active'],
       programIds: [],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       statuses: ['active'],
       programIds: [],
     }));
@@ -163,7 +193,7 @@ describe('Youth', () => {
       statuses: ['inactive'],
       programIds: ['program-1'],
     }));
-    expect(preferenceHook.save).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
       statuses: ['inactive'],
       programIds: ['program-1'],
     }));
@@ -275,60 +305,6 @@ describe('Youth', () => {
     expect(await screen.findByText('Unable to delete note')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Delete Profile Note' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
-  });
-
-  it('returns to profile-note details after saving an edit', async () => {
-    youthApi.getYouthProfileNotes.mockResolvedValue([{
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
-      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
-    }]);
-    youthApi.setYouthProfileNote.mockResolvedValue({
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Updated follow-up',
-      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-08-11T12:00:00.000Z', createdByName: 'Bilal Khan',
-    });
-    render(<Youth />);
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Family follow-up' }));
-    fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Updated follow-up' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-
-    expect(await screen.findByRole('dialog', { name: 'Updated follow-up' })).toBeInTheDocument();
-    expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
-      title: 'Updated follow-up',
-    }), 'profile-note-1');
-  });
-
-  it('does not reopen stale note details when the selected profile changes during save', async () => {
-    youthApi.getYouthProfileNotes.mockResolvedValue([{
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
-      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
-    }]);
-    mockUseYouth.mockReturnValue({
-      youth: [
-        makeYouthProfile({ id: 'youth-1', firstName: 'Jamie', account: null }),
-        makeYouthProfile({ id: 'youth-2', firstName: 'Taylor', account: null }),
-      ],
-      loading: false,
-      error: null,
-    });
-    let resolveUpdate!: (note: Awaited<ReturnType<typeof youthApi.setYouthProfileNote>>) => void;
-    youthApi.setYouthProfileNote.mockReturnValue(new Promise(resolve => {
-      resolveUpdate = resolve;
-    }));
-    render(<Youth />);
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Family follow-up' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(youthApi.setYouthProfileNote).toHaveBeenCalled());
-    fireEvent.click(screen.getByText('Taylor').closest('tr')!);
-    resolveUpdate({
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
-      details: null, createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-08-11T12:00:00.000Z', createdByName: 'Bilal Khan',
-    });
-
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Family follow-up' })).not.toBeInTheDocument());
   });
 
   it('removes a successfully deleted profile note from the card', async () => {

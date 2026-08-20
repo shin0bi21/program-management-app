@@ -1,10 +1,11 @@
+// Owns report loading, failure presentation, and generated object-URL cleanup.
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import YouthReportModal from './YouthReportModal';
 
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
-vi.mock('../../api/programming.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
+vi.mock('../../api/cohorts.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
 
 const cohort = { id: 'cohort-1', programName: 'Soft Skills', name: 'Summer 2026' };
 
@@ -41,5 +42,26 @@ describe('YouthReportModal', () => {
     render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the youth report.');
+  });
+
+  it('revokes generated URLs when the report target changes and on unmount', async () => {
+    const nextCohort = { ...cohort, id: 'cohort-2', name: 'Fall 2026' };
+    api.getReportPdf
+      .mockResolvedValueOnce(new Blob(['first'], { type: 'application/pdf' }))
+      .mockResolvedValueOnce(new Blob(['second'], { type: 'application/pdf' }));
+    vi.mocked(URL.createObjectURL)
+      .mockReturnValueOnce('blob:first-report')
+      .mockReturnValueOnce('blob:second-report');
+    const view = render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
+
+    expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:first-report');
+
+    view.rerender(<YouthReportModal cohort={nextCohort} onClose={vi.fn()} />);
+
+    expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:second-report');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:first-report');
+
+    view.unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:second-report');
   });
 });

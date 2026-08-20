@@ -13,7 +13,7 @@
 - Use `useMemo` for meaningful computation or an explicit reference-stability contract, not as decoration.
 - Use `useCallback` when a stable callback prevents real downstream work or participates in another hook's dependency contract.
 - Keep effect dependencies complete. Extract a stable callback or named effect owner instead of suppressing the dependency rule.
-- Use refs for live, non-rendering state such as pointer sessions, request revisions, mutation queues, and imperative caches. Do not mirror declarative UI state in refs.
+- Use refs for live, non-rendering state such as pointer sessions, active submit locks, and imperative caches. Request revisions or mutation queues belong in refs only when the owner permits a real overlapping workflow that needs them. Do not mirror declarative UI state in refs.
 - Add a manual ref cache only when preserving unchanged subtree references materially bounds rendering. Isolate cache key construction and filtering in named helpers, invalidate on every semantic input, and protect the contract with reference-identity tests.
 - Give each predicate a named business meaning. Do not combine unrelated filtering, fallback, mutation, and formatting decisions into one boolean or transform chain.
 
@@ -21,9 +21,9 @@
 
 - Use stable domain query keys; do not encode presentation concepts such as `manage` unless they represent a genuinely different server contract.
 - Keep one authoritative server-state owner. Reconcile writes through the query cache or a focused buffered-state owner rather than duplicating remote state across unrelated hooks.
-- Pass cancellation through API adapters. Use revisions, serialization, or cancellation so stale loads and mutations cannot overwrite newer state.
+- Pass cancellation through API adapters. Prefer TanStack Query cancellation for remote reads and an existing pending/submit lock when overlap should be unavailable. Add serialization or revisions only when overlapping work can actually update the same state and a focused regression demonstrates the race.
 - Preserve unaffected resource, period, row, and item references during localized updates when render scope depends on them.
 
 ## Verify
 
-Test results and the reason for the hook's structure: filter semantics, semantic cache invalidation, unchanged-reference reuse, stale-response rejection, rollback, and effect cleanup as applicable. Remove custom caching if its reference contract is not demonstrated by a focused test.
+Test the behavior that justifies the hook's structure: filter semantics, semantic cache invalidation, unchanged-reference reuse, and effect cleanup as applicable. Test stale-response rejection or rollback only when the owner exposes those paths. Remove custom caching or concurrency machinery when its contract is not demonstrated by a focused test.

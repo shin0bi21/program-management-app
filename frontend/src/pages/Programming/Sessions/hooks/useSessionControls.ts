@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { Program } from '../../../../common/features/programs/types';
+import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-import type { SessionStatusFilter, SessionsView } from '../sessionViewTypes';
+import type { SessionPreference, SessionStatusFilter, SessionsView } from '../types';
 
 interface UseSessionControlsOptions {
   role: string | null;
@@ -16,12 +18,18 @@ interface UseSessionControlsOptions {
   cohortsLoading: boolean;
   cohortsError?: string | null;
   sessionTypes: SessionType[];
+  sessionTypesLoading: boolean;
+  sessionTypesError?: string | null;
   onFiltersChanged: () => void;
+  columnKeys: readonly string[];
+  sortKeys: readonly SessionSortKey[];
 }
+
+const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 
 export function useSessionControls({
   role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
-  sessionTypes, onFiltersChanged,
+  sessionTypes, sessionTypesLoading, sessionTypesError, onFiltersChanged, columnKeys, sortKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
   const [search, setSearch] = useState('');
@@ -33,13 +41,19 @@ export function useSessionControls({
 
   // View and table controls.
   const [view, setViewState] = useState<SessionsView>('calendar');
-  const [sorting, setSortingState] = useState<ListSort<SessionSortKey>>({ key: 'date', direction: 'desc' });
+  const [sorting, setSortingState] = useState<ListSort<SessionSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
   // Persisted preference initialization.
   const [ready, setReady] = useState(false);
-  const { preference, loading: preferenceLoading, error, save } = useUserPreference('session-filters');
+  const {
+    preference,
+    loading: preferenceLoading,
+    error,
+    setBaseline,
+    save,
+  } = useUserPreference<SessionPreference>('session-filters', columnKeys);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -47,29 +61,56 @@ export function useSessionControls({
   }, [search]);
 
   useEffect(() => {
-    if (ready || preferenceLoading || programsLoading || cohortsLoading || role === null) return;
+    if (
+      ready
+      || preferenceLoading
+      || programsLoading
+      || cohortsLoading
+      || sessionTypesLoading
+      || role === null
+    ) return;
     const availableProgramIds = new Set(programs.map(program => program.id));
-    if (preference) {
-      const savedProgramIds = programsError
+    const assignedProgram = getSingleAssignedProgram(role, programs);
+    const restoredProgramIds = preference
+      ? programsError
         ? preference.programIds
-        : preference.programIds.filter(id => availableProgramIds.has(id));
-      setViewState(preference.view);
-      setProgramIds(savedProgramIds);
-      setCohortId(cohortsError || cohorts.some(cohort => cohort.id === preference.cohortId)
+        : preference.programIds.filter(id => availableProgramIds.has(id))
+      : assignedProgram ? [assignedProgram.id] : [];
+    const restoredCohortId = preference
+      ? cohortsError || cohorts.some(cohort => cohort.id === preference.cohortId)
         ? preference.cohortId ?? ''
-        : '');
-      setSessionTypeIds(preference.sessionTypeIds);
-      setStatuses(preference.statuses);
-      setSortingState(preference.sorting ?? { key: 'date', direction: 'desc' });
-      setColumnWidthsState(preference.columnWidths ?? {});
-      setHiddenColumnsState(preference.hiddenColumns ?? []);
-    } else {
-      const assignedProgram = getSingleAssignedProgram(role, programs);
-      setProgramIds(assignedProgram ? [assignedProgram.id] : []);
-      setCohortId(assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '');
-    }
+        : ''
+      : assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '';
+    const availableSessionTypeIds = new Set(sessionTypes.map(type => type.id));
+    const restoredSessionTypeIds = preference
+      ? sessionTypesError
+        ? preference.sessionTypeIds
+        : preference.sessionTypeIds.filter(id => availableSessionTypeIds.has(id))
+      : [];
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredColumnWidths = preference?.columnWidths ?? {};
+    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restored: SessionPreference = {
+      view: preference?.view ?? 'calendar',
+      programIds: restoredProgramIds,
+      cohortId: restoredCohortId || null,
+      sessionTypeIds: restoredSessionTypeIds,
+      statuses: preference?.statuses ?? [],
+      sorting: restoredSorting,
+      columnWidths: restoredColumnWidths,
+      hiddenColumns: restoredHiddenColumns,
+    };
+    setViewState(restored.view);
+    setProgramIds(restored.programIds);
+    setCohortId(restored.cohortId ?? '');
+    setSessionTypeIds(restored.sessionTypeIds);
+    setStatuses(restored.statuses);
+    setSortingState(restoredSorting);
+    setColumnWidthsState(restoredColumnWidths);
+    setHiddenColumnsState(restoredHiddenColumns);
+    setBaseline(restored);
     setReady(true);
-  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role]);
+  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, setBaseline, sortKeys]);
 
   // Stable option sets shared by the header and Add Sessions modal.
   const filteredCohorts = useMemo(() => programIds.length
@@ -93,16 +134,60 @@ export function useSessionControls({
     sorting?: ListSort<SessionSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
-  }) => save({
-    view: next.view ?? view,
-    programIds: next.programIds ?? programIds,
-    cohortId: (next.cohortId ?? cohortId) || null,
-    sessionTypeIds: next.sessionTypeIds ?? sessionTypeIds,
-    statuses: next.statuses ?? statuses,
-    sorting: next.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? hiddenColumns,
-  }), [cohortId, columnWidths, hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
+  }) => save(current => ({
+    view: next.view ?? current?.view ?? view,
+    programIds: next.programIds ?? current?.programIds ?? programIds,
+    cohortId: (next.cohortId ?? current?.cohortId ?? cohortId) || null,
+    sessionTypeIds: next.sessionTypeIds ?? current?.sessionTypeIds ?? sessionTypeIds,
+    statuses: next.statuses ?? current?.statuses ?? statuses,
+    sorting: next.sorting ?? current?.sorting ?? sorting,
+    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
+    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
+  })), [cohortId, columnWidths, hiddenColumns, programIds, save, sessionTypeIds, sorting, statuses, view]);
+
+  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
+  const availableCohortIds = useMemo(() => cohorts.map(cohort => cohort.id), [cohorts]);
+  const availableSessionTypeIds = useMemo(() => sessionTypes.map(type => type.id), [sessionTypes]);
+  const selectedCohortIds = useMemo(() => cohortId ? [cohortId] : [], [cohortId]);
+
+  const reconcilePrograms = useCallback((nextProgramIds: string[]) => {
+    setProgramIds(nextProgramIds);
+    void persist({ programIds: nextProgramIds });
+  }, [persist]);
+  const reconcileCohort = useCallback((nextCohortIds: string[]) => {
+    const nextCohortId = nextCohortIds[0] ?? '';
+    setCohortId(nextCohortId);
+    void persist({ cohortId: nextCohortId });
+  }, [persist]);
+  const reconcileSessionTypes = useCallback((nextSessionTypeIds: string[]) => {
+    setSessionTypeIds(nextSessionTypeIds);
+    void persist({ sessionTypeIds: nextSessionTypeIds });
+  }, [persist]);
+
+  usePreferenceOptionRecovery({
+    ready,
+    loading: programsLoading,
+    error: Boolean(programsError),
+    selectedIds: programIds,
+    availableIds: availableProgramIds,
+    onReconcile: reconcilePrograms,
+  });
+  usePreferenceOptionRecovery({
+    ready,
+    loading: cohortsLoading,
+    error: Boolean(cohortsError),
+    selectedIds: selectedCohortIds,
+    availableIds: availableCohortIds,
+    onReconcile: reconcileCohort,
+  });
+  usePreferenceOptionRecovery({
+    ready,
+    loading: sessionTypesLoading,
+    error: Boolean(sessionTypesError),
+    selectedIds: sessionTypeIds,
+    availableIds: availableSessionTypeIds,
+    onReconcile: reconcileSessionTypes,
+  });
 
   const applyFilter = useCallback((key: string, values: string[]) => {
     const nextProgramIds = key === 'program' ? values : programIds;

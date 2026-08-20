@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
 import { login } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint } from '../../../../auth/deviceFingerprint';
 import { getErrorMessage } from '../../../../http/clientErrors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
-import { loginSchema, type LoginFormData } from '../../common/validation/authSchemas';
+import type { LoginFormData } from '../types';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+}) satisfies z.ZodType<LoginFormData, LoginFormData>;
 
 export const useLogin = () => {
   const [error, setError] = useState('');

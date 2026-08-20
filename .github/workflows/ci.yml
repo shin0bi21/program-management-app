@@ -12,25 +12,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  enforce-merge-path:
+  merge_path:
     name: Enforce develop → main only
+    if: github.base_ref == 'main'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 2
     steps:
-      - name: Block non-develop PRs targeting main
-        if: github.base_ref == 'main' && github.head_ref != 'develop'
+      - name: Verify release source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          echo "PRs to main must come from develop, not '${{ github.head_ref }}'."
-          exit 1
+          if [ "$HEAD_REF" != "develop" ]; then
+            echo "PRs to main must come from develop, not '$HEAD_REF'."
+            exit 1
+          fi
 
   changes:
-    name: Classify production changes
+    name: Classify changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      backend_image: ${{ steps.production.outputs.backend_image }}
-      frontend_image: ${{ steps.production.outputs.frontend_image }}
-      compose: ${{ steps.production.outputs.compose }}
+      static: ${{ steps.plan.outputs.static }}
+      backend: ${{ steps.plan.outputs.backend }}
+      backend_mode: ${{ steps.plan.outputs.backend_mode }}
+      backend_test_paths: ${{ steps.plan.outputs.backend_test_paths }}
+      frontend: ${{ steps.plan.outputs.frontend }}
+      frontend_mode: ${{ steps.plan.outputs.frontend_mode }}
+      deploy: ${{ steps.plan.outputs.deploy }}
+      backend_image: ${{ steps.plan.outputs.backend_image }}
+      frontend_image: ${{ steps.plan.outputs.frontend_image }}
+      compose: ${{ steps.plan.outputs.compose }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -38,43 +49,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Detect production build inputs
-        id: production
+      - name: Plan checks from changed ownership paths
+        id: plan
         env:
           BASE_REF: ${{ github.base_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          if [ "$BASE_REF" = main ]; then
-            backend_image=true
-            frontend_image=true
-            compose=true
-          else
-            backend_image=false
-            frontend_image=false
-            compose=false
-
-            if ! git diff --quiet "$BASE_SHA" HEAD -- \
-              backend/Dockerfile backend/.dockerignore backend/package.json backend/package-lock.json; then
-              backend_image=true
-            fi
-            if ! git diff --quiet "$BASE_SHA" HEAD -- \
-              frontend/Dockerfile frontend/.dockerignore frontend/package.json frontend/package-lock.json; then
-              frontend_image=true
-            fi
-            if ! git diff --quiet "$BASE_SHA" HEAD -- \
-              docker-compose.prod.yml nginx.conf scripts/deploy.sh; then
-              backend_image=true
-              frontend_image=true
-              compose=true
-            fi
-          fi
-
-          echo "backend_image=$backend_image" >> "$GITHUB_OUTPUT"
-          echo "frontend_image=$frontend_image" >> "$GITHUB_OUTPUT"
-          echo "compose=$compose" >> "$GITHUB_OUTPUT"
+          git diff --name-only --diff-filter=ACDMR "$BASE_SHA"...HEAD \
+            | node scripts/ci/select-tests.js --github-output "$GITHUB_OUTPUT" --base-ref "$BASE_REF"
 
   quality:
     name: Lint & Shell Analysis
+    needs: changes
+    if: github.base_ref == 'main' || needs.changes.outputs.static == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -97,8 +84,14 @@ jobs:
       - name: Run static checks
         run: bash scripts/tests/test-static.sh
 
+      - name: Test deployment planning
+        if: needs.changes.outputs.deploy == 'true'
+        run: bash scripts/tests/test-deploy.sh
+
   backend:
     name: Backend — Typecheck, Migrate & Test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -121,6 +114,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
@@ -156,6 +150,8 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
+          BACKEND_MODE: ${{ needs.changes.outputs.backend_mode }}
+          BACKEND_TEST_PATHS: ${{ needs.changes.outputs.backend_test_paths }}
           DATABASE_URL: postgresql://test:test@localhost:5432/myapp_test
           JWT_SECRET: ci-test-secret
           REFRESH_SECRET: ci-test-refresh-secret
@@ -163,50 +159,29 @@ jobs:
           EMAIL_PASS: test
           EMAIL_FROM: test@example.com
           NODE_ENV: test
-        run: npm test
+        run: |
+          if [ "$BACKEND_MODE" = full ]; then
+            npm test
+          else
+            read -r -a test_paths <<< "$BACKEND_TEST_PATHS"
+            npm test -- --runInBand "${test_paths[@]}"
+          fi
 
       - name: Build
         working-directory: backend
         run: npm run build
 
-  frontend-tests:
-    name: Frontend Tests — Shard ${{ matrix.shard }}/2
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Test
-        working-directory: frontend
-        run: npm test -- --shard=${{ matrix.shard }}/2
-
   frontend:
     name: Frontend — Typecheck & Build
-    needs: frontend-tests
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
@@ -219,6 +194,19 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Run related tests
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FRONTEND_MODE: ${{ needs.changes.outputs.frontend_mode }}
+        run: |
+          if [ "$FRONTEND_MODE" = full ]; then
+            cd frontend
+            npm test
+          else
+            cd frontend
+            npm test -- --changed "$BASE_SHA"
+          fi
 
       - name: Build (includes tsc)
         working-directory: frontend
@@ -246,7 +234,7 @@ jobs:
 
   production-backend-image:
     name: Backend Production Image
-    needs: [changes, backend]
+    needs: changes
     if: needs.changes.outputs.backend_image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -261,7 +249,7 @@ jobs:
 
   production-frontend-image:
     name: Frontend Production Image
-    needs: [changes, frontend]
+    needs: changes
     if: needs.changes.outputs.frontend_image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15

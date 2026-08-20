@@ -1,4 +1,4 @@
-import { getPrograms } from '../api/programs.api';
+import { getPrograms } from '../programs.api';
 import type { Program } from '../types';
 import useListQuery from '../../../../query/hooks/useListQuery';
 

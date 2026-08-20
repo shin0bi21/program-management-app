@@ -1,16 +1,17 @@
+// Scope: verifies account modal program assignment, role, and route-adapter integration behavior.
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getPrograms } from '../../../../../common/features/programs/api/programs.api';
-import { inviteAccount, updateAccount } from '../../api/accounts.api';
-import renderWithQueryClient from '../../../../../tests/renderWithQueryClient';
+import { getPrograms } from '../../../../../common/features/programs/programs.api';
+import { inviteAccount, updateAccount } from '../../accounts.api';
+import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import AccountModal from './AccountModal';
 
-vi.mock('../../../../../common/features/programs/api/programs.api', () => ({
+vi.mock('../../../../../common/features/programs/programs.api', () => ({
   getPrograms: vi.fn(),
 }));
 
-vi.mock('../../api/accounts.api', () => ({
+vi.mock('../../accounts.api', () => ({
   inviteAccount: vi.fn(),
   updateAccount: vi.fn(),
 }));
@@ -70,11 +71,13 @@ describe('AccountModal program assignments', () => {
 
   it('assigns selected enrollment programs and lists open programs as automatic', async () => {
     const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
     renderWithQueryClient(
       <AccountModal
         isOpen
-        onClose={vi.fn()}
-        onSuccess={vi.fn()}
+        onClose={onClose}
+        onSuccess={onSuccess}
       />,
     );
 
@@ -93,6 +96,12 @@ describe('AccountModal program assignments', () => {
       programIds: [softSkillsId],
     }));
     expect(screen.queryByRole('checkbox', { name: 'Drop In' })).not.toBeInTheDocument();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(screen.getByText('Invitation sent!')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Invite Staff Account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('First Name *')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Soft Skills' })).toBeDisabled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('lets an admin edit an existing staff member program assignments', async () => {

@@ -5,9 +5,11 @@ import { generateToken } from '../shared/tokenHelpers';
 import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriods';
 
 const app = createApp();
-const workDate = '2026-08-09';
 
 describe('Time entries API', () => {
+  let workDate: string;
+  let linkedWorkDate: string;
+  let placementWorkDate: string;
   let adminId: string;
   let adminToken: string;
   let firstStaffId: string;
@@ -23,11 +25,22 @@ describe('Time entries API', () => {
   let activeCycleId: string;
   let upcomingCycleId: string;
   let upcomingWorkDate: string;
-  let sessionId: string;
+  let sessionId: string | null = null;
   let assignedTaskId: string | null = null;
 
   beforeAll(async () => {
     const stamp = Date.now();
+    const [dates] = await sql<Array<{
+      workDate: string;
+      linkedWorkDate: string;
+      placementWorkDate: string;
+    }>>`
+      SELECT
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS work_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_work_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_work_date
+    `;
+    ({ workDate, linkedWorkDate, placementWorkDate } = dates);
     const admin = await seedTestUser({ email: `timesheet-admin-${stamp}@test.local`, role: 'admin' });
     const firstStaff = await seedTestUser({
       email: `timesheet-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
@@ -53,8 +66,12 @@ describe('Time entries API', () => {
       WITH cycles AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
         VALUES
-          (${`Active Timesheet ${stamp}`}, CURRENT_DATE - 7, CURRENT_DATE + 7),
-          (${`Upcoming Timesheet ${stamp}`}, CURRENT_DATE + 14, CURRENT_DATE + 28)
+          (
+            ${`Active Timesheet ${stamp}`},
+            ${workDate}::date - 7,
+            ${workDate}::date + 7
+          ),
+          (${`Upcoming Timesheet ${stamp}`}, ${workDate}::date + 14, ${workDate}::date + 28)
         RETURNING id, starts_on
       )
       INSERT INTO program_cohorts (program_id, cycle_id)
@@ -86,9 +103,9 @@ describe('Time entries API', () => {
   afterAll(async () => {
     await sql`DELETE FROM time_entries WHERE staff_id IN (${adminId}, ${firstStaffId}, ${secondStaffId}, ${unrelatedStaffId})`;
     if (assignedTaskId) await sql`DELETE FROM tasks WHERE id = ${assignedTaskId}`;
-    await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
+    if (sessionId) await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
     await sql`DELETE FROM program_cohorts WHERE id IN (${activeCohortId}, ${upcomingCohortId})`;
-    await sql`DELETE FROM program_cycles WHERE name LIKE 'Active Timesheet %' OR name LIKE 'Upcoming Timesheet %'`;
+    await sql`DELETE FROM program_cycles WHERE id IN (${activeCycleId}, ${upcomingCycleId})`;
     await deleteTestUser(unrelatedStaffId);
     await deleteTestUser(secondStaffId);
     await deleteTestUser(firstStaffId);
@@ -467,7 +484,7 @@ describe('Time entries API', () => {
     expect(coworkerDelete.status).toBe(403);
   });
 
-  it('derives task scope for assigned staff time and starts the task', async () => {
+  it('derives task scope for assigned staff time without changing its open lifecycle', async () => {
     const createdTask = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -499,7 +516,7 @@ describe('Time entries API', () => {
         source: 'task',
         staffId: firstStaffId,
         taskId: assignedTaskId,
-        workDate: '2026-08-15',
+        workDate: linkedWorkDate,
         hours: 2,
         note: 'Drafted the poster',
       });
@@ -510,15 +527,15 @@ describe('Time entries API', () => {
       category: 'outreach', programId,
     }));
 
-    const startedTask = await request(app)
+    const taskWithHours = await request(app)
       .get('/api/tasks?category=outreach')
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(startedTask.body).toEqual(expect.arrayContaining([
+    expect(taskWithHours.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: assignedTaskId,
-        status: 'in_progress',
+        status: 'open',
         hoursLogged: 2,
-        loggedHoursByDate: [{ date: '2026-08-15', hours: 2 }],
+        loggedHoursByDate: [{ date: linkedWorkDate, hours: 2 }],
       }),
     ]));
 
@@ -536,7 +553,7 @@ describe('Time entries API', () => {
     const reopened = await request(app)
       .patch(`/api/tasks/${assignedTaskId}/status`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'in_progress' });
+      .send({ status: 'open' });
     expect(reopened.status).toBe(200);
     const cancelled = await request(app)
       .patch(`/api/tasks/${assignedTaskId}/status`)
@@ -556,9 +573,9 @@ describe('Time entries API', () => {
     expect(linkedDelete.body.error).toBe('Tasks with logged time cannot be deleted');
 
     const entriesAfterRejectedDelete = await request(app)
-      .get('/api/time-entries?start=2026-08-15&end=2026-08-15')
+      .get(`/api/time-entries?start=${linkedWorkDate}&end=${linkedWorkDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(entriesAfterRejectedDelete.body.data[firstStaffId]['2026-08-15']).toEqual(expect.arrayContaining([
+    expect(entriesAfterRejectedDelete.body.data[firstStaffId][linkedWorkDate]).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: linkedEntry.body.id, taskId: assignedTaskId, taskTitle: 'Create marketing poster' }),
     ]));
   });
@@ -604,6 +621,46 @@ describe('Time entries API', () => {
 
     await request(app).delete(`/api/time-entries/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  it('requires task-write permission to complete a task while logging time', async () => {
+    const task = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Protected task completion', category: 'planning_prep', programId,
+        startDate: workDate, dueDate: workDate, staffId: firstStaffId,
+      });
+    expect(task.status).toBe(201);
+
+    const timesheetOnlyToken = generateToken(
+      firstStaffId,
+      'staff',
+      'timesheet-write-only@test.local',
+      ['write:timesheets'],
+    );
+    const entry = await request(app)
+      .post('/api/time-entries')
+      .set('Authorization', `Bearer ${timesheetOnlyToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
+        workDate, hours: 1, note: 'Should not complete task',
+      });
+
+    expect(entry.status).toBe(403);
+    const [savedTask] = await sql<Array<{ status: string }>>`
+      SELECT status FROM tasks WHERE id = ${task.body.id}
+    `;
+    const savedEntries = await sql<Array<{ id: string }>>`
+      SELECT id FROM time_entries
+      WHERE task_id = ${task.body.id} AND note = 'Should not complete task'
+    `;
+    expect(savedTask.status).toBe('open');
+    expect(savedEntries).toHaveLength(0);
+
+    await request(app)
+      .delete(`/api/tasks/${task.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
   });
 
   it('rejects work dates that are not covered by a cycle', async () => {
@@ -699,7 +756,7 @@ describe('Time entries API', () => {
     const placementUpdate = await request(app)
       .patch(`/api/time-entries/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ workDate: '2026-08-10' });
+      .send({ workDate: placementWorkDate });
 
     expect(placementUpdate.status).toBe(200);
     expect(placementUpdate.body).toEqual(expect.objectContaining({
@@ -707,7 +764,7 @@ describe('Time entries API', () => {
       programId: null,
       cycleId: activeCycleId,
       category: 'planning_prep',
-      workDate: '2026-08-10',
+      workDate: placementWorkDate,
       hours: 2.5,
       note: 'Newer saved note',
     }));

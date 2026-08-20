@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateCohort } from '../../../../../common/features/programming/api/programming.api';
+import { updateCohort } from '../../../../../common/features/programming/api/cohorts.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../../common/components/Modal/Modal';

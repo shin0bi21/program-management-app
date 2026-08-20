@@ -1,10 +1,11 @@
 import { screen, waitFor } from '@testing-library/react';
-import render from '../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import Cohorts from './Cohorts';
+import type { CohortPreference } from './types';
 
 function LocationProbe() {
   const location = useLocation();
@@ -33,16 +34,20 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   }],
 }));
 const preferenceHook = vi.hoisted(() => ({
-  preference: null as { programId: string | null; status: 'active' | 'upcoming' | 'completed' | null } | null,
+  preference: null as CohortPreference | null,
   loading: false,
   error: null,
+  setBaseline: vi.fn(),
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../common/features/programming/api/sessions.api', () => ({
+  getSessionTypes: api.getSessionTypes,
+}));
+
+vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getCohorts: api.getCohorts,
   getCohortPage: api.getCohorts,
-  getSessionTypes: api.getSessionTypes,
   createCohort: api.createCohort,
   deleteCohort: api.deleteCohort,
   getProgramCycles: api.getProgramCycles,
@@ -70,7 +75,19 @@ describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     preferenceHook.preference = null;
+    preferenceHook.loading = false;
+    preferenceHook.error = null;
+    preferenceHook.setBaseline.mockImplementation((value: CohortPreference) => {
+      preferenceHook.preference = value;
+    });
     preferenceHook.save.mockReset();
+    preferenceHook.save.mockImplementation((
+      update: CohortPreference | ((current: CohortPreference | null) => CohortPreference),
+    ) => {
+      preferenceHook.preference = typeof update === 'function'
+        ? update(preferenceHook.preference)
+        : update;
+    });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
     programState.programs = [{
@@ -135,13 +152,29 @@ describe('Cohorts', () => {
     await user.click(screen.getByRole('button', { name: 'Columns' }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
 
-    expect(preferenceHook.save).toHaveBeenCalledWith({
+    expect(preferenceHook.preference).toEqual({
       programId: null,
       status: null,
       sorting: { key: 'start', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: ['status'],
     });
+  });
+
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    preferenceHook.loading = true;
+    const rendered = render(<MemoryRouter><Cohorts /></MemoryRouter>);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved cohort preferences…');
+    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Cohorts' })).not.toBeInTheDocument();
+
+    preferenceHook.loading = false;
+    rendered.rerender(<MemoryRouter><Cohorts /></MemoryRouter>);
+
+    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Cohorts' })).toBeInTheDocument();
   });
 
   it('shows all cohorts by default and can display a selected program', async () => {

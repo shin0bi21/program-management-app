@@ -7,9 +7,10 @@
 - Use one `main.page-container.page-container--data` and one route-level `PageHeader`.
 - Put the concise page title in `PageHeader`; place permission-aware create, add, invite, export, or other page-wide actions in its `actions` slot.
 - Put `SearchInput`, `FilterCard`, and view-switching controls in the named `search`, `filters`, and `view` slots. Keep row actions and content-specific controls with their owning content.
+- Put `ColumnVisibilityMenu` in `columns` and render it only while the table view is active. Keep table pagination and row-specific status or actions out of the header.
 - Keep data loading, filtering, preference persistence, and action workflows in the page or focused hooks rather than in `PageHeader`.
 
-Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*ListView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper.
+Use this route-level composition. Omit an optional prop rather than passing an empty wrapper. Pass the page-owned `*TableView` or `*CalendarView` directly to its slot; those views render `Table` or `ResourceCalendar` without adding another layout wrapper. Existing `*ListView` owners are a migration boundary, not the template for new pages.
 
 ```tsx
 <main className="page-container page-container--data">
@@ -26,15 +27,20 @@ Use this route-level composition. Omit an optional prop rather than passing an e
 
   {controlsReady && <PageBody
     ariaLabel="Page overview and records"
-    dashboard={<>
-      <DashboardCard title="Overview">...</DashboardCard>
-      <DashboardCard title="Details" action={optionalCardAction}>...</DashboardCard>
-    </>}
-    {...(view === 'list'
-      ? { table: <ExampleListView {...listProps} /> }
-      : { calendar: <ExampleCalendarView {...calendarProps} /> })}
+    dashboard={dashboard}
+    {...viewContent}
   />}
 </main>
+```
+
+Declare substantial view JSX separately before selecting the `PageBody` slot. Keep the branch itself small so route composition does not bury two component trees inside a conditional expression:
+
+```tsx
+const exampleTableView = <ExampleTableView {...tableProps} />;
+const exampleCalendarView = <ExampleCalendarView {...calendarProps} />;
+const viewContent = view === 'list'
+  ? { table: exampleTableView }
+  : { calendar: exampleCalendarView };
 ```
 
 `PageHeader` owns and emits this DOM in this order. Never reproduce these classes in a page:
@@ -91,4 +97,5 @@ For calendar view, `PageBody` replaces `div.page-table` with `div.page-calendar`
 ## Verify the shell
 
 - Test permission-dependent primary actions and wiring from search, filters, and view controls to page state.
+- Shared `PageHeader` tests own generic slot placement; shared `PageBody` tests own its stable dashboard and single-content-slot structure. Consumer tests own only permission and state wiring.
 - Confirm header wrapping, mobile search and filters, dashboard stacking, long titles/actions, content height, and modal fit at the shared `768px` breakpoint.

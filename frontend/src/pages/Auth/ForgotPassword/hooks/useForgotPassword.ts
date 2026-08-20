@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
 import { forgotPassword } from '../../../../auth/auth.api';
 import { getErrorMessage } from '../../../../http/clientErrors';
-import { forgotPasswordSchema, type ForgotPasswordFormData } from '../../common/validation/authSchemas';
+import type { ForgotPasswordFormData } from '../types';
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+}) satisfies z.ZodType<ForgotPasswordFormData, ForgotPasswordFormData>;
 
 export const useForgotPassword = () => {
   const [error, setError] = useState('');

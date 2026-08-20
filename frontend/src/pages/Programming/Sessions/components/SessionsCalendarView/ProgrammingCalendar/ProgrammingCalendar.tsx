@@ -9,7 +9,7 @@ import classicThemePlugin from '@fullcalendar/react/themes/classic';
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/theme.css';
 import '@fullcalendar/react/themes/classic/palette.css';
-import { sessionTypeModifier } from '../../../utils/sessionType';
+import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
 import './ProgrammingCalendar.css';
 
 interface ProgrammingCalendarProps {
@@ -167,14 +167,7 @@ export default function ProgrammingCalendar({
                     <span className="programming-calendar-event__session">{info.event.title}</span>
                   )}
                   {sessionTypeName && (
-                    <span
-                      className={
-                        `programming-calendar-event__type `
-                        + `programming-calendar-event__type--${sessionTypeModifier(sessionTypeName)}`
-                      }
-                    >
-                      {sessionTypeName}
-                    </span>
+                    <SessionTypeBadge name={sessionTypeName} appearance="calendar" />
                   )}
                 </button>
               </span>

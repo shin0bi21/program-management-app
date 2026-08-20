@@ -1,5 +1,5 @@
 import { act, screen } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
@@ -10,10 +10,10 @@ const api = vi.hoisted(() => ({
   getYouth: vi.fn(),
 }));
 
-vi.mock('../../../../../common/features/programming/api/programming.api', () => ({
+vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
   enrollYouth: api.enrollYouth,
 }));
-vi.mock('../../../../../common/features/youth/api/youth.api', () => ({
+vi.mock('../../../../../common/features/youth/youth.api', () => ({
   getYouth: api.getYouth,
 }));
 
@@ -109,6 +109,8 @@ describe('EnrollYouthModal', () => {
       youthIds: ['youth-1', 'youth-2'],
     });
     expect(screen.getByText('Adding 2 youth to Soft Skills - Summer 2026...')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search youth' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Jamie One' })).toBeDisabled();
 
     await act(async () => {
       completeEnrollment([]);

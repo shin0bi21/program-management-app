@@ -1,222 +1,291 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../../auth/authContext';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
+import { useState } from 'react';
+
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import Modal from '../../../common/components/Modal/Modal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { TableColumn } from '../../../common/components/Table/Table';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { getTaskOptions, getTasks } from '../../../common/features/tasks/api/tasks.api';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../common/features/tasks/types';
+import TimeEntryModal from '../../../common/features/timeEntries/components/TimeEntryModal/TimeEntryModal';
 import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
-import TaskDialogs, { type TaskModalTarget } from './components/TaskDialogs/TaskDialogs';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
-import TaskListView from './components/TaskListView/TaskListView';
-import TaskStatusBadge from './components/TaskStatusBadge/TaskStatusBadge';
-import useTaskControls from './hooks/useTaskControls';
-import useTaskMutations from './hooks/useTaskMutations';
-import {
-  canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask, reopenedTaskStatus,
-} from './taskActionCapabilities';
-import { TASKS_QUERY_KEY } from './taskQueryKeys';
-import type { TaskViewMutationCache } from './taskViewTypes';
+import TaskTableView from './components/TaskTableView/TaskTableView';
+import TaskModal from './components/TaskModal/TaskModal';
+
+import { useAuth } from '../../../auth/authContext';
+import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
+import useTaskTable from './components/TaskTableView/hooks/useTaskTable';
+import useTaskActions from './hooks/useTaskActions';
+import useCurrentTaskDate from './hooks/useCurrentTaskDate';
+import useTaskData from './hooks/useTaskData';
+import useTaskFilters from './hooks/useTaskFilters';
+import useTaskPreferences from './hooks/useTaskPreferences';
+import useTaskSelection from './hooks/useTaskSelection';
+
+import type { Task } from '../../../common/features/tasks/types';
+import type { AddTaskModalInitialValues, TaskModalState } from './types';
+
+import './Tasks.css';
+
+// Page-owned cache and persisted-column contracts.
+const TASK_COLUMN_KEYS = [
+  'title',
+  'category',
+  'firstName',
+  'lastName',
+  'program',
+  'startDate',
+  'dueDate',
+  'status',
+] as const;
+const TASK_SORT_KEYS = [
+  'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
+] as const;
+
+const TASK_QUERY_KEY = ['tasks'] as const;
+const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
+const TASK_OPTIONS_QUERY_KEY = ['task-options'] as const;
+const TIME_ENTRY_QUERY_KEY = ['time-entries'] as const;
+
+// Page helpers.
+function getTaskError(
+  actionError: string,
+  preferenceError: string | null,
+  optionsError: unknown,
+) {
+  return actionError
+    || preferenceError
+    || (optionsError ? 'Unable to load task form options.' : '');
+}
+
+function getLoggableTask(task: Task | null, canWrite: boolean) {
+  if (!canWrite || !task?.writable) return null;
+  if (task.status !== 'open') return null;
+  return task;
+}
 
 export default function Tasks() {
-  // Application permissions and selected page workflows.
+  // Permissions.
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:tasks');
-  const [modalTarget, setModalTarget] = useState<TaskModalTarget | null>(null);
-  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedTaskSnapshot, setSelectedTaskSnapshot] = useState<Task | null>(null);
-  const [logHoursTask, setLogHoursTask] = useState<Task | null>(null);
+  const today = useCurrentTaskDate();
 
-  // The calendar owns buffered range data outside TanStack Query.
-  const emptyMutationCache = useMemo<TaskViewMutationCache>(() => ({
-    upsert: (_task: Task) => undefined,
-    remove: (_taskId: string) => undefined,
-  }), []);
-  const calendarMutationRef = useRef<TaskViewMutationCache>(emptyMutationCache);
-  const mutations = useTaskMutations({
-    onUpsert: task => {
-      calendarMutationRef.current.upsert(task);
-      setSelectedTaskSnapshot(current => current?.id === task.id ? task : current);
-    },
-    onRemove: taskId => {
-      calendarMutationRef.current.remove(taskId);
-      setSelectedTaskSnapshot(current => current?.id === taskId ? null : current);
+  // Modal state.
+  const [selectedLogHoursTask, setSelectedLogHoursTask] = useState<Task | null>(null);
+  const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
+
+  // Page data and persisted controls.
+  const pageData = useTaskData(TASK_OPTIONS_QUERY_KEY);
+  const taskPreferences = useTaskPreferences({
+    options: pageData.options,
+    optionsLoading: pageData.optionsLoading,
+    optionsError: Boolean(pageData.optionsError),
+    columnKeys: TASK_COLUMN_KEYS,
+    sortKeys: TASK_SORT_KEYS,
+  });
+
+  const filters = useTaskFilters({
+    preferences: taskPreferences.preferences,
+    options: pageData.options,
+    updatePreferences: taskPreferences.updatePreferences,
+  });
+
+  const view = taskPreferences.preferences.view;
+
+  // Selection, actions, and modal workflows.
+  const selection = useTaskSelection({ resources: pageData.resources });
+
+  const actions = useTaskActions({
+    taskQueryKey: TASK_QUERY_KEY,
+    taskListQueryKey: TASK_LIST_QUERY_KEY,
+    timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
+    onTaskSynced: selection.updateSelectedTask,
+    onTaskRemoved: selection.removeSelectedTask,
+  });
+
+  const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
+    setTaskModalState({ mode: 'add', initialValues });
+  };
+
+  const openEditTaskModal = (task: Task) => {
+    setTaskModalState({ mode: 'edit', task });
+  };
+
+  const closeTaskModal = () => setTaskModalState(null);
+
+  const table = useTaskTable({
+    canWrite,
+    today,
+    preferences: taskPreferences.preferences,
+    updatePreferences: taskPreferences.updatePreferences,
+    actions: {
+      isTaskPending: actions.isTaskPending,
+      setStatus: actions.setStatus,
+      edit: openEditTaskModal,
+      requestDelete: actions.requestDelete,
     },
   });
 
-  // Remote options, persisted controls, and selected resource data.
-  const optionsQuery = useQuery({ queryKey: ['task-options'], queryFn: ({ signal }) => getTaskOptions({ signal }) });
-  const controls = useTaskControls(optionsQuery.data, optionsQuery.isLoading);
-  const resources = useMemo(() => optionsQuery.data?.resources ?? [], [optionsQuery.data?.resources]);
-  const writableResources = useMemo(() => resources.filter(resource => resource.writable), [resources]);
-  useEffect(() => {
-    if (!selectedResourceId && writableResources.length) setSelectedResourceId(writableResources[0].id);
-  }, [selectedResourceId, writableResources]);
-  const selectedResource = resources.find(resource => resource.id === selectedResourceId) ?? null;
-  const overviewQuery = useQuery({
-    queryKey: [...TASKS_QUERY_KEY, 'overview', selectedResourceId],
-    queryFn: ({ signal }) => getTasks({ staffId: selectedResourceId! }, { signal }),
-    enabled: selectedResourceId !== null,
-    placeholderData: previous => previous,
+  const confirmModal = useConfirmModal({
+    action: actions.confirmAction,
+    onClose: actions.closeConfirmation,
   });
-  const resourceTasks = overviewQuery.data ?? [];
-  const selectedTask = resourceTasks.find(task => task.id === selectedTaskId)
-    ?? (selectedTaskSnapshot?.id === selectedTaskId ? selectedTaskSnapshot : null);
 
-  // Page actions and selection transitions.
-  const openAddTask = useCallback(() => {
-    const today = dayKey(new Date());
-    setModalTarget({ startDate: today, dueDate: today });
-  }, []);
-  const selectTask = useCallback((task: Task) => {
-    setSelectedResourceId(task.assignee.id);
-    setSelectedTaskId(task.id);
-    setSelectedTaskSnapshot(task);
-  }, []);
-  const selectResource = useCallback((resourceId: string) => {
-    setSelectedResourceId(resourceId);
-    setSelectedTaskId(null);
-    setSelectedTaskSnapshot(null);
-  }, []);
-  const saveTask = useCallback((task: Task) => {
-    if (modalTarget && 'id' in modalTarget) {
-      mutations.reconcileTask(task);
-      return;
-    }
-    mutations.addTask(task);
-  }, [modalTarget, mutations]);
+  // View configuration.
+  const taskError = getTaskError(
+    actions.actionError,
+    taskPreferences.error,
+    pageData.optionsError,
+  );
+  const loggableTask = getLoggableTask(selection.selectedTask, canWrite);
 
-  // List presentation and page-level status.
-  const columns = useMemo<TableColumn<Task>[]>(() => [
-    { key: 'firstName', sortKey: 'firstName', header: 'First Name', width: 150, render: task => task.assignee.firstName },
-    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', width: 150, render: task => task.assignee.lastName },
-    { key: 'title', sortKey: 'title', header: 'Task', render: task => task.title },
-    { key: 'program', sortKey: 'program', header: 'Program', width: 160, render: task => task.programName ?? '—' },
-    { key: 'category', sortKey: 'category', header: 'Category', width: 150, render: task => TASK_CATEGORY_LABELS[task.category] },
-    { key: 'startDate', sortKey: 'startDate', header: 'Start', width: 120, render: task => task.startDate },
-    { key: 'dueDate', sortKey: 'dueDate', header: 'Due', width: 120, render: task => task.dueDate },
-    {
-      key: 'status',
-      sortKey: 'status',
-      header: 'Status',
-      width: 150,
-      render: task => <TaskStatusBadge status={task.status} />,
-    },
-    ...(canWrite ? [{
-      key: 'actions',
-      header: '',
-      width: 40,
-      resizable: false,
-      className: 'col-actions',
-      render: (task: Task) => task.writable ? <ActionsMenu
-        ariaLabel={`Actions for ${task.title}`}
-        items={[
-          ...(canCompleteTask(task) ? [{ id: 'complete', label: 'Set Completed', onClick: () => void mutations.setStatus(task, 'completed') }] : []),
-          ...(canCancelTask(task) ? [{ id: 'cancel', label: 'Set Cancelled', onClick: () => void mutations.setStatus(task, 'cancelled') }] : []),
-          ...(canReopenTask(task) ? [{ id: 'reopen', label: 'Reopen task', onClick: () => void mutations.setStatus(task, reopenedTaskStatus(task)) }] : []),
-          ...(canEditTask(task) ? [{ id: 'edit', label: 'Edit', onClick: () => setModalTarget(task) }] : []),
-          ...(canDeleteTask(task) ? [{ id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => mutations.requestDelete(task) }] : []),
-        ]}
-      /> : null,
-    }] : []),
-  ], [canWrite, mutations]);
-
-  const taskError = mutations.statusError
-    || controls.error
-    || (optionsQuery.error ? 'Unable to load task form options.' : '')
-    || (overviewQuery.error ? 'Unable to load task overview.' : '');
-  const logHoursAction = canWrite && selectedTask?.writable && (selectedTask.status === 'todo' || selectedTask.status === 'in_progress')
-    ? () => setLogHoursTask(selectedTask)
+  const logHoursAction = loggableTask
+    ? () => setSelectedLogHoursTask(loggableTask)
     : undefined;
 
+  const taskTableView = (
+    <TaskTableView
+      queryKey={TASK_LIST_QUERY_KEY}
+      columns={table.columns}
+      hiddenColumnKeys={table.hiddenColumns}
+      staffIds={filters.staffIds}
+      programIds={filters.programIds}
+      categories={filters.categories}
+      statuses={filters.statusFilters}
+      search={filters.search}
+      today={today}
+      sorting={table.sorting}
+      columnWidths={table.columnWidths}
+      selectedTaskId={selection.selectedTaskId}
+      onTaskSelect={selection.selectTask}
+      onSortingChange={table.updateSorting}
+      onColumnWidthsChange={table.updateColumnWidths}
+    />
+  );
+
+  const taskCalendarView = (
+    <TaskCalendarView
+      resources={pageData.resources}
+      filters={{
+        staffIds: filters.staffIds,
+        programIds: filters.programIds,
+        categories: filters.categories,
+        statuses: filters.statusFilters,
+      }}
+      canWrite={canWrite}
+      selectedResourceId={selection.selectedResourceId}
+      selectedTaskId={selection.selectedTaskId}
+      today={today}
+      actions={actions}
+      calendarCacheRef={actions.calendarCacheRef}
+      onTaskSelect={selection.selectTask}
+      onResourceSelect={selection.selectResource}
+      onAddTask={openAddTaskModal}
+      onEditTask={openEditTaskModal}
+    />
+  );
+
+  const viewContent = view === 'list'
+    ? { table: taskTableView }
+    : { calendar: taskCalendarView };
+
+  // Render.
   return <>
     <main className="page-container page-container--data">
       <PageHeader
         title="Tasks"
-        actions={canWrite && writableResources.length ? <Button
-          disabled={optionsQuery.isLoading || Boolean(optionsQuery.error)}
-          onClick={openAddTask}
+
+        actions={canWrite && pageData.writableResources.length ? <Button
+          disabled={pageData.optionsLoading || Boolean(pageData.optionsError)}
+          onClick={() => {
+            openAddTaskModal({ startDate: today, dueDate: today });
+          }}
         >+ Add</Button> : undefined}
-        search={controls.view === 'list' ? <SearchInput
+
+        search={taskPreferences.ready && view === 'list' ? <SearchInput
           label="Search tasks"
-          value={controls.search}
-          onChange={event => controls.setSearch(event.target.value)}
+          value={filters.search}
+          onChange={event => filters.setSearch(event.target.value)}
           placeholder="Search tasks"
         /> : undefined}
-        view={<ViewMenu
-          value={controls.view}
+
+        view={taskPreferences.ready ? <ViewMenu
+          value={view}
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
-          onChange={controls.changeView}
-        />}
-        columns={controls.view === 'list'
-          ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.changeHiddenColumns} />
+          onChange={nextView => taskPreferences.updatePreferences({ view: nextView })}
+        /> : undefined}
+
+        columns={taskPreferences.ready && view === 'list'
+          ? <ColumnVisibilityMenu
+            columns={table.columns}
+            hiddenColumnKeys={table.hiddenColumns}
+            onHiddenColumnKeysChange={table.updateHiddenColumns}
+          />
           : undefined}
-        filters={<FilterCard
-          categories={controls.filterCategories}
-          values={{ staff: controls.staffIds, program: controls.programIds, category: controls.categories, status: controls.statusFilters }}
-          onApply={controls.applyFilter}
-          onClearAll={controls.clearFilters}
-        />}
+        filters={taskPreferences.ready ? <FilterCard
+          categories={filters.filterCategories}
+          values={{
+            staff: filters.staffIds,
+            program: filters.programIds,
+            category: filters.categories,
+            status: filters.statusFilters,
+          }}
+          onApply={filters.applyFilter}
+          onClearAll={filters.clearFilters}
+        /> : undefined}
       />
+
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
-      {controls.ready && <PageBody
+      {!taskPreferences.ready ? <p role="status">Loading saved task preferences…</p> : <PageBody
         ariaLabel="Task overview and assignments"
-        dashboard={selectedResource ? <TaskDashboard
-          tasks={resourceTasks}
-          resourceName={selectedResource.name}
-          selectedTask={selectedTask}
+        dashboard={selection.selectedResource ? <TaskDashboard
+          queryKey={TASK_QUERY_KEY}
+          resourceId={selection.selectedResource.id}
+          resourceName={selection.selectedResource.name}
+          today={today}
+          selectedTask={selection.selectedTask}
           onLogHours={logHoursAction}
         /> : null}
-        {...(controls.view === 'list' ? { table: <TaskListView
-          columns={columns}
-          hiddenColumnKeys={controls.hiddenColumns}
-          staffIds={controls.staffIds}
-          programIds={controls.programIds}
-          categories={controls.categories}
-          statuses={controls.statusFilters}
-          search={controls.search}
-          sorting={controls.sorting}
-          columnWidths={controls.columnWidths}
-          selectedTaskId={selectedTaskId}
-          onTaskSelect={selectTask}
-          onSortingChange={controls.changeSorting}
-          onColumnWidthsChange={controls.changeColumnWidths}
-        /> } : { calendar: <TaskCalendarView
-          resources={resources}
-          filters={{ staffIds: controls.staffIds, programIds: controls.programIds, categories: controls.categories, statuses: controls.statusFilters }}
-          canWrite={canWrite}
-          selectedResourceId={selectedResourceId}
-          selectedTaskId={selectedTaskId}
-          mutations={mutations}
-          mutationCacheRef={calendarMutationRef}
-          onTaskSelect={selectTask}
-          onResourceSelect={selectResource}
-          onModalTargetChange={setModalTarget}
-        /> })}
+        {...viewContent}
       />}
     </main>
-    <TaskDialogs
-      canWrite={canWrite}
-      modalTarget={modalTarget}
-      logHoursTask={logHoursTask}
-      confirmAction={mutations.confirmAction}
-      resources={resources}
-      writableResources={writableResources}
-      programs={optionsQuery.data?.programs ?? []}
-      onTaskSaved={saveTask}
-      onCloseTask={() => setModalTarget(null)}
-      onLogHours={mutations.logHours}
-      onCloseLogHours={() => setLogHoursTask(null)}
-      onCloseConfirmation={mutations.closeConfirmation}
-    />
+
+    {canWrite && taskModalState && <TaskModal
+      isOpen
+      task={taskModalState.mode === 'edit' ? taskModalState.task : undefined}
+      initialStartDate={taskModalState.mode === 'add' ? taskModalState.initialValues.startDate : undefined}
+      initialDueDate={taskModalState.mode === 'add' ? taskModalState.initialValues.dueDate : undefined}
+      fixedStaffId={taskModalState.mode === 'add' ? taskModalState.initialValues.fixedStaffId : undefined}
+      resources={pageData.writableResources}
+      programs={pageData.options?.programs ?? []}
+      onSaved={actions.syncTask}
+      onClose={closeTaskModal}
+    />}
+
+    {selectedLogHoursTask && <TimeEntryModal
+      isOpen
+      initialSource="task"
+      initialTask={selectedLogHoursTask}
+      initialResourceId={selectedLogHoursTask.assignee.id}
+      canCompleteTask={canWrite}
+      resources={pageData.resources}
+      programs={pageData.options?.programs ?? []}
+      onAdd={actions.logHours}
+      onClose={() => setSelectedLogHoursTask(null)}
+    />}
+
+    <Modal
+      isOpen={actions.confirmAction !== null}
+      onClose={actions.closeConfirmation}
+      title={actions.confirmAction?.title ?? ''}
+      status={confirmModal.status}
+      statusMessage={confirmModal.statusMessage}
+      footer={confirmModal.footer}
+      successDelay={confirmModal.successDelay}
+    >
+      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
+    </Modal>
   </>;
 }

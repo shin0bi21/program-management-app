@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   deleteYouthProfileNote,
   getYouthProfileNotes,
-} from '../../../../common/features/youth/api/youth.api';
+} from '../../../../common/features/youth/youth.api';
 import type { YouthProfileNote } from '../../../../common/types/youth';
 import { getErrorMessage } from '../../../../http/clientErrors';
 
@@ -14,13 +14,11 @@ export default function useProfileNotes(selectedYouthId: string | null) {
   const [editorTarget, setEditorTarget] = useState<{
     youthId: string;
     note: YouthProfileNote | 'new';
-    revision: number;
   } | null>(null);
   const [selectedNote, setSelectedNote] = useState<YouthProfileNote | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const lifecycleRevision = useRef(0);
 
   const query = useQuery({
     queryKey: profileNotesQueryKey(selectedYouthId),
@@ -32,7 +30,6 @@ export default function useProfileNotes(selectedYouthId: string | null) {
   });
 
   useEffect(() => {
-    lifecycleRevision.current += 1;
     setEditorTarget(current => current?.youthId === selectedYouthId ? current : null);
     setSelectedNote(null);
     setConfirmingDelete(false);
@@ -49,7 +46,7 @@ export default function useProfileNotes(selectedYouthId: string | null) {
 
   const openEditor = useCallback((note: YouthProfileNote | 'new', youthId = selectedYouthId) => {
     if (!youthId) throw new Error('A selected youth profile is required to edit profile notes');
-    setEditorTarget({ youthId, note, revision: lifecycleRevision.current });
+    setEditorTarget({ youthId, note });
     if (note !== 'new') setSelectedNote(null);
   }, [selectedYouthId]);
 
@@ -65,8 +62,6 @@ export default function useProfileNotes(selectedYouthId: string | null) {
         : notes.map(item => item.id === note.id ? note : item);
     });
 
-    if (editorTarget.revision !== lifecycleRevision.current) return;
-    setEditorTarget(null);
     if (shouldReturnToDetails) setSelectedNote(note);
   }, [editorTarget, queryClient]);
 
@@ -84,8 +79,6 @@ export default function useProfileNotes(selectedYouthId: string | null) {
   const confirmDelete = useCallback(async () => {
     if (!selectedNote) throw new Error('A selected profile note is required for deletion');
     const target = selectedNote;
-    const revision = lifecycleRevision.current;
-
     setDeleting(true);
     setDeleteError('');
     try {
@@ -93,14 +86,12 @@ export default function useProfileNotes(selectedYouthId: string | null) {
       queryClient.setQueryData<YouthProfileNote[]>(profileNotesQueryKey(target.youthId), current =>
         current?.filter(note => note.id !== target.id) ?? [],
       );
-      if (revision !== lifecycleRevision.current) return;
       setSelectedNote(null);
       setConfirmingDelete(false);
     } catch (cause) {
-      if (revision !== lifecycleRevision.current) return;
       setDeleteError(getErrorMessage(cause, 'Failed to delete profile note'));
     } finally {
-      if (revision === lifecycleRevision.current) setDeleting(false);
+      setDeleting(false);
     }
   }, [queryClient, selectedNote]);
 

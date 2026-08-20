@@ -24,6 +24,17 @@ import { useYouthControls } from './hooks/useYouthControls';
 import { useYouth, type YouthProfile } from './hooks/useYouth';
 import './Youth.css';
 
+const YOUTH_COLUMN_KEYS = [
+  'firstName',
+  'lastName',
+  'age',
+  'school',
+  'grade',
+  'program',
+  'status',
+] as const;
+const YOUTH_SORT_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+
 export default function Youth() {
   // Application services and permission capabilities.
   const queryClient = useQueryClient();
@@ -39,11 +50,18 @@ export default function Youth() {
 
   // Shared options and persisted page controls.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: role === 'staff' });
-  const controls = useYouthControls({ role, programs, programsLoading, programsError });
+  const controls = useYouthControls({
+    role,
+    programs,
+    programsLoading,
+    programsError,
+    columnKeys: YOUTH_COLUMN_KEYS,
+    sortKeys: YOUTH_SORT_KEYS,
+  });
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferencesError, filterCategories,
-    hasActiveQueryFilters,
+    hasActiveQueryFilters, ready: controlsReady,
   } = controls;
 
   // Remote records and selection.
@@ -70,8 +88,6 @@ export default function Youth() {
 
   // Page actions and table presentation.
   const handleSaveYouth = () => {
-    setModalTarget(null);
-    setContactTarget(null);
     void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 
@@ -158,22 +174,22 @@ export default function Youth() {
             onChange={event => setSearch(event.target.value)}
             placeholder="Search youth, school, or program"
           />}
-          columns={<ColumnVisibilityMenu
+          columns={controlsReady ? <ColumnVisibilityMenu
             columns={youthColumns}
             hiddenColumnKeys={hiddenColumns}
             onHiddenColumnKeysChange={controls.setHiddenColumns}
-          />}
-          filters={<FilterCard
+          /> : undefined}
+          filters={controlsReady ? <FilterCard
             categories={filterCategories}
             values={{ status: statusFilters, program: programFilters }}
             onApply={controls.applyFilter}
             onClearAll={controls.clearFilters}
-          />}
+          /> : undefined}
         />
         {preferencesError && <p className="form-error" role="alert">{preferencesError}</p>}
         {programsError && <p className="form-error" role="alert">{programsError}</p>}
 
-        <PageBody
+        {!controlsReady ? <p role="status">Loading saved youth preferences…</p> : <PageBody
           ariaLabel="Youth profiles"
           table={<Table
             ariaLabel="Youth profiles"
@@ -214,7 +230,7 @@ export default function Youth() {
             onEditProfileNote={profileNotes.openEditor}
             onDeleteProfileNote={profileNotes.requestDelete}
           />}
-        />
+        />}
       </main>
 
       <YouthModal
