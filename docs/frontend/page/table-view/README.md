@@ -82,7 +82,7 @@ export default function ExampleTableView(props: ExampleTableViewProps) {
 
 - Use durable row IDs and stable declarative columns.
 - Make user-facing data columns resizable; keep action columns fixed.
-- Send sortable columns to a backend-supported `sortKey`.
+- Use the canonical column `key` as the backend-supported sort key, and pass the owner’s canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
 - Use controlled table selection only when selection has application meaning.

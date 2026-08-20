@@ -21,15 +21,14 @@ interface UseSessionControlsOptions {
   sessionTypesLoading: boolean;
   sessionTypesError?: string | null;
   onFiltersChanged: () => void;
-  columnKeys: readonly string[];
-  sortKeys: readonly SessionSortKey[];
+  tableKeys: readonly SessionSortKey[];
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 
 export function useSessionControls({
   role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
-  sessionTypes, sessionTypesLoading, sessionTypesError, onFiltersChanged, columnKeys, sortKeys,
+  sessionTypes, sessionTypesLoading, sessionTypesError, onFiltersChanged, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
   const [search, setSearch] = useState('');
@@ -53,7 +52,7 @@ export function useSessionControls({
     error,
     setBaseline,
     save,
-  } = useUserPreference<SessionPreference>('session-filters', columnKeys);
+  } = useUserPreference<SessionPreference>('session-filters', tableKeys);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -87,7 +86,7 @@ export function useSessionControls({
         ? preference.sessionTypeIds
         : preference.sessionTypeIds.filter(id => availableSessionTypeIds.has(id))
       : [];
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: SessionPreference = {
@@ -110,7 +109,7 @@ export function useSessionControls({
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, setBaseline, sortKeys]);
+  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, setBaseline, tableKeys]);
 
   // Stable option sets shared by the header and Add Sessions modal.
   const filteredCohorts = useMemo(() => programIds.length

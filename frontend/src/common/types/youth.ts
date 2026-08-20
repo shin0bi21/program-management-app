@@ -75,4 +75,5 @@ export interface YouthFilters {
   programIds?: string[];
   cohortIds?: string[];
 }
-export type YouthSortKey = 'firstName' | 'lastName' | 'age' | 'school' | 'grade' | 'program' | 'status';
+export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+export type YouthSortKey = typeof YOUTH_TABLE_KEYS[number];

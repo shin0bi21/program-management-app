@@ -8,7 +8,6 @@ export interface TableColumn<T> {
   render: (item: T) => ReactNode;
   width?: number;
   className?: string;
-  sortKey?: string;
   resizable?: boolean;
   /** Whether a user can hide this column from their own table view. */
   hideable?: boolean;
@@ -33,6 +32,7 @@ export interface TableProps<T> {
   scrollToSelected?: boolean;
   onRowSelect?: (item: T) => void;
   sorting?: TableSorting;
+  sortableColumns?: readonly string[];
   onSortingChange?: (sorting: TableSorting) => void;
   hasNextPage?: boolean;
   loadingNextPage?: boolean;

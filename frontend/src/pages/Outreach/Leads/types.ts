@@ -53,7 +53,8 @@ export interface LeadFilters {
   origins?: LeadOrigin[];
 }
 
-export type LeadSortKey = 'firstName' | 'lastName' | 'school' | 'program' | 'status' | 'createdAt';
+export const LEAD_TABLE_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
+export type LeadSortKey = typeof LEAD_TABLE_KEYS[number];
 
 export interface LeadPreference {
   statuses: LeadStatus[];

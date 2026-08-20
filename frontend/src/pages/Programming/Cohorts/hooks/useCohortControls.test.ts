@@ -24,8 +24,7 @@ const programs: Program[] = [{
   minAge: 12,
   maxAge: 15,
 }];
-const columnKeys = ['program', 'cohort', 'start', 'end', 'status'];
-const sortKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
+const tableKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
 
 describe('useCohortControls', () => {
   beforeEach(() => {
@@ -45,7 +44,7 @@ describe('useCohortControls', () => {
       Object.assign(persisted, update(persisted));
     });
     const { result } = renderHook(() => (
-      useCohortControls('admin', programs, false, columnKeys, sortKeys, null)
+      useCohortControls('admin', programs, false, tableKeys, null)
     ));
     await waitFor(() => expect(preferenceHook.setBaseline).toHaveBeenCalled());
 
@@ -67,7 +66,7 @@ describe('useCohortControls', () => {
       sorting: { key: 'removedColumn' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => (
-      useCohortControls('admin', programs, false, columnKeys, sortKeys, null)
+      useCohortControls('admin', programs, false, tableKeys, null)
     ));
 
     await waitFor(() => expect(result.current.ready).toBe(true));

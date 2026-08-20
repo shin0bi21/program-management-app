@@ -28,8 +28,7 @@ const cohorts: ProgramCohort[] = [{
   attendanceAttendedCount: 0, attendanceRecordedCount: 0,
 }];
 const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
-const columnKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'];
-const sortKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+const tableKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 
 describe('useSessionControls', () => {
   beforeEach(() => {
@@ -46,7 +45,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
@@ -58,7 +57,7 @@ describe('useSessionControls', () => {
   it('defaults staff with one assigned program to its active cohort', async () => {
     const { result } = renderHook(() => useSessionControls({
       role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.programIds).toEqual(['program-1']);
@@ -82,7 +81,7 @@ describe('useSessionControls', () => {
     const onFiltersChanged = vi.fn();
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged, columnKeys, sortKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     act(() => result.current.applyFilter('status', ['completed']));
@@ -112,7 +111,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -137,7 +136,7 @@ describe('useSessionControls', () => {
       role: 'admin', programs: [], programsLoading: false, programsError: 'Could not load programs.',
       cohorts: [], cohortsLoading: false, cohortsError: 'Could not load cohorts.',
       sessionTypes: [], sessionTypesLoading: false, sessionTypesError: 'Could not load session types.',
-      onFiltersChanged: vi.fn(), columnKeys, sortKeys,
+      onFiltersChanged: vi.fn(), tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));

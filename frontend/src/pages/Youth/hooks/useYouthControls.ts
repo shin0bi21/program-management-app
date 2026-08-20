@@ -14,8 +14,7 @@ interface UseYouthControlsOptions {
   programs: Program[];
   programsLoading: boolean;
   programsError?: string | null;
-  columnKeys: readonly string[];
-  sortKeys: readonly YouthSortKey[];
+  tableKeys: readonly YouthSortKey[];
 }
 
 const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
@@ -25,8 +24,7 @@ export function useYouthControls({
   programs,
   programsLoading,
   programsError,
-  columnKeys,
-  sortKeys,
+  tableKeys,
 }: UseYouthControlsOptions) {
   // Search and filter state.
   const [search, setSearch] = useState('');
@@ -47,7 +45,7 @@ export function useYouthControls({
     error,
     setBaseline,
     save,
-  } = useUserPreference<YouthPreference>('youth-profile-filters', columnKeys);
+  } = useUserPreference<YouthPreference>('youth-profile-filters', tableKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -64,7 +62,7 @@ export function useYouthControls({
         ? preference.programIds
         : preference.programIds.filter(programId => availableProgramIds.has(programId))
       : role === 'staff' ? programs.map(program => program.id) : [];
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: YouthPreference = {
@@ -81,7 +79,7 @@ export function useYouthControls({
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, sortKeys]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, tableKeys]);
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {

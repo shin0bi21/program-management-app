@@ -24,32 +24,16 @@ import useHoursPreferences from './hooks/useHoursPreferences';
 import useHoursSelection from './hooks/useHoursSelection';
 
 import type { SetHoursInput } from '../../../common/features/hours/hours.api';
-import type { HoursModalState, HoursAddTarget, HoursEntryTarget } from './types';
+import { HOURS_TABLE_KEYS, type HoursModalState, type HoursAddTarget, type HoursEntryTarget } from './types';
 
 import './Hours.css';
 
-// Page-owned cache and persisted-column contracts.
+// Page-owned cache contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_LIST_QUERY_KEY = [...HOURS_QUERY_KEY, 'list'] as const;
 const HOURS_OPTIONS_QUERY_KEY = ['hours-options'] as const;
 const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
-
-const HOURS_COLUMN_KEYS = [
-  'date',
-  'firstName',
-  'lastName',
-  'program',
-  'cycle',
-  'category',
-  'session',
-  'hours',
-  'note',
-  'type',
-] as const;
-const HOURS_SORT_KEYS = [
-  'firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type',
-] as const;
 
 function getHoursError(
   optionsError: unknown,
@@ -86,8 +70,7 @@ export default function Hours() {
     loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
     optionsError: Boolean(pageData.optionsError),
     cyclesError: Boolean(pageData.cyclesError),
-    columnKeys: HOURS_COLUMN_KEYS,
-    sortKeys: HOURS_SORT_KEYS,
+    tableKeys: HOURS_TABLE_KEYS,
   });
 
   const filters = useHoursFilters({

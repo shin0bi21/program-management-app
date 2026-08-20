@@ -30,8 +30,7 @@ const programs: Program[] = [{
   minAge: 12,
   maxAge: 15,
 }];
-const columnKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'];
-const sortKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+const tableKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
 
 describe('useYouthControls', () => {
   beforeEach(() => {
@@ -47,8 +46,7 @@ describe('useYouthControls', () => {
         role,
         programs,
         programsLoading: false,
-        columnKeys,
-        sortKeys,
+        tableKeys,
       }),
       { initialProps: { role: null as string | null } },
     );
@@ -76,8 +74,7 @@ describe('useYouthControls', () => {
       role: 'staff',
       programs,
       programsLoading: false,
-      columnKeys,
-      sortKeys,
+      tableKeys,
     }));
 
     await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
@@ -105,8 +102,7 @@ describe('useYouthControls', () => {
       role: 'staff',
       programs,
       programsLoading: false,
-      columnKeys,
-      sortKeys,
+      tableKeys,
     }));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
@@ -126,7 +122,7 @@ describe('useYouthControls', () => {
       sorting: { key: 'removedColumn' as never, direction: 'desc' },
     };
     const { result } = renderHook(() => useYouthControls({
-      role: 'staff', programs, programsLoading: false, columnKeys, sortKeys,
+      role: 'staff', programs, programsLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
