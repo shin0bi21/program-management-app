@@ -4,10 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
 import {
+  createLead,
   deleteLeadNote,
+  getLeadNotes,
   getLeads,
   setLeadNote,
   signUpLead,
+  updateLead,
   updateLeadStatus,
 } from './leads.api';
 
@@ -52,5 +55,35 @@ describe('leads API', () => {
       details: 'Meeting booked.',
     });
     expect(apiClient.delete).toHaveBeenCalledWith('/leads/lead-1/notes/note-1');
+  });
+
+  it('uses the Lead collection and record endpoints for create and update', () => {
+    const input = {
+      youthFirstName: 'Maya',
+      youthLastName: 'Thompson',
+      age: 15,
+      school: 'Central High',
+      programOfInterestId: 'program-1',
+      contactPhoneNumber: '416-555-0100',
+      contactRelationship: 'parent' as const,
+      discoverySource: 'school' as const,
+      notes: 'Interested in summer programming.',
+    };
+
+    createLead(input);
+    updateLead('lead-1', input);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/leads', input);
+    expect(apiClient.put).toHaveBeenCalledWith('/leads/lead-1', input);
+  });
+
+  it('loads Lead notes with optional cancellation', () => {
+    const options = { signal: new AbortController().signal };
+
+    getLeadNotes('lead-1');
+    getLeadNotes('lead-2', options);
+
+    expect(apiClient.get).toHaveBeenNthCalledWith(1, '/leads/lead-1/notes');
+    expect(apiClient.get).toHaveBeenNthCalledWith(2, '/leads/lead-2/notes', options);
   });
 });
