@@ -18,12 +18,10 @@ import LeadModal from './components/LeadModal/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import { useLeadControls } from './hooks/useLeadControls';
 import useLeadActions from './hooks/useLeadActions';
-import type { Lead, LeadOrigin, LeadStatus } from './types';
+import { LEAD_TABLE_KEYS, type Lead, type LeadOrigin, type LeadStatus } from './types';
 import './Leads.css';
 
 const editableStatuses: LeadStatus[] = ['contacted', 'eligible', 'ineligible'];
-const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
-const LEAD_SORT_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'createdAt'] as const;
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 
 export default function Leads({ origin }: { origin: LeadOrigin }) {
@@ -42,8 +40,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     programs,
     programsLoading,
     programsError,
-    LEAD_COLUMN_KEYS,
-    LEAD_SORT_KEYS,
+    LEAD_TABLE_KEYS,
   );
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
@@ -64,12 +61,12 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Table presentation.
   const columns: TableColumn<Lead>[] = [
-    { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: lead => lead.youthFirstName },
-    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
-    { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
-    { key: 'program', sortKey: 'program', header: 'Eligible Program', render: lead => lead.recommendedProgramName ?? '—' },
-    { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
-    { key: 'created', sortKey: 'createdAt', header: 'Created', width: 130, render: lead => formatShortDate(lead.createdAt) },
+    { key: 'firstName', header: 'First Name', render: lead => lead.youthFirstName },
+    { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
+    { key: 'school', header: 'School', render: lead => lead.school },
+    { key: 'program', header: 'Eligible Program', render: lead => lead.recommendedProgramName ?? '—' },
+    { key: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
+    { key: 'created', header: 'Created', width: 130, render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
       key: 'actions' as const,
       width: 40,

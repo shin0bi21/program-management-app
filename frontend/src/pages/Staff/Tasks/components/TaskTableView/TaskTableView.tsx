@@ -1,7 +1,7 @@
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
 import type { Task, TaskCategory, TaskListStatus } from '../../../../../common/features/tasks/types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import type { TaskSortKey } from '../../types';
+import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
 import useTaskList from './hooks/useTaskList';
 
 interface TaskTableViewProps {
@@ -42,6 +42,7 @@ export default function TaskTableView({
     selectedKey={selectedTaskId}
     onRowSelect={onTaskSelect}
     sorting={sorting}
+    sortableColumns={TASK_TABLE_KEYS}
     onSortingChange={next => onSortingChange(next as ListSort<TaskSortKey>)}
     columnWidths={columnWidths}
     onColumnWidthsChange={onColumnWidthsChange}

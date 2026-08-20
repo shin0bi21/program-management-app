@@ -183,7 +183,7 @@ describe('Leads', () => {
       statuses: [],
       programIds: [],
       origins: ['external'],
-      sorting: { key: 'createdAt', direction: 'desc' },
+      sorting: { key: 'created', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: ['school'],
     });
@@ -231,7 +231,7 @@ describe('Leads', () => {
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       { search: '', statuses: ['new'], programIds: [], origins: ['external'] },
-      expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
+      expect.objectContaining({ key: 'created', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });
@@ -250,7 +250,7 @@ describe('Leads', () => {
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       { search: '', statuses: [], programIds: ['program-1'], origins: ['external'] },
-      expect.objectContaining({ key: 'createdAt', direction: 'desc', limit: 25 }),
+      expect.objectContaining({ key: 'created', direction: 'desc', limit: 25 }),
       { signal: expect.any(AbortSignal) },
     ));
   });

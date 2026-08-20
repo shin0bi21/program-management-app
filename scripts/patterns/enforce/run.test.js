@@ -24,7 +24,7 @@ test('routes page preferences to their ownership check', () => {
     'frontend/src/pages/Example/hooks/useExamplePreferences.ts',
     "const { save } = useUserPreference('example-filters');\nsave({ hiddenColumns });",
   );
-  assert.match(violations.join('\n'), /page-owned columnKeys/);
+  assert.match(violations.join('\n'), /owning tableKeys/);
 });
 
 test('routes backend route files to async-handler enforcement', () => {

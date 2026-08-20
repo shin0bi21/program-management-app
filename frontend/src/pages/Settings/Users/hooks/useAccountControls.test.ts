@@ -17,8 +17,7 @@ vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () =>
   default: () => preferenceHook,
 }));
 
-const columnKeys = ['name', 'email', 'role', 'status', 'createdAt'];
-const sortKeys = ['name', 'email', 'role', 'status', 'createdAt'] as const;
+const tableKeys = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 
 describe('useAccountControls', () => {
   beforeEach(() => {
@@ -33,7 +32,7 @@ describe('useAccountControls', () => {
       statuses: ['active'], roles: ['staff'], sorting: { key: 'email', direction: 'desc' },
       columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     };
-    const { result } = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
+    const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
     await waitFor(() => expect(result.current.queryFilters).toEqual({
       search: '', roles: ['staff'], statuses: ['active'],
@@ -45,8 +44,8 @@ describe('useAccountControls', () => {
   });
 
   it('limits role filters to administrators', async () => {
-    const admin = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
-    const staff = renderHook(() => useAccountControls(false, columnKeys, sortKeys));
+    const admin = renderHook(() => useAccountControls(true, tableKeys));
+    const staff = renderHook(() => useAccountControls(false, tableKeys));
     await waitFor(() => expect(admin.result.current.queryFilters).not.toBeNull());
     await waitFor(() => expect(staff.result.current.queryFilters).not.toBeNull());
 
@@ -62,7 +61,7 @@ describe('useAccountControls', () => {
     preferenceHook.save.mockImplementation((update: (current: AccountPreference) => AccountPreference) => {
       Object.assign(persisted, update(persisted));
     });
-    const { result } = renderHook(() => useAccountControls(true, columnKeys, sortKeys));
+    const { result } = renderHook(() => useAccountControls(true, tableKeys));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
     act(() => {
@@ -82,7 +81,7 @@ describe('useAccountControls', () => {
       roles: ['admin'],
       sorting: { key: 'removedColumn' as never, direction: 'desc' },
     };
-    const { result } = renderHook(() => useAccountControls(false, columnKeys, sortKeys));
+    const { result } = renderHook(() => useAccountControls(false, tableKeys));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 

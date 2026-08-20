@@ -9,7 +9,7 @@ import type { ListSort } from '../../../../common/types/pagination';
 import type { LeadFilters, LeadOrigin, LeadPreference, LeadSortKey, LeadStatus } from '../types';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
-const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'createdAt', direction: 'desc' };
+const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'created', direction: 'desc' };
 
 export function useLeadControls(
   origin: LeadOrigin,
@@ -17,8 +17,7 @@ export function useLeadControls(
   programs: Program[],
   programsLoading: boolean,
   programsError: string | null,
-  columnKeys: readonly string[],
-  sortKeys: readonly LeadSortKey[],
+  tableKeys: readonly LeadSortKey[],
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
@@ -39,7 +38,7 @@ export function useLeadControls(
     error,
     setBaseline,
     save,
-  } = useUserPreference<LeadPreference>(preferenceKey, columnKeys);
+  } = useUserPreference<LeadPreference>(preferenceKey, tableKeys);
 
   // Delay query changes until the user pauses typing.
   useEffect(() => {
@@ -54,7 +53,7 @@ export function useLeadControls(
     const restoredProgramIds = programsError
       ? preference?.programIds ?? []
       : preference?.programIds.filter(id => availableProgramIds.has(id)) ?? [];
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, sortKeys, DEFAULT_SORTING);
+    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: LeadPreference = {
@@ -72,7 +71,7 @@ export function useLeadControls(
     setHiddenColumnsState(restoredHiddenColumns);
     setBaseline(restored);
     setReady(true);
-  }, [origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline, sortKeys]);
+  }, [origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline, tableKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<LeadFilters | null>(() => ready

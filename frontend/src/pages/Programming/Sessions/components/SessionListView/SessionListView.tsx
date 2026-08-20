@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Table, { type TableColumn } from '../../../../../common/components/Table/Table';
-import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../../common/types/cohort';
+import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters, type SessionSortKey } from '../../../../../common/types/cohort';
 import type { ListSort } from '../../../../../common/types/pagination';
 import { useSessions } from './hooks/useSessions';
 
@@ -45,6 +45,7 @@ export default function SessionListView({
     scrollToSelected={Boolean(selectedSessionId)}
     onRowSelect={onSessionSelect}
     sorting={sorting}
+    sortableColumns={SESSION_TABLE_KEYS}
     onSortingChange={next => onSortingChange(next as ListSort<SessionSortKey>)}
     columnWidths={columnWidths}
     onColumnWidthsChange={onColumnWidthsChange}

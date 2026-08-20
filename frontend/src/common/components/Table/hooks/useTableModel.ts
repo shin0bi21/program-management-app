@@ -20,6 +20,7 @@ interface UseTableModelOptions<T> {
   data: T[];
   columns: TableColumn<T>[];
   sorting?: TableSorting;
+  sortableColumns: readonly string[];
   onSortingChange?: (sorting: TableSorting) => void;
   columnWidths: ColumnSizingState;
   onColumnWidthsChange?: (widths: ColumnSizingState) => void;
@@ -29,10 +30,13 @@ export default function useTableModel<T>({
   data,
   columns,
   sorting,
+  sortableColumns,
   onSortingChange,
   columnWidths,
   onColumnWidthsChange,
 }: UseTableModelOptions<T>) {
+
+  // Adapt application columns to TanStack columns.
   const tanstackColumns = useMemo<ColumnDef<T>[]>(() => columns.map(column => {
     const fixedWidth = column.resizable === false;
     const fixedSize = column.width ?? FIXED_COLUMN_WIDTH;
@@ -42,21 +46,22 @@ export default function useTableModel<T>({
       accessorFn: row => row,
       header: column.header,
       cell: context => column.render(context.row.original),
-      enableSorting: Boolean(column.sortKey),
+      enableSorting: sortableColumns.includes(column.key),
       enableResizing: !fixedWidth,
       size: fixedWidth ? fixedSize : column.width ?? DEFAULT_COLUMN_WIDTH,
       minSize: fixedWidth ? fixedSize : MIN_COLUMN_WIDTH,
       maxSize: fixedWidth ? fixedSize : MAX_COLUMN_WIDTH,
       meta: column,
     };
-  }), [columns]);
+  }), [columns, sortableColumns]);
 
+  // Adapt controlled sorting state. TanStack represents ascending as desc: false.
   const sortingState = useMemo<SortingState>(() => {
     if (!sorting) return [];
-    const columnId = columns.find(column => column.sortKey === sorting.key)?.key ?? sorting.key;
-    return [{ id: columnId, desc: sorting.direction === 'desc' }];
-  }, [columns, sorting]);
+    return [{ id: sorting.key, desc: sorting.direction === 'desc' }];
+  }, [sorting]);
 
+  // Manage controlled column sizing.
   const normalizeColumnWidths = useCallback((next: ColumnSizingState): ColumnSizingState => Object.fromEntries(
     columns.flatMap(column => {
       if (column.resizable === false) return [];
@@ -71,27 +76,17 @@ export default function useTableModel<T>({
     onColumnWidthsChange(normalizeColumnWidths(next));
   }, [columnWidths, normalizeColumnWidths, onColumnWidthsChange]);
 
-  const table = useReactTable({
-    data,
-    columns: tanstackColumns,
-    state: { sorting: sortingState, columnSizing: columnWidths },
-    manualSorting: true,
-    enableMultiSort: false,
-    columnResizeMode: 'onChange',
-    onColumnSizingChange: handleColumnSizingChange,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
+  // Expose application-level interactions.
   const toggleSort = useCallback((column: TableColumn<T>) => {
-    if (!column.sortKey || !onSortingChange) return;
-    const ascending = sorting?.key === column.sortKey && sorting.direction === 'asc';
+    if (!sortableColumns.includes(column.key) || !onSortingChange) return;
+    const ascending = sorting?.key === column.key && sorting.direction === 'asc';
     onSortingChange({
-      key: column.sortKey,
+      key: column.key,
       direction: ascending ? 'desc' : 'asc',
     });
-  }, [onSortingChange, sorting]);
+  }, [onSortingChange, sortableColumns, sorting]);
 
-  const nudgeColumnWidth = useCallback((
+  const resizeColumnByStep = useCallback((
     columnId: string,
     currentWidth: number,
     direction: 'ArrowLeft' | 'ArrowRight',
@@ -106,10 +101,22 @@ export default function useTableModel<T>({
     });
   }, [columnWidths, onColumnWidthsChange]);
 
+  // Build the TanStack model after adapting its controlled inputs.
+  const table = useReactTable({
+    data,
+    columns: tanstackColumns,
+    state: { sorting: sortingState, columnSizing: columnWidths },
+    manualSorting: true,
+    enableMultiSort: false,
+    columnResizeMode: 'onChange',
+    onColumnSizingChange: handleColumnSizingChange,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return {
     headers: table.getHeaderGroups()[0].headers,
     isResizing: Boolean(table.getState().columnSizingInfo.isResizingColumn),
-    nudgeColumnWidth,
+    resizeColumnByStep,
     resolvedColumnWidths: Object.fromEntries(
       table.getAllLeafColumns().map(column => [column.id, column.getSize()]),
     ),

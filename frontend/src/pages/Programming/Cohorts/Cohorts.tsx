@@ -18,7 +18,7 @@ import { deleteCohort, getProgramCycles } from '../../../common/features/program
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
-import type { ProgramCohort, ProgramCycle } from '../../../common/types/cohort';
+import { COHORT_TABLE_KEYS, type ProgramCohort, type ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { COHORT_OPTIONS_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
@@ -29,8 +29,6 @@ import { useCohortControls } from './hooks/useCohortControls';
 import useCohortTable from './hooks/useCohortTable';
 import './Cohorts.css';
 
-const COHORT_COLUMN_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
-const COHORT_SORT_KEYS = ['program', 'cohort', 'start', 'end', 'status'] as const;
 const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
 
 export default function Cohorts() {
@@ -46,8 +44,7 @@ export default function Cohorts() {
     role,
     programs,
     programsLoading,
-    COHORT_COLUMN_KEYS,
-    COHORT_SORT_KEYS,
+    COHORT_TABLE_KEYS,
     programsError,
   );
   const {
@@ -103,13 +100,12 @@ export default function Cohorts() {
   // Table presentation and row actions.
   const columns = useMemo<TableColumn<ProgramCohort>[]>(
     () => [
-      { key: 'program', sortKey: 'program', header: 'Program', render: (cohort) => cohort.programName },
-      { key: 'cohort', sortKey: 'cohort', header: 'Cycle', render: (cohort) => cohort.cycleName },
-      { key: 'start', sortKey: 'start', header: 'Start', width: 140, render: (cohort) => formatShortDate(cohort.startsOn) },
-      { key: 'end', sortKey: 'end', header: 'End', width: 140, render: (cohort) => formatShortDate(cohort.endsOn) },
+      { key: 'program', header: 'Program', render: (cohort) => cohort.programName },
+      { key: 'cohort', header: 'Cycle', render: (cohort) => cohort.cycleName },
+      { key: 'start', header: 'Start', width: 140, render: (cohort) => formatShortDate(cohort.startsOn) },
+      { key: 'end', header: 'End', width: 140, render: (cohort) => formatShortDate(cohort.endsOn) },
       {
         key: 'status',
-        sortKey: 'status',
         header: 'Status',
         width: 120,
         render: (cohort) => <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>,
@@ -210,6 +206,7 @@ export default function Cohorts() {
                 selectedKey={selectedCohortId}
                 onRowSelect={selectCohort}
                 sorting={sorting}
+                sortableColumns={COHORT_TABLE_KEYS}
                 onSortingChange={controls.setSorting}
                 columnWidths={columnWidths}
                 onColumnWidthsChange={controls.setColumnWidths}
