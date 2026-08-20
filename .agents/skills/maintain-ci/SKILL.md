@@ -9,11 +9,10 @@ Evolve CI without weakening the merge gate or confusing local and remote test ow
 
 ## 1. Establish the execution path
 
-1. Read [`docs/operations/ci.md`](../../../docs/operations/ci.md) completely.
-2. Read [`docs/architecture/ci.md`](../../../docs/architecture/ci.md) completely when assessing or changing topology, gates, ownership, sharding, caching, required checks, or performance.
-3. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
-4. Read `docs/operations/testing.md` when changing test ownership or runner composition. Read `docs/operations/local-development.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/operations/deployment.md` for any push-to-main or production path.
-5. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
+1. Read [`docs/workflows/ci.md`](../../../docs/workflows/ci.md) completely. It owns CI architecture, operations, gates, routing, performance, and failure handling.
+2. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
+3. Read `docs/workflows/testing.md` when changing test ownership or runner composition. Read `docs/workflows/local-development.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/workflows/deployment.md` for any push-to-main or production path.
+4. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
 
 Treat workflow files as orchestration, repository scripts as stable developer/CI entry points, and package scripts as framework-level commands.
 
@@ -46,7 +45,7 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 5. Compare job-level timestamps when run-level timestamps include queueing or delayed status updates.
 6. State whether a change improves developer wait time, compute consumption, or both.
 
-Do not claim a durable improvement from a tiny sample. Record a dated baseline in the architecture document when the measurement will guide future work.
+Do not claim a durable improvement from a tiny sample. Record a dated baseline in the CI owner document when the measurement will guide future work.
 
 ## 4. Implement and verify
 
@@ -55,6 +54,6 @@ Do not claim a durable improvement from a tiny sample. Record a dated baseline i
 3. Run `bash -n` and `shellcheck` for changed shell scripts when available.
 4. Run `node scripts/agents/validate-skills.js` when repository skills change.
 5. Run the narrow affected runner and `bash scripts/tests/test-static.sh` when the change affects executable test or static-analysis behavior.
-6. Review the final workflow graph against `docs/architecture/ci.md` and update that document in the same concern when architecture or ownership changes.
+6. Review the final workflow graph against `docs/workflows/ci.md` and update that document in the same concern when architecture, ownership, or operation changes.
 
 Report checks run, unverified GitHub-only behavior, expected wall-time effect, expected runner-minute effect, and any required-check or branch-protection follow-up.

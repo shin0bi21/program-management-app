@@ -1,6 +1,6 @@
 # Auth System
 
-For the API endpoint reference, see the [backend API reference](../../backend/README.md#api-reference).
+For the API endpoint reference, see the [backend API reference](api.md).
 Unless stated otherwise, source paths in this document are relative to `backend/`.
 
 ---
@@ -291,7 +291,7 @@ Every security-relevant auth event is written to `auth_log` by `src/services/aut
 
 ### IP Privacy
 
-`req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [database.md § 6 Auth Log](./database.md#6-auth-log) for the full privacy design.
+`req.ip` is passed from every auth controller handler to the service function as `ipAddress?`. The service never stores the raw IP — `authLogService.ts` hashes the /24 subnet prefix with HMAC-SHA256. See [database.md § 7 Auth Log](database.md#7-auth-log) for the full privacy design.
 
 The HMAC key defaults to `JWT_SECRET` but can be overridden by setting `LOG_HMAC_SECRET` to an independent secret. Using a separate secret means IP hash correlation cannot be broken even if `JWT_SECRET` is rotated — recommended for production.
 

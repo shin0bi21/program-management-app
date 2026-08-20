@@ -4,7 +4,7 @@ import test from 'node:test';
 import { planCommands, selectTests } from './select-tests.js';
 
 test('documentation-only changes do not select paid application jobs', () => {
-  assert.deepEqual(planCommands(selectTests(['docs/operations/testing.md'])), []);
+  assert.deepEqual(planCommands(selectTests(['docs/workflows/testing.md'])), []);
 });
 
 test('Task backend changes select Task and Timesheet integration suites', () => {

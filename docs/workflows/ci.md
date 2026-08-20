@@ -1,4 +1,4 @@
-# Continuous integration architecture
+# Continuous integration
 
 ## Purpose
 
@@ -6,9 +6,7 @@ CI is the authoritative merge gate for pull requests. It keeps fast, reproducibl
 checks on the pull-request path while isolating slower or differently scoped
 automation. Repository scripts provide the stable interface shared by developers,
 agents, and GitHub Actions; package scripts remain framework-level implementation
-details.
-
-For inspecting runs, reproducing failures, rerunning jobs, and changing workflows, see [Continuous integration](../operations/ci.md).
+details. This document owns both CI architecture and its operating workflow.
 
 ## Workflow topology
 
@@ -56,6 +54,20 @@ Backend verification owns type checking, migrations, migration status, generated
 Production image and Compose checks are selected by changed production inputs for
 feature pull requests. Release pull requests to `main` run all production checks.
 
+### Changed-path routing
+
+The shared selector applies these rules locally and in CI:
+
+- Documentation-only changes skip paid application jobs.
+- Repository automation changes run static checks.
+- Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Timesheets for Task changes.
+- Shared backend infrastructure, migrations, dependencies, and unmapped backend paths run the full backend suite.
+- Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
+- Changed production inputs select deployment planning, image builds, and Compose validation.
+- Unrecognized paths fail closed to the full local application plan until deliberately classified.
+
+Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate both production images and the production Compose configuration.
+
 ## Test-layer ownership
 
 | Layer | Canonical command | Environment | Normal PR CI |
@@ -71,7 +83,7 @@ test files explicitly select Node with their file-level Vitest environment annot
 Both environments can appear in a related or full run because environment selection is
 per test file. Playwright owns behavior that depends on a real
 browser, including layout geometry, scrolling, pointer behavior, and browser focus.
-See [Testing](../operations/testing.md) for commands and focused-suite routing.
+See [Testing](testing.md) for commands and focused-suite routing.
 
 ## Runner boundaries
 
@@ -111,16 +123,39 @@ or total time-to-merge.
 `npm run report:ci` is the canonical read-only measurement interface. It derives merge
 intervals and CI-change boundaries from GitHub pull requests, and derives queue, wall,
 runner, reliability, and rerun measurements from workflow and job timestamps. See the
-[Reports guide](../operations/reports.md#ci-report) for usage.
+[Reports guide](reports.md#ci-report) for usage.
+
+## Reproduce a failed check
+
+Start from the failed GitHub job and run its stable repository command where one exists:
+
+| Failed job or layer | Local command |
+|---|---|
+| Lint and shell analysis | `bash scripts/tests/test-static.sh` |
+| Backend API behavior | `bash scripts/tests/backend/test-apis.sh` |
+| Frontend Vitest behavior | `bash scripts/tests/frontend/test-ui.sh` |
+| Browser component behavior | `bash scripts/tests/frontend/test-browser.sh` |
+| Full local application gate | `bash scripts/tests/test-app.sh` |
+| Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `bash scripts/tests/test-app.sh --changed` |
+| Repository patterns | `node scripts/patterns/check-patterns.js --changed` |
+
+CI also owns framework and production steps such as backend migrations and generated-type drift checks, frontend builds, image builds, Compose validation, and nginx validation. Inspect the failed workflow step for its exact command. [Testing](testing.md) owns runner selection; [local development](local-development.md) owns Docker, migrations, dependencies, and environment diagnostics.
+
+## Inspect and rerun GitHub checks
+
+Open the pull request's **Checks** section or the repository's **Actions** tab, select the workflow run, then open the failed job and step. Use **Re-run failed jobs** for an infrastructure or transient failure after confirming the commit has not changed. Push a code fix when the failure is reproducible or caused by the diff.
+
+Pattern Review publishes its report in the job summary and retains the text artifact. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
 
 ## Change checklist
 
-When changing CI architecture:
+When changing CI architecture or operation:
 
 1. Identify the required gate and every scheduled, push, manual, and deployment consumer.
 2. Preserve a reproducible repository-root command for locally relevant checks.
 3. Confirm permissions, timeouts, concurrency cancellation, cache inputs, dependency edges, and conditional jobs.
 4. Confirm required-check names and branch-protection expectations.
-5. Run syntax, skill, static, and affected-suite validation locally where possible.
-6. Inspect the first GitHub run at job level and record unexpected queueing, failures, or critical-path movement.
-7. Update this document whenever workflow ownership, triggers, gates, or test-layer boundaries change.
+5. Run `bash -n` and ShellCheck for changed shell scripts, plus skill, static, and affected-suite validation where possible.
+6. Preserve workflow orchestration in `.github/workflows/`, changed-path policy in `scripts/ci/`, reusable execution in `scripts/tests/`, and framework commands in package scripts.
+7. Inspect the first GitHub run at job level because triggers, services, permissions, caches, and rulesets cannot be fully verified locally.
+8. Update this document whenever workflow ownership, triggers, gates, operational procedures, or test-layer boundaries change.

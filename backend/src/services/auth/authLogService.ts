@@ -10,7 +10,7 @@ const HMAC_SECRET = process.env.LOG_HMAC_SECRET ?? requireEnv('JWT_SECRET');
 
 // Auth events mirror the security-relevant taxonomy in the
 // OWASP Authentication Cheat Sheet — "Logging and Monitoring" section.
-// token_reuse_detected: refresh-token rotation threat (see docs/architecture/auth.md §5).
+// token_reuse_detected: refresh-token rotation threat (see docs/backend/auth.md §5).
 export type AuthEvent =
   | 'login_success'
   | 'login_failure'

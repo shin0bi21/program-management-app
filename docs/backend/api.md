@@ -1,41 +1,6 @@
-# Youth Services Application — Backend
+# Backend API reference
 
-Express + TypeScript + PostgreSQL API for the youth services application.
-
-## Documentation
-
-| Area | Canonical document |
-|---|---|
-| Backend architecture | [`../docs/architecture/backend.md`](../docs/architecture/backend.md) |
-| Authentication and permissions | [`../docs/architecture/auth.md`](../docs/architecture/auth.md) |
-| Database and migrations | [`../docs/architecture/database.md`](../docs/architecture/database.md) |
-| Error handling | [`../docs/architecture/errors.md`](../docs/architecture/errors.md) |
-| Full HTTP lifecycle | [`../docs/architecture/http.mmd`](../docs/architecture/http.mmd) |
-| Development handbook | [`../docs/development/README.md`](../docs/development/README.md) |
-| Local setup | [`../docs/operations/setup.md`](../docs/operations/setup.md) |
-| Local development | [`../docs/operations/local-development.md`](../docs/operations/local-development.md) |
-| Testing | [`../docs/operations/testing.md`](../docs/operations/testing.md) |
-| Deployment | [`../docs/operations/deployment.md`](../docs/operations/deployment.md) |
-| Google Sheets scripts | [`docs/google-sheets.md`](docs/google-sheets.md) |
-
-Repository-wide implementation invariants and documentation routing begin in [`../AGENTS.md`](../AGENTS.md).
-
-## Stack
-
-| Concern | Technology |
-|---|---|
-| Runtime | Node.js 24+ |
-| Framework | Express 4.18.2 |
-| Language | TypeScript 5.9.3 |
-| Database | PostgreSQL 18 with postgres.js 3.4.8 |
-| Authentication | JWT and email 2FA |
-| Validation | Zod 4.3.6 |
-| Testing | Jest 30.2.0 and Supertest 7.2.2 |
-| Email | Nodemailer 7.0.12 |
-
-## API reference
-
-Paths below are relative to `/api`. Protected endpoints require the permissions shown in the route source and summarized in the [RBAC model](../docs/architecture/auth.md#3-rbac-model).
+Paths are relative to `/api`. Protected endpoints require the permissions declared by the route and summarized in the [RBAC model](auth.md#3-rbac-model). Route files under [`backend/src/routes/`](../../backend/src/routes/) are authoritative for exact paths, validation middleware, and required permissions.
 
 ### Authentication — `/auth`
 
@@ -120,10 +85,4 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `/expressions-of-interest` | Internal review, status updates, and lead conversion |
 | `/leads` | Lead intake, status, notes, and youth signup |
 
-Route files under `src/routes/` are the source of truth for exact paths, validation, and required permissions.
-
-## Operations
-
-- Use [`../docs/operations/local-development.md`](../docs/operations/local-development.md) for backend restarts, environment changes, migrations, database types, logs, debugging, and resets.
-- Use [`../docs/operations/testing.md`](../docs/operations/testing.md) for full, backend-only, and focused test commands.
-- Use [`../docs/operations/deployment.md`](../docs/operations/deployment.md) for CI, production deployment, monitoring, and production troubleshooting.
+For lifecycle, ownership, and implementation, see [Backend architecture and development](../../README.md#backend-architecture-and-development) and the focused guides beside this file. Local commands, testing, and deployment are linked from the root application README.
