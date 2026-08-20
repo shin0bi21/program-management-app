@@ -53,7 +53,7 @@ export interface LeadFilters {
   origins?: LeadOrigin[];
 }
 
-export type LeadSortKey = 'name' | 'school' | 'program' | 'status' | 'createdAt';
+export type LeadSortKey = 'firstName' | 'lastName' | 'school' | 'program' | 'status' | 'createdAt';
 
 export interface LeadPreference {
   statuses: LeadStatus[];

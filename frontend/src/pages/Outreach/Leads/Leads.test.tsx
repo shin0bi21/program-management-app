@@ -143,12 +143,33 @@ describe('Leads', () => {
 
     expect(await screen.findByRole('columnheader', { name: /First Name/ })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Origin' })).not.toBeInTheDocument();
     await screen.findByRole('row', { name: /Avery Outreach/ });
     expect(screen.getByRole('cell', { name: 'Avery' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Outreach' })).toBeInTheDocument();
     expect(screen.queryByText('Expression of Interest')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'External Leads' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+  });
+
+  it('requests independent first-name and last-name sorting', async () => {
+    renderPage();
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
+    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
+      expect.objectContaining({ origins: ['external'] }),
+      expect.objectContaining({ key: 'firstName', direction: 'asc', limit: 25 }),
+      { signal: expect.any(AbortSignal) },
+    ));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Last Name' }));
+    await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
+      expect.objectContaining({ origins: ['external'] }),
+      expect.objectContaining({ key: 'lastName', direction: 'asc', limit: 25 }),
+      { signal: expect.any(AbortSignal) },
+    ));
+    expect(preferenceHook.preference?.sorting).toEqual({ key: 'lastName', direction: 'asc' });
   });
 
   it('persists a complete preference when first hiding a column', async () => {

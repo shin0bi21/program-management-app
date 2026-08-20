@@ -22,8 +22,8 @@ import type { Lead, LeadOrigin, LeadStatus } from './types';
 import './Leads.css';
 
 const editableStatuses: LeadStatus[] = ['contacted', 'eligible', 'ineligible'];
-const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'origin', 'school', 'program', 'status', 'created'] as const;
-const LEAD_SORT_KEYS = ['name', 'school', 'program', 'status', 'createdAt'] as const;
+const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
+const LEAD_SORT_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'createdAt'] as const;
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 
 export default function Leads({ origin }: { origin: LeadOrigin }) {
@@ -64,9 +64,8 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Table presentation.
   const columns: TableColumn<Lead>[] = [
-    { key: 'firstName', sortKey: 'name', header: 'First Name', render: lead => lead.youthFirstName },
-    { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
-    { key: 'origin', header: 'Origin', width: 100, render: lead => title(lead.origin) },
+    { key: 'firstName', sortKey: 'firstName', header: 'First Name', render: lead => lead.youthFirstName },
+    { key: 'lastName', sortKey: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
     { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
     { key: 'program', sortKey: 'program', header: 'Eligible Program', render: lead => lead.recommendedProgramName ?? '—' },
     { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
