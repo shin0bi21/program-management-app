@@ -43,7 +43,11 @@ change classification
   └── conditional production image and Compose validation
 ```
 
-[`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. The required quality job always runs against `main` so branch-flow enforcement cannot be hidden by a skipped non-required classifier. Unknown paths fail closed to the full application plan.
+Release pull requests also run the independent `Enforce develop → main only`
+job. Keeping this repository policy in its own job gives branch protection a
+stable required-check identity without coupling it to lint or shell analysis.
+
+[`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests. This replaces the previous two always-on shards, which reduced wall time but repeated setup and always billed the complete frontend collection.
 
