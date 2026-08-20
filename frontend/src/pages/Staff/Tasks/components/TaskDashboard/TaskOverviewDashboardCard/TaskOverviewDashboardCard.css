@@ -150,7 +150,7 @@
 }
 
 .task-overview-card__task-section--danger ul {
-  border-left-color: var(--color-danger-border);
+  border-left-color: var(--color-danger-dark);
 }
 
 .task-overview-card__task-section--danger h3 {
