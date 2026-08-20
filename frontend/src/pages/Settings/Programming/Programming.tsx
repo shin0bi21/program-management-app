@@ -14,7 +14,7 @@ import type { ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
 import { getErrorMessage } from '../../../http/clientErrors';
 import CycleModal from './components/CycleModal';
-import ProgramModal from './components/ProgramModal';
+import ProgramModal from './components/ProgramModal/ProgramModal';
 import type { CycleModalTarget, ProgramModalTarget } from './types';
 import './Programming.css';
 
