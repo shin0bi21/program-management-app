@@ -114,7 +114,8 @@ Keep non-TanStack state separate. A mounted ResourceCalendar may expose a narrow
 ## 6. Verify the list
 
 - Shared Table tests own generic rendering, sorting events, resizing, keyboard navigation, selection presentation, loading states, and intersection-observer behavior.
-- Test query keys, filter wiring, cursor advancement, append behavior, deduplication, cancellation, and row shaping beside `useExampleList`.
+- Shared `useInfiniteListQuery` tests own generic page accumulation, row deduplication, background-refresh preservation, and pagination state.
+- Consumer list-hook tests own their query-key inputs, domain filter/sort serialization, standard page size, cancellation signal and cursor forwarding, and domain row shaping.
 - Test columns, API sort-key wiring, selection, permission-aware rows/actions, persisted widths, loading/error/empty states, and cache behavior beside their narrowest owners.
 - Test page-header controls, preference restoration and first save, dialogs, view switching, and cross-view coordination in the route test.
 - Use browser tests for pointer resizing, horizontal overflow, sticky behavior, real scrolling and load-more observation, focus geometry, large-list rendering, and the shared `768px` mobile layout.

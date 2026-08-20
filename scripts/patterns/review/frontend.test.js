@@ -126,9 +126,10 @@ test('does not warn for a lean page orchestrator composed from owned hooks and v
   const file = 'frontend/src/pages/Things/Things.tsx';
   const source = `
     export default function Things() {
-      const controls = useThingControls();
-      const things = useThings(controls.filters);
-      return <ThingListView controls={controls} things={things} />;
+      const preferences = useThingPreferences();
+      const filters = useThingFilters(preferences);
+      const things = useThings(filters.applied);
+      return <ThingTableView filters={filters} preferences={preferences} things={things} />;
     }
   `;
 
@@ -136,7 +137,9 @@ test('does not warn for a lean page orchestrator composed from owned hooks and v
     repositoryFiles: [
       file,
       'frontend/src/pages/Things/Things.css',
-      'frontend/src/pages/Things/components/ThingListView/ThingListView.tsx',
+      'frontend/src/pages/Things/components/ThingTableView/ThingTableView.tsx',
+      'frontend/src/pages/Things/hooks/useThingFilters.ts',
+      'frontend/src/pages/Things/hooks/useThingPreferences.ts',
       'frontend/src/pages/Things/hooks/useThings.ts',
     ],
     routePageDirectories: ['frontend/src/pages/Things'],

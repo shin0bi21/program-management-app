@@ -48,9 +48,13 @@ export default function ExamplePage() {
   const queryClient = useQueryClient();
   const { permissions } = useAuth();
 
-  // Persisted controls and remote data.
-  const controls = useExampleControls();
-  const records = useExamples(controls.filters, controls.sorting);
+  // Persisted preferences, filters, and remote data.
+  const preferences = useExamplePreferences();
+  const filters = useExampleFilters({
+    preferences: preferences.value,
+    updatePreferences: preferences.update,
+  });
+  const records = useExamples(filters.applied, preferences.value.sorting);
 
   // Selected records and page-owned dialogs.
   const selection = useTableSelection(records.data);
@@ -70,7 +74,7 @@ Route specialized content to the applicable guide:
 - create, edit, or destructive workflow: [Forms and modals](forms-and-modals.md);
 - pointer, keyboard, focus, portal, drag, or geometry behavior: [Interactions](interactions.md).
 
-The route page owns shared controls, selection context, dashboards, dialogs, and coordination between sibling views. A substantial `*ListView` or `*CalendarView` owns its own remote data and view-specific behavior.
+The route page coordinates focused preference, filter, action, and selection owners with dashboards, dialogs, and sibling views. A substantial `*TableView` or `*CalendarView` owns its own remote data and view-specific behavior.
 
 ## 5. Test and verify
 
