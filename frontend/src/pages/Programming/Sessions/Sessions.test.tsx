@@ -294,14 +294,19 @@ describe('Sessions', () => {
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
   });
 
-  it('removes a deleted session without refetching the table', async () => {
+  it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
         <Sessions />
+        <LocationProbe />
       </MemoryRouter>,
     );
     await screen.findByText('Communication');
+    expect(screen.getByText('Communication').closest('tr')).toHaveClass('table-row--selected');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent(
+      'No attendance.',
+    );
     const initialRequestCount = getSessions.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
@@ -310,6 +315,8 @@ describe('Sessions', () => {
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
+    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
     expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
