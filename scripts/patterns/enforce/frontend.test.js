@@ -457,7 +457,7 @@ test('requires frontend architecture and integration documentation to remain cen
 
   assert.match(violations[0], /belongs under docs/);
   assert.deepEqual(
-    violationsFor(checkCentralizedFrontendDocumentation, 'docs/development/frontend/example.md'),
+    violationsFor(checkCentralizedFrontendDocumentation, 'docs/frontend/example.md'),
     [],
   );
 });

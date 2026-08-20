@@ -2,7 +2,7 @@
 
 Use this guide to trace a local failure from the browser through the API and
 backend process. The error types, response contract, middleware flow, and
-request-ID design are owned by [Error handling](../architecture/errors.md).
+request-ID design are owned by [Error handling](../backend/errors.md).
 
 ## Trace a client or API failure
 

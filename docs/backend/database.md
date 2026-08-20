@@ -1,7 +1,15 @@
 # Database & Migrations
 
-For migration and database-type commands, see [Local development](../operations/local-development.md#migrations-and-database-types).
+For migration and database-type commands, see [Local development](../workflows/local-development.md#migrations-and-database-types).
 Unless stated otherwise, source paths in this document are relative to `backend/`.
+
+## Persistence design contract
+
+- Encode current invariants with foreign keys, unique and check constraints, required columns, indexes, and deliberate deletion behavior.
+- Model current cardinality directly. A required single owner belongs on the parent as a non-null foreign key; use a relationship table only when zero/many relationships, independent relationship metadata, or relationship history is part of the current contract. A uniqueness constraint on a child row enforces at most one, not exactly one.
+- Do not weaken current constraints for a hypothetical future workflow. Model a materially different backlog, draft, or unassigned lifecycle only when that workflow is approved.
+- Use the base-table pattern below for new data tables and add actor foreign keys consistently.
+- Choose cascade, restrict, set-null, archive, or soft-delete behavior from the product's historical-record contract rather than convenience.
 
 ---
 
@@ -96,6 +104,8 @@ docker compose exec backend npm run db:status    # verify
 ```
 
 `db:migrate` automatically runs `kysely-codegen` after applying migrations to keep `src/types/database.ts` in sync with the schema. If type generation fails, it will say so — run `npm run db:types` manually to retry.
+
+Update deterministic seeds and fixtures for new required relationships and fields. Apply the migration to fresh development and test databases, verify status and checksums, and query important constraints or migrated values directly.
 
 ---
 

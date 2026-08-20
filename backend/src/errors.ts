@@ -24,7 +24,7 @@ export interface ErrorResponse {
 // 2. BASE CLASS
 // ============================================================================
 
-/** Abstract base for all API errors. Never instantiate directly — subclass it. See `docs/architecture/errors.md`. */
+/** Abstract base for all API errors. Never instantiate directly — subclass it. See `docs/backend/errors.md`. */
 export abstract class AppError extends Error {
   /** Field-level validation failures. Set only on {@link ValidationError}. */
   public details?: ValidationDetail[];
