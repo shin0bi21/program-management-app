@@ -101,6 +101,10 @@ export default function Sessions() {
           await deleteSession(session.id);
           removeInfiniteListRow(queryClient, SESSION_LIST_QUERY_KEY, session.id);
           setCalendarSessions(current => current.filter(candidate => candidate.id !== session.id));
+          if (selectedSessionId === session.id) {
+            setSelectedListSession(null);
+            clearSelectedSession();
+          }
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
             queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
@@ -108,7 +112,7 @@ export default function Sessions() {
         },
       });
     },
-    [queryClient],
+    [clearSelectedSession, queryClient, selectedSessionId],
   );
 
   const selectSession = (session: Pick<CohortSession, 'id'>) => {
