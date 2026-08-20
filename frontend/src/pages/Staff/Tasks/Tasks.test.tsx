@@ -7,8 +7,9 @@ import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getTaskList, getTaskOptions, getTasks, updateTaskStatus } from '../../../common/features/tasks/tasks.api';
 import { setTimeEntry } from '../../../common/features/timeEntries/timeEntries.api';
 import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
-import { buildInitialDayPeriods, dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
+import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
 import type { Task, TaskResource } from '../../../common/features/tasks/types';
+import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
 import type { TaskPreference } from './types';
@@ -45,7 +46,7 @@ vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
   },
 }));
 
-const today = dayKey(new Date());
+const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
 const task = makeTask({ startDate: today, dueDate: today });
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
@@ -99,7 +100,7 @@ describe('Tasks', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
 
-    const today = dayKey(new Date());
+    const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
     expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
     expect(screen.getByLabelText('Start date *')).toHaveValue(today);
     expect(screen.getByLabelText('Due date *')).toHaveValue(today);
