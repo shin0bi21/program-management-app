@@ -27,15 +27,20 @@ Use this route-level composition. Omit an optional prop rather than passing an e
 
   {controlsReady && <PageBody
     ariaLabel="Page overview and records"
-    dashboard={<>
-      <DashboardCard title="Overview">...</DashboardCard>
-      <DashboardCard title="Details" action={optionalCardAction}>...</DashboardCard>
-    </>}
-    {...(view === 'list'
-      ? { table: <ExampleTableView {...tableProps} /> }
-      : { calendar: <ExampleCalendarView {...calendarProps} /> })}
+    dashboard={dashboard}
+    {...viewContent}
   />}
 </main>
+```
+
+Declare substantial view JSX separately before selecting the `PageBody` slot. Keep the branch itself small so route composition does not bury two component trees inside a conditional expression:
+
+```tsx
+const exampleTableView = <ExampleTableView {...tableProps} />;
+const exampleCalendarView = <ExampleCalendarView {...calendarProps} />;
+const viewContent = view === 'list'
+  ? { table: exampleTableView }
+  : { calendar: exampleCalendarView };
 ```
 
 `PageHeader` owns and emits this DOM in this order. Never reproduce these classes in a page:

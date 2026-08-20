@@ -24,7 +24,7 @@ import useTimesheetPreferences from './hooks/useTimesheetPreferences';
 import useTimesheetSelection from './hooks/useTimesheetSelection';
 
 import type { SetTimeEntryInput } from '../../../common/features/timeEntries/timeEntries.api';
-import type { TimesheetAddTarget, TimesheetEntryTarget } from './types';
+import type { TimeEntryModalState, TimesheetAddTarget, TimesheetEntryTarget } from './types';
 
 import './Timesheets.css';
 
@@ -69,9 +69,7 @@ export default function Timesheets() {
   const canCompleteTask = permissions.includes('write:tasks');
 
   // Modal state.
-  const [modalOpen, setModalOpen] = useState(false);
-  const [addTarget, setAddTarget] = useState<TimesheetAddTarget>({});
-  const [editTarget, setEditTarget] = useState<TimesheetEntryTarget | null>(null);
+  const [timeEntryModalState, setTimeEntryModalState] = useState<TimeEntryModalState>(null);
 
   // Page data and persisted controls.
   const pageData = useTimesheetData(
@@ -116,21 +114,21 @@ export default function Timesheets() {
     timeEntryListQueryKey: TIME_ENTRY_LIST_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
     onEntryRemoved: entryId => {
-      setEditTarget(current => current?.item.id === entryId ? null : current);
+      setTimeEntryModalState(current => (
+        current?.mode === 'edit' && current.target.item.id === entryId ? null : current
+      ));
     },
   });
 
-  const openAddTarget = useCallback((target: TimesheetAddTarget) => {
-    setEditTarget(null);
-    setAddTarget(target);
-    setModalOpen(true);
+  const openAddTimeEntryModal = useCallback((initialValues: TimesheetAddTarget) => {
+    setTimeEntryModalState({ mode: 'add', initialValues });
   }, []);
 
-  const openEditTarget = useCallback((target: TimesheetEntryTarget) => {
-    setEditTarget(target);
-    setAddTarget({ resourceId: target.resourceId, date: target.date });
-    setModalOpen(true);
+  const openEditTimeEntryModal = useCallback((target: TimesheetEntryTarget) => {
+    setTimeEntryModalState({ mode: 'edit', target });
   }, []);
+
+  const closeTimeEntryModal = useCallback(() => setTimeEntryModalState(null), []);
 
   const table = useTimesheetTable({
     canWrite,
@@ -138,7 +136,7 @@ export default function Timesheets() {
     preferences: timesheetPreferences.preferences,
     updatePreferences: timesheetPreferences.updatePreferences,
     isEntryPending: actions.isEntryPending,
-    onEdit: openEditTarget,
+    onEdit: openEditTimeEntryModal,
     onDelete: actions.requestDelete,
   });
 
@@ -158,8 +156,8 @@ export default function Timesheets() {
     pageData.cyclesError,
     timesheetPreferences.error,
   );
-  const viewContent = view === 'list'
-    ? { table: <TimesheetTableView
+  const timesheetTableView = (
+    <TimesheetTableView
       queryKey={TIME_ENTRY_LIST_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={table.hiddenColumns}
@@ -175,8 +173,11 @@ export default function Timesheets() {
       onRowSelect={selection.selectRow}
       onSortingChange={table.updateSorting}
       onColumnWidthsChange={table.updateColumnWidths}
-    /> }
-    : { calendar: <TimesheetCalendarView
+    />
+  );
+
+  const timesheetCalendarView = (
+    <TimesheetCalendarView
       resources={pageData.resources}
       staffIds={filters.staffIds}
       categories={filters.categories}
@@ -186,17 +187,25 @@ export default function Timesheets() {
       canWrite={canWrite}
       moveError={actions.moveError}
       selectedStaffId={selection.selectedStaff?.id}
-      mutationCacheRef={actions.calendarCacheRef}
+      calendarCacheRef={actions.calendarCacheRef}
       isEntryPending={actions.isEntryPending}
       onStaffSelect={selection.selectStaff}
-      onEdit={openEditTarget}
+      onEdit={openEditTimeEntryModal}
       onDelete={actions.requestDelete}
-      onAdd={openAddTarget}
+      onAdd={openAddTimeEntryModal}
       onMove={actions.moveTimeEntry}
-    /> };
+    />
+  );
+
+  const viewContent = view === 'list'
+    ? { table: timesheetTableView }
+    : { calendar: timesheetCalendarView };
 
   const submitTimeEntry = (input: SetTimeEntryInput) => (
-    actions.saveTimeEntry(input, editTarget?.item.id)
+    actions.saveTimeEntry(
+      input,
+      timeEntryModalState?.mode === 'edit' ? timeEntryModalState.target.item.id : undefined,
+    )
   );
 
   // Render.
@@ -208,9 +217,9 @@ export default function Timesheets() {
           triggerLabel="+ Add"
           ariaLabel="Add hours"
           items={[
-            { id: 'session', label: 'Session Hours', onClick: () => openAddTarget({ source: 'session' }) },
-            { id: 'task', label: 'Task Hours', onClick: () => openAddTarget({ source: 'task' }) },
-            { id: 'regular', label: 'Regular Hours', onClick: () => openAddTarget({ source: 'regular' }) },
+            { id: 'session', label: 'Session Hours', onClick: () => openAddTimeEntryModal({ source: 'session' }) },
+            { id: 'task', label: 'Task Hours', onClick: () => openAddTimeEntryModal({ source: 'task' }) },
+            { id: 'regular', label: 'Regular Hours', onClick: () => openAddTimeEntryModal({ source: 'regular' }) },
           ]}
         /> : undefined}
 
@@ -260,17 +269,24 @@ export default function Timesheets() {
     </main>
 
     <TimeEntryModal
-      isOpen={modalOpen}
+      isOpen={timeEntryModalState !== null}
       resources={pageData.writableResources}
       programs={pageData.programs}
-      onClose={() => setModalOpen(false)}
+      onClose={closeTimeEntryModal}
       onAdd={submitTimeEntry}
-      initialResourceId={addTarget.resourceId ?? (!editTarget ? currentUserId : undefined)}
-      initialDate={addTarget.date}
-      initialSource={addTarget.source}
+      initialResourceId={timeEntryModalState?.mode === 'edit'
+        ? timeEntryModalState.target.resourceId
+        : timeEntryModalState?.initialValues.resourceId ?? currentUserId}
+      initialDate={timeEntryModalState?.mode === 'edit'
+        ? timeEntryModalState.target.date
+        : timeEntryModalState?.initialValues.date}
+      initialSource={timeEntryModalState?.mode === 'add'
+        ? timeEntryModalState.initialValues.source
+        : undefined}
       canCompleteTask={canCompleteTask}
-      staffLocked={Boolean(addTarget.resourceId)}
-      initialItem={editTarget?.item}
+      staffLocked={timeEntryModalState?.mode === 'edit'
+        || Boolean(timeEntryModalState?.initialValues.resourceId)}
+      initialItem={timeEntryModalState?.mode === 'edit' ? timeEntryModalState.target.item : undefined}
     />
 
     <Modal

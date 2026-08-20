@@ -18,6 +18,8 @@ TanStack Query owns remote data; React Hook Form or local React state owns the d
 - Inventory every entry path before building the form: page action, calendar cell, selected dashboard record, list action, and contextual create or edit.
 - Keep genuinely different workflows separate at the entry point. Use a floating menu before the modal when the user must choose between distinct flows; do not add a mode selector inside a form merely because the forms share a shell.
 - Pass known context into the modal and lock fields the entry path already decided. Do not ask users to reselect a calendar resource, task, date, or other authoritative context.
+- Represent mutually exclusive add and edit lifecycles with one domain-named discriminated state, such as `TaskModalState` or `TimeEntryModalState`, plus `null` for closed. Do not coordinate independent `isOpen`, add-target, and edit-target states that can describe impossible combinations.
+- Name page handlers for the domain and modal they operate, such as `openAddTaskModal`, `openEditTaskModal`, and `closeTaskModal`. Avoid generic editor terminology or callback names that hide whether they add, edit, or dismiss a specific workflow.
 
 ## Align the field contract
 

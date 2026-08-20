@@ -37,7 +37,7 @@ interface TimesheetCalendarViewProps {
   canWrite: boolean;
   moveError: string | null;
   selectedStaffId?: string;
-  mutationCacheRef: React.MutableRefObject<TimesheetCalendarCache>;
+  calendarCacheRef: React.MutableRefObject<TimesheetCalendarCache>;
   isEntryPending: (entryId: string) => boolean;
   onStaffSelect: (staffId: string) => void;
   onEdit: (target: TimesheetEntryTarget) => void;
@@ -48,7 +48,7 @@ interface TimesheetCalendarViewProps {
 
 export default function TimesheetCalendarView({
   resources, staffIds, categories, programIds, types, cycleId, canWrite, moveError, selectedStaffId,
-  mutationCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove,
+  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove,
 }: TimesheetCalendarViewProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
     (await getTimeEntries({ start: start.key, end: end.key })).data
@@ -59,9 +59,9 @@ export default function TimesheetCalendarView({
     errorMessage: 'Unable to load timesheet data',
   });
   useEffect(() => {
-    mutationCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
-    return () => { mutationCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, mutationCacheRef]);
+    calendarCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
+    return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
+  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
   const visibleResources = useMemo(() => staffIds.length
     ? resources.filter(resource => staffIds.includes(resource.id))
     : resources, [resources, staffIds]);

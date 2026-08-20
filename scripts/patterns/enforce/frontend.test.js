@@ -9,6 +9,7 @@ import {
   checkPaginatedTables,
   checkPreferenceControlOwnership,
   checkResourceCalendars,
+  checkRoutePageShell,
   checkRoutePageStructure,
   checkTestOwnership,
   collectRoutePageDirectories,
@@ -97,6 +98,36 @@ test('accepts a complete route-page root', () => {
       `${leadsPage}/Leads.tsx`,
       routePageDirectories,
       completeLeadPage,
+    ),
+    [],
+  );
+});
+
+test('requires data route pages to compose the shared page shell', () => {
+  const missingHeader = violationsFor(
+    checkRoutePageShell,
+    `${leadsPage}/Leads.tsx`,
+    '<main className="page-container page-container--data"><PageBody /></main>',
+    routePageDirectories,
+  );
+  assert.match(missingHeader[0], /route-level PageHeader/);
+
+  const missingDataMain = violationsFor(
+    checkRoutePageShell,
+    `${leadsPage}/Leads.tsx`,
+    '<main><PageHeader title="Leads" /><PageBody /></main>',
+    routePageDirectories,
+  );
+  assert.match(missingDataMain[0], /main\.page-container\.page-container--data/);
+});
+
+test('accepts the canonical data route page shell', () => {
+  assert.deepEqual(
+    violationsFor(
+      checkRoutePageShell,
+      `${leadsPage}/Leads.tsx`,
+      '<main className="page-container page-container--data leads-page"><PageHeader title="Leads" /><PageBody /></main>',
+      routePageDirectories,
     ),
     [],
   );

@@ -5,7 +5,7 @@ import type { PeriodRange } from '../../../../../common/components/ResourceCalen
 import { getTasks } from '../../../../../common/features/tasks/tasks.api';
 import type { Task, TaskCategory, TaskListStatus, TaskResource } from '../../../../../common/features/tasks/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import type { TaskCalendarActions, TaskCalendarCache, TaskModalTarget } from '../../types';
+import type { AddTaskModalInitialValues, TaskCalendarActions, TaskCalendarCache } from '../../types';
 import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask,
 } from '../../utils/taskCapabilities';
@@ -34,12 +34,13 @@ interface TaskCalendarViewProps {
   calendarCacheRef: React.MutableRefObject<TaskCalendarCache>;
   onTaskSelect: (task: Task) => void;
   onResourceSelect: (resourceId: string) => void;
-  onModalTargetChange: (target: TaskModalTarget) => void;
+  onAddTask: (initialValues: AddTaskModalInitialValues) => void;
+  onEditTask: (task: Task) => void;
 }
 
 export default function TaskCalendarView({
   resources, filters, canWrite, selectedResourceId, selectedTaskId, today, actions, calendarCacheRef,
-  onTaskSelect, onResourceSelect, onModalTargetChange,
+  onTaskSelect, onResourceSelect, onAddTask, onEditTask,
 }: TaskCalendarViewProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
     const tasks = await getTasks({ start: start.key, end: end.key, includeClosed: true });
@@ -61,7 +62,7 @@ export default function TaskCalendarView({
       remove: calendar.removeItem,
     };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar, calendarCacheRef]);
+  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
   const rangeData = useTaskCalendarData(calendar.rangeData, filters, today);
   const visibleResources = useMemo(() => filters.staffIds.length
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
@@ -96,12 +97,12 @@ export default function TaskCalendarView({
           onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setStatus(task, 'completed') : undefined}
           onCancel={actionsAvailable && canCancelTask(task) ? () => void actions.setStatus(task, 'cancelled') : undefined}
           onReopen={actionsAvailable && canReopenTask(task) ? () => void actions.setStatus(task, 'open') : undefined}
-          onEdit={actionsAvailable && canEditTask(task) ? () => onModalTargetChange(task) : undefined}
+          onEdit={actionsAvailable && canEditTask(task) ? () => onEditTask(task) : undefined}
           onDelete={actionsAvailable && canDeleteTask(task) ? () => actions.requestDelete(task) : undefined}
         />;
       }}
       onCellActivate={canWrite ? ({ resource, period }) => {
-        if (resource.writable) onModalTargetChange({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
+        if (resource.writable) onAddTask({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
       } : undefined}
       onRangeResize={canWrite ? async ({ item: task, nextRange }) => {
         const updatedTask = await actions.setTaskRange(task, nextRange, 'resize');

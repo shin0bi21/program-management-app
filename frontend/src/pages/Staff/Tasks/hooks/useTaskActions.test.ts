@@ -86,7 +86,7 @@ describe('useTaskActions', () => {
       );
     });
 
-    expect(rendered.result.current.statusError).toBe('Unable to resize task.');
+    expect(rendered.result.current.actionError).toBe('Unable to resize task.');
     expect(rendered.onTaskSynced).not.toHaveBeenCalled();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(returnedTask).toBeNull();
@@ -143,7 +143,7 @@ describe('useTaskActions', () => {
     const rendered = renderActions();
 
     await act(async () => rendered.result.current.setStatus(task, 'completed'));
-    expect(rendered.result.current.statusError).toBe('Unable to update task status.');
+    expect(rendered.result.current.actionError).toBe('Unable to update task status.');
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(rendered.onTaskSynced).not.toHaveBeenCalled();
 
