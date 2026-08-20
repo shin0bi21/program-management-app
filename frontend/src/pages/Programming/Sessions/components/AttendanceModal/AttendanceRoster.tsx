@@ -10,6 +10,7 @@ interface AttendanceRosterProps {
   isOpenRoster: boolean;
   roster: SessionRosterMember[];
   selections: Record<string, AttendanceStatus | ''>;
+  disabled: boolean;
   onRemove: (youthId: string) => void;
   onStatusChange: (youthId: string, status: AttendanceStatus | '') => void;
 }
@@ -19,6 +20,7 @@ export default function AttendanceRoster({
   isOpenRoster,
   roster,
   selections,
+  disabled,
   onRemove,
   onStatusChange,
 }: AttendanceRosterProps) {
@@ -46,6 +48,7 @@ export default function AttendanceRoster({
               size="sm"
               variant="secondary"
               onClick={() => onRemove(member.youthId)}
+              disabled={disabled}
             >
               Remove
             </Button>
@@ -56,6 +59,7 @@ export default function AttendanceRoster({
               rosterMode="enrolled"
               value={selections[member.youthId] ?? ''}
               onChange={value => onStatusChange(member.youthId, value)}
+              disabled={disabled}
             />
           )}
         </div>
