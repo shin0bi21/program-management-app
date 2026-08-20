@@ -1,5 +1,5 @@
 // Scope: verifies timesheet columns, writable row actions, and isolated table preference patches.
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { makeTimesheetItem } from '../../../../../../tests/factories/timesheet';
@@ -20,6 +20,35 @@ const row: TimesheetListRow = {
 };
 
 describe('useTimesheetTable', () => {
+  it('returns the canonical read-only columns and entry-type renderer', () => {
+    const { result } = renderHook(() => useTimesheetTable({
+      canWrite: false,
+      resourcesById: new Map(),
+      preferences,
+      updatePreferences: vi.fn(),
+      isEntryPending: () => false,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }));
+
+    expect(result.current.columns.map(column => [column.key, column.header])).toEqual([
+      ['firstName', 'First Name'],
+      ['lastName', 'Last Name'],
+      ['date', 'Date'],
+      ['cycle', 'Cycle'],
+      ['program', 'Program'],
+      ['category', 'Category'],
+      ['session', 'Session'],
+      ['hours', 'Hours'],
+      ['note', 'Note'],
+      ['type', 'Type'],
+    ]);
+
+    const typeColumn = result.current.columns.find(column => column.key === 'type')!;
+    render(<>{typeColumn.render(row)}</>);
+    expect(screen.getByText('Task')).toHaveClass('time-item__type--task');
+  });
+
   it('builds row actions only for writable resources', () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();

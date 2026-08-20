@@ -65,10 +65,23 @@ describe('useTaskTable', () => {
 
   it('returns data columns only for read-only users', () => {
     const rendered = renderTable(false);
+    const task = makeTask();
 
-    expect(rendered.result.current.columns.map(column => column.key)).toEqual([
-      'firstName', 'lastName', 'title', 'program', 'category', 'startDate', 'dueDate', 'status',
+    expect(rendered.result.current.columns.map(column => [column.key, column.header])).toEqual([
+      ['firstName', 'First Name'],
+      ['lastName', 'Last Name'],
+      ['title', 'Task'],
+      ['program', 'Program'],
+      ['category', 'Category'],
+      ['startDate', 'Start'],
+      ['dueDate', 'Due'],
+      ['status', 'Status'],
     ]);
+    expect(rendered.result.current.columns.find(column => column.key === 'program')?.render(task)).toBe('—');
+
+    const status = rendered.result.current.columns.find(column => column.key === 'status')!;
+    render(<>{status.render(task)}</>);
+    expect(screen.getByText('Active')).toHaveClass('task-status-badge--active');
   });
 
   it('builds capability-gated actions and forwards the selected action', async () => {

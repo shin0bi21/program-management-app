@@ -131,6 +131,27 @@ describe('useTimesheetActions', () => {
     expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', { workDate: '2026-08-19' });
   });
 
+  it('restores an optimistic move and releases the entry after placement fails', async () => {
+    vi.mocked(updateTimeEntryPlacement).mockRejectedValue(new Error('move failed'));
+    const rendered = renderActions();
+    const item = makeTimesheetItem({ id: 'entry-1' });
+
+    await act(async () => rendered.result.current.moveTimeEntry({
+      item,
+      source: { resourceId: 'staff-1', date: '2026-08-18' },
+      destination: { resourceId: 'staff-1', date: '2026-08-19' },
+    }));
+
+    expect(rendered.upsert.mock.calls).toEqual([
+      ['staff-1', '2026-08-19', item],
+      ['staff-1', '2026-08-18', item],
+    ]);
+    expect(rendered.result.current.moveError).toBe(
+      'Unable to move logged hours. The hours were returned to their original day.',
+    );
+    expect(rendered.result.current.isEntryPending(item.id)).toBe(false);
+  });
+
   it('does not reconcile failed save or delete actions', async () => {
     vi.mocked(setTimeEntry).mockRejectedValueOnce(new Error('save failed'));
     vi.mocked(deleteTimeEntry).mockRejectedValueOnce(new Error('delete failed'));

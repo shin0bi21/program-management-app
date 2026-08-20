@@ -1,26 +1,23 @@
+// Scope: verifies Timesheets route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
-  setTimeEntry,
   deleteTimeEntry,
   getTimeEntryOverview,
   getTimeEntryList,
   getTimeEntryOptions,
   getTimeEntries,
-  getTimeEntrySessions,
+  setTimeEntry,
   updateTimeEntryPlacement,
 } from '../../../common/features/timeEntries/timeEntries.api';
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
-import queryClient from '../../../query/queryClient';
+import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Timesheets from './Timesheets';
 import type { TimesheetPreference } from './types';
-import { getTasks } from '../../../common/features/tasks/tasks.api';
 import { getUser } from '../../../auth/storage';
-
-const TIME_ENTRY_LIST_QUERY_KEY = ['time-entries', 'list'] as const;
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
@@ -69,16 +66,6 @@ const auth: AuthContextValue = {
   logout: vi.fn(),
 };
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise;
-    reject = rejectPromise;
-  });
-  return { promise, resolve, reject };
-}
-
 function dashboardOverview(totalHours: number, label = 'Meeting') {
   const breakdown = totalHours ? [{ label, hours: totalHours }] : [];
   return {
@@ -106,7 +93,6 @@ describe('Timesheets', () => {
     vi.mocked(getUser).mockReturnValue({
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com',
     });
-    queryClient.clear();
     vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} });
     vi.stubGlobal('ResizeObserver', class {
       constructor(private readonly callback: ResizeObserverCallback) {}
@@ -167,8 +153,6 @@ describe('Timesheets', () => {
       },
       biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
     });
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([]);
-    vi.mocked(getTasks).mockResolvedValue([]);
     programmingApi.getProgramCycles.mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
@@ -180,7 +164,7 @@ describe('Timesheets', () => {
 
   it('does not show staff their redundant Staff filter', async () => {
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -197,45 +181,10 @@ describe('Timesheets', () => {
     ]);
   });
 
-  it('keeps a fixed row height and uses dense text for seven entries before overflow', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      data: { 'staff-1': { [workDate]: [1, 2, 3, 4, 5, 6, 7].map(index => ({
-        id: `entry-${index}`,
-        programId: null,
-        programName: null,
-        cycleId: 'cycle-1',
-        cycleName: 'Summer 2026',
-        category: 'meeting' as const,
-        categoryLabel: `Meeting ${index}`,
-        taskId: null,
-        taskTitle: null, sessionId: null, sessionLabel: null,
-        hours: index,
-        note: `Entry ${index}`,
-      })) } },
-    });
-
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    expect(container.querySelector('.resource-calendar__row')).toHaveStyle({ height: '112px' });
-    expect(await screen.findByRole('button', { name: /meeting 1, 1 hours/i })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /meeting 2, 2 hours/i })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /meeting 7, 7 hours/i })).toBeInTheDocument();
-    expect(container.querySelector(`[data-item-period="${workDate}"]`)).toHaveClass('resource-calendar__item-slot--dense');
-    expect(screen.queryByRole('button', { name: /show all 7 items/i })).not.toBeInTheDocument();
-  });
-
   it('keeps the Staff filter for admins', async () => {
     auth.role = 'admin';
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -278,7 +227,7 @@ describe('Timesheets', () => {
     ));
 
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -297,7 +246,7 @@ describe('Timesheets', () => {
   it('switches between the persisted Timesheets views', async () => {
     preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -326,7 +275,7 @@ describe('Timesheets', () => {
     });
     vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -363,7 +312,7 @@ describe('Timesheets', () => {
       }] } },
     });
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -408,7 +357,7 @@ describe('Timesheets', () => {
       },
     });
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -442,7 +391,7 @@ describe('Timesheets', () => {
     });
     vi.mocked(getTimeEntryOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -502,7 +451,7 @@ describe('Timesheets', () => {
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
     });
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -522,18 +471,6 @@ describe('Timesheets', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
 
     await screen.findByText('Alex planning meeting');
-    expect(screen.getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'First Name', 'Last Name', 'Date', 'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Note', 'Type', '',
-    ]);
-    expect(screen.getByRole('columnheader', { name: 'Session' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
-    await waitFor(() => expect(preferenceHook.preference).toEqual(expect.objectContaining({
-      sorting: { key: 'firstName', direction: 'asc' },
-    })));
-    const listRows = screen.getAllByRole('row').slice(1);
-    expect(listRows[0]).toHaveTextContent('Alex');
-    expect(listRows[1]).toHaveTextContent('Zoe');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
@@ -543,40 +480,56 @@ describe('Timesheets', () => {
     expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
   });
 
-  it('opens a prefilled add form when a calendar cell is clicked', async () => {
+  function mockWritableListEntry() {
+    preferenceHook.preference = {
+      view: 'list',
+      staffIds: [],
+      programIds: [],
+      categories: [],
+      cycleId: 'cycle-1',
+    };
+    vi.mocked(getTimeEntries).mockResolvedValue({
+      resources: [{
+        id: 'staff-1',
+        firstName: 'Zoe',
+        lastName: 'Wilson',
+        name: 'Zoe Wilson',
+        role: 'staff',
+        writable: true,
+      }],
+      programs: [],
+      data: {
+        'staff-1': {
+          '2026-08-09': [{
+            id: 'entry-1',
+            programId: null,
+            programName: null,
+            cycleId: 'cycle-1',
+            cycleName: 'Summer 2026',
+            category: 'meeting',
+            categoryLabel: 'Meeting',
+            taskId: null,
+            taskTitle: null,
+            sessionId: null,
+            sessionLabel: null,
+            hours: 2,
+            note: 'Planning meeting',
+          }],
+        },
+      },
+    });
+  }
+
+  it('bridges the page Add action to the shared entry modal', async () => {
     const workDate = dayKey(new Date());
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-
-    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
-
-    expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
-    expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Select a program');
-    expect(screen.queryByRole('button', { name: 'Cycle' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Program' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'General' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Soft Skills' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Program' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear program' }));
-    expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Select a program');
-    expect(screen.queryByRole('button', { name: 'Cycle' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Date')).not.toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Program Delivery' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitemradio', { name: 'Meeting' })).toBeInTheDocument();
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalled());
-  });
-
-  it('uses the shared time-type menu from the page Add action', async () => {
+    vi.mocked(setTimeEntry).mockResolvedValue({
+      id: 'entry-new', staffId: 'staff-1', programId: null, programName: null,
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
+      category: 'planning_prep', taskId: null, taskTitle: null, sessionId: null,
+      sessionLabel: null, workDate, hours: 1, note: 'Route bridge',
+    });
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
@@ -587,379 +540,73 @@ describe('Timesheets', () => {
     expect(screen.getByRole('menuitem', { name: 'Task Hours' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Session Hours' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Task Hours' }));
-    expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Staff member' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Task' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Program' })).not.toBeInTheDocument();
-  });
-
-  it('defaults an admin page-level entry to their own staff resource', async () => {
-    auth.role = 'admin';
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [
-        { id: 'staff-2', firstName: 'Avery', lastName: 'Morgan', name: 'Avery Morgan', role: 'staff', writable: true },
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'admin', writable: true },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: {},
-    });
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add hours' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Hours' }));
 
+    expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
-  });
-
-  it('loads the selected staff member\'s sessions for the calendar day', async () => {
-    const workDate = dayKey(new Date());
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    const cell = container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!;
-    vi.mocked(getTimeEntrySessions).mockResolvedValue([{
-      id: 'session-1', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
-      workDate, startsAt: `${workDate}T14:00:00.000Z`,
-    }]);
-    vi.mocked(setTimeEntry).mockResolvedValue({
-      id: 'entry-session', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'program_delivery', taskId: null, taskTitle: null, sessionId: 'session-1',
-      sessionLabel: 'Confidence', workDate, hours: 2, note: 'Delivered workshop',
-    });
-    fireEvent.click(cell);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Session Hours' }));
-    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith('staff-1', workDate, expect.any(AbortSignal)));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Confidence' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Leadership' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Date')).toHaveValue(workDate);
-    expect(screen.getByLabelText('Date')).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Category' })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Delivered workshop' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
-
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith({
-      source: 'session', staffId: 'staff-1', sessionId: 'session-1', hours: 2, note: 'Delivered workshop',
-    }));
-  });
-
-  it('filters top-level session choices when its editable date changes', async () => {
-    const today = dayKey(new Date());
-    const sessions = [{
-      id: 'session-today', label: 'Confidence', programId: 'program-1', programName: 'Soft Skills',
-      workDate: today, startsAt: `${today}T14:00:00.000Z`,
-    }, {
-      id: 'session-future', label: 'Leadership', programId: 'program-1', programName: 'Soft Skills',
-      workDate: '2099-01-01', startsAt: '2099-01-01T14:00:00.000Z',
-    }];
-    vi.mocked(getTimeEntrySessions).mockImplementation(async (_staffId, workDate) => (
-      sessions.filter(session => session.workDate === workDate)
-    ));
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    fireEvent.click(screen.getByRole('button', { name: 'Add hours' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Session Hours' }));
-
-    expect(screen.getByLabelText('Date')).toBeEnabled();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
-    expect(screen.getByRole('menuitemradio', { name: 'Confidence' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitemradio', { name: 'Leadership' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
-
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
-    await waitFor(() => expect(getTimeEntrySessions).toHaveBeenCalledWith(
-      'staff-1', '2099-01-01', expect.any(AbortSignal),
-    ));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Session' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Session' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Confidence' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitemradio', { name: 'Leadership' })).toBeInTheDocument();
-  });
-
-  it('keeps session time fixed to its scheduled calendar day', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: { 'staff-1': { [workDate]: [{
-        id: 'entry-session', programId: 'program-1', programName: 'Soft Skills',
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery', categoryLabel: 'Program Delivery',
-        taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Confidence',
-        hours: 2, note: 'Delivered workshop',
-      }] } },
-    });
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    const entry = await screen.findByRole('button', { name: /Confidence, 2 hours/ });
-    expect(entry.closest('.resource-calendar__item')).not.toHaveClass('draggable');
-  });
-
-  it('creates general project work in the active cycle without a program', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(setTimeEntry).mockResolvedValue({
-      id: 'entry-general', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'maintenance', workDate,
-      cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
-      hours: 1, note: 'Cleaned shared equipment',
-    });
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Maintenance' }));
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Cleaned shared equipment' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
-
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
-      staffId: 'staff-1',
-      programId: null,
-      category: 'maintenance',
-      note: 'Cleaned shared equipment',
-    })));
-  });
-
-  it('offers assigned tasks for the selected category and links the entry', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(getTasks).mockResolvedValue([{
-      id: 'task-1',
-      title: 'Create marketing poster',
-      details: null,
-      category: 'outreach',
-      programId: null,
-      programName: null,
-      status: 'open',
-      startDate: '2026-08-09',
-      dueDate: '2026-08-14',
-      hoursLogged: 0,
-      loggedHoursByDate: [],
-      completedAt: null,
-      assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
-    }, {
-      id: 'task-complete', title: 'Completed report', details: null, category: 'administration',
-      programId: null, programName: null, status: 'completed',
-      startDate: '2026-08-01', dueDate: '2026-08-08', hoursLogged: 1, loggedHoursByDate: [],
-      completedAt: '2026-08-08T14:00:00.000Z', assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
-    }]);
-    vi.mocked(setTimeEntry).mockResolvedValue({
-      id: 'entry-task', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'outreach', taskId: 'task-1', taskTitle: 'Create marketing poster', sessionId: null, sessionLabel: null, workDate,
-      hours: 1, note: 'Drafted poster concepts',
-    });
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Task Hours' }));
-    await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
-      { staffId: 'staff-1' },
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    ));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Task' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Task' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Completed report' })).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: /Create marketing poster/ }));
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Drafted poster concepts' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
-
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
-      source: 'task',
-      taskId: 'task-1',
-    })));
-    const taskTimeInput = vi.mocked(setTimeEntry).mock.calls[vi.mocked(setTimeEntry).mock.calls.length - 1]?.[0];
-    expect(taskTimeInput).not.toHaveProperty('cycleId');
-    expect(taskTimeInput).not.toHaveProperty('category');
-    expect(taskTimeInput).not.toHaveProperty('programId');
-  });
-
-  it('creates general time without submitting a cycle', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(setTimeEntry).mockResolvedValue({
-      id: 'entry-cycle-only', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, workDate, hours: 1, note: 'Organization-wide cycle meeting',
-    });
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    const cell = await waitFor(() => {
-      const value = document.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`);
-      expect(value).not.toBeNull();
-      return value as HTMLElement;
-    });
-    fireEvent.click(cell);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
-    expect(screen.queryByRole('button', { name: 'Cycle' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Meeting' }));
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Organization-wide cycle meeting' } });
-    fireEvent.submit(document.getElementById('time-entry-form')!);
-
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
-      programId: null,
-      category: 'meeting',
-    })));
-    expect(vi.mocked(setTimeEntry).mock.calls[vi.mocked(setTimeEntry).mock.calls.length - 1]?.[0]).not.toHaveProperty('cycleId');
-  });
-
-  it('keeps the entry modal locked through submitting and visible success', async () => {
-    const workDate = dayKey(new Date());
-    const pendingCreate = deferred<Awaited<ReturnType<typeof setTimeEntry>>>();
-    vi.mocked(setTimeEntry).mockImplementation(() => pendingCreate.promise);
-    const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findAllByLabelText('Zoe Wilson');
-    fireEvent.click(container.querySelector(`[data-resource-id="staff-1"][data-period="${workDate}"]`)!);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Route bridge' } });
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
     await waitFor(() => expect(setTimeEntry).toHaveBeenCalledOnce());
-    const dialog = screen.getByRole('dialog', { name: 'Log Hours' });
-    const close = screen.getByRole('button', { name: 'Close' });
-    expect(close).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    fireEvent.click(close);
-    expect(dialog).toBeInTheDocument();
-
-    pendingCreate.resolve({
-      id: 'entry-pending', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery', workDate: dayKey(new Date()),
-      cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      taskId: null, taskTitle: null, sessionId: null, sessionLabel: null,
-      hours: 1, note: 'Pending work',
-    });
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(
-      'Hours logged successfully.',
-    ));
-    expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(close).toBeDisabled();
+    expect(vi.mocked(setTimeEntry).mock.calls[0]).toHaveLength(1);
   });
 
-  it('updates an existing entry without triggering the cell add flow', async () => {
+  it('bridges a calendar cell target to a locked, dated entry modal', async () => {
     const workDate = dayKey(new Date());
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: {
-        'staff-1': {
-          [workDate]: [{
-            id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
-            cycleId: 'cycle-1', cycleName: 'Summer 2026',
-            category: 'program_delivery', categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
-          }],
-        },
-      },
-    });
-    vi.mocked(setTimeEntry).mockResolvedValue({
-      id: 'entry-1', staffId: 'staff-1', programId: 'program-1', programName: 'Soft Skills',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026',
-      cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'program_delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, workDate, hours: 3, note: 'Updated workshop',
-    });
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+    const { container } = render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
-    const entry = await screen.findByRole('button', { name: /Program Delivery, 2 hours/ });
+    await screen.findAllByLabelText('Zoe Wilson');
 
-    fireEvent.click(entry);
+    fireEvent.click(container.querySelector(
+      `[data-resource-id="staff-1"][data-period="${workDate}"]`,
+    )!);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
+
+    expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
+    expect(screen.getByLabelText('Date')).toHaveValue(workDate);
+  });
+
+  it('bridges a table Edit action to the shared entry modal', async () => {
+    mockWritableListEntry();
+    vi.mocked(setTimeEntry).mockResolvedValue({
+      id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
+      category: 'meeting', taskId: null, taskTitle: null, sessionId: null,
+      sessionLabel: null, workDate: '2026-08-09', hours: 2, note: 'Planning meeting',
+    });
+    render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'Actions for Meeting on 2026-08-09',
+    }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '3' } });
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Updated workshop' } });
+    expect(screen.getByLabelText('Hours')).toHaveValue(2);
+    expect(screen.getByLabelText('Note')).toHaveValue('Planning meeting');
     fireEvent.submit(document.getElementById('time-entry-form')!);
 
-    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(expect.objectContaining({
-      staffId: 'staff-1', programId: 'program-1', workDate, hours: 3, note: 'Updated workshop',
-    }), 'entry-1'));
-    expect(await screen.findByRole('button', { name: /Program Delivery, 3 hours/ })).toBeInTheDocument();
+    await waitFor(() => expect(setTimeEntry).toHaveBeenCalledWith(
+      expect.any(Object),
+      'entry-1',
+    ));
   });
 
-  it('opens Edit from an entry inside the overflow panel', async () => {
-    const workDate = dayKey(new Date());
-    const entries = Array.from({ length: 8 }, (_, index) => ({
-      id: `entry-${index + 1}`,
-      programId: 'program-1',
-      programName: 'Soft Skills',
-      cycleId: 'cycle-1',
-      cycleName: 'Summer 2026',
-      category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery',
-      taskId: null,
-      taskTitle: null, sessionId: null, sessionLabel: null,
-      hours: index + 1,
-      note: `Workshop ${index + 1}`,
-    }));
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: { 'staff-1': { [workDate]: entries } },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: `Show all 8 items for ${workDate}` }));
-    fireEvent.click(screen.getByRole('button', { name: /Program Delivery, 1 hours/ }));
-    const editAction = screen.getByRole('menuitem', { name: 'Edit' });
-    fireEvent.pointerDown(editAction);
-    fireEvent.click(editAction);
-
-    expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
-    expect(document.querySelector('.resource-calendar__overflow-panel')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Hours')).toHaveValue(1);
-    expect(screen.getByLabelText('Note')).toHaveValue('Workshop 1');
-  });
-
-  it('moves an entry through the narrow placement API', async () => {
+  it('bridges a calendar move to the page-owned placement action', async () => {
     const workDate = dayKey(new Date());
     const nextDate = dayKey(new Date(new Date().setDate(new Date().getDate() + 1)));
     const item = {
       id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
+      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null,
+      sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
     };
     vi.mocked(getTimeEntries).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
@@ -967,18 +614,26 @@ describe('Timesheets', () => {
       data: { 'staff-1': { [workDate]: [item] } },
     });
     vi.mocked(updateTimeEntryPlacement).mockResolvedValue({
-      ...item, staffId: 'staff-1', workDate: nextDate, cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
+      ...item,
+      staffId: 'staff-1',
+      workDate: nextDate,
+      cycleStartsOn: '2026-07-01',
+      cycleEndsOn: '2026-09-01',
     });
-    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
     const { container } = render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
     await screen.findByRole('button', { name: /Program Delivery, 2 hours/ });
     const source = container.querySelector<HTMLElement>('.resource-calendar__item')!;
-    const target = container.querySelector<HTMLElement>(`[data-resource-id="staff-1"][data-period="${nextDate}"]`)!;
-    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => target) });
+    const target = container.querySelector<HTMLElement>(
+      `[data-resource-id="staff-1"][data-period="${nextDate}"]`,
+    )!;
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
     vi.spyOn(source, 'getBoundingClientRect').mockReturnValue({ width: 120 } as DOMRect);
 
     fireEvent.pointerDown(source, { pointerId: 1, button: 0, clientX: 220, clientY: 100 });
@@ -988,80 +643,23 @@ describe('Timesheets', () => {
     await waitFor(() => expect(updateTimeEntryPlacement).toHaveBeenCalledWith('entry-1', {
       workDate: nextDate,
     }));
-    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: TIME_ENTRY_LIST_QUERY_KEY,
-    }));
-    expect(setTimeEntry).not.toHaveBeenCalled();
   });
 
-  it('renders a read-only calendar without mutation controls', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      data: { 'staff-1': { [workDate]: [{
-        id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
-        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Cleaned equipment',
-      }] } },
-    });
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={{ ...auth, permissions: ['read:timesheets'] }}>
-          <Timesheets />
-        </AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    const entry = await screen.findByRole('button', { name: 'Maintenance, 1 hours, Regular' });
-    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('gridcell')).not.toBeInTheDocument();
-    expect(entry.closest('.resource-calendar__item')).not.toHaveClass('draggable');
-    fireEvent.click(entry);
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-  });
-
-  it('deletes an entry and removes it from the buffered calendar data', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(getTimeEntries).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      data: { 'staff-1': { [workDate]: [{
-        id: 'entry-1', programId: null, programName: null, cycleId: 'cycle-1', cycleName: 'Summer 2026',
-        category: 'maintenance', categoryLabel: 'Maintenance', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Cleaned equipment',
-      }] } },
-    });
+  it('bridges a table Delete action to the page confirmation workflow', async () => {
+    mockWritableListEntry();
     vi.mocked(deleteTimeEntry).mockResolvedValue({ message: 'Deleted' });
     render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
 
-    const entry = await screen.findByRole('button', { name: /Maintenance, 1 hours/ });
-    fireEvent.click(entry);
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'Actions for Meeting on 2026-08-09',
+    }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteTimeEntry).toHaveBeenCalledWith('entry-1'));
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Maintenance, 1 hours/ })).not.toBeInTheDocument());
-  });
-
-  it('loads a new buffered range when navigating forward one week', async () => {
-    render(
-      <QueryClientProvider client={queryClient}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Timesheets /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalled());
-    expect(getTimeEntries).not.toHaveBeenCalledWith();
-    vi.mocked(getTimeEntries).mockClear();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-
-    await waitFor(() => expect(getTimeEntries).toHaveBeenCalledTimes(1));
-    expect(getTimeEntries).toHaveBeenCalledWith({
-      start: expect.any(String),
-      end: expect.any(String),
-    });
   });
 });
