@@ -15,10 +15,11 @@ describe('SignupSection', () => {
   })
 
   it('organizes the shared data shape into form sections without duplicate response fields', () => {
-    render(<SignupSection />)
+    const { container } = render(<SignupSection />)
 
     expect(screen.getByText('Youth Information')).toBeInTheDocument()
     expect(screen.getByText('Primary Contact')).toBeInTheDocument()
+    expect(container.querySelector('input[name="website"]')).toHaveAttribute('hidden')
     expect(screen.getByRole('button', { name: 'Who is filling out this form?' })).toHaveTextContent('Parent')
     expect(screen.queryByText('Follow-up Information')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument()
