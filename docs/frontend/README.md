@@ -43,13 +43,29 @@ Use only the files the owner needs. Each nested component repeats this pattern a
 
 ## State and hook patterns
 
-Keep one authoritative owner for each state value. TanStack Query owns remote lists, records, and aggregates. The route page or a focused page hook owns persisted controls, selection, and modal targets. The modal or form owner owns its draft and validation. Refs own live non-rendering sessions, not ordinary rendered values.
+The owner of a value is the one place responsible for changing it. Choose that owner by asking what kind of value it is:
 
-Use a focused hook when behavior has meaningful derivation, effects, subscriptions, asynchronous coordination, or a stable-reference contract. Components render state and delegate that behavior. Keep effect dependencies complete, use `useMemo` and `useCallback` only for meaningful computation or reference stability, and keep setup and cleanup in the same owner.
+| Value | Owner | Examples |
+|---|---|---|
+| Data returned by the backend | TanStack Query in the focused data, list, or dashboard hook | rows, records, options, totals |
+| A page control that must be restored and saved | The page's preferences hook | view, sorting, column widths, hidden columns |
+| A temporary choice shared across page children | The route page or a focused page hook | selected row, selected resource, open modal target |
+| An unfinished form value | The modal or form hook | field values, validation errors, submitting state |
+| A live value that must not render on every change | A ref inside the behavior that uses it | drag session, pending request ID, calendar cache adapter |
 
-Data flows from a component through its focused hook and typed API adapter to the centralized HTTP client. Query keys include every server input and adapters forward request cancellation. Server mutations return authoritative records; the owning action hook reconciles the narrowest relevant cache and derived state. Focused row mutations follow the [table-row contract](page/table-view/rows.md).
+Start with state in the component that owns it. Extract a focused hook when the behavior needs restoration, derived values, effects, subscriptions, asynchronous coordination, or callbacks whose stable identity matters. A hook is not needed merely to rename a `useState` value or pass it through another file. The [page guide](page/README.md#page-owned-hooks) defines the standard page-level hook roles.
 
-Colocate hook tests with the hook and test the behavior that justifies the owner: initialization, input changes, loading and failure state, resets, callback order, cleanup, and overlap handling when overlapping work is possible.
+Backend data follows one visible path:
+
+```text
+component → focused query hook → typed feature API → centralized HTTP client
+```
+
+The query hook owns loading, error, and cached server data. Its query key includes every filter, search, sort, selection, or date value sent to the backend so different requests cannot share the wrong cached result. The API adapter forwards cancellation to the HTTP client.
+
+After a mutation, use the record returned by the backend rather than rebuilding it from form values. The owning action hook updates the specific list row, selection, calendar, or dashboard affected by that response. It does not refresh an entire page to avoid deciding which owner changed. Table mutations follow the [table-row contract](page/table-view/rows.md).
+
+Keep a hook's test beside it. Test the behavior that made the hook necessary: restoration, input changes, loading and failure, reset or reopen behavior, callback order, cleanup, and overlapping work when the hook permits it. Simple state wiring belongs in the component or page test instead.
 
 ## Development flow
 
