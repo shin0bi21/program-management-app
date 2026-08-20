@@ -59,6 +59,62 @@ test('reports inline workflow behavior without scoring its complexity', () => {
   );
 });
 
+test('allows cohesive page-owned modal entry state', () => {
+  const file = 'frontend/src/pages/Tasks/Tasks.tsx';
+  const source = `
+    import { useState } from 'react';
+    export default function Tasks() {
+      const [taskModalState] = useState(null);
+      const [hoursModalState] = useState(null);
+      return <TaskTableView taskModalState={taskModalState} hoursModalState={hoursModalState} />;
+    }
+  `;
+
+  assert.deepEqual(findingsFor(file, source, {
+    repositoryFiles: [file, 'frontend/src/pages/Tasks/Tasks.css'],
+    routePageDirectories: ['frontend/src/pages/Tasks'],
+  }), []);
+});
+
+test('allows a CalendarView to own one range loader and buffer-adapter effect', () => {
+  const file = 'frontend/src/pages/Tasks/components/TaskCalendarView/TaskCalendarView.tsx';
+  const source = `
+    import { useEffect } from 'react';
+    import { getTasks } from '../../../../common/features/tasks/tasks.api';
+    export default function TaskCalendarView({ calendarCacheRef, calendar }) {
+      const loadRange = async () => getTasks();
+      useEffect(() => {
+        calendarCacheRef.current = { upsert: calendar.upsertItem };
+      }, [calendar.upsertItem, calendarCacheRef]);
+      return <ResourceCalendar load={loadRange} />;
+    }
+  `;
+
+  assert.deepEqual(findingsFor(file, source, {
+    repositoryFiles: [
+      file,
+      'frontend/src/pages/Tasks/components/TaskCalendarView/TaskItem/TaskItem.tsx',
+      'frontend/src/pages/Tasks/components/TaskCalendarView/hooks/useTaskCalendarData.ts',
+    ],
+  }), []);
+});
+
+test('still reports mixed workflow state inside a CalendarView', () => {
+  const file = 'frontend/src/pages/Tasks/components/TaskCalendarView/TaskCalendarView.tsx';
+  const source = `
+    import { useEffect, useState } from 'react';
+    import { getTasks } from '../../../../common/features/tasks/tasks.api';
+    export default function TaskCalendarView() {
+      const [editorState] = useState(null);
+      useEffect(() => {}, []);
+      const loadRange = async () => getTasks();
+      return <ResourceCalendar load={loadRange} editorState={editorState} />;
+    }
+  `;
+
+  assert.match(findingsFor(file, source).join('\n'), /\[review-inline-workflow\]/);
+});
+
 test('flags response compatibility and empty-filter fallbacks outside API adapters', () => {
   const source = `
     export function useThings(filters) {

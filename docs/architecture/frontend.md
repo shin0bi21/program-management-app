@@ -111,7 +111,7 @@ Use only the files the feature needs. The important boundary is that the entry c
 Substantial data pages use nested ownership rather than leaving every page-private unit as a peer:
 
 ```text
-Page.tsx                         route shell and cross-view orchestration
+PageName.tsx                     route shell and cross-view orchestration; matches its directory name
 components/
   FeatureTableView/             remote list query, table, and table-only helpers
     hooks/

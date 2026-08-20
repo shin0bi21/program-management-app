@@ -58,7 +58,7 @@ function renderCalendar({
     current: { upsert: vi.fn(), remove: vi.fn() },
   };
   const callbacks = {
-    onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onModalTargetChange: vi.fn(),
+    onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
   };
   render(<TaskCalendarView
     resources={resources}
@@ -161,7 +161,7 @@ describe('TaskCalendarView', () => {
     act(() => element.props.onEdit());
     expect(rendered.actions.setStatus).toHaveBeenCalledWith(openTask, 'completed');
     expect(rendered.actions.setStatus).toHaveBeenCalledWith(openTask, 'cancelled');
-    expect(rendered.onModalTargetChange).toHaveBeenCalledWith(openTask);
+    expect(rendered.onEditTask).toHaveBeenCalledWith(openTask);
   });
 
   it('limits date changes and reassignment by task lifecycle', () => {
@@ -205,7 +205,7 @@ describe('TaskCalendarView', () => {
     const rendered = renderCalendar();
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     calendarState.props?.onCellActivate?.({ resource, resourceIndex: 0, period: periods[1], items: [] });
-    expect(rendered.onModalTargetChange).toHaveBeenCalledWith({
+    expect(rendered.onAddTask).toHaveBeenCalledWith({
       startDate: periods[1].key, dueDate: periods[1].key, fixedStaffId: 'staff-1',
     });
   });

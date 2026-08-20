@@ -31,11 +31,16 @@ export interface TaskCalendarCache {
   remove: (taskId: string) => void;
 }
 
-export type TaskModalTarget = Task | {
+export interface AddTaskModalInitialValues {
   startDate: string;
   dueDate: string;
   fixedStaffId?: string;
-};
+}
+
+export type TaskModalState =
+  | { mode: 'add'; initialValues: AddTaskModalInitialValues }
+  | { mode: 'edit'; task: Task }
+  | null;
 
 export interface TaskCalendarActions {
   isTaskPending: (taskId: string) => boolean;

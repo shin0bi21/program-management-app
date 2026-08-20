@@ -25,7 +25,7 @@ import useTaskPreferences from './hooks/useTaskPreferences';
 import useTaskSelection from './hooks/useTaskSelection';
 
 import type { Task } from '../../../common/features/tasks/types';
-import type { TaskModalTarget } from './types';
+import type { AddTaskModalInitialValues, TaskModalState } from './types';
 
 import './Tasks.css';
 
@@ -74,7 +74,7 @@ export default function Tasks() {
 
   // Modal state.
   const [selectedLogHoursTask, setSelectedLogHoursTask] = useState<Task | null>(null);
-  const [taskModalTarget, setTaskModalTarget] = useState<TaskModalTarget | null>(null);
+  const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
 
   // Page data and persisted controls.
   const pageData = useTaskData(TASK_OPTIONS_QUERY_KEY);
@@ -97,7 +97,7 @@ export default function Tasks() {
   // Selection, actions, and modal workflows.
   const selection = useTaskSelection({ resources: pageData.resources });
 
-  const taskActions = useTaskActions({
+  const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
     taskListQueryKey: TASK_LIST_QUERY_KEY,
     timeEntryQueryKey: TIME_ENTRY_QUERY_KEY,
@@ -105,27 +105,37 @@ export default function Tasks() {
     onTaskRemoved: selection.removeSelectedTask,
   });
 
+  const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
+    setTaskModalState({ mode: 'add', initialValues });
+  };
+
+  const openEditTaskModal = (task: Task) => {
+    setTaskModalState({ mode: 'edit', task });
+  };
+
+  const closeTaskModal = () => setTaskModalState(null);
+
   const table = useTaskTable({
     canWrite,
     today,
     preferences: taskPreferences.preferences,
     updatePreferences: taskPreferences.updatePreferences,
     actions: {
-      isTaskPending: taskActions.isTaskPending,
-      setStatus: taskActions.setStatus,
-      edit: setTaskModalTarget,
-      requestDelete: taskActions.requestDelete,
+      isTaskPending: actions.isTaskPending,
+      setStatus: actions.setStatus,
+      edit: openEditTaskModal,
+      requestDelete: actions.requestDelete,
     },
   });
 
   const confirmModal = useConfirmModal({
-    action: taskActions.confirmAction,
-    onClose: taskActions.closeConfirmation,
+    action: actions.confirmAction,
+    onClose: actions.closeConfirmation,
   });
 
   // View configuration.
   const taskError = getTaskError(
-    taskActions.statusError,
+    actions.actionError,
     taskPreferences.error,
     pageData.optionsError,
   );
@@ -135,8 +145,8 @@ export default function Tasks() {
     ? () => setSelectedLogHoursTask(loggableTask)
     : undefined;
 
-  const viewContent = view === 'list'
-    ? { table: <TaskTableView
+  const taskTableView = (
+    <TaskTableView
       queryKey={TASK_LIST_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={table.hiddenColumns}
@@ -152,8 +162,11 @@ export default function Tasks() {
       onTaskSelect={selection.selectTask}
       onSortingChange={table.updateSorting}
       onColumnWidthsChange={table.updateColumnWidths}
-    /> }
-    : { calendar: <TaskCalendarView
+    />
+  );
+
+  const taskCalendarView = (
+    <TaskCalendarView
       resources={pageData.resources}
       filters={{
         staffIds: filters.staffIds,
@@ -165,35 +178,45 @@ export default function Tasks() {
       selectedResourceId={selection.selectedResourceId}
       selectedTaskId={selection.selectedTaskId}
       today={today}
-      actions={taskActions}
-      calendarCacheRef={taskActions.calendarCacheRef}
+      actions={actions}
+      calendarCacheRef={actions.calendarCacheRef}
       onTaskSelect={selection.selectTask}
       onResourceSelect={selection.selectResource}
-      onModalTargetChange={setTaskModalTarget}
-    /> };
+      onAddTask={openAddTaskModal}
+      onEditTask={openEditTaskModal}
+    />
+  );
+
+  const viewContent = view === 'list'
+    ? { table: taskTableView }
+    : { calendar: taskCalendarView };
 
   // Render.
   return <>
     <main className="page-container page-container--data">
       <PageHeader
         title="Tasks"
+
         actions={canWrite && pageData.writableResources.length ? <Button
           disabled={pageData.optionsLoading || Boolean(pageData.optionsError)}
           onClick={() => {
-            setTaskModalTarget({ startDate: today, dueDate: today });
+            openAddTaskModal({ startDate: today, dueDate: today });
           }}
         >+ Add</Button> : undefined}
+
         search={taskPreferences.ready && view === 'list' ? <SearchInput
           label="Search tasks"
           value={filters.search}
           onChange={event => filters.setSearch(event.target.value)}
           placeholder="Search tasks"
         /> : undefined}
+
         view={taskPreferences.ready ? <ViewMenu
           value={view}
           options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
           onChange={nextView => taskPreferences.updatePreferences({ view: nextView })}
         /> : undefined}
+
         columns={taskPreferences.ready && view === 'list'
           ? <ColumnVisibilityMenu
             columns={table.columns}
@@ -213,6 +236,7 @@ export default function Tasks() {
           onClearAll={filters.clearFilters}
         /> : undefined}
       />
+
       {taskError && <p className="form-error" role="alert">{taskError}</p>}
       {!taskPreferences.ready ? <p role="status">Loading saved task preferences…</p> : <PageBody
         ariaLabel="Task overview and assignments"
@@ -228,16 +252,16 @@ export default function Tasks() {
       />}
     </main>
 
-    {canWrite && taskModalTarget && <TaskModal
+    {canWrite && taskModalState && <TaskModal
       isOpen
-      task={'id' in taskModalTarget ? taskModalTarget : undefined}
-      initialStartDate={'id' in taskModalTarget ? undefined : taskModalTarget.startDate}
-      initialDueDate={'id' in taskModalTarget ? undefined : taskModalTarget.dueDate}
-      fixedStaffId={'id' in taskModalTarget ? undefined : taskModalTarget.fixedStaffId}
+      task={taskModalState.mode === 'edit' ? taskModalState.task : undefined}
+      initialStartDate={taskModalState.mode === 'add' ? taskModalState.initialValues.startDate : undefined}
+      initialDueDate={taskModalState.mode === 'add' ? taskModalState.initialValues.dueDate : undefined}
+      fixedStaffId={taskModalState.mode === 'add' ? taskModalState.initialValues.fixedStaffId : undefined}
       resources={pageData.writableResources}
       programs={pageData.options?.programs ?? []}
-      onSaved={taskActions.syncTask}
-      onClose={() => setTaskModalTarget(null)}
+      onSaved={actions.syncTask}
+      onClose={closeTaskModal}
     />}
 
     {selectedLogHoursTask && <TimeEntryModal
@@ -248,20 +272,20 @@ export default function Tasks() {
       canCompleteTask={canWrite}
       resources={pageData.resources}
       programs={pageData.options?.programs ?? []}
-      onAdd={taskActions.logHours}
+      onAdd={actions.logHours}
       onClose={() => setSelectedLogHoursTask(null)}
     />}
 
     <Modal
-      isOpen={taskActions.confirmAction !== null}
-      onClose={taskActions.closeConfirmation}
-      title={taskActions.confirmAction?.title ?? ''}
+      isOpen={actions.confirmAction !== null}
+      onClose={actions.closeConfirmation}
+      title={actions.confirmAction?.title ?? ''}
       status={confirmModal.status}
       statusMessage={confirmModal.statusMessage}
       footer={confirmModal.footer}
       successDelay={confirmModal.successDelay}
     >
-      {taskActions.confirmAction && <p>{taskActions.confirmAction.message}</p>}
+      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
     </Modal>
   </>;
 }

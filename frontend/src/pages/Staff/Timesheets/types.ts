@@ -17,6 +17,10 @@ export type TimesheetAddTarget = {
   date?: string;
   source?: 'regular' | 'task' | 'session';
 };
+export type TimeEntryModalState =
+  | { mode: 'add'; initialValues: TimesheetAddTarget }
+  | { mode: 'edit'; target: TimesheetEntryTarget }
+  | null;
 
 export interface TimesheetCalendarCache {
   upsert: (resourceId: string, date: string, item: TimesheetItem) => void;

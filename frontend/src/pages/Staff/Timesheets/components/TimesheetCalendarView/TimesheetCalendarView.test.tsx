@@ -90,7 +90,7 @@ function renderCalendar({
   onMove?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getTimeEntries).mockResolvedValue({ resources, programs: [], data });
-  const mutationCacheRef: MutableRefObject<TimesheetCalendarCache> = {
+  const calendarCacheRef: MutableRefObject<TimesheetCalendarCache> = {
     current: { upsert: vi.fn(), remove: vi.fn() },
   };
   const result = render(
@@ -105,7 +105,7 @@ function renderCalendar({
         isEntryPending={() => false}
         moveError={null}
         selectedStaffId="staff-1"
-        mutationCacheRef={mutationCacheRef}
+        calendarCacheRef={calendarCacheRef}
         onStaffSelect={onStaffSelect}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -115,7 +115,7 @@ function renderCalendar({
   );
   return {
     ...result,
-    mutationCacheRef,
+    calendarCacheRef,
     onAdd,
     onEdit,
     onDelete,

@@ -240,6 +240,28 @@ export function checkRoutePageStructure(
   }
 }
 
+export function checkRoutePageShell(
+  violations,
+  file,
+  source,
+  routePageDirectories,
+) {
+  const routeDirectory = findRoutePageDirectory(file, routePageDirectories);
+  if (!routeDirectory) return;
+
+  const pageName = routeDirectory.split('/').at(-1);
+  if (file !== `${routeDirectory}/${pageName}.tsx` || !/<PageBody\b/.test(source)) return;
+
+  if (!/<PageHeader\b/.test(source)) {
+    violations.push(`${file}:1 data route pages using PageBody must compose a route-level PageHeader.`);
+  }
+
+  const dataMain = /<main\b[^>]*className\s*=\s*["'][^"']*\bpage-container\b[^"']*\bpage-container--data\b[^"']*["']/s;
+  if (!dataMain.test(source)) {
+    violations.push(`${file}:1 data route pages must use main.page-container.page-container--data.`);
+  }
+}
+
 export function checkApiStructure(violations, file, repositoryFiles) {
   const featureFile = file.startsWith('frontend/src/common/features/');
   const pageFamilyCommonFile = /^frontend\/src\/pages\/[^/]+\/common\//.test(file);

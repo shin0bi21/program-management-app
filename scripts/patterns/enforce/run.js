@@ -9,6 +9,7 @@ import {
   checkPaginatedTables,
   checkPreferenceControlOwnership,
   checkResourceCalendars,
+  checkRoutePageShell,
   checkRoutePageStructure,
   checkTestOwnership,
   collectRoutePageDirectories,
@@ -35,6 +36,7 @@ export function runEnforcementChecks(
     if (file.endsWith('.api.ts')) checkFocusedAdapters(violations, file, source);
     if (file.endsWith('.tsx')) checkDashboardNames(violations, file, source);
     if (file.startsWith('frontend/src/pages/')) {
+      checkRoutePageShell(violations, file, source, routePageDirectories);
       checkPaginatedTables(violations, file, source);
       checkPreferenceControlOwnership(violations, file, source);
       if (file.endsWith('.tsx')) checkResourceCalendars(violations, file, source);

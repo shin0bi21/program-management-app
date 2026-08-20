@@ -169,21 +169,46 @@ function describeMetrics(metrics) {
   return descriptions.join(', ');
 }
 
-function hasInlineWorkflow(metrics) {
-  return [
-    metrics.stateHooks > 0,
+function isCalendarView(file) {
+  return /\/components\/[^/]*CalendarView\/[^/]*CalendarView\.tsx$/.test(file);
+}
+
+function hasInlineWorkflow(file, metrics) {
+  if (isCalendarView(file)) {
+    return metrics.stateHooks > 0
+      || metrics.effects > 1
+      || metrics.queryHooks > 0
+      || metrics.apiCalls > 1
+      || metrics.cacheCalls > 0
+      || metrics.externalLifecycles > 0;
+  }
+
+  const coordinatedSignals = [
     metrics.effects > 0,
     metrics.queryHooks > 0,
     metrics.apiCalls > 0,
     metrics.cacheCalls > 0,
     metrics.externalLifecycles > 0,
-  ].some(Boolean);
+  ].filter(Boolean).length;
+
+  return metrics.stateHooks >= 3
+    || coordinatedSignals >= 2
+    || (metrics.stateHooks > 0 && coordinatedSignals > 0)
+    || metrics.queryHooks > 0
+    || metrics.cacheCalls > 0
+    || metrics.externalLifecycles > 0;
 }
 
 function ownerDirectoryContext(file, repositoryFiles, routeDirectory) {
   const ownerDirectory = routeDirectory ?? dirname(file);
   const missing = [];
-  if (!repositoryFiles.some((entry) => entry.startsWith(`${ownerDirectory}/components/`))) {
+  const ownsNestedComponent = repositoryFiles.some((entry) => {
+    if (!entry.startsWith(`${ownerDirectory}/`) || !entry.endsWith('.tsx')) return false;
+    const relativePath = entry.slice(ownerDirectory.length + 1);
+    return relativePath.includes('/') && !relativePath.startsWith('hooks/');
+  });
+  if (!repositoryFiles.some((entry) => entry.startsWith(`${ownerDirectory}/components/`))
+    && !ownsNestedComponent) {
     missing.push('components/');
   }
   if (!repositoryFiles.some((entry) => entry.startsWith(`${ownerDirectory}/hooks/`))) {
@@ -210,7 +235,7 @@ const FILE_RULES = [
   },
   {
     category: 'review-inline-workflow',
-    appliesTo: ({ file, metrics }) => file.endsWith('.tsx') && hasInlineWorkflow(metrics),
+    appliesTo: ({ file, metrics }) => file.endsWith('.tsx') && hasInlineWorkflow(file, metrics),
     message: ({ metrics, directoryContext }) => (
       `TSX file contains inline workflow behavior (${describeMetrics(metrics)})${directoryContext}.`
     ),

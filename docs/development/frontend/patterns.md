@@ -32,6 +32,8 @@ Pages remain orchestrators. They may own cross-view controls, selections, dialog
 
 Use focused `use*Data`, `use*Preferences`, `use*Filters`, `use*Actions`, and `use*Selection` hooks only when each owns real behavior. Keep their initialization in dependency order so the route still reads as the composition owner.
 
+`use*Data` owns remote options, loading and error state, and derived option collections. `use*Selection` owns selected resource/row/item state and two distinct synchronization paths: selection reconciliation repairs or defaults a selection when its available resources change, while selection sync updates or clears the selected record after a successful mutation. Keep both paths in the selection owner rather than placing rendered selection state in `use*Data`.
+
 Do not collect unrelated persistence, filtering, remote data, selection, and mutation behavior in a catch-all `use*Controls` hook. Keep a simple view value and its update with the preference owner instead of creating a pass-through `use*View` hook. A small value or callback does not need its own abstraction merely to match a directory shape.
 
 ## Keep defensive behavior at real boundaries

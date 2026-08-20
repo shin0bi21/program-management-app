@@ -37,7 +37,7 @@ export default function useTaskActions({
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [statusError, setStatusError] = useState('');
+  const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
   const [pendingTaskIds, setPendingTaskIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -98,7 +98,7 @@ export default function useTaskActions({
     action: 'move' | 'resize',
     staffId = task.assignee.id,
   ) => {
-    setStatusError('');
+    setActionError('');
 
     if (!startTaskAction(task.id)) return null;
 
@@ -111,7 +111,7 @@ export default function useTaskActions({
       syncTask(updatedTask);
       return updatedTask;
     } catch {
-      setStatusError(`Unable to ${action} task.`);
+      setActionError(`Unable to ${action} task.`);
       return null;
     } finally {
       finishTaskAction(task.id);
@@ -119,7 +119,7 @@ export default function useTaskActions({
   }, [finishTaskAction, startTaskAction, syncTask]);
 
   const setStatus = useCallback(async (task: Task, status: Task['status']) => {
-    setStatusError('');
+    setActionError('');
 
     if (!startTaskAction(task.id)) return;
 
@@ -127,7 +127,7 @@ export default function useTaskActions({
       const updatedTask = await updateTaskStatus(task.id, status);
       syncTask(updatedTask);
     } catch {
-      setStatusError('Unable to update task status.');
+      setActionError('Unable to update task status.');
     } finally {
       finishTaskAction(task.id);
     }
@@ -145,7 +145,7 @@ export default function useTaskActions({
 
   return {
     confirmAction,
-    statusError,
+    actionError,
     calendarCacheRef,
     isTaskPending,
     syncTask,
