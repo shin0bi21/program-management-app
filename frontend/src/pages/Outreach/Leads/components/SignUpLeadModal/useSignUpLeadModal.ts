@@ -31,6 +31,7 @@ export default function useSignUpLeadModal({
   const [cohortId, setCohortId] = useState('');
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory>('general');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showAllPrograms, setShowAllPrograms] = useState(false);
   const submitLock = useSubmitLock();
   const leadId = lead?.id;
 
@@ -47,12 +48,8 @@ export default function useSignUpLeadModal({
     error: cohortsError,
     isLoading: loading,
   } = useQuery({
-    queryKey: [...queryKey, lead?.programOfInterestId],
-    queryFn: ({ signal }) => getCohorts(
-      lead?.programOfInterestId ?? undefined,
-      {},
-      { signal },
-    ),
+    queryKey: [...queryKey, 'all-programs'],
+    queryFn: ({ signal }) => getCohorts(undefined, {}, { signal }),
     enabled: Boolean(lead),
     select: rows => rows.filter(cohort => (
       cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
@@ -64,17 +61,21 @@ export default function useSignUpLeadModal({
     setCohortId('');
     setNoteCategory('general');
     setSuccessMessage('');
+    setShowAllPrograms(false);
     resetStatus();
   }, [leadId, resetStatus]);
 
   const visibleCohorts = useMemo(() => {
     if (!lead) return cohorts;
-    return cohorts.filter(cohort => (
+    const ageEligible = cohorts.filter(cohort => (
       cohort.minAge == null
       || cohort.maxAge == null
       || (lead.age >= cohort.minAge && lead.age <= cohort.maxAge)
     ));
-  }, [cohorts, lead]);
+    return showAllPrograms || !lead.recommendedProgramId
+      ? ageEligible
+      : ageEligible.filter(cohort => cohort.programId === lead.recommendedProgramId);
+  }, [cohorts, lead, showAllPrograms]);
 
   const submit = async () => {
     if (!lead || !submitLock.tryLock()) return;
@@ -132,6 +133,8 @@ export default function useSignUpLeadModal({
     selectNoteCategory: setNoteCategory,
     cohorts,
     visibleCohorts,
+    showAllPrograms,
+    setShowAllPrograms,
     loading,
     loadError: cohortsError
       ? getErrorMessage(cohortsError, 'Unable to load cohorts')

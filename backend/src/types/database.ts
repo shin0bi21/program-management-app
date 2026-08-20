@@ -33,9 +33,11 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
-export type LeadOrigin = "expression_of_interest" | "staff_created";
+export type LeadOrigin = "external" | "internal";
 
 export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
+
+export type LeadSubmitterRole = "guardian" | "parent" | "staff" | "youth";
 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
@@ -194,6 +196,7 @@ export interface Leads {
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;
+  submitted_by_role: Generated<LeadSubmitterRole>;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   youth_first_name: string;

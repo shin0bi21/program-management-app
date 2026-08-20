@@ -9,6 +9,8 @@ export type PreferenceKey =
   | 'task-filters'
   | 'cohort-filters'
   | 'lead-filters'
+  | 'outreach-external-leads-filters'
+  | 'outreach-internal-leads-filters'
   | 'expression-interest-filters';
 
 export function getPreference<T extends object>(key: PreferenceKey, opts?: RequestOptions) {

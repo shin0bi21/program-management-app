@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { publicOutreachFormDefaultValues, publicOutreachFormSchema, type PublicOutreachFormValues } from '../../../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import { ApiError, getErrorMessage } from '../../../../../http/clientErrors';
-import { submitExpressionOfInterest } from '../../publicHomepage.api';
+import { submitPublicLead } from '../../publicHomepage.api';
 
 export function useSignupSection() {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
@@ -24,7 +24,7 @@ export function useSignupSection() {
     setError('');
     setSubmitStatus('submitting');
     try {
-      await submitExpressionOfInterest({
+      await submitPublicLead({
         youthFirstName: data.youthFirstName.trim(),
         youthLastName: data.youthLastName.trim(),
         age: data.age,
@@ -34,6 +34,7 @@ export function useSignupSection() {
         contactRelationship: data.contactRelationship,
         discoverySource: data.discoverySource,
         notes: data.notes.trim() || undefined,
+        website: '',
       });
       reset(publicOutreachFormDefaultValues);
       setSubmitStatus('success');

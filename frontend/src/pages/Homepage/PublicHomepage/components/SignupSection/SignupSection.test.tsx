@@ -2,16 +2,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SignupSection from './SignupSection'
 
-const mockSubmitExpressionOfInterest = vi.fn()
+const mockSubmitPublicLead = vi.fn()
 
 vi.mock('../../publicHomepage.api', () => ({
-  submitExpressionOfInterest: (...args: unknown[]) => mockSubmitExpressionOfInterest(...args),
+  submitPublicLead: (...args: unknown[]) => mockSubmitPublicLead(...args),
 }))
 
 describe('SignupSection', () => {
   beforeEach(() => {
-    mockSubmitExpressionOfInterest.mockReset()
-    mockSubmitExpressionOfInterest.mockResolvedValue({ message: 'ok' })
+    mockSubmitPublicLead.mockReset()
+    mockSubmitPublicLead.mockResolvedValue({ message: 'ok' })
   })
 
   it('organizes the shared data shape into form sections without duplicate response fields', () => {
@@ -44,7 +44,7 @@ describe('SignupSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
     await waitFor(() => {
-      expect(mockSubmitExpressionOfInterest).toHaveBeenCalledWith({
+      expect(mockSubmitPublicLead).toHaveBeenCalledWith({
         youthFirstName: 'Jordan',
         youthLastName: 'Test',
         age: 14,
@@ -54,6 +54,7 @@ describe('SignupSection', () => {
         contactRelationship: 'guardian',
         discoverySource: 'online',
         notes: 'Please follow up.',
+        website: '',
       })
     })
   })
@@ -69,7 +70,7 @@ describe('SignupSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
 
     await waitFor(() => {
-      expect(mockSubmitExpressionOfInterest).toHaveBeenCalled()
+      expect(mockSubmitPublicLead).toHaveBeenCalled()
     })
 
     expect(screen.getByText(/thank you for your submission/i)).toBeInTheDocument()
@@ -86,6 +87,6 @@ describe('SignupSection', () => {
     fireEvent.submit(screen.getByRole('button', { name: /submit/i }).closest('form')!)
 
     expect(await screen.findByText(/contact phone number is required/i)).toBeInTheDocument()
-    expect(mockSubmitExpressionOfInterest).not.toHaveBeenCalled()
+    expect(mockSubmitPublicLead).not.toHaveBeenCalled()
   })
 })

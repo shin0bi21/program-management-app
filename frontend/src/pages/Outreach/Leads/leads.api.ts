@@ -20,6 +20,7 @@ export const getLeads = (
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  if (filters.origins?.length) params.set('origins', filters.origins.join(','));
   if (pagination) {
     params.set('sort', pagination.key);
     params.set('direction', pagination.direction);
@@ -36,6 +37,7 @@ export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/lead
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);
 export const updateLeadStatus = (id: string, status: LeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
+export const deleteLead = (id: string) => apiClient.delete<{ id: string }>(`/leads/${id}`);
 export const signUpLead = (
   id: string,
   cohortId: string | null,

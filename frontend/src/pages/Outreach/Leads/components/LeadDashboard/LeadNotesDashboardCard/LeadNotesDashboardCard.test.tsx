@@ -15,15 +15,15 @@ vi.mock('../../../leads.api', () => api);
 
 const lead: Lead = {
   id: 'lead-1',
-  origin: 'expression_of_interest',
-  expressionOfInterestId: 'expression-1',
+  origin: 'external',
+  submittedByRole: 'guardian',
   convertedYouthId: null,
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
   age: 14,
   school: 'Test School',
-  programOfInterestId: null,
-  programOfInterestName: null,
+  recommendedProgramId: null,
+  recommendedProgramName: null,
   contactPhoneNumber: '519-555-0100',
   contactRelationship: 'guardian',
   discoverySource: 'online',
@@ -78,7 +78,7 @@ describe('LeadNotesDashboardCard', () => {
     render(<LeadNotesDashboardCard lead={lead} canWrite />);
     await screen.findByText(existingNote.details);
 
-    fireEvent.click(screen.getByRole('button', { name: /Delete follow-up note/ }));
+    fireEvent.click(screen.getByRole('button', { name: `Delete ${existingNote.details}` }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(api.deleteLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id));

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { submitExpressionOfInterest } from '../services/outreach/expressions/publicService';
+import { submitPublicLead } from '../services/outreach/leads/publicLeadService';
 
-export const handleExpressionOfInterest = async (req: Request, res: Response) => {
-  await submitExpressionOfInterest(req.body);
-  res.status(201).json({ message: 'Expression of interest submitted successfully' });
+export const handlePublicLead = async (req: Request, res: Response) => {
+  await submitPublicLead(req.body);
+  res.status(201).json({ message: 'Lead submitted successfully' });
 };

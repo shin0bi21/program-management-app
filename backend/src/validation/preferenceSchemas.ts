@@ -8,6 +8,8 @@ const preferenceKeys = [
   'task-filters',
   'cohort-filters',
   'lead-filters',
+  'outreach-external-leads-filters',
+  'outreach-internal-leads-filters',
   'expression-interest-filters',
 ] as const;
 

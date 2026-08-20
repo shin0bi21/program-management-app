@@ -5,7 +5,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
-import expressionOfInterestRoutes from '../../src/routes/expressionOfInterestRoutes';
 import publicRoutes from '../../src/routes/publicRoutes';
 import accountRoutes from '../../src/routes/accountRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
@@ -23,10 +22,9 @@ import { requestId } from '../../src/middleware/routeMiddleware';
 export function createApp() {
   const app = express();
   app.use(requestId);
-  app.use(express.json());
+  app.use(express.json({ limit: '20kb', type: 'application/json' }));
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
-  app.use('/api/expressions-of-interest', expressionOfInterestRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/accounts', accountRoutes);
   app.use('/api/youth', youthRoutes);

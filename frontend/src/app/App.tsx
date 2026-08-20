@@ -13,7 +13,6 @@ const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
 const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
-const ExpressionsOfInterest = lazy(() => import('../pages/Outreach/ExpressionsOfInterest/ExpressionsOfInterest'));
 const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
 const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
 const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
@@ -109,20 +108,22 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/outreach" element={<Navigate to="/outreach/expressions-of-interest" replace />} />
+              <Route path="/outreach" element={<Navigate to="/outreach/leads/external" replace />} />
+              <Route path="/outreach/expressions-of-interest" element={<Navigate to="/outreach/leads/external" replace />} />
+              <Route path="/outreach/leads" element={<Navigate to="/outreach/leads/external" replace />} />
               <Route
-                path="/outreach/expressions-of-interest"
+                path="/outreach/leads/external"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
-                    <ExpressionsOfInterest />
+                    <Leads key="external" origin="external" />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/outreach/leads"
+                path="/outreach/leads/internal"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
-                    <Leads />
+                    <Leads key="internal" origin="internal" />
                   </ProtectedRoute>
                 }
               />

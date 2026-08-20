@@ -29,11 +29,24 @@
   min-width: 0;
 }
 
-.note-row__summary strong {
+.note-row__title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.note-row--compact .note-row__summary {
+  flex-wrap: nowrap;
+}
+
+.note-row--compact .note-row__title {
+  flex: 1 1 auto;
+  font-weight: 400;
+}
+
+.note-row--compact .note-row__author {
+  flex: 0 1 9rem;
 }
 
 .note-row__date {
@@ -44,6 +57,15 @@
   color: var(--color-muted);
   font-size: 0.75rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.note-row__author {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

@@ -1,19 +1,20 @@
 export type LeadStatus = 'new' | 'contacted' | 'eligible' | 'ineligible' | 'signed_up';
-export type LeadOrigin = 'expression_of_interest' | 'staff_created';
+export type LeadOrigin = 'external' | 'internal';
+export type LeadSubmitterRole = 'youth' | 'parent' | 'guardian' | 'staff';
 export type LeadRelationship = 'parent' | 'sibling' | 'guardian';
 export type DiscoverySource = 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
 
 export interface Lead {
   id: string;
   origin: LeadOrigin;
-  expressionOfInterestId: string | null;
+  submittedByRole: LeadSubmitterRole;
   convertedYouthId: string | null;
   youthFirstName: string;
   youthLastName: string;
   age: number;
   school: string;
-  programOfInterestId: string | null;
-  programOfInterestName: string | null;
+  recommendedProgramId: string | null;
+  recommendedProgramName: string | null;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
   discoverySource: DiscoverySource;
@@ -37,7 +38,6 @@ export interface CreateLeadInput {
   youthLastName: string;
   age: number;
   school: string;
-  programOfInterestId?: string | null;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
   discoverySource: DiscoverySource;
@@ -50,6 +50,7 @@ export interface LeadFilters {
   search?: string;
   statuses?: LeadStatus[];
   programIds?: string[];
+  origins?: LeadOrigin[];
 }
 
 export type LeadSortKey = 'name' | 'school' | 'program' | 'status' | 'createdAt';
@@ -57,6 +58,7 @@ export type LeadSortKey = 'name' | 'school' | 'program' | 'status' | 'createdAt'
 export interface LeadPreference {
   statuses: LeadStatus[];
   programIds: string[];
+  origins: LeadOrigin[];
   sorting?: { key: LeadSortKey; direction: 'asc' | 'desc' };
   columnWidths?: Record<string, number>;
   hiddenColumns?: string[];

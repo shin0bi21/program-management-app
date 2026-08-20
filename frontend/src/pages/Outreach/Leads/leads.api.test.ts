@@ -63,7 +63,6 @@ describe('leads API', () => {
       youthLastName: 'Thompson',
       age: 15,
       school: 'Central High',
-      programOfInterestId: 'program-1',
       contactPhoneNumber: '416-555-0100',
       contactRelationship: 'parent' as const,
       discoverySource: 'school' as const,

@@ -1,15 +1,9 @@
-import { Controller } from 'react-hook-form'
 import Button from '../../../../../common/components/Button/Button'
+import OutreachFormFields from '../../../../../common/features/outreach/components/OutreachForm/OutreachFormFields'
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect'
 import FormField from '../../../../../common/components/FormField/FormField'
-import OutreachFormFields from '../../../../../common/features/outreach/components/OutreachForm/OutreachFormFields'
+import { Controller } from 'react-hook-form'
 import { useSignupSection } from './useSignupSection'
-
-const submitterOptions = [
-  { value: 'youth', label: 'Youth' },
-  { value: 'parent', label: 'Parent' },
-  { value: 'guardian', label: 'Guardian' },
-]
 
 export default function SignupSection() {
   const {
@@ -44,21 +38,22 @@ export default function SignupSection() {
               {submitStatus === 'error' && error && (
                 <div className="form-error">{error}</div>
               )}
+              <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="visually-hidden" {...register('website')} />
               <div className="outreach-form-section">
                 <Controller
                   name="submittedByRole"
                   control={control}
                   render={({ field }) => (
-                    <FormField
-                      id="cohort-submittedByRole"
-                      label="Who is filling out this form? *"
-                      error={errors.submittedByRole?.message}
-                    >
+                    <FormField id="cohort-submittedByRole" label="Who is filling out this form? *" error={errors.submittedByRole?.message}>
                       <FloatingSelect
                         id="cohort-submittedByRole"
                         ariaLabel="Who is filling out this form?"
                         value={field.value}
-                        options={submitterOptions}
+                        options={[
+                          { value: 'youth', label: 'Youth' },
+                          { value: 'parent', label: 'Parent' },
+                          { value: 'guardian', label: 'Guardian' },
+                        ]}
                         onChange={field.onChange}
                       />
                     </FormField>

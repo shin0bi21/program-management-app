@@ -37,6 +37,7 @@ describe('useLeadControls', () => {
     const persisted: LeadPreference = {
       statuses: [],
       programIds: [],
+      origins: [],
       sorting: { key: 'createdAt', direction: 'desc' },
       columnWidths: {},
       hiddenColumns: [],
@@ -44,7 +45,7 @@ describe('useLeadControls', () => {
     preferenceHook.save.mockImplementation((update: (current: LeadPreference) => LeadPreference) => {
       Object.assign(persisted, update(persisted));
     });
-    const { result } = renderHook(() => useLeadControls(programs, false, null, columnKeys, sortKeys));
+    const { result } = renderHook(() => useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, columnKeys, sortKeys));
     await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
 
     act(() => {
@@ -62,10 +63,11 @@ describe('useLeadControls', () => {
     preferenceHook.preference = {
       statuses: ['new'],
       programIds: ['removed-program'],
+      origins: [],
       sorting: { key: 'removedColumn' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => (
-      useLeadControls(programs, false, null, columnKeys, sortKeys)
+      useLeadControls('external', 'outreach-external-leads-filters', programs, false, null, columnKeys, sortKeys)
     ));
 
     await waitFor(() => expect(result.current.ready).toBe(true));

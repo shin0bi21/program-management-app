@@ -22,15 +22,15 @@ vi.mock('../../leads.api', () => ({
 
 const lead: Lead = {
   id: 'lead-1',
-  origin: 'staff_created',
-  expressionOfInterestId: null,
+  origin: 'internal',
+  submittedByRole: 'staff',
   convertedYouthId: null,
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
   age: 14,
   school: 'Test School',
-  programOfInterestId: 'program-1',
-  programOfInterestName: 'Soft Skills',
+  recommendedProgramId: 'program-1',
+  recommendedProgramName: 'Soft Skills',
   contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian',
   discoverySource: 'online',
@@ -93,7 +93,7 @@ describe('useSignUpLeadModal', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(getCohorts).toHaveBeenCalledWith(
-      'program-1',
+      undefined,
       {},
       { signal: expect.any(AbortSignal) },
     );

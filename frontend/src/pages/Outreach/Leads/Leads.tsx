@@ -1,44 +1,44 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import Modal from '../../../common/components/Modal/Modal';
+import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
+import type { TableColumn } from '../../../common/components/Table/Table';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { formatShortDate } from '../../../common/utils/date';
-import { updateLeadStatus } from './leads.api';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
+import LeadTableView from './components/LeadTableView/LeadTableView';
 import LeadModal from './components/LeadModal/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import { useLeadControls } from './hooks/useLeadControls';
-import { useLeads } from './hooks/useLeads';
-import type { Lead, LeadStatus } from './types';
+import useLeadActions from './hooks/useLeadActions';
+import type { Lead, LeadOrigin, LeadStatus } from './types';
 import './Leads.css';
 
-const editableStatuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible'];
-const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
+const editableStatuses: LeadStatus[] = ['contacted', 'eligible', 'ineligible'];
+const LEAD_COLUMN_KEYS = ['firstName', 'lastName', 'origin', 'school', 'program', 'status', 'created'] as const;
 const LEAD_SORT_KEYS = ['name', 'school', 'program', 'status', 'createdAt'] as const;
-const LEADS_LIST_QUERY_KEY = ['leads', 'list'] as const;
-const EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY = ['expressions-of-interest', 'list'] as const;
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 
-export default function Leads() {
+export default function Leads({ origin }: { origin: LeadOrigin }) {
+  const viewTitle = origin === 'external' ? 'External Leads' : 'Internal Leads';
+  const preferenceKey = origin === 'external' ? 'outreach-external-leads-filters' : 'outreach-internal-leads-filters';
+  const listQueryKey = ['leads', origin, 'list'] as const;
   // Services and permissions.
-  const queryClient = useQueryClient();
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
 
   // Controls and remote records.
   const { programs, loading: programsLoading, error: programsError } = usePrograms();
   const controls = useLeadControls(
+    origin,
+    preferenceKey,
     programs,
     programsLoading,
     programsError,
@@ -48,46 +48,27 @@ export default function Leads() {
   const {
     search, setSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters, ready: controlsReady,
+    ready: controlsReady,
   } = controls;
-  const { leads, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useLeads(
-    LEADS_LIST_QUERY_KEY,
-    queryFilters,
-    sorting,
-  );
+  const actions = useLeadActions(listQueryKey);
 
   // Selection and dialogs.
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
-  const {
-    selectedItem: selectedLead,
-    selectedKey: selectedLeadId,
-    selectItem: selectLead,
-  } = useTableSelection(leads);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const selectedLeadId = selectedLead?.id ?? null;
   const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
+  const confirmModal = useConfirmModal({ action: actions.confirmAction, onClose: actions.closeConfirmation });
 
   // Mutations and cache reconciliation.
-  const setStatus = async (lead: Lead, status: LeadStatus) => {
-    await updateLeadStatus(lead.id, status);
-    await queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY });
-  };
-
-  const reconcileSignUp = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: EXPRESSIONS_OF_INTEREST_LIST_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-    ]);
-  };
-
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
   // Table presentation.
   const columns: TableColumn<Lead>[] = [
     { key: 'firstName', sortKey: 'name', header: 'First Name', render: lead => lead.youthFirstName },
     { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
+    { key: 'origin', header: 'Origin', width: 100, render: lead => title(lead.origin) },
     { key: 'school', sortKey: 'school', header: 'School', render: lead => lead.school },
-    { key: 'program', sortKey: 'program', header: 'Program of Interest', render: lead => lead.programOfInterestName ?? '—' },
+    { key: 'program', sortKey: 'program', header: 'Eligible Program', render: lead => lead.recommendedProgramName ?? '—' },
     { key: 'status', sortKey: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
     { key: 'created', sortKey: 'createdAt', header: 'Created', width: 130, render: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
@@ -96,14 +77,18 @@ export default function Leads() {
       resizable: false,
       header: '',
       className: 'col-actions',
-      render: (lead: Lead) => lead.status === 'signed_up'
-        ? null
-        : <ActionsMenu
+      render: (lead: Lead) => lead.status === 'signed_up' ? null : <ActionsMenu
           ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
           items={[
             { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
+            { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => actions.requestDelete(lead) },
+            ...editableStatuses.filter(status => status !== lead.status).map((status, index) => ({
+              id: status,
+              label: `Mark ${title(status)}`,
+              groupStart: index === 0,
+              onClick: () => void actions.setStatus(lead, status),
+            })),
             { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
-            ...editableStatuses.filter(status => status !== lead.status).map(status => ({ id: status, label: `Mark ${title(status)}`, onClick: () => void setStatus(lead, status) })),
           ]}
         />,
     }] : []),
@@ -112,8 +97,8 @@ export default function Leads() {
   return <>
     <main className="page-container page-container--data">
       <PageHeader
-        title="Leads"
-        actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
+        title={viewTitle}
+        actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
         search={<SearchInput
           label="Search leads"
           value={search}
@@ -135,28 +120,18 @@ export default function Leads() {
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
       {programsError && <p className="form-error" role="alert">{programsError}</p>}
       {!controlsReady ? <p role="status">Loading saved lead preferences…</p> : <PageBody
-        ariaLabel="Leads"
-        table={<Table
-          ariaLabel="Leads"
+        ariaLabel={viewTitle}
+        table={<LeadTableView
+          queryKey={listQueryKey}
           columns={columns}
           hiddenColumnKeys={hiddenColumns}
-          data={leads}
-          loading={loading}
-          refreshing={refreshing}
-          error={error ?? undefined}
-          emptyMessage={hasActiveQueryFilters
-            ? 'No leads match these filters'
-            : 'No leads yet'}
-          keyExtractor={lead => lead.id}
-          selectedKey={selectedLeadId}
-          onRowSelect={selectLead}
+          filters={queryFilters}
           sorting={sorting}
-          onSortingChange={controls.setSorting}
           columnWidths={columnWidths}
+          selectedLeadId={selectedLeadId}
+          onLeadSelect={setSelectedLead}
+          onSortingChange={controls.setSorting}
           onColumnWidthsChange={controls.setColumnWidths}
-          hasNextPage={hasNextPage}
-          loadingNextPage={loadingNextPage}
-          onLoadNextPage={loadNextPage}
         />}
         dashboard={<LeadDashboard lead={selectedLead} canWrite={canWrite} />}
       />}
@@ -165,14 +140,25 @@ export default function Leads() {
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
-      onSuccess={() => { void queryClient.invalidateQueries({ queryKey: LEADS_LIST_QUERY_KEY }); }}
+      onSuccess={() => { void actions.refreshLeads(); }}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}
       lead={signUpTarget}
       onClose={() => setSignUpTarget(null)}
-      onSuccess={reconcileSignUp}
+      onSuccess={actions.reconcileSignUp}
     />
+    <Modal
+      isOpen={actions.confirmAction !== null}
+      onClose={actions.closeConfirmation}
+      title={actions.confirmAction?.title ?? ''}
+      status={confirmModal.status}
+      statusMessage={confirmModal.statusMessage}
+      footer={confirmModal.footer}
+      successDelay={confirmModal.successDelay}
+    >
+      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
+    </Modal>
   </>;
 }
 
