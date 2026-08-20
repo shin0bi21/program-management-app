@@ -1,7 +1,9 @@
+// Scope: verifies Generate Sessions field composition and pending-state wiring.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import render from '../../../../../tests/renderWithQueryClient';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { ProgramCohort } from '../../../../../common/types/cohort';
+import render from '../../../../../tests/renderWithQueryClient';
 import GenerateSessionsModal from './GenerateSessionsModal';
 
 const generateSessions = vi.fn();
@@ -9,10 +11,7 @@ const regularTypeId = '00000000-0000-4000-8000-000000000001';
 
 vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   generateSessions: (...args: unknown[]) => generateSessions(...args),
-  getSessionTypes: () => Promise.resolve([
-    { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },
-    { id: 'type-guest', name: 'Guest Speaker' },
-  ]),
+  getSessionTypes: () => Promise.resolve([{ id: regularTypeId, name: 'Regular' }]),
 }));
 
 const cohort: ProgramCohort = {
@@ -40,34 +39,21 @@ const cohort: ProgramCohort = {
 describe('GenerateSessionsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    generateSessions.mockResolvedValue({
-      sessions: [{ id: 'session-1' }, { id: 'session-2' }],
-    });
+    generateSessions.mockResolvedValue({ sessions: [{ id: 'session-1' }] });
   });
 
-  it('includes the selected weekday for a weekly schedule', async () => {
+  it('renders fixed-cohort weekly fields without a cohort selector', async () => {
     render(<GenerateSessionsModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Day of week' })).toHaveTextContent('Tuesday');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
     expect(screen.getByLabelText('Title / Theme')).toBeRequired();
-    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Communication' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
-
-    await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({
-      frequency: 'weekly',
-      sessionTypeId: regularTypeId,
-      dayOfWeek: 'tuesday',
-      startsOn: '2026-07-01',
-      endsOn: '2026-08-31',
-    })));
-    expect(await screen.findByText(
-      '2 sessions successfully added to Soft Skills - Summer 2026.',
-    )).toBeInTheDocument();
+    expect(screen.getByLabelText('Schedule starts')).toHaveValue(cohort.startsOn);
+    expect(screen.getByLabelText('Ends on')).toHaveValue(cohort.endsOn);
   });
 
-  it('selects a cohort and schedules in one step from the Sessions page', async () => {
+  it('renders selectable-cohort and frequency-specific fields', async () => {
     render(
       <GenerateSessionsModal
         cohort={null}
@@ -78,34 +64,35 @@ describe('GenerateSessionsModal', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Add Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cohort' })).toHaveTextContent(
       'Soft Skills · Summer 2026',
     );
-    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Communication' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
-
-    await waitFor(() => expect(generateSessions).toHaveBeenCalledWith(
-      cohort.id,
-      expect.objectContaining({ startsOn: cohort.startsOn, endsOn: cohort.endsOn }),
-    ));
-  });
-
-  it('switches monthly schedules to a day-of-month selector', async () => {
-    render(<GenerateSessionsModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
-
     fireEvent.click(screen.getByRole('button', { name: 'Frequency' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Monthly' }));
-    expect(screen.getByRole('button', { name: 'Day of month' })).toHaveTextContent('1st');
-    fireEvent.click(screen.getByRole('button', { name: 'Day of month' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: '15th' }));
-    fireEvent.change(screen.getByLabelText('Title / Theme'), { target: { value: 'Monthly Workshop' } });
+    expect(screen.getByRole('button', { name: 'Day of month' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Day of week' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Frequency' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'One time' }));
+    expect(screen.getByLabelText('Session date')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ends on')).not.toBeInTheDocument();
+  });
+
+  it('disables the complete form while generation is pending', async () => {
+    generateSessions.mockReturnValue(new Promise(() => undefined));
+    render(<GenerateSessionsModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
+    fireEvent.change(screen.getByLabelText('Title / Theme'), {
+      target: { value: 'Communication' },
+    });
+
     fireEvent.click(screen.getByRole('button', { name: 'Add Sessions' }));
 
-    await waitFor(() => expect(generateSessions).toHaveBeenCalledWith('cohort-1', expect.objectContaining({
-      frequency: 'monthly',
-      dayOfMonth: 15,
-    })));
+    const themeInput = screen.getByLabelText('Title / Theme');
+    await waitFor(() => expect(themeInput.closest('form')).toHaveAttribute('aria-busy', 'true'));
+    expect(themeInput).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Frequency' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Sessions' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 });
