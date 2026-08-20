@@ -1,3 +1,4 @@
+// Scope: verifies Hours overview query inputs and selected-context state transitions.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

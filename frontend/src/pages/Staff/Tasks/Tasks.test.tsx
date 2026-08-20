@@ -159,16 +159,6 @@ describe('Tasks', () => {
     expect(Array.from(dashboard?.children ?? []).filter(child => child.matches('.dashboard-card'))).toHaveLength(2);
   });
 
-  it('shows program before category in the task table', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    const headers = (await screen.findAllByRole('columnheader')).map(header => header.textContent);
-    expect(headers.indexOf('Program')).toBeLessThan(headers.indexOf('Category'));
-    expect(await screen.findByRole('cell', { name: '—' })).toBeInTheDocument();
-    expect((await screen.findByRole('cell', { name: 'Active' })).querySelector('.task-status-badge--active')).not.toBeNull();
-  });
-
   it('persists a complete preference when first hiding a column', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);

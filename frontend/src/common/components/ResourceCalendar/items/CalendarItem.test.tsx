@@ -1,6 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+// Scope: verifies shared calendar-item actions, detail discovery, hover dismissal, and positioning.
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import CalendarItem from './CalendarItem';
+
+const itemProps = {
+  id: 'item-1',
+  ariaLabel: 'Prepare workshop',
+  summary: 'Prepare workshop',
+  detailTitle: 'Prepare workshop details',
+  details: [{ label: 'Program', value: 'After School' }],
+};
 
 describe('CalendarItem', () => {
   afterEach(() => {
@@ -83,5 +92,41 @@ describe('CalendarItem', () => {
 
     expect(screen.queryByRole('menuitem', { name: 'View details' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toHaveFocus();
+  });
+
+  it('dismisses hover details when a scroll container moves', async () => {
+    const { container } = render(<CalendarItem {...itemProps} />);
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Prepare workshop' }));
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.scroll(container);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('dismisses hover details immediately on pointer down', async () => {
+    render(<CalendarItem {...itemProps} />);
+    const trigger = screen.getByRole('button', { name: 'Prepare workshop' });
+    fireEvent.mouseEnter(trigger);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.pointerDown(trigger);
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('does not open hover details when the pointer leaves during the delay', () => {
+    vi.useFakeTimers();
+    try {
+      render(<CalendarItem {...itemProps} />);
+      const trigger = screen.getByRole('button', { name: 'Prepare workshop' });
+      fireEvent.mouseEnter(trigger);
+      fireEvent.mouseLeave(trigger);
+      act(() => vi.advanceTimersByTime(120));
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,3 +1,4 @@
+// Scope: verifies Hours table query-state wiring and domain empty-state copy.
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
