@@ -265,7 +265,7 @@ test('accepts the normalized functional preference lifecycle', () => {
   assert.deepEqual(
     violationsFor(
       checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadControls.ts`,
+      `${leadsPage}/hooks/useLeadPreferences.ts`,
       source,
     ),
     [],
@@ -302,7 +302,7 @@ test('allows filter-only preferences without table column keys', () => {
   assert.deepEqual(
     violationsFor(
       checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadControls.ts`,
+      `${leadsPage}/hooks/useLeadPreferences.ts`,
       source,
     ),
     [],
@@ -316,7 +316,7 @@ test('requires page-owned column keys and functional preference saves', () => {
   `;
   const violations = violationsFor(
     checkPreferenceControlOwnership,
-    `${leadsPage}/hooks/useLeadControls.ts`,
+    `${leadsPage}/hooks/useLeadPreferences.ts`,
     source,
   );
 

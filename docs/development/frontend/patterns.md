@@ -28,6 +28,12 @@ These are review prompts, not automatic extraction rules. Keep a focused leaf in
 
 Pages remain orchestrators. They may own cross-view controls, selections, dialogs, and synchronization, while substantial list and calendar views own their remote data and view-specific behavior. Components own presentation and interaction; hooks own stateful policy and lifecycle; API adapters own transport paths and response typing; utilities own pure transforms.
 
+### Split page-wide behavior by responsibility
+
+Use focused `use*Data`, `use*Preferences`, `use*Filters`, `use*Actions`, and `use*Selection` hooks only when each owns real behavior. Keep their initialization in dependency order so the route still reads as the composition owner.
+
+Do not collect unrelated persistence, filtering, remote data, selection, and mutation behavior in a catch-all `use*Controls` hook. Keep a simple view value and its update with the preference owner instead of creating a pass-through `use*View` hook. A small value or callback does not need its own abstraction merely to match a directory shape.
+
 ## Keep defensive behavior at real boundaries
 
 Validate and normalize data where uncertainty enters the system:

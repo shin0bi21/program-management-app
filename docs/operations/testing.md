@@ -39,13 +39,13 @@ The frontend layers are:
 
 Place each behavior at its narrowest authoritative owner. A broader consumer test is required only when correctness depends on wiring across that boundary.
 
-| Owner | Required coverage |
+| Owner | Applicable coverage |
 |---|---|
 | Pure utility or finite policy | Representative inputs, boundaries, invalid values that are part of the contract, and exhaustive finite cases. Use the Node environment. |
 | API adapter | Exact method, path, query/body serialization, typed response shaping, and boundary normalization. Mock the centralized client rather than browser UI. |
-| Stateful hook | Initialization, input changes, loading/error state, reset or reopen behavior, stale-response protection, cache effects, callback ordering, and cleanup on unmount where applicable. |
+| Stateful hook | Initialization, meaningful input changes, loading/error state, reset or reopen behavior, cache effects, callback ordering, and cleanup when the hook owns those behaviors. Test stale-response protection only when overlapping requests can reach the same state. |
 | Shared component | Public rendering and accessibility contract, supported states, emitted events, keyboard behavior available in jsdom, and controlled-prop wiring. Test generic behavior once here. |
-| Form or modal workflow | Create/edit initialization, required and dependent fields, direct form submission, submitting and duplicate-submit prevention, success, failure recovery, dismissal rules, reset/reopen behavior, and callback/API payload ordering. |
+| Form or modal workflow | Applicable create/edit initialization, required and dependent fields, direct form submission, submit-lock and disabled-state wiring, success, failure recovery, reset/reopen behavior, and callback/API payload ordering. Shared Modal and submit-lock mechanics stay at their shared owners. |
 | List, table, or calendar view | Initial loading, background refresh, error, empty and filtered-empty states, pagination/range loading, sorting/filter wiring, selection, permission-aware actions, and exact domain callback payloads. Shared mechanics remain covered by their shared owner. |
 | Route page | Route composition, permission-dependent controls, preference restoration and first save, dialog entry paths, view switching, selected-record context, and callback-to-adapter wiring that crosses child owners. Do not repeat internal hook or shared-component tests. |
 | Playwright browser scenario | Real layout, scrolling, sticky positioning, focus geometry and return, portals, observers, pointer capture, drag/resize, virtualization, clipping, cancellation, and responsive behavior that jsdom cannot prove. |
@@ -55,11 +55,11 @@ For every applicable owner, cover the meaningful state and event lifecycle rathe
 1. initial, loading, success, empty, and error presentation;
 2. user actions and their exact emitted or persisted values;
 3. transitions when props, targets, permissions, or dependent inputs change;
-4. repeat, reopen, retry, cancellation, and unmount cleanup paths;
-5. overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation when the owner permits concurrency;
+4. repeat, reopen, retry, cancellation, and unmount cleanup paths when the owner exposes them;
+5. overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation only when the owner permits those paths;
 6. accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
 
-Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
+Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Shared components and hooks own generic mechanics once; consumers prove only their domain values and cross-owner wiring. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
 
 `test-ui.sh`, focused frontend runners, and normal PR CI all use Vitest; Vitest selects Node or jsdom per file. Pull-request CI runs one frontend job: related tests for source changes or the complete collection for configuration, dependency, and runner changes, followed by the frontend build. Playwright is not included in that job or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 

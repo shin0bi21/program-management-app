@@ -9,7 +9,7 @@ TanStack Query owns remote data; React Hook Form or local React state owns the d
 - Pass a stable `title` and the workflow's `status`. While status is `submitting` or `success`, Modal disables its X button and Escape dismissal; disable footer Cancel and Submit controls consistently.
 - Use `disableClose` only for a non-status state that independently prevents dismissal.
 - Keep `onClose` idempotent. Do not clear server-backed state until its operation completes or is deliberately cancelled.
-- Use `status`, `statusMessage`, and `successDelay` for submission feedback instead of adding another overlay.
+- Use `status`, `statusMessage`, and `successDelay` for submission feedback instead of adding another overlay. Shared `Modal` owns delayed success closure and timer cleanup; a consumer that enters success must not also close immediately or start its own timer.
 - Use `ModalFormFooter` when its standard Cancel/Submit behavior fits, and give a body form a stable ID when the footer submit button targets it.
 - Use `FormField`, `FloatingSelect`, and `Button` inside forms. Portalled choices use `FloatingSelect` or `FloatingMenuPanel` so positioning, dismissal, keyboard behavior, and focus return remain shared.
 
@@ -46,6 +46,6 @@ The modal owns its draft, submit, and error state. One owner controls the mutati
 
 ## Verify each path
 
-Test required fields, dependent changes, contextual locked fields, defaults, create/edit reset, failure recovery, duplicate-submit prevention, and each distinct entry path. Add consumer tests when correctness depends on calendar/list/dashboard wiring rather than the modal alone.
+Test required fields, dependent changes, contextual locked fields, defaults, create/edit reset, authoritative mutation and reconciliation ordering, and failure recovery at the workflow owner. Test lock and disabled-state wiring where the workflow exposes a submission path; the shared submit-lock test owns the generic same-tick locking mechanic. Add consumer tests when correctness depends on calendar, table, dashboard, or cache wiring rather than the modal alone.
 
-Shared Modal tests own generic dialog semantics, focus, Escape, and disabled-close behavior. Workflow tests prove direct form submission cannot bypass validation or submit twice, status and disabled controls are wired correctly, success refreshes or closes the intended owner, and failure keeps the form open with an accessible error. Use Playwright when portal placement or browser focus geometry cannot be established in jsdom.
+Shared Modal tests own generic dialog semantics, focus, Escape, disabled-close behavior, delayed success closure, and timer cleanup. Workflow tests set success and prove their domain callback/status wiring without advancing the generic timer. Route tests own entry paths and cross-owner reconciliation. Use Playwright when portal placement or browser focus geometry cannot be established in jsdom.

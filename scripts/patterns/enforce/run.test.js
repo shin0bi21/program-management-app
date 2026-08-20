@@ -19,9 +19,9 @@ test('keeps dashboard naming checks on common components', () => {
   assert.match(violations.join('\n'), /structural dashboard owners/);
 });
 
-test('routes page preference controls to their ownership check', () => {
+test('routes page preferences to their ownership check', () => {
   const violations = violationsFor(
-    'frontend/src/pages/Example/hooks/useExampleControls.ts',
+    'frontend/src/pages/Example/hooks/useExamplePreferences.ts',
     "const { save } = useUserPreference('example-filters');\nsave({ hiddenColumns });",
   );
   assert.match(violations.join('\n'), /page-owned columnKeys/);

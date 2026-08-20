@@ -113,19 +113,19 @@ Substantial data pages use nested ownership rather than leaving every page-priva
 ```text
 Page.tsx                         route shell and cross-view orchestration
 components/
-  FeatureListView/              remote list query, table, and list-only helpers
+  FeatureTableView/             remote list query, table, and table-only helpers
     hooks/
   FeatureCalendarView/          calendar buffer, filtering, items, and interactions
     hooks/
     FeatureItem/
   FeatureDashboard/             dashboard composition
     FeatureDashboardCard/
-hooks/                          page-wide controls and cross-view workflows
+hooks/                          focused preferences, filters, actions, selection, and cross-view workflows
 types.ts                        contracts shared by the route and sibling views
 utils/                          pure helpers shared by sibling views
 ```
 
-The route owns the header, shared filters and preferences, dialogs, selection context, dashboards, and synchronization between mounted or unmounted views. A `*ListView` owns its remote list hook and table-specific behavior. A `*CalendarView` owns its range loader, buffer adapter, visible-data hook, item component, and calendar-only mutation helpers. A dashboard owns cards used only within that dashboard. Do not move a contract under one child when a sibling view or the route also consumes it; keep that contract at the narrowest shared feature level.
+The route owns the header, shared filters and preferences, dialogs, selection context, dashboards, and synchronization between mounted or unmounted views. A `*TableView` owns its remote list hook and table-specific behavior. Legacy `*ListView` owners migrate to this name when their page structure is next changed. A `*CalendarView` owns its range loader, buffer adapter, visible-data hook, item component, and calendar-only mutation helpers. A dashboard owns cards used only within that dashboard. Do not move a contract under one child when a sibling view or the route also consumes it; keep that contract at the narrowest shared feature level.
 
 Name the structural dashboard owner `*Dashboard`, not `*Overview`, and name extracted card components `*DashboardCard`. A semantic qualifier may precede that suffix, such as `TaskOverviewDashboardCard`. Reserve “overview” by itself for domain content, aggregate data, and hooks; it must not become an alternate structural name for either the dashboard owner or an extracted dashboard card.
 
@@ -162,7 +162,7 @@ types ← endpoint adapter ← query/workflow hook ← component
 | Cross-page user preferences | `common/features/preferences/` |
 | High-frequency transient interaction state | Focused hooks and refs when values do not affect declarative rendering |
 
-Query keys remain stable and domain-specific. Paginated lists use a dedicated list prefix so cache helpers cannot touch another query shape. Mutation owners invalidate server-filtered lists by default, update rows directly only when membership and order cannot change, and invalidate every domain changed by a cross-domain command. Cache writes preserve unaffected object references where practical, and mutation flows define how stale or overlapping responses are prevented from overwriting newer state.
+Query keys remain stable and domain-specific. Paginated lists use a dedicated list prefix so cache helpers cannot touch another query shape. Mutation owners invalidate server-filtered lists by default, update rows directly only when membership and order cannot change, and invalidate every domain changed by a cross-domain command. Cache writes preserve unaffected object references where practical. When overlapping commands can actually reach the same state, their owner must prevent stale completion through cancellation, a pending lock, serialization, or a focused revision contract. Do not add concurrency machinery for paths the UI and owner cannot produce.
 
 Focused mutation hooks present their public workflows in domain order: create/add, edit/update, delete, then other actions. When several workflows reconcile the same query cache, they share one helper that owns the cache-missing fallback and each workflow supplies only its validity check and transformation.
 

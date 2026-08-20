@@ -335,10 +335,10 @@ export function checkPreferenceControlOwnership(violations, file, source) {
     violations.push(`${file}:1 table preference hooks must receive page-owned columnKeys and pass them to useUserPreference.`);
   }
   if (!/\bsetBaseline\s*\(/.test(source)) {
-    violations.push(`${file}:1 preference control hooks must initialize the shared save baseline from their normalized restored state.`);
+    violations.push(`${file}:1 preference hooks must initialize the shared save baseline from their normalized restored state.`);
   }
   if (!/\bsave\s*\(\s*current\s*=>/.test(source)) {
-    violations.push(`${file}:1 preference control hooks must use functional saves so consecutive controls preserve the latest state.`);
+    violations.push(`${file}:1 preference hooks must use functional saves so consecutive controls preserve the latest state.`);
   }
 }
 
