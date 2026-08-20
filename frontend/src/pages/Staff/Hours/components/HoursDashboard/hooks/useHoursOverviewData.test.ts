@@ -33,7 +33,7 @@ describe('useHoursOverviewData', () => {
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(
       ({ staffId, cycleId }) => useHoursOverviewData(
-        ['time-entries'],
+        ['hours'],
         staffId,
         cycleId,
       ),
@@ -61,7 +61,7 @@ describe('useHoursOverviewData', () => {
       .mockReturnValueOnce(next.promise);
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(
-      ({ staffId }) => useHoursOverviewData(['time-entries'], staffId, 'cycle-1'),
+      ({ staffId }) => useHoursOverviewData(['hours'], staffId, 'cycle-1'),
       {
         initialProps: { staffId: 'staff-1' },
         wrapper: createQueryClientWrapper(client),

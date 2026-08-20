@@ -34,8 +34,8 @@ function renderActions() {
   const client = createTestQueryClient();
   const onEntryRemoved = vi.fn();
   const rendered = renderHook(() => useHoursActions({
-    hoursQueryKey: ['time-entries'],
-    hoursListQueryKey: ['time-entries', 'list'],
+    hoursQueryKey: ['hours'],
+    hoursListQueryKey: ['hours', 'list'],
     taskQueryKey: ['tasks'],
     onEntryRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
@@ -72,10 +72,10 @@ describe('useHoursActions', () => {
       '2026-08-19',
       expect.objectContaining({ id: 'entry-1', categoryLabel: 'Meeting' }),
     );
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['time-entries'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] });
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['time-entries', 'overview'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'overview'] });
   });
 
   it('owns confirmation and deletion reconciliation together', async () => {

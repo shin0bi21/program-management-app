@@ -23,12 +23,12 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 | `PATCH` | `/:id` | Change account status |
 | `DELETE` | `/:id` | Revoke a pending invitation |
 
-### Hours — `/time-entries`
+### Hours — `/hours`
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/` | List time-entry resources and entries for a date range |
-| `GET` | `/list` | List cursor-paginated, policy-scoped time entries |
+| `GET` | `/` | List hours resources and entries for a date range |
+| `GET` | `/list` | List cursor-paginated, policy-scoped logged hours |
 | `GET` | `/options` | List readable staff resources and programs |
 | `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
 | `GET` | `/sessions` | List assigned sessions available for time entry |
@@ -54,7 +54,7 @@ Time-entry validation, policies, services, and `backend/tests/hours/` are author
 | `PATCH` | `/:id/status` | Update an assigned task's status |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
 
-Task validation, policies, services, and `backend/tests/tasks/` are authoritative for lifecycle, assignment, placement, deletion, time-entry integration, and resource-scope behavior.
+Task validation, policies, services, and `backend/tests/tasks/` are authoritative for lifecycle, assignment, placement, deletion, hours integration, and resource-scope behavior.
 
 ### Youth — `/youth`
 

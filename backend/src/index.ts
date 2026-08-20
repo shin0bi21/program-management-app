@@ -71,7 +71,7 @@ app.use('/api/programs', programRoutes);
 app.use('/api/cohorts', cohortRoutes);
 app.use('/api/homepage', homepageRoutes);
 app.use('/api/preferences', preferenceRoutes);
-app.use('/api/time-entries', hoursRoutes);
+app.use('/api/hours', hoursRoutes);
 app.use('/api/tasks', taskRoutes);
 
 // 404 handler — catches all unmatched routes; forwards to errorHandler

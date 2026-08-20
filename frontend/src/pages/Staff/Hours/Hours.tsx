@@ -30,9 +30,9 @@ import './Hours.css';
 
 // Page-owned cache and persisted-column contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
-const HOURS_QUERY_KEY = ['time-entries'] as const;
+const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_LIST_QUERY_KEY = [...HOURS_QUERY_KEY, 'list'] as const;
-const HOURS_OPTIONS_QUERY_KEY = ['time-entry-options'] as const;
+const HOURS_OPTIONS_QUERY_KEY = ['hours-options'] as const;
 const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 const HOURS_COLUMN_KEYS = [
