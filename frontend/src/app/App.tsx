@@ -16,7 +16,7 @@ const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Pro
 const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
 const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
 const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
-const Timesheets = lazy(() => import('../pages/Staff/Timesheets/Timesheets'));
+const Hours = lazy(() => import('../pages/Staff/Hours/Hours'));
 const Tasks = lazy(() => import('../pages/Staff/Tasks/Tasks'));
 const Login = lazy(() => import('../pages/Auth/Login/Login'));
 const VerifyPassword = lazy(() => import('../pages/Auth/VerifyPassword/VerifyPassword'));
@@ -103,8 +103,8 @@ function App() {
               <Route
                 path="/staff/hours"
                 element={
-                  <ProtectedRoute requiredPermission="read:timesheets">
-                    <Timesheets />
+                  <ProtectedRoute requiredPermission="read:hours">
+                    <Hours />
                   </ProtectedRoute>
                 }
               />

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { timeEntryCategorySchema } from './timeEntrySchemas';
+import { hoursCategorySchema } from './hoursSchemas';
 import { cursorListFields } from './listQuerySchemas';
 
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
@@ -21,7 +21,7 @@ export const taskParamsSchema = z.object({
 export const taskQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID').optional(),
-    category: timeEntryCategorySchema.optional(),
+    category: hoursCategorySchema.optional(),
     start: calendarDate('Start date').optional(),
     end: calendarDate('End date').optional(),
     includeClosed: z.union([z.enum(['true', 'false']), z.boolean()]).optional().transform(value => value === true || value === 'true'),
@@ -42,7 +42,7 @@ export const taskListQuerySchema = z.object({
   query: z.object({
     staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
     programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
-    categories: commaSeparated(timeEntryCategorySchema),
+    categories: commaSeparated(hoursCategorySchema),
     statuses: commaSeparated(taskListStatusSchema),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
@@ -53,7 +53,7 @@ export const setTaskSchema = z.object({
   body: z.object({
     title: z.string().trim().min(1, 'Title is required').max(255, 'Title cannot exceed 255 characters'),
     details: z.string().trim().max(2000, 'Details cannot exceed 2000 characters').nullable().optional().transform(value => value || null),
-    category: timeEntryCategorySchema,
+    category: hoursCategorySchema,
     programId: nullableUuid('Invalid program ID'),
     startDate: calendarDate('Start date'),
     dueDate: calendarDate('Due date'),

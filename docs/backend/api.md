@@ -23,7 +23,7 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 | `PATCH` | `/:id` | Change account status |
 | `DELETE` | `/:id` | Revoke a pending invitation |
 
-### Timesheets — `/time-entries`
+### Hours — `/time-entries`
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -39,7 +39,7 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 
 Staff writes are self-scoped while reads include policy-visible coworker resources; administrators can manage entries for active staff and administrators.
 
-Time-entry validation, policies, services, and `backend/tests/timesheets/` are authoritative for entry, cycle, task-integration, and resource-scope behavior.
+Time-entry validation, policies, services, and `backend/tests/hours/` are authoritative for entry, cycle, task-integration, and resource-scope behavior.
 
 ### Assigned tasks — `/tasks`
 

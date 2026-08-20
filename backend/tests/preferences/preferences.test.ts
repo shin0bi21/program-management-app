@@ -80,7 +80,7 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
-  it('persists the Timesheets view with its filters and selected cycle', async () => {
+  it('persists the Hours view with its filters and selected cycle', async () => {
     const value = {
       view: 'list',
       staffIds: [],
@@ -92,14 +92,14 @@ describe('User preferences API', () => {
       columnWidths: { firstName: 180, lastName: 200, session: 220, type: 120 },
     };
     const saved = await request(app)
-      .put('/api/preferences/timesheet-filters')
+      .put('/api/preferences/hours-filters')
       .set('Authorization', `Bearer ${firstToken}`)
       .send(value);
     expect(saved.status).toBe(200);
     expect(saved.body).toEqual(value);
 
     const restored = await request(app)
-      .get('/api/preferences/timesheet-filters')
+      .get('/api/preferences/hours-filters')
       .set('Authorization', `Bearer ${firstToken}`);
     expect(restored.body).toEqual(value);
   });

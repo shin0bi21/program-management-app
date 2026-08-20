@@ -34,7 +34,7 @@ Every command that updates an existing table-owned record returns its authoritat
 
 ```ts
 interface CompleteWorkResult {
-  timeEntry: TimeEntryListRow;
+  hours: HoursListRow;
   updatedTask?: Task;
 }
 ```

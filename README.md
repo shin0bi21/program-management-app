@@ -1,6 +1,6 @@
 # Youth Services Application
 
-A full-stack platform for outreach, youth profiles, programming, attendance, staff tasks, timesheets, reporting, accounts, and public website content.
+A full-stack platform for outreach, youth profiles, programming, attendance, staff tasks, hours, reporting, accounts, and public website content.
 
 ## Documentation
 

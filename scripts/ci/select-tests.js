@@ -5,7 +5,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 // Backend domains map to their authoritative Jest directories. A domain can
-// intentionally include consumer coverage, as Tasks and Timesheets do below.
+// intentionally include consumer coverage, as Tasks and Hours do below.
 const BACKEND_TEST_PATHS = {
   accounts: ['tests/accounts'],
   auth: ['tests/auth'],
@@ -16,7 +16,7 @@ const BACKEND_TEST_PATHS = {
   programs: ['tests/programs'],
   schools: ['tests/schools'],
   tasks: ['tests/tasks'],
-  timesheets: ['tests/timesheets'],
+  hours: ['tests/hours'],
   youth: ['tests/youth'],
 };
 
@@ -24,12 +24,12 @@ const BACKEND_TEST_PATHS = {
 // without a known owner return null so the caller can fail closed to all tests.
 function backendSuitesFor(file) {
   if (/backend\/(?:tests\/tasks\/|src\/(?:controllers\/taskController|policies\/taskPolicy|routes\/taskRoutes|services\/staff\/tasks\/|validation\/taskSchemas))/.test(file)) {
-    return ['tasks', 'timesheets'];
+    return ['tasks', 'hours'];
   }
-  if (/backend\/(?:tests\/timesheets\/|src\/(?:controllers\/timeEntryController|policies\/timeEntryPolicy|routes\/timeEntryRoutes|services\/staff\/hours\/|validation\/timeEntrySchemas)|db\/scripts\/seed-timesheet-demo)/.test(file)) {
-    return ['timesheets', 'tasks'];
+  if (/backend\/(?:tests\/hours\/|src\/(?:controllers\/hoursController|policies\/hoursPolicy|routes\/hoursRoutes|services\/staff\/hours\/|validation\/hoursSchemas)|db\/scripts\/seed-hours-demo)/.test(file)) {
+    return ['hours', 'tasks'];
   }
-  if (file === 'backend/src/policies/staffResourcePolicy.ts') return ['tasks', 'timesheets'];
+  if (file === 'backend/src/policies/staffResourcePolicy.ts') return ['tasks', 'hours'];
   if (/backend\/(?:tests\/auth\/|src\/(?:controllers\/auth|routes\/auth|services\/auth|validation\/auth))/.test(file)) return ['auth'];
   if (/backend\/(?:tests\/accounts\/|src\/(?:controllers\/account|policies\/account|routes\/account|services\/account|validation\/account))/.test(file)) return ['accounts'];
   if (/backend\/(?:tests\/youth\/|src\/(?:controllers\/youth|routes\/youth|services\/youth|validation\/youth))/.test(file)) return ['youth'];
