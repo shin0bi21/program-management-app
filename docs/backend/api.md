@@ -85,4 +85,4 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `/expressions-of-interest` | Internal review, status updates, and lead conversion |
 | `/leads` | Lead intake, status, notes, and youth signup |
 
-For lifecycle, ownership, and implementation, see [Backend architecture and development](../../README.md#backend-architecture-and-development) and the focused guides beside this file. Local commands, testing, and deployment are linked from the root application README.
+For lifecycle, ownership, and implementation, see the [Backend guide](README.md) and the focused documents beside this file. Local commands, testing, and deployment are routed through the root application README.

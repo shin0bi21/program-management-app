@@ -2,24 +2,6 @@
 
 A page-owned `*Dashboard` composes selected-record details and aggregate overview cards inside `PageBody`'s dashboard region. It owns dashboard-specific loading, error, and empty presentation; the route page owns what resource or record selects it.
 
-## Component structure
-
-```text
-components/
-  ExampleDashboard/
-    ExampleDashboard.tsx
-    ExampleDashboard.test.tsx
-    hooks/
-      useExampleOverviewData.ts
-      useExampleOverviewData.test.ts
-    ExampleOverviewDashboardCard/
-      ExampleOverviewDashboardCard.tsx
-      ExampleOverviewDashboardCard.test.tsx
-    ExampleDetailsDashboardCard/
-      ExampleDetailsDashboardCard.tsx
-      ExampleDetailsDashboardCard.test.tsx
-```
-
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
 ## Data and hook pattern

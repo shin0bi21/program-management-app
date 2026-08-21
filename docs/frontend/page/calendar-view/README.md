@@ -64,7 +64,7 @@ The shared `ResourceCalendar` owns resource/period virtualization, grid semantic
 - Give every item a complete accessible label and never communicate type or status by color alone.
 - Keep one calendar scroll viewport and fixed-height virtualized resource rows.
 
-Detailed focus, pointer, drag, resize, cancellation, and portal behavior is owned by [shared interactions](../../shared/interactions.md).
+Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 
 ## Persist and reconcile
 
