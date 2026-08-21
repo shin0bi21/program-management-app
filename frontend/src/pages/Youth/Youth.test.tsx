@@ -5,7 +5,7 @@ import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 import type { YouthPreference } from './types';
 
-const mockUseYouth = vi.fn();
+const mockUseYouthTableData = vi.fn();
 const youthApi = vi.hoisted(() => ({
   getYouthProfileNotes: vi.fn(),
   setYouthProfileNote: vi.fn(),
@@ -18,9 +18,12 @@ const preferenceHook = vi.hoisted(() => ({
   setBaseline: vi.fn(),
   save: vi.fn(),
 }));
+const authState = vi.hoisted(() => ({
+  permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'],
+}));
 
-vi.mock('./hooks/useYouth', () => ({
-  useYouth: (filters: unknown) => mockUseYouth(filters),
+vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
+  default: (filters: unknown) => mockUseYouthTableData(filters),
 }));
 vi.mock('../../common/features/youth/youth.api', () => youthApi);
 vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
@@ -33,7 +36,7 @@ vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
 }));
 
 vi.mock('../../auth/authContext', () => ({
-  useAuth: () => ({ role: 'staff', permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'] }),
+  useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
 }));
 
 vi.mock('../../common/features/youth/components/YouthModal/YouthModal', () => ({
@@ -63,6 +66,8 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
+    authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
+    mockUseYouthTableData.mockClear();
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     youthApi.setYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
@@ -80,10 +85,14 @@ describe('Youth', () => {
         ? update(preferenceHook.preference)
         : update;
     });
-    mockUseYouth.mockReturnValue({
-      youth: [makeYouthProfile({ account: null })],
+    mockUseYouthTableData.mockReturnValue({
+      rows: [makeYouthProfile({ account: null })],
       loading: false,
+      refreshing: false,
       error: null,
+      hasNextPage: false,
+      loadingNextPage: false,
+      loadNextPage: vi.fn(),
     });
   });
 
@@ -119,9 +128,19 @@ describe('Youth', () => {
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
   });
 
+  it('omits the actions column when the user cannot write youth profiles', () => {
+    authState.permissions = ['read:youth_profiles'];
+
+    render(<Youth />);
+
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Jamie Test' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-column-id="actions"]')).not.toBeInTheDocument();
+  });
+
   it('persists a complete preference when first hiding a column', async () => {
     render(<Youth />);
-    await waitFor(() => expect(mockUseYouth).toHaveBeenCalled());
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'School' }));
@@ -139,7 +158,7 @@ describe('Youth', () => {
     expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Youth profiles' })).not.toBeInTheDocument();
-    expect(mockUseYouth).toHaveBeenLastCalledWith(null);
+    expect(mockUseYouthTableData).not.toHaveBeenCalled();
 
     preferenceHook.loading = false;
     rendered.rerender(<Youth />);
@@ -151,7 +170,7 @@ describe('Youth', () => {
   it('defaults staff to active youth in their assigned programs and persists changes', async () => {
     render(<Youth />);
 
-    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['active'],
       programIds: ['program-1'],
@@ -162,7 +181,7 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
-    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['active'],
       programIds: [],
@@ -176,7 +195,7 @@ describe('Youth', () => {
   it('can filter inactive youth and restore the saved filters on another visit', async () => {
     render(<Youth />);
 
-    await waitFor(() => expect(mockUseYouth).toHaveBeenCalledWith({
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenCalledWith({
       search: '',
       statuses: ['active'],
       programIds: ['program-1'],
@@ -188,7 +207,7 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Inactive' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
-    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['inactive'],
       programIds: ['program-1'],
@@ -202,9 +221,9 @@ describe('Youth', () => {
       statuses: ['inactive'],
       programIds: [],
     };
-    mockUseYouth.mockClear();
+    mockUseYouthTableData.mockClear();
     render(<Youth />);
-    await waitFor(() => expect(mockUseYouth).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: '',
       statuses: ['inactive'],
       programIds: [],
@@ -216,8 +235,8 @@ describe('Youth', () => {
       id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
       details: 'Youth profile note', createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
     }]);
-    mockUseYouth.mockReturnValue({
-      youth: [makeYouthProfile({
+    mockUseYouthTableData.mockReturnValue({
+      rows: [makeYouthProfile({
         lastAttendedOn: '2026-07-21',
         cohorts: [{
           id: 'cohort-1',
@@ -259,8 +278,8 @@ describe('Youth', () => {
         absentCount: 0, lastAttendedOn: '2026-07-21',
       }],
     });
-    mockUseYouth.mockReturnValue({
-      youth: [profile], loading: false, error: null,
+    mockUseYouthTableData.mockReturnValue({
+      rows: [profile], loading: false, error: null,
     });
     render(<Youth />);
 
@@ -278,8 +297,8 @@ describe('Youth', () => {
         absentCount: 0, lastAttendedOn: '2026-07-21',
       }],
     });
-    mockUseYouth.mockReturnValue({
-      youth: [profile], loading: false, error: null,
+    mockUseYouthTableData.mockReturnValue({
+      rows: [profile], loading: false, error: null,
     });
     render(<Youth />);
 

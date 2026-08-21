@@ -12,13 +12,13 @@ import type { Task, TaskResource } from '../../../common/features/tasks/types';
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import Tasks from './Tasks';
-import type { TaskPreference } from './types';
+import type { StoredTaskPreferences } from './types';
 
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
-  view: 'list' as 'list' | 'calendar',
+  view: 'table' as 'table' | 'calendar',
   props: null as TaskCalendarProps | null,
   savePreference: vi.fn(),
 }));
@@ -54,8 +54,8 @@ const auth: AuthContextValue = {
   login: vi.fn(), logout: vi.fn(),
 };
 
-const currentPreference: TaskPreference = {
-  view: 'list',
+const currentPreference: StoredTaskPreferences = {
+  view: 'table',
   staffIds: [],
   programIds: [],
   categories: [],
@@ -69,15 +69,15 @@ function getLastSavedPreference() {
     calendarTestState.savePreference.mock.calls.length - 1
   ];
   const update = lastCall?.[0] as (
-    current: TaskPreference | null,
-  ) => TaskPreference;
+    current: StoredTaskPreferences | null,
+  ) => StoredTaskPreferences;
   return update(currentPreference);
 }
 
 describe('Tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    calendarTestState.view = 'list';
+    calendarTestState.view = 'table';
     calendarTestState.props = null;
     calendarTestState.savePreference.mockReset();
     vi.mocked(getTasks).mockResolvedValue([task]);
@@ -121,7 +121,7 @@ describe('Tasks', () => {
       programs: [],
     }));
 
-    expect(await screen.findByRole('button', { name: 'View: List' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
   });
@@ -170,11 +170,11 @@ describe('Tasks', () => {
 
     expect(screen.queryByRole('columnheader', { name: 'Program' })).not.toBeInTheDocument();
     expect(getLastSavedPreference()).toEqual(expect.objectContaining({
-      view: 'list', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
+      view: 'table', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
     }));
   });
 
-  it('puts Staff first and sends the applied staff filter to the list request', async () => {
+  it('puts Staff first and sends the applied staff filter to the table request', async () => {
     const coworker = {
       id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
     };
@@ -200,7 +200,7 @@ describe('Tasks', () => {
     ));
     expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(calendarTestState.props?.resources).toEqual([coworker]));
   });
@@ -229,12 +229,12 @@ describe('Tasks', () => {
     expect(screen.getByRole('menuitem', { name: 'Set Cancelled' })).toBeInTheDocument();
   });
 
-  it('keeps search in list view and removes it from the calendar header', async () => {
+  it('keeps search in table view and removes it from the calendar header', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     fireEvent.change(await screen.findByRole('textbox', { name: 'Search tasks' }), { target: { value: 'missing' } });
-    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());

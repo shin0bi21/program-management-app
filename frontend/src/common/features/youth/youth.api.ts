@@ -11,14 +11,14 @@ import type {
   YouthSortKey,
 } from '../../types/youth';
 
-export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
-export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
 export function getYouth(
   id: undefined,
   filters: YouthFilters,
   opts: RequestOptions | undefined,
   pagination: CursorRequest<YouthSortKey>,
-): Promise<YouthProfile[] | CursorPage<YouthProfile>>;
+): Promise<CursorPage<YouthProfile>>;
+export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
+export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
 export function getYouth(
   id?: string,
   filters: YouthFilters = {},
@@ -39,9 +39,19 @@ export function getYouth(
   }
   const query = params.toString();
   const path = `/youth${query ? `?${query}` : ''}`;
+  if (pagination) {
+    return opts
+      ? apiClient.get<CursorPage<YouthProfile>>(path, opts)
+      : apiClient.get<CursorPage<YouthProfile>>(path);
+  }
+  if (id) {
+    return opts
+      ? apiClient.get<YouthProfile | null>(path, opts)
+      : apiClient.get<YouthProfile | null>(path);
+  }
   return opts
-    ? apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path, opts)
-    : apiClient.get<YouthProfile | YouthProfile[] | CursorPage<YouthProfile> | null>(path);
+    ? apiClient.get<YouthProfile[]>(path, opts)
+    : apiClient.get<YouthProfile[]>(path);
 }
 
 export function setYouth(data: SetYouthInput) {

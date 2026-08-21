@@ -1,20 +1,19 @@
+import { flexRender, type Row } from '@tanstack/react-table';
 import { memo, type KeyboardEvent, type MouseEvent } from 'react';
-import type { TableColumn, TableNavigationKey } from '../Table.types';
+import type { TableNavigationKey } from '../Table.types';
 
 interface TableRowProps<T> {
-  item: T;
-  columns: TableColumn<T>[];
+  row: Row<T>;
   selected: boolean;
   tabbable: boolean;
   rowIndex: number;
   onSelect?: (item: T) => void;
-  onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
+  onNavigate: (rowIndex: number, id: TableNavigationKey) => void;
   columnWidths: Record<string, number>;
 }
 
 function TableRowComponent<T>({
-  item,
-  columns,
+  row,
   selected,
   tabbable,
   rowIndex,
@@ -22,6 +21,7 @@ function TableRowComponent<T>({
   onNavigate,
   columnWidths,
 }: TableRowProps<T>) {
+  const item = row.original;
   const select = () => onSelect?.(item);
   const isInteractiveTarget = (target: HTMLElement) => Boolean(
     target.closest('button, a, input, select, textarea, [role="menuitem"]'),
@@ -58,9 +58,13 @@ function TableRowComponent<T>({
       onClick={onSelect ? handleClick : undefined}
       onKeyDown={handleKeyDown}
     >
-      {columns.map(column => (
-        <td key={column.key} className={column.className} style={{ width: columnWidths[column.key] }}>
-          {column.render(item)}
+      {row.getVisibleCells().map(cell => (
+        <td
+          key={cell.id}
+          data-column-id={cell.column.id}
+          style={{ width: columnWidths[cell.column.id] }}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </td>
       ))}
     </tr>

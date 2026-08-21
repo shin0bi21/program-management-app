@@ -48,7 +48,7 @@ Use `useMemo` and `useCallback` only for meaningful computation or an explicit d
 - Add manual reference caches only when they materially bound downstream work and focused identity tests prove the contract.
 - Give complex predicates and transitions names instead of compressing unrelated decisions.
 
-Table row cache behavior belongs only to [table rows](../page/table-view/rows.md). Calendar buffer behavior belongs to [CalendarView](../page/calendar-view/README.md).
+Table row cache behavior belongs only to [table rows](../page/table-view/rows.md). Calendar buffer behavior belongs to the [page calendar](../page/calendar-view/README.md).
 
 ## State tests
 

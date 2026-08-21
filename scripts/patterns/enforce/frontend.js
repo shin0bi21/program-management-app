@@ -367,17 +367,50 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 export function checkPaginatedTables(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/')) return;
 
+  const routePageMatch = file.match(/\/([^/]+)\/\1\.tsx$/);
+  if (routePageMatch) {
+    addMatches(
+      violations,
+      file,
+      source,
+      /from\s+['"][^'"]*\/components\/[^/'"]+Table\/hooks\/use[^/'"]*TableData['"]/g,
+      'route pages must not import a table owner\'s private data hook; the *Table component owns its remote query.',
+    );
+  }
+
   const usesInfiniteList = source.includes('useInfiniteListQuery');
+  const tableOwnerMatch = file.match(/\/components\/([^/]+)\//);
+  const tableOwnerName = tableOwnerMatch?.[1];
+  const historicalTableOwner = tableOwnerName != null
+    && /(?:ListView|TableView)$/.test(tableOwnerName);
+  const canonicalTableOwner = tableOwnerName != null && /Table$/.test(tableOwnerName);
+
+  if (historicalTableOwner) {
+    violations.push(
+      `${file}:1 page-owned table components must use components/*Table/*Table.tsx; *ListView and *TableView owners are not supported.`,
+    );
+  }
+
   if (usesInfiniteList && !file.includes('/hooks/')) {
     violations.push(
       `${file}:1 page components must own remote infinite-list queries through a page hook.`,
     );
   }
 
-  const tableViewHook = /\/components\/[^/]*(?:List|Table)View\/hooks\//.test(file);
-  if (usesInfiniteList && /(?:List|Table)View\//.test(file) && !tableViewHook) {
+  const tableOwnerHook = canonicalTableOwner
+    && file.includes(`/components/${tableOwnerName}/hooks/`);
+  if (usesInfiniteList && canonicalTableOwner && !tableOwnerHook) {
     violations.push(
-      `${file}:1 a remote-table view hook must be colocated under that view's hooks directory.`,
+      `${file}:1 a remote-table hook must be colocated under its table owner's hooks directory.`,
+    );
+  }
+
+  const rendersTable = /<Table(?:\s|\/|>)/.test(source);
+  const canonicalTableComponent = canonicalTableOwner
+    && file.endsWith(`/components/${tableOwnerName}/${tableOwnerName}.tsx`);
+  if (rendersTable && !canonicalTableComponent) {
+    violations.push(
+      `${file}:1 a page-owned table renderer must use components/*Table/*Table.tsx with matching owner and file names.`,
     );
   }
 
@@ -386,6 +419,8 @@ export function checkPaginatedTables(violations, file, source) {
       `${file}:1 remote list hooks must request the standard 25-row cursor page size.`,
     );
   }
+
+  if (/\.(?:test|spec|story)\.tsx?$/.test(file)) return;
 
   const paginationProps = ['hasNextPage', 'loadingNextPage', 'onLoadNextPage'];
   const wiredProps = paginationProps.filter(
@@ -412,10 +447,10 @@ export function checkResourceCalendars(violations, file, source) {
     );
   }
 
-  const calendarViewOwner = /\/components\/[^/]*CalendarView\/[^/]*CalendarView\.tsx$/.test(file);
-  if (!calendarViewOwner) {
+  const calendarOwner = /\/components\/[^/]*Calendar\/[^/]*Calendar\.tsx$/.test(file);
+  if (!calendarOwner) {
     violations.push(
-      `${file}:1 ResourceCalendar must be owned by a cohesive page-private *CalendarView component.`,
+      `${file}:1 ResourceCalendar must be owned by a cohesive page-private *Calendar component.`,
     );
   }
 
@@ -441,10 +476,10 @@ export function checkCalendarDataHooks(violations, file) {
     && !/\.(?:test|spec)\.tsx?$/.test(file);
   if (!calendarDataHook) return;
 
-  const calendarViewHook = /\/components\/[^/]*CalendarView\/hooks\/use[^/]*CalendarData\.tsx?$/.test(file);
-  if (!calendarViewHook) {
+  const calendarHook = /\/components\/[^/]*Calendar\/hooks\/use[^/]*CalendarData\.tsx?$/.test(file);
+  if (!calendarHook) {
     violations.push(
-      `${file}:1 calendar-data hooks must be owned by their page-private *CalendarView hooks directory.`,
+      `${file}:1 calendar-data hooks must be owned by their page-private *Calendar hooks directory.`,
     );
   }
 }

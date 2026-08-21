@@ -66,7 +66,7 @@ test('allows cohesive page-owned modal entry state', () => {
     export default function Tasks() {
       const [taskModalState] = useState(null);
       const [hoursModalState] = useState(null);
-      return <TaskTableView taskModalState={taskModalState} hoursModalState={hoursModalState} />;
+      return <TaskTable taskModalState={taskModalState} hoursModalState={hoursModalState} />;
     }
   `;
 
@@ -76,12 +76,12 @@ test('allows cohesive page-owned modal entry state', () => {
   }), []);
 });
 
-test('allows a CalendarView to own one range loader and buffer-adapter effect', () => {
-  const file = 'frontend/src/pages/Tasks/components/TaskCalendarView/TaskCalendarView.tsx';
+test('allows a Calendar owner to own one range loader and buffer-adapter effect', () => {
+  const file = 'frontend/src/pages/Tasks/components/TaskCalendar/TaskCalendar.tsx';
   const source = `
     import { useEffect } from 'react';
     import { getTasks } from '../../../../common/features/tasks/tasks.api';
-    export default function TaskCalendarView({ calendarCacheRef, calendar }) {
+    export default function TaskCalendar({ calendarCacheRef, calendar }) {
       const loadRange = async () => getTasks();
       useEffect(() => {
         calendarCacheRef.current = { upsert: calendar.upsertItem };
@@ -93,18 +93,18 @@ test('allows a CalendarView to own one range loader and buffer-adapter effect', 
   assert.deepEqual(findingsFor(file, source, {
     repositoryFiles: [
       file,
-      'frontend/src/pages/Tasks/components/TaskCalendarView/TaskItem/TaskItem.tsx',
-      'frontend/src/pages/Tasks/components/TaskCalendarView/hooks/useTaskCalendarData.ts',
+      'frontend/src/pages/Tasks/components/TaskCalendar/TaskItem/TaskItem.tsx',
+      'frontend/src/pages/Tasks/components/TaskCalendar/hooks/useTaskCalendarData.ts',
     ],
   }), []);
 });
 
-test('still reports mixed workflow state inside a CalendarView', () => {
-  const file = 'frontend/src/pages/Tasks/components/TaskCalendarView/TaskCalendarView.tsx';
+test('still reports mixed workflow state inside a Calendar owner', () => {
+  const file = 'frontend/src/pages/Tasks/components/TaskCalendar/TaskCalendar.tsx';
   const source = `
     import { useEffect, useState } from 'react';
     import { getTasks } from '../../../../common/features/tasks/tasks.api';
-    export default function TaskCalendarView() {
+    export default function TaskCalendar() {
       const [editorState] = useState(null);
       useEffect(() => {}, []);
       const loadRange = async () => getTasks();
@@ -185,7 +185,7 @@ test('does not warn for a lean page orchestrator composed from owned hooks and v
       const preferences = useThingPreferences();
       const filters = useThingFilters(preferences);
       const things = useThings(filters.applied);
-      return <ThingTableView filters={filters} preferences={preferences} things={things} />;
+      return <ThingTable filters={filters} preferences={preferences} things={things} />;
     }
   `;
 
@@ -193,7 +193,7 @@ test('does not warn for a lean page orchestrator composed from owned hooks and v
     repositoryFiles: [
       file,
       'frontend/src/pages/Things/Things.css',
-      'frontend/src/pages/Things/components/ThingTableView/ThingTableView.tsx',
+      'frontend/src/pages/Things/components/ThingTable/ThingTable.tsx',
       'frontend/src/pages/Things/hooks/useThingFilters.ts',
       'frontend/src/pages/Things/hooks/useThingPreferences.ts',
       'frontend/src/pages/Things/hooks/useThings.ts',

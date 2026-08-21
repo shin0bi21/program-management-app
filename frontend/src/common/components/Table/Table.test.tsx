@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import Table, { type TableColumn } from './Table';
+import Table from './Table';
+import type { TableColumnDef } from './Table.types';
 
 interface Row {
   id: string;
   name: string;
 }
 
-const columns: TableColumn<Row>[] = [
-  { key: 'name', header: 'Name', render: row => row.name },
-  { key: 'status', header: 'Status', render: () => 'Active' },
+const columns: TableColumnDef<Row>[] = [
+  { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
+  { id: 'status', header: 'Status', cell: () => 'Active' },
 ];
 
 describe('Table', () => {
@@ -18,8 +19,8 @@ describe('Table', () => {
 
   it('emits controlled backend sorting from sortable headers', () => {
     const onSortingChange = vi.fn();
-    const sortableColumns: TableColumn<Row>[] = [
-      { key: 'name', header: 'Name', render: row => row.name },
+    const sortableColumns: TableColumnDef<Row>[] = [
+      { accessorKey: 'name', header: 'Name' },
     ];
     render(<Table ariaLabel="Accounts" columns={sortableColumns} data={[]} keyExtractor={row => row.id} sorting={{ key: 'name', direction: 'asc' }} sortableColumns={['name']} onSortingChange={onSortingChange} />);
 
@@ -33,7 +34,7 @@ describe('Table', () => {
       ariaLabel="Accounts"
       columns={[
         ...columns,
-        { key: 'actions', header: '', render: () => 'Actions', width: 40, resizable: false },
+        { id: 'actions', header: '', cell: () => 'Actions', size: 40, enableResizing: false, enableHiding: false },
       ]}
       data={[{ id: 'one', name: 'Avery' }]}
       keyExtractor={row => row.id}
@@ -42,14 +43,33 @@ describe('Table', () => {
 
     expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
-    expect(screen.getByText('Actions')).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')[1]).toHaveAttribute('data-column-id', 'actions');
+    expect(screen.getByText('Actions').closest('td')).toHaveAttribute('data-column-id', 'actions');
+  });
+
+  it('renders native TanStack cells through the shared table row model', () => {
+    const tanstackColumns: TableColumnDef<Row>[] = [
+      { id: 'name', header: 'Name', cell: ({ row }) => row.original.name.toUpperCase() },
+      { id: 'status', header: 'Status', cell: () => 'Active' },
+    ];
+
+    render(<Table
+      ariaLabel="Accounts"
+      columns={tanstackColumns}
+      data={[{ id: 'one', name: 'Avery' }]}
+      keyExtractor={row => row.id}
+      hiddenColumnKeys={['status']}
+    />);
+
+    expect(screen.getByRole('cell', { name: 'AVERY' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
   });
 
   it('resizes data columns by keyboard while leaving action columns fixed', () => {
     const onColumnWidthsChange = vi.fn();
-    const resizableColumns: TableColumn<Row>[] = [
-      { key: 'name', header: 'Name', render: row => row.name },
-      { key: 'actions', header: '', render: () => null, width: 40, resizable: false },
+    const resizableColumns: TableColumnDef<Row>[] = [
+      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
+      { id: 'actions', header: '', cell: () => null, size: 40, enableResizing: false, enableHiding: false },
     ];
     render(<Table
       ariaLabel="Accounts"
@@ -73,10 +93,10 @@ describe('Table', () => {
 
   it('locks sibling pixel widths while the active column grows from its right edge', () => {
     const onWidthsChange = vi.fn();
-    const resizeColumns: TableColumn<Row>[] = [
-      { key: 'name', header: 'Name', render: row => row.name },
-      { key: 'status', header: 'Status', render: () => 'Active' },
-      { key: 'actions', header: '', render: () => null, width: 40, resizable: false },
+    const resizeColumns: TableColumnDef<Row>[] = [
+      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
+      { id: 'status', header: 'Status', cell: () => 'Active' },
+      { id: 'actions', header: '', cell: () => null, size: 40, enableResizing: false, enableHiding: false },
     ];
 
     function ControlledTable() {
@@ -173,8 +193,8 @@ describe('Table', () => {
 
   it('clamps transient drag widths before exposing them to preference persistence', () => {
     const onColumnWidthsChange = vi.fn();
-    const dragColumns: TableColumn<Row>[] = [
-      { key: 'name', header: 'Name', render: row => row.name },
+    const dragColumns: TableColumnDef<Row>[] = [
+      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
     ];
     render(<Table
       ariaLabel="Accounts"
@@ -347,9 +367,9 @@ describe('Table', () => {
   it('does not select a row when an interactive control is clicked', () => {
     const onSelect = vi.fn();
     const onAction = vi.fn();
-    const columnsWithAction: TableColumn<Row>[] = [
+    const columnsWithAction: TableColumnDef<Row>[] = [
       ...columns,
-      { key: 'action', header: '', render: () => <button onClick={onAction}>More actions</button> },
+      { id: 'action', header: '', cell: () => <button onClick={onAction}>More actions</button> },
     ];
     render(<Table ariaLabel="Accounts" columns={columnsWithAction} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} onRowSelect={onSelect} />);
 

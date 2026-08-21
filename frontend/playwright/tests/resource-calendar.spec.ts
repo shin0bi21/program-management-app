@@ -4,8 +4,8 @@ const storyId = 'ResourceCalendar/Interactive';
 const rangeLaneSizingStoryId = 'ResourceCalendar/RangeLaneSizing';
 const itemDensityStoryId = 'ResourceCalendar/ItemDensity';
 const persistedPositionStoryId = 'ResourceCalendar/PersistedPosition';
-const timeItemStoryId = 'pages/Staff/Hours/components/HoursCalendarView/TimeItem/TimeItem/InteractiveTimeItems';
-const taskItemStoryId = 'pages/Staff/Tasks/components/TaskCalendarView/TaskItem/TaskItem/InteractiveTaskItem';
+const hoursItemStoryId = 'pages/Staff/Hours/components/HoursCalendar/HoursItem/HoursItem/InteractiveHoursItems';
+const taskItemStoryId = 'pages/Staff/Tasks/components/TaskCalendar/TaskItem/TaskItem/InteractiveTaskItem';
 const periodWidth = 145;
 const resourceWidth = 125;
 
@@ -611,7 +611,7 @@ test('opens the real task-item floating menu instead of editing directly', async
   await expect(component.getByTestId('task-item-action')).toHaveValue('edit');
 });
 
-test('gives a real task item the same hover-details lifecycle as a time item', async ({ page, mount }) => {
+test('gives a real task item the same hover-details lifecycle as an hours item', async ({ page, mount }) => {
   const component = await mount(taskItemStoryId);
   const item = component.getByRole('button', { name: /Prepare workshop.*Open actions/ });
   const rangeItem = item.locator('xpath=ancestor::div[contains(@class, "resource-calendar__range-item")]');
@@ -662,8 +662,8 @@ test('gives a real task item the same hover-details lifecycle as a time item', a
 });
 
 test('keeps ranged tasks compact enough for three lanes', async ({ mount }) => {
-  const timeComponent = await mount(timeItemStoryId);
-  const timeBox = await timeComponent.getByRole('button', { name: /Program Delivery, 2 hours/ }).boundingBox();
+  const hoursComponent = await mount(hoursItemStoryId);
+  const timeBox = await hoursComponent.getByRole('button', { name: /Program Delivery, 2 hours/ }).boundingBox();
   const taskComponent = await mount(taskItemStoryId);
   const taskBox = await taskComponent.getByRole('button', { name: /Prepare workshop.*Open actions/ }).boundingBox();
   if (!timeBox || !taskBox) throw new Error('Calendar item geometry is unavailable');
@@ -708,11 +708,11 @@ test('shows a geometry-only task resize ghost without expanding its text', async
   await expect(component.getByTestId('task-range-change')).toHaveValue('resize:2026-08-08:2026-08-11');
 });
 
-test('opens the real time-item action menu without starting a drag', async ({ page, mount }) => {
-  const component = await mount(timeItemStoryId);
+test('opens the real hours-item action menu without starting a drag', async ({ page, mount }) => {
+  const component = await mount(hoursItemStoryId);
   const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
   const itemBox = await item.boundingBox();
-  if (!itemBox) throw new Error('Time action anchor geometry is unavailable');
+  if (!itemBox) throw new Error('Hours action anchor geometry is unavailable');
   const borderColor = await item.evaluate(element => getComputedStyle(element).borderTopColor);
 
   await item.click();
@@ -724,24 +724,24 @@ test('opens the real time-item action menu without starting a drag', async ({ pa
     .toBeCloseTo(itemBox.x, 0);
   await page.getByRole('menuitem', { name: 'Edit' }).click();
 
-  await expect(component.getByTestId('time-item-action')).toHaveValue('edit:entry-1');
+  await expect(component.getByTestId('hours-item-action')).toHaveValue('edit:entry-1');
   await expect(component.locator('.resource-calendar__drag-overlay')).toHaveCount(0);
 });
 
-test('renders time items on an opaque surface with the type aligned right', async ({ mount }) => {
-  const component = await mount(timeItemStoryId);
+test('renders hours items on an opaque surface with the type aligned right', async ({ mount }) => {
+  const component = await mount(hoursItemStoryId);
   const item = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
-  const type = item.locator('.time-item__type');
+  const type = item.locator('.hours-item__type');
 
   await expect(item).toHaveCSS('background-color', 'rgb(238, 242, 255)');
   const itemBox = await item.boundingBox();
   const typeBox = await type.boundingBox();
-  if (!itemBox || !typeBox) throw new Error('Time item layout geometry is unavailable');
+  if (!itemBox || !typeBox) throw new Error('Hours item layout geometry is unavailable');
   expect(itemBox.x + itemBox.width - (typeBox.x + typeBox.width)).toBeCloseTo(7, 0);
 });
 
-test('selects the owning row when a real time item is activated without redundant selection', async ({ page, mount }) => {
-  const component = await mount(timeItemStoryId);
+test('selects the owning row when a real hours item is activated without redundant selection', async ({ page, mount }) => {
+  const component = await mount(hoursItemStoryId);
   const item = component.getByRole('button', { name: /Administrative, 1.5 hours/ });
 
   await item.click();
@@ -756,8 +756,8 @@ test('selects the owning row when a real time item is activated without redundan
   await expect(component.getByTestId('resource-selection-count')).toHaveValue('1');
 });
 
-test('suppresses real time-item details from pointer down through drag end', async ({ page, mount }) => {
-  const component = await mount(timeItemStoryId);
+test('suppresses real hours-item details from pointer down through drag end', async ({ page, mount }) => {
+  const component = await mount(hoursItemStoryId);
   const source = component.getByRole('button', { name: /Program Delivery, 2 hours/ });
   const target = component.getByRole('button', { name: /Meeting, 1 hours/ });
 
@@ -767,7 +767,7 @@ test('suppresses real time-item details from pointer down through drag end', asy
   const sourceBox = await source.boundingBox();
   const dayBox = await source.locator('xpath=ancestor::div[contains(@class, "resource-calendar__item-slot")]').boundingBox();
   const targetBox = await target.boundingBox();
-  if (!sourceBox || !dayBox || !targetBox) throw new Error('Time item geometry is unavailable');
+  if (!sourceBox || !dayBox || !targetBox) throw new Error('Hours item geometry is unavailable');
   await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(sourceBox.x, 0);
   await expect.poll(async () => (await tooltip.boundingBox())?.y).toBeCloseTo(sourceBox.y + sourceBox.height + 8, 0);
 

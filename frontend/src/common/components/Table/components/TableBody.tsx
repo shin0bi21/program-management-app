@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import type { Row } from '@tanstack/react-table';
 import TableRow from './TableRow';
-import type { TableColumn, TableNavigationKey } from '../Table.types';
+import type { TableNavigationKey } from '../Table.types';
 
 interface TableBodyProps<T> {
-  columns: TableColumn<T>[];
+  rows: Row<T>[];
+  visibleColumnCount: number;
   data: T[];
   loading: boolean;
   refreshing: boolean;
@@ -18,7 +20,8 @@ interface TableBodyProps<T> {
 }
 
 export default function TableBody<T>({
-  columns,
+  rows,
+  visibleColumnCount,
   data,
   loading,
   refreshing,
@@ -44,29 +47,29 @@ export default function TableBody<T>({
   if (loading) {
     content = (
       <tr className="table-loading-row">
-        <td colSpan={columns.length} className="table-state-cell">Loading...</td>
+        <td colSpan={visibleColumnCount} className="table-state-cell">Loading...</td>
       </tr>
     );
   } else if (error) {
     content = (
       <tr className="table-error-row">
-        <td colSpan={columns.length} className="table-state-cell table-error-cell">{error}</td>
+        <td colSpan={visibleColumnCount} className="table-state-cell table-error-cell">{error}</td>
       </tr>
     );
   } else if (data.length === 0) {
     content = (
       <tr className="table-empty-row">
-        <td colSpan={columns.length} className="table-empty-cell">{emptyMessage}</td>
+        <td colSpan={visibleColumnCount} className="table-empty-cell">{emptyMessage}</td>
       </tr>
     );
   } else {
-    content = data.map((item, index) => {
+    content = rows.map((row, index) => {
+      const item = row.original;
       const key = keyExtractor(item);
       return (
         <TableRow
           key={key}
-          item={item}
-          columns={columns}
+          row={row}
           selected={selectedKey === key}
           tabbable={index === tabbableIndex}
           rowIndex={index}

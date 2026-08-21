@@ -20,7 +20,7 @@ const EMPTY_CALENDAR_CACHE: TaskCalendarCache = {
 
 interface TaskActionHandlers {
   taskQueryKey: readonly unknown[];
-  taskListQueryKey: readonly unknown[];
+  taskTableQueryKey: readonly unknown[];
   hoursQueryKey: readonly unknown[];
   onTaskSynced?: (task: Task) => void;
   onTaskRemoved?: (taskId: string) => void;
@@ -28,7 +28,7 @@ interface TaskActionHandlers {
 
 export default function useTaskActions({
   taskQueryKey,
-  taskListQueryKey,
+  taskTableQueryKey,
   hoursQueryKey,
   onTaskSynced,
   onTaskRemoved,
@@ -82,7 +82,7 @@ export default function useTaskActions({
 
       try {
         await deleteTask(task.id);
-        removeInfiniteListRow(queryClient, taskListQueryKey, task.id);
+        removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
         calendarCacheRef.current.remove(task.id);
         onTaskRemoved?.(task.id);
         refreshTasks();
@@ -90,7 +90,7 @@ export default function useTaskActions({
         finishTaskAction(task.id);
       }
     },
-  }), [finishTaskAction, onTaskRemoved, queryClient, refreshTasks, startTaskAction, taskListQueryKey]);
+  }), [finishTaskAction, onTaskRemoved, queryClient, refreshTasks, startTaskAction, taskTableQueryKey]);
 
   const setTaskRange = useCallback(async (
     task: Task,

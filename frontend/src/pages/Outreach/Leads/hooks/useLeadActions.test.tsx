@@ -16,16 +16,16 @@ const lead = {
 
 beforeEach(() => vi.clearAllMocks());
 
-it('owns confirmed deletion and list reconciliation', async () => {
+it('owns confirmed deletion and table reconciliation', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined);
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  const { result } = renderHook(() => useLeadActions(['leads', 'list']), { wrapper });
+  const { result } = renderHook(() => useLeadActions(['leads', 'table']), { wrapper });
 
   act(() => result.current.requestDelete(lead));
   expect(result.current.confirmAction?.title).toBe('Delete Lead');
   await act(async () => result.current.confirmAction?.onConfirm());
 
   expect(deleteLead).toHaveBeenCalledWith('lead-1');
-  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['leads', 'list'] });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['leads', 'table'] });
 });

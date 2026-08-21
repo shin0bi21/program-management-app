@@ -4,8 +4,9 @@ import usePreferenceOptionRecovery from '../../../../common/features/preferences
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { TaskOptions } from '../../../../common/features/tasks/types';
+import type { ListSort } from '../../../../common/types/pagination';
 
-import type { TaskPreference, TaskPreferences, TaskSortKey } from '../types';
+import type { StoredTaskPreferences, TaskPreferences, TaskSortKey, TasksView } from '../types';
 
 const DEFAULT_TASK_PREFERENCES: TaskPreferences = {
   view: 'calendar',
@@ -19,8 +20,14 @@ const DEFAULT_TASK_PREFERENCES: TaskPreferences = {
 };
 const DEFAULT_SORTING = DEFAULT_TASK_PREFERENCES.sorting;
 
+function resolveTasksView(value: unknown): TasksView {
+  return value === 'calendar' || value === 'table'
+    ? value
+    : DEFAULT_TASK_PREFERENCES.view;
+}
+
 function resolveTaskPreference(
-  preference: TaskPreference | null,
+  preference: StoredTaskPreferences | null,
   options: TaskOptions | undefined,
   preserveSavedOptions: boolean,
   tableKeys: readonly TaskSortKey[],
@@ -29,7 +36,7 @@ function resolveTaskPreference(
   const programIds = new Set(options?.programs.map(program => program.id) ?? []);
 
   return {
-    view: preference?.view ?? DEFAULT_TASK_PREFERENCES.view,
+    view: resolveTasksView(preference?.view),
     staffIds: preserveSavedOptions
       ? preference?.staffIds ?? []
       : preference?.staffIds?.filter(id => resourceIds.has(id)) ?? [],
@@ -64,7 +71,7 @@ export default function useTaskPreferences({
     error,
     setBaseline,
     save,
-  } = useUserPreference<TaskPreference>('task-filters', tableKeys);
+  } = useUserPreference<StoredTaskPreferences>('task-filters', tableKeys);
 
   // Restore one complete canonical value before preferences become interactive.
   useEffect(() => {
@@ -83,6 +90,16 @@ export default function useTaskPreferences({
       ...patch,
     }));
   }, [options, optionsError, save, tableKeys]);
+
+  const updateSorting = useCallback((sorting: ListSort<TaskSortKey>) => {
+    updatePreferences({ sorting });
+  }, [updatePreferences]);
+  const updateColumnWidths = useCallback((columnWidths: Record<string, number>) => {
+    updatePreferences({ columnWidths });
+  }, [updatePreferences]);
+  const updateHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    updatePreferences({ hiddenColumns });
+  }, [updatePreferences]);
 
   const availableStaffIds = useMemo(
     () => options?.resources.map(resource => resource.id) ?? [],
@@ -122,5 +139,8 @@ export default function useTaskPreferences({
     ready,
     error,
     updatePreferences,
+    updateSorting,
+    updateColumnWidths,
+    updateHiddenColumns,
   };
 }

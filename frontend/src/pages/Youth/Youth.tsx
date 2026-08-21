@@ -8,8 +8,8 @@ import FilterCard from '../../common/components/FilterCard/FilterCard';
 import PageBody from '../../common/components/PageBody/PageBody';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../common/components/Table/Table';
-import useTableSelection from '../../common/components/Table/hooks/useTableSelection';
+import type { CellContext } from '@tanstack/react-table';
+import type { TableColumnDef } from '../../common/components/Table/Table.types';
 import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/programming/queryKeys';
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
@@ -21,8 +21,9 @@ import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 import YouthDashboard from './components/YouthDashboard/YouthDashboard';
+import YouthTable from './components/YouthTable/YouthTable';
 import { useYouthControls } from './hooks/useYouthControls';
-import { useYouth, type YouthProfile } from './hooks/useYouth';
+import type { YouthProfile } from './types';
 import './Youth.css';
 
 export default function Youth() {
@@ -54,12 +55,9 @@ export default function Youth() {
   } = controls;
 
   // Remote records and selection.
-  const { youth, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useYouth(queryFilters, sorting);
-  const {
-    selectedItem: selectedProfile,
-    selectedKey: selectedProfileId,
-    selectItem: selectProfile,
-  } = useTableSelection(youth);
+  const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
+  const selectedProfileId = selectedProfile?.id ?? null;
+  const selectProfile = setSelectedProfile;
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
@@ -80,59 +78,60 @@ export default function Youth() {
     void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 
-  const youthColumns = useMemo<TableColumn<YouthProfile>[]>(() => [
+  const youthColumns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
     {
-      key: 'firstName',
+      id: 'firstName',
       header: 'First Name',
-      render: (profile) => profile.firstName,
+      accessorFn: profile => profile.firstName,
     },
     {
-      key: 'lastName',
+      id: 'lastName',
       header: 'Last Name',
-      render: (profile) => profile.lastName,
+      accessorFn: profile => profile.lastName,
     },
     {
-      key: 'age',
+      id: 'age',
       header: 'Age',
-      render: (profile) => calculateAge(profile.dateOfBirth),
-      width: 100,
+      accessorFn: profile => calculateAge(profile.dateOfBirth),
+      size: 100,
     },
     {
-      key: 'school',
+      id: 'school',
       header: 'School',
-      render: (profile) => profile.schoolName ?? '—',
+      accessorFn: profile => profile.schoolName ?? '—',
     },
     {
-      key: 'grade',
+      id: 'grade',
       header: 'Grade',
-      render: (profile) => profile.gradeLevel ?? '—',
-      width: 100,
+      accessorFn: profile => profile.gradeLevel ?? '—',
+      size: 100,
     },
     {
-      key: 'program',
+      id: 'program',
       header: 'Program',
-      render: (profile) => {
+      accessorFn: profile => {
         const names = [...new Set(profile.cohorts.filter(cohort => cohort.withdrawnOn === null).map(cohort => cohort.programName))];
         return names.length ? names.join(', ') : '—';
       },
     },
     {
-      key: 'status',
+      id: 'status',
       header: 'Status',
-      width: 110,
-      render: profile => (
+      size: 110,
+      accessorFn: profile => profile.status,
+      cell: ({ row: { original: profile } }: CellContext<YouthProfile, unknown>) => (
         <span className={`status-badge status-${profile.status}`}>
           {profile.status === 'active' ? 'Active' : 'Inactive'}
         </span>
       ),
     },
-    {
-      key: 'actions',
-      width: 40,
-      resizable: false,
+    ...(canWrite ? [{
+      id: 'actions' as const,
+      size: 40,
+      enableResizing: false,
+      enableHiding: false,
       header: '',
-      className: 'col-actions',
-      render: (profile) => canWrite ? (
+      cell: ({ row: { original: profile } }: CellContext<YouthProfile, unknown>) => (
         <ActionsMenu
           ariaLabel={`More actions for ${profile.firstName} ${profile.lastName}`}
           items={[
@@ -140,8 +139,8 @@ export default function Youth() {
             { id: 'add-note', label: 'Add Note', onClick: () => { selectProfile(profile); openProfileNoteEditor('new', profile.id); } },
           ]}
         />
-      ) : null,
-    },
+      ),
+    }] : []),
   ], [canWrite, openProfileNoteEditor, selectProfile]);
 
   return (
@@ -173,28 +172,18 @@ export default function Youth() {
 
         {!controlsReady ? <p role="status">Loading saved youth preferences…</p> : <PageBody
           ariaLabel="Youth profiles"
-          table={<Table
-            ariaLabel="Youth profiles"
+          table={<YouthTable
             columns={youthColumns}
+            filters={queryFilters}
             hiddenColumnKeys={hiddenColumns}
-            data={youth}
-            loading={loading}
-            refreshing={refreshing}
-            error={error}
-            emptyMessage={hasActiveQueryFilters
-              ? 'No youth profiles match these filters'
-              : 'No youth profiles found'}
-            keyExtractor={profile => profile.id}
-            selectedKey={selectedProfileId}
+            selectedProfileId={selectedProfileId}
+            hasActiveQueryFilters={hasActiveQueryFilters}
+            onSelectedProfileResolved={setSelectedProfile}
             onRowSelect={selectProfile}
             sorting={sorting}
-            sortableColumns={YOUTH_TABLE_KEYS}
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}
-            hasNextPage={hasNextPage}
-            loadingNextPage={loadingNextPage}
-            onLoadNextPage={loadNextPage}
           />}
           dashboard={<YouthDashboard
             profile={selectedProfile}

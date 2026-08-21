@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ColumnSizingState } from '@tanstack/react-table';
-import Table, { type TableColumn } from './Table';
+import Table from './Table';
+import type { TableColumnDef } from './Table.types';
 
 interface StoryRow {
   id: string;
@@ -16,10 +17,10 @@ function makeRows(start: number, count: number): StoryRow[] {
   });
 }
 
-const columns: TableColumn<StoryRow>[] = [
-  { key: 'name', header: 'Name', width: 300, render: row => row.name, resizable: true },
-  { key: 'status', header: 'Status', width: 260, render: row => row.status, resizable: true },
-  { key: 'notes', header: 'Notes', width: 520, render: row => row.notes, resizable: true },
+const columns: TableColumnDef<StoryRow>[] = [
+  { id: 'name', header: 'Name', size: 300, cell: ({ row: { original: row } }) => row.name, enableResizing: true },
+  { id: 'status', header: 'Status', size: 260, cell: ({ row: { original: row } }) => row.status, enableResizing: true },
+  { id: 'notes', header: 'Notes', size: 520, cell: ({ row: { original: row } }) => row.notes, enableResizing: true },
 ];
 
 export function InfiniteScroll() {

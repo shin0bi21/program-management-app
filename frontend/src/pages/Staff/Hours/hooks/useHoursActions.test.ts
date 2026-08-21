@@ -1,4 +1,4 @@
-// Scope: verifies save/delete reconciliation across calendar, list, overview, and task caches.
+// Scope: verifies save/delete reconciliation across calendar, table, overview, and task caches.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,7 +35,7 @@ function renderActions() {
   const onEntryRemoved = vi.fn();
   const rendered = renderHook(() => useHoursActions({
     hoursQueryKey: ['hours'],
-    hoursListQueryKey: ['hours', 'list'],
+    hoursTableQueryKey: ['hours', 'table'],
     taskQueryKey: ['tasks'],
     onEntryRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
