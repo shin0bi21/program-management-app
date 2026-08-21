@@ -8,7 +8,7 @@ import {
   type OutreachFormValues,
 } from '../../../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
 

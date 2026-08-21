@@ -9,19 +9,19 @@ import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
+import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { ACCOUNT_TABLE_KEYS, type Account, type AccountStatus } from '../../../common/types/account';
 import { formatShortDate } from '../../../common/utils/date';
-import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../query/infiniteListCache';
 import { revokeAccountInvite, toggleAccountStatus } from './accounts.api';
 import AccountModal from './components/AccountModal/AccountModal';
+import UserTable from './components/UserTable/UserTable';
 import { useAccountControls } from './hooks/useAccountControls';
-import { useAccounts } from './hooks/useAccounts';
 import './Users.css';
 
-const ACCOUNTS_LIST_QUERY_KEY = ['accounts', 'list'] as const;
+const ACCOUNTS_TABLE_QUERY_KEY = ['accounts', 'table'] as const;
 
 export default function Users() {
   // Services and permissions.
@@ -38,12 +38,6 @@ export default function Users() {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
-  const { accounts, loading, refreshing, error, hasNextPage, loadingNextPage, loadNextPage } = useAccounts(
-    ACCOUNTS_LIST_QUERY_KEY,
-    queryFilters,
-    sorting,
-  );
-
   // Dialog state.
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
@@ -59,7 +53,7 @@ export default function Users() {
     successMessage: 'Invitation revoked',
     onConfirm: async () => {
       await revokeAccountInvite(account.id);
-      removeInfiniteListRow(queryClient, ACCOUNTS_LIST_QUERY_KEY, account.id);
+      removeInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, account.id);
     },
   }), [queryClient]);
 
@@ -72,40 +66,41 @@ export default function Users() {
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
       onConfirm: async () => {
-        await toggleAccountStatus(account.id);
-        await queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
+        const savedAccount = await toggleAccountStatus(account.id);
+        replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
       },
     });
   }, [queryClient]);
 
   // Table presentation.
-  const columns = useMemo<TableColumn<Account>[]>(() => {
-    const accountColumns: TableColumn<Account>[] = [
+  const columns = useMemo<TableColumnDef<Account>[]>(() => {
+    const accountColumns: TableColumnDef<Account>[] = [
       {
-        key: 'name',
+        id: 'name',
         header: 'Name',
-        render: account => `${account.firstName} ${account.lastName}`,
+        accessorFn: account => `${account.firstName} ${account.lastName}`,
       },
-      { key: 'email', header: 'Email', render: account => account.email },
-      { key: 'role', header: 'Role', width: 110, render: account => titleCase(account.role) },
-      { key: 'status', header: 'Status', width: 120, render: account => statusBadge(account.status) },
+      { id: 'email', header: 'Email', accessorFn: account => account.email },
+      { id: 'role', header: 'Role', size: 110, accessorFn: account => titleCase(account.role) },
+      { id: 'status', header: 'Status', size: 120, accessorFn: account => statusBadge(account.status) },
       {
-        key: 'createdAt',
+        id: 'createdAt',
         header: 'Created',
-        width: 150,
-        render: account => formatShortDate(account.createdAt),
+        size: 150,
+        accessorFn: account => formatShortDate(account.createdAt),
       },
     ];
 
     if (!canWrite) return accountColumns;
 
     return [...accountColumns, {
-      key: 'actions',
-      width: 40,
-      resizable: false,
+      id: 'actions',
+      size: 40,
+      enableResizing: false,
+      enableHiding: false,
       header: '',
-      className: 'col-actions',
-      render: account => (
+
+      cell: ({ row: { original: account } }) => (
         <ActionsMenu
           ariaLabel={`More actions for ${account.firstName} ${account.lastName}`}
           items={[
@@ -161,24 +156,16 @@ export default function Users() {
         {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
 
         {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <section className="accounts-panel" aria-label="Accounts">
-          <Table
-            ariaLabel="Accounts"
+          <UserTable
+            queryKey={ACCOUNTS_TABLE_QUERY_KEY}
+            filters={queryFilters}
             columns={columns}
             hiddenColumnKeys={hiddenColumns}
-            data={accounts}
-            loading={loading}
-            refreshing={refreshing}
-            error={error}
-            emptyMessage={hasActiveQueryFilters ? 'No accounts match these filters' : 'No accounts found'}
-            keyExtractor={account => account.id}
+            hasActiveQueryFilters={hasActiveQueryFilters}
             sorting={sorting}
-            sortableColumns={ACCOUNT_TABLE_KEYS}
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}
-            hasNextPage={hasNextPage}
-            loadingNextPage={loadingNextPage}
-            onLoadNextPage={loadNextPage}
           />
         </section>}
       </main>
@@ -188,8 +175,12 @@ export default function Users() {
           isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
-          onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY });
+          onSuccess={savedAccount => {
+            if (modalTarget === 'new') {
+              void queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
+            } else {
+              replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
+            }
           }}
         />
       )}
@@ -201,7 +192,7 @@ export default function Users() {
           onClose={() => setYouthInviteOpen(false)}
           onSuccess={() => {
             void Promise.all([
-              queryClient.invalidateQueries({ queryKey: ACCOUNTS_LIST_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY }),
               queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
             ]);
           }}

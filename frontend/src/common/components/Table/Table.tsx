@@ -1,15 +1,16 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import TableBody from './components/TableBody';
 import TableHeader from './components/TableHeader';
 import useTableInfiniteScroll from './hooks/useTableInfiniteScroll';
 import useTableModel from './hooks/useTableModel';
 import useTableNavigation from './hooks/useTableNavigation';
-import type { TableProps } from './Table.types';
+import {
+  getTableColumnId,
+  type TableProps,
+} from './Table.types';
 import { clampColumnWidth } from './table.utils';
 import './Table.css';
-
-export type { TableColumn } from './Table.types';
 
 export default function Table<T>({
   ariaLabel,
@@ -34,17 +35,14 @@ export default function Table<T>({
   onColumnWidthsChange,
   hiddenColumnKeys = [],
 }: TableProps<T>) {
-  const visibleColumns = useMemo(
-    () => columns.filter(column => column.hideable === false || column.resizable === false || !hiddenColumnKeys.includes(column.key)),
-    [columns, hiddenColumnKeys],
-  );
   const updateVisibleColumnWidths = useCallback((nextWidths: Record<string, number>) => {
     if (!onColumnWidthsChange) return;
 
     const hiddenWidths = Object.fromEntries(columns.flatMap((column) => {
-      if (column.resizable === false || !hiddenColumnKeys.includes(column.key)) return [];
-      const width = columnWidths[column.key];
-      return Number.isFinite(width) ? [[column.key, clampColumnWidth(width)]] : [];
+      const key = getTableColumnId(column);
+      if (column.enableResizing === false || !hiddenColumnKeys.includes(key)) return [];
+      const width = columnWidths[key];
+      return Number.isFinite(width) ? [[key, clampColumnWidth(width)]] : [];
     }));
     onColumnWidthsChange({ ...hiddenWidths, ...nextWidths });
   }, [columnWidths, columns, hiddenColumnKeys, onColumnWidthsChange]);
@@ -59,6 +57,7 @@ export default function Table<T>({
   });
   const {
     headers,
+    rows,
     isResizing,
     resizeColumnByStep,
     resolvedColumnWidths,
@@ -66,7 +65,9 @@ export default function Table<T>({
     totalWidth,
   } = useTableModel({
     data,
-    columns: visibleColumns,
+    columns,
+    hiddenColumnKeys,
+    keyExtractor,
     sorting,
     sortableColumns,
     onSortingChange,
@@ -79,25 +80,27 @@ export default function Table<T>({
     if (!headerCells) return undefined;
 
     const preservedWidths = Object.fromEntries(columns.flatMap((column) => {
-      if (column.resizable === false) return [];
-      const width = columnWidths[column.key];
-      return Number.isFinite(width) ? [[column.key, clampColumnWidth(width)]] : [];
+      if (column.enableResizing === false) return [];
+      const key = getTableColumnId(column);
+      const width = columnWidths[key];
+      return Number.isFinite(width) ? [[key, clampColumnWidth(width)]] : [];
     }));
     const lockedWidths = {
       ...preservedWidths,
-      ...Object.fromEntries(visibleColumns.flatMap((column, index) => {
-        if (column.resizable === false) return [];
+      ...Object.fromEntries(headers.flatMap((header, index) => {
+        if (!header.column.getCanResize()) return [];
         const renderedWidth = headerCells[index]?.getBoundingClientRect().width;
         return [[
-          column.key,
-          clampColumnWidth(renderedWidth && renderedWidth > 0 ? renderedWidth : resolvedColumnWidths[column.key]),
+          header.column.id,
+          clampColumnWidth(renderedWidth && renderedWidth > 0 ? renderedWidth : resolvedColumnWidths[header.column.id]),
         ]];
       })),
     };
 
     onColumnWidthsChange(lockedWidths);
     return lockedWidths;
-  }, [columnWidths, columns, onColumnWidthsChange, resolvedColumnWidths, visibleColumns]);
+  }, [columnWidths, columns, headers, onColumnWidthsChange, resolvedColumnWidths]);
+
   const sentinelRef = useTableInfiniteScroll({
     rootRef: wrapperRef,
     dataLength: data.length,
@@ -120,10 +123,10 @@ export default function Table<T>({
         style={{ width: '100%', minWidth: totalWidth }}
       >
         <colgroup>
-          {visibleColumns.map(column => (
+          {headers.map(header => (
             <col
-              key={column.key}
-              style={{ width: resolvedColumnWidths[column.key] }}
+              key={header.column.id}
+              style={{ width: resolvedColumnWidths[header.column.id] }}
             />
           ))}
         </colgroup>
@@ -135,7 +138,8 @@ export default function Table<T>({
           onResizeByStep={resizeColumnByStep}
         />
         <TableBody
-          columns={visibleColumns}
+          rows={rows}
+          visibleColumnCount={headers.length}
           data={data}
           loading={loading}
           refreshing={refreshing}

@@ -82,9 +82,9 @@ Browser-sensitive interactions use Playwright component stories under `frontend/
 | Owner | Guide |
 |---|---|
 | Route page and page hooks | [Page](page/README.md) |
-| Remote table composition | [TableView](page/table-view/README.md) |
+| Remote table composition | [Table](page/table-view/README.md) |
 | Row rendering and mutations | [Table rows](page/table-view/rows.md) |
-| Calendar data and items | [CalendarView](page/calendar-view/README.md) |
+| Calendar data and items | [Calendar](page/calendar-view/README.md) |
 | Dashboard composition | [Dashboard](page/dashboard/README.md) |
 | Forms and modal workflows | [Modal](page/modal/README.md) |
 | File placement and extraction | [Shared ownership](shared/ownership.md) |

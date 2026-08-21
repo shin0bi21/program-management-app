@@ -6,7 +6,7 @@ import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import type { LeadPreference } from './types';
 
-const LEADS_LIST_QUERY_KEY = ['leads', 'external', 'list'] as const;
+const LEADS_TABLE_QUERY_KEY = ['leads', 'external', 'table'] as const;
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
@@ -17,6 +17,7 @@ const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: {
 const getLeads = vi.fn();
 const updateLead = vi.fn();
 const updateLeadStatus = vi.fn();
+const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
 const preferenceHook = vi.hoisted(() => ({
@@ -32,6 +33,7 @@ vi.mock('./leads.api', () => ({
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
   updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
+  deleteLead: (...args: unknown[]) => deleteLead(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
   setLeadNote: vi.fn(),
@@ -76,6 +78,9 @@ describe('Leads', () => {
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     });
     updateLeadStatus.mockReset();
+    updateLead.mockReset();
+    deleteLead.mockReset();
+    deleteLead.mockResolvedValue({ id: 'lead-1' });
     getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
@@ -88,7 +93,7 @@ describe('Leads', () => {
     }]);
   });
 
-  it('refetches Leads after a status change', async () => {
+  it('replaces the authoritative Lead after a status change without refetching the table', async () => {
     const contactedLead = {
       id: 'lead-1', origin: 'external', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
@@ -101,14 +106,13 @@ describe('Leads', () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
     const initialRequestCount = getLeads.mock.calls.length;
-    getLeads.mockResolvedValue([contactedLead]);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
 
     await waitFor(() => expect(updateLeadStatus).toHaveBeenCalledWith('lead-1', 'contacted'));
     expect(await screen.findByText('Contacted')).toBeInTheDocument();
-    expect(getLeads.mock.calls.length).toBeGreaterThan(initialRequestCount);
+    expect(getLeads).toHaveBeenCalledTimes(initialRequestCount);
   });
 
   it('signs up a Lead through the dedicated conversion action', async () => {
@@ -116,6 +120,7 @@ describe('Leads', () => {
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
     renderPage(queryClient);
     await screen.findByRole('row', { name: /Avery Outreach/ });
+    const initialRequestCount = getLeads.mock.calls.length;
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
@@ -126,13 +131,12 @@ describe('Leads', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
-    for (const queryKey of [
-      LEADS_LIST_QUERY_KEY,
-      YOUTH_QUERY_KEY,
-      COHORT_QUERY_KEY,
-    ]) {
+    for (const queryKey of [YOUTH_QUERY_KEY, COHORT_QUERY_KEY]) {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
     }
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: LEADS_TABLE_QUERY_KEY });
+    expect(getLeads).toHaveBeenCalledTimes(initialRequestCount);
+    expect(await screen.findByText('Signed Up')).toBeInTheDocument();
     expect(await screen.findByText(
       'Youth profile successfully created for Avery Outreach.',
     )).toBeInTheDocument();
@@ -218,6 +222,98 @@ describe('Leads', () => {
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
+  });
+
+  it('keeps the selected dashboard synchronized with status responses', async () => {
+    const initialLead = (await getLeads())[0];
+    updateLeadStatus.mockResolvedValue({ ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' });
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
+
+    expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
+    expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
+  });
+
+  it('keeps the selected dashboard synchronized after editing', async () => {
+    const initialLead = (await getLeads())[0];
+    updateLead.mockResolvedValue({ ...initialLead, contactPhoneNumber: '416-555-0188' });
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Phone Number *'), { target: { value: '416-555-0188' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update Lead' }));
+
+    expect(await screen.findByText('416-555-0188')).toBeInTheDocument();
+    expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
+  });
+
+  it('keeps the selected dashboard synchronized after sign-up', async () => {
+    const initialLead = (await getLeads())[0];
+    signUpLead.mockResolvedValue({
+      ...initialLead,
+      status: 'signed_up',
+      convertedYouthId: 'youth-1',
+      contactPhoneNumber: '416-555-0177',
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
+    const submit = screen.getByRole('button', { name: 'Create Profile' });
+    await waitFor(() => expect(submit).toBeEnabled());
+    fireEvent.click(submit);
+
+    expect(await screen.findByText('416-555-0177')).toBeInTheDocument();
+    expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
+  });
+
+  it('clears a selected dashboard after deleting that lead', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Lead deleted')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument());
+  });
+
+  it('preserves the selected dashboard after deleting another lead', async () => {
+    const initialLead = (await getLeads())[0];
+    const otherLead = {
+      ...initialLead,
+      id: 'lead-2',
+      youthFirstName: 'Sam',
+      youthLastName: 'Stable',
+      contactPhoneNumber: '416-555-0101',
+    };
+    getLeads.mockResolvedValue([initialLead, otherLead]);
+    deleteLead.mockResolvedValue({ id: 'lead-2' });
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Sam Stable' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Lead deleted')).toBeInTheDocument();
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+  });
+
+  it('shows a status error without changing the selected dashboard', async () => {
+    updateLeadStatus.mockRejectedValue(new Error('network unavailable'));
+    renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to update lead status.');
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+    expect(screen.getByText('New')).toBeInTheDocument();
   });
 
   it('requests filtered lead data from the API', async () => {

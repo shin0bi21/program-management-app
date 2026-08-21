@@ -1,12 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import type { TableColumnDef } from '../Table/Table.types';
 import ColumnVisibilityMenu from './ColumnVisibilityMenu';
 
-const columns = [
-  { key: 'name', header: 'Name', render: () => 'Name' },
-  { key: 'status', header: 'Status', render: () => 'Status' },
-  { key: 'actions', header: '', render: () => 'Actions', resizable: false },
+const columns: TableColumnDef<{ name: string; status: string }>[] = [
+  { id: 'name', header: 'Name', cell: ({ row }) => row.original.name },
+  { id: 'status', header: 'Status', cell: ({ row }) => row.original.status },
+  { id: 'actions', header: '', cell: () => 'Actions', enableResizing: false, enableHiding: false },
 ];
 
 describe('ColumnVisibilityMenu', () => {
@@ -19,6 +20,17 @@ describe('ColumnVisibilityMenu', () => {
 
     expect(onHiddenColumnKeysChange).toHaveBeenCalledWith(['status']);
     expect(screen.queryByRole('menuitemcheckbox', { name: 'Actions' })).not.toBeInTheDocument();
+  });
+
+  it('treats hiding and resizing as independent column capabilities', () => {
+    const fixedColumns: TableColumnDef<{ name: string }>[] = [
+      { id: 'name', header: 'Name', accessorFn: row => row.name, enableResizing: false },
+    ];
+
+    render(<ColumnVisibilityMenu columns={fixedColumns} hiddenColumnKeys={[]} onHiddenColumnKeysChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Name' })).toBeInTheDocument();
   });
 
   it('does not allow the final visible data column to be hidden', () => {

@@ -4,7 +4,7 @@ import {
   type QueryKey,
   type QueryFunctionContext,
 } from '@tanstack/react-query';
-import { getErrorMessage } from '../../http/clientErrors';
+import { getErrorMessage } from '../../http/errors';
 
 interface ListQueryOptions<T> {
   queryKey: QueryKey;

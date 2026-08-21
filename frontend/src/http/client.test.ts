@@ -91,4 +91,19 @@ describe('apiClient re-authentication', () => {
 
     await expect(apiClient.delete<void>('/tasks/task-1')).resolves.toBeUndefined();
   });
+
+  it('returns blob responses through the shared request pipeline', async () => {
+    const token = tokenWithExpiry(Date.now() + 60 * 60_000);
+    const blob = new Blob(['report'], { type: 'text/plain' });
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    vi.mocked(fetch).mockResolvedValue(new Response(blob, { status: 200 }));
+
+    const result = await apiClient.download('/reports/example');
+
+    expect(result.type).toContain('text/plain');
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/reports\/example$/), expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: `Bearer ${token}` }),
+    }));
+  });
 });

@@ -1,0 +1,32 @@
+.calendar-item.task-item--active {
+  border-color: var(--color-task-active-border);
+  background: var(--color-task-active-bg);
+}
+
+.calendar-item.task-item--overdue {
+  border-color: var(--color-danger-dark);
+  background: var(--color-danger-bg);
+}
+
+.calendar-item.task-item--completed {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.calendar-item.task-item--cancelled {
+  border-color: var(--color-border);
+  background: var(--ink-06);
+}
+
+.task-item__detail-title {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.task-item__detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}

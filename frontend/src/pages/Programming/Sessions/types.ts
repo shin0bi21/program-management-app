@@ -2,10 +2,10 @@ import type { SessionSortKey } from '../../../common/types/cohort';
 import type { ListSort } from '../../../common/types/pagination';
 
 export type SessionStatusFilter = 'upcoming' | 'completed';
-export type SessionsView = 'list' | 'calendar';
+export type SessionView = 'calendar' | 'table';
 
 export interface SessionPreference {
-  view: SessionsView;
+  view: SessionView;
   programIds: string[];
   cohortId: string | null;
   sessionTypeIds: string[];

@@ -2,11 +2,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { HoursPreference } from '../types';
+import type { StoredHoursPreferences } from '../types';
 import useHoursPreferences from './useHoursPreferences';
 
 const preferenceHook = vi.hoisted<{
-  preference: HoursPreference | null;
+  preference: StoredHoursPreferences | null;
   loading: boolean;
   error: string | null;
   setBaseline: ReturnType<typeof vi.fn>;
@@ -33,14 +33,14 @@ describe('useHoursPreferences', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.save.mockImplementation((update: HoursPreference | ((current: HoursPreference | null) => HoursPreference)) => {
+    preferenceHook.save.mockImplementation((update: StoredHoursPreferences | ((current: StoredHoursPreferences | null) => StoredHoursPreferences)) => {
       preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
     });
   });
 
   it('waits for dependencies and restores one complete admin preference', async () => {
     preferenceHook.preference = {
-      view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
+      view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     };
@@ -56,7 +56,7 @@ describe('useHoursPreferences', () => {
     rerender({ loading: false });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.preferences).toEqual({
-      view: 'list', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
+      view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     });
@@ -71,16 +71,19 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
-      result.current.updatePreferences({ hiddenColumns: ['note'] });
-      result.current.updatePreferences({ columnWidths: { note: 280 } });
+      result.current.updateHiddenColumns(['note']);
+      result.current.updateColumnWidths({ note: 280 });
+      result.current.updateSorting({ key: 'hours', direction: 'asc' });
       result.current.updatePreferences({ staffIds: ['staff-1'] });
     });
 
     expect(result.current.preferences).toEqual(expect.objectContaining({
-      hiddenColumns: ['note'], columnWidths: { note: 280 }, staffIds: ['staff-1'],
+      hiddenColumns: ['note'], columnWidths: { note: 280 },
+      sorting: { key: 'hours', direction: 'asc' }, staffIds: ['staff-1'],
     }));
     expect(preferenceHook.preference).toEqual(expect.objectContaining({
-      hiddenColumns: ['note'], columnWidths: { note: 280 }, staffIds: ['staff-1'],
+      hiddenColumns: ['note'], columnWidths: { note: 280 },
+      sorting: { key: 'hours', direction: 'asc' }, staffIds: ['staff-1'],
     }));
   });
 
@@ -97,9 +100,23 @@ describe('useHoursPreferences', () => {
     expect(result.current.preferences.staffIds).toEqual([]);
   });
 
-  it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
+  it('replaces a removed list view preference with the calendar default', async () => {
     preferenceHook.preference = {
       view: 'list',
+    } as unknown as StoredHoursPreferences;
+    const { result } = renderHook(() => useHoursPreferences({
+      role: 'admin', resources, programs, cycles, loadingDependencies: false,
+      optionsError: false, cyclesError: false, tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.preferences.view).toBe('calendar');
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+  });
+
+  it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
+    preferenceHook.preference = {
+      view: 'table',
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['general', 'program-1', 'removed-program'],
       categories: [],
@@ -123,7 +140,7 @@ describe('useHoursPreferences', () => {
 
   it('preserves saved dependency IDs when hours options fail to load', async () => {
     preferenceHook.preference = {
-      view: 'list',
+      view: 'table',
       staffIds: ['saved-staff'],
       programIds: ['saved-program'],
       categories: [],

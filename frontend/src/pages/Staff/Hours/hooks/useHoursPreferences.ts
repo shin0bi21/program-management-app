@@ -5,8 +5,9 @@ import useUserPreference from '../../../../common/features/preferences/hooks/use
 import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
 import type { StaffResource, HoursProgram } from '../../../../common/features/hours/types';
 import type { ProgramCycle } from '../../../../common/types/cohort';
+import type { ListSort } from '../../../../common/types/pagination';
 
-import type { HoursPreference, HoursPreferences, HoursSortKey } from '../types';
+import type { HoursPreferences, HoursSortKey, HoursView, StoredHoursPreferences } from '../types';
 
 const DEFAULT_HOURS_PREFERENCES: HoursPreferences = {
   view: 'calendar',
@@ -21,8 +22,14 @@ const DEFAULT_HOURS_PREFERENCES: HoursPreferences = {
 };
 const DEFAULT_SORTING = DEFAULT_HOURS_PREFERENCES.sorting;
 
+function resolveHoursView(value: unknown): HoursView {
+  return value === 'calendar' || value === 'table'
+    ? value
+    : DEFAULT_HOURS_PREFERENCES.view;
+}
+
 function resolveHoursPreference(
-  preference: HoursPreference | null,
+  preference: StoredHoursPreferences | null,
   role: string,
   resources: readonly StaffResource[],
   programs: readonly HoursProgram[],
@@ -39,7 +46,7 @@ function resolveHoursPreference(
   const programIds = new Set(['general', ...programs.map(program => program.id)]);
 
   return {
-    view: preference?.view ?? DEFAULT_HOURS_PREFERENCES.view,
+    view: resolveHoursView(preference?.view),
     staffIds: role === 'admin'
       ? preserveSavedOptions
         ? preference?.staffIds ?? []
@@ -78,7 +85,7 @@ export default function useHoursPreferences({
 }) {
   const [preferences, setPreferences] = useState<HoursPreferences>(DEFAULT_HOURS_PREFERENCES);
   const [ready, setReady] = useState(false);
-  const { preference, loading, error, setBaseline, save } = useUserPreference<HoursPreference>(
+  const { preference, loading, error, setBaseline, save } = useUserPreference<StoredHoursPreferences>(
     'hours-filters',
     tableKeys,
   );
@@ -167,5 +174,23 @@ export default function useHoursPreferences({
     applyPreferencePatch(patch);
   }, [applyPreferencePatch]);
 
-  return { preferences, ready, error, updatePreferences };
+  const updateSorting = useCallback((sorting: ListSort<HoursSortKey>) => {
+    applyPreferencePatch({ sorting });
+  }, [applyPreferencePatch]);
+  const updateColumnWidths = useCallback((columnWidths: Record<string, number>) => {
+    applyPreferencePatch({ columnWidths });
+  }, [applyPreferencePatch]);
+  const updateHiddenColumns = useCallback((hiddenColumns: string[]) => {
+    applyPreferencePatch({ hiddenColumns });
+  }, [applyPreferencePatch]);
+
+  return {
+    preferences,
+    ready,
+    error,
+    updatePreferences,
+    updateSorting,
+    updateColumnWidths,
+    updateHiddenColumns,
+  };
 }

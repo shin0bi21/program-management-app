@@ -5,7 +5,7 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import type { CursorPage } from '../../common/types/pagination';
-import { getErrorMessage } from '../../http/clientErrors';
+import { getErrorMessage } from '../../http/errors';
 
 interface InfiniteListQueryOptions<T> {
   queryKey: QueryKey;

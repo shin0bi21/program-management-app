@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { buildInitialDayPeriods } from '../periods/periods';
-import { ApiError } from '../../../../http/clientErrors';
+import { ApiError } from '../../../../http/errors';
 import { usePeriodDataBuffer } from './usePeriodDataBuffer';
 
 describe('usePeriodDataBuffer', () => {

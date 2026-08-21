@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { dayKey } from '../../../../../components/ResourceCalendar/periods/periods';
 import { useSubmitStatus } from '../../../../../hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../hooks/useSubmitLock';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 import { getTasks } from '../../../../tasks/tasks.api';
 import type { Task } from '../../../../tasks/types';
 import { getHoursSessions, type SetHoursInput } from '../../../hours.api';

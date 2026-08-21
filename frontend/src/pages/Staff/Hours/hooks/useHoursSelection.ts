@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import type { StaffResource } from '../../../../common/features/hours/types';
 
-import type { HoursListRow } from '../types';
+import type { HoursTableRow } from '../../../../common/features/hours/types';
 
 export default function useHoursSelection({
   resources,
@@ -18,7 +18,7 @@ export default function useHoursSelection({
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
-  const selectRow = useCallback((row: HoursListRow) => {
+  const selectRow = useCallback((row: HoursTableRow) => {
     setSelectedRowId(row.id);
     setSelectedStaffId(row.resourceId);
     if (row.item.cycleId !== cycleId) onCycleSelect(row.item.cycleId);

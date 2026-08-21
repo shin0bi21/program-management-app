@@ -54,7 +54,7 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
     typeof window.matchMedia !== 'function' || !window.matchMedia(PRECISE_HOVER_QUERY).matches
   );
   useViewportDismissal(detailPosition !== null, () => setDetailPosition(null));
-  const hasActions = actions.length > 0 || Boolean(onEdit && onDelete);
+  const hasActions = actions.length > 0 || Boolean(onEdit || onDelete);
   const detailsId = `calendar-item-details-${id}`;
   const cancelPendingDetails = () => {
     if (detailOpenTimerRef.current === null) return;
@@ -196,10 +196,31 @@ export default function CalendarItem({ id, ariaLabel, leading, summary, trailing
           className={action.variant === 'danger' ? 'calendar-item-menu__delete' : undefined}
           onClick={event => { event.stopPropagation(); runAction(action.onClick); }}
         >{action.label}</button>)}
-        {onEdit && onDelete && <>
-          <button type="button" role="menuitem" onClick={event => { event.stopPropagation(); runAction(onEdit); }}>Edit</button>
-          <button type="button" role="menuitem" className="calendar-item-menu__delete" onClick={event => { event.stopPropagation(); runAction(onDelete); }}>Delete</button>
-        </>}
+        {onEdit && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={event => {
+              event.stopPropagation();
+              runAction(onEdit);
+            }}
+          >
+            Edit
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            role="menuitem"
+            className="calendar-item-menu__delete"
+            onClick={event => {
+              event.stopPropagation();
+              runAction(onDelete);
+            }}
+          >
+            Delete
+          </button>
+        )}
       </FloatingMenuPanel>, document.body,
     )}
   </>;

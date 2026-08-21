@@ -121,11 +121,7 @@
   background: var(--ink-35);
 }
 
-.table th.col-actions,
-.table td.col-actions {
-  width: 40px;
-  min-width: 40px;
-  max-width: 40px;
+.table [data-column-id='actions'] {
   padding: 0.5rem;
   text-align: center;
 }

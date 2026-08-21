@@ -1,6 +1,6 @@
 # Table rows
 
-This document is the single source for TableView row identity, rendering, actions, and mutation reconciliation.
+This document is the single source for page-table row identity, rendering, actions, and mutation reconciliation.
 
 ## Row presentation
 
@@ -19,7 +19,7 @@ Give each remote table a stable list-key prefix that contains only cursor-list v
 
 ```ts
 const EXAMPLE_QUERY_KEY = ['examples'] as const;
-const EXAMPLE_LIST_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'list'] as const;
+const EXAMPLE_TABLE_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'table'] as const;
 const EXAMPLE_OVERVIEW_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'overview'] as const;
 const EXAMPLE_CALENDAR_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'calendar'] as const;
 ```

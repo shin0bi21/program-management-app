@@ -5,15 +5,17 @@ import { DashboardCard, DashboardCardGroup } from '../../../common/components/Da
 import Modal from '../../../common/components/Modal/Modal';
 import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
+import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
-import { getErrorMessage } from '../../../http/clientErrors';
+import { getErrorMessage } from '../../../http/errors';
 import CycleModal from './components/CycleModal';
+import CycleTable from './components/CycleTable/CycleTable';
+import ProgramTable from './components/ProgramTable/ProgramTable';
 import ProgramModal from './components/ProgramModal/ProgramModal';
 import type { CycleModalTarget, ProgramModalTarget } from './types';
 import './Programming.css';
@@ -55,7 +57,7 @@ export default function Programming() {
   const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
     setConfirmAction({
       title: 'Delete Cycle',
-      message: `Delete ${cycle.name}? Cycles assigned to cohorts or time entries cannot be deleted.`,
+      message: `Delete ${cycle.name}? Cycles assigned to cohorts or logged hours cannot be deleted.`,
       confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Cycle deleted',
@@ -67,20 +69,20 @@ export default function Programming() {
   }, []);
 
   // Table presentation and row actions.
-  const programColumns = useMemo<TableColumn<Program>[]>(() => [
-    { key: 'name', header: 'Program', render: program => program.name },
-    { key: 'attendance', header: 'Attendance', render: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },
-    { key: 'ages', header: 'Ages', width: 120, render: program => program.minAge === null ? 'All ages' : `${program.minAge}–${program.maxAge}` },
-    { key: 'actions', header: '', width: 40, resizable: false, className: 'col-actions', render: program => (
+  const programColumns = useMemo<TableColumnDef<Program>[]>(() => [
+    { id: 'name', header: 'Program', accessorFn: program => program.name },
+    { id: 'attendance', header: 'Attendance', accessorFn: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },
+    { id: 'ages', header: 'Ages', size: 120, accessorFn: program => program.minAge === null ? 'All ages' : `${program.minAge}–${program.maxAge}` },
+    { id: 'actions', header: '', size: 40, enableResizing: false, enableHiding: false, cell: ({ row: { original: program } }) => (
       <ActionsMenu ariaLabel={`Actions for ${program.name}`} items={[{ id: 'edit', label: 'Edit Program', onClick: () => setProgramTarget(program) }]} />
     ) },
   ], []);
 
-  const cycleColumns = useMemo<TableColumn<ProgramCycle>[]>(() => [
-    { key: 'name', header: 'Cycle', render: cycle => cycle.name },
-    { key: 'start', header: 'Start', width: 140, render: cycle => formatShortDate(cycle.startsOn) },
-    { key: 'end', header: 'End', width: 140, render: cycle => formatShortDate(cycle.endsOn) },
-    { key: 'actions', header: '', width: 40, resizable: false, className: 'col-actions', render: cycle => (
+  const cycleColumns = useMemo<TableColumnDef<ProgramCycle>[]>(() => [
+    { id: 'name', header: 'Cycle', accessorFn: cycle => cycle.name },
+    { id: 'start', header: 'Start', size: 140, accessorFn: cycle => formatShortDate(cycle.startsOn) },
+    { id: 'end', header: 'End', size: 140, accessorFn: cycle => formatShortDate(cycle.endsOn) },
+    { id: 'actions', header: '', size: 40, enableResizing: false, enableHiding: false, cell: ({ row: { original: cycle } }) => (
       <ActionsMenu ariaLabel={`Actions for ${cycle.name}`} items={[
         { id: 'edit', label: 'Edit Cycle', onClick: () => setCycleTarget(cycle) },
         { id: 'delete', label: 'Delete Cycle', variant: 'danger', onClick: () => requestCycleDeletion(cycle) },
@@ -93,29 +95,23 @@ export default function Programming() {
       <PageHeader title="Programming Settings" />
       <DashboardCardGroup ariaLabel="Program and cycle management">
         <DashboardCard title="Programs" action={<Button size="sm" onClick={() => setProgramTarget(null)}>+ Add Program</Button>}>
-          <Table
-            ariaLabel="Programs"
+          <ProgramTable
             columns={programColumns}
-            data={programs}
+            programs={programs}
             loading={programsLoading}
             error={programsError ?? undefined}
-            keyExtractor={program => program.id}
             selectedKey={programSelection.selectedKey}
             onRowSelect={programSelection.selectItem}
-            emptyMessage="No programs yet"
           />
         </DashboardCard>
         <DashboardCard title="Cycles" action={<Button size="sm" onClick={() => setCycleTarget(null)}>+ Add Cycle</Button>}>
-          <Table
-            ariaLabel="Cycles"
+          <CycleTable
             columns={cycleColumns}
-            data={cycles}
+            cycles={cycles}
             loading={cyclesLoading}
             error={cyclesError ?? undefined}
-            keyExtractor={cycle => cycle.id}
             selectedKey={cycleSelection.selectedKey}
             onRowSelect={cycleSelection.selectItem}
-            emptyMessage="No cycles yet"
           />
         </DashboardCard>
       </DashboardCardGroup>

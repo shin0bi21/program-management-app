@@ -7,7 +7,7 @@ import { resolvePreferenceSorting } from '../../../../common/features/preference
 import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-import type { SessionPreference, SessionStatusFilter, SessionsView } from '../types';
+import type { SessionPreference, SessionStatusFilter, SessionView } from '../types';
 
 interface UseSessionControlsOptions {
   role: string | null;
@@ -26,6 +26,10 @@ interface UseSessionControlsOptions {
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 
+function resolveSessionView(view: unknown): SessionView {
+  return view === 'table' ? 'table' : 'calendar';
+}
+
 export function useSessionControls({
   role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
   sessionTypes, sessionTypesLoading, sessionTypesError, onFiltersChanged, tableKeys,
@@ -39,7 +43,7 @@ export function useSessionControls({
   const [statuses, setStatuses] = useState<SessionStatusFilter[]>([]);
 
   // View and table controls.
-  const [view, setViewState] = useState<SessionsView>('calendar');
+  const [view, setViewState] = useState<SessionView>('calendar');
   const [sorting, setSortingState] = useState<ListSort<SessionSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
@@ -90,7 +94,7 @@ export function useSessionControls({
     const restoredColumnWidths = preference?.columnWidths ?? {};
     const restoredHiddenColumns = preference?.hiddenColumns ?? [];
     const restored: SessionPreference = {
-      view: preference?.view ?? 'calendar',
+      view: resolveSessionView(preference?.view),
       programIds: restoredProgramIds,
       cohortId: restoredCohortId || null,
       sessionTypeIds: restoredSessionTypeIds,
@@ -125,7 +129,7 @@ export function useSessionControls({
 
   // UI handlers persist complete preference values.
   const persist = useCallback((next: {
-    view?: SessionsView;
+    view?: SessionView;
     programIds?: string[];
     cohortId?: string;
     sessionTypeIds?: string[];
@@ -134,7 +138,7 @@ export function useSessionControls({
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
   }) => save(current => ({
-    view: next.view ?? current?.view ?? view,
+    view: resolveSessionView(next.view ?? current?.view ?? view),
     programIds: next.programIds ?? current?.programIds ?? programIds,
     cohortId: (next.cohortId ?? current?.cohortId ?? cohortId) || null,
     sessionTypeIds: next.sessionTypeIds ?? current?.sessionTypeIds ?? sessionTypeIds,
@@ -208,7 +212,7 @@ export function useSessionControls({
     void persist({ programIds: [], cohortId: '', sessionTypeIds: [], statuses: [] });
     onFiltersChanged();
   }, [onFiltersChanged, persist]);
-  const setView = useCallback((next: SessionsView) => { setViewState(next); void persist({ view: next }); }, [persist]);
+  const setView = useCallback((next: SessionView) => { setViewState(next); void persist({ view: next }); }, [persist]);
   const setSorting = useCallback((next: ListSort<SessionSortKey>) => { setSortingState(next); void persist({ sorting: next }); }, [persist]);
   const setColumnWidths = useCallback((next: Record<string, number>) => { setColumnWidthsState(next); void persist({ columnWidths: next }); }, [persist]);
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);

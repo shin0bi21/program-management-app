@@ -1,7 +1,7 @@
 import type { PublicOutreachFormValues } from '../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import { api } from '../../../http/config';
+import { apiUrl } from '../../../http/transport';
 import type { HomepageImage, HomepageSession } from './types';
 
 export type PublicLeadPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
@@ -11,7 +11,7 @@ export function submitPublicLead(payload: PublicLeadPayload) {
 }
 
 function resolveImageUrl(image: HomepageImage): HomepageImage {
-  const resolve = (url: string) => url.startsWith('/public/') ? api(url) : url;
+  const resolve = (url: string) => url.startsWith('/public/') ? apiUrl(url) : url;
   return {
     ...image,
     imageUrl: resolve(image.imageUrl),

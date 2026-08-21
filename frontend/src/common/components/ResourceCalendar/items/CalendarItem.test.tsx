@@ -94,6 +94,20 @@ describe('CalendarItem', () => {
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toHaveFocus();
   });
 
+  it('offers edit when delete is unavailable', () => {
+    const onEdit = vi.fn();
+    render(<CalendarItem
+      {...itemProps}
+      onEdit={onEdit}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
   it('dismisses hover details when a scroll container moves', async () => {
     const { container } = render(<CalendarItem {...itemProps} />);
     fireEvent.mouseEnter(screen.getByRole('button', { name: 'Prepare workshop' }));

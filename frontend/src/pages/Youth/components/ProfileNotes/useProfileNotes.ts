@@ -5,7 +5,7 @@ import {
   getYouthProfileNotes,
 } from '../../../../common/features/youth/youth.api';
 import type { YouthProfileNote } from '../../../../common/types/youth';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 
 const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;
 

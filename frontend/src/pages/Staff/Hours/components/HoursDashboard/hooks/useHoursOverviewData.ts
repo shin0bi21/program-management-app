@@ -4,7 +4,7 @@ import {
   getHoursOverview,
   type HoursOverviewResponse,
 } from '../../../../../../common/features/hours/hours.api';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 export type HoursOverviewState =
   | { status: 'unavailable' }

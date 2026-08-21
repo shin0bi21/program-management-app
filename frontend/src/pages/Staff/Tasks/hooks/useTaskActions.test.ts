@@ -26,7 +26,7 @@ function renderActions(client = createTestQueryClient()) {
   const onTaskSynced = vi.fn();
   const onTaskRemoved = vi.fn();
   const result = renderHook(() => useTaskActions({
-    taskQueryKey: ['tasks'], taskListQueryKey: ['tasks', 'list'], hoursQueryKey: ['hours'],
+    taskQueryKey: ['tasks'], taskTableQueryKey: ['tasks', 'table'], hoursQueryKey: ['hours'],
     onTaskSynced, onTaskRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
   const upsertCalendarTask = vi.fn();
@@ -120,11 +120,11 @@ describe('useTaskActions', () => {
     expect(rendered.upsertCalendarTask).toHaveBeenCalledOnce();
   });
 
-  it('owns confirmation, deletion, list removal, and calendar removal together', async () => {
+  it('owns confirmation, deletion, table removal, and calendar removal together', async () => {
     vi.mocked(deleteTask).mockResolvedValue();
     const client = createTestQueryClient();
-    const listKey = ['tasks', 'list', 'variant'];
-    client.setQueryData(listKey, { pages: [{ rows: [task], nextCursor: null }], pageParams: [null] });
+    const tableKey = ['tasks', 'table', 'variant'];
+    client.setQueryData(tableKey, { pages: [{ rows: [task], nextCursor: null }], pageParams: [null] });
     const rendered = renderActions(client);
 
     act(() => rendered.result.current.requestDelete(task));
@@ -134,7 +134,7 @@ describe('useTaskActions', () => {
     expect(deleteTask).toHaveBeenCalledWith('task-1');
     expect(rendered.onTaskRemoved).toHaveBeenCalledWith('task-1');
     expect(rendered.removeCalendarTask).toHaveBeenCalledWith('task-1');
-    expect(client.getQueryData<{ pages: Array<{ rows: Task[] }> }>(listKey)?.pages[0].rows).toEqual([]);
+    expect(client.getQueryData<{ pages: Array<{ rows: Task[] }> }>(tableKey)?.pages[0].rows).toEqual([]);
   });
 
   it('does not reconcile failed status or deletion actions', async () => {

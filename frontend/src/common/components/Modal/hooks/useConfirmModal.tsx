@@ -5,7 +5,7 @@ import {
   type ReactNode,
 } from 'react';
 import Button from '../../Button/Button';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 
 export interface ConfirmAction {
   title: string;

@@ -7,8 +7,8 @@ A route page is the orchestration owner. It connects permissions, options, persi
 ```text
 app route
   → page
-      → TableView → rows
-      → CalendarView → items
+      → Table → rows
+      → Calendar → items
       → Dashboard → cards
       → Modal → form workflow
   → common/features
@@ -18,7 +18,31 @@ app route
 
 The page selects and coordinates its route-specific views. Shared product capabilities, generic UI, and application infrastructure remain downstream dependencies rather than page-private owners.
 
-A route family with multiple pages gives each route its own page owner and keeps genuinely shared family behavior under the route-family `common/` directory.
+## Page structure
+
+```text
+ExamplePage/
+  ExamplePage.tsx
+  ExamplePage.test.tsx
+  ExamplePage.css                 only for route-owned styles
+  examplePage.api.ts              one page-owned endpoint group, when needed
+  examplePage.api.test.ts
+  types.ts                        contracts shared by sibling page units
+  hooks/
+    useExampleData.ts             remote options and derived option collections
+    useExamplePreferences.ts      restoration and complete preference saves
+    useExampleFilters.ts          filter projection and events
+    useExampleSelection.ts        selected resource/record synchronization
+    useExampleActions.ts          mutations and cross-child reconciliation
+  components/
+    ExampleTable/
+    ExampleCalendar/
+    ExampleDashboard/
+    ExampleModal/
+  utils/                          pure helpers shared by sibling page units
+```
+
+Use only the files the page needs. Do not create empty hooks or child folders to complete the shape. A route family with multiple pages gives each route its own page owner and keeps genuinely shared family behavior under the route-family `common/` directory.
 
 ## Page-owned hooks
 
@@ -63,8 +87,8 @@ export default function ExamplePage() {
     onRecordRemoved: selection.removeSelectedRecord,
   });
 
-  const tableView = <ExampleTableView
-    queryKey={EXAMPLE_LIST_QUERY_KEY}
+  const table = <ExampleTable
+    queryKey={EXAMPLE_TABLE_QUERY_KEY}
     filters={filters.applied}
     sorting={preferences.value.sorting}
     selectedId={selection.selectedId}
@@ -72,16 +96,16 @@ export default function ExamplePage() {
     actions={actions}
   />;
 
-  const calendarView = <ExampleCalendarView
+  const calendar = <ExampleCalendar
     resources={data.resources}
     filters={filters.applied}
     selection={selection}
     actions={actions}
   />;
 
-  const viewContent = preferences.value.view === 'list'
-    ? { table: tableView }
-    : { calendar: calendarView };
+  const viewContent = preferences.value.view === 'table'
+    ? { table }
+    : { calendar };
 
   return <>
     <main className="page-container page-container--data">
@@ -91,7 +115,7 @@ export default function ExamplePage() {
           ? <Button onClick={() => setModalState({ mode: 'add' })}>+ Add</Button>
           : undefined}
         search={<SearchInput {...filters.searchProps} />}
-        columns={preferences.value.view === 'list' ? preferences.columnMenu : undefined}
+        columns={preferences.value.view === 'table' ? preferences.columnMenu : undefined}
         view={preferences.viewMenu}
         filters={filters.card}
       />
@@ -125,9 +149,9 @@ Route tests own permission-dependent actions, control wiring, preference restora
 
 ## Child owners
 
-- [TableView](table-view/README.md): remote list query, table configuration, pagination, and states.
+- [Table](table-view/README.md): remote list query, table configuration, pagination, and states.
 - [Table rows](table-view/rows.md): row identity, rendering, actions, updates, creates, and deletes.
-- [CalendarView](calendar-view/README.md): range data, buffer adapters, items, and calendar callbacks.
+- [Calendar](calendar-view/README.md): range data, buffer adapters, items, and calendar callbacks.
 - [Dashboard](dashboard/README.md): dashboard composition, cards, and overview data.
 - [Modal](modal/README.md): form state, validation, submission, and dialog lifecycle.
 

@@ -54,7 +54,7 @@ function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeek
   title: string;
   tasks: readonly Task[];
   emptyMessage: string;
-  tone?: 'neutral' | 'danger';
+  tone?: 'neutral' | 'info' | 'warn' | 'danger';
   dueThisWeekIds?: ReadonlySet<string>;
 }) {
   return <section className={`task-overview-card__task-section task-overview-card__task-section--${tone}`}>
@@ -92,8 +92,8 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName, today }
       <div className="dashboard-card__compact-layout task-overview-card__layout">
         <dl className="task-overview-card__metrics">
           <div><dt>Tasks Assigned</dt><dd>{summary.assigned}</dd></div>
-          <div><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
-          <div><dt>Active</dt><dd>{summary.active}</dd></div>
+          <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
+          <div className="task-overview-card__metric-active"><dt>Active</dt><dd>{summary.active}</dd></div>
           <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
         </dl>
         <div className="dashboard-card__compact-action task-overview-card__action">
@@ -109,8 +109,8 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName, today }
     <Modal isOpen={open} onClose={() => setOpen(false)} title={resourceName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
-        <div><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
-        <div><dt>Active</dt><dd>{summary.active}</dd></div>
+        <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
+        <div className="task-overview-card__report-active"><dt>Active</dt><dd>{summary.active}</dd></div>
         <div className="task-overview-card__report-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
       </dl>
       <div className="task-overview-card__task-lists">
@@ -118,12 +118,14 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName, today }
           title="Upcoming"
           tasks={overview.upcomingTasks}
           emptyMessage="No upcoming tasks."
+          tone="info"
           dueThisWeekIds={dueThisWeekIds}
         />
         <TaskDueList
           title="Active"
           tasks={overview.activeTasks}
           emptyMessage="No active tasks."
+          tone="warn"
           dueThisWeekIds={dueThisWeekIds}
         />
         <TaskDueList title="Overdue" tasks={overview.overdueTasks} emptyMessage="No overdue tasks." tone="danger" />

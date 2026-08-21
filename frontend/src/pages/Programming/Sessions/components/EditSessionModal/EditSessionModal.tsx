@@ -6,7 +6,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 import { useSessionTypes } from '../../../common/hooks/useSessionTypes';
 
 const localDateTime = (value: string) => {

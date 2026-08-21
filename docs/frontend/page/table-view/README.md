@@ -1,15 +1,49 @@
-# Frontend TableView
+# Frontend table
 
-A page-owned `*TableView` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the TableView owns fetching, pagination, table states, and the `Table` integration.
+A page-owned `*Table` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the page table owns fetching, pagination, table states, and the shared `Table` integration.
 
-Keep columns in the TableView owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the TableView.
+## Component structure
 
-## Remote-list hook
+```text
+components/
+  ExampleTable/
+    ExampleTable.tsx
+    ExampleTable.test.tsx
+    hooks/
+      useExampleTableData.ts      remote query and row shaping
+      useExampleTable.tsx         columns and table-only preference adapters, when substantial
+```
+
+Keep columns in the page-table owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the table component.
+
+Define page-table columns with the shared `TableColumnDef<T>` type, which narrows TanStack's native column definition to the flat, string-header contract supported by the shared table. Use the canonical backend sort key as `id`, put the user-facing string in `header`, use `size`, `enableResizing`, and `enableHiding`, and render from `row.original` in `cell`. Nested column groups are not supported. The shared table exposes that ID as `data-column-id` on header and data cells for column-specific styling.
+
+```tsx
+const columns = useMemo<TableColumnDef<Example>[]>(() => [
+  {
+    id: 'name',
+    header: 'Name',
+    cell: ({ row }) => row.original.name,
+  },
+  {
+    id: 'actions',
+    header: '',
+    size: 40,
+    enableResizing: false,
+    enableHiding: false,
+    cell: ({ row }) => <ExampleActionsMenu example={row.original} />,
+  },
+], [edit, requestDelete]);
+```
+
+The shared `Table` renders TanStack header, row, visibility, sizing, sorting, and cell models end to end through its flat `TableColumnDef` contract.
+
+## Remote table-data hook
 
 Wrap the typed API adapter with `useInfiniteListQuery`. Include every server-owned search, filter, and sort input in the query key, forward cancellation and cursors, and request 25 rows unless the domain documents another size.
 
 ```tsx
-export function useExamples(
+export function useExampleTableData(
   queryKey: readonly unknown[],
   filters: ExampleFilters | null,
   sorting: ListSort<ExampleSortKey>,
@@ -44,20 +78,20 @@ The backend applies permissions, search, filters, and sorting before cursor pagi
 ## Table component pattern
 
 ```tsx
-export default function ExampleTableView(props: ExampleTableViewProps) {
-  const list = useExamples(props.queryKey, props.filters, props.sorting);
+export default function ExampleTable(props: ExampleTableProps) {
+  const tableData = useExampleTableData(props.queryKey, props.filters, props.sorting);
 
   return <Table
     ariaLabel="Examples"
     columns={props.columns}
-    data={list.rows}
+    data={tableData.rows}
     keyExtractor={row => row.id}
-    loading={list.loading}
-    refreshing={list.refreshing}
-    error={list.error}
-    hasNextPage={list.hasNextPage}
-    loadingNextPage={list.loadingNextPage}
-    onLoadNextPage={list.loadNextPage}
+    loading={tableData.loading}
+    refreshing={tableData.refreshing}
+    error={tableData.error}
+    hasNextPage={tableData.hasNextPage}
+    loadingNextPage={tableData.loadingNextPage}
+    onLoadNextPage={tableData.loadNextPage}
     sorting={props.sorting}
     onSortingChange={props.onSortingChange}
     columnWidths={props.columnWidths}
@@ -83,8 +117,8 @@ Persist one complete preference value after each control change. Each handler up
 
 ## Table tests
 
-- The list-hook test owns query-key inputs, filter/sort serialization, page size, cursor forwarding, cancellation, and domain row shaping.
-- The TableView test owns columns, selection wiring, loading/error/empty states, pagination, and table-specific actions.
+- The table-data hook test owns query-key inputs, filter/sort serialization, page size, cursor forwarding, cancellation, and domain row shaping.
+- The page-table test owns columns, selection wiring, loading/error/empty states, pagination, and table-specific actions.
 - The page test owns header controls, preference restoration, view switching, dialogs, and cross-child coordination.
 - Shared `Table` and `useInfiniteListQuery` tests own their generic mechanics.
 - Use browser tests for resizing, horizontal overflow, sticky behavior, real scrolling, load-more observation, focus geometry, and mobile layout.
