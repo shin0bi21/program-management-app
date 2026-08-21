@@ -1,10 +1,10 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import { api } from '../../../http/config';
+import { apiUrl } from '../../../http/transport';
 import type { ManagedHomepageImage } from './types';
 
 function resolveImageUrl(image: ManagedHomepageImage): ManagedHomepageImage {
-  const resolve = (url: string) => url.startsWith('/public/') ? api(url) : url;
+  const resolve = (url: string) => url.startsWith('/public/') ? apiUrl(url) : url;
   return {
     ...image,
     imageUrl: resolve(image.imageUrl),

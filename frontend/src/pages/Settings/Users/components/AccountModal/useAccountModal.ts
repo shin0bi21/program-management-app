@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteAccount, updateAccount } from '../../accounts.api';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Account } from '../../../../../common/types/account';
 import { accountSchema, type AccountFormData } from './accountSchema';

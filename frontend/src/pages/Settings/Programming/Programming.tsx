@@ -12,7 +12,7 @@ import { usePrograms } from '../../../common/features/programs/hooks/usePrograms
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../common/types/cohort';
 import { formatShortDate } from '../../../common/utils/date';
-import { getErrorMessage } from '../../../http/clientErrors';
+import { getErrorMessage } from '../../../http/errors';
 import CycleModal from './components/CycleModal';
 import CycleTable from './components/CycleTable/CycleTable';
 import ProgramTable from './components/ProgramTable/ProgramTable';

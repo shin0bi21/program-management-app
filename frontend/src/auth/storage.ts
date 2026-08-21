@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
 export const DEFAULT_AUTH_PATH = '/settings/account';
 
 const LAST_AUTH_PATH_PREFIX = 'lastAuthPath:';
+
 const PUBLIC_AUTH_PATHS = new Set([
   '/login',
   '/verify-password',

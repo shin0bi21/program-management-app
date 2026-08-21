@@ -3,7 +3,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 import { createHomepageImage, updateHomepageImage } from '../../manageHomepage.api';
 import type { ManagedHomepageImage } from '../../types';
 

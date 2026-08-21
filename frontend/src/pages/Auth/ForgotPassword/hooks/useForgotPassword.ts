@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { forgotPassword } from '../../../../auth/auth.api';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import type { ForgotPasswordFormData } from '../types';
 
 const forgotPasswordSchema = z.object({

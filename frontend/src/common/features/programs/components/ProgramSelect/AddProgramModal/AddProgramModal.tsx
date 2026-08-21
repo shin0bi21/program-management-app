@@ -7,7 +7,7 @@ import FormField from '../../../../../components/FormField/FormField';
 import Modal from '../../../../../components/Modal/Modal';
 import ModalFormFooter from '../../../../../components/Modal/components/ModalFormFooter';
 import { useSubmitStatus, type SubmitStatus } from '../../../../../hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 import { createProgram } from '../../../programs.api';
 import type { Program } from '../../../types';
 

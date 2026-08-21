@@ -4,7 +4,7 @@ import { createProgram, updateProgram } from '../../../../../../common/features/
 import type { Program } from '../../../../../../common/features/programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 interface ProgramDraft {
   name: string;

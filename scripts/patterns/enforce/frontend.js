@@ -322,7 +322,7 @@ export function checkTestOwnership(violations, file, repositoryFiles, routePageD
 }
 
 export function checkCentralizedHttp(violations, file, source) {
-  if (!file.startsWith('frontend/src/') || file === 'frontend/src/http/client.ts' || file === 'frontend/src/auth/tokenRefresh.ts') return;
+  if (!file.startsWith('frontend/src/') || file === 'frontend/src/http/transport.ts') return;
   addMatches(violations, file, source, /\bfetch\s*\(/g, 'frontend requests must use the centralized API client.');
 }
 

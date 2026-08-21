@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import { dayBufferAdapter } from './dayBufferAdapter';
 import { PeriodDataBuffer, type PeriodRange } from './PeriodDataBuffer';
 import type { CalendarPeriod, ResourcePeriodData, ResourceRangeData } from '../types';

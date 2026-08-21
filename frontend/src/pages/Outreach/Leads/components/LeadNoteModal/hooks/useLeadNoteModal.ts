@@ -5,7 +5,7 @@ import {
   getSubmitStatusMessage,
   useSubmitStatus,
 } from '../../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 import { setLeadNote } from '../../../leads.api';
 import type { Lead, LeadNote } from '../../../types';

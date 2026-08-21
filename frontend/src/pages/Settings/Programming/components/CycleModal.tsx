@@ -5,7 +5,7 @@ import ModalFormFooter from '../../../../common/components/Modal/components/Moda
 import { setProgramCycle } from '../../../../common/features/programming/api/cohorts.api';
 import type { SubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 
 interface CycleModalProps {
   isOpen: boolean;

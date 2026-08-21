@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import { getPublicHomepageSessions } from '../publicHomepage.api';
 
 export function useHomepageSessions() {

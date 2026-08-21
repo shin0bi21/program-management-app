@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, AuthError, getErrorMessage, NetworkError, RequestTimeoutError } from './clientErrors';
+import { ApiError, getErrorMessage, NetworkError, RequestTimeoutError } from './errors';
 
 describe('HTTP client errors', () => {
   it('preserves API response metadata', () => {
@@ -18,13 +18,6 @@ describe('HTTP client errors', () => {
     expect(error).toBeInstanceOf(NetworkError);
     expect(error.name).toBe('RequestTimeoutError');
     expect(error.message).toContain('15s');
-  });
-
-  it('provides a distinct missing-authentication error', () => {
-    expect(new AuthError()).toMatchObject({
-      name: 'AuthError',
-      message: 'Authentication required. Please log in.',
-    });
   });
 
   it('extracts known messages and otherwise uses the fallback', () => {
