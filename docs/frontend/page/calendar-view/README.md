@@ -1,14 +1,14 @@
-# Frontend CalendarView
+# Frontend calendar
 
-A page-owned `*CalendarView` adapts domain records to the shared `ResourceCalendar`. It owns range loading, domain filtering, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
+A page-owned `*Calendar` adapts domain records to the shared `ResourceCalendar`. It owns range loading, domain filtering, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
 ## Component structure
 
 ```text
 components/
-  ExampleCalendarView/
-    ExampleCalendarView.tsx
-    ExampleCalendarView.test.tsx
+  ExampleCalendar/
+    ExampleCalendar.tsx
+    ExampleCalendar.test.tsx
     hooks/
       useExampleCalendarData.ts
       useExampleCalendarData.test.ts
@@ -18,14 +18,14 @@ components/
       ExampleItem.story.tsx          when browser interaction matters
 ```
 
-The route owns shared filters, selection, dialogs, and cross-view actions. The CalendarView owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
+The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 
 ## Range data hook
 
-Add a typed range API and connect it to `usePeriodDataBuffer`. Keep React-aware filtering and reference preservation in a focused CalendarView hook.
+Add a typed range API and connect it to `usePeriodDataBuffer`. Keep React-aware filtering and reference preservation in a focused page-calendar hook.
 
 ```tsx
-function ExampleCalendarView({ resources, filters, selection, actions }: Props) {
+function ExampleCalendar({ resources, filters, selection, actions }: Props) {
   const calendar = usePeriodDataBuffer(getExamplesForRange);
   const visible = useExampleCalendarData({
     rangeData: calendar.data,
@@ -76,8 +76,8 @@ Persist durable filters with page preferences. Keep browser-local calendar posit
 
 ## Calendar tests
 
-- The CalendarView data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
-- The CalendarView test owns capability mapping, selection, item construction, and exact callback-to-action wiring.
+- The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
+- The page-calendar test owns capability mapping, selection, item construction, and exact callback-to-action wiring.
 - The page test owns shared controls, view switching, dialog entry, and cross-view selection.
 - Shared calendar tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable cleanup.
 - Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation, unmount cleanup, and mobile geometry.

@@ -42,7 +42,7 @@ const preferenceHook = vi.hoisted<{
   setBaseline: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
-  preference: { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
+  preference: { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
   loading: false,
   error: null,
   setBaseline: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock('../../../auth/authContext', () => ({
 }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
-vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
+vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   default: ({
     onSessionSelect,
     ...props
@@ -134,7 +134,7 @@ vi.mock('./components/SessionsCalendarView/SessionsCalendarView', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
-    preferenceHook.preference = { view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     preferenceHook.loading = false;
     preferenceHook.error = null;
     preferenceHook.setBaseline.mockImplementation((value: SessionPreference) => {
@@ -388,7 +388,7 @@ describe('Sessions', () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Completed' })).toHaveAttribute('aria-checked', 'true');
@@ -469,7 +469,7 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 
-  it('switches between list and calendar views on the same page', async () => {
+  it('switches between table and calendar views on the same page', async () => {
     preferenceHook.preference = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     render(
       <MemoryRouter initialEntries={['/programming/sessions']}>
@@ -485,19 +485,19 @@ describe('Sessions', () => {
     expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(viewSelector);
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
 
-    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'list' }));
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'table' }));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View: List' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Sessions and overview' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
 
     fireEvent.click(await screen.findByText('Communication'));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();

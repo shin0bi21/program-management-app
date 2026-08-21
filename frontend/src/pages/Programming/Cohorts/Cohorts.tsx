@@ -12,8 +12,8 @@ import { useConfirmModal, type ConfirmAction } from '../../../common/components/
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import Table, { type TableColumn } from '../../../common/components/Table/Table';
-import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
+import type { CellContext } from '@tanstack/react-table';
+import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
@@ -23,10 +23,10 @@ import { formatShortDate } from '../../../common/utils/date';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { COHORT_OPTIONS_QUERY_KEY, SESSION_QUERY_KEY } from '../common/queryKeys';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
+import CohortTable from './components/CohortTable/CohortTable';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
 import { useCohortControls } from './hooks/useCohortControls';
-import useCohortTable from './hooks/useCohortTable';
 import './Cohorts.css';
 
 const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
@@ -52,10 +52,6 @@ export default function Cohorts() {
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
-  const cohortTable = useCohortTable(COHORT_TABLE_QUERY_KEY, tableFilters, sorting);
-  const cohorts = cohortTable.rows;
-  const cohortsLoading = cohortTable.loading;
-  const error = cohortTable.error;
   const refreshCohorts = useCallback(
     () => Promise.all([
       queryClient.invalidateQueries({ queryKey: COHORT_TABLE_QUERY_KEY }),
@@ -91,34 +87,32 @@ export default function Cohorts() {
     return () => controller.abort();
   }, [refreshCycles]);
 
-  const {
-    selectedItem: selectedCohort,
-    selectedKey: selectedCohortId,
-    selectItem: selectCohort,
-  } = useTableSelection(cohorts);
+  const [selectedCohort, setSelectedCohort] = useState<ProgramCohort | null>(null);
 
   // Table presentation and row actions.
-  const columns = useMemo<TableColumn<ProgramCohort>[]>(
+  const columns = useMemo<TableColumnDef<ProgramCohort>[]>(
     () => [
-      { key: 'program', header: 'Program', render: (cohort) => cohort.programName },
-      { key: 'cohort', header: 'Cycle', render: (cohort) => cohort.cycleName },
-      { key: 'start', header: 'Start', width: 140, render: (cohort) => formatShortDate(cohort.startsOn) },
-      { key: 'end', header: 'End', width: 140, render: (cohort) => formatShortDate(cohort.endsOn) },
+      { id: 'program', header: 'Program', accessorFn: cohort => cohort.programName },
+      { id: 'cohort', header: 'Cycle', accessorFn: cohort => cohort.cycleName },
+      { id: 'start', header: 'Start', size: 140, accessorFn: cohort => formatShortDate(cohort.startsOn) },
+      { id: 'end', header: 'End', size: 140, accessorFn: cohort => formatShortDate(cohort.endsOn) },
       {
-        key: 'status',
+        id: 'status',
         header: 'Status',
-        width: 120,
-        render: (cohort) => <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>,
+        size: 120,
+        accessorFn: cohort => cohort.state,
+        cell: ({ row: { original: cohort } }) => <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>,
       },
       ...(canWriteCohorts
         ? [
             {
-              key: 'actions',
-              width: 40,
-              resizable: false,
+              id: 'actions',
+              size: 40,
+              enableResizing: false,
+              enableHiding: false,
               header: '',
-              className: 'col-actions',
-              render: (cohort: ProgramCohort) => (
+
+              cell: ({ row: { original: cohort } }: CellContext<ProgramCohort, unknown>) => (
                 <ActionsMenu
                   ariaLabel={`More actions for ${cohort.name}`}
                   items={[
@@ -194,30 +188,18 @@ export default function Cohorts() {
           {!controlsReady ? <p role="status">Loading saved cohort preferences…</p> : <PageBody
             ariaLabel="Programming cohorts and overview"
             table={
-              <Table
-                ariaLabel="Cohorts"
+              <CohortTable
+                queryKey={COHORT_TABLE_QUERY_KEY}
+                filters={tableFilters}
                 columns={columns}
                 hiddenColumnKeys={hiddenColumns}
-                data={cohorts}
-                loading={cohortsLoading}
-                refreshing={cohortTable.refreshing}
-                error={error ?? undefined}
-                keyExtractor={(cohort) => cohort.id}
-                selectedKey={selectedCohortId}
-                onRowSelect={selectCohort}
+                selectedKey={selectedCohort?.id ?? null}
+                onRowSelect={setSelectedCohort}
                 sorting={sorting}
-                sortableColumns={COHORT_TABLE_KEYS}
                 onSortingChange={controls.setSorting}
                 columnWidths={columnWidths}
                 onColumnWidthsChange={controls.setColumnWidths}
-                hasNextPage={cohortTable.hasNextPage}
-                loadingNextPage={cohortTable.loadingNextPage}
-                onLoadNextPage={cohortTable.loadNextPage}
-                emptyMessage={
-                  hasActiveQueryFilters
-                    ? 'No cohorts match your search and filters'
-                    : 'No cohorts yet'
-                }
+                hasActiveQueryFilters={hasActiveQueryFilters}
               />
             }
             dashboard={

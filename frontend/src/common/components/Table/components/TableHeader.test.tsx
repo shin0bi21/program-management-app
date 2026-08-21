@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { Header } from '@tanstack/react-table';
+import type { ColumnDef, Header } from '@tanstack/react-table';
 import { describe, expect, it, vi } from 'vitest';
-import type { TableColumn } from '../Table.types';
 import TableHeader from './TableHeader';
 
 interface Row {
@@ -10,7 +9,7 @@ interface Row {
 
 describe('TableHeader', () => {
   it('resizes a column by one keyboard step from its locked width', () => {
-    const column: TableColumn<Row> = { key: 'name', header: 'Name', render: row => row.name };
+    const column: ColumnDef<Row> = { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name };
     const onResizeByStep = vi.fn();
     const header = {
       id: 'name',

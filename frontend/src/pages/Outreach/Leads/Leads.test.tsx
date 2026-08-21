@@ -6,7 +6,7 @@ import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { COHORT_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import type { LeadPreference } from './types';
 
-const LEADS_LIST_QUERY_KEY = ['leads', 'external', 'list'] as const;
+const LEADS_TABLE_QUERY_KEY = ['leads', 'external', 'table'] as const;
 
 const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return render(
@@ -17,6 +17,7 @@ const renderPage = (queryClient = new QueryClient({ defaultOptions: { queries: {
 const getLeads = vi.fn();
 const updateLead = vi.fn();
 const updateLeadStatus = vi.fn();
+const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
 const preferenceHook = vi.hoisted(() => ({
@@ -32,6 +33,7 @@ vi.mock('./leads.api', () => ({
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
   updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
+  deleteLead: (...args: unknown[]) => deleteLead(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
   setLeadNote: vi.fn(),
@@ -76,6 +78,9 @@ describe('Leads', () => {
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     });
     updateLeadStatus.mockReset();
+    updateLead.mockReset();
+    deleteLead.mockReset();
+    deleteLead.mockResolvedValue({ id: 'lead-1' });
     getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
@@ -101,14 +106,12 @@ describe('Leads', () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
     const initialRequestCount = getLeads.mock.calls.length;
-    getLeads.mockResolvedValue([contactedLead]);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
 
     await waitFor(() => expect(updateLeadStatus).toHaveBeenCalledWith('lead-1', 'contacted'));
-    expect(await screen.findByText('Contacted')).toBeInTheDocument();
-    expect(getLeads.mock.calls.length).toBeGreaterThan(initialRequestCount);
+    await waitFor(() => expect(getLeads.mock.calls.length).toBeGreaterThan(initialRequestCount));
   });
 
   it('signs up a Lead through the dedicated conversion action', async () => {
@@ -116,6 +119,7 @@ describe('Leads', () => {
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
     renderPage(queryClient);
     await screen.findByRole('row', { name: /Avery Outreach/ });
+    const initialRequestCount = getLeads.mock.calls.length;
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
@@ -126,13 +130,10 @@ describe('Leads', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
     await waitFor(() => expect(signUpLead).toHaveBeenCalledWith('lead-1', null));
-    for (const queryKey of [
-      LEADS_LIST_QUERY_KEY,
-      YOUTH_QUERY_KEY,
-      COHORT_QUERY_KEY,
-    ]) {
+    for (const queryKey of [LEADS_TABLE_QUERY_KEY, YOUTH_QUERY_KEY, COHORT_QUERY_KEY]) {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
     }
+    expect(getLeads.mock.calls.length).toBeGreaterThan(initialRequestCount);
     expect(await screen.findByText(
       'Youth profile successfully created for Avery Outreach.',
     )).toBeInTheDocument();

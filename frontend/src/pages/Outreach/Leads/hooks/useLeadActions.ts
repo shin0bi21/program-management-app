@@ -6,12 +6,12 @@ import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { deleteLead, updateLeadStatus } from '../leads.api';
 import type { Lead, LeadStatus } from '../types';
 
-export default function useLeadActions(listQueryKey: readonly unknown[]) {
+export default function useLeadActions(tableQueryKey: readonly unknown[]) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const refreshLeads = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: listQueryKey });
-  }, [listQueryKey, queryClient]);
+    await queryClient.invalidateQueries({ queryKey: tableQueryKey });
+  }, [tableQueryKey, queryClient]);
 
   const setStatus = useCallback(async (lead: Lead, status: LeadStatus) => {
     await updateLeadStatus(lead.id, status);

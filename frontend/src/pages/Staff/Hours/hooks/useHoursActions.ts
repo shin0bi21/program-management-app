@@ -23,12 +23,12 @@ const EMPTY_CALENDAR_CACHE: HoursCalendarCache = {
 
 export default function useHoursActions({
   hoursQueryKey,
-  hoursListQueryKey,
+  hoursTableQueryKey,
   taskQueryKey,
   onEntryRemoved,
 }: {
   hoursQueryKey: readonly unknown[];
-  hoursListQueryKey: readonly unknown[];
+  hoursTableQueryKey: readonly unknown[];
   taskQueryKey: readonly unknown[];
   onEntryRemoved?: (entryId: string) => void;
 }) {
@@ -107,7 +107,7 @@ export default function useHoursActions({
       });
       refreshOverview();
 
-      const refreshes = [queryClient.invalidateQueries({ queryKey: hoursListQueryKey })];
+      const refreshes = [queryClient.invalidateQueries({ queryKey: hoursTableQueryKey })];
       if (item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: taskQueryKey }));
       await Promise.all(refreshes);
     } catch {
@@ -116,7 +116,7 @@ export default function useHoursActions({
     } finally {
       finishEntryAction(item.id);
     }
-  }, [finishEntryAction, queryClient, refreshOverview, startEntryAction, taskQueryKey, hoursListQueryKey]);
+  }, [finishEntryAction, queryClient, refreshOverview, startEntryAction, taskQueryKey, hoursTableQueryKey]);
 
   const requestDelete = useCallback((target: HoursEntryTarget) => setConfirmAction({
     title: 'Delete logged hours',

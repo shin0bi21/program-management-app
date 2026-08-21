@@ -169,12 +169,12 @@ function describeMetrics(metrics) {
   return descriptions.join(', ');
 }
 
-function isCalendarView(file) {
-  return /\/components\/[^/]*CalendarView\/[^/]*CalendarView\.tsx$/.test(file);
+function isCalendarOwner(file) {
+  return /\/components\/[^/]*Calendar\/[^/]*Calendar\.tsx$/.test(file);
 }
 
 function hasInlineWorkflow(file, metrics) {
-  if (isCalendarView(file)) {
+  if (isCalendarOwner(file)) {
     return metrics.stateHooks > 0
       || metrics.effects > 1
       || metrics.queryHooks > 0

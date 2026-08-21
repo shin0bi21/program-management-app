@@ -3,10 +3,16 @@ import {
   getCoreRowModel,
   useReactTable,
   type ColumnDef,
+  type VisibilityState,
   type ColumnSizingState,
   type SortingState,
 } from '@tanstack/react-table';
-import type { TableColumn, TableSorting } from '../Table.types';
+import {
+  getTableColumnCanHide,
+  getTableColumnId,
+  type TableColumnDef,
+  type TableSorting,
+} from '../Table.types';
 import {
   DEFAULT_COLUMN_WIDTH,
   FIXED_COLUMN_WIDTH,
@@ -18,7 +24,9 @@ import {
 
 interface UseTableModelOptions<T> {
   data: T[];
-  columns: TableColumn<T>[];
+  columns: TableColumnDef<T, unknown>[];
+  hiddenColumnKeys: string[];
+  keyExtractor: (item: T) => string;
   sorting?: TableSorting;
   sortableColumns: readonly string[];
   onSortingChange?: (sorting: TableSorting) => void;
@@ -29,6 +37,8 @@ interface UseTableModelOptions<T> {
 export default function useTableModel<T>({
   data,
   columns,
+  hiddenColumnKeys,
+  keyExtractor,
   sorting,
   sortableColumns,
   onSortingChange,
@@ -36,24 +46,30 @@ export default function useTableModel<T>({
   onColumnWidthsChange,
 }: UseTableModelOptions<T>) {
 
-  // Adapt application columns to TanStack columns.
+  // Apply shared controlled sorting and sizing policy to native TanStack columns.
   const tanstackColumns = useMemo<ColumnDef<T>[]>(() => columns.map(column => {
-    const fixedWidth = column.resizable === false;
-    const fixedSize = column.width ?? FIXED_COLUMN_WIDTH;
+    const key = getTableColumnId(column);
+    const fixedWidth = column.enableResizing === false;
+    const configuredSize = column.size;
+    const fixedSize = configuredSize ?? FIXED_COLUMN_WIDTH;
 
     return {
-      id: column.key,
-      accessorFn: row => row,
-      header: column.header,
-      cell: context => column.render(context.row.original),
-      enableSorting: sortableColumns.includes(column.key),
+      ...column,
+      id: key,
+      enableSorting: sortableColumns.includes(key),
       enableResizing: !fixedWidth,
-      size: fixedWidth ? fixedSize : column.width ?? DEFAULT_COLUMN_WIDTH,
-      minSize: fixedWidth ? fixedSize : MIN_COLUMN_WIDTH,
-      maxSize: fixedWidth ? fixedSize : MAX_COLUMN_WIDTH,
-      meta: column,
+      size: fixedWidth ? fixedSize : configuredSize ?? DEFAULT_COLUMN_WIDTH,
+      minSize: fixedWidth ? fixedSize : column.minSize ?? MIN_COLUMN_WIDTH,
+      maxSize: fixedWidth ? fixedSize : column.maxSize ?? MAX_COLUMN_WIDTH,
     };
   }), [columns, sortableColumns]);
+
+  const columnVisibility = useMemo<VisibilityState>(() => Object.fromEntries(
+    columns.map(column => {
+      const key = getTableColumnId(column);
+      return [key, getTableColumnCanHide(column) ? !hiddenColumnKeys.includes(key) : true];
+    }),
+  ), [columns, hiddenColumnKeys]);
 
   // Adapt controlled sorting state. TanStack represents ascending as desc: false.
   const sortingState = useMemo<SortingState>(() => {
@@ -64,9 +80,10 @@ export default function useTableModel<T>({
   // Manage controlled column sizing.
   const normalizeColumnWidths = useCallback((next: ColumnSizingState): ColumnSizingState => Object.fromEntries(
     columns.flatMap(column => {
-      if (column.resizable === false) return [];
-      const width = next[column.key];
-      return Number.isFinite(width) ? [[column.key, clampColumnWidth(width)]] : [];
+      if (column.enableResizing === false) return [];
+      const key = getTableColumnId(column);
+      const width = next[key];
+      return Number.isFinite(width) ? [[key, clampColumnWidth(width)]] : [];
     }),
   ), [columns]);
 
@@ -77,11 +94,11 @@ export default function useTableModel<T>({
   }, [columnWidths, normalizeColumnWidths, onColumnWidthsChange]);
 
   // Expose application-level interactions.
-  const toggleSort = useCallback((column: TableColumn<T>) => {
-    if (!sortableColumns.includes(column.key) || !onSortingChange) return;
-    const ascending = sorting?.key === column.key && sorting.direction === 'asc';
+  const toggleSort = useCallback((columnKey: string) => {
+    if (!sortableColumns.includes(columnKey) || !onSortingChange) return;
+    const ascending = sorting?.key === columnKey && sorting.direction === 'asc';
     onSortingChange({
-      key: column.key,
+      key: columnKey,
       direction: ascending ? 'desc' : 'asc',
     });
   }, [onSortingChange, sortableColumns, sorting]);
@@ -105,16 +122,19 @@ export default function useTableModel<T>({
   const table = useReactTable({
     data,
     columns: tanstackColumns,
-    state: { sorting: sortingState, columnSizing: columnWidths },
+    state: { sorting: sortingState, columnSizing: columnWidths, columnVisibility },
     manualSorting: true,
+    autoResetPageIndex: false,
     enableMultiSort: false,
     columnResizeMode: 'onChange',
     onColumnSizingChange: handleColumnSizingChange,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: row => keyExtractor(row),
   });
 
   return {
     headers: table.getHeaderGroups()[0].headers,
+    rows: table.getRowModel().rows,
     isResizing: Boolean(table.getState().columnSizingInfo.isResizingColumn),
     resizeColumnByStep,
     resolvedColumnWidths: Object.fromEntries(

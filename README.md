@@ -65,8 +65,8 @@ When existing code disagrees with a canonical owner guide, the guide is authorit
 ```text
 app route
   → page
-      → TableView → rows
-      → CalendarView → items
+      → Table → rows
+      → Calendar → items
       → Dashboard → cards
       → Modal → form workflow
   → common/features
@@ -115,9 +115,9 @@ Focused frontend guides:
 | Owner | Guide |
 |---|---|
 | Route page and page hooks | [Page](docs/frontend/page/README.md) |
-| Remote table composition | [TableView](docs/frontend/page/table-view/README.md) |
+| Remote table composition | [Table](docs/frontend/page/table-view/README.md) |
 | Row rendering and mutations | [Table rows](docs/frontend/page/table-view/rows.md) |
-| Calendar data and items | [CalendarView](docs/frontend/page/calendar-view/README.md) |
+| Calendar data and items | [Calendar](docs/frontend/page/calendar-view/README.md) |
 | Dashboard composition | [Dashboard](docs/frontend/page/dashboard/README.md) |
 | Forms and modal workflows | [Modal](docs/frontend/page/modal/README.md) |
 | File placement and extraction | [Shared ownership](docs/frontend/shared/ownership.md) |

@@ -373,37 +373,110 @@ test('requires owning table keys and functional preference saves', () => {
   assert.match(violations.join('\n'), /functional saves/);
 });
 
-test('requires infinite-list queries to use the owning table-view hook and page size', () => {
+test('rejects a historical list-view owner', () => {
   const violations = violationsFor(
     checkPaginatedTables,
-    'frontend/src/pages/Staff/Tasks/components/TaskListView/useTasks.ts',
-    'useInfiniteListQuery({ limit: 50 });',
+    'frontend/src/pages/Staff/Tasks/components/TaskListView/hooks/useTasks.ts',
+    'useInfiniteListQuery({ limit: 25 });',
   );
 
-  assert.match(violations.join('\n'), /remote-table view hook/);
-  assert.match(violations.join('\n'), /25-row cursor page size/);
+  assert.match(violations.join('\n'), /\*ListView and \*TableView owners are not supported/);
 });
 
-test('accepts a standard infinite-list hook', () => {
+test('rejects a historical table-view owner', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTableView/hooks/useTasks.ts',
+    'useInfiniteListQuery({ limit: 25 });',
+  );
+
+  assert.match(violations.join('\n'), /\*ListView and \*TableView owners are not supported/);
+});
+
+test('requires infinite-list queries in a canonical table to use its hooks directory', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/useTasks.ts',
+    'useInfiniteListQuery({ limit: 25 });',
+  );
+
+  assert.match(violations.join('\n'), /remote-table hook/);
+});
+
+test('accepts an infinite-list hook colocated under a canonical table', () => {
   assert.deepEqual(violationsFor(
     checkPaginatedTables,
-    'frontend/src/pages/Staff/Tasks/components/TaskListView/hooks/useTasks.ts',
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTasks.ts',
     'useInfiniteListQuery({ limit: 25 });',
   ), []);
 });
 
-test('accepts a standard TableView infinite-list hook', () => {
+test('rejects a route page importing its table owner private data hook', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Youth/Youth.tsx',
+    "import useYouthTableData from './components/YouthTable/hooks/useYouthTableData';",
+  );
+
+  assert.match(violations.join('\n'), /must not import a table owner's private data hook/);
+});
+
+test('accepts a route page importing its table presentation hook', () => {
   assert.deepEqual(violationsFor(
     checkPaginatedTables,
-    'frontend/src/pages/Staff/Tasks/components/TaskTableView/hooks/useTasks.ts',
-    'useInfiniteListQuery({ limit: 25 });',
+    'frontend/src/pages/Staff/Hours/Hours.tsx',
+    "import useHoursTable from './components/HoursTable/hooks/useHoursTable';",
+  ), []);
+});
+
+test('requires a canonical table renderer filename to match its owner', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/Rows.tsx',
+    'export function Rows() { return <Table />; }',
+  );
+
+  assert.match(violations.join('\n'), /matching owner and file names/);
+});
+
+test('rejects a route page that renders the shared table directly', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/Tasks.tsx',
+    'export function Tasks() { return <Table />; }',
+  );
+
+  assert.match(violations.join('\n'), /components\/\*Table\/\*Table\.tsx/);
+});
+
+test('accepts a canonical table renderer', () => {
+  assert.deepEqual(violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/TaskTable.tsx',
+    'export function TaskTable() { return <Table />; }',
+  ), []);
+});
+
+test('does not confuse the shared table column type with a Table renderer', () => {
+  assert.deepEqual(violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/Tasks.tsx',
+    'const columns = useMemo<TableColumnDef<Task>[]>(() => []);',
+  ), []);
+});
+
+test('does not confuse generic infinite-list infrastructure with a page table owner', () => {
+  assert.deepEqual(violationsFor(
+    checkPaginatedTables,
+    'frontend/src/query/useInfiniteListQuery.ts',
+    'export function useInfiniteListQuery() {}',
   ), []);
 });
 
 test('requires the complete paginated-table contract', () => {
   const violations = violationsFor(
     checkPaginatedTables,
-    'frontend/src/pages/Staff/Tasks/components/TaskListView/TaskListView.tsx',
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/TaskTable.tsx',
     '<Table hasNextPage={hasNextPage} />',
   );
 
@@ -418,7 +491,7 @@ test('reports missing ResourceCalendar ownership, buffering, and lifecycle wirin
   );
 
   assert.match(violations.join('\n'), /usePeriodDataBuffer/);
-  assert.match(violations.join('\n'), /\*CalendarView component/);
+  assert.match(violations.join('\n'), /\*Calendar component/);
   assert.match(violations.join('\n'), /complete period lifecycle/);
 });
 
@@ -435,18 +508,18 @@ test('accepts a fully wired page-owned ResourceCalendar view', () => {
 
   assert.deepEqual(violationsFor(
     checkResourceCalendars,
-    'frontend/src/pages/Staff/Tasks/components/TaskCalendarView/TaskCalendarView.tsx',
+    'frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx',
     source,
   ), []);
 });
 
-test('requires calendar-data hooks to live under their CalendarView', () => {
+test('requires calendar-data hooks to live under their Calendar owner', () => {
   const violations = violationsFor(
     checkCalendarDataHooks,
     'frontend/src/pages/Staff/Tasks/hooks/useTaskCalendarData.ts',
   );
 
-  assert.match(violations[0], /CalendarView hooks directory/);
+  assert.match(violations[0], /Calendar hooks directory/);
 });
 
 test('requires frontend architecture and integration documentation to remain centralized', () => {

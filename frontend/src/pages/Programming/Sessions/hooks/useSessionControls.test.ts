@@ -40,7 +40,7 @@ describe('useSessionControls', () => {
 
   it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
     preferenceHook.preference = {
-      view: 'list', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      view: 'table', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
       sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     };
     const { result } = renderHook(() => useSessionControls({
@@ -49,9 +49,28 @@ describe('useSessionControls', () => {
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
-      view: 'list', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      view: 'table', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
       sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     });
+  });
+
+  it('rejects a stale stored list view and establishes the calendar default', async () => {
+    preferenceHook.preference = {
+      view: 'list' as never,
+      programIds: [],
+      cohortId: null,
+      sessionTypeIds: [],
+      statuses: [],
+    };
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.view).toBe('calendar');
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
   });
 
   it('defaults staff with one assigned program to its active cohort', async () => {
@@ -87,22 +106,22 @@ describe('useSessionControls', () => {
     act(() => result.current.applyFilter('status', ['completed']));
     expect(persisted.statuses).toEqual(['completed']);
     expect(onFiltersChanged).toHaveBeenCalledTimes(1);
-    act(() => result.current.setView('list'));
-    expect(persisted).toEqual(expect.objectContaining({ view: 'list', statuses: ['completed'] }));
+    act(() => result.current.setView('table'));
+    expect(persisted).toEqual(expect.objectContaining({ view: 'table', statuses: ['completed'] }));
 
     act(() => {
       result.current.setHiddenColumns(['status']);
       result.current.setColumnWidths({ theme: 240 });
     });
     expect(persisted).toEqual(expect.objectContaining({
-      view: 'list', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'],
+      view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'],
       hiddenColumns: ['status'], columnWidths: { theme: 240 },
     }));
   });
 
   it('scrubs removed session types and obsolete sorting before establishing the baseline', async () => {
     preferenceHook.preference = {
-      view: 'list',
+      view: 'table',
       programIds: ['program-1'],
       cohortId: 'cohort-1',
       sessionTypeIds: ['removed-type'],
@@ -126,7 +145,7 @@ describe('useSessionControls', () => {
 
   it('preserves saved dependency IDs when session options fail to load', async () => {
     preferenceHook.preference = {
-      view: 'list',
+      view: 'table',
       programIds: ['saved-program'],
       cohortId: 'saved-cohort',
       sessionTypeIds: ['saved-type'],

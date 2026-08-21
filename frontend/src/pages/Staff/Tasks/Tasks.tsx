@@ -9,14 +9,14 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import HoursModal from '../../../common/features/hours/components/HoursModal/HoursModal';
-import TaskCalendarView from './components/TaskCalendarView/TaskCalendarView';
+import TaskCalendar from './components/TaskCalendar/TaskCalendar';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
-import TaskTableView from './components/TaskTableView/TaskTableView';
+import TaskTable from './components/TaskTable/TaskTable';
 import TaskModal from './components/TaskModal/TaskModal';
 
 import { useAuth } from '../../../auth/authContext';
 import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
-import useTaskTable from './components/TaskTableView/hooks/useTaskTable';
+import useTaskTable from './components/TaskTable/hooks/useTaskTable';
 import useTaskActions from './hooks/useTaskActions';
 import useCurrentTaskDate from './hooks/useCurrentTaskDate';
 import useTaskData from './hooks/useTaskData';
@@ -31,7 +31,7 @@ import './Tasks.css';
 
 // Page-owned cache contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
-const TASK_LIST_QUERY_KEY = [...TASK_QUERY_KEY, 'list'] as const;
+const TASK_TABLE_QUERY_KEY = [...TASK_QUERY_KEY, 'table'] as const;
 const TASK_OPTIONS_QUERY_KEY = ['task-options'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
@@ -84,7 +84,7 @@ export default function Tasks() {
 
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
-    taskListQueryKey: TASK_LIST_QUERY_KEY,
+    taskTableQueryKey: TASK_TABLE_QUERY_KEY,
     hoursQueryKey: HOURS_QUERY_KEY,
     onTaskSynced: selection.updateSelectedTask,
     onTaskRemoved: selection.removeSelectedTask,
@@ -103,8 +103,6 @@ export default function Tasks() {
   const table = useTaskTable({
     canWrite,
     today,
-    preferences: taskPreferences.preferences,
-    updatePreferences: taskPreferences.updatePreferences,
     actions: {
       isTaskPending: actions.isTaskPending,
       setStatus: actions.setStatus,
@@ -130,28 +128,28 @@ export default function Tasks() {
     ? () => setSelectedLogHoursTask(loggableTask)
     : undefined;
 
-  const taskTableView = (
-    <TaskTableView
-      queryKey={TASK_LIST_QUERY_KEY}
+  const taskTable = (
+    <TaskTable
+      queryKey={TASK_TABLE_QUERY_KEY}
       columns={table.columns}
-      hiddenColumnKeys={table.hiddenColumns}
+      hiddenColumnKeys={taskPreferences.preferences.hiddenColumns}
       staffIds={filters.staffIds}
       programIds={filters.programIds}
       categories={filters.categories}
       statuses={filters.statusFilters}
       search={filters.search}
       today={today}
-      sorting={table.sorting}
-      columnWidths={table.columnWidths}
+      sorting={taskPreferences.preferences.sorting}
+      columnWidths={taskPreferences.preferences.columnWidths}
       selectedTaskId={selection.selectedTaskId}
       onTaskSelect={selection.selectTask}
-      onSortingChange={table.updateSorting}
-      onColumnWidthsChange={table.updateColumnWidths}
+      onSortingChange={taskPreferences.updateSorting}
+      onColumnWidthsChange={taskPreferences.updateColumnWidths}
     />
   );
 
-  const taskCalendarView = (
-    <TaskCalendarView
+  const taskCalendar = (
+    <TaskCalendar
       resources={pageData.resources}
       filters={{
         staffIds: filters.staffIds,
@@ -172,9 +170,9 @@ export default function Tasks() {
     />
   );
 
-  const viewContent = view === 'list'
-    ? { table: taskTableView }
-    : { calendar: taskCalendarView };
+  const viewContent = view === 'table'
+    ? { table: taskTable }
+    : { calendar: taskCalendar };
 
   // Render.
   return <>
@@ -189,7 +187,7 @@ export default function Tasks() {
           }}
         >+ Add</Button> : undefined}
 
-        search={taskPreferences.ready && view === 'list' ? <SearchInput
+        search={taskPreferences.ready && view === 'table' ? <SearchInput
           label="Search tasks"
           value={filters.search}
           onChange={event => filters.setSearch(event.target.value)}
@@ -198,15 +196,15 @@ export default function Tasks() {
 
         view={taskPreferences.ready ? <ViewMenu
           value={view}
-          options={[{ value: 'calendar', label: 'Calendar' }, { value: 'list', label: 'List' }]}
+          options={[{ value: 'calendar', label: 'Calendar' }, { value: 'table', label: 'Table' }]}
           onChange={nextView => taskPreferences.updatePreferences({ view: nextView })}
         /> : undefined}
 
-        columns={taskPreferences.ready && view === 'list'
+        columns={taskPreferences.ready && view === 'table'
           ? <ColumnVisibilityMenu
             columns={table.columns}
-            hiddenColumnKeys={table.hiddenColumns}
-            onHiddenColumnKeysChange={table.updateHiddenColumns}
+            hiddenColumnKeys={taskPreferences.preferences.hiddenColumns}
+            onHiddenColumnKeysChange={taskPreferences.updateHiddenColumns}
           />
           : undefined}
         filters={taskPreferences.ready ? <FilterCard

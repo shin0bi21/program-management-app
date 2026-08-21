@@ -2,11 +2,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { TaskPreference } from '../types';
+import type { StoredTaskPreferences } from '../types';
 import useTaskPreferences from './useTaskPreferences';
 
 const preferenceHook = vi.hoisted<{
-  preference: TaskPreference | null;
+  preference: StoredTaskPreferences | null;
   loading: boolean;
   error: string | null;
   setBaseline: ReturnType<typeof vi.fn>;
@@ -29,7 +29,7 @@ describe('useTaskPreferences', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.save.mockImplementation((update: TaskPreference | ((current: TaskPreference | null) => TaskPreference)) => {
+    preferenceHook.save.mockImplementation((update: StoredTaskPreferences | ((current: StoredTaskPreferences | null) => StoredTaskPreferences)) => {
       preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
     });
   });
@@ -68,9 +68,9 @@ describe('useTaskPreferences', () => {
 
     act(() => {
       result.current.updatePreferences({ staffIds: ['staff-1'] });
-      result.current.updatePreferences({ hiddenColumns: ['program'] });
-      result.current.updatePreferences({ columnWidths: { title: 300 } });
-      result.current.updatePreferences({ sorting: { key: 'title', direction: 'asc' } });
+      result.current.updateHiddenColumns(['program']);
+      result.current.updateColumnWidths({ title: 300 });
+      result.current.updateSorting({ key: 'title', direction: 'asc' });
     });
 
     expect(preferenceHook.preference).toEqual(expect.objectContaining({
@@ -86,6 +86,19 @@ describe('useTaskPreferences', () => {
       columnWidths: { title: 300 },
       sorting: { key: 'title', direction: 'asc' },
     }));
+  });
+
+  it('replaces a removed list view preference with the calendar default', async () => {
+    preferenceHook.preference = {
+      view: 'list',
+    } as unknown as StoredTaskPreferences;
+    const { result } = renderHook(() => useTaskPreferences({
+      options, optionsLoading: false, optionsError: false, tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.preferences.view).toBe('calendar');
+    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
   });
 
   it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
