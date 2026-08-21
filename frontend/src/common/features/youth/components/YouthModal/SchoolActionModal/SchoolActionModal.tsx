@@ -7,7 +7,7 @@ import useSubmitLock from '../../../../../hooks/useSubmitLock';
 
 import { createSchool, deleteSchool, setSchool } from '../schools/schools.api';
 import type { School } from '../schools/types';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 export type SchoolAction =
   | { type: 'add' }

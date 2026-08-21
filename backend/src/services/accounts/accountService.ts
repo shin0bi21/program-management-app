@@ -336,7 +336,6 @@ async function replaceUserProgramAssignments(
     SELECT id
     FROM programs
     WHERE id = ANY(${sql.array(programIds)}::uuid[])
-      AND roster_mode = 'enrolled'
   `;
   if (assignablePrograms.length !== programIds.length) {
     throw new ConflictError('One or more selected programs cannot be assigned');

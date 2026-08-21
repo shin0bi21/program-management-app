@@ -15,25 +15,7 @@ Choose the narrowest owner that can state the complete behavior. File placement 
 
 Never import a page from common code or another page's private files. Promote a contract only when a real second owner needs it.
 
-## Owner structure
-
-A non-trivial component colocates its UI, stateful behavior, validation, types, styles, and tests:
-
-```text
-FeatureName/
-  FeatureName.tsx
-  FeatureName.test.tsx
-  FeatureName.css                 when it owns styles
-  hooks/
-    useFeatureName.ts
-    useFeatureName.test.ts
-  featureNameSchema.ts            when it owns validation
-  types.ts                        when internal siblings share contracts
-  components/                     only for meaningful nested owners
-  utils/                          only for pure helpers with a clear owner
-```
-
-Use only the files needed. Import named implementation files directly; do not add an `index.ts` that only re-exports one component.
+Every frontend feature and component follows the colocated [frontend feature breakdown](../README.md#feature-breakdown). This guide decides where that owner belongs and when behavior should move to a nested or shared owner.
 
 ## Component, hook, API, and utility pattern
 

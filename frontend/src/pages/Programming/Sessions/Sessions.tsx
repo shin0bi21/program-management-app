@@ -11,7 +11,8 @@ import { useConfirmModal, type ConfirmAction } from '../../../common/components/
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { TableColumn } from '../../../common/components/Table/Table';
+import type { CellContext } from '@tanstack/react-table';
+import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { deleteSession } from '../../../common/features/programming/api/sessions.api';
 import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
@@ -26,8 +27,8 @@ import { useSessionTypes } from '../common/hooks/useSessionTypes';
 import AttendanceModal from './components/AttendanceModal/AttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
-import SessionsCalendarView from './components/SessionsCalendarView/SessionsCalendarView';
-import SessionListView from './components/SessionListView/SessionListView';
+import SessionCalendar from './components/SessionCalendar/SessionCalendar';
+import SessionTable from './components/SessionTable/SessionTable';
 import SessionTypeBadge from './components/SessionTypeBadge/SessionTypeBadge';
 import { useSessionControls } from './hooks/useSessionControls';
 import './Sessions.css';
@@ -36,7 +37,7 @@ const timeFormatter = new Intl.DateTimeFormat('en-CA', {
   hour: 'numeric',
   minute: '2-digit',
 });
-const SESSION_LIST_QUERY_KEY = [...SESSION_QUERY_KEY, 'list'] as const;
+const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Sessions() {
@@ -59,7 +60,7 @@ export default function Sessions() {
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
   const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
-  const [selectedListSession, setSelectedListSession] = useState<CohortSession | null>(null);
+  const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
@@ -96,10 +97,10 @@ export default function Sessions() {
         successMessage: 'Session deleted',
         onConfirm: async () => {
           await deleteSession(session.id);
-          removeInfiniteListRow(queryClient, SESSION_LIST_QUERY_KEY, session.id);
+          removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
           setCalendarSessions(current => current.filter(candidate => candidate.id !== session.id));
           if (selectedSessionId === session.id) {
-            setSelectedListSession(null);
+            setSelectedTableSession(null);
             clearSelectedSession();
           }
           await Promise.all([
@@ -118,40 +119,43 @@ export default function Sessions() {
     setSearchParams(next);
   };
 
-  const columns = useMemo<TableColumn<CohortSession>[]>(
+  const columns = useMemo<TableColumnDef<CohortSession>[]>(
     () => [
-      { key: 'program', header: 'Program', render: (session) => session.programName },
-      { key: 'cohort', header: 'Cohort', render: (session) => session.cohortName },
-      { key: 'theme', header: 'Title / Theme', render: (session) => session.theme },
-      { key: 'date', header: 'Date', width: 135, render: (session) => formatShortDate(session.startsAt) },
+      { id: 'program', header: 'Program', accessorFn: session => session.programName },
+      { id: 'cohort', header: 'Cohort', accessorFn: session => session.cohortName },
+      { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
+      { id: 'date', header: 'Date', size: 135, accessorFn: session => formatShortDate(session.startsAt) },
       {
-        key: 'time',
+        id: 'time',
         header: 'Time',
-        width: 165,
-        render: (session) =>
+        size: 165,
+        accessorFn: session =>
           `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
       },
       {
-        key: 'type',
+        id: 'type',
         header: 'Type',
-        width: 135,
-        render: (session) => <SessionTypeBadge name={session.sessionTypeName} />,
+        size: 135,
+        accessorFn: session => session.sessionTypeName,
+        cell: ({ row: { original: session } }) => <SessionTypeBadge name={session.sessionTypeName} />,
       },
       {
-        key: 'status',
+        id: 'status',
         header: 'Status',
-        width: 110,
-        render: (session) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
+        size: 110,
+        accessorFn: session => session.state,
+        cell: ({ row: { original: session } }) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
       },
       ...(canWriteAttendance || canWriteSessions
         ? [
             {
-              key: 'actions',
-              width: 40,
-              resizable: false,
+              id: 'actions',
+              size: 40,
+              enableResizing: false,
+              enableHiding: false,
               header: '',
-              className: 'col-actions',
-              render: (session: CohortSession) => (
+
+              cell: ({ row: { original: session } }: CellContext<CohortSession, unknown>) => (
                 <ActionsMenu
                   ariaLabel={`More actions for ${session.theme}`}
                   items={[
@@ -187,10 +191,10 @@ export default function Sessions() {
 
   const selectedSession = view === 'calendar'
     ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
-    : selectedListSession?.id === selectedSessionId ? selectedListSession : null;
+    : selectedTableSession?.id === selectedSessionId ? selectedTableSession : null;
 
   const refreshSessionQueries = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: SESSION_LIST_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
     queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
     queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
   ]).then(() => undefined);
@@ -236,12 +240,12 @@ export default function Sessions() {
                 value={view}
                 options={[
                   { value: 'calendar', label: 'Calendar' },
-                  { value: 'list', label: 'List' },
+                  { value: 'table', label: 'Table' },
                 ]}
                 onChange={controls.setView}
               />
             ) : undefined}
-            columns={filtersReady && view === 'list'
+            columns={filtersReady && view === 'table'
               ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
               : undefined}
           />
@@ -251,12 +255,12 @@ export default function Sessions() {
           {sessionTypesError && <p className="form-error" role="alert">{sessionTypesError}</p>}
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
-          ) : view === 'list' ? (
+          ) : view === 'table' ? (
             <PageBody
               ariaLabel="Sessions and overview"
               table={
-                <SessionListView
-                  queryKey={SESSION_LIST_QUERY_KEY}
+                <SessionTable
+                  queryKey={SESSION_TABLE_QUERY_KEY}
                   columns={columns}
                   hiddenColumnKeys={controls.hiddenColumns}
                   filters={{
@@ -269,7 +273,7 @@ export default function Sessions() {
                   sorting={sorting}
                   columnWidths={columnWidths}
                   selectedSessionId={selectedSessionId}
-                  onSelectedSessionResolved={setSelectedListSession}
+                  onSelectedSessionResolved={setSelectedTableSession}
                   onSessionSelect={selectSession}
                   onSortingChange={controls.setSorting}
                   onColumnWidthsChange={controls.setColumnWidths}
@@ -289,7 +293,7 @@ export default function Sessions() {
             <PageBody
               ariaLabel="Sessions calendar and overview"
               calendar={
-                <SessionsCalendarView
+                <SessionCalendar
                   queryKey={SESSION_CALENDAR_QUERY_KEY}
                   selectedProgramIds={selectedProgramIds}
                   selectedCohortId={cohortId}

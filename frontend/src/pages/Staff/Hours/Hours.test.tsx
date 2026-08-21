@@ -16,12 +16,12 @@ import {
 import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
-import type { HoursPreference } from './types';
+import type { StoredHoursPreferences } from './types';
 import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook = vi.hoisted<{
-  preference: HoursPreference | null;
+  preference: StoredHoursPreferences | null;
   loading: boolean;
   error: string | null;
   setBaseline: ReturnType<typeof vi.fn>;
@@ -87,7 +87,7 @@ describe('Hours', () => {
     preferenceHook.loading = false;
     preferenceHook.error = null;
     preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((update: HoursPreference | ((current: HoursPreference | null) => HoursPreference)) => {
+    preferenceHook.save.mockImplementation((update: StoredHoursPreferences | ((current: StoredHoursPreferences | null) => StoredHoursPreferences)) => {
       preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
     });
     vi.mocked(getUser).mockReturnValue({
@@ -195,7 +195,7 @@ describe('Hours', () => {
   });
 
   it('shows a readable coworker row without exposing hours write controls', async () => {
-    preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
     vi.mocked(getHours).mockResolvedValue({
       resources: [
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -244,26 +244,26 @@ describe('Hours', () => {
   });
 
   it('switches between the persisted Hours views', async () => {
-    preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
       </MemoryRouter></QueryClientProvider>,
     );
 
-    expect(await screen.findByRole('button', { name: 'View: List' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
     await waitFor(() => expect(getHours).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
     ));
-    fireEvent.click(screen.getByRole('button', { name: 'View: List' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
   it('clears the persisted cycle with the other Hours filters', async () => {
-    preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
         programs: [{ id: 'program-1', name: 'Soft Skills' }],
@@ -301,7 +301,7 @@ describe('Hours', () => {
   });
 
   it('reloads cycle-aware overview data when the cycle filter changes', async () => {
-    preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
@@ -330,7 +330,7 @@ describe('Hours', () => {
   });
 
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
-    preferenceHook.preference = { view: 'list', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [],
@@ -379,7 +379,7 @@ describe('Hours', () => {
     );
   });
 
-  it('always shows searchable list overview cards for staff', async () => {
+  it('always shows searchable table overview cards for staff', async () => {
     vi.mocked(getHours).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
@@ -401,7 +401,7 @@ describe('Hours', () => {
       screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article'),
     ).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
 
@@ -415,7 +415,7 @@ describe('Hours', () => {
     expect(entryRow).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });
-    expect(await screen.findByText('No hours match your search')).toBeInTheDocument();
+    expect(await screen.findByText('No hours found')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 
@@ -468,7 +468,7 @@ describe('Hours', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'List' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
 
     await screen.findByText('Alex planning meeting');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
@@ -480,9 +480,9 @@ describe('Hours', () => {
     expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
   });
 
-  function mockWritableListEntry() {
+  function mockWritableTableEntry() {
     preferenceHook.preference = {
-      view: 'list',
+      view: 'table',
       staffIds: [],
       programIds: [],
       categories: [],
@@ -570,7 +570,7 @@ describe('Hours', () => {
   });
 
   it('bridges a table Edit action to the shared entry modal', async () => {
-    mockWritableListEntry();
+    mockWritableTableEntry();
     vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
@@ -646,7 +646,7 @@ describe('Hours', () => {
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {
-    mockWritableListEntry();
+    mockWritableTableEntry();
     vi.mocked(deleteHours).mockResolvedValue({ message: 'Deleted' });
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>

@@ -59,7 +59,9 @@ describe('Hours API', () => {
     secondStaffToken = generateToken(secondStaff.userId, 'staff', secondStaff.email);
     unrelatedStaffId = unrelatedStaff.userId;
     unrelatedStaffToken = generateToken(unrelatedStaff.userId, 'staff', unrelatedStaff.email);
-    const programs = await sql<Array<{ id: string; name: string }>>`SELECT id, name FROM programs ORDER BY name LIMIT 1`;
+    const programs = await sql<Array<{ id: string; name: string }>>`
+      SELECT id, name FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
+    `;
     programId = programs[0].id;
     programName = programs[0].name;
     const cohorts = await sql<Array<{ id: string; cycleId: string }>>`
@@ -185,7 +187,7 @@ describe('Hours API', () => {
     });
   });
 
-  it('lists assigned sessions and derives session time metadata', async () => {
+  it('lists assigned open-program sessions and derives session time metadata', async () => {
     const sessions = await request(app)
       .get(`/api/hours/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
@@ -195,6 +197,18 @@ describe('Hours API', () => {
         id: sessionId, label: 'Hours workshop', programId, workDate,
       }),
     ]);
+
+    const unassignedSessions = await request(app)
+      .get(`/api/hours/sessions?staffId=${unrelatedStaffId}&workDate=${workDate}`)
+      .set('Authorization', `Bearer ${unrelatedStaffToken}`);
+    expect(unassignedSessions.status).toBe(200);
+    expect(unassignedSessions.body).toEqual([]);
+
+    const unassignedEntry = await request(app)
+      .post('/api/hours')
+      .set('Authorization', `Bearer ${unrelatedStaffToken}`)
+      .send({ source: 'session', staffId: unrelatedStaffId, sessionId, hours: 1, note: 'Unassigned delivery' });
+    expect(unassignedEntry.status).toBe(404);
 
     const created = await request(app)
       .post('/api/hours')

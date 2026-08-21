@@ -1,22 +1,66 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
 import { COHORT_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 import { deleteLead, updateLeadStatus } from '../leads.api';
 import type { Lead, LeadStatus } from '../types';
 
-export default function useLeadActions(listQueryKey: readonly unknown[]) {
+interface UseLeadActionsOptions {
+  tableQueryKey: readonly unknown[];
+  onLeadSynced?: (lead: Lead) => void;
+  onLeadRemoved?: (leadId: string) => void;
+}
+
+export default function useLeadActions({
+  tableQueryKey,
+  onLeadSynced,
+  onLeadRemoved,
+}: UseLeadActionsOptions) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [actionError, setActionError] = useState('');
+  const actionGenerations = useRef(new Map<string, number>());
+
+  const nextActionGeneration = useCallback((leadId: string) => {
+    const generation = (actionGenerations.current.get(leadId) ?? 0) + 1;
+    actionGenerations.current.set(leadId, generation);
+    return generation;
+  }, []);
+
+  const isCurrentAction = useCallback(
+    (leadId: string, generation: number) => actionGenerations.current.get(leadId) === generation,
+    [],
+  );
   const refreshLeads = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: listQueryKey });
-  }, [listQueryKey, queryClient]);
+    await queryClient.invalidateQueries({ queryKey: tableQueryKey });
+  }, [tableQueryKey, queryClient]);
+
+  const applyLead = useCallback((lead: Lead) => {
+    replaceInfiniteListRow(queryClient, tableQueryKey, lead);
+    onLeadSynced?.(lead);
+  }, [onLeadSynced, queryClient, tableQueryKey]);
+
+  const syncLead = useCallback((lead: Lead) => {
+    setActionError('');
+    nextActionGeneration(lead.id);
+    applyLead(lead);
+  }, [applyLead, nextActionGeneration]);
 
   const setStatus = useCallback(async (lead: Lead, status: LeadStatus) => {
-    await updateLeadStatus(lead.id, status);
-    await refreshLeads();
-  }, [refreshLeads]);
+    setActionError('');
+    const generation = nextActionGeneration(lead.id);
+
+    try {
+      const savedLead = await updateLeadStatus(lead.id, status);
+      if (isCurrentAction(lead.id, generation)) applyLead(savedLead);
+    } catch {
+      if (isCurrentAction(lead.id, generation)) {
+        setActionError('Unable to update lead status.');
+      }
+    }
+  }, [applyLead, isCurrentAction, nextActionGeneration]);
 
   const requestDelete = useCallback((lead: Lead) => setConfirmAction({
     title: 'Delete Lead',
@@ -24,22 +68,29 @@ export default function useLeadActions(listQueryKey: readonly unknown[]) {
     confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Lead deleted',
-    onConfirm: async () => { await deleteLead(lead.id); await refreshLeads(); },
-  }), [refreshLeads]);
+    onConfirm: async () => {
+      await deleteLead(lead.id);
+      nextActionGeneration(lead.id);
+      removeInfiniteListRow(queryClient, tableQueryKey, lead.id);
+      onLeadRemoved?.(lead.id);
+    },
+  }), [nextActionGeneration, onLeadRemoved, queryClient, tableQueryKey]);
 
-  const reconcileSignUp = useCallback(async () => {
+  const reconcileSignUp = useCallback(async (lead: Lead) => {
+    syncLead(lead);
     await Promise.all([
-      refreshLeads(),
       queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
     ]);
-  }, [queryClient, refreshLeads]);
+  }, [queryClient, syncLead]);
 
   return {
     confirmAction,
+    actionError,
     closeConfirmation: () => setConfirmAction(null),
     setStatus,
     requestDelete,
+    syncLead,
     refreshLeads,
     reconcileSignUp,
   };

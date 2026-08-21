@@ -16,7 +16,7 @@ import type {
   SessionRosterMember,
 } from '../../../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../../../common/types/youth';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseAttendanceModalOptions {
   session: CohortSession | null;

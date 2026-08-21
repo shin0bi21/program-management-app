@@ -10,18 +10,9 @@ export function programAccessPredicate(
 
   return sql`
     EXISTS (
-      SELECT 1
-      FROM programs scoped_program
-      WHERE scoped_program.id = ${programId}
-        AND (
-          scoped_program.roster_mode = 'open'
-          OR EXISTS (
-            SELECT 1
-            FROM user_program_assignments scoped_assignment
-            WHERE scoped_assignment.user_id = ${actor.userId}
-              AND scoped_assignment.program_id = scoped_program.id
-          )
-        )
+      SELECT 1 FROM user_program_assignments scoped_assignment
+      WHERE scoped_assignment.user_id = ${actor.userId}
+        AND scoped_assignment.program_id = ${programId}
     )
   `;
 }

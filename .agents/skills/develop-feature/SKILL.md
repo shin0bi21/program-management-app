@@ -9,8 +9,8 @@ Use the repository's human-facing application handbook and owner documents as th
 
 ## Route the work
 
-1. Read `README.md` for every application change. Use the established owner and tests when behavior exists; choose the owner before creating files for a new capability.
-2. Follow the backend and/or frontend architecture and development sections in `README.md` in their documented order.
+1. Start at the routing overview in `README.md` for every application change. Use the established owner and tests when behavior exists; choose the owner before creating files for a new capability.
+2. Follow `docs/backend/README.md` and/or `docs/frontend/README.md` in dependency order.
 3. Follow the narrowest focused child guide for every shared surface, component, integration, or workflow the change creates, modifies, or consumes.
 4. Inspect the owning types, validation, policies, and authoritative tests before changing product behavior.
 5. Inspect one strong matching implementation before coding. Inspect a second only when the repository pattern remains ambiguous.

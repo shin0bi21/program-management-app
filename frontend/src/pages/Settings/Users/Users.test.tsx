@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
 import type { AccountPreference } from './types';
+import { toggleAccountStatus } from './accounts.api';
+import type { Account } from '../../../common/types/account';
 
 const mockUseAuth = vi.fn();
-const mockUseAccounts = vi.fn();
+const mockUseUserTableData = vi.fn();
 const preferenceHook = vi.hoisted(() => ({
   preference: null as AccountPreference | null,
   loading: false,
@@ -16,11 +18,15 @@ const preferenceHook = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
-vi.mock('./hooks/useAccounts', () => ({
-  useAccounts: (...args: unknown[]) => mockUseAccounts(...args),
+vi.mock('./components/UserTable/hooks/useUserTableData', () => ({
+  default: (...args: unknown[]) => mockUseUserTableData(...args),
 }));
 vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
+}));
+vi.mock('./accounts.api', () => ({
+  revokeAccountInvite: vi.fn(),
+  toggleAccountStatus: vi.fn(),
 }));
 
 const accounts = [
@@ -44,11 +50,14 @@ const accounts = [
   },
 ] as const;
 
-const renderPage = () => render(
-  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => ({
+  client,
+  ...render(
+  <QueryClientProvider client={client}>
     <Users />
   </QueryClientProvider>,
-);
+  ),
+});
 
 describe('Users', () => {
   beforeEach(() => {
@@ -66,8 +75,9 @@ describe('Users', () => {
         ? update(preferenceHook.preference)
         : update;
     });
-    mockUseAccounts.mockReturnValue({
-      accounts,
+    mockUseUserTableData.mockReset();
+    mockUseUserTableData.mockReturnValue({
+      rows: accounts,
       loading: false,
       error: '',
     });
@@ -94,11 +104,7 @@ describe('Users', () => {
     expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Accounts' })).not.toBeInTheDocument();
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
-      null,
-      expect.any(Object),
-    );
+    expect(mockUseUserTableData).not.toHaveBeenCalled();
 
     preferenceHook.loading = false;
     rendered.rerender(
@@ -125,8 +131,8 @@ describe('Users', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
     act(() => vi.advanceTimersByTime(250));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
+    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
       expect.objectContaining({ search: 'Yara' }),
       expect.any(Object),
     );
@@ -135,8 +141,8 @@ describe('Users', () => {
 
   it('shows the staff-scoped presentation without staff-management controls', () => {
     mockUseAuth.mockReturnValue({ role: 'staff', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
-    mockUseAccounts.mockReturnValue({
-      accounts: [accounts[1]],
+    mockUseUserTableData.mockReturnValue({
+      rows: [accounts[1]],
       loading: false,
       error: '',
     });
@@ -152,6 +158,34 @@ describe('Users', () => {
     expect(screen.getByText('Yara Youth')).toBeInTheDocument();
   });
 
+  it('replaces a toggled account in every cached table variant without refetching', async () => {
+    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const firstKey = ['accounts', 'table', { statuses: ['active'] }] as const;
+    const secondKey = ['accounts', 'table', { search: 'Alice' }] as const;
+    const activeAccount = accounts[0] as Account;
+    const unaffectedAccount = accounts[1] as Account;
+    const savedAccount = { ...activeAccount, status: 'inactive' } as Account;
+    for (const [key, rows] of [[firstKey, [activeAccount, unaffectedAccount]], [secondKey, [activeAccount]]] as const) {
+      client.setQueryData(key, { pages: [{ rows, nextCursor: null }], pageParams: [undefined] });
+    }
+    const cachedUnaffectedAccount = client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows[1];
+    const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined);
+    vi.mocked(toggleAccountStatus).mockResolvedValue(savedAccount);
+    renderPage(client);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Alice Admin' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+
+    expect(await screen.findByText('Account deactivated')).toBeInTheDocument();
+    expect(toggleAccountStatus).toHaveBeenCalledWith('admin-1');
+    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows).toEqual([savedAccount, unaffectedAccount]);
+    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows[1]).toBe(cachedUnaffectedAccount);
+    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(secondKey)?.pages[0].rows).toEqual([savedAccount]);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   it('sends applied role and status filters and clears them by category or together', () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
     renderPage();
@@ -161,8 +195,8 @@ describe('Users', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Invited' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
+    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
       expect.objectContaining({ statuses: ['active', 'invited'] }),
       expect.any(Object),
     );
@@ -172,8 +206,8 @@ describe('Users', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Admin' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Staff' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
+    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
       expect.objectContaining({
         roles: ['admin', 'staff'],
         statuses: ['active', 'invited'],
@@ -182,16 +216,16 @@ describe('Users', () => {
     );
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
+    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
       expect.objectContaining({ roles: [], statuses: ['active', 'invited'] }),
       expect.any(Object),
     );
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(mockUseAccounts).toHaveBeenLastCalledWith(
-      ['accounts', 'list'],
+    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
       expect.objectContaining({ roles: [], statuses: [] }),
       expect.any(Object),
     );

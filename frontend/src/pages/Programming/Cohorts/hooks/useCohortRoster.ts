@@ -4,7 +4,7 @@ import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { getYouth } from '../../../../common/features/youth/youth.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { YouthProfile } from '../../../../common/types/youth';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 
 const belongsToCohort = (profile: YouthProfile, cohortId: string) =>
   profile.cohorts.some((enrollment) => enrollment.id === cohortId && enrollment.withdrawnOn === null);

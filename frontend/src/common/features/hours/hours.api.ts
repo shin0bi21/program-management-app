@@ -2,14 +2,22 @@ import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { ResourcePeriodData } from '../../components/ResourceCalendar/types';
 import type { CursorPage, CursorRequest } from '../../types/pagination';
-import type { StaffResource, HoursCategory, HoursProgram, HoursSession, HoursItem } from './types';
+import type { StaffResource, HoursCategory, HoursProgram, HoursSession, HoursItem, HoursTableRow } from './types';
 
 export interface HoursResponse {
-  id: string; staffId: string; programId: string | null; programName: string | null;
-  cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string;
-  category: HoursCategory; taskId: string | null; taskTitle: string | null;
+  id: string;
+  staffId: string;
+  programId: string | null; programName: string | null;
+  cycleId: string;
+  cycleName: string;
+  cycleStartsOn: string;
+  cycleEndsOn: string;
+  category: HoursCategory;
+  taskId: string | null; taskTitle: string | null;
   sessionId: string | null; sessionLabel: string | null;
-  workDate: string; hours: number; note: string;
+  workDate: string;
+  hours: number;
+  note: string;
 }
 
 interface SharedHoursInput { staffId: string; hours: number; note: string }
@@ -40,15 +48,11 @@ export interface HoursOverviewResponse {
 }
 
 export interface HoursFilters { start?: string; end?: string; cycleId?: string }
+
 export interface HoursListFilters {
   staffIds: string[]; categories: HoursCategory[]; programIds: string[];
   types: Array<'task' | 'session' | 'other'>; cycleId?: string; search?: string;
 }
-export interface HoursListRowResponse {
-  id: string; resourceId: string; date: string; item: HoursItem;
-  staffFirstName: string; staffLastName: string; staffName: string;
-}
-
 export function getHours(filters: HoursFilters = {}, opts?: RequestOptions) {
   const params = new URLSearchParams();
   if (filters.start && filters.end) { params.set('start', filters.start); params.set('end', filters.end); }
@@ -76,7 +80,7 @@ export function getHoursList(
   if (filters.types.length) params.set('types', filters.types.join(','));
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
   if (filters.search) params.set('search', filters.search);
-  return apiClient.get<CursorPage<HoursListRowResponse>>(`/hours/list?${params}`, opts);
+  return apiClient.get<CursorPage<HoursTableRow>>(`/hours/list?${params}`, opts);
 }
 
 export function getHoursOverview(staffId: string, cycleId: string, opts?: RequestOptions) {

@@ -40,8 +40,8 @@ Read only the references required by the current diff, and read each selected fi
 - Read [`references/structure-and-ownership.md`](references/structure-and-ownership.md) for non-trivial implementation changes, shared extractions, or directory/ownership changes.
 - Read [`references/react-rendering-and-state.md`](references/react-rendering-and-state.md) for React UI, grids, calendars, drag/drop, optimistic state, realtime state, or render-sensitive work.
 - Read [`references/testing.md`](references/testing.md) whenever behavior, tests, runners, APIs, persistence, or asynchronous flows change.
-- For frontend changes, read the frontend architecture and development section in the root [`README.md`](../../../README.md), then read only the focused guides under `docs/frontend/` for the surfaces changed. Review must enforce the same owning contract implementation was supposed to follow without routing through unrelated component guides.
-- For backend changes, read the backend architecture and development section in the root [`README.md`](../../../README.md), then read every applicable focused middleware, service, policy, database, testing, error, auth, API, or integration guide under `docs/backend/`.
+- For frontend changes, read [`docs/frontend/README.md`](../../../docs/frontend/README.md), then read only the focused guides under `docs/frontend/` for the surfaces changed. Review must enforce the same owning contract implementation was supposed to follow without routing through unrelated component guides.
+- For backend changes, read [`docs/backend/README.md`](../../../docs/backend/README.md), then read every applicable focused middleware, service, policy, database, testing, error, auth, API, or integration guide under `docs/backend/`.
 - For permissions, ownership, assignments, resource visibility, or writable capabilities, also read [`authorization.md`](../../../docs/backend/authorization.md).
 
 For a cross-stack or repository-wide review, read all applicable references. Do not skip a reference merely because the diff is large.

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { verify2FA, resend2FA } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint, getDeviceName } from '../../../../auth/deviceFingerprint';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import { formatTime } from '../../../../common/utils/time';
 import type { VerifyPasswordFormData } from '../types';

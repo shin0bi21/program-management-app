@@ -80,6 +80,10 @@ describe('Cohorts and attendance API', () => {
     `;
     const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Drop In'`;
     openProgramId = openProgram.id;
+    await sql`
+      INSERT INTO user_program_assignments (user_id, program_id)
+      VALUES (${staffId}, ${openProgramId})
+    `;
     const [clock] = await sql<{ today: string }[]>`
       SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date::text AS today
     `;

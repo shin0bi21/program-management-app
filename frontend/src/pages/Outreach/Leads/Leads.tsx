@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -9,11 +9,12 @@ import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfi
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { TableColumn } from '../../../common/components/Table/Table';
+import type { CellContext } from '@tanstack/react-table';
+import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { formatShortDate } from '../../../common/utils/date';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
-import LeadTableView from './components/LeadTableView/LeadTableView';
+import LeadTable from './components/LeadTable/LeadTable';
 import LeadModal from './components/LeadModal/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import { useLeadControls } from './hooks/useLeadControls';
@@ -27,7 +28,7 @@ const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   const viewTitle = origin === 'external' ? 'External Leads' : 'Internal Leads';
   const preferenceKey = origin === 'external' ? 'outreach-external-leads-filters' : 'outreach-internal-leads-filters';
-  const listQueryKey = ['leads', origin, 'list'] as const;
+  const tableQueryKey = ['leads', origin, 'table'] as const;
   // Services and permissions.
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:outreach');
@@ -47,33 +48,49 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     ready: controlsReady,
   } = controls;
-  const actions = useLeadActions(listQueryKey);
-
   // Selection and dialogs.
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const selectedLeadId = selectedLead?.id ?? null;
   const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
+  const syncSelectedLead = useCallback((lead: Lead) => {
+    setSelectedLead(current => current?.id === lead.id ? lead : current);
+  }, []);
+  const removeSelectedLead = useCallback((leadId: string) => {
+    setSelectedLead(current => current?.id === leadId ? null : current);
+  }, []);
+  const actions = useLeadActions({
+    tableQueryKey,
+    onLeadSynced: syncSelectedLead,
+    onLeadRemoved: removeSelectedLead,
+  });
   const confirmModal = useConfirmModal({ action: actions.confirmAction, onClose: actions.closeConfirmation });
 
   // Mutations and cache reconciliation.
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
 
   // Table presentation.
-  const columns: TableColumn<Lead>[] = [
-    { key: 'firstName', header: 'First Name', render: lead => lead.youthFirstName },
-    { key: 'lastName', header: 'Last Name', render: lead => lead.youthLastName },
-    { key: 'school', header: 'School', render: lead => lead.school },
-    { key: 'program', header: 'Eligible Program', render: lead => lead.recommendedProgramName ?? '—' },
-    { key: 'status', header: 'Status', width: 120, render: lead => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span> },
-    { key: 'created', header: 'Created', width: 130, render: lead => formatShortDate(lead.createdAt) },
+  const columns: TableColumnDef<Lead>[] = [
+    { id: 'firstName', header: 'First Name', accessorFn: lead => lead.youthFirstName },
+    { id: 'lastName', header: 'Last Name', accessorFn: lead => lead.youthLastName },
+    { id: 'school', header: 'School', accessorFn: lead => lead.school },
+    { id: 'program', header: 'Eligible Program', accessorFn: lead => lead.recommendedProgramName ?? '—' },
+    {
+      id: 'status',
+      header: 'Status',
+      size: 120,
+      accessorFn: lead => lead.status,
+      cell: ({ row: { original: lead } }) => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span>,
+    },
+    { id: 'created', header: 'Created', size: 130, accessorFn: lead => formatShortDate(lead.createdAt) },
     ...(canWrite ? [{
-      key: 'actions' as const,
-      width: 40,
-      resizable: false,
+      id: 'actions' as const,
+      size: 40,
+      enableResizing: false,
+      enableHiding: false,
       header: '',
-      className: 'col-actions',
-      render: (lead: Lead) => lead.status === 'signed_up' ? null : <ActionsMenu
+
+      cell: ({ row: { original: lead } }: CellContext<Lead, unknown>) => lead.status === 'signed_up' ? null : <ActionsMenu
           ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
           items={[
             { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
@@ -115,10 +132,11 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
       {programsError && <p className="form-error" role="alert">{programsError}</p>}
+      {actions.actionError && <p className="form-error" role="alert">{actions.actionError}</p>}
       {!controlsReady ? <p role="status">Loading saved lead preferences…</p> : <PageBody
         ariaLabel={viewTitle}
-        table={<LeadTableView
-          queryKey={listQueryKey}
+        table={<LeadTable
+          queryKey={tableQueryKey}
           columns={columns}
           hiddenColumnKeys={hiddenColumns}
           filters={queryFilters}
@@ -136,7 +154,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
-      onSuccess={() => { void actions.refreshLeads(); }}
+      onSuccess={savedLead => {
+        if (modalTarget === 'new') void actions.refreshLeads();
+        else actions.syncLead(savedLead);
+      }}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}

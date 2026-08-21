@@ -120,7 +120,7 @@ describe('Programs API', () => {
     expect(reversedRange.status).toBe(400);
   });
 
-  it('returns assigned and open programs to staff', async () => {
+  it('returns only assigned programs to staff', async () => {
     const res = await request(app)
       .get('/api/programs?scope=assigned')
       .set('Authorization', `Bearer ${staffToken}`);
@@ -133,10 +133,10 @@ describe('Programs API', () => {
         minAge: 12,
         maxAge: 15,
       }),
-      expect.objectContaining({ id: expect.any(String), name: 'Drop In', rosterMode: 'open' }),
     ]));
     expect(res.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Job Readiness', minAge: 16, maxAge: 19 }),
+      expect.objectContaining({ name: 'Drop In', rosterMode: 'open' }),
     ]));
   });
 

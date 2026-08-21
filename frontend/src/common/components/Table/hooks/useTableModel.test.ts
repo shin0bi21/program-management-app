@@ -1,16 +1,16 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { TableColumn } from '../Table.types';
 import useTableModel from './useTableModel';
+import type { TableColumnDef } from '../Table.types';
 
 interface Row {
   id: string;
   name: string;
 }
 
-const columns: TableColumn<Row>[] = [
-  { key: 'name', header: 'Name', render: row => row.name },
-  { key: 'actions', header: '', render: () => null, resizable: false },
+const columns: TableColumnDef<Row>[] = [
+  { accessorKey: 'name', header: 'Name' },
+  { id: 'actions', header: '', cell: () => null, enableResizing: false, enableHiding: false },
 ];
 
 describe('useTableModel', () => {
@@ -19,13 +19,15 @@ describe('useTableModel', () => {
     const { result } = renderHook(() => useTableModel({
       data: [],
       columns,
+      hiddenColumnKeys: [],
+      keyExtractor: row => row.id,
       sorting: { key: 'name', direction: 'asc' },
       sortableColumns: ['name'],
       onSortingChange,
       columnWidths: {},
     }));
 
-    result.current.toggleSort(columns[0]);
+    result.current.toggleSort('name');
 
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'name', direction: 'desc' });
   });
@@ -35,12 +37,14 @@ describe('useTableModel', () => {
     const { result } = renderHook(() => useTableModel({
       data: [],
       columns,
+      hiddenColumnKeys: [],
+      keyExtractor: row => row.id,
       sortableColumns: ['name'],
       onSortingChange,
       columnWidths: {},
     }));
 
-    result.current.toggleSort(columns[1]);
+    result.current.toggleSort('actions');
 
     expect(onSortingChange).not.toHaveBeenCalled();
   });

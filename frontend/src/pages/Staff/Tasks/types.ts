@@ -3,7 +3,7 @@ import type { ListSort } from '../../../common/types/pagination';
 
 export const TASK_TABLE_KEYS = ['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'] as const;
 export type TaskSortKey = typeof TASK_TABLE_KEYS[number];
-export type TasksView = 'calendar' | 'list';
+export type TasksView = 'calendar' | 'table';
 
 export interface TaskPreferences {
   view: TasksView;
@@ -16,16 +16,7 @@ export interface TaskPreferences {
   hiddenColumns: string[];
 }
 
-export interface TaskPreference {
-  view?: TasksView;
-  staffIds?: string[];
-  programIds: string[];
-  categories: TaskCategory[];
-  statuses: TaskListStatus[];
-  sorting?: ListSort<TaskSortKey>;
-  columnWidths?: Record<string, number>;
-  hiddenColumns?: string[];
-}
+export type StoredTaskPreferences = Partial<TaskPreferences>;
 
 export interface TaskCalendarCache {
   upsert: (task: Task) => void;

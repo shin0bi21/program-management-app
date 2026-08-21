@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { resetPassword } from '../../../../auth/auth.api';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import type { ResetPasswordFormData } from '../types';
 
 const resetPasswordSchema = z.object({

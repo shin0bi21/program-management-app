@@ -2,20 +2,6 @@
 
 A page-owned modal owns one form draft, validation, submission lifecycle, and failure recovery. The route page owns the modal target and entry paths; shared `Modal` owns generic dialog semantics, focus, Escape handling, and focus return.
 
-## Component structure
-
-```text
-components/
-  ExampleModal/
-    ExampleModal.tsx
-    ExampleModal.test.tsx
-    hooks/
-      useExampleModal.ts
-      useExampleModal.test.ts
-    exampleModalSchema.ts          when validation is modal-specific
-    types.ts                       only when internal files share contracts
-```
-
 Keep one-off props beside the component. A non-trivial workflow hook owns initialization, draft transitions, validation, submit locking, API errors, reset, and the authoritative success callback.
 
 ## Page entry pattern

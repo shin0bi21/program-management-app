@@ -8,7 +8,7 @@ import {
   type GenerateSessionsInput,
   type ProgramCohort,
 } from '../../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 import { useSessionTypes } from '../../../hooks/useSessionTypes';
 
 type SessionFrequency = GenerateSessionsInput['frequency'];

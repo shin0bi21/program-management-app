@@ -8,7 +8,7 @@ import {
   useSubmitStatus,
 } from '../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';

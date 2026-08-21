@@ -28,3 +28,13 @@ export interface HoursItem {
   hours: number;
   note: string;
 }
+
+export interface HoursTableRow {
+  id: string;
+  resourceId: string;
+  date: string;
+  item: HoursItem;
+  staffFirstName: string;
+  staffLastName: string;
+  staffName: string;
+}

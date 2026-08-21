@@ -2,14 +2,14 @@ import { flexRender, type Header } from '@tanstack/react-table';
 import type { KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
 import type { ColumnSizingState } from '@tanstack/react-table';
-import type { TableColumn } from '../Table.types';
+import { getTableColumnHeader } from '../Table.types';
 import { ariaSortFor } from '../table.utils';
 
 interface TableHeaderProps<T> {
   headers: Header<T, unknown>[];
   canResize: boolean;
   onResizeStart: () => ColumnSizingState | undefined;
-  onToggleSort: (column: TableColumn<T>) => void;
+  onToggleSort: (columnKey: string) => void;
   onResizeByStep: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight', lockedWidths?: ColumnSizingState) => void;
 }
 
@@ -24,7 +24,7 @@ function TableHeaderCell<T>({
   onToggleSort,
   onResizeByStep,
 }: TableHeaderCellProps<T>) {
-  const column = header.column.columnDef.meta as TableColumn<T>;
+  const column = header.column.columnDef;
   const sortDirection = header.column.getIsSorted();
   const headerLabel = flexRender(header.column.columnDef.header, header.getContext());
 
@@ -48,12 +48,12 @@ function TableHeaderCell<T>({
 
   return (
     <th
-      className={column.className}
+      data-column-id={header.column.id}
       style={{ width: header.getSize() }}
       aria-sort={ariaSortFor(sortDirection)}
     >
       {header.column.getCanSort() ? (
-        <button type="button" className="table-sort-trigger" onClick={() => onToggleSort(column)}>
+        <button type="button" className="table-sort-trigger" onClick={() => onToggleSort(header.column.id)}>
           {headerLabel}
           <span aria-hidden="true" className="table-sort-indicator" data-direction={sortDirection || 'none'} />
         </button>
@@ -62,7 +62,7 @@ function TableHeaderCell<T>({
         <button
           type="button"
           className={`table-resize-handle${header.column.getIsResizing() ? ' table-resize-handle--active' : ''}`}
-          aria-label={`Resize ${String(column.header)} column`}
+          aria-label={`Resize ${getTableColumnHeader(column)} column`}
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
           onDoubleClick={() => header.column.resetSize()}

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { login } from '../../../../auth/auth.api';
 import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint } from '../../../../auth/deviceFingerprint';
-import { getErrorMessage } from '../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../http/errors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import type { LoginFormData } from '../types';
 

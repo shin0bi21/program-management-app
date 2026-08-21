@@ -4,11 +4,16 @@ import { faCheck, faColumns } from '@fortawesome/free-solid-svg-icons';
 import Button from '../Button/Button';
 import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import { useFloatingMenu } from '../FloatingMenu/hooks/useFloatingMenu';
-import type { TableColumn } from '../Table/Table.types';
+import {
+  getTableColumnCanHide,
+  getTableColumnHeader,
+  getTableColumnId,
+  type TableColumnDef,
+} from '../Table/Table.types';
 import './ColumnVisibilityMenu.css';
 
 interface ColumnVisibilityMenuProps<T> {
-  columns: TableColumn<T>[];
+  columns: TableColumnDef<T, unknown>[];
   hiddenColumnKeys: string[];
   onHiddenColumnKeysChange: (keys: string[]) => void;
   label?: string;
@@ -22,7 +27,7 @@ export default function ColumnVisibilityMenu<T>({
 }: ColumnVisibilityMenuProps<T>) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const hideableColumns = useMemo(
-    () => columns.filter(column => column.hideable !== false && column.resizable !== false),
+    () => columns.filter(getTableColumnCanHide),
     [columns],
   );
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
@@ -34,7 +39,9 @@ export default function ColumnVisibilityMenu<T>({
       dismissOnViewportChange: false,
     },
   );
-  const visibleCount = hideableColumns.filter(column => !hiddenColumnKeys.includes(column.key)).length;
+  const visibleCount = hideableColumns.filter(
+    column => !hiddenColumnKeys.includes(getTableColumnId(column)),
+  ).length;
 
   const toggleColumn = (key: string) => {
     const hidden = hiddenColumnKeys.includes(key);
@@ -54,12 +61,13 @@ export default function ColumnVisibilityMenu<T>({
         <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close} className="column-visibility-menu" width={220}>
           <div className="column-visibility-menu__title">{label}</div>
           {hideableColumns.map(column => {
-            const visible = !hiddenColumnKeys.includes(column.key);
+            const key = getTableColumnId(column);
+            const visible = !hiddenColumnKeys.includes(key);
             const disableHide = visible && visibleCount === 1;
             return (
-              <button key={column.key} type="button" role="menuitemcheckbox" aria-checked={visible} disabled={disableHide} className="column-visibility-menu__option" onClick={() => toggleColumn(column.key)}>
+              <button key={key} type="button" role="menuitemcheckbox" aria-checked={visible} disabled={disableHide} className="column-visibility-menu__option" onClick={() => toggleColumn(key)}>
                 <span className={`column-visibility-menu__checkbox${visible ? ' checked' : ''}`}>{visible && <FontAwesomeIcon icon={faCheck} />}</span>
-                <span>{column.header}</span>
+                <span>{getTableColumnHeader(column)}</span>
               </button>
             );
           })}
