@@ -18,6 +18,7 @@ vi.mock('../../accounts.api', () => ({
 
 const softSkillsId = '11111111-1111-4111-8111-111111111111';
 const jobReadinessId = '44444444-4444-4444-8444-444444444444';
+const dropInId = '22222222-2222-4222-8222-222222222222';
 
 describe('AccountModal program assignments', () => {
   beforeEach(() => {
@@ -39,7 +40,7 @@ describe('AccountModal program assignments', () => {
         maxAge: 19,
       },
       {
-        id: '22222222-2222-4222-8222-222222222222',
+        id: dropInId,
         name: 'Drop In',
         description: null,
         rosterMode: 'open',
@@ -55,7 +56,7 @@ describe('AccountModal program assignments', () => {
       role: 'staff',
       status: 'invited',
       createdAt: '2026-07-25T00:00:00.000Z',
-      programIds: [softSkillsId],
+      programIds: [softSkillsId, dropInId],
     });
     vi.mocked(updateAccount).mockResolvedValue({
       id: '33333333-3333-4333-8333-333333333333',
@@ -69,7 +70,7 @@ describe('AccountModal program assignments', () => {
     });
   });
 
-  it('assigns selected enrollment programs and lists open programs as automatic', async () => {
+  it('assigns selected enrolled and open-roster programs', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onSuccess = vi.fn();
@@ -81,11 +82,12 @@ describe('AccountModal program assignments', () => {
       />,
     );
 
-    expect(await screen.findByText('Automatically available: Drop In')).toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: 'Drop In' })).not.toBeChecked();
     await user.type(screen.getByLabelText('First Name *'), 'Sam');
     await user.type(screen.getByLabelText('Last Name *'), 'Staff');
     await user.type(screen.getByLabelText('Email *'), 'sam@example.com');
     await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Drop In' }));
     await user.click(screen.getByRole('button', { name: 'Send Invite' }));
 
     await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith({
@@ -93,9 +95,8 @@ describe('AccountModal program assignments', () => {
       lastName: 'Staff',
       email: 'sam@example.com',
       role: 'staff',
-      programIds: [softSkillsId],
+      programIds: [softSkillsId, dropInId],
     }));
-    expect(screen.queryByRole('checkbox', { name: 'Drop In' })).not.toBeInTheDocument();
     expect(onSuccess).toHaveBeenCalled();
     expect(screen.getByText('Invitation sent!')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Invite Staff Account' })).toBeInTheDocument();
@@ -145,7 +146,7 @@ describe('AccountModal program assignments', () => {
       <AccountModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />,
     );
 
-    await screen.findByText('Automatically available: Drop In');
+    await screen.findByRole('checkbox', { name: 'Drop In' });
     await user.type(screen.getByLabelText('First Name *'), 'Avery');
     await user.type(screen.getByLabelText('Last Name *'), 'Admin');
     await user.type(screen.getByLabelText('Email *'), 'avery@example.com');
