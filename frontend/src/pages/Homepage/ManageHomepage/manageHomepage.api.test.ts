@@ -14,8 +14,8 @@ vi.mock('../../../http/client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
-vi.mock('../../../http/config', () => ({
-  api: (path: string) => `https://api.example.test${path}`,
+vi.mock('../../../http/transport', () => ({
+  apiUrl: (path: string) => `https://api.example.test${path}`,
 }));
 
 describe('manageHomepage API', () => {

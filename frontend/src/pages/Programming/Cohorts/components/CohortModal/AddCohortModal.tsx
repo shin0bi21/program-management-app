@@ -7,7 +7,7 @@ import ModalFormFooter from '../../../../../common/components/Modal/components/M
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { Program } from '../../../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../http/errors';
 
 interface AddCohortModalProps {
   isOpen: boolean;

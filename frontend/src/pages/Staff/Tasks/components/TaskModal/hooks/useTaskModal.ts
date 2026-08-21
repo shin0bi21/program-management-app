@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { setTask } from '../../../../../../common/features/tasks/tasks.api';
 import type { Task, TaskCategory } from '../../../../../../common/features/tasks/types';
 import { getSubmitStatusMessage, useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../../http/clientErrors';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 export interface UseTaskModalOptions {
   isOpen: boolean;

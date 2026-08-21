@@ -1,3 +1,4 @@
+/** Field-level validation metadata returned by the API. */
 export interface ValidationDetail {
   field: string;
   message: string;
@@ -13,13 +14,6 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
-  }
-}
-
-export class AuthError extends Error {
-  constructor(message = 'Authentication required. Please log in.') {
-    super(message);
-    this.name = 'AuthError';
   }
 }
 

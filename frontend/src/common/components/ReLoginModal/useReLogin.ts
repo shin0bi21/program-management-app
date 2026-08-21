@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { login, resend2FA, verify2FA } from '../../../auth/auth.api';
 import { getDeviceFingerprint, getDeviceName } from '../../../auth/deviceFingerprint';
-import { getErrorMessage } from '../../../http/clientErrors';
+import { getErrorMessage } from '../../../http/errors';
 import { getUser, setAuthData } from '../../../auth/storage';
 
 export type ReLoginStep = 'password' | 'verify';
