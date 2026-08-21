@@ -1,11 +1,12 @@
 // Scope: verifies Users route permissions, preferences, query wiring, and account action entry points.
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
 import type { AccountPreference } from './types';
 import { toggleAccountStatus } from './accounts.api';
 import type { Account } from '../../../common/types/account';
+import { formatShortDate } from '../../../common/utils/date';
 
 const mockUseAuth = vi.fn();
 const mockUseUserTableData = vi.fn();
@@ -137,6 +138,21 @@ describe('Users', () => {
       expect.any(Object),
     );
     vi.useRealTimers();
+  });
+
+  it('renders each account column, including the styled status cell', () => {
+    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
+    renderPage();
+
+    const row = screen.getByText('Alice Admin').closest('tr');
+    if (!row) throw new Error('Expected Alice Admin account row');
+    const accountRow = within(row);
+
+    expect(accountRow.getByText('alice@example.com')).toBeInTheDocument();
+    expect(accountRow.getByText('Admin')).toBeInTheDocument();
+    expect(accountRow.getByText(formatShortDate(accounts[0].createdAt))).toBeInTheDocument();
+    expect(accountRow.getByText('Active')).toHaveClass('status-badge', 'status-active');
+    expect(accountRow.queryByText('[object Object]')).not.toBeInTheDocument();
   });
 
   it('shows the staff-scoped presentation without staff-management controls', () => {

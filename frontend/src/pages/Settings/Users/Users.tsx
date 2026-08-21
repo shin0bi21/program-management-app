@@ -82,7 +82,13 @@ export default function Users() {
       },
       { id: 'email', header: 'Email', accessorFn: account => account.email },
       { id: 'role', header: 'Role', size: 110, accessorFn: account => titleCase(account.role) },
-      { id: 'status', header: 'Status', size: 120, accessorFn: account => statusBadge(account.status) },
+      {
+        id: 'status',
+        header: 'Status',
+        size: 120,
+        accessorFn: account => account.status,
+        cell: ({ row }) => statusBadge(row.original.status),
+      },
       {
         id: 'createdAt',
         header: 'Created',
