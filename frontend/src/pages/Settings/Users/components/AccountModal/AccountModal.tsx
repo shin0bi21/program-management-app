@@ -21,8 +21,6 @@ export default function AccountModal(props: AccountModalProps) {
   const { register, control, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
   const isEdit = account !== undefined;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
-  const assignablePrograms = programs.filter(program => program.rosterMode === 'enrolled');
-  const openPrograms = programs.filter(program => program.rosterMode === 'open');
 
   return (
     <Modal
@@ -72,29 +70,24 @@ export default function AccountModal(props: AccountModalProps) {
           />
         </div>
         <fieldset className="account-programs">
-            <legend>Programs</legend>
-            <div className="account-programs__list">
-              {programsLoading ? (
-                <span className="account-programs__empty">Loading programs…</span>
-              ) : assignablePrograms.length ? assignablePrograms.map(program => (
-                <label key={program.id} className="account-programs__option">
-                  <input
-                    type="checkbox"
-                    value={program.id}
-                    disabled={submissionComplete}
-                    {...register('programIds')}
-                  />
-                  <span>{program.name}</span>
-                </label>
-              )) : (
-                <span className="account-programs__empty">No assignable programs.</span>
-              )}
-            </div>
-            {openPrograms.length > 0 && (
-              <small>
-                Automatically available: {openPrograms.map(program => program.name).join(', ')}
-              </small>
+          <legend>Programs</legend>
+          <div className="account-programs__list">
+            {programsLoading ? (
+              <span className="account-programs__empty">Loading programs…</span>
+            ) : programs.length ? programs.map(program => (
+              <label key={program.id} className="account-programs__option">
+                <input
+                  type="checkbox"
+                  value={program.id}
+                  disabled={submissionComplete}
+                  {...register('programIds')}
+                />
+                <span>{program.name}</span>
+              </label>
+            )) : (
+              <span className="account-programs__empty">No assignable programs.</span>
             )}
+          </div>
         </fieldset>
       </form>
     </Modal>

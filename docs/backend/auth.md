@@ -97,6 +97,8 @@ Route access and mutations are permission-based. Roles group permissions in the 
 
 Authorization has two layers: route permissions define the capability an actor may attempt, while domain policies under `src/policies/` define record scope. Services apply those policies inside authoritative reads and transaction-locked mutation lookups. Frontend restrictions mirror the policy for usability but are never the authorization boundary.
 
+Staff program scope is assignment-based for every program. A program's `roster_mode` controls youth enrollment and attendance behavior; it does not automatically grant staff access. Administrators can assign both enrolled- and open-roster programs to staff accounts.
+
 ### Roles and their permissions
 
 | Role | Permissions |

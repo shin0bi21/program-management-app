@@ -206,7 +206,7 @@ describe('Accounts API', () => {
     it('should create staff user with valid data (admin)', async () => {
       const uniqueEmail = `create-${Date.now()}@test.local`;
       const [program] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE name = 'Soft Skills'
+        SELECT id FROM programs WHERE name = 'Drop In'
       `;
       const res = await request(app)
         .post('/api/accounts')
