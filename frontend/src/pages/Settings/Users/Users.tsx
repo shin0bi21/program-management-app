@@ -14,7 +14,7 @@ import YouthModal from '../../../common/features/youth/components/YouthModal/You
 import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { ACCOUNT_TABLE_KEYS, type Account, type AccountStatus } from '../../../common/types/account';
 import { formatShortDate } from '../../../common/utils/date';
-import { removeInfiniteListRow } from '../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../query/infiniteListCache';
 import { revokeAccountInvite, toggleAccountStatus } from './accounts.api';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
@@ -66,8 +66,8 @@ export default function Users() {
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
       onConfirm: async () => {
-        await toggleAccountStatus(account.id);
-        await queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
+        const savedAccount = await toggleAccountStatus(account.id);
+        replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
       },
     });
   }, [queryClient]);
@@ -175,8 +175,12 @@ export default function Users() {
           isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
           onClose={() => setModalTarget(null)}
-          onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
+          onSuccess={savedAccount => {
+            if (modalTarget === 'new') {
+              void queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
+            } else {
+              replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
+            }
           }}
         />
       )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
@@ -53,7 +53,17 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const selectedLeadId = selectedLead?.id ?? null;
   const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
-  const actions = useLeadActions(tableQueryKey);
+  const syncSelectedLead = useCallback((lead: Lead) => {
+    setSelectedLead(current => current?.id === lead.id ? lead : current);
+  }, []);
+  const removeSelectedLead = useCallback((leadId: string) => {
+    setSelectedLead(current => current?.id === leadId ? null : current);
+  }, []);
+  const actions = useLeadActions({
+    tableQueryKey,
+    onLeadSynced: syncSelectedLead,
+    onLeadRemoved: removeSelectedLead,
+  });
   const confirmModal = useConfirmModal({ action: actions.confirmAction, onClose: actions.closeConfirmation });
 
   // Mutations and cache reconciliation.
@@ -122,6 +132,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       />
       {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
       {programsError && <p className="form-error" role="alert">{programsError}</p>}
+      {actions.actionError && <p className="form-error" role="alert">{actions.actionError}</p>}
       {!controlsReady ? <p role="status">Loading saved lead preferences…</p> : <PageBody
         ariaLabel={viewTitle}
         table={<LeadTable
@@ -143,7 +154,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
       onClose={() => setModalTarget(null)}
-      onSuccess={() => { void actions.refreshLeads(); }}
+      onSuccess={savedLead => {
+        if (modalTarget === 'new') void actions.refreshLeads();
+        else actions.syncLead(savedLead);
+      }}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}
