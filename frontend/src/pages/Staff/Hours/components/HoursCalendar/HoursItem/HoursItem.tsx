@@ -25,7 +25,6 @@ export default function HoursItem({ item, onEdit, onDelete }: HoursItemProps) {
       { label: 'Cycle', value: item.cycleName ?? '—' },
       { label: 'Program', value: item.programName ?? '—' },
       { label: 'Category', value: item.categoryLabel },
-      ...(item.sessionLabel ? [{ label: 'Session', value: item.sessionLabel }] : []),
       { label: 'Hours', value: item.hours, sectionStart: true },
       { label: 'Notes', value: item.note, multiline: true },
     ]}

@@ -1,5 +1,5 @@
 // Scope: verifies hours-item summaries, domain details, and emitted entry actions.
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import HoursItem from './HoursItem';
 
@@ -72,8 +72,9 @@ describe('HoursItem', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
 
     const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getAllByText('Healthy Relationships')).toHaveLength(1);
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Notes',
+      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
     expect(tooltip).toHaveTextContent('Program Delivery');
   });
