@@ -44,7 +44,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     LEAD_TABLE_KEYS,
   );
   const {
-    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     ready: controlsReady,
   } = controls;
@@ -115,7 +115,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
         search={<SearchInput
           label="Search leads"
           value={search}
+          appliedValue={appliedSearch}
           onChange={event => setSearch(event.target.value)}
+          onApply={applySearch}
+          onClear={clearSearch}
           placeholder="Search youth or school"
         />}
         columns={controlsReady ? <ColumnVisibilityMenu

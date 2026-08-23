@@ -137,7 +137,7 @@ export default function Tasks() {
       programIds={filters.programIds}
       categories={filters.categories}
       statuses={filters.statusFilters}
-      search={filters.debouncedSearch}
+      search={filters.appliedSearch}
       today={today}
       sorting={taskPreferences.preferences.sorting}
       columnWidths={taskPreferences.preferences.columnWidths}
@@ -190,7 +190,10 @@ export default function Tasks() {
         search={taskPreferences.ready && view === 'table' ? <SearchInput
           label="Search tasks"
           value={filters.search}
+          appliedValue={filters.appliedSearch}
           onChange={event => filters.setSearch(event.target.value)}
+          onApply={filters.applySearch}
+          onClear={filters.clearSearch}
           placeholder="Search tasks"
         /> : undefined}
 

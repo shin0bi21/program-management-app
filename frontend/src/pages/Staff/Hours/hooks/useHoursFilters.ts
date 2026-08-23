@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import { HOURS_CATEGORY_OPTIONS } from '../../../../common/features/hours/hoursOptions';
@@ -27,12 +27,13 @@ export default function useHoursFilters({
   updatePreferences: (patch: Partial<HoursPreferences>) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     ...(role === 'admin' ? [{
@@ -86,7 +87,9 @@ export default function useHoursFilters({
   return {
     search,
     setSearch,
-    debouncedSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     staffIds: preferences.staffIds,
     programIds: preferences.programIds,
     categories: preferences.categories,

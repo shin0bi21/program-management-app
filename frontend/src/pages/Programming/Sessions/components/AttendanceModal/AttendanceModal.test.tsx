@@ -117,6 +117,7 @@ describe('AttendanceModal', () => {
     expect(screen.queryByText('Late')).not.toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox', { name: 'Find youth profile' }), 'Jordan');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
     await user.click(await screen.findByRole('button', { name: 'Check in' }));
     expect(screen.getByText('Jordan Drop In')).toBeInTheDocument();
 

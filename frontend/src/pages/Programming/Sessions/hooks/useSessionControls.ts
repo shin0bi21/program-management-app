@@ -36,7 +36,7 @@ export function useSessionControls({
 }: UseSessionControlsOptions) {
   // Search and filters.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [programIds, setProgramIds] = useState<string[]>([]);
   const [cohortId, setCohortId] = useState('');
   const [sessionTypeIds, setSessionTypeIds] = useState<string[]>([]);
@@ -58,10 +58,11 @@ export function useSessionControls({
     save,
   } = useUserPreference<SessionPreference>('session-filters', tableKeys);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   useEffect(() => {
     if (
@@ -218,7 +219,7 @@ export function useSessionControls({
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
-    search, setSearch, debouncedSearch, view, setView, programIds, cohortId, sessionTypeIds, statuses,
+    search, setSearch, appliedSearch, applySearch, clearSearch, view, setView, programIds, cohortId, sessionTypeIds, statuses,
     ready, sorting, setSorting, columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     error, filterCategories, applyFilter, clearFilters, schedulableCohorts,
   };

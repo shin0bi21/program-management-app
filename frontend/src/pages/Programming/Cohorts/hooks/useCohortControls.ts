@@ -21,7 +21,7 @@ export function useCohortControls(
 ) {
   // Search and filters.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [programId, setProgramId] = useState('');
   const [status, setStatus] = useState<CohortStatus | ''>('');
 
@@ -38,11 +38,11 @@ export function useCohortControls(
     save,
   } = useUserPreference<CohortPreference>('cohort-filters', tableKeys);
 
-  // Delay query changes until the user pauses typing.
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim().toLowerCase()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   // Restore preferences once their referenced program options are available.
   useEffect(() => {
@@ -76,10 +76,10 @@ export function useCohortControls(
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {
     programId: programId || undefined,
-    search: debouncedSearch,
+    search: appliedSearch,
     status: status || undefined,
-  } : null, [debouncedSearch, programId, ready, status]);
-  const hasActiveQueryFilters = Boolean(programId || status || debouncedSearch);
+  } : null, [appliedSearch, programId, ready, status]);
+  const hasActiveQueryFilters = Boolean(programId || status || appliedSearch);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
       id: 'program', label: 'Program', selectionMode: 'single',
@@ -159,7 +159,7 @@ export function useCohortControls(
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
-    search, setSearch, tableFilters, programId, status, sorting, setSorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, tableFilters, programId, status, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };

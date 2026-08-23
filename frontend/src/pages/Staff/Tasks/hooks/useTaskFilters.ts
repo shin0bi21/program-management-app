@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import {
@@ -30,12 +30,13 @@ export default function useTaskFilters({
   updatePreferences,
 }: UseTaskFiltersOptions) {
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -69,7 +70,9 @@ export default function useTaskFilters({
   return {
     search,
     setSearch,
-    debouncedSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     staffIds: preferences.staffIds,
     programIds: preferences.programIds,
     categories: preferences.categories,

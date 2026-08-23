@@ -367,6 +367,12 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 export function checkPaginatedTables(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/')) return;
 
+  if (/\bdebouncedSearch\b/.test(source)) {
+    violations.push(
+      `${file}:1 searches must use the shared explicit Apply/Clear flow; do not debounce search.`,
+    );
+  }
+
   const routePageMatch = file.match(/\/([^/]+)\/\1\.tsx$/);
   if (routePageMatch) {
     addMatches(

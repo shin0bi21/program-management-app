@@ -1,5 +1,5 @@
 // Scope: verifies Users route permissions, preferences, query wiring, and account action entry points.
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
@@ -119,7 +119,6 @@ describe('Users', () => {
   });
 
   it('shows admin account controls and sends search state to the accounts query', async () => {
-    vi.useFakeTimers();
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
 
@@ -131,13 +130,12 @@ describe('Users', () => {
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
-    act(() => vi.advanceTimersByTime(250));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     expect(mockUseUserTableData).toHaveBeenLastCalledWith(
       ['accounts', 'table'],
       expect.objectContaining({ search: 'Yara' }),
       expect.any(Object),
     );
-    vi.useRealTimers();
   });
 
   it('renders each account column, including the styled status cell', () => {

@@ -34,7 +34,7 @@ export default function Users() {
   // Controls and remote records.
   const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
   const {
-    search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
@@ -150,7 +150,15 @@ export default function Users() {
               ) : null}
             </div>
           )}
-          search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
+          search={<SearchInput
+            label="Search accounts"
+            value={search}
+            appliedValue={appliedSearch}
+            onChange={event => setSearch(event.target.value)}
+            onApply={applySearch}
+            onClear={clearSearch}
+            placeholder="Search by name or email"
+          />}
           columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
           filters={controlsReady ? <FilterCard
             categories={filterCategories}

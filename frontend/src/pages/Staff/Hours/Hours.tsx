@@ -147,7 +147,7 @@ export default function Hours() {
       programIds={filters.programIds}
       types={filters.types}
       cycleId={filters.cycleId ?? undefined}
-      search={filters.debouncedSearch}
+      search={filters.appliedSearch}
       sorting={hoursPreferences.preferences.sorting}
       columnWidths={hoursPreferences.preferences.columnWidths}
       selectedRowId={selection.selectedRowId}
@@ -207,7 +207,10 @@ export default function Hours() {
         search={hoursPreferences.ready && view === 'table' ? <SearchInput
           label="Search hours"
           value={filters.search}
+          appliedValue={filters.appliedSearch}
           onChange={event => filters.setSearch(event.target.value)}
+          onApply={filters.applySearch}
+          onClear={filters.clearSearch}
           placeholder="Search hours"
         /> : undefined}
 

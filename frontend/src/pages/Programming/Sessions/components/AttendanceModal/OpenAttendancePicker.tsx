@@ -4,24 +4,30 @@ import type { YouthProfile } from '../../../../../common/types/youth';
 
 interface OpenAttendancePickerProps {
   search: string;
+  appliedSearch: string;
   searchResults: YouthProfile[];
   searching: boolean;
   disabled: boolean;
   onSearchChange: (value: string) => void;
+  onSearchApply: () => void;
+  onSearchClear: () => void;
   onCreateProfile: () => void;
   onCheckIn: (profile: YouthProfile) => void;
 }
 
 export default function OpenAttendancePicker({
   search,
+  appliedSearch,
   searchResults,
   searching,
   disabled,
   onSearchChange,
+  onSearchApply,
+  onSearchClear,
   onCreateProfile,
   onCheckIn,
 }: OpenAttendancePickerProps) {
-  const showResults = search.trim().length >= 2;
+  const showResults = appliedSearch.length >= 2;
 
   return (
     <div className="open-attendance-picker">
@@ -29,7 +35,10 @@ export default function OpenAttendancePicker({
         <SearchInput
           label="Find youth profile"
           value={search}
+          appliedValue={appliedSearch}
           onChange={(event) => onSearchChange(event.target.value)}
+          onApply={onSearchApply}
+          onClear={onSearchClear}
           placeholder="Search youth profiles"
           disabled={disabled}
         />

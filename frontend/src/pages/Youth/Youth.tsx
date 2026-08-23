@@ -49,7 +49,7 @@ export default function Youth() {
     tableKeys: YOUTH_TABLE_KEYS,
   });
   const {
-    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferencesError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
@@ -152,7 +152,10 @@ export default function Youth() {
           search={<SearchInput
             label="Search youth"
             value={search}
+            appliedValue={appliedSearch}
             onChange={event => setSearch(event.target.value)}
+            onApply={applySearch}
+            onClear={clearSearch}
             placeholder="Search youth, school, or program"
           />}
           columns={controlsReady ? <ColumnVisibilityMenu

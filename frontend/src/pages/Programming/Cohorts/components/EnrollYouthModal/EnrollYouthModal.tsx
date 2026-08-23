@@ -32,6 +32,9 @@ export default function EnrollYouthModal({
     unenrolledYouth,
     search,
     setSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     filterBySearch,
     loading,
     error: loadError,
@@ -123,7 +126,10 @@ export default function EnrollYouthModal({
         <SearchInput
           label="Search youth"
           value={search}
+          appliedValue={appliedSearch}
           onChange={event => setSearch(event.target.value)}
+          onApply={applySearch}
+          onClear={clearSearch}
           placeholder="Search by name or school"
           disabled={submissionComplete}
         />
