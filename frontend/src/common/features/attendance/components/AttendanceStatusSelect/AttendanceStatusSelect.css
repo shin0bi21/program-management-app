@@ -28,21 +28,21 @@
   --attendance-status-text: var(--color-info);
 }
 
-.floating-select-trigger.attendance-status,
-.floating-menu-panel .floating-select-option.attendance-status,
-.floating-menu-panel .floating-select-option.attendance-status[aria-checked="true"] {
+.floating-select-trigger[class*="attendance-status--"],
+.floating-menu-panel .floating-select-option[class*="attendance-status--"],
+.floating-menu-panel .floating-select-option[class*="attendance-status--"][aria-checked="true"] {
   background: var(--attendance-status-bg);
   border-color: var(--attendance-status-border);
   color: var(--attendance-status-text);
   font-weight: 600;
 }
 
-.floating-menu-panel .floating-select-option.attendance-status:hover {
+.floating-menu-panel .floating-select-option[class*="attendance-status--"]:hover {
   background: var(--attendance-status-bg);
   box-shadow: inset 0 0 0 1px var(--attendance-status-border);
   filter: brightness(0.97);
 }
 
-.floating-menu-panel .floating-select-option.attendance-status[aria-checked="true"] {
+.floating-menu-panel .floating-select-option[class*="attendance-status--"][aria-checked="true"] {
   box-shadow: inset 0 0 0 2px var(--attendance-status-border);
 }

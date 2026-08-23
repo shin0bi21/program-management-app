@@ -3,7 +3,7 @@ import type { AttendanceStatus } from '../../../../types/cohort';
 import './AttendanceStatusSelect.css';
 
 const statusClassName = (status: AttendanceStatus | '') => (
-  `attendance-status attendance-status--${status || 'unmarked'}`
+  `attendance-status--${status || 'unmarked'}`
 );
 
 const enrolledOptions = [

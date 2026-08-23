@@ -17,6 +17,7 @@ describe('AttendanceStatusSelect', () => {
 
     const trigger = screen.getByRole('button', { name: 'Attendance status' });
     expect(trigger).toHaveClass('attendance-status--unmarked');
+    expect(trigger).not.toHaveClass('attendance-status');
     fireEvent.click(trigger);
     expect(screen.getByRole('menuitemradio', { name: 'Present' })).toHaveClass('attendance-status--present');
     expect(screen.getByRole('menuitemradio', { name: 'Absent' })).toHaveClass('attendance-status--absent');
