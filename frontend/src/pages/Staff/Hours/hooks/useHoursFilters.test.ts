@@ -1,4 +1,4 @@
-// Scope: verifies filter option ownership, local search, narrow patches, role policy, and clear behavior.
+// Scope: verifies filter option ownership, debounced server search, narrow patches, role policy, and clear behavior.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -44,16 +44,21 @@ describe('useHoursFilters', () => {
   });
 
   it('owns local search and clears persisted filters without showing staff its redundant filter', () => {
+    vi.useFakeTimers();
     const updatePreferences = vi.fn();
     const { result } = renderHook(() => useHoursFilters({
       role: 'staff', preferences, resources, programs, cycles, updatePreferences,
     }));
     expect(result.current.filterCategories.map(category => category.id)).not.toContain('staff');
-    act(() => result.current.setSearch('workshop'));
-    expect(result.current.search).toBe('workshop');
+    act(() => result.current.setSearch(' workshop '));
+    expect(result.current.search).toBe(' workshop ');
+    expect(result.current.debouncedSearch).toBe('');
+    act(() => vi.advanceTimersByTime(250));
+    expect(result.current.debouncedSearch).toBe('workshop');
     act(() => result.current.clearFilters());
     expect(updatePreferences).toHaveBeenCalledWith({
       staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
     });
+    vi.useRealTimers();
   });
 });

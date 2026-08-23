@@ -137,7 +137,7 @@ export default function Tasks() {
       programIds={filters.programIds}
       categories={filters.categories}
       statuses={filters.statusFilters}
-      search={filters.search}
+      search={filters.debouncedSearch}
       today={today}
       sorting={taskPreferences.preferences.sorting}
       columnWidths={taskPreferences.preferences.columnWidths}

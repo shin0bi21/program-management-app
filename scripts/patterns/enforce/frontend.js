@@ -420,6 +420,12 @@ export function checkPaginatedTables(violations, file, source) {
     );
   }
 
+  if (usesInfiniteList && source.includes('useDeferredValue')) {
+    violations.push(
+      `${file}:1 remote table-data hooks must receive page-applied search in their filter object; do not defer search inside the query hook.`,
+    );
+  }
+
   if (/\.(?:test|spec|story)\.tsx?$/.test(file)) return;
 
   const paginationProps = ['hasNextPage', 'loadingNextPage', 'onLoadNextPage'];

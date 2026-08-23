@@ -12,7 +12,6 @@ const tableState = vi.hoisted(() => ({
   hasNextPage: false,
   loadingNextPage: false,
   loadNextPage: vi.fn(),
-  appliedSearch: '',
 }));
 const useHoursTableData = vi.hoisted(() => vi.fn(() => tableState));
 const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -48,7 +47,7 @@ describe('HoursTable', () => {
     vi.clearAllMocks();
     Object.assign(tableState, {
       rows: [], loading: false, refreshing: false, error: null,
-      hasNextPage: false, loadingNextPage: false, appliedSearch: '',
+      hasNextPage: false, loadingNextPage: false,
     });
     tableProps.current = null;
   });
@@ -93,7 +92,6 @@ describe('HoursTable', () => {
   });
 
   it('forwards table-data errors while keeping the standard empty message', () => {
-    tableState.appliedSearch = 'planning';
     tableState.error = 'Could not load hours.';
     render(<HoursTable {...baseProps} search="planning" />);
 

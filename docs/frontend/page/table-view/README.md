@@ -111,7 +111,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 
 ## Page integration
 
-The page owns live search, applied filters, sorting preferences, hidden columns, widths, and view choice. Restore persisted controls and required option data before enabling the list query. Debounce or defer search once, and build both the query and filtered-empty message from the same applied value.
+The page owns live search, applied filters, sorting preferences, hidden columns, widths, and view choice. Restore persisted controls and required option data before enabling the list query. Debounce search in the page controls, then pass the trimmed debounced value through the same filter object used by the query key, API adapter, and filtered-empty message. Do not defer search inside the table-data hook; it must treat search like every other backend filter.
 
 Persist one complete preference value after each control change. Each handler updates page-owned React state and saves the resulting full snapshot; it must not rebuild preferences from a stale cached preference value.
 

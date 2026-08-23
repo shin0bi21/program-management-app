@@ -147,7 +147,7 @@ export default function Hours() {
       programIds={filters.programIds}
       types={filters.types}
       cycleId={filters.cycleId ?? undefined}
-      search={filters.search}
+      search={filters.debouncedSearch}
       sorting={hoursPreferences.preferences.sorting}
       columnWidths={hoursPreferences.preferences.columnWidths}
       selectedRowId={selection.selectedRowId}
