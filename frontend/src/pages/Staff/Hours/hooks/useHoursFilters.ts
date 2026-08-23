@@ -27,6 +27,13 @@ export default function useHoursFilters({
   updatePreferences: (patch: Partial<HoursPreferences>) => void;
 }) {
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     ...(role === 'admin' ? [{
@@ -80,6 +87,9 @@ export default function useHoursFilters({
   return {
     search,
     setSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     staffIds: preferences.staffIds,
     programIds: preferences.programIds,
     categories: preferences.categories,

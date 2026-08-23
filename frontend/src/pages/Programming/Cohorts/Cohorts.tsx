@@ -48,7 +48,7 @@ export default function Cohorts() {
     programsError,
   );
   const {
-    search, setSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
+    search, setSearch, appliedSearch, applySearch, clearSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
@@ -164,7 +164,10 @@ export default function Cohorts() {
               <SearchInput
                 label="Search cohorts"
                 value={search}
+                appliedValue={appliedSearch}
                 onChange={(event) => setSearch(event.target.value)}
+                onApply={applySearch}
+                onClear={clearSearch}
                 placeholder="Search cohorts or programs"
               />
             }

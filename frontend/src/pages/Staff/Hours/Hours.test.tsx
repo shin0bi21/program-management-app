@@ -415,6 +415,7 @@ describe('Hours', () => {
     expect(entryRow).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     expect(await screen.findByText('No hours found')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });

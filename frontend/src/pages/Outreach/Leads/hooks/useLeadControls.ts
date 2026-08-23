@@ -21,7 +21,7 @@ export function useLeadControls(
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -40,11 +40,11 @@ export function useLeadControls(
     save,
   } = useUserPreference<LeadPreference>(preferenceKey, tableKeys);
 
-  // Delay query changes until the user pauses typing.
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   // Restore preferences once their referenced program options are available.
   useEffect(() => {
@@ -75,8 +75,8 @@ export function useLeadControls(
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<LeadFilters | null>(() => ready
-    ? ({ search: debouncedSearch, statuses: statusFilters, programIds: programFilters, origins: [origin] })
-    : null, [debouncedSearch, origin, programFilters, ready, statusFilters]);
+    ? ({ search: appliedSearch, statuses: statusFilters, programIds: programFilters, origins: [origin] })
+    : null, [appliedSearch, origin, programFilters, ready, statusFilters]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
     { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
@@ -144,7 +144,7 @@ export function useLeadControls(
   }, [persist]);
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
   return {
-    search, setSearch, queryFilters, statusFilters, programFilters, sorting, setSorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, programFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     origins: [origin] as LeadOrigin[],
     ready, error, filterCategories, applyFilter, clearFilters,

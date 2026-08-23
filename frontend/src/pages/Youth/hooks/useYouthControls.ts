@@ -28,7 +28,7 @@ export function useYouthControls({
 }: UseYouthControlsOptions) {
   // Search and filter state.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<YouthStatusFilter[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -47,11 +47,11 @@ export function useYouthControls({
     save,
   } = useUserPreference<YouthPreference>('youth-profile-filters', tableKeys);
 
-  // Delay query changes until the user pauses typing.
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   // Restore preferences once their referenced program options are available.
   useEffect(() => {
@@ -112,11 +112,11 @@ export function useYouthControls({
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
-    search: debouncedSearch,
+    search: appliedSearch,
     statuses: statusFilters,
     programIds: programFilters,
-  }) : null, [debouncedSearch, programFilters, ready, statusFilters]);
-  const hasActiveQueryFilters = Boolean(debouncedSearch || statusFilters.length || programFilters.length);
+  }) : null, [appliedSearch, programFilters, ready, statusFilters]);
+  const hasActiveQueryFilters = Boolean(appliedSearch || statusFilters.length || programFilters.length);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -172,6 +172,9 @@ export function useYouthControls({
   return {
     search,
     setSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     queryFilters,
     statusFilters,
     programFilters,

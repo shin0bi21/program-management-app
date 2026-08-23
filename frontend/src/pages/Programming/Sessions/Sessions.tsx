@@ -82,7 +82,7 @@ export default function Sessions() {
     tableKeys: SESSION_TABLE_KEYS,
   });
   const {
-    search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
+    search, appliedSearch, view, programIds: selectedProgramIds, cohortId,
     sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, ready: filtersReady,
     sorting, columnWidths, filterCategories, schedulableCohorts,
   } = controls;
@@ -218,7 +218,10 @@ export default function Sessions() {
               <SearchInput
                 label="Search sessions"
                 value={search}
+                appliedValue={appliedSearch}
                 onChange={(event) => controls.setSearch(event.target.value)}
+                onApply={controls.applySearch}
+                onClear={controls.clearSearch}
                 placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
@@ -268,7 +271,7 @@ export default function Sessions() {
                     cohortId: cohortId || undefined,
                     sessionTypeIds: selectedSessionTypeIds,
                     statuses: statusFilters,
-                    search: debouncedSearch || undefined,
+                    search: appliedSearch || undefined,
                   }}
                   sorting={sorting}
                   columnWidths={columnWidths}
@@ -300,7 +303,7 @@ export default function Sessions() {
                   selectedSessionId={selectedSessionId}
                   selectedSessionTypeIds={selectedSessionTypeIds}
                   selectedStatuses={statusFilters}
-                  search={debouncedSearch}
+                  search={appliedSearch}
                   onSessionsLoaded={setCalendarSessions}
                   onSessionSelect={(session) => {
                     setCalendarSessions((current) =>

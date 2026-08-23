@@ -19,7 +19,7 @@ describe('useTaskTableData', () => {
     const client = createTestQueryClient();
     const filters = {
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep' as const],
-      statuses: ['active' as const], search: ' workshop ',
+      statuses: ['active' as const], search: 'workshop',
     };
     const sorting = { key: 'dueDate' as const, direction: 'asc' as const };
     const { result } = renderHook(
@@ -28,9 +28,8 @@ describe('useTaskTableData', () => {
     );
 
     await waitFor(() => expect(result.current.rows).toEqual([task]));
-    expect(result.current.appliedSearch).toBe(' workshop ');
     expect(getTaskList).toHaveBeenCalledWith(
-      { ...filters, search: ' workshop ' },
+      filters,
       { signal: expect.any(AbortSignal) },
       { ...sorting, cursor: undefined, limit: 25 },
     );

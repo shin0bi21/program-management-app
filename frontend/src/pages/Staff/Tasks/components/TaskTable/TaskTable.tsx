@@ -38,7 +38,7 @@ export default function TaskTable({
     loading={query.loading}
     refreshing={query.refreshing}
     error={query.error || undefined}
-    emptyMessage={query.appliedSearch.trim() || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
+    emptyMessage={search || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
     keyExtractor={task => task.id}
     selectedKey={selectedTaskId}
     onRowSelect={onTaskSelect}

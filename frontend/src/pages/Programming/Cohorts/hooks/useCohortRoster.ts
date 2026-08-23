@@ -12,6 +12,7 @@ const noYouth: YouthProfile[] = [];
 
 export function useCohortRoster(cohort: ProgramCohort | null) {
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const cohortId = cohort?.id;
   const query = useQuery({
     queryKey: [...YOUTH_QUERY_KEY, 'cohort-roster'],
@@ -22,7 +23,14 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
 
   useEffect(() => {
     setSearch('');
+    setAppliedSearch('');
   }, [cohortId]);
+
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   const enrolledYouth = useMemo(
     () => (cohortId ? youth.filter((profile) => belongsToCohort(profile, cohortId)) : []),
@@ -34,7 +42,7 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
   );
   const filterBySearch = useCallback(
     (profiles: YouthProfile[]) => {
-      const query = search.trim().toLowerCase();
+      const query = appliedSearch.toLowerCase();
       if (!query) return profiles;
       return profiles.filter(
         (profile) =>
@@ -42,7 +50,7 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
           profile.schoolName?.toLowerCase().includes(query),
       );
     },
-    [search],
+    [appliedSearch],
   );
 
   return {
@@ -51,6 +59,9 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
     unenrolledYouth,
     search,
     setSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     filterBySearch,
     loading: query.isLoading,
     error: query.error ? getErrorMessage(query.error, 'Could not load youth') : null,

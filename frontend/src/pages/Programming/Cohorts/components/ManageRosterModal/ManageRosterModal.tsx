@@ -26,7 +26,10 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
   const [refreshError, setRefreshError] = useState('');
   const cohortId = cohort?.id;
 
-  const { enrolledYouth, search, setSearch, filterBySearch, loading, error, refresh } = useCohortRoster(cohort);
+  const {
+    enrolledYouth, search, setSearch, appliedSearch, applySearch, clearSearch,
+    filterBySearch, loading, error, refresh,
+  } = useCohortRoster(cohort);
   const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const visibleYouth = useMemo(() => filterBySearch(enrolledYouth), [enrolledYouth, filterBySearch]);
 
@@ -76,7 +79,10 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
         <SearchInput
           label="Search enrolled youth"
           value={search}
+          appliedValue={appliedSearch}
           onChange={event => setSearch(event.target.value)}
+          onApply={applySearch}
+          onClear={clearSearch}
           placeholder="Search by name or school"
         />
         <div className="manage-roster-list" aria-label="Current cohort roster">

@@ -15,7 +15,7 @@ export function useAccountControls(
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<AccountStatus[]>([]);
   const [roleFilters, setRoleFilters] = useState<AccountRole[]>([]);
   const [ready, setReady] = useState(false);
@@ -34,11 +34,11 @@ export function useAccountControls(
     save,
   } = useUserPreference<AccountPreference>('account-filters', tableKeys);
 
-  // Delay query changes until the user pauses typing.
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   // Restore preferences before enabling the account query.
   useEffect(() => {
@@ -64,11 +64,11 @@ export function useAccountControls(
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({
-    search: debouncedSearch,
+    search: appliedSearch,
     roles: roleFilters,
     statuses: statusFilters,
-  }) : null, [debouncedSearch, ready, roleFilters, statusFilters]);
-  const hasActiveQueryFilters = Boolean(debouncedSearch || roleFilters.length || statusFilters.length);
+  }) : null, [appliedSearch, ready, roleFilters, statusFilters]);
+  const hasActiveQueryFilters = Boolean(appliedSearch || roleFilters.length || statusFilters.length);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'status', label: 'Status', options: [
       { value: 'active', label: 'Active' },
@@ -130,7 +130,7 @@ export function useAccountControls(
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
-    search, setSearch, queryFilters, statusFilters, roleFilters, sorting, setSorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, roleFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
     ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
   };

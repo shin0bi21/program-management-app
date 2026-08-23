@@ -1,4 +1,4 @@
-// Scope: verifies task filter option mapping, owned updates, search, and clear behavior.
+// Scope: verifies task filter option mapping, explicit server search, owned updates, and clear behavior.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -50,8 +50,16 @@ describe('useTaskFilters', () => {
     const updatePreferences = vi.fn();
     const { result } = renderHook(() => useTaskFilters({ preferences, options: undefined, updatePreferences }));
 
-    act(() => result.current.setSearch('workshop'));
-    expect(result.current.search).toBe('workshop');
+    act(() => result.current.setSearch(' workshop '));
+    expect(result.current.search).toBe(' workshop ');
+    expect(result.current.appliedSearch).toBe('');
+    act(() => result.current.applySearch());
+    expect(result.current.appliedSearch).toBe('workshop');
+    act(() => result.current.setSearch('planning'));
+    expect(result.current.appliedSearch).toBe('workshop');
+    act(() => result.current.clearSearch());
+    expect(result.current.search).toBe('');
+    expect(result.current.appliedSearch).toBe('');
 
     act(() => result.current.clearFilters());
     expect(updatePreferences).toHaveBeenCalledWith({

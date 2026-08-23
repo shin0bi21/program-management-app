@@ -1,4 +1,4 @@
-// Scope: verifies filter option ownership, local search, narrow patches, role policy, and clear behavior.
+// Scope: verifies filter option ownership, explicit server search, narrow patches, role policy, and clear behavior.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -49,8 +49,14 @@ describe('useHoursFilters', () => {
       role: 'staff', preferences, resources, programs, cycles, updatePreferences,
     }));
     expect(result.current.filterCategories.map(category => category.id)).not.toContain('staff');
-    act(() => result.current.setSearch('workshop'));
-    expect(result.current.search).toBe('workshop');
+    act(() => result.current.setSearch(' workshop '));
+    expect(result.current.search).toBe(' workshop ');
+    expect(result.current.appliedSearch).toBe('');
+    act(() => result.current.applySearch());
+    expect(result.current.appliedSearch).toBe('workshop');
+    act(() => result.current.clearSearch());
+    expect(result.current.search).toBe('');
+    expect(result.current.appliedSearch).toBe('');
     act(() => result.current.clearFilters());
     expect(updatePreferences).toHaveBeenCalledWith({
       staffIds: [], programIds: [], categories: [], types: [], cycleId: null,

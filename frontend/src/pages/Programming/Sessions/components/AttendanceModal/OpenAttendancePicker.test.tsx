@@ -15,10 +15,13 @@ const profile = {
 function renderPicker(overrides: Partial<ComponentProps<typeof OpenAttendancePicker>> = {}) {
   const props: ComponentProps<typeof OpenAttendancePicker> = {
     search: '',
+    appliedSearch: '',
     searchResults: [],
     searching: false,
     disabled: false,
     onSearchChange: vi.fn(),
+    onSearchApply: vi.fn(),
+    onSearchClear: vi.fn(),
     onCreateProfile: vi.fn(),
     onCheckIn: vi.fn(),
     ...overrides,
@@ -42,7 +45,7 @@ describe('OpenAttendancePicker', () => {
   });
 
   it('renders search states and forwards check-in', () => {
-    const props = renderPicker({ search: 'Ma', searchResults: [profile] });
+    const props = renderPicker({ search: 'Ma', appliedSearch: 'Ma', searchResults: [profile] });
 
     fireEvent.click(screen.getByRole('button', { name: 'Check in' }));
 
@@ -53,10 +56,13 @@ describe('OpenAttendancePicker', () => {
   it('renders searching and empty-result states', () => {
     const view = render(<OpenAttendancePicker
       search="Ma"
+      appliedSearch="Ma"
       searchResults={[]}
       searching
       disabled={false}
       onSearchChange={vi.fn()}
+      onSearchApply={vi.fn()}
+      onSearchClear={vi.fn()}
       onCreateProfile={vi.fn()}
       onCheckIn={vi.fn()}
     />);
@@ -64,10 +70,13 @@ describe('OpenAttendancePicker', () => {
 
     view.rerender(<OpenAttendancePicker
       search="Ma"
+      appliedSearch="Ma"
       searchResults={[]}
       searching={false}
       disabled={false}
       onSearchChange={vi.fn()}
+      onSearchApply={vi.fn()}
+      onSearchClear={vi.fn()}
       onCreateProfile={vi.fn()}
       onCheckIn={vi.fn()}
     />);
@@ -75,7 +84,7 @@ describe('OpenAttendancePicker', () => {
   });
 
   it('disables every action while attendance is saving', () => {
-    renderPicker({ search: 'Ma', searchResults: [profile], disabled: true });
+    renderPicker({ search: 'Ma', appliedSearch: 'Ma', searchResults: [profile], disabled: true });
 
     expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '+ Create Profile' })).toBeDisabled();

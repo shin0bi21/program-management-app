@@ -205,6 +205,34 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props?.resources).toEqual([coworker]));
   });
 
+  it('applies task search only on submit and clears the backend filter explicitly', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    const search = await screen.findByRole('textbox', { name: 'Search tasks' });
+    await waitFor(() => expect(getTaskList).toHaveBeenCalled());
+    vi.mocked(getTaskList).mockClear();
+
+    fireEvent.change(search, { target: { value: ' workshop ' } });
+    expect(getTaskList).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(search, { key: 'Enter' });
+    await waitFor(() => expect(getTaskList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: 'workshop' }),
+      expect.anything(),
+      expect.objectContaining({ limit: 25 }),
+    ));
+
+    vi.mocked(getTaskList).mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(search).toHaveValue('');
+    await waitFor(() => expect(getTaskList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: '' }),
+      expect.anything(),
+      expect.objectContaining({ limit: 25 }),
+    ));
+  });
+
   it('shows completion again after a completed task is reopened', async () => {
     const completedTask = { ...task, status: 'completed' as const, completedAt: '2026-08-11T12:00:00.000Z', hoursLogged: 1 };
     vi.mocked(getTasks).mockResolvedValue([completedTask]);

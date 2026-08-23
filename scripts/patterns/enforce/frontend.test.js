@@ -411,6 +411,26 @@ test('accepts an infinite-list hook colocated under a canonical table', () => {
   ), []);
 });
 
+test('rejects deferred search inside a remote table-data hook', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTaskTableData.ts',
+    'useDeferredValue(search); useInfiniteListQuery({ limit: 25 });',
+  );
+
+  assert.match(violations.join('\n'), /receive page-applied search/);
+});
+
+test('rejects debounced page search', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Youth/hooks/useYouthControls.ts',
+    'const debouncedSearch = useDebounce(search);',
+  );
+
+  assert.match(violations.join('\n'), /explicit Apply\/Clear flow/);
+});
+
 test('rejects a route page importing its table owner private data hook', () => {
   const violations = violationsFor(
     checkPaginatedTables,

@@ -367,6 +367,12 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 export function checkPaginatedTables(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/')) return;
 
+  if (/\bdebouncedSearch\b/.test(source)) {
+    violations.push(
+      `${file}:1 searches must use the shared explicit Apply/Clear flow; do not debounce search.`,
+    );
+  }
+
   const routePageMatch = file.match(/\/([^/]+)\/\1\.tsx$/);
   if (routePageMatch) {
     addMatches(
@@ -417,6 +423,12 @@ export function checkPaginatedTables(violations, file, source) {
   if (usesInfiniteList && !/limit\s*:\s*25\b/.test(source)) {
     violations.push(
       `${file}:1 remote list hooks must request the standard 25-row cursor page size.`,
+    );
+  }
+
+  if (usesInfiniteList && source.includes('useDeferredValue')) {
+    violations.push(
+      `${file}:1 remote table-data hooks must receive page-applied search in their filter object; do not defer search inside the query hook.`,
     );
   }
 

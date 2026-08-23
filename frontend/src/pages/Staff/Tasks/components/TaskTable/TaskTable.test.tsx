@@ -6,7 +6,7 @@ import TaskTable from './TaskTable';
 
 const tableState = vi.hoisted(() => ({
   rows: [], loading: false, refreshing: false, error: null as string | null,
-  hasNextPage: false, loadingNextPage: false, loadNextPage: vi.fn(), appliedSearch: '',
+  hasNextPage: false, loadingNextPage: false, loadNextPage: vi.fn(),
 }));
 const useTaskTableData = vi.hoisted(() => vi.fn(() => tableState));
 const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -30,7 +30,7 @@ const baseProps = {
 describe('TaskTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.assign(tableState, { rows: [], loading: false, refreshing: false, error: null, appliedSearch: '' });
+    Object.assign(tableState, { rows: [], loading: false, refreshing: false, error: null });
     tableProps.current = null;
   });
 
@@ -68,7 +68,6 @@ describe('TaskTable', () => {
     const { rerender } = render(<TaskTable {...baseProps} />);
     expect(tableProps.current).toEqual(expect.objectContaining({ emptyMessage: 'No tasks assigned' }));
 
-    tableState.appliedSearch = 'missing';
     tableState.error = 'Unable to load tasks.';
     rerender(<TaskTable {...baseProps} search="missing" />);
     expect(tableProps.current).toEqual(expect.objectContaining({
