@@ -28,7 +28,7 @@ export default function SearchInput({
   };
 
   return (
-    <div className={`search-input search-input--with-actions${className ? ` ${className}` : ''}`}>
+    <div className={`search-input${className ? ` ${className}` : ''}`}>
       <label className="search-input__field">
         <span className="sr-only">{label}</span>
         <input type={type} value={value} disabled={disabled} onKeyDown={handleKeyDown} {...inputProps} />
