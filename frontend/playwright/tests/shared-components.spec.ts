@@ -1,5 +1,34 @@
 import { expect, test } from '@playwright/test';
 
+test.describe('SearchInput', () => {
+  test('keeps the field and actions inside one focused outer bar', async ({ mount }) => {
+    const component = await mount('SearchInput/Interactive');
+    const searchBar = component.locator('.search-input');
+    const input = component.getByRole('textbox', { name: 'Search tasks' });
+
+    await input.focus();
+
+    await expect(searchBar).toHaveCSS('box-shadow', /rgb/);
+    await expect(input).toHaveCSS('box-shadow', 'none');
+
+    const barBox = await searchBar.boundingBox();
+    const childBoxes = await Promise.all([
+      input.boundingBox(),
+      component.getByRole('button', { name: 'Search', exact: true }).boundingBox(),
+      component.getByRole('button', { name: 'Clear search' }).boundingBox(),
+    ]);
+    if (!barBox || childBoxes.some(box => !box)) throw new Error('Search bar geometry is unavailable');
+
+    for (const childBox of childBoxes) {
+      if (!childBox) continue;
+      expect(childBox.x).toBeGreaterThanOrEqual(barBox.x);
+      expect(childBox.y).toBeGreaterThanOrEqual(barBox.y);
+      expect(childBox.x + childBox.width).toBeLessThanOrEqual(barBox.x + barBox.width);
+      expect(childBox.y + childBox.height).toBeLessThanOrEqual(barBox.y + barBox.height);
+    }
+  });
+});
+
 test.describe('FloatingMenu', () => {
   test('supports keyboard navigation, dismissal, and focus return', async ({ page, mount }) => {
     const component = await mount('FloatingMenu/Interactive');
