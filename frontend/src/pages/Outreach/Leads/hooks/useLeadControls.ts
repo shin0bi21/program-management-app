@@ -36,7 +36,7 @@ export function useLeadControls(
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    initializePreference,
     save,
   } = useUserPreference<LeadPreference>(preferenceKey, tableKeys);
 
@@ -69,9 +69,9 @@ export function useLeadControls(
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, setBaseline, tableKeys]);
+  }, [origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, initializePreference, tableKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<LeadFilters | null>(() => ready

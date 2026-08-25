@@ -34,7 +34,7 @@ export function useCohortControls(
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    initializePreference,
     save,
   } = useUserPreference<CohortPreference>('cohort-filters', tableKeys);
 
@@ -69,9 +69,9 @@ export function useCohortControls(
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, tableKeys]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
 
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {

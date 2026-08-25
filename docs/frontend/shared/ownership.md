@@ -13,7 +13,7 @@ Choose the narrowest owner that can state the complete behavior. File placement 
 | `common/hooks/` and `common/utils/` | Small generic hooks and pure utilities |
 | `app`, `auth`, `http`, `query` | Root composition and technical infrastructure |
 
-Never import a page from common code or another page's private files. Promote a contract only when a real second owner needs it.
+Never import a page from common code. Pages and their nested components may import another page's route-owned code directly when that page remains the clearest owner. Promote a contract only when ownership itself becomes shared; a second consumer alone is not enough.
 
 Every frontend feature and component follows the colocated [frontend feature breakdown](../README.md#feature-breakdown). This guide decides where that owner belongs and when behavior should move to a nested or shared owner.
 
@@ -23,7 +23,8 @@ Every frontend feature and component follows the colocated [frontend feature bre
 - A hook owns coherent stateful policy, effects, subscriptions, observers, asynchronous transitions, or coordinated callbacks.
 - An API adapter owns endpoint paths and request/response typing through the centralized HTTP client.
 - A utility owns pure transforms, constants, date arithmetic, or external-library adaptation.
-- One-off prop types stay beside the component; contracts shared by sibling page units belong in page `types.ts`.
+- Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
+- Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
 ```tsx
 function FeatureName(props: FeatureNameProps) {

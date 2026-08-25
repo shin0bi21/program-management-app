@@ -8,7 +8,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as LeadPreference | null,
   loading: false,
   error: null as string | null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -73,7 +73,7 @@ describe('useLeadControls', () => {
 
     expect(result.current.programFilters).toEqual([]);
     expect(result.current.sorting).toEqual({ key: 'created', direction: 'desc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       programIds: [],
       sorting: { key: 'created', direction: 'desc' },
     }));

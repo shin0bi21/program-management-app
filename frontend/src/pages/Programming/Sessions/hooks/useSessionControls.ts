@@ -54,7 +54,7 @@ export function useSessionControls({
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    initializePreference,
     save,
   } = useUserPreference<SessionPreference>('session-filters', tableKeys);
 
@@ -112,9 +112,9 @@ export function useSessionControls({
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, setBaseline, tableKeys]);
+  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, initializePreference, tableKeys]);
 
   // Stable option sets shared by the header and Add Sessions modal.
   const filteredCohorts = useMemo(() => programIds.length

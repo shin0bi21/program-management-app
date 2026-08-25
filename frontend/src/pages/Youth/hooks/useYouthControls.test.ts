@@ -8,13 +8,13 @@ const preferenceHook = vi.hoisted<{
   preference: YouthPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: null,
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -78,7 +78,7 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith({
       statuses: ['active'],
       programIds: [],
       sorting: { key: 'firstName', direction: 'asc' },
@@ -128,7 +128,7 @@ describe('useYouthControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.sorting).toEqual({ key: 'firstName', direction: 'asc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       sorting: { key: 'firstName', direction: 'asc' },
     }));
   });

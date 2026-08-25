@@ -4,6 +4,11 @@ const shortDateFormatter = new Intl.DateTimeFormat('en-CA', {
   day: 'numeric',
 });
 
+export function formatHours(hours: number): string {
+  const value = hours.toLocaleString('en-CA', { maximumFractionDigits: 2 });
+  return `${value} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
 export function formatShortDate(value: string | number | Date): string {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [year, month, day] = value.split('-').map(Number);

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatShortDate, formatShortDateRange, getDateKeyInTimeZone } from './date';
+import { formatHours, formatShortDate, formatShortDateRange, getDateKeyInTimeZone } from './date';
+
+describe('formatHours', () => {
+  it('formats and pluralizes hour durations', () => {
+    expect(formatHours(1)).toBe('1 hour');
+    expect(formatHours(1.5)).toBe('1.5 hours');
+    expect(formatHours(2.345)).toBe('2.35 hours');
+  });
+});
 
 describe('formatShortDate', () => {
   it('formats timestamps using the shared short-date style', () => {

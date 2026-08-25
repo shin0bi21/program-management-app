@@ -24,7 +24,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as LeadPreference | null,
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -58,7 +58,7 @@ describe('Leads', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.setBaseline.mockImplementation((value: LeadPreference) => {
+    preferenceHook.initializePreference.mockImplementation((value: LeadPreference) => {
       preferenceHook.preference = value;
     });
     preferenceHook.save.mockReset();

@@ -19,7 +19,7 @@ frontend/src/
   pages/                  route-family pages and page-private capabilities
 ```
 
-Pages may consume common features, generic common code, and root infrastructure. Common features must not import pages, common components must not import product-aware features, and one page must not import another page's private code. Route-family `common/` code may be shared by sibling routes but must not import their private code. Promote code only when ownership is genuinely shared.
+Pages may consume common features, generic common code, root infrastructure, and code owned by another page. A second page consumer does not by itself justify moving route-owned code into `common/`; keep the code with its clearest owner and import it directly. Common features must not import pages, common components must not import product-aware features, and route-family `common/` code must not import route-private code. Promote code only when ownership is genuinely shared.
 
 ## Feature breakdown
 

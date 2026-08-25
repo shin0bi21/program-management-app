@@ -102,7 +102,7 @@ export default function TaskCalendar({
         />;
       }}
       onCellActivate={canWrite ? ({ resource, period }) => {
-        if (resource.writable) onAddTask({ startDate: period.key, dueDate: period.key, fixedStaffId: resource.id });
+        if (resource.writable) onAddTask({ startDate: period.key, dueDate: period.key, staffId: resource.id });
       } : undefined}
       onRangeResize={canWrite ? async ({ item: task, nextRange }) => {
         const updatedTask = await actions.setTaskRange(task, nextRange, 'resize');

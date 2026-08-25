@@ -123,7 +123,7 @@ describe('useUserPreference', () => {
     await act(async () => Promise.resolve());
 
     act(() => {
-      result.current.setBaseline({ statuses: [], programIds: [] });
+      result.current.initializePreference({ statuses: [], programIds: [] });
       result.current.save(current => ({
         ...(current ?? filters([])),
         columnWidths: { name: 180 },
@@ -230,7 +230,7 @@ describe('useUserPreference', () => {
     const { result } = renderHook(useTestPreference, { wrapper });
 
     await act(async () => {
-      result.current.setBaseline(filters(['inactive']));
+      result.current.initializePreference(filters(['inactive']));
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(result.current.preference).toEqual(filters(['inactive']));

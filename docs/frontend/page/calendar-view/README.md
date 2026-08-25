@@ -1,6 +1,6 @@
 # Frontend calendar
 
-A page-owned `*Calendar` adapts domain records to the shared `ResourceCalendar`. It owns range loading, domain filtering, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
+A page-owned `*Calendar` adapts domain records to the shared `ResourceCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
 ## Component structure
 
@@ -22,7 +22,7 @@ The route owns shared filters, selection, dialogs, and cross-view actions. The p
 
 ## Range data hook
 
-Add a typed range API and connect it to `usePeriodDataBuffer`. Keep React-aware filtering and reference preservation in a focused page-calendar hook.
+Add a typed range API and connect it to `usePeriodDataBuffer`. Send page-owned filters through that API. Keep React-aware shaping and reference preservation in a focused page-calendar hook only when the returned data still needs client-side adaptation.
 
 ```tsx
 function ExampleCalendar({ resources, filters, selection, actions }: Props) {

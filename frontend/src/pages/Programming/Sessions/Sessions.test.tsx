@@ -39,13 +39,13 @@ const preferenceHook = vi.hoisted<{
   preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -137,7 +137,7 @@ describe('Sessions', () => {
     preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.setBaseline.mockImplementation((value: SessionPreference) => {
+    preferenceHook.initializePreference.mockImplementation((value: SessionPreference) => {
       preferenceHook.preference = value;
     });
     preferenceHook.save.mockReset();

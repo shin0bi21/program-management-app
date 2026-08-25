@@ -44,7 +44,7 @@ test('discovers nested route pages before their route-family parent', () => {
   );
 });
 
-test('rejects imports from a sibling route page', () => {
+test('allows imports from a sibling route page', () => {
   const violations = violationsFor(
     checkFrontendOwnership,
     `${manageHomepagePage}/ManageHomepage.tsx`,
@@ -53,7 +53,19 @@ test('rejects imports from a sibling route page', () => {
     repoRoot,
   );
 
-  assert.match(violations[0], /another route page's private code/);
+  assert.deepEqual(violations, []);
+});
+
+test('allows imports across route families', () => {
+  const violations = violationsFor(
+    checkFrontendOwnership,
+    `${leadsPage}/Leads.tsx`,
+    "import Homepage from '../../Homepage/Homepage';",
+    routePageDirectories,
+    repoRoot,
+  );
+
+  assert.deepEqual(violations, []);
 });
 
 test('allows a nested route page to import its page-family common owner', () => {
@@ -288,8 +300,8 @@ test('checks an owner when its test is deleted', () => {
 
 test('accepts the normalized functional preference lifecycle', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference('lead-filters', tableKeys);
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference('lead-filters', tableKeys);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -305,8 +317,8 @@ test('accepts the normalized functional preference lifecycle', () => {
 
 test('accepts a route-selected preference key with owning table keys', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference(preferenceKey, tableKeys);
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference(preferenceKey, tableKeys);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -322,11 +334,11 @@ test('accepts a route-selected preference key with owning table keys', () => {
 
 test('accepts formatted owning table keys with a trailing argument comma', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference<LeadPreference>(
+    const { initializePreference, save } = useUserPreference<LeadPreference>(
       'lead-filters',
       tableKeys,
     );
-    setBaseline(restored);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -342,8 +354,8 @@ test('accepts formatted owning table keys with a trailing argument comma', () =>
 
 test('allows filter-only preferences without table column keys', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference('lead-filters');
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference('lead-filters');
+    initializePreference(restored);
     save(current => ({ ...current, statuses }));
   `;
 

@@ -14,7 +14,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as AccountPreference | null,
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -65,7 +65,7 @@ describe('Users', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.setBaseline.mockImplementation((value: AccountPreference) => {
+    preferenceHook.initializePreference.mockImplementation((value: AccountPreference) => {
       preferenceHook.preference = value;
     });
     preferenceHook.save.mockReset();

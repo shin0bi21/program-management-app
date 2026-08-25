@@ -9,9 +9,9 @@ const preferenceHook = vi.hoisted<{
   preference: AccountPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, initializePreference: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -40,7 +40,7 @@ describe('useAccountControls', () => {
     expect(result.current).toMatchObject({
       sorting: { key: 'email', direction: 'desc' }, columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(preferenceHook.preference);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(preferenceHook.preference);
   });
 
   it('limits role filters to administrators', async () => {
@@ -89,7 +89,7 @@ describe('useAccountControls', () => {
       search: '', roles: [], statuses: ['active'],
     });
     expect(result.current.sorting).toEqual({ key: 'name', direction: 'asc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       roles: [], sorting: { key: 'name', direction: 'asc' },
     }));
   });
