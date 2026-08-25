@@ -1,6 +1,6 @@
 # Frontend page
 
-A route page is the orchestration owner. It connects permissions, options, persisted controls, selection, cross-view actions, and dialogs while delegating substantial rendering and remote-data behavior to child components.
+A route page is the orchestration owner. It connects permissions, options, persisted preferences, selection, cross-view actions, and dialogs while delegating substantial rendering and remote-data behavior to child components.
 
 ## Page hierarchy
 
@@ -30,8 +30,7 @@ ExamplePage/
   types.ts                        contracts shared by sibling page units
   hooks/
     useExampleData.ts             remote options and derived option collections
-    useExamplePreferences.ts      restoration and complete preference saves
-    useExampleFilters.ts          filter projection and events
+    useExamplePreferences.ts      restored search, filters, view, and table preferences
     useExampleSelection.ts        selected resource/record synchronization
     useExampleActions.ts          mutations and cross-child reconciliation
   components/
@@ -49,12 +48,11 @@ Use only the files the page needs. Do not create empty hooks or child folders to
 | Hook | Owns |
 |---|---|
 | `use*Data` | Remote options, loading/error state, and derived option collections needed across children |
-| `use*Preferences` | One-time restoration, canonical defaults, view choice, sorting, widths, hidden columns, and complete atomic saves |
-| `use*Filters` | Filter categories, selected values, application/clear events, and query-filter projection |
+| `use*Preferences` | One-time restoration, canonical defaults, complete atomic saves, draft/applied search, filters, view, sorting, widths, and hidden columns |
 | `use*Selection` | Selected resource/row identity, reconciliation when options change, and synchronization after mutations |
 | `use*Actions` | Page-spanning mutations and reconciliation across table, calendar, dashboard, selection, and related domains |
 
-Keep a simple value with its real owner instead of adding a pass-through hook. Do not combine data, preferences, filters, selection, and actions into a catch-all controls hook.
+Keep a simple value with its real owner instead of adding a pass-through hook. A page-preference hook may combine persisted preferences with the search, filter, view, and table operations that update them; return named sections for those preference groups. Keep remote data, selection, and mutations in their focused hooks rather than absorbing them into preferences.
 
 ## Page composition pattern
 
@@ -77,10 +75,6 @@ export default function ExamplePage() {
 
   const data = useExampleData();
   const preferences = useExamplePreferences({ options: data.options });
-  const filters = useExampleFilters({
-    preferences: preferences.value,
-    updatePreferences: preferences.update,
-  });
   const selection = useExampleSelection({ resources: data.resources });
   const actions = useExampleActions({
     onRecordSaved: selection.updateSelectedRecord,
@@ -89,8 +83,8 @@ export default function ExamplePage() {
 
   const table = <ExampleTable
     queryKey={EXAMPLE_TABLE_QUERY_KEY}
-    filters={filters.applied}
-    sorting={preferences.value.sorting}
+    filters={preferences.filters.applied}
+    sorting={preferences.table.sorting}
     selectedId={selection.selectedId}
     onSelect={selection.selectRecord}
     actions={actions}
@@ -98,12 +92,12 @@ export default function ExamplePage() {
 
   const calendar = <ExampleCalendar
     resources={data.resources}
-    filters={filters.applied}
+    filters={preferences.filters.applied}
     selection={selection}
     actions={actions}
   />;
 
-  const viewContent = preferences.value.view === 'table'
+  const viewContent = preferences.view === 'table'
     ? { table }
     : { calendar };
 
@@ -114,10 +108,10 @@ export default function ExamplePage() {
         actions={permissions.includes('write:examples')
           ? <Button onClick={() => setModalState({ mode: 'add' })}>+ Add</Button>
           : undefined}
-        search={<SearchInput {...filters.searchProps} />}
-        columns={preferences.value.view === 'table' ? preferences.columnMenu : undefined}
+        search={<SearchInput {...preferences.search.inputProps} />}
+        columns={preferences.view === 'table' ? preferences.table.columnMenu : undefined}
         view={preferences.viewMenu}
-        filters={filters.card}
+        filters={preferences.filters.card}
       />
       {preferences.ready && <PageBody
         ariaLabel="Example overview and records"
@@ -141,7 +135,7 @@ The example shows ownership and dependency order, not mandatory prop wrappers. P
 - Render `PageHeader` followed by one `PageBody`.
 - `PageBody` owns the dashboard region and exactly one table or calendar region; route pages must not recreate its wrappers.
 - Create a route-family layout only when sibling routes share persistent rendered UI, state, or coordination—not merely a URL prefix or permission.
-- Restore saved controls before rendering dependent queries or misleading defaults.
+- Restore saved preferences before rendering dependent queries or misleading defaults.
 
 ## Page tests
 

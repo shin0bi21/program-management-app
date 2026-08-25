@@ -9,9 +9,9 @@ const preferenceHook = vi.hoisted<{
   preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, initializePreference: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -70,7 +70,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.view).toBe('calendar');
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
   });
 
   it('defaults staff with one assigned program to its active cohort', async () => {
@@ -137,7 +137,7 @@ describe('useSessionControls', () => {
 
     expect(result.current.sessionTypeIds).toEqual([]);
     expect(result.current.sorting).toEqual({ key: 'date', direction: 'desc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       sessionTypeIds: [],
       sorting: { key: 'date', direction: 'desc' },
     }));

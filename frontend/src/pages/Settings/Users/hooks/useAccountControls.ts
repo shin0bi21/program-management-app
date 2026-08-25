@@ -30,7 +30,7 @@ export function useAccountControls(
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    initializePreference,
     save,
   } = useUserPreference<AccountPreference>('account-filters', tableKeys);
 
@@ -58,9 +58,9 @@ export function useAccountControls(
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [isAdmin, preference, preferenceLoading, ready, setBaseline, tableKeys]);
+  }, [isAdmin, preference, preferenceLoading, ready, initializePreference, tableKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({

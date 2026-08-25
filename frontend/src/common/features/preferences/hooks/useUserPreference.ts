@@ -62,7 +62,7 @@ export default function useUserPreference<T extends object>(
     mutationFn: (value: T) => setPreference(key, value),
   });
 
-  const setBaseline = useCallback((value: T) => {
+  const initializePreference = useCallback((value: T) => {
     const normalized = sanitizeColumns(value, columnKeys)!;
     void queryClient.cancelQueries({ queryKey, exact: true });
     latestValueRef.current = normalized;
@@ -128,7 +128,8 @@ export default function useUserPreference<T extends object>(
     preference: query.data ?? null,
     loading: query.isLoading,
     error: error ?? queryError,
-    setBaseline,
+    initializePreference,
+    setBaseline: initializePreference,
     save,
   };
 }

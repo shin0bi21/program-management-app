@@ -8,7 +8,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as CohortPreference | null,
   loading: false,
   error: null as string | null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -46,7 +46,7 @@ describe('useCohortControls', () => {
     const { result } = renderHook(() => (
       useCohortControls('admin', programs, false, tableKeys, null)
     ));
-    await waitFor(() => expect(preferenceHook.setBaseline).toHaveBeenCalled());
+    await waitFor(() => expect(preferenceHook.initializePreference).toHaveBeenCalled());
 
     act(() => {
       result.current.setHiddenColumns(['status']);
@@ -73,7 +73,7 @@ describe('useCohortControls', () => {
 
     expect(result.current.programId).toBe('');
     expect(result.current.sorting).toEqual({ key: 'start', direction: 'desc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       programId: null,
       sorting: { key: 'start', direction: 'desc' },
     }));

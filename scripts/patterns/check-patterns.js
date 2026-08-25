@@ -85,6 +85,14 @@ function checkAppliedMigrations(violations, baseRef) {
 const options = parseArguments(process.argv.slice(2));
 const files = options.mode === 'all' ? collectAllFiles() : collectChangedFiles(options.baseRef);
 const repositoryFiles = collectAllFiles();
+const repositorySources = new Map(repositoryFiles
+  .filter(file => file.startsWith('frontend/src/pages/') && /\.tsx?$/.test(file))
+  .map((file) => {
+    const absolute = resolve(REPO_ROOT, file);
+    return [file, existsSync(absolute) && statSync(absolute).isFile()
+      ? readFileSync(absolute, 'utf8')
+      : ''];
+  }));
 const routePageDirectories = collectRoutePageDirectories(repositoryFiles);
 const structureFiles = options.mode === 'all'
   ? files
@@ -96,7 +104,11 @@ for (const file of files) {
   if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
   const source = readFileSync(absolute, 'utf8');
   runEnforcementChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
-  runPatternReview(reviewFindings, file, source, { repositoryFiles, routePageDirectories });
+  runPatternReview(reviewFindings, file, source, {
+    repositoryFiles,
+    repositorySources,
+    routePageDirectories,
+  });
 }
 for (const file of structureFiles) {
   const absolute = resolve(REPO_ROOT, file);

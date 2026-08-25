@@ -85,6 +85,7 @@ function collectMetrics(file, source) {
     stateHooks: 0,
     emptyFilterFallbacks: [],
     compatibilityNormalizations: [],
+    exportedTypes: [],
   };
   const apiImports = new Set();
 
@@ -100,6 +101,15 @@ function collectMetrics(file, source) {
           if (isApiImport) apiImports.add(specifier.local.name);
         }
       }
+    }
+
+    if (node.type === 'ExportNamedDeclaration'
+      && (node.declaration?.type === 'TSInterfaceDeclaration'
+        || node.declaration?.type === 'TSTypeAliasDeclaration')) {
+      metrics.exportedTypes.push({
+        line: node.declaration.loc.start.line,
+        name: node.declaration.id.name,
+      });
     }
 
     if (node.type === 'CallExpression') {
@@ -156,6 +166,47 @@ function collectMetrics(file, source) {
 
   walk(parsed.ast);
   return metrics;
+}
+
+function pageTypesDirectoryFor(file, routePageDirectories) {
+  return routePageDirectories.find(directory => file === `${directory}/types.ts`) ?? null;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function typeOwnershipFindings(file, source, metrics, routePageDirectories, repositorySources) {
+  const pageDirectory = pageTypesDirectoryFor(file, routePageDirectories);
+  if (!pageDirectory) return [];
+
+  return metrics.exportedTypes.flatMap(({ line, name }) => {
+    const patternSource = `\\b${escapeRegExp(name)}\\b`;
+    const ownOccurrences = source.match(new RegExp(patternSource, 'g'))?.length ?? 0;
+    if (ownOccurrences > 1) return [];
+
+    const consumers = [...repositorySources.entries()]
+      .filter(([consumerFile, consumerSource]) => (
+        consumerFile !== file
+        && consumerFile.startsWith(`${pageDirectory}/`)
+        && !isTestFile(consumerFile)
+        && new RegExp(patternSource).test(consumerSource)
+      ))
+      .map(([consumerFile]) => consumerFile);
+
+    if (consumers.length !== 1) return [];
+    const [consumer] = consumers;
+    if (isApiAdapter(consumer)) {
+      return [{
+        line,
+        message: `exported type ${name} is only consumed by ${consumer}; keep endpoint-only contracts in the API adapter.`,
+      }];
+    }
+    return [{
+      line,
+      message: `exported type ${name} is only consumed by ${consumer}; keep owner-local contracts beside that component, hook, or page.`,
+    }];
+  });
 }
 
 function describeMetrics(metrics) {
@@ -246,7 +297,11 @@ export function reviewFrontendPatterns(
   findings,
   file,
   source,
-  { repositoryFiles = [], routePageDirectories = [] } = {},
+  {
+    repositoryFiles = [],
+    repositorySources = new Map(),
+    routePageDirectories = [],
+  } = {},
 ) {
   if (!isAuditedFrontendOwner(file) || isTestFile(file) || !/\.tsx?$/.test(file)) return;
 
@@ -290,5 +345,14 @@ export function reviewFrontendPatterns(
       line,
       'response-shape compatibility is normalized outside an API adapter.',
     );
+  }
+  for (const finding of typeOwnershipFindings(
+    file,
+    source,
+    metrics,
+    routePageDirectories,
+    repositorySources,
+  )) {
+    addAdvisory('review-type-ownership', finding.line, finding.message);
   }
 }

@@ -7,6 +7,7 @@ export type PreferenceKey =
   | 'session-filters'
   | 'hours-filters'
   | 'task-filters'
+  | 'task-preferences'
   | 'cohort-filters'
   | 'lead-filters'
   | 'outreach-external-leads-filters'

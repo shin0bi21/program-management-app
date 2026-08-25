@@ -32,6 +32,8 @@
 - Escape user-controlled values interpolated into email HTML.
 - Route frontend HTTP calls through the centralized API client.
 - Preserve the frontend dependency direction `pages → common/features → common/components`.
+- Keep endpoint-only request, filter, and payload types in their API adapter; keep component-, hook-, and page-only types beside that owner. Reserve a page-root `types.ts` for contracts genuinely shared by sibling page units.
+- Enforce separation of concerns at the lowest valid owner. Keep page-specific APIs, types, constants, hooks, and components inside that page; use `pages/<RouteFamily>/common/` only for code with real sibling-route consumers; promote code to global `common/features/` only when multiple route families genuinely consume it. Do not centralize code merely because values look similar or future reuse seems possible.
 
 ## Testing
 

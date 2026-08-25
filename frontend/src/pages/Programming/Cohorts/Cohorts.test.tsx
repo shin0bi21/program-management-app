@@ -37,7 +37,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as CohortPreference | null,
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -77,7 +77,7 @@ describe('Cohorts', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.setBaseline.mockImplementation((value: CohortPreference) => {
+    preferenceHook.initializePreference.mockImplementation((value: CohortPreference) => {
       preferenceHook.preference = value;
     });
     preferenceHook.save.mockReset();

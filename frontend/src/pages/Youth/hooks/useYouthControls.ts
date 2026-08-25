@@ -43,7 +43,7 @@ export function useYouthControls({
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    initializePreference,
     save,
   } = useUserPreference<YouthPreference>('youth-profile-filters', tableKeys);
 
@@ -77,9 +77,9 @@ export function useYouthControls({
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, tableKeys]);
+  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {

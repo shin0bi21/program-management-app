@@ -15,7 +15,7 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as YouthPreference | null,
   loading: false,
   error: null as string | null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 const authState = vi.hoisted(() => ({
@@ -74,7 +74,7 @@ describe('Youth', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.setBaseline.mockImplementation((value: YouthPreference) => {
+    preferenceHook.initializePreference.mockImplementation((value: YouthPreference) => {
       preferenceHook.preference = value;
     });
     preferenceHook.save.mockReset();

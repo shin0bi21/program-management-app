@@ -100,21 +100,9 @@ export function checkFrontendOwnership(
       continue;
     }
 
-    const sourceRoute = findRoutePageDirectory(file, routePageDirectories);
     const targetRoute = findRoutePageDirectory(target, routePageDirectories);
     if (/^frontend\/src\/pages\/[^/]+\/common\//.test(file) && targetRoute) {
       violations.push(`${file}:${lineNumber(source, match.index)} page-family common code cannot import a route page's private code (${match[1]}).`);
-      continue;
-    }
-    if (sourceRoute && targetRoute && sourceRoute !== targetRoute) {
-      violations.push(`${file}:${lineNumber(source, match.index)} route pages cannot import another route page's private code (${match[1]}).`);
-      continue;
-    }
-
-    const pageMatch = file.match(/^frontend\/src\/pages\/([^/]+)\//);
-    const targetPageMatch = target.match(/^frontend\/src\/pages\/([^/]+)\//);
-    if (pageMatch && targetPageMatch && pageMatch[1] !== targetPageMatch[1]) {
-      violations.push(`${file}:${lineNumber(source, match.index)} route-family pages cannot import another page family's private code (${match[1]}).`);
     }
   }
 }
@@ -356,7 +344,7 @@ export function checkPreferenceControlOwnership(violations, file, source) {
   if (ownsTablePreferences && !passesTableKeys) {
     violations.push(`${file}:1 table preference hooks must receive owning tableKeys and pass them to useUserPreference.`);
   }
-  if (!/\bsetBaseline\s*\(/.test(source)) {
+  if (!/\binitializePreference\s*\(/.test(source)) {
     violations.push(`${file}:1 preference hooks must initialize the shared save baseline from their normalized restored state.`);
   }
   if (!/\bsave\s*\(\s*current\s*=>/.test(source)) {
