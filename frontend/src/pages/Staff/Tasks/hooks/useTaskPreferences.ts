@@ -69,18 +69,18 @@ export default function useTaskPreferences({
     preference,
     loading,
     error,
-    setBaseline,
+    initializePreference,
     save,
-  } = useUserPreference<StoredTaskPreferences>('task-filters', tableKeys);
+  } = useUserPreference<StoredTaskPreferences>('task-preferences', tableKeys);
 
   // Restore one complete canonical value before preferences become interactive.
   useEffect(() => {
     if (ready || loading || optionsLoading) return;
     const restored = resolveTaskPreference(preference, options, optionsError, tableKeys);
     setPreferences(restored);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [loading, options, optionsError, optionsLoading, preference, ready, setBaseline, tableKeys]);
+  }, [initializePreference, loading, options, optionsError, optionsLoading, preference, ready, tableKeys]);
 
   // Every section patches only its owned fields into the latest complete value.
   const updatePreferences = useCallback((patch: Partial<TaskPreferences>) => {

@@ -6,7 +6,6 @@ export type PreferenceKey =
   | 'youth-profile-filters'
   | 'session-filters'
   | 'hours-filters'
-  | 'task-filters'
   | 'task-preferences'
   | 'cohort-filters'
   | 'lead-filters'
