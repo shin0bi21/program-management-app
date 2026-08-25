@@ -1,4 +1,4 @@
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../types';
 import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 import useTaskOverviewData from './hooks/useTaskOverviewData';

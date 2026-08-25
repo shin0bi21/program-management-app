@@ -1,23 +1,23 @@
 import { sql } from '../../../db/client';
 import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type { HoursListQuery } from '../../../validation/hoursSchemas';
+import type { HoursTableQuery } from '../../../validation/hoursSchemas';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 import {
-  hoursCategoryLabels,
   hoursRecordColumns,
   hoursRecordFrom,
   type HoursRow,
 } from './hoursRecordQuery';
+import { getHoursCategoryLabel } from './hoursReferenceData';
 
-export async function getHoursList(actor: AccessTokenPayload, query: HoursListQuery) {
+export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQuery) {
   const cursor = decodeCursor(query.cursor);
   const direction = query.direction;
   const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
   const sortValue = {
     firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, date: sql`entry.work_date::text`,
     program: sql`LOWER(COALESCE(program.name, ''))`, cycle: sql`LOWER(cycle.name)`, category: sql`entry.category::text`,
-    session: sql`LOWER(COALESCE(session.theme, ''))`, hours: sql`TO_CHAR(entry.hours, 'FM0000000000.0000')`,
+    hours: sql`TO_CHAR(entry.hours, 'FM0000000000.0000')`,
     note: sql`LOWER(entry.note)`, type: entryType,
   }[query.sort]!;
   const search = query.search ? `%${query.search}%` : null;
@@ -50,7 +50,7 @@ export async function getHoursList(actor: AccessTokenPayload, query: HoursListQu
     item: {
       id: row.id, programId: row.programId, programName: row.programName, cycleId: row.cycleId,
       cycleName: row.cycleName, cycleStartsOn: row.cycleStartsOn, cycleEndsOn: row.cycleEndsOn,
-      category: row.category, categoryLabel: hoursCategoryLabels[row.category], taskId: row.taskId,
+      category: row.category, categoryLabel: getHoursCategoryLabel(row.category), taskId: row.taskId,
       taskTitle: row.taskTitle, sessionId: row.sessionId, sessionLabel: row.sessionLabel,
       hours: Number(row.hours), note: row.note,
     },

@@ -1,13 +1,13 @@
-// Scope: verifies the task-options query and its derived resource collections.
+// Scope: verifies the task reference-data query and its derived resource collections.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTaskOptions } from '../../../../common/features/tasks/tasks.api';
+import { getTaskReferenceData } from '../tasks.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import useTaskData from './useTaskData';
 
-vi.mock('../../../../common/features/tasks/tasks.api', () => ({
-  getTaskOptions: vi.fn(),
+vi.mock('../tasks.api', () => ({
+  getTaskReferenceData: vi.fn(),
 }));
 
 const resources = [
@@ -19,12 +19,17 @@ const resources = [
 describe('useTaskData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getTaskOptions).mockResolvedValue({ resources, programs: [] });
+    vi.mocked(getTaskReferenceData).mockResolvedValue({
+      resources,
+      programs: [],
+      categories: [{ value: 'meeting', label: 'Meeting' }],
+      statuses: [{ value: 'active', label: 'Active' }],
+    });
   });
 
-  it('loads task options and exposes stable derived resources', async () => {
+  it('loads task reference data and exposes stable derived resources', async () => {
     const client = createTestQueryClient();
-    const { result, rerender } = renderHook(() => useTaskData(['task-options']), {
+    const { result, rerender } = renderHook(() => useTaskData(['task-reference-data']), {
       wrapper: createQueryClientWrapper(client),
     });
 
@@ -34,6 +39,6 @@ describe('useTaskData', () => {
     expect(writableResources.map(resource => resource.id)).toEqual(['staff-1', 'staff-2']);
     rerender();
     expect(result.current.writableResources).toBe(writableResources);
-    expect(getTaskOptions).toHaveBeenCalledTimes(1);
+    expect(getTaskReferenceData).toHaveBeenCalledTimes(1);
   });
 });

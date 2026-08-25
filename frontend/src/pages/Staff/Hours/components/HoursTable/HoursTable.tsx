@@ -1,6 +1,6 @@
 import Table from '../../../../../common/components/Table/Table';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { HoursCategory, HoursTableRow } from '../../../../../common/features/hours/types';
+import type { HoursCategory, HoursTableRow } from '../../types';
 import type { ListSort } from '../../../../../common/types/pagination';
 import { HOURS_TABLE_KEYS, type HoursEntryType, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';

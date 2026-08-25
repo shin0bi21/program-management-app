@@ -3,8 +3,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
-import { TASK_CATEGORY_OPTIONS, type Task, type TaskCategory, type TaskProgram, type TaskResource } from '../../../../../common/features/tasks/types';
-import type { TaskModalState } from '../../types';
+import type { Task, TaskCategory, TaskModalState, TaskProgram, TaskResource } from '../../types';
 
 import useTaskModal from './hooks/useTaskModal';
 
@@ -14,6 +13,7 @@ export interface TaskModalProps {
   target: Exclude<TaskModalState, null>;
   resources: readonly TaskResource[];
   programs: readonly TaskProgram[];
+  categories: ReadonlyArray<{ value: TaskCategory; label: string }>;
   onSaved: (task: Task) => void;
   onClose: () => void;
 }
@@ -23,6 +23,7 @@ export default function TaskModal(props: TaskModalProps) {
     target,
     resources,
     programs,
+    categories,
     onClose,
   } = props;
   const modal = useTaskModal(props);
@@ -92,7 +93,7 @@ export default function TaskModal(props: TaskModalProps) {
             <FloatingSelect
               id="task-category"
               value={modal.draft.category}
-              options={TASK_CATEGORY_OPTIONS}
+              options={categories}
               onChange={value => modal.updateDraft('category', value as TaskCategory)}
               ariaLabel="Task category"
               disabled={modal.submissionComplete}

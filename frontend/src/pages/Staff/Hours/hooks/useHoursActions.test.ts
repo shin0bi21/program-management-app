@@ -6,7 +6,7 @@ import {
   deleteHours,
   setHours,
   updateHoursPlacement,
-} from '../../../../common/features/hours/hours.api';
+} from '../hours.api';
 import { makeHoursItem } from '../../../../tests/factories/hours';
 import {
   createQueryClientWrapper,
@@ -14,7 +14,7 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 import useHoursActions from './useHoursActions';
 
-vi.mock('../../../../common/features/hours/hours.api', () => ({
+vi.mock('../hours.api', () => ({
   deleteHours: vi.fn(),
   setHours: vi.fn(),
   updateHoursPlacement: vi.fn(),
@@ -48,7 +48,7 @@ function renderActions() {
 const saved = {
   id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
   cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-  category: 'meeting' as const, taskId: 'task-1', taskTitle: 'Prepare workshop',
+  category: 'meeting' as const, categoryLabel: 'Meeting', taskId: 'task-1', taskTitle: 'Prepare workshop',
   sessionId: null, sessionLabel: null, workDate: '2026-08-19', hours: 2, note: 'Planning',
 };
 
@@ -75,7 +75,7 @@ describe('useHoursActions', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] });
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'overview'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'dashboard'] });
   });
 
   it('owns confirmation and deletion reconciliation together', async () => {

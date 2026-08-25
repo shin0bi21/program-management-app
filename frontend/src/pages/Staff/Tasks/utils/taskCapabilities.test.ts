@@ -1,7 +1,7 @@
 // Scope: verifies task action availability across open, completed, and cancelled lifecycles.
 import { describe, expect, it } from 'vitest';
 
-import type { Task } from '../../../../common/features/tasks/types';
+import type { Task } from '../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -10,7 +10,7 @@ import {
   canReopenTask,
 } from './taskCapabilities';
 
-const task = { status: 'open', hoursLogged: 0 } as Task;
+const task = { state: 'open', hoursLogged: 0 } as Task;
 
 describe('task capabilities', () => {
   it('allows open tasks to be edited and untouched tasks to be deleted', () => {
@@ -26,13 +26,13 @@ describe('task capabilities', () => {
 
   it('allows cancellation only while a task is open', () => {
     expect(canCancelTask(task)).toBe(true);
-    expect(canCancelTask({ ...task, status: 'completed' })).toBe(false);
-    expect(canCancelTask({ ...task, status: 'cancelled' })).toBe(false);
+    expect(canCancelTask({ ...task, state: 'completed' })).toBe(false);
+    expect(canCancelTask({ ...task, state: 'cancelled' })).toBe(false);
   });
 
   it('allows either terminal state to be reopened', () => {
-    const completed = { ...task, status: 'completed', hoursLogged: 1 } as Task;
-    const cancelled = { ...task, status: 'cancelled' } as Task;
+    const completed = { ...task, state: 'completed', hoursLogged: 1 } as Task;
+    const cancelled = { ...task, state: 'cancelled' } as Task;
 
     expect(canReopenTask(completed)).toBe(true);
     expect(canReopenTask(cancelled)).toBe(true);

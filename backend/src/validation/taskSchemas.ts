@@ -11,26 +11,16 @@ const calendarDate = (label: string) => z.string()
     return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
   }, `${label} must be a valid calendar date`);
 
-export const taskStatusSchema = z.enum(['open', 'completed', 'cancelled']);
-export const taskListStatusSchema = z.enum(['upcoming', 'active', 'overdue', 'completed', 'cancelled']);
+export const taskStateSchema = z.enum(['open', 'completed', 'cancelled']);
+export const taskStatusSchema = z.enum(['upcoming', 'active', 'overdue', 'completed', 'cancelled']);
 
 export const taskParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid task ID') }),
 });
 
-export const taskQuerySchema = z.object({
+export const openTaskQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID').optional(),
-    category: hoursCategorySchema.optional(),
-    start: calendarDate('Start date').optional(),
-    end: calendarDate('End date').optional(),
-    includeClosed: z.union([z.enum(['true', 'false']), z.boolean()]).optional().transform(value => value === true || value === 'true'),
-  }).refine(query => Boolean(query.start) === Boolean(query.end), {
-    message: 'Start and end dates must be provided together',
-    path: ['end'],
-  }).refine(query => !query.start || !query.end || query.start <= query.end, {
-    message: 'End date must be on or after start date',
-    path: ['end'],
   }),
 });
 
@@ -38,14 +28,29 @@ const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value
   typeof value === 'string' && value ? value.split(',') : []
 ), z.array(schema));
 
+const taskFilterFields = {
+  staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
+  programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
+  categories: commaSeparated(hoursCategorySchema),
+  statuses: commaSeparated(taskStatusSchema),
+  search: z.string().trim().max(120).optional().default(''),
+};
+
 export const taskListQuerySchema = z.object({
   query: z.object({
-    staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
-    programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
-    categories: commaSeparated(hoursCategorySchema),
-    statuses: commaSeparated(taskListStatusSchema),
-    search: z.string().trim().max(120).optional().default(''),
+    ...taskFilterFields,
     ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
+  }),
+});
+
+export const taskCalendarQuerySchema = z.object({
+  query: z.object({
+    ...taskFilterFields,
+    start: calendarDate('Start date'),
+    end: calendarDate('End date'),
+  }).refine(query => query.start <= query.end, {
+    message: 'End date must be on or after start date',
+    path: ['end'],
   }),
 });
 
@@ -64,8 +69,8 @@ export const setTaskSchema = z.object({
   }),
 });
 
-export const updateTaskStatusSchema = z.object({
-  body: z.object({ status: taskStatusSchema }),
+export const updateTaskStateSchema = z.object({
+  body: z.object({ state: taskStateSchema }),
 });
 
 export const updateTaskPlacementSchema = z.object({
@@ -79,7 +84,8 @@ export const updateTaskPlacementSchema = z.object({
   }),
 });
 
-export type TaskQuery = z.infer<typeof taskQuerySchema.shape.query>;
+export type OpenTaskQuery = z.infer<typeof openTaskQuerySchema.shape.query>;
 export type TaskListQuery = z.infer<typeof taskListQuerySchema.shape.query>;
+export type TaskCalendarQuery = z.infer<typeof taskCalendarQuerySchema.shape.query>;
 export type SetTaskInput = z.infer<typeof setTaskSchema.shape.body>;
 export type TaskPlacementInput = z.infer<typeof updateTaskPlacementSchema.shape.body>;

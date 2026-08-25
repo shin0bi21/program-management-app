@@ -8,7 +8,7 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import HoursModal from '../../../common/features/hours/components/HoursModal/HoursModal';
+import HoursModal from './components/HoursModal/HoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
 import HoursDashboard from './components/HoursDashboard/HoursDashboard';
 import HoursTable from './components/HoursTable/HoursTable';
@@ -23,16 +23,28 @@ import useHoursFilters from './hooks/useHoursFilters';
 import useHoursPreferences from './hooks/useHoursPreferences';
 import useHoursSelection from './hooks/useHoursSelection';
 
-import type { SetHoursInput } from '../../../common/features/hours/hours.api';
-import { HOURS_TABLE_KEYS, type HoursModalState, type HoursAddTarget, type HoursEntryTarget } from './types';
+import type { SetHoursInput } from './hours.api';
+import { getTaskDashboardData } from '../Tasks/tasks.api';
+import { HOURS_TABLE_KEYS, type HoursEntryTarget } from './types';
 
 import './Hours.css';
+
+type HoursAddTarget = {
+  resourceId?: string;
+  date?: string;
+  source?: 'regular' | 'task' | 'session';
+};
+
+type HoursModalState =
+  | { mode: 'add'; initialValues: HoursAddTarget }
+  | { mode: 'edit'; target: HoursEntryTarget }
+  | null;
 
 // Page-owned cache contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
-const HOURS_OPTIONS_QUERY_KEY = ['hours-options'] as const;
+const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 function getHoursError(
@@ -57,7 +69,7 @@ export default function Hours() {
 
   // Page data and persisted controls.
   const pageData = useHoursData(
-    HOURS_OPTIONS_QUERY_KEY,
+    HOURS_REFERENCE_DATA_QUERY_KEY,
     PROGRAM_CYCLES_QUERY_KEY,
     currentUserId,
   );
@@ -78,6 +90,8 @@ export default function Hours() {
     preferences: hoursPreferences.preferences,
     resources: pageData.resources,
     programs: pageData.programs,
+    categories: pageData.categories,
+    types: pageData.types,
     cycles: pageData.cycles,
     updatePreferences: hoursPreferences.updatePreferences,
   });
@@ -256,6 +270,8 @@ export default function Hours() {
       isOpen={hoursModalState !== null}
       resources={pageData.writableResources}
       programs={pageData.programs}
+      categories={pageData.categories}
+      loadTasks={getTaskDashboardData}
       onClose={closeHoursModal}
       onAdd={submitHours}
       initialResourceId={hoursModalState?.mode === 'edit'

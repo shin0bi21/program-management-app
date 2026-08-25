@@ -1,26 +1,18 @@
-import { getTaskList } from '../../../../../../common/features/tasks/tasks.api';
-import type { Task, TaskCategory, TaskListStatus } from '../../../../../../common/features/tasks/types';
+import { getTasksTableData } from '../../../tasks.api';
+import type { Task, TasksFilters } from '../../../types';
 import type { ListSort } from '../../../../../../common/types/pagination';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { TaskSortKey } from '../../../types';
 
-interface TaskTableFilters {
-  staffIds: string[];
-  programIds: string[];
-  categories: TaskCategory[];
-  statuses: TaskListStatus[];
-  search: string;
-}
-
 export default function useTaskTableData(
   queryKey: readonly unknown[],
-  filters: TaskTableFilters,
+  filters: TasksFilters,
   sorting: ListSort<TaskSortKey>,
   today: string,
 ) {
   return useInfiniteListQuery<Task>({
     queryKey: [...queryKey, filters, sorting, today],
-    queryFn: ({ signal, pageParam }) => getTaskList(
+    queryFn: ({ signal, pageParam }) => getTasksTableData(
       filters,
       { signal },
       { ...sorting, cursor: pageParam ?? undefined, limit: 25 },

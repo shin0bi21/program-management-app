@@ -1,12 +1,13 @@
 // Scope: verifies task-hour breakdown presentation and contextual logging events.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, status: 'open',
+  categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
+  status: 'active', statusLabel: 'Active',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 4.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 3 }, { date: '2026-08-11', hours: 1.5 }],
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
 import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
-import type { HoursItem as HoursEntry } from '../../../../../../common/features/hours/types';
+import type { HoursItem as HoursEntry } from '../../../types';
 import HoursItem from './HoursItem';
 
 interface StoryResource {

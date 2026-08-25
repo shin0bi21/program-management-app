@@ -13,6 +13,8 @@ const resources = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
+const categories = [{ value: 'meeting' as const, label: 'Meeting' }];
+const types = [{ value: 'task' as const, label: 'Task' }];
 const cycles = [{
   id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const,
 }];
@@ -21,11 +23,11 @@ describe('useHoursFilters', () => {
   it('maps admin options and emits a narrow patch for every filter', () => {
     const updatePreferences = vi.fn();
     const { result } = renderHook(() => useHoursFilters({
-      role: 'admin', preferences, resources, programs, cycles, updatePreferences,
+      role: 'admin', preferences, resources, programs, categories, types, cycles, updatePreferences,
     }));
 
     expect(result.current.filterCategories.map(category => category.id)).toEqual([
-      'staff', 'program', 'entryType', 'type', 'cycle',
+      'staff', 'program', 'cycle', 'type', 'entryType',
     ]);
     act(() => {
       result.current.applyFilter('staff', ['staff-1']);
@@ -46,7 +48,7 @@ describe('useHoursFilters', () => {
   it('owns local search and clears persisted filters without showing staff its redundant filter', () => {
     const updatePreferences = vi.fn();
     const { result } = renderHook(() => useHoursFilters({
-      role: 'staff', preferences, resources, programs, cycles, updatePreferences,
+      role: 'staff', preferences, resources, programs, categories, types, cycles, updatePreferences,
     }));
     expect(result.current.filterCategories.map(category => category.id)).not.toContain('staff');
     act(() => result.current.setSearch(' workshop '));

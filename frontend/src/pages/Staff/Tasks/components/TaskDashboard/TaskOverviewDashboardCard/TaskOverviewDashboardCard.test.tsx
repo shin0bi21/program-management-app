@@ -1,12 +1,13 @@
 // Scope: verifies resource task overview groups and report navigation.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard';
 
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, status: 'open',
+  categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
+  status: 'active', statusLabel: 'Active',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
   assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
@@ -17,13 +18,17 @@ describe('TaskOverviewDashboardCard', () => {
   it('shows a resource overview and opens its report', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-11T12:00:00'));
-    const overdueTask = { ...baseTask, id: 'task-2', title: 'Submit report', dueDate: '2026-08-09' };
+    const overdueTask = {
+      ...baseTask, id: 'task-2', title: 'Submit report', dueDate: '2026-08-09',
+      status: 'overdue' as const, statusLabel: 'Overdue',
+    };
     const upcomingTask = {
       ...baseTask, id: 'task-3', title: 'Future workshop', startDate: '2026-08-13', dueDate: '2026-08-14',
+      status: 'upcoming' as const, statusLabel: 'Upcoming',
     };
     render(<TaskOverviewDashboardCard tasks={[baseTask, overdueTask, upcomingTask]} resourceName="Zoe Wilson" today="2026-08-11" />);
 
-    expect(screen.getByText('Tasks Assigned').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Active').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
@@ -49,13 +54,28 @@ describe('TaskOverviewDashboardCard', () => {
     vi.setSystemTime(new Date('2026-08-11T12:00:00'));
     const tasks = [
       { ...baseTask, id: 'later', title: 'Later', dueDate: '2026-08-20' },
-      { ...baseTask, id: 'overdue', title: 'Overdue', dueDate: '2026-08-09' },
+      {
+        ...baseTask,
+        id: 'overdue',
+        title: 'Overdue',
+        dueDate: '2026-08-09',
+        status: 'overdue' as const,
+        statusLabel: 'Overdue',
+      },
       { ...baseTask, id: 'soon', title: 'Soon', dueDate: '2026-08-12' },
-      { ...baseTask, id: 'closed', title: 'Closed', dueDate: '2026-08-01', status: 'completed' as const },
+      {
+        ...baseTask,
+        id: 'closed',
+        title: 'Closed',
+        dueDate: '2026-08-01',
+        state: 'completed' as const,
+        status: 'completed' as const,
+        statusLabel: 'Completed',
+      },
     ];
     render(<TaskOverviewDashboardCard tasks={tasks} resourceName="Zoe Wilson" today="2026-08-11" />);
 
-    expect(screen.getByText('Tasks Assigned').nextSibling).toHaveTextContent('3');
+    expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 

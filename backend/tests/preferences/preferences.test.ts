@@ -290,6 +290,41 @@ describe('User preferences API', () => {
     })).rejects.toBe(rollback);
   });
 
+  it('renames the persisted task list view to the table view', async () => {
+    const rollback = new Error('rollback task list view migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-08-25_1_rename_task_list_view.sql',
+    ), 'utf8');
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      await trx`
+        INSERT INTO user_preferences (user_id, preference_key, value)
+        VALUES (
+          ${firstUserId},
+          'task-preferences',
+          ${trx.json({ view: 'list', staffIds: [] })}
+        )
+        ON CONFLICT (user_id, preference_key) DO UPDATE
+        SET value = EXCLUDED.value, updated_at = NOW()
+      `;
+
+      for (const statement of migration.split(';').map(part => part.trim()).filter(Boolean)) {
+        await trx.unsafe(statement);
+      }
+
+      const [preference] = await trx<Array<{ value: { view: string; staffIds: string[] } }>>`
+        SELECT value
+        FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key = 'task-preferences'
+      `;
+      expect(preference.value).toEqual({ view: 'table', staffIds: [] });
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
   it('rejects unknown preference keys and non-object preference values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')

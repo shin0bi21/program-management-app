@@ -6,13 +6,15 @@ import { apiClient } from '../../../http/client';
 
 import {
   deleteTask,
-  getTaskList,
-  getTasks,
+  getTaskDashboardData,
+  getTaskReferenceData,
+  getTasksCalendarData,
+  getTasksTableData,
   setTask,
+  type SetTaskInput,
   updateTaskPlacement,
-  updateTaskStatus,
+  updateTaskState,
 } from './tasks.api';
-import type { SetTaskInput } from './types';
 
 vi.mock('../../../http/client', () => ({
   apiClient: {
@@ -37,24 +39,44 @@ const input: SetTaskInput = {
 describe('tasks API', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('serializes calendar filters and request options', () => {
+  it('loads open dashboard tasks for one staff member', () => {
     const controller = new AbortController();
-    getTasks({
-      staffId: 'staff-1',
-      category: 'planning_prep',
-      start: '2026-08-10',
-      end: '2026-08-12',
-      includeClosed: true,
-    }, { signal: controller.signal });
+
+    getTaskDashboardData('staff-1', { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks?staffId=staff-1&category=planning_prep&start=2026-08-10&end=2026-08-12&includeClosed=true',
+      '/tasks?staffId=staff-1',
+      { signal: controller.signal },
+    );
+  });
+
+  it('serializes shared filters for calendar range data', () => {
+    getTasksCalendarData({
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+      categories: ['planning_prep'],
+      statuses: ['active', 'overdue'],
+      search: 'workshop prep',
+    }, { start: '2026-08-10', end: '2026-08-12' });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/tasks/calendar?start=2026-08-10&end=2026-08-12&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=active%2Coverdue&search=workshop+prep',
+      undefined,
+    );
+  });
+
+  it('loads all task reference data in one request', () => {
+    const controller = new AbortController();
+    getTaskReferenceData({ signal: controller.signal });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/tasks/reference-data',
       { signal: controller.signal },
     );
   });
 
   it('serializes list filters, derived timing states, and cursor pagination', () => {
-    getTaskList({
+    getTasksTableData({
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
@@ -82,13 +104,13 @@ describe('tasks API', () => {
   });
 
   it('sends narrow lifecycle, placement, and delete commands', () => {
-    updateTaskStatus('task-1', 'completed');
+    updateTaskState('task-1', 'completed');
     updateTaskPlacement('task-1', {
       startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
     });
     deleteTask('task-1');
 
-    expect(apiClient.patch).toHaveBeenNthCalledWith(1, '/tasks/task-1/status', { status: 'completed' });
+    expect(apiClient.patch).toHaveBeenNthCalledWith(1, '/tasks/task-1/state', { state: 'completed' });
     expect(apiClient.patch).toHaveBeenNthCalledWith(2, '/tasks/task-1/placement', {
       startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
     });

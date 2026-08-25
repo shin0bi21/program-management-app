@@ -2,16 +2,16 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  programId: null, programName: null, status: 'open',
+  categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
+  status: 'active', statusLabel: 'Active',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
-const today = '2026-08-11';
 
 function showDetails() {
   fireEvent.mouseEnter(screen.getByRole('button', { name: /Prepare workshop/ }));
@@ -28,7 +28,7 @@ describe('TaskItem', () => {
   afterEach(() => vi.useRealTimers());
 
   it('shows task details through the shared calendar-item hover behavior', async () => {
-    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} today={today} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
     expect(item).toHaveTextContent('Prepare workshop · Planning / Prep');
@@ -49,7 +49,7 @@ describe('TaskItem', () => {
   });
 
   it('shows a dash when the task has no program', async () => {
-    render(<TaskItem task={task} today={today} />);
+    render(<TaskItem task={task} />);
 
     const tooltip = showDetails();
     expect(within(tooltip).getByText('—')).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('TaskItem', () => {
     const onComplete = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
-    render(<div onClick={onActivate}><TaskItem task={task} today={today} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
+    render(<div onClick={onActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, Active, 2026-08-10 to 2026-08-12. Open actions' }));
     expect(onActivate).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('TaskItem', () => {
 
   it('invokes mark complete from the task action menu', () => {
     const onComplete = vi.fn();
-    render(<TaskItem task={task} today={today} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={task} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Set Completed' }));
@@ -86,7 +86,7 @@ describe('TaskItem', () => {
 
   it('notifies the page when the task item is activated', () => {
     const onActivate = vi.fn();
-    render(<TaskItem task={task} today={today} onActivate={onActivate} />);
+    render(<TaskItem task={task} onActivate={onActivate} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop/ }));
 
@@ -94,7 +94,7 @@ describe('TaskItem', () => {
   });
 
   it('keeps selected task styling independent of the transient action menu', () => {
-    render(<TaskItem task={task} today={today} selected onComplete={vi.fn()} />);
+    render(<TaskItem task={task} selected onComplete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
     expect(item).toHaveClass('calendar-item--selected');
@@ -103,7 +103,7 @@ describe('TaskItem', () => {
   });
 
   it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {
-    render(<TaskItem task={{ ...task, dueDate: '2000-01-01' }} today={today} />);
+    render(<TaskItem task={{ ...task, dueDate: '2000-01-01', status: 'overdue', statusLabel: 'Overdue' }} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass('task-item--overdue');
@@ -119,10 +119,12 @@ describe('TaskItem', () => {
   it('uses the full task bar for completed feedback instead of a trailing symbol', async () => {
     render(<TaskItem task={{
       ...task,
+      state: 'completed',
       status: 'completed',
+      statusLabel: 'Completed',
       dueDate: '2000-01-01',
       completedAt: '2000-01-02T12:00:00.000Z',
-    }} today={today} />);
+    }} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass('task-item--completed');
@@ -133,13 +135,13 @@ describe('TaskItem', () => {
   });
 
   it.each([
-    ['Upcoming', { startDate: '2026-08-12', dueDate: '2026-08-13' }, 'upcoming'],
-    ['Active', { startDate: '2026-08-10', dueDate: '2026-08-12' }, 'active'],
-    ['Overdue', { startDate: '2026-08-08', dueDate: '2026-08-10' }, 'overdue'],
-    ['Completed', { status: 'completed' as const }, 'completed'],
-    ['Cancelled', { status: 'cancelled' as const }, 'cancelled'],
+    ['Upcoming', { startDate: '2026-08-12', dueDate: '2026-08-13', status: 'upcoming' as const, statusLabel: 'Upcoming' }, 'upcoming'],
+    ['Active', { startDate: '2026-08-10', dueDate: '2026-08-12', status: 'active' as const, statusLabel: 'Active' }, 'active'],
+    ['Overdue', { startDate: '2026-08-08', dueDate: '2026-08-10', status: 'overdue' as const, statusLabel: 'Overdue' }, 'overdue'],
+    ['Completed', { state: 'completed' as const, status: 'completed' as const, statusLabel: 'Completed' }, 'completed'],
+    ['Cancelled', { state: 'cancelled' as const, status: 'cancelled' as const, statusLabel: 'Cancelled' }, 'cancelled'],
   ])('styles the task as %s', async (label, overrides, modifier) => {
-    render(<TaskItem task={{ ...task, ...overrides }} today={today} />);
+    render(<TaskItem task={{ ...task, ...overrides }} />);
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass(`task-item--${modifier}`);
     showDetails();

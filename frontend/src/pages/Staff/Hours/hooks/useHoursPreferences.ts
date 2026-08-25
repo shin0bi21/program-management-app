@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
-import type { StaffResource, HoursProgram } from '../../../../common/features/hours/types';
+import type { StaffResource, HoursProgram } from '../types';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 
-import type { HoursPreferences, HoursSortKey, HoursView, StoredHoursPreferences } from '../types';
+import type { HoursPreferences, HoursSortKey, HoursView } from '../types';
+
+export type StoredHoursPreferences = Partial<HoursPreferences>;
 
 const DEFAULT_HOURS_PREFERENCES: HoursPreferences = {
   view: 'calendar',
@@ -85,7 +87,7 @@ export default function useHoursPreferences({
 }) {
   const [preferences, setPreferences] = useState<HoursPreferences>(DEFAULT_HOURS_PREFERENCES);
   const [ready, setReady] = useState(false);
-  const { preference, loading, error, setBaseline, save } = useUserPreference<StoredHoursPreferences>(
+  const { preference, loading, error, initializePreference, save } = useUserPreference<StoredHoursPreferences>(
     'hours-filters',
     tableKeys,
   );
@@ -103,9 +105,9 @@ export default function useHoursPreferences({
       tableKeys,
     );
     setPreferences(restored);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [cycles, cyclesError, loading, loadingDependencies, optionsError, preference, programs, ready, resources, role, setBaseline, tableKeys]);
+  }, [cycles, cyclesError, loading, loadingDependencies, optionsError, preference, programs, ready, resources, role, initializePreference, tableKeys]);
 
   const applyPreferencePatch = useCallback((patch: Partial<HoursPreferences>) => {
     setPreferences(current => ({ ...current, ...patch }));

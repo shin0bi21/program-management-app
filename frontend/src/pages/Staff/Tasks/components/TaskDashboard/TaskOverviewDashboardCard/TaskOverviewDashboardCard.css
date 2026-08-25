@@ -109,10 +109,18 @@
 
 .task-overview-card__task-lists {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
   margin-top: var(--space-5);
   padding-top: var(--space-4);
   border-top: var(--border-line-soft);
+}
+
+.task-overview-card__task-section {
+  padding: var(--space-4);
+  border: var(--border-line-soft);
+  border-left-width: 4px;
+  border-radius: 0;
+  background: var(--color-surface-warm);
 }
 
 .task-overview-card__task-section h3 {
@@ -124,15 +132,14 @@
 
 .task-overview-card__task-section ul {
   display: grid;
-  gap: var(--space-4);
   margin: 0;
-  padding: var(--space-1) 0 var(--space-1) var(--space-4);
-  border-left: 3px solid var(--color-border);
+  padding: 0;
   list-style: none;
 }
 
-.task-overview-card__task-section--info ul {
+.task-overview-card__task-section--info {
   border-left-color: var(--color-info);
+  background: var(--color-info-bg);
 }
 
 .task-overview-card__task-section--info h3,
@@ -140,8 +147,9 @@
   color: var(--color-info);
 }
 
-.task-overview-card__task-section--warn ul {
+.task-overview-card__task-section--warn {
   border-left-color: var(--color-task-active-border);
+  background: var(--color-task-active-bg);
 }
 
 .task-overview-card__task-section--warn h3,
@@ -149,8 +157,9 @@
   color: var(--color-task-active);
 }
 
-.task-overview-card__task-section--danger ul {
+.task-overview-card__task-section--danger {
   border-left-color: var(--color-danger-dark);
+  background: var(--color-danger-bg);
 }
 
 .task-overview-card__task-section--danger h3 {
@@ -162,6 +171,12 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.task-overview-card__task-section li + li {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-line-soft);
 }
 
 .task-overview-card__task-section li strong {

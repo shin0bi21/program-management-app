@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { setTask } from '../../../../../../common/features/tasks/tasks.api';
-import type { TaskCategory } from '../../../../../../common/features/tasks/types';
+import { setTask } from '../../../tasks.api';
+import type { TaskCategory } from '../../../types';
 import { getSubmitStatusMessage, useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
 import type { TaskModalProps } from '../TaskModal';

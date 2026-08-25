@@ -2,36 +2,36 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   deleteHours,
-  getHours,
-  getHoursOptions,
-  getHoursOverview,
+  getHoursCalendarData,
+  getHoursReferenceData,
+  getHoursDashboardData,
   getHoursSessions,
   setHours,
   updateHoursPlacement,
 } from '../services/staff/hours/hoursService';
 import { getHoursList } from '../services/staff/hours/hoursListService';
-import type { HoursListQuery, HoursOverviewQuery, HoursQuery, HoursSessionQuery } from '../validation/hoursSchemas';
+import type { HoursTableQuery, HoursDashboardQuery, HoursCalendarQuery, HoursSessionQuery } from '../validation/hoursSchemas';
 
-export async function handleGetHours(req: Request, res: Response) {
+export async function handleGetHoursCalendarData(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = req.query as unknown as HoursQuery;
-  res.json(await getHours(actor, query));
+  const query = req.query as unknown as HoursCalendarQuery;
+  res.json(await getHoursCalendarData(actor, query));
 }
 
-export async function handleGetHoursList(req: Request, res: Response) {
+export async function handleGetHoursTableData(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = req.query as unknown as HoursListQuery;
+  const query = req.query as unknown as HoursTableQuery;
   res.json(await getHoursList(actor, query));
 }
 
-export async function handleGetHoursOptions(req: Request, res: Response) {
-  res.json(await getHoursOptions((req as AuthRequest).user!));
+export async function handleGetHoursReferenceData(req: Request, res: Response) {
+  res.json(await getHoursReferenceData((req as AuthRequest).user!));
 }
 
-export async function handleGetHoursOverview(req: Request, res: Response) {
+export async function handleGetHoursDashboardData(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = req.query as unknown as HoursOverviewQuery;
-  res.json(await getHoursOverview(actor, query));
+  const query = req.query as unknown as HoursDashboardQuery;
+  res.json(await getHoursDashboardData(actor, query));
 }
 
 export async function handleGetHoursSessions(req: Request, res: Response) {

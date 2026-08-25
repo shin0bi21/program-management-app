@@ -2,17 +2,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteTask, updateTaskPlacement, updateTaskStatus } from '../../../../common/features/tasks/tasks.api';
-import type { Task } from '../../../../common/features/tasks/types';
-import { setHours } from '../../../../common/features/hours/hours.api';
+import { deleteTask, updateTaskPlacement, updateTaskState } from '../tasks.api';
+import type { Task } from '../types';
+import { setHours } from '../../Hours/hours.api';
 import { makeTask } from '../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import useTaskActions from './useTaskActions';
 
-vi.mock('../../../../common/features/tasks/tasks.api', () => ({
-  deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskStatus: vi.fn(),
+vi.mock('../tasks.api', () => ({
+  deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(),
 }));
-vi.mock('../../../../common/features/hours/hours.api', () => ({ setHours: vi.fn() }));
+vi.mock('../../Hours/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
 
@@ -51,7 +51,7 @@ describe('useTaskActions', () => {
   it('uses narrow placement and status actions then synchronizes task consumers', async () => {
     const moved = { ...task, startDate: '2026-08-11', dueDate: '2026-08-13' };
     vi.mocked(updateTaskPlacement).mockResolvedValue(moved);
-    vi.mocked(updateTaskStatus).mockResolvedValue({ ...moved, status: 'cancelled' });
+    vi.mocked(updateTaskState).mockResolvedValue({ ...moved, state: 'cancelled', status: 'cancelled', statusLabel: 'Cancelled' });
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
 
@@ -61,12 +61,12 @@ describe('useTaskActions', () => {
       task, { start: '2026-08-11', end: '2026-08-13' }, 'move', 'staff-2',
       );
     });
-    await act(async () => rendered.result.current.setStatus(moved, 'cancelled'));
+    await act(async () => rendered.result.current.setState(moved, 'cancelled'));
 
     expect(updateTaskPlacement).toHaveBeenCalledWith('task-1', {
       startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
     });
-    expect(updateTaskStatus).toHaveBeenCalledWith('task-1', 'cancelled');
+    expect(updateTaskState).toHaveBeenCalledWith('task-1', 'cancelled');
     expect(rendered.onTaskSynced).toHaveBeenCalledTimes(2);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] });
@@ -107,8 +107,8 @@ describe('useTaskActions', () => {
     });
 
     expect(rendered.result.current.isTaskPending(task.id)).toBe(true);
-    await act(async () => rendered.result.current.setStatus(task, 'completed'));
-    expect(updateTaskStatus).not.toHaveBeenCalled();
+    await act(async () => rendered.result.current.setState(task, 'completed'));
+    expect(updateTaskState).not.toHaveBeenCalled();
 
     await act(async () => {
       moveRequest.resolve({ ...task, startDate: '2026-08-11', dueDate: '2026-08-13' });
@@ -120,16 +120,14 @@ describe('useTaskActions', () => {
     expect(rendered.upsertCalendarTask).toHaveBeenCalledOnce();
   });
 
-  it('owns confirmation, deletion, table removal, and calendar removal together', async () => {
+  it('deletes the task and reconciles table, calendar, and selection consumers', async () => {
     vi.mocked(deleteTask).mockResolvedValue();
     const client = createTestQueryClient();
     const tableKey = ['tasks', 'table', 'variant'];
     client.setQueryData(tableKey, { pages: [{ rows: [task], nextCursor: null }], pageParams: [null] });
     const rendered = renderActions(client);
 
-    act(() => rendered.result.current.requestDelete(task));
-    expect(rendered.result.current.confirmAction).toEqual(expect.objectContaining({ title: 'Delete Task' }));
-    await act(async () => rendered.result.current.confirmAction?.onConfirm());
+    await act(async () => rendered.result.current.deleteTask(task));
 
     expect(deleteTask).toHaveBeenCalledWith('task-1');
     expect(rendered.onTaskRemoved).toHaveBeenCalledWith('task-1');
@@ -138,18 +136,17 @@ describe('useTaskActions', () => {
   });
 
   it('does not reconcile failed status or deletion actions', async () => {
-    vi.mocked(updateTaskStatus).mockRejectedValueOnce(new Error('status failed'));
+    vi.mocked(updateTaskState).mockRejectedValueOnce(new Error('state failed'));
     vi.mocked(deleteTask).mockRejectedValueOnce(new Error('delete failed'));
     const rendered = renderActions();
 
-    await act(async () => rendered.result.current.setStatus(task, 'completed'));
+    await act(async () => rendered.result.current.setState(task, 'completed'));
     expect(rendered.result.current.actionError).toBe('Unable to update task status.');
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(rendered.onTaskSynced).not.toHaveBeenCalled();
 
-    act(() => rendered.result.current.requestDelete(task));
     await act(async () => {
-      await expect(rendered.result.current.confirmAction!.onConfirm()).rejects.toThrow('delete failed');
+      await expect(rendered.result.current.deleteTask(task)).rejects.toThrow('delete failed');
     });
     expect(rendered.removeCalendarTask).not.toHaveBeenCalled();
     expect(rendered.onTaskRemoved).not.toHaveBeenCalled();

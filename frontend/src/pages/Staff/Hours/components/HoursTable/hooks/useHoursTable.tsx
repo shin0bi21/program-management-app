@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { StaffResource, HoursTableRow } from '../../../../../../common/features/hours/types';
+import type { StaffResource, HoursTableRow } from '../../../types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import type { HoursEntryTarget } from '../../../types';
 import { getHoursEntryType, HOURS_ENTRY_TYPE_LABELS } from '../../../utils/hoursEntryType';
@@ -41,7 +41,6 @@ export default function useHoursTable({
     { id: 'cycle', header: 'Cycle', accessorFn: row => row.item.cycleName ?? '—' },
     { id: 'program', header: 'Program', accessorFn: row => row.item.programName ?? '—' },
     { id: 'category', header: 'Category', accessorFn: row => row.item.categoryLabel },
-    { id: 'session', header: 'Session', accessorFn: row => row.item.sessionLabel ?? '—' },
     { id: 'hours', header: 'Hours', size: 100, accessorFn: row => row.item.hours },
     { id: 'note', header: 'Note', accessorFn: row => row.item.note },
     { id: 'type', header: 'Type', size: 110,

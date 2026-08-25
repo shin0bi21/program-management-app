@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { HoursTableRow } from '../../../../../../common/features/hours/types';
+import type { HoursTableRow } from '../../../types';
 import useHoursTable from './useHoursTable';
 
 const writable = {
@@ -39,7 +39,6 @@ describe('useHoursTable', () => {
       ['cycle', 'Cycle'],
       ['program', 'Program'],
       ['category', 'Category'],
-      ['session', 'Session'],
       ['hours', 'Hours'],
       ['note', 'Note'],
       ['type', 'Type'],
