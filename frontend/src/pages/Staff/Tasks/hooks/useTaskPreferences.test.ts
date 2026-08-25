@@ -9,9 +9,15 @@ const preferenceHook = vi.hoisted<{
   preference: StoredTaskPreferences | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({
+  preference: null,
+  loading: false,
+  error: null,
+  initializePreference: vi.fn(),
+  save: vi.fn(),
+}));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -57,7 +63,7 @@ describe('useTaskPreferences', () => {
       columnWidths: {},
       hiddenColumns: [],
     });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(result.current.preferences);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
   });
 
   it('merges immediate filter and presentation patches into the latest complete preference', async () => {
@@ -98,7 +104,9 @@ describe('useTaskPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.preferences.view).toBe('calendar');
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
+      view: 'calendar',
+    }));
   });
 
   it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
@@ -120,7 +128,7 @@ describe('useTaskPreferences', () => {
       programIds: ['program-1'],
       sorting: { key: 'startDate', direction: 'asc' },
     }));
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(result.current.preferences);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
   });
 
   it('preserves saved option IDs when task options fail to load', async () => {

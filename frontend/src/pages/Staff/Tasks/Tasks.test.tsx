@@ -33,7 +33,7 @@ vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
     preference: { view: calendarTestState.view },
     loading: false,
     error: null,
-    setBaseline: vi.fn(),
+    initializePreference: vi.fn(),
     save: calendarTestState.savePreference,
   }),
 }));
