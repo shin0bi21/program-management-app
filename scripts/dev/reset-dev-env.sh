@@ -36,7 +36,7 @@ echo ""
 echo "Running migrations (test DB)..."
 docker compose exec -T backend npm run db:migrate:test
 
-# Seed the configured admin and deterministic demo records.
+# Seed the configured initial administrator.
 echo ""
 echo "Seeding admin user..."
 if docker compose exec -T backend npm run seed:admin 2>&1; then
@@ -44,14 +44,6 @@ if docker compose exec -T backend npm run seed:admin 2>&1; then
 else
   echo "  Skipped - ensure ADMIN_EMAIL and ADMIN_PASSWORD are set in .env"
 fi
-
-echo ""
-echo "Seeding programming demo data..."
-docker compose exec -T backend npm run seed:programming-demo
-
-echo ""
-echo "Seeding Hours demo data..."
-docker compose exec -T backend npm run seed:hours-demo
 
 # Regenerate TypeScript database types from the live schema.
 echo ""
