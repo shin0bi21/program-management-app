@@ -28,9 +28,6 @@
     "db:status": "npx tsx db/scripts/migration_status.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
-    "seed:expression-of-interest": "npx tsx db/scripts/seed-expression-of-interest.ts",
-    "seed:programming-demo": "npx tsx db/scripts/seed-programming-demo.ts",
-    "seed:hours-demo": "npx tsx db/scripts/seed-hours-demo.ts",
     "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },

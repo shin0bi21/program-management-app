@@ -132,6 +132,6 @@ bash scripts/dev/reset-dev-env.sh
 
 This runs `docker compose down -v`, deleting the local development database,
 installed dependency volumes, and uploaded-file volume. It then rebuilds the
-stack, migrates the development and test databases, seeds the admin and demo
-data, and regenerates database types. Do not use it as routine troubleshooting
-when local data must be retained.
+stack, migrates the development and test databases, seeds the configured admin,
+and regenerates database types. Do not use it as routine troubleshooting when
+local data must be retained.
