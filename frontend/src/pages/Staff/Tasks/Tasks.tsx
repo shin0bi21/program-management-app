@@ -239,11 +239,7 @@ export default function Tasks() {
     </main>
 
     {canWrite && taskModalState && <TaskModal
-      isOpen
-      task={taskModalState.mode === 'edit' ? taskModalState.task : undefined}
-      initialStartDate={taskModalState.mode === 'add' ? taskModalState.initialValues.startDate : undefined}
-      initialDueDate={taskModalState.mode === 'add' ? taskModalState.initialValues.dueDate : undefined}
-      fixedStaffId={taskModalState.mode === 'add' ? taskModalState.initialValues.fixedStaffId : undefined}
+      target={taskModalState}
       resources={pageData.writableResources}
       programs={pageData.options?.programs ?? []}
       onSaved={actions.syncTask}

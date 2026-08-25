@@ -206,7 +206,7 @@ describe('TaskCalendar', () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     calendarState.props?.onCellActivate?.({ resource, resourceIndex: 0, period: periods[1], items: [] });
     expect(rendered.onAddTask).toHaveBeenCalledWith({
-      startDate: periods[1].key, dueDate: periods[1].key, fixedStaffId: 'staff-1',
+      startDate: periods[1].key, dueDate: periods[1].key, staffId: 'staff-1',
     });
   });
 

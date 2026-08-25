@@ -26,7 +26,7 @@ export interface TaskCalendarCache {
 export interface AddTaskModalInitialValues {
   startDate: string;
   dueDate: string;
-  fixedStaffId?: string;
+  staffId?: string;
 }
 
 export type TaskModalState =

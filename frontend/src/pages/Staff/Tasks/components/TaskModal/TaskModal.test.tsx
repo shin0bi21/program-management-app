@@ -28,7 +28,7 @@ describe('TaskModal', () => {
 
   it('renders the accessible create fields and required controls', () => {
     render(<TaskModal
-      isOpen
+      target={{ mode: 'add', initialValues: { startDate: '', dueDate: '' } }}
       resources={resources}
       programs={programs}
       onSaved={vi.fn()}
@@ -48,12 +48,16 @@ describe('TaskModal', () => {
 
   it('uses the calendar context without rendering an editable staff control', () => {
     render(<TaskModal
-      isOpen
+      target={{
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-10',
+          staffId: 'staff-1',
+        },
+      }}
       resources={resources}
       programs={programs}
-      initialStartDate="2026-08-10"
-      initialDueDate="2026-08-10"
-      fixedStaffId="staff-1"
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);
@@ -67,17 +71,23 @@ describe('TaskModal', () => {
   it('disables modal controls while the task is submitting', () => {
     vi.mocked(setTask).mockReturnValue(new Promise(() => undefined));
     render(<TaskModal
-      isOpen
+      target={{
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-14',
+          staffId: 'staff-1',
+        },
+      }}
       resources={resources}
       programs={programs}
-      initialStartDate="2026-08-10"
-      initialDueDate="2026-08-14"
-      fixedStaffId="staff-1"
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);
 
     fireEvent.change(screen.getByLabelText('Task title *'), { target: { value: 'Calendar task' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Task category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Outreach' }));
     fireEvent.submit(document.getElementById('task-form')!);
 
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
@@ -90,12 +100,14 @@ describe('TaskModal', () => {
 
   it('keeps lifecycle controls out of the edit form', () => {
     render(<TaskModal
-      isOpen
-      task={makeTask({
-        title: 'Active task',
-        hoursLogged: 1,
-        loggedHoursByDate: [{ date: '2026-08-10', hours: 1 }],
-      })}
+      target={{
+        mode: 'edit',
+        task: makeTask({
+          title: 'Active task',
+          hoursLogged: 1,
+          loggedHoursByDate: [{ date: '2026-08-10', hours: 1 }],
+        }),
+      }}
       resources={resources}
       programs={programs}
       onSaved={vi.fn()}
