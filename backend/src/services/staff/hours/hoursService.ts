@@ -6,8 +6,8 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   SetHoursInput,
   HoursCategory,
-  HoursOverviewQuery,
-  HoursQuery,
+  HoursDashboardQuery,
+  HoursCalendarQuery,
   HoursSessionQuery,
   UpdateHoursPlacementInput,
 } from '../../../validation/hoursSchemas';
@@ -15,18 +15,18 @@ import { assertCanSetHours, hoursReadScopePredicate, hoursResourceReadScopePredi
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getBiweeklyPayPeriod } from './payPeriods';
 import {
-  hoursCategoryLabels,
   hoursMutationColumns,
   hoursRecordColumns,
   hoursRecordFrom,
   type HoursRow,
 } from './hoursRecordQuery';
+import {
+  getHoursCategoryLabel,
+  HOURS_CATEGORY_OPTIONS,
+  HOURS_ENTRY_TYPE_OPTIONS,
+} from './hoursReferenceData';
 
-export async function getHours(actor: AccessTokenPayload, query: HoursQuery) {
-  const programs = await sql<Array<{ id: string; name: string }>>`
-    SELECT id, name FROM programs ORDER BY name, id
-  `;
-  const resources = await getHoursResources(actor);
+export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
   const rows = await sql<HoursRow[]>`
     SELECT ${hoursRecordColumns}
     ${hoursRecordFrom}
@@ -51,7 +51,7 @@ export async function getHours(actor: AccessTokenPayload, query: HoursQuery) {
       cycleStartsOn: row.cycleStartsOn,
       cycleEndsOn: row.cycleEndsOn,
       category: row.category,
-      categoryLabel: hoursCategoryLabels[row.category],
+      categoryLabel: getHoursCategoryLabel(row.category),
       taskId: row.taskId,
       taskTitle: row.taskTitle,
       sessionId: row.sessionId,
@@ -61,7 +61,7 @@ export async function getHours(actor: AccessTokenPayload, query: HoursQuery) {
     });
   });
 
-  return { resources, programs, data };
+  return data;
 }
 
 export async function setHours(
@@ -95,7 +95,11 @@ export async function setHours(
       { ...saved },
     );
   });
-  return { ...saved, hours: Number(saved.hours) };
+  return {
+    ...saved,
+    categoryLabel: getHoursCategoryLabel(saved.category),
+    hours: Number(saved.hours),
+  };
 }
 
 export async function updateHoursPlacement(
@@ -121,7 +125,11 @@ export async function updateHoursPlacement(
     updated = rows[0];
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
   });
-  return { ...updated, hours: Number(updated.hours) };
+  return {
+    ...updated,
+    categoryLabel: getHoursCategoryLabel(updated.category),
+    hours: Number(updated.hours),
+  };
 }
 
 export async function deleteHours(id: string, actor: AccessTokenPayload) {
@@ -134,12 +142,17 @@ export async function deleteHours(id: string, actor: AccessTokenPayload) {
   });
 }
 
-export async function getHoursOptions(actor: AccessTokenPayload) {
+export async function getHoursReferenceData(actor: AccessTokenPayload) {
   const [resources, programs] = await Promise.all([
     getHoursResources(actor),
     sql<Array<{ id: string; name: string }>>`SELECT id, name FROM programs ORDER BY name, id`,
   ]);
-  return { resources, programs };
+  return {
+    resources,
+    programs,
+    categories: HOURS_CATEGORY_OPTIONS,
+    types: HOURS_ENTRY_TYPE_OPTIONS,
+  };
 }
 
 export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
@@ -169,7 +182,7 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
   `;
 }
 
-export async function getHoursOverview(actor: AccessTokenPayload, query: HoursOverviewQuery) {
+export async function getHoursDashboardData(actor: AccessTokenPayload, query: HoursDashboardQuery) {
   const readableStaff = await getHoursResources(actor);
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
     throw new NotFoundError('Hours overview not found');
@@ -247,11 +260,11 @@ export async function getHoursOverview(actor: AccessTokenPayload, query: HoursOv
   if (!rows.length) throw new NotFoundError('Hours overview not found');
 
   const payPeriodBreakdown = rows.flatMap(row => row.category && Number(row.periodHours) > 0
-    ? [{ label: hoursCategoryLabels[row.category], hours: Number(row.periodHours) }]
+    ? [{ label: getHoursCategoryLabel(row.category), hours: Number(row.periodHours) }]
     : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
   const periodCount = Number(rows[0].periodCount);
   const biweeklyBreakdown = rows.flatMap(row => row.category && Number(row.cycleHours) > 0
-    ? [{ label: hoursCategoryLabels[row.category], hours: Number(row.cycleHours) / periodCount }]
+    ? [{ label: getHoursCategoryLabel(row.category), hours: Number(row.cycleHours) / periodCount }]
     : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
   return {
     payPeriod: {

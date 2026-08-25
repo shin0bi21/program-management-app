@@ -28,7 +28,7 @@ export const hoursParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid time entry ID') }),
 });
 
-export const hoursQuerySchema = z.object({
+export const hoursCalendarQuerySchema = z.object({
   query: z.object({
     start: dateSchema.optional(),
     end: dateSchema.optional(),
@@ -51,7 +51,7 @@ const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value
   typeof value === 'string' && value ? value.split(',') : []
 ), z.array(schema));
 
-export const hoursListQuerySchema = z.object({
+export const hoursTableQuerySchema = z.object({
   query: z.object({
     staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
     categories: commaSeparated(hoursCategorySchema),
@@ -59,7 +59,7 @@ export const hoursListQuerySchema = z.object({
     types: commaSeparated(z.enum(['task', 'session', 'other'])),
     cycleId: z.string().uuid('Invalid cycle ID').optional(),
     search: z.string().trim().max(120).optional().default(''),
-    ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'], 'date', 'desc'),
+    ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'], 'date', 'desc'),
   }),
 });
 
@@ -70,7 +70,7 @@ export const hoursSessionQuerySchema = z.object({
   }),
 });
 
-export const hoursOverviewQuerySchema = z.object({
+export const hoursDashboardQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
     cycleId: z.string().uuid('Invalid cycle ID'),
@@ -111,9 +111,9 @@ export const updateHoursPlacementSchema = z.object({
   body: z.object({ workDate: dateSchema }),
 });
 
-export type HoursQuery = z.infer<typeof hoursQuerySchema.shape.query>;
-export type HoursListQuery = z.infer<typeof hoursListQuerySchema.shape.query>;
-export type HoursOverviewQuery = z.infer<typeof hoursOverviewQuerySchema.shape.query>;
+export type HoursCalendarQuery = z.infer<typeof hoursCalendarQuerySchema.shape.query>;
+export type HoursTableQuery = z.infer<typeof hoursTableQuerySchema.shape.query>;
+export type HoursDashboardQuery = z.infer<typeof hoursDashboardQuerySchema.shape.query>;
 export type HoursSessionQuery = z.infer<typeof hoursSessionQuerySchema.shape.query>;
 export type SetHoursInput = z.infer<typeof setHoursSchema.shape.body>;
 export type UpdateHoursPlacementInput = z.infer<typeof updateHoursPlacementSchema.shape.body>;

@@ -2,6 +2,11 @@ import { sql } from '../../../db/client';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetTaskInput } from '../../../validation/taskSchemas';
+import {
+  getTaskCategoryLabel,
+  getTaskStatus,
+  getTaskStatusLabel,
+} from './taskReferenceData';
 
 export interface TaskRow {
   id: string;
@@ -75,15 +80,22 @@ export function attachTaskDetails<TRow extends TaskRow>(
     else loggedHoursByTask.set(entry.taskId, [dailyHours]);
   });
 
-  return rows.map(row => ({
-    ...row,
-    loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
-    assignee: {
-      id: row.staffId,
-      firstName: row.staffFirstName,
-      lastName: row.staffLastName,
-      name: row.staffName,
-    },
-    writable: canWriteTaskFor(actor, row.staffId),
-  }));
+  return rows.map(row => {
+    const status = getTaskStatus(row);
+    return {
+      ...row,
+      state: row.status,
+      categoryLabel: getTaskCategoryLabel(row.category),
+      status,
+      statusLabel: getTaskStatusLabel(status),
+      loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
+      assignee: {
+        id: row.staffId,
+        firstName: row.staffFirstName,
+        lastName: row.staffLastName,
+        name: row.staffName,
+      },
+      writable: canWriteTaskFor(actor, row.staffId),
+    };
+  });
 }

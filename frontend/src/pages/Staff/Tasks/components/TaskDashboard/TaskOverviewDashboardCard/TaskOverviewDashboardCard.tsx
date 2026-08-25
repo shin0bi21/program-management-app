@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
-import type { Task } from '../../../../../../common/features/tasks/types';
-import { getTaskTiming } from '../../../utils/taskDates';
+import type { Task } from '../../../types';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewDashboardCard.css';
 
@@ -28,10 +27,10 @@ function sortByDueDate(tasks: readonly Task[]) {
 }
 
 function groupTasksForOverview(tasks: readonly Task[], today: string) {
-  const assignedTasks = tasks.filter(task => task.status === 'open');
-  const upcomingTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'upcoming');
-  const activeTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'active');
-  const overdueTasks = assignedTasks.filter(task => getTaskTiming(task, today) === 'overdue');
+  const assignedTasks = tasks.filter(task => task.state === 'open');
+  const upcomingTasks = assignedTasks.filter(task => task.status === 'upcoming');
+  const activeTasks = assignedTasks.filter(task => task.status === 'active');
+  const overdueTasks = assignedTasks.filter(task => task.status === 'overdue');
   const weekEnd = currentWeekEnd(today);
   const dueThisWeekTasks = [...upcomingTasks, ...activeTasks]
     .filter(task => task.dueDate >= today && task.dueDate <= weekEnd);
@@ -91,7 +90,7 @@ export default function TaskOverviewDashboardCard({ tasks, resourceName, today }
       <h2 className="task-overview-card__accessible-title">Task Overview</h2>
       <div className="dashboard-card__compact-layout task-overview-card__layout">
         <dl className="task-overview-card__metrics">
-          <div><dt>Tasks Assigned</dt><dd>{summary.assigned}</dd></div>
+          <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
           <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
           <div className="task-overview-card__metric-active"><dt>Active</dt><dd>{summary.active}</dd></div>
           <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 import TaskItem from './TaskItem';
 
 const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };
 const initialTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: 'Prepare activities and materials.', category: 'planning_prep',
-  programId: 'program-1', programName: 'Soft Skills', status: 'open',
+  categoryLabel: 'Planning / Prep', programId: 'program-1', programName: 'Soft Skills', state: 'open',
+  status: 'active', statusLabel: 'Active',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
   assignee: {
@@ -34,7 +35,7 @@ export function InteractiveTaskItem() {
       getItemCapabilities={() => ({ draggable: true, resizable: true })}
       renderResource={({ resource: item }) => item.name}
       buildItem={() => null}
-      buildRangeItem={({ data: item }) => <TaskItem task={item} today="2026-08-11" onComplete={() => setAction('complete')} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
+      buildRangeItem={({ data: item }) => <TaskItem task={item} onComplete={() => setAction('complete')} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
       onRangeMove={({ nextRange }) => { setRangeChange(`move:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
       onRangeResize={({ nextRange }) => { setRangeChange(`resize:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
     />

@@ -1,23 +1,21 @@
 import { useMemo } from 'react';
 
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import { TASK_CATEGORY_LABELS, type Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 
 import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import TaskActionsMenu, { type TaskTableActions } from '../TaskActionsMenu';
 
 interface UseTaskTableOptions {
   canWrite: boolean;
-  today: string;
   actions: TaskTableActions;
 }
 
 export default function useTaskTable({
   canWrite,
-  today,
   actions,
 }: UseTaskTableOptions) {
-  const { isTaskPending, setStatus, edit, requestDelete } = actions;
+  const { isTaskPending, setState, edit, requestDelete } = actions;
 
   const columns = useMemo<TableColumnDef<Task>[]>(() => [
     {
@@ -47,7 +45,7 @@ export default function useTaskTable({
       id: 'category',
       header: 'Category',
       size: 150,
-      accessorFn: task => TASK_CATEGORY_LABELS[task.category],
+      accessorFn: task => task.categoryLabel,
     },
     {
       id: 'startDate',
@@ -66,7 +64,7 @@ export default function useTaskTable({
       header: 'Status',
       size: 150,
       accessorFn: task => task.status,
-      cell: ({ row }) => <TaskStatusBadge task={row.original} today={today} />,
+      cell: ({ row }) => <TaskStatusBadge task={row.original} />,
     },
     ...(canWrite ? [{
       id: 'actions',
@@ -77,12 +75,12 @@ export default function useTaskTable({
       cell: ({ row }: { row: { original: Task } }) => <TaskActionsMenu
         task={row.original}
         isTaskPending={isTaskPending}
-        setStatus={setStatus}
+        setState={setState}
         edit={edit}
         requestDelete={requestDelete}
       />,
     }] : []),
-  ], [canWrite, edit, isTaskPending, requestDelete, setStatus, today]);
+  ], [canWrite, edit, isTaskPending, requestDelete, setState]);
 
   return { columns };
 }

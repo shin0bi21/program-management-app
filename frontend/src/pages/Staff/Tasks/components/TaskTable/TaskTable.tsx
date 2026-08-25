@@ -1,6 +1,6 @@
 import Table from '../../../../../common/components/Table/Table';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { Task, TaskCategory, TaskListStatus } from '../../../../../common/features/tasks/types';
+import type { Task, TaskCategory, TaskStatus } from '../../types';
 import type { ListSort } from '../../../../../common/types/pagination';
 import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
 import useTaskTableData from './hooks/useTaskTableData';
@@ -12,7 +12,7 @@ interface TaskTableProps {
   staffIds: string[];
   programIds: string[];
   categories: TaskCategory[];
-  statuses: TaskListStatus[];
+  statuses: TaskStatus[];
   search: string;
   today: string;
   sorting: ListSort<TaskSortKey>;

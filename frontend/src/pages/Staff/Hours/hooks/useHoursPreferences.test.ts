@@ -2,16 +2,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { StoredHoursPreferences } from '../types';
-import useHoursPreferences from './useHoursPreferences';
+import useHoursPreferences, { type StoredHoursPreferences } from './useHoursPreferences';
 
 const preferenceHook = vi.hoisted<{
   preference: StoredHoursPreferences | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, initializePreference: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -25,7 +24,7 @@ const resources = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
-const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'session', 'hours', 'note', 'type'] as const;
+const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 
 describe('useHoursPreferences', () => {
   beforeEach(() => {
@@ -60,7 +59,7 @@ describe('useHoursPreferences', () => {
       types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(result.current.preferences);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
   });
 
   it('merges immediate owned patches without losing sibling controls', async () => {
@@ -111,7 +110,7 @@ describe('useHoursPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.preferences.view).toBe('calendar');
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
   });
 
   it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
@@ -135,7 +134,7 @@ describe('useHoursPreferences', () => {
       programIds: ['general', 'program-1'],
       sorting: { key: 'date', direction: 'desc' },
     }));
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(result.current.preferences);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
   });
 
   it('preserves saved dependency IDs when hours options fail to load', async () => {

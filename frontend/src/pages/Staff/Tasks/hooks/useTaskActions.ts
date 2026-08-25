@@ -1,14 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
-import { setHours, type SetHoursInput } from '../../../../common/features/hours/hours.api';
+import { setHours, type SetHoursInput } from '../../Hours/hours.api';
 import {
   deleteTask,
   updateTaskPlacement,
-  updateTaskStatus,
-} from '../../../../common/features/tasks/tasks.api';
-import type { Task } from '../../../../common/features/tasks/types';
+  updateTaskState,
+} from '../tasks.api';
+import type { Task } from '../types';
 import { removeInfiniteListRow } from '../../../../query/infiniteListCache';
 
 import type { TaskCalendarCache } from '../types';
@@ -36,7 +35,6 @@ export default function useTaskActions({
   
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
@@ -71,26 +69,19 @@ export default function useTaskActions({
   }, [onTaskSynced, refreshTasks]);
 
   // User-triggered task actions.
-  const requestDelete = useCallback((task: Task) => setConfirmAction({
-    title: 'Delete Task',
-    message: `Delete “${task.title}”? Tasks with logged time cannot be deleted.`,
-    confirmLabel: 'Delete',
-    confirmVariant: 'danger',
-    successMessage: 'Task deleted',
-    onConfirm: async () => {
-      if (!startTaskAction(task.id)) return;
+  const deleteTaskAction = useCallback(async (task: Task) => {
+    if (!startTaskAction(task.id)) return;
 
-      try {
-        await deleteTask(task.id);
-        removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
-        calendarCacheRef.current.remove(task.id);
-        onTaskRemoved?.(task.id);
-        refreshTasks();
-      } finally {
-        finishTaskAction(task.id);
-      }
-    },
-  }), [finishTaskAction, onTaskRemoved, queryClient, refreshTasks, startTaskAction, taskTableQueryKey]);
+    try {
+      await deleteTask(task.id);
+      removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
+      calendarCacheRef.current.remove(task.id);
+      onTaskRemoved?.(task.id);
+      refreshTasks();
+    } finally {
+      finishTaskAction(task.id);
+    }
+  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTasks, startTaskAction, taskTableQueryKey]);
 
   const setTaskRange = useCallback(async (
     task: Task,
@@ -118,13 +109,13 @@ export default function useTaskActions({
     }
   }, [finishTaskAction, startTaskAction, syncTask]);
 
-  const setStatus = useCallback(async (task: Task, status: Task['status']) => {
+  const setState = useCallback(async (task: Task, state: Task['state']) => {
     setActionError('');
 
     if (!startTaskAction(task.id)) return;
 
     try {
-      const updatedTask = await updateTaskStatus(task.id, status);
+      const updatedTask = await updateTaskState(task.id, state);
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
@@ -141,18 +132,14 @@ export default function useTaskActions({
     ]);
   }, [queryClient, taskQueryKey, hoursQueryKey]);
 
-  const closeConfirmation = useCallback(() => setConfirmAction(null), []);
-
   return {
-    confirmAction,
     actionError,
     calendarCacheRef,
     isTaskPending,
     syncTask,
-    requestDelete,
+    deleteTask: deleteTaskAction,
     setTaskRange,
-    setStatus,
+    setState,
     logHours,
-    closeConfirmation,
   };
 }

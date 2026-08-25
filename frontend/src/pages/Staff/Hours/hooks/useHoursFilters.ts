@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
-import { HOURS_CATEGORY_OPTIONS } from '../../../../common/features/hours/hoursOptions';
 import type {
   StaffResource,
   HoursCategory,
   HoursProgram,
-} from '../../../../common/features/hours/types';
+} from '../types';
 import type { ProgramCycle } from '../../../../common/types/cohort';
 
 import type { HoursEntryType, HoursPreferences } from '../types';
@@ -16,6 +15,8 @@ export default function useHoursFilters({
   preferences,
   resources,
   programs,
+  categories,
+  types,
   cycles,
   updatePreferences,
 }: {
@@ -23,6 +24,8 @@ export default function useHoursFilters({
   preferences: HoursPreferences;
   resources: readonly StaffResource[];
   programs: readonly HoursProgram[];
+  categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
+  types: ReadonlyArray<{ value: HoursEntryType; label: string }>;
   cycles: readonly ProgramCycle[];
   updatePreferences: (patch: Partial<HoursPreferences>) => void;
 }) {
@@ -49,19 +52,15 @@ export default function useHoursFilters({
         ...programs.map(program => ({ value: program.id, label: program.name })),
       ],
     },
-    { id: 'entryType', label: 'Category', options: HOURS_CATEGORY_OPTIONS },
-    { id: 'type', label: 'Type', options: [
-      { value: 'task', label: 'Task' },
-      { value: 'session', label: 'Session' },
-      { value: 'other', label: 'Regular' },
-    ] },
     {
       id: 'cycle',
       label: 'Cycle',
       selectionMode: 'single',
       options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
     },
-  ], [cycles, programs, resources, role]);
+    { id: 'type', label: 'Type', options: [...types] },
+    { id: 'entryType', label: 'Category', options: [...categories] },
+  ], [categories, cycles, programs, resources, role, types]);
 
   const applyFilter = useCallback((id: string, selected: string[]) => {
     if (id === 'staff') updatePreferences({ staffIds: selected });

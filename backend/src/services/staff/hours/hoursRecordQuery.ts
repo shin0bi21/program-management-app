@@ -20,16 +20,6 @@ export interface HoursRow {
   note: string;
 }
 
-export const hoursCategoryLabels: Record<HoursCategory, string> = {
-  program_delivery: 'Program Delivery',
-  planning_prep: 'Planning / Prep',
-  meeting: 'Meeting',
-  administration: 'Administration',
-  outreach: 'Outreach',
-  maintenance: 'Maintenance',
-  other: 'Other',
-};
-
 /** Canonical hours fields shared by collection and direct-record reads. */
 export const hoursRecordColumns = sql`
   entry.id,

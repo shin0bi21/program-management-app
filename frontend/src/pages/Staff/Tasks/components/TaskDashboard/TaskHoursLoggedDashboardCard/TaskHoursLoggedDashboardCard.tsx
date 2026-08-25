@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import { formatShortDate } from '../../../../../../common/utils/date';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import { formatHours, formatShortDate } from '../../../../../../common/utils/date';
+import type { Task } from '../../../types';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskHoursLoggedDashboardCard.css';
-
-function formatHours(hours: number) {
-  return `${hours.toLocaleString('en-CA', { maximumFractionDigits: 2 })} ${hours === 1 ? 'hour' : 'hours'}`;
-}
 
 export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
   task: Task | null;

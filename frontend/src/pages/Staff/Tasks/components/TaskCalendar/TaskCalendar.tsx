@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo } from 'react';
 import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
-import { getTasks } from '../../../../../common/features/tasks/tasks.api';
-import type { Task, TaskCategory, TaskListStatus, TaskResource } from '../../../../../common/features/tasks/types';
+import { getTasksCalendarData } from '../../tasks.api';
+import type { Task, TaskResource, TasksFilters } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import type { AddTaskModalInitialValues, TaskCalendarActions, TaskCalendarCache } from '../../types';
+import type { AddTaskModalInitialValues, TaskCalendarCache } from '../../types';
 import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask,
 } from '../../utils/taskCapabilities';
-import { useTaskCalendarData } from './hooks/useTaskCalendarData';
 import TaskItem from './TaskItem/TaskItem';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
@@ -20,16 +19,27 @@ function getTaskCalendarCapabilities(task: Task, canWriteTask: boolean) {
 }
 
 function canReassignTask(task: Task) {
-  return task.status === 'open' && task.hoursLogged === 0;
+  return task.state === 'open' && task.hoursLogged === 0;
+}
+
+export interface TaskCalendarActions {
+  isTaskPending: (taskId: string) => boolean;
+  requestDelete: (task: Task) => void;
+  setState: (task: Task, state: Task['state']) => Promise<void>;
+  setTaskRange: (
+    task: Task,
+    nextRange: { start: string; end: string },
+    action: 'move' | 'resize',
+    staffId?: string,
+  ) => Promise<Task | null>;
 }
 
 interface TaskCalendarProps {
   resources: TaskResource[];
-  filters: { staffIds: string[]; programIds: string[]; categories: TaskCategory[]; statuses: TaskListStatus[] };
+  filters: TasksFilters;
   canWrite: boolean;
   selectedResourceId: string | null;
   selectedTaskId: string | null;
-  today: string;
   actions: TaskCalendarActions;
   calendarCacheRef: React.MutableRefObject<TaskCalendarCache>;
   onTaskSelect: (task: Task) => void;
@@ -39,31 +49,31 @@ interface TaskCalendarProps {
 }
 
 export default function TaskCalendar({
-  resources, filters, canWrite, selectedResourceId, selectedTaskId, today, actions, calendarCacheRef,
+  resources, filters, canWrite, selectedResourceId, selectedTaskId, actions, calendarCacheRef,
   onTaskSelect, onResourceSelect, onAddTask, onEditTask,
 }: TaskCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
-    const tasks = await getTasks({ start: start.key, end: end.key, includeClosed: true });
+    const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key });
     return tasks.reduce<Record<string, Record<string, Task[]>>>((data, task) => {
       data[task.assignee.id] ??= {};
       data[task.assignee.id][start.key] ??= [];
       data[task.assignee.id][start.key].push(task);
       return data;
     }, {});
-  }, []);
+  }, [filters]);
   const calendar = usePeriodDataBuffer({
     load: loadRange,
     getItemId: task => task.id,
     errorMessage: 'Unable to load task calendar data',
   });
+  const { upsertItem, removeItem } = calendar;
   useEffect(() => {
     calendarCacheRef.current = {
-      upsert: task => calendar.upsertItem(task.assignee.id, task.startDate, task),
-      remove: calendar.removeItem,
+      upsert: task => upsertItem(task.assignee.id, task.startDate, task),
+      remove: removeItem,
     };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
-  const rangeData = useTaskCalendarData(calendar.rangeData, filters, today);
+  }, [calendarCacheRef, removeItem, upsertItem]);
   const visibleResources = useMemo(() => filters.staffIds.length
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
     : resources, [filters.staffIds, resources]);
@@ -73,7 +83,7 @@ export default function TaskCalendar({
     <ResourceCalendar
       resources={visibleResources}
       data={{}}
-      rangeData={rangeData}
+      rangeData={calendar.rangeData}
       onInitialPeriods={calendar.initialize}
       onPeriodsBuilt={calendar.onPeriodsBuilt}
       onPeriodsReset={calendar.reset}
@@ -91,12 +101,11 @@ export default function TaskCalendar({
         const actionsAvailable = canWrite && task.writable && !actions.isTaskPending(task.id);
         return <TaskItem
           task={task}
-          today={today}
           selected={task.id === selectedTaskId}
           onActivate={() => onTaskSelect(task)}
-          onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setStatus(task, 'completed') : undefined}
-          onCancel={actionsAvailable && canCancelTask(task) ? () => void actions.setStatus(task, 'cancelled') : undefined}
-          onReopen={actionsAvailable && canReopenTask(task) ? () => void actions.setStatus(task, 'open') : undefined}
+          onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setState(task, 'completed') : undefined}
+          onCancel={actionsAvailable && canCancelTask(task) ? () => void actions.setState(task, 'cancelled') : undefined}
+          onReopen={actionsAvailable && canReopenTask(task) ? () => void actions.setState(task, 'open') : undefined}
           onEdit={actionsAvailable && canEditTask(task) ? () => onEditTask(task) : undefined}
           onDelete={actionsAvailable && canDeleteTask(task) ? () => actions.requestDelete(task) : undefined}
         />;

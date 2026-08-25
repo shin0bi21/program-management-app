@@ -3,7 +3,7 @@ import { sql, asTransactionSql } from '../../../db/client';
 import { audit } from '../../shared/auditService';
 import { ConflictError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type { SetTaskInput, TaskPlacementInput, TaskQuery } from '../../../validation/taskSchemas';
+import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
 import { assertCanAssignTaskTo, taskReadScopePredicate, taskResourceReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import {
   attachTaskDetails,
@@ -12,19 +12,16 @@ import {
   taskRecordFrom,
   type TaskRow,
 } from './taskRecordQuery';
+import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
 
 
-export async function getTasks(actor: AccessTokenPayload, query: TaskQuery) {
+export async function getOpenTasks(actor: AccessTokenPayload, query: OpenTaskQuery) {
   const rows = await sql<TaskRow[]>`
     SELECT ${taskRecordColumns}
     ${taskRecordFrom}
     WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
-      AND ${query.start && query.end
-        ? sql`task.start_date <= ${query.end}::date AND task.due_date >= ${query.start}::date`
-        : sql`TRUE`}
       AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-      AND ${query.category ? sql`task.category = ${query.category}` : sql`TRUE`}
-      AND ${query.includeClosed ? sql`TRUE` : sql`task.status = 'open'`}
+      AND task.status = 'open'
     ORDER BY task.start_date, task.due_date, task.title, task.id
   `;
   const taskIds = rows.map(row => row.id);
@@ -120,7 +117,7 @@ export async function updateTaskPlacement(
   return attachTaskDetails([updated], await loadTaskLoggedHours([id]), actor)[0];
 }
 
-export async function updateTaskStatus(id: string, status: 'open' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
+export async function updateTaskState(id: string, state: 'open' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
   let updated!: TaskRow;
   await sql.begin(async tx => {
@@ -133,21 +130,21 @@ export async function updateTaskStatus(id: string, status: 'open' | 'completed' 
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
-    if (status === 'completed' && existingRows[0].status !== 'open') {
+    if (state === 'completed' && existingRows[0].status !== 'open') {
       throw new ConflictError('Only open tasks can be completed');
     }
-    if (status === 'completed' && existingRows[0].hoursLogged === 0) {
+    if (state === 'completed' && existingRows[0].hoursLogged === 0) {
       throw new ConflictError('Tasks need logged time before they can be completed');
     }
-    if (status === 'cancelled' && existingRows[0].status !== 'open') {
+    if (state === 'cancelled' && existingRows[0].status !== 'open') {
       throw new ConflictError('Only open tasks can be cancelled');
     }
-    if (status === 'open' && !['completed', 'cancelled'].includes(existingRows[0].status)) {
+    if (state === 'open' && !['completed', 'cancelled'].includes(existingRows[0].status)) {
       throw new ConflictError('Only completed or cancelled tasks can be reopened');
     }
     const rows = await trx<TaskRow[]>`
-      UPDATE tasks SET status = ${status},
-        completed_at = CASE WHEN ${status} = 'completed' THEN COALESCE(completed_at, NOW()) ELSE NULL END,
+      UPDATE tasks SET status = ${state},
+        completed_at = CASE WHEN ${state} = 'completed' THEN COALESCE(completed_at, NOW()) ELSE NULL END,
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING id, title, details, category, staff_id,
@@ -192,7 +189,7 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
   });
 }
 
-export async function getTaskOptions(actor: AccessTokenPayload) {
+export async function getTaskReferenceData(actor: AccessTokenPayload) {
   const resources = await sql<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }[]>`
     SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
       (${taskWriteScopePredicate(actor, sql`u.id`)}) AS writable
@@ -209,7 +206,12 @@ export async function getTaskOptions(actor: AccessTokenPayload) {
     FROM programs program
     ORDER BY program.name, program.id
   `;
-  return { resources, programs };
+  return {
+    resources,
+    programs,
+    categories: TASK_CATEGORY_OPTIONS,
+    statuses: TASK_STATUS_OPTIONS,
+  };
 }
 
 async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTokenPayload) {

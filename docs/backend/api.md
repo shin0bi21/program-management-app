@@ -27,10 +27,10 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/` | List hours resources and entries for a date range |
-| `GET` | `/list` | List cursor-paginated, policy-scoped logged hours |
-| `GET` | `/options` | List readable staff resources and programs |
-| `GET` | `/overview` | Get cycle-based pay-period and biweekly dashboard data for one staff member |
+| `GET` | `/calendar` | Get resources and logged hours shaped for a calendar date range |
+| `GET` | `/table` | Get cursor-paginated, policy-scoped logged hours shaped for the table |
+| `GET` | `/reference-data` | List task staff, programs, categories, and status choices |
+| `GET` | `/dashboard` | Get cycle-based pay-period and biweekly data shaped for one staff dashboard |
 | `GET` | `/sessions` | List assigned sessions available for time entry |
 | `POST` | `/` | Create a time entry |
 | `PUT` | `/:id` | Update a time entry |
@@ -45,13 +45,14 @@ Time-entry validation, policies, services, and `backend/tests/hours/` are author
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/` | List active assigned tasks, optionally filtered by staff and category |
+| `GET` | `/` | List open assigned tasks, optionally scoped to one staff member |
+| `GET` | `/calendar` | List filtered tasks intersecting a calendar date range |
 | `GET` | `/list` | List cursor-paginated, policy-scoped tasks |
-| `GET` | `/options` | List readable staff resources and programs |
+| `GET` | `/reference-data` | List readable staff resources, programs, categories, and statuses |
 | `POST` | `/` | Create a task with one required policy-scoped `staffId` owner |
-| `PUT` | `/:id` | Update policy-scoped task details, status, dates, and owner |
+| `PUT` | `/:id` | Update policy-scoped task details, dates, and owner |
 | `PATCH` | `/:id/placement` | Move or resize a task without replacing unrelated task fields |
-| `PATCH` | `/:id/status` | Update an assigned task's status |
+| `PATCH` | `/:id/state` | Update an assigned task's lifecycle state |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
 
 Task validation, policies, services, and `backend/tests/tasks/` are authoritative for lifecycle, assignment, placement, deletion, hours integration, and resource-scope behavior.

@@ -1,20 +1,20 @@
 import {
-  getHoursList,
-  type HoursListFilters,
-} from '../../../../../../common/features/hours/hours.api';
-import type { HoursTableRow } from '../../../../../../common/features/hours/types';
+  getHoursTableData,
+  type HoursTableFilters,
+} from '../../../hours.api';
+import type { HoursTableRow } from '../../../types';
 import type { ListSort } from '../../../../../../common/types/pagination';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { HoursSortKey } from '../../../types';
 
 export default function useHoursTableData(
   queryKey: readonly unknown[],
-  filters: HoursListFilters,
+  filters: HoursTableFilters,
   sorting: ListSort<HoursSortKey>,
 ) {
   return useInfiniteListQuery<HoursTableRow>({
     queryKey: [...queryKey, filters, sorting],
-    queryFn: ({ signal, pageParam }) => getHoursList(
+    queryFn: ({ signal, pageParam }) => getHoursTableData(
       filters,
       { signal },
       { ...sorting, cursor: pageParam ?? undefined, limit: 25 },

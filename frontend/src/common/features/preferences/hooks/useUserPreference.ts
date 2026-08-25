@@ -129,7 +129,6 @@ export default function useUserPreference<T extends object>(
     loading: query.isLoading,
     error: error ?? queryError,
     initializePreference,
-    setBaseline: initializePreference,
     save,
   };
 }

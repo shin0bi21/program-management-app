@@ -2,12 +2,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setTask } from '../../../../../common/features/tasks/tasks.api';
+import { setTask } from '../../tasks.api';
 import { makeTask } from '../../../../../tests/factories/task';
 
 import TaskModal from './TaskModal';
 
-vi.mock('../../../../../common/features/tasks/tasks.api', () => ({
+vi.mock('../../tasks.api', () => ({
   setTask: vi.fn(),
 }));
 
@@ -20,6 +20,7 @@ const resources = [{
   writable: true,
 }];
 const programs = [{ id: 'program-soft', name: 'Soft Skills' }];
+const categories = [{ value: 'planning_prep' as const, label: 'Planning / Prep' }];
 
 describe('TaskModal', () => {
   beforeEach(() => {
@@ -31,6 +32,7 @@ describe('TaskModal', () => {
       target={{ mode: 'add', initialValues: { startDate: '', dueDate: '' } }}
       resources={resources}
       programs={programs}
+      categories={categories}
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);
@@ -58,6 +60,7 @@ describe('TaskModal', () => {
       }}
       resources={resources}
       programs={programs}
+      categories={categories}
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);
@@ -81,13 +84,14 @@ describe('TaskModal', () => {
       }}
       resources={resources}
       programs={programs}
+      categories={categories}
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);
 
     fireEvent.change(screen.getByLabelText('Task title *'), { target: { value: 'Calendar task' } });
     fireEvent.click(screen.getByRole('button', { name: 'Task category' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Outreach' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Planning / Prep' }));
     fireEvent.submit(document.getElementById('task-form')!);
 
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
@@ -110,6 +114,7 @@ describe('TaskModal', () => {
       }}
       resources={resources}
       programs={programs}
+      categories={categories}
       onSaved={vi.fn()}
       onClose={vi.fn()}
     />);

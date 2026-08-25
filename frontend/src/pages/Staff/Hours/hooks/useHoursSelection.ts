@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 
-import type { StaffResource } from '../../../../common/features/hours/types';
+import type { StaffResource } from '../types';
 
-import type { HoursTableRow } from '../../../../common/features/hours/types';
+import type { HoursTableRow } from '../types';
 
 export default function useHoursSelection({
   resources,

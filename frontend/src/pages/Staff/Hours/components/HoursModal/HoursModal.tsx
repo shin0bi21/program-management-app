@@ -1,9 +1,8 @@
-import Button from '../../../../components/Button/Button';
-import FloatingSelect from '../../../../components/FloatingSelect/FloatingSelect';
-import FormField from '../../../../components/FormField/FormField';
-import Modal from '../../../../components/Modal/Modal';
-import { getSubmitStatusMessage } from '../../../../hooks/useSubmitStatus';
-import { OTHER_HOURS_CATEGORY_OPTIONS } from '../../hoursOptions';
+import Button from '../../../../../common/components/Button/Button';
+import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
+import FormField from '../../../../../common/components/FormField/FormField';
+import Modal from '../../../../../common/components/Modal/Modal';
+import { getSubmitStatusMessage } from '../../../../../common/hooks/useSubmitStatus';
 import type { HoursCategory } from '../../types';
 import useHoursModal, { type UseHoursModalOptions } from './hooks/useHoursModal';
 import './HoursModal.css';
@@ -11,12 +10,14 @@ import './HoursModal.css';
 interface HoursModalProps extends UseHoursModalOptions {
   onClose: () => void;
   staffLocked?: boolean;
+  categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
 }
 
 export default function HoursModal({
   isOpen,
   resources,
   programs,
+  loadTasks,
   onClose,
   onAdd,
   initialResourceId,
@@ -26,11 +27,13 @@ export default function HoursModal({
   initialTask,
   initialItem,
   canCompleteTask = false,
+  categories,
 }: HoursModalProps) {
   const workflow = useHoursModal({
     isOpen,
     resources,
     programs,
+    loadTasks,
     onAdd,
     initialResourceId,
     initialDate,
@@ -172,7 +175,7 @@ export default function HoursModal({
             <FloatingSelect
               id="hours-category"
               value={draft.category}
-              options={OTHER_HOURS_CATEGORY_OPTIONS}
+              options={categories.filter(option => option.value !== 'program_delivery')}
               onChange={value => workflow.selectCategory(
                 value as Exclude<HoursCategory, 'program_delivery'>,
               )}

@@ -4,12 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { getTasks } from '../../../../tasks/tasks.api';
 import { getHoursSessions } from '../../../hours.api';
 import useHoursModal, { type UseHoursModalOptions } from './useHoursModal';
 
-vi.mock('../../../../tasks/tasks.api', () => ({ getTasks: vi.fn() }));
 vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
+
+const loadTasks = vi.fn();
 
 const resources = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -22,6 +22,7 @@ function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
     isOpen: true,
     resources,
     programs,
+    loadTasks,
     onAdd: vi.fn().mockResolvedValue(undefined),
     initialDate: '2026-08-19',
     ...overrides,
@@ -40,7 +41,7 @@ function submitEvent() {
 describe('useHoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getTasks).mockResolvedValue([]);
+    loadTasks.mockResolvedValue([]);
     vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
@@ -70,9 +71,9 @@ describe('useHoursModal', () => {
 
   it('loads only open task options and submits the task command', async () => {
     const task = makeTask();
-    vi.mocked(getTasks).mockResolvedValue([
+    loadTasks.mockResolvedValue([
       task,
-      makeTask({ id: 'task-complete', status: 'completed' }),
+      makeTask({ id: 'task-complete', state: 'completed', status: 'completed', statusLabel: 'Completed' }),
     ]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({
@@ -102,7 +103,7 @@ describe('useHoursModal', () => {
 
   it('does not send task completion without task-write capability', async () => {
     const task = makeTask();
-    vi.mocked(getTasks).mockResolvedValue([task]);
+    loadTasks.mockResolvedValue([task]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({ initialSource: 'task', onAdd });
 
@@ -174,6 +175,7 @@ describe('useHoursModal', () => {
       isOpen: true,
       resources,
       programs,
+      loadTasks,
       onAdd: vi.fn().mockResolvedValue(undefined),
       initialDate: '2026-08-19',
     };

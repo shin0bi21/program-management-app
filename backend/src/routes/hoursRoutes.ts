@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import {
   handleDeleteHours,
-  handleGetHours,
-  handleGetHoursList,
-  handleGetHoursOptions,
-  handleGetHoursOverview,
+  handleGetHoursCalendarData,
+  handleGetHoursTableData,
+  handleGetHoursReferenceData,
+  handleGetHoursDashboardData,
   handleGetHoursSessions,
   handleSetHours,
   handleUpdateHoursPlacement,
@@ -14,20 +14,20 @@ import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   setHoursSchema,
-  hoursOverviewQuerySchema,
-  hoursListQuerySchema,
+  hoursDashboardQuerySchema,
+  hoursTableQuerySchema,
   hoursParamsSchema,
-  hoursQuerySchema,
+  hoursCalendarQuerySchema,
   hoursSessionQuerySchema,
   updateHoursPlacementSchema,
 } from '../validation/hoursSchemas';
 
 const router = Router();
 
-router.get('/', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursQuerySchema), asyncHandler(handleGetHours));
-router.get('/list', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursListQuerySchema), asyncHandler(handleGetHoursList));
-router.get('/options', authenticateToken, requirePermission('read:hours'), generalLimiter, asyncHandler(handleGetHoursOptions));
-router.get('/overview', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursOverviewQuerySchema), asyncHandler(handleGetHoursOverview));
+router.get('/calendar', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursCalendarQuerySchema), asyncHandler(handleGetHoursCalendarData));
+router.get('/table', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursTableQuerySchema), asyncHandler(handleGetHoursTableData));
+router.get('/reference-data', authenticateToken, requirePermission('read:hours'), generalLimiter, asyncHandler(handleGetHoursReferenceData));
+router.get('/dashboard', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursDashboardQuerySchema), asyncHandler(handleGetHoursDashboardData));
 router.get('/sessions', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(hoursSessionQuerySchema), asyncHandler(handleGetHoursSessions));
 router.post('/', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(setHoursSchema), asyncHandler(handleSetHours));
 router.put('/:id', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(hoursParamsSchema), validateRequest(setHoursSchema), asyncHandler(handleSetHours));

@@ -1,156 +1,245 @@
-// Scope: verifies preference defaults, restoration, baselining, and atomic partial updates.
+// Scope: verifies canonical task preference restoration, persistence, search, filters, and table settings.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { StoredTaskPreferences } from '../types';
-import useTaskPreferences from './useTaskPreferences';
+import type { TaskReferenceData } from '../types';
+import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 const preferenceHook = vi.hoisted<{
   preference: StoredTaskPreferences | null;
   loading: boolean;
   error: string | null;
+  key: ReturnType<typeof vi.fn>;
   initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: null,
   loading: false,
   error: null,
+  key: vi.fn(),
   initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
-vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => preferenceHook,
-}));
+type PreferenceUpdate = StoredTaskPreferences | (
+  (current: StoredTaskPreferences | null) => StoredTaskPreferences
+);
+
+vi.mock('../../../../common/features/preferences/hooks/useUserPreference', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
+  const useMockUserPreference = (key: string) => {
+    preferenceHook.key(key);
+    const [preference, setPreference] = React.useState(preferenceHook.preference);
+    const initializePreference = React.useCallback((value: StoredTaskPreferences) => {
+      preferenceHook.initializePreference(value);
+      preferenceHook.preference = value;
+      setPreference(value);
+    }, []);
+    const save = React.useCallback((update: PreferenceUpdate) => {
+      preferenceHook.save(update);
+      setPreference(current => {
+        const next = typeof update === 'function' ? update(current) : update;
+        preferenceHook.preference = next;
+        return next;
+      });
+    }, []);
+
+    return {
+      preference,
+      loading: preferenceHook.loading,
+      error: preferenceHook.error,
+      initializePreference,
+      save,
+    };
+  };
+
+  return { default: useMockUserPreference };
+});
+
+const options: TaskReferenceData = {
+  resources: [{
+    id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
+  }],
+  programs: [{ id: 'program-1', name: 'Soft Skills' }],
+  categories: [
+    { value: 'planning_prep', label: 'Planning / Prep' },
+    { value: 'meeting', label: 'Meeting' },
+  ],
+  statuses: [
+    { value: 'active', label: 'Active' },
+    { value: 'completed', label: 'Completed' },
+  ],
+};
+const tableKeys = [
+  'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
+] as const;
+
+interface UsePreferencesOptions {
+  currentOptions?: TaskReferenceData;
+  optionsLoading?: boolean;
+  optionsError?: boolean;
+}
+
+function usePreferences(settings: UsePreferencesOptions = {}) {
+  const currentOptions = Object.prototype.hasOwnProperty.call(settings, 'currentOptions')
+    ? settings.currentOptions
+    : options;
+
+  return useTaskPreferences({
+    referenceData: currentOptions,
+    referenceDataLoading: settings.optionsLoading ?? false,
+    referenceDataError: settings.optionsError ?? false,
+    tableKeys,
+  });
+}
 
 describe('useTaskPreferences', () => {
-  const options = {
-    resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-    programs: [{ id: 'program-1', name: 'Soft Skills' }],
-  };
-  const tableKeys = ['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'] as const;
-
   beforeEach(() => {
     vi.clearAllMocks();
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
-    preferenceHook.save.mockImplementation((update: StoredTaskPreferences | ((current: StoredTaskPreferences | null) => StoredTaskPreferences)) => {
-      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
-    });
   });
 
-  it('waits for options, restores missing fields with defaults, and establishes one baseline', async () => {
-    preferenceHook.preference = { programIds: ['program-1'], categories: [], statuses: [] };
+  it('waits for options, restores one complete value, and establishes its baseline', async () => {
+    preferenceHook.preference = {
+      search: 'workshop', programIds: ['program-1'], categories: [], statuses: [],
+    };
     const { result, rerender } = renderHook(
-      ({ loading }) => useTaskPreferences({
-        options, optionsLoading: loading, optionsError: false, tableKeys,
-      }),
-      { initialProps: { loading: true } },
+      ({ optionsLoading }) => usePreferences({ optionsLoading }),
+      { initialProps: { optionsLoading: true } },
     );
 
     expect(result.current.ready).toBe(false);
-    rerender({ loading: false });
+    rerender({ optionsLoading: false });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.preferences).toEqual({
+    expect(result.current).toMatchObject({
       view: 'calendar',
-      staffIds: [],
-      programIds: ['program-1'],
-      categories: [],
-      statuses: [],
-      sorting: { key: 'startDate', direction: 'asc' },
-      columnWidths: {},
-      hiddenColumns: [],
+      search: { value: 'workshop', appliedValue: 'workshop' },
+      filters: {
+        staffIds: [], programIds: ['program-1'], categories: [], statuses: [],
+      },
+      table: {
+        sorting: { key: 'startDate', direction: 'asc' },
+        columnWidths: {},
+        hiddenColumns: [],
+      },
     });
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
-  });
-
-  it('merges immediate filter and presentation patches into the latest complete preference', async () => {
-    const { result } = renderHook(() => useTaskPreferences({
-      options, optionsLoading: false, optionsError: false, tableKeys,
-    }));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    act(() => {
-      result.current.updatePreferences({ staffIds: ['staff-1'] });
-      result.current.updateHiddenColumns(['program']);
-      result.current.updateColumnWidths({ title: 300 });
-      result.current.updateSorting({ key: 'title', direction: 'asc' });
-    });
-
-    expect(preferenceHook.preference).toEqual(expect.objectContaining({
-      view: 'calendar',
-      staffIds: ['staff-1'],
-      hiddenColumns: ['program'],
-      columnWidths: { title: 300 },
-      sorting: { key: 'title', direction: 'asc' },
-    }));
-    expect(result.current.preferences).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'],
-      hiddenColumns: ['program'],
-      columnWidths: { title: 300 },
-      sorting: { key: 'title', direction: 'asc' },
-    }));
-  });
-
-  it('replaces a removed list view preference with the calendar default', async () => {
-    preferenceHook.preference = {
-      view: 'list',
-    } as unknown as StoredTaskPreferences;
-    const { result } = renderHook(() => useTaskPreferences({
-      options, optionsLoading: false, optionsError: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.preferences.view).toBe('calendar');
     expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
-      view: 'calendar',
+      view: 'calendar', search: 'workshop', programIds: ['program-1'],
+    }));
+    expect(preferenceHook.key).toHaveBeenCalledWith('task-preferences');
+  });
+
+  it('composes rapid updates through one optimistic preference source', async () => {
+    const { result } = renderHook(() => usePreferences());
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.filters.definitions.map(definition => definition.id)).toEqual([
+      'staff', 'program', 'category', 'status',
+    ]);
+    act(() => {
+      result.current.filters.apply('staff', ['staff-1']);
+      result.current.filters.apply('program', ['program-1']);
+      result.current.filters.apply('category', ['planning_prep']);
+      result.current.filters.apply('status', ['active']);
+      result.current.table.setHiddenColumns(['program']);
+      result.current.table.setColumnWidths({ title: 300 });
+      result.current.table.setSorting({ key: 'title', direction: 'asc' });
+      result.current.setView('table');
+    });
+
+    const expected = {
+      view: 'table',
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+      categories: ['planning_prep'],
+      statuses: ['active'],
+      hiddenColumns: ['program'],
+      columnWidths: { title: 300 },
+      sorting: { key: 'title', direction: 'asc' },
+    };
+    expect(preferenceHook.preference).toEqual(expect.objectContaining(expected));
+    expect(result.current).toMatchObject({
+      view: expected.view,
+      filters: {
+        staffIds: expected.staffIds,
+        programIds: expected.programIds,
+        categories: expected.categories,
+        statuses: expected.statuses,
+      },
+      table: {
+        hiddenColumns: expected.hiddenColumns,
+        columnWidths: expected.columnWidths,
+        sorting: expected.sorting,
+      },
+    });
+  });
+
+  it('applies trimmed search explicitly and clears draft and applied values together', async () => {
+    const { result } = renderHook(() => usePreferences());
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => result.current.search.setValue(' workshop '));
+    expect(result.current.search.appliedValue).toBe('');
+    act(() => result.current.search.apply());
+    expect(result.current.search.appliedValue).toBe('workshop');
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ search: 'workshop' }));
+    act(() => result.current.search.setValue('planning'));
+    expect(result.current.search.appliedValue).toBe('workshop');
+    act(() => result.current.search.clear());
+    expect(result.current.search.value).toBe('');
+    expect(result.current.search.appliedValue).toBe('');
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({ search: '' }));
+  });
+
+  it('clears all persisted filters as one complete update', async () => {
+    preferenceHook.preference = {
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+      categories: ['planning_prep'],
+      statuses: ['active'],
+    };
+    const { result } = renderHook(() => usePreferences());
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => result.current.filters.clear());
+
+    expect(result.current.filters).toMatchObject({
+      staffIds: [], programIds: [], categories: [], statuses: [],
+    });
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
+      staffIds: [], programIds: [], categories: [], statuses: [],
     }));
   });
 
-  it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
+  it('reconciles filters, option IDs, and sorting before establishing the baseline', async () => {
     preferenceHook.preference = {
+      view: 'table',
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['program-1', 'removed-program'],
-      categories: [],
-      statuses: [],
+      categories: ['planning_prep', 'removed-category'] as never,
+      statuses: ['active', 'removed-status'] as never,
       sorting: { key: 'removedColumn' as never, direction: 'desc' },
     };
-    const { result } = renderHook(() => useTaskPreferences({
-      options, optionsLoading: false, optionsError: false, tableKeys,
-    }));
+    const { result } = renderHook(() => usePreferences());
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.preferences).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'],
-      programIds: ['program-1'],
-      sorting: { key: 'startDate', direction: 'asc' },
-    }));
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(result.current.preferences);
+    expect(result.current).toMatchObject({
+      view: 'table',
+      filters: {
+        staffIds: ['staff-1'],
+        programIds: ['program-1'],
+        categories: ['planning_prep'],
+        statuses: ['active'],
+      },
+      table: { sorting: { key: 'startDate', direction: 'asc' } },
+    });
   });
 
-  it('preserves saved option IDs when task options fail to load', async () => {
-    preferenceHook.preference = {
-      staffIds: ['saved-staff'],
-      programIds: ['saved-program'],
-      categories: [],
-      statuses: [],
-    };
-    const { result } = renderHook(() => useTaskPreferences({
-      options: undefined, optionsLoading: false, optionsError: true, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.preferences).toEqual(expect.objectContaining({
-      staffIds: ['saved-staff'],
-      programIds: ['saved-program'],
-    }));
-  });
-
-  it('scrubs preserved IDs after task options recover', async () => {
+  it('preserves unverified IDs after an option error and scrubs them when options recover', async () => {
     preferenceHook.preference = {
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['program-1', 'removed-program'],
@@ -158,21 +247,30 @@ describe('useTaskPreferences', () => {
       statuses: [],
     };
     const { result, rerender } = renderHook(
-      ({ currentOptions, optionsError }) => useTaskPreferences({
-        options: currentOptions,
-        optionsLoading: false,
-        optionsError,
-        tableKeys,
-      }),
-      { initialProps: { currentOptions: undefined as typeof options | undefined, optionsError: true } },
+      ({ currentOptions, optionsError }) => usePreferences({ currentOptions, optionsError }),
+      {
+        initialProps: {
+          currentOptions: undefined as TaskReferenceData | undefined,
+          optionsError: true,
+        },
+      },
     );
 
     await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters).toMatchObject({
+      staffIds: ['staff-1', 'removed-staff'],
+      programIds: ['program-1', 'removed-program'],
+    });
+
     rerender({ currentOptions: options, optionsError: false });
 
-    await waitFor(() => expect(result.current.preferences).toEqual(expect.objectContaining({
+    await waitFor(() => expect(result.current.filters).toMatchObject({
       staffIds: ['staff-1'],
       programIds: ['program-1'],
-    })));
+    }));
+    expect(preferenceHook.preference).toEqual(expect.objectContaining({
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+    }));
   });
 });

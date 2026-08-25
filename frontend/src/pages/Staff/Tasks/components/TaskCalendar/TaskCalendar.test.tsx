@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildInitialDayPeriods } from '../../../../../common/components/ResourceCalendar/periods/periods';
 import type { ResourceCalendarProps } from '../../../../../common/components/ResourceCalendar/types';
-import { getTasks } from '../../../../../common/features/tasks/tasks.api';
-import type { Task, TaskResource } from '../../../../../common/features/tasks/types';
+import { getTasksCalendarData } from '../../tasks.api';
+import type { Task, TaskResource } from '../../types';
 import { makeTask } from '../../../../../tests/factories/task';
-import type { TaskCalendarActions, TaskCalendarCache } from '../../types';
-import TaskCalendar from './TaskCalendar';
+import type { TaskCalendarCache } from '../../types';
+import TaskCalendar, { type TaskCalendarActions } from './TaskCalendar';
 
 type CalendarProps = ResourceCalendarProps<TaskResource, Task>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
@@ -20,7 +20,7 @@ vi.mock('../../../../../common/components/ResourceCalendar/ResourceCalendar', ()
     return <div aria-label="Task calendar">{props.resources.map(resource => <span key={resource.id}>{resource.name}</span>)}</div>;
   },
 }));
-vi.mock('../../../../../common/features/tasks/tasks.api', () => ({ getTasks: vi.fn() }));
+vi.mock('../../tasks.api', () => ({ getTasksCalendarData: vi.fn() }));
 
 const resource: TaskResource = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
@@ -39,7 +39,7 @@ function renderCalendar({
   const actions: TaskCalendarActions = {
     isTaskPending: vi.fn(() => false),
     requestDelete: vi.fn(),
-    setStatus: vi.fn().mockResolvedValue(undefined),
+    setState: vi.fn().mockResolvedValue(undefined),
     setTaskRange: vi.fn().mockImplementation(async (
       currentTask,
       nextRange,
@@ -62,11 +62,10 @@ function renderCalendar({
   };
   render(<TaskCalendar
     resources={resources}
-    filters={{ staffIds, programIds: [], categories: [], statuses: [] }}
+    filters={{ search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
     selectedResourceId="staff-1"
     selectedTaskId={selectedTaskId}
-    today="2026-08-11"
     actions={actions}
     calendarCacheRef={calendarCacheRef}
     {...callbacks}
@@ -78,7 +77,7 @@ describe('TaskCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     calendarState.props = null;
-    vi.mocked(getTasks).mockResolvedValue([task]);
+    vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
   });
 
   it('loads buffered task data and applies the staff resource filter', async () => {
@@ -86,9 +85,10 @@ describe('TaskCalendar', () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     act(() => calendarState.props?.onInitialPeriods?.(periods));
 
-    await waitFor(() => expect(getTasks).toHaveBeenCalledWith({
-      start: expect.any(String), end: expect.any(String), includeClosed: true,
-    }));
+    await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
+      { search: '', staffIds: ['staff-1'], programIds: [], categories: [], statuses: [] },
+      { start: expect.any(String), end: expect.any(String) },
+    ));
     await waitFor(() => expect(calendarState.props?.rangeData?.['staff-1']).toEqual([task]));
     expect(calendarState.props?.resources).toEqual([resource]);
     expect(calendarState.props?.positionStorageKey).toBe('resource-calendar:tasks:position');
@@ -146,7 +146,7 @@ describe('TaskCalendar', () => {
 
   it('builds lifecycle actions from task state and write capability', async () => {
     const rendered = renderCalendar({ selectedTaskId: 'task-1' });
-    const openTask = { ...task, status: 'open' as const, hoursLogged: 1 };
+    const openTask = { ...task, state: 'open' as const, hoursLogged: 1 };
     const element = calendarState.props?.buildRangeItem?.({
       resource,
       data: openTask,
@@ -159,16 +159,16 @@ describe('TaskCalendar', () => {
     act(() => element.props.onComplete());
     act(() => element.props.onCancel());
     act(() => element.props.onEdit());
-    expect(rendered.actions.setStatus).toHaveBeenCalledWith(openTask, 'completed');
-    expect(rendered.actions.setStatus).toHaveBeenCalledWith(openTask, 'cancelled');
+    expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'completed');
+    expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'cancelled');
     expect(rendered.onEditTask).toHaveBeenCalledWith(openTask);
   });
 
   it('limits date changes and reassignment by task lifecycle', () => {
     renderCalendar();
     const range = { start: task.startDate, end: task.dueDate };
-    const openTaskWithHours = { ...task, status: 'open' as const, hoursLogged: 1 };
-    const completed = { ...task, status: 'completed' as const, hoursLogged: 1 };
+    const openTaskWithHours = { ...task, state: 'open' as const, hoursLogged: 1 };
+    const completed = { ...task, state: 'completed' as const, status: 'completed' as const, hoursLogged: 1 };
 
     expect(calendarState.props?.getItemCapabilities?.({ resource, data: task, range })).toEqual({
       draggable: true,
@@ -211,7 +211,7 @@ describe('TaskCalendar', () => {
   });
 
   it('removes mutation callbacks in read-only mode and reports range-load errors', async () => {
-    vi.mocked(getTasks).mockRejectedValue(new Error('Task request failed'));
+    vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
     renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     expect(calendarState.props?.onRangeResize).toBeUndefined();

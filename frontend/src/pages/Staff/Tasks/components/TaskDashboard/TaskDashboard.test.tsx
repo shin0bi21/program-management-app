@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../types';
 import TaskDashboard from './TaskDashboard';
 
 const overviewProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));

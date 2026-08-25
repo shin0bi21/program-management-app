@@ -4,8 +4,8 @@ import ResourceCalendar from '../../../../../common/components/ResourceCalendar/
 import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
 import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../../../common/components/ResourceCalendar/types';
-import { getHours } from '../../../../../common/features/hours/hours.api';
-import type { StaffResource, HoursCategory, HoursItem as HoursEntry } from '../../../../../common/features/hours/types';
+import { getHoursCalendarData } from '../../hours.api';
+import type { StaffResource, HoursCategory, HoursItem as HoursEntry } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type {
   HoursCalendarCache,
@@ -51,7 +51,7 @@ export default function HoursCalendar({
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove,
 }: HoursCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    (await getHours({ start: start.key, end: end.key })).data
+    getHoursCalendarData({ start: start.key, end: end.key })
   ), []);
   const calendar = usePeriodDataBuffer({
     load: loadRange,

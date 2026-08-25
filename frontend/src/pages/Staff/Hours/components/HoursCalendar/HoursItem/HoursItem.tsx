@@ -1,5 +1,5 @@
 import CalendarItem from '../../../../../../common/components/ResourceCalendar/items/CalendarItem';
-import type { HoursItem } from '../../../../../../common/features/hours/types';
+import type { HoursItem } from '../../../types';
 import HoursTypeLabel from '../../HoursTypeLabel/HoursTypeLabel';
 import { getHoursEntryType, HOURS_ENTRY_TYPE_LABELS } from '../../../utils/hoursEntryType';
 import './HoursItem.css';

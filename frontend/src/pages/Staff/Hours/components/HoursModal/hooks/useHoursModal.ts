@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { dayKey } from '../../../../../components/ResourceCalendar/periods/periods';
-import { useSubmitStatus } from '../../../../../hooks/useSubmitStatus';
-import useSubmitLock from '../../../../../hooks/useSubmitLock';
+import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
+import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
+import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { getTasks } from '../../../../tasks/tasks.api';
-import type { Task } from '../../../../tasks/types';
+import type { RequestOptions } from '../../../../../../http/client';
 import { getHoursSessions, type SetHoursInput } from '../../../hours.api';
 import type {
   StaffResource,
@@ -16,6 +15,13 @@ import type {
 } from '../../../types';
 
 type HoursSource = 'regular' | 'task' | 'session';
+
+export interface HoursTaskOption {
+  id: string;
+  title: string;
+  state: 'open' | 'completed' | 'cancelled';
+  assignee: { id: string };
+}
 
 interface HoursDraft {
   resourceId: string;
@@ -34,11 +40,15 @@ export interface UseHoursModalOptions {
   isOpen: boolean;
   resources: readonly StaffResource[];
   programs: readonly HoursProgram[];
+  loadTasks: (
+    staffId: string,
+    opts?: RequestOptions,
+  ) => Promise<readonly HoursTaskOption[]>;
   onAdd: (input: SetHoursInput) => Promise<void>;
   initialResourceId?: string;
   initialDate?: string;
   initialSource?: HoursSource;
-  initialTask?: Task;
+  initialTask?: HoursTaskOption;
   initialItem?: HoursItem;
   canCompleteTask?: boolean;
 }
@@ -110,6 +120,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     isOpen,
     resources,
     programs,
+    loadTasks,
     onAdd,
     initialResourceId,
     initialDate,
@@ -160,12 +171,12 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   // Source-specific remote options.
   const taskQuery = useQuery({
     queryKey: ['tasks', draft.resourceId, 'hours'],
-    queryFn: ({ signal }) => getTasks({ staffId: draft.resourceId }, { signal }),
+    queryFn: ({ signal }) => loadTasks(draft.resourceId, { signal }),
     enabled: isOpen && draft.source === 'task' && Boolean(draft.resourceId) && !taskLocked,
   });
   const taskOptions = initialTask
     ? [initialTask]
-    : (taskQuery.data ?? []).filter(task => task.status === 'open');
+    : (taskQuery.data ?? []).filter(task => task.state === 'open');
 
   const sessionQuery = useQuery({
     queryKey: ['hours-sessions', draft.resourceId, draft.date],

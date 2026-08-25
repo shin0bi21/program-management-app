@@ -2,13 +2,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTasks } from '../../../../../../common/features/tasks/tasks.api';
+import { getTaskDashboardData } from '../../../tasks.api';
 import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import useTaskOverviewData from './useTaskOverviewData';
 
-vi.mock('../../../../../../common/features/tasks/tasks.api', () => ({
-  getTasks: vi.fn(),
+vi.mock('../../../tasks.api', () => ({
+  getTaskDashboardData: vi.fn(),
 }));
 
 describe('useTaskOverviewData', () => {
@@ -16,7 +16,7 @@ describe('useTaskOverviewData', () => {
 
   it('loads tasks for the selected resource under the page-owned query key', async () => {
     const task = makeTask();
-    vi.mocked(getTasks).mockResolvedValue([task]);
+    vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     const client = createTestQueryClient();
     const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1'), {
       wrapper: createQueryClientWrapper(client),
@@ -24,15 +24,15 @@ describe('useTaskOverviewData', () => {
 
     await waitFor(() => expect(result.current.tasks).toEqual([task]));
 
-    expect(getTasks).toHaveBeenCalledWith(
-      { staffId: 'staff-1' },
+    expect(getTaskDashboardData).toHaveBeenCalledWith(
+      'staff-1',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(client.getQueryData(['tasks', 'overview', 'staff-1'])).toEqual([task]);
   });
 
   it('owns the overview error message', async () => {
-    vi.mocked(getTasks).mockRejectedValue(new Error('offline'));
+    vi.mocked(getTaskDashboardData).mockRejectedValue(new Error('offline'));
     const client = createTestQueryClient();
     const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1'), {
       wrapper: createQueryClientWrapper(client),
@@ -44,8 +44,8 @@ describe('useTaskOverviewData', () => {
 
   it('does not carry the previous resource tasks into a pending resource query', async () => {
     let resolveSecondResource: (tasks: ReturnType<typeof makeTask>[]) => void = () => undefined;
-    vi.mocked(getTasks).mockImplementation(filters => (
-      filters?.staffId === 'staff-1'
+    vi.mocked(getTaskDashboardData).mockImplementation(resourceId => (
+      resourceId === 'staff-1'
         ? Promise.resolve([makeTask({ id: 'task-1' })])
         : new Promise(resolve => { resolveSecondResource = resolve; })
     ));

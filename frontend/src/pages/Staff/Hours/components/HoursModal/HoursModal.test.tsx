@@ -4,18 +4,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
-import { getTasks } from '../../../tasks/tasks.api';
 import { getHoursSessions } from '../../hours.api';
 import HoursModal from './HoursModal';
 
-vi.mock('../../../tasks/tasks.api', () => ({ getTasks: vi.fn() }));
 vi.mock('../../hours.api', () => ({ getHoursSessions: vi.fn() }));
+
+const loadTasks = vi.fn();
 
 const resources = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
 ] as const;
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
+const categories = [
+  { value: 'program_delivery' as const, label: 'Program Delivery' },
+  { value: 'meeting' as const, label: 'Meeting' },
+];
 const task = makeTask();
 
 function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {}) {
@@ -23,6 +27,8 @@ function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {})
     isOpen: true,
     resources,
     programs,
+    categories,
+    loadTasks,
     onAdd: vi.fn().mockResolvedValue(undefined),
     onClose: vi.fn(),
     ...overrides,
@@ -39,7 +45,7 @@ function submitForm() {
 describe('HoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getTasks).mockResolvedValue([]);
+    loadTasks.mockResolvedValue([]);
     vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
@@ -49,6 +55,8 @@ describe('HoursModal', () => {
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[{ id: 'program-1', name: 'Program one' }]}
+      categories={categories}
+      loadTasks={loadTasks}
       onAdd={vi.fn()}
       onClose={vi.fn()}
     /></QueryClientProvider>);
@@ -72,14 +80,14 @@ describe('HoursModal', () => {
   });
 
   it('renders only open assigned tasks', async () => {
-    vi.mocked(getTasks).mockResolvedValue([
+    loadTasks.mockResolvedValue([
       task,
-      makeTask({ id: 'task-complete', title: 'Completed report', status: 'completed' }),
+      makeTask({ id: 'task-complete', title: 'Completed report', state: 'completed', status: 'completed', statusLabel: 'Completed' }),
     ]);
     renderModal({ initialSource: 'task', initialDate: '2026-08-18' });
 
-    await waitFor(() => expect(getTasks).toHaveBeenCalledWith(
-      { staffId: 'staff-1' },
+    await waitFor(() => expect(loadTasks).toHaveBeenCalledWith(
+      'staff-1',
       { signal: expect.any(AbortSignal) },
     ));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Task' })).toBeEnabled());
@@ -96,6 +104,8 @@ describe('HoursModal', () => {
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[]}
+      categories={categories}
+      loadTasks={loadTasks}
       initialSource="session"
       onAdd={vi.fn()}
       onClose={vi.fn()}
@@ -156,6 +166,8 @@ describe('HoursModal', () => {
       isOpen
       resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
       programs={[]}
+      categories={categories}
+      loadTasks={loadTasks}
       initialTask={task}
       canCompleteTask
       onAdd={vi.fn()}

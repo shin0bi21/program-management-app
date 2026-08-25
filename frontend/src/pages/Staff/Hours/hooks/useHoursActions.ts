@@ -7,8 +7,7 @@ import {
   setHours,
   type SetHoursInput,
   updateHoursPlacement,
-} from '../../../../common/features/hours/hours.api';
-import { HOURS_CATEGORY_OPTIONS } from '../../../../common/features/hours/hoursOptions';
+} from '../hours.api';
 
 import type {
   HoursCalendarCache,
@@ -57,7 +56,7 @@ export default function useHoursActions({
   );
 
   const refreshOverview = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'overview'] });
+    void queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'dashboard'] });
   }, [queryClient, hoursQueryKey]);
 
   const refreshRelatedData = useCallback(async (taskId: string | null) => {
@@ -73,11 +72,7 @@ export default function useHoursActions({
       const saved = entryId
         ? await setHours(input, entryId)
         : await setHours(input);
-      const categoryLabel = HOURS_CATEGORY_OPTIONS.find(
-        option => option.value === saved.category,
-      )?.label ?? saved.category;
-
-      calendarCacheRef.current.upsert(saved.staffId, saved.workDate, { ...saved, categoryLabel });
+      calendarCacheRef.current.upsert(saved.staffId, saved.workDate, saved);
       refreshOverview();
       await refreshRelatedData(saved.taskId);
     } finally {
@@ -97,14 +92,7 @@ export default function useHoursActions({
 
     try {
       const updated = await updateHoursPlacement(item.id, { workDate: destination.date });
-      const categoryLabel = HOURS_CATEGORY_OPTIONS.find(
-        option => option.value === updated.category,
-      )?.label ?? updated.category;
-
-      calendarCacheRef.current.upsert(destination.resourceId, destination.date, {
-        ...updated,
-        categoryLabel,
-      });
+      calendarCacheRef.current.upsert(destination.resourceId, destination.date, updated);
       refreshOverview();
 
       const refreshes = [queryClient.invalidateQueries({ queryKey: hoursTableQueryKey })];
