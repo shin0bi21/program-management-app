@@ -50,7 +50,7 @@ describe('useTaskModal', () => {
       startDate: '2026-08-10',
       dueDate: '2026-08-14',
       staffId: 'staff-1',
-    });
+    }, undefined);
     expect(onSaved).toHaveBeenCalledWith(savedTask);
     expect(result.current.status).toBe('success');
     expect(result.current.statusMessage).toBe('Task created.');
