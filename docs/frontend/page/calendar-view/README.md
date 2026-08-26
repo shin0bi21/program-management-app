@@ -1,6 +1,6 @@
 # Frontend calendar
 
-A page-owned `*Calendar` adapts domain records to the shared `ResourceCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
+A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
 ## Component structure
 
@@ -22,47 +22,52 @@ The route owns shared filters, selection, dialogs, and cross-view actions. The p
 
 ## Range data hook
 
-Add a typed range API and connect it to `usePeriodDataBuffer`. Send page-owned filters through that API. Keep React-aware shaping and reference preservation in a focused page-calendar hook only when the returned data still needs client-side adaptation.
+Add a typed range API and connect it to `useDataBuffer`. Send page-owned filters through that API. Keep React-aware shaping and reference preservation in a focused page-calendar hook only when the returned data still needs client-side adaptation.
 
 ```tsx
-function ExampleCalendar({ resources, filters, selection, actions }: Props) {
-  const calendar = usePeriodDataBuffer(getExamplesForRange);
+function ExampleCalendar({ rows, filters, selection, actions }: Props) {
+  const calendar = useDataBuffer({
+    load: getExamplesForRange,
+    getItemId: example => example.id,
+    getItemRange: example => ({ start: example.startsOn, end: example.endsOn }),
+  });
   const visible = useExampleCalendarData({
-    rangeData: calendar.data,
+    items: calendar.items,
     filters,
   });
 
-  return <ResourceCalendar
-    resources={resources}
-    rangeData={visible}
-    getResourceId={resource => resource.id}
-    getRange={example => ({ start: example.startsOn, end: example.endsOn })}
-    buildRangeItem={example => <ExampleItem example={example} actions={actions} />}
-    getItemCapabilities={example => ({
-      draggable: actions.canMove(example),
-      resizable: actions.canResize(example),
+  return <TimelineCalendar
+    rows={rows}
+    items={visible}
+    getRowId={row => row.id}
+    getItemRange={example => ({ start: example.startsOn, end: example.endsOn })}
+    buildItem={({ data }) => <ExampleItem example={data} actions={actions} />}
+    getItemCapabilities={({ data }) => ({
+      draggable: actions.canMove(data),
+      resizable: actions.canResize(data),
     })}
-    selectedResourceId={selection.selectedResourceId}
-    onResourceSelect={selection.selectResource}
+    selectedRowId={selection.selectedRowId}
+    onRowSelect={selection.selectRow}
     onItemActivate={selection.selectRecord}
-    onRangeMove={actions.move}
-    onRangeResize={actions.resize}
+    onItemMove={actions.move}
+    onItemResize={actions.resize}
   />;
 }
 ```
 
-Point records match a date in the requested range. Ranged records match overlap and appear once as complete records; never duplicate a ranged item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months, and years.
+Every item has one inclusive `{ start, end }` range. A one-period record uses the same key for both values; a multi-period record uses its actual boundaries. Ranged records match overlap and appear once as complete records; never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months, and years.
 
 ## Calendar and item ownership
 
-The shared `ResourceCalendar` owns resource/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional resource selection. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.
+The shared `TimelineCalendar` owns row/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional row selection. A row can represent a resource, program, room, or another domain axis. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.
 
-- Use `onCellActivate`, `onItemActivate`, and `onResourceSelect` for their distinct targets.
-- Point items use `onItemDrop`; ranged items use `onRangeMove` and optional `onRangeResize`.
+- Use `onCellActivate`, `onItemActivate`, and `onRowSelect` for their distinct targets.
+- All items use `onItemMove`; enable optional `onItemResize` per item with `getItemCapabilities`. For example, Hours items use `resizable: false`.
 - Use `getCellActions` when one cell opens multiple domain workflows.
-- Build editable content with the shared `CalendarItem` shell; it owns sizing, details, menus, pointer-down dismissal, and focus return.
+- Build editable content with the shared `Item` shell; it owns sizing, details, menus, pointer-down dismissal, and focus return.
+- Position all items in the shared row item layer. Dense overlaps may hide visual summaries, but every item keeps its accessible label and hover or focus details; do not replace the items with an overflow menu.
 - Give every item a complete accessible label and never communicate type or status by color alone.
-- Keep one calendar scroll viewport and fixed-height virtualized resource rows.
+- Keep one calendar scroll viewport and fixed-height virtualized rows.
 
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 

@@ -8,7 +8,7 @@ import {
   checkFrontendOwnership,
   checkPaginatedTables,
   checkPreferenceControlOwnership,
-  checkResourceCalendars,
+  checkTimelineCalendars,
   checkRoutePageShell,
   checkRoutePageStructure,
   checkTestOwnership,
@@ -515,22 +515,22 @@ test('requires the complete paginated-table contract', () => {
   assert.match(violations[0], /loadingNextPage, onLoadNextPage/);
 });
 
-test('reports missing ResourceCalendar ownership, buffering, and lifecycle wiring', () => {
+test('reports missing TimelineCalendar ownership, buffering, and lifecycle wiring', () => {
   const violations = violationsFor(
-    checkResourceCalendars,
+    checkTimelineCalendars,
     'frontend/src/pages/Staff/Tasks/Tasks.tsx',
-    '<ResourceCalendar />',
+    '<TimelineCalendar />',
   );
 
-  assert.match(violations.join('\n'), /usePeriodDataBuffer/);
+  assert.match(violations.join('\n'), /useDataBuffer/);
   assert.match(violations.join('\n'), /\*Calendar component/);
   assert.match(violations.join('\n'), /complete period lifecycle/);
 });
 
-test('accepts a fully wired page-owned ResourceCalendar view', () => {
+test('accepts a fully wired page-owned TimelineCalendar view', () => {
   const source = `
-    usePeriodDataBuffer();
-    <ResourceCalendar
+    useDataBuffer();
+    <TimelineCalendar
       onInitialPeriods={onInitialPeriods}
       onPeriodsBuilt={onPeriodsBuilt}
       onPeriodsReset={onPeriodsReset}
@@ -539,7 +539,7 @@ test('accepts a fully wired page-owned ResourceCalendar view', () => {
   `;
 
   assert.deepEqual(violationsFor(
-    checkResourceCalendars,
+    checkTimelineCalendars,
     'frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx',
     source,
   ), []);

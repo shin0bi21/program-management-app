@@ -86,7 +86,7 @@ test('allows a Calendar owner to own one range loader and buffer-adapter effect'
       useEffect(() => {
         calendarCacheRef.current = { upsert: calendar.upsertItem };
       }, [calendar.upsertItem, calendarCacheRef]);
-      return <ResourceCalendar load={loadRange} />;
+      return <TimelineCalendar load={loadRange} />;
     }
   `;
 
@@ -108,7 +108,7 @@ test('still reports mixed workflow state inside a Calendar owner', () => {
       const [editorState] = useState(null);
       useEffect(() => {}, []);
       const loadRange = async () => getTasks();
-      return <ResourceCalendar load={loadRange} editorState={editorState} />;
+      return <TimelineCalendar load={loadRange} editorState={editorState} />;
     }
   `;
 

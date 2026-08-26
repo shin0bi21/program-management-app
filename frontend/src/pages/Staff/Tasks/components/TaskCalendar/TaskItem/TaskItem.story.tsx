@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
+import TimelineCalendar from '../../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import type { Task } from '../../../types';
 import TaskItem from './TaskItem';
 
@@ -21,25 +21,26 @@ const initialTask: Task = {
 export function InteractiveTaskItem() {
   const [task, setTask] = useState(initialTask);
   const [action, setAction] = useState('');
+  const [activatedTaskId, setActivatedTaskId] = useState('');
   const [rangeChange, setRangeChange] = useState('');
   return <div style={{ height: '300px', padding: 16 }}>
-    <ResourceCalendar
-      resources={[resource]}
-      data={{}}
-      rangeData={{ [resource.id]: [task] }}
+    <TimelineCalendar
+      rows={[resource]}
+      items={{ [resource.id]: [task] }}
       initialDate={new Date(2026, 7, 9)}
       ariaLabel="Browser-tested task calendar"
-      getResourceId={item => item.id}
+      getRowId={item => item.id}
       getItemId={item => item.id}
       getItemRange={item => ({ start: item.startDate, end: item.dueDate })}
       getItemCapabilities={() => ({ draggable: true, resizable: true })}
-      renderResource={({ resource: item }) => item.name}
-      buildItem={() => null}
-      buildRangeItem={({ data: item }) => <TaskItem task={item} onComplete={() => setAction('complete')} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
-      onRangeMove={({ nextRange }) => { setRangeChange(`move:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
-      onRangeResize={({ nextRange }) => { setRangeChange(`resize:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
+      renderRow={({ row: item }) => item.name}
+      buildItem={({ data: item }) => <TaskItem task={item} onComplete={() => setAction('complete')} onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />}
+      onItemActivate={({ data: item }) => setActivatedTaskId(item.id)}
+      onItemMove={({ nextRange }) => { setRangeChange(`move:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
+      onItemResize={({ nextRange }) => { setRangeChange(`resize:${nextRange.start}:${nextRange.end}`); setTask(current => ({ ...current, startDate: nextRange.start, dueDate: nextRange.end })); }}
     />
     <input hidden readOnly data-testid="task-item-action" value={action} />
+    <input hidden readOnly data-testid="task-item-activation" value={activatedTaskId} />
     <input hidden readOnly data-testid="task-range-change" value={rangeChange} />
   </div>;
 }

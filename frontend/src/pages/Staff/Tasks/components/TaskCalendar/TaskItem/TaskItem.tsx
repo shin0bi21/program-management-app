@@ -1,13 +1,13 @@
-import CalendarItem from '../../../../../../common/components/ResourceCalendar/items/CalendarItem';
+import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import { formatHours } from '../../../../../../common/utils/date';
 import type { Task } from '../../../types';
 import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import './TaskItem.css';
 
-export default function TaskItem({ task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete, onActivate }: { task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void; onActivate?: () => void }) {
+export default function TaskItem({ task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete }: { task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const className = `task-item--${task.status}`;
 
-  return <CalendarItem
+  return <Item
     id={task.id}
     selected={selected}
     ariaLabel={`${task.title}, ${task.statusLabel}, ${task.startDate} to ${task.dueDate}`}
@@ -35,7 +35,6 @@ export default function TaskItem({ task, selected = false, onComplete, onCancel,
     ]}
     onEdit={onEdit}
     onDelete={onDelete}
-    onActivate={onActivate}
     className={className}
   />;
 }

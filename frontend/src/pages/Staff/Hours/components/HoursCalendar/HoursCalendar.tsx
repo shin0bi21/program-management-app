@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import Button from '../../../../../common/components/Button/Button';
-import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
-import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
-import type { BuildItemContext, CalendarCellContext, ItemDropContext } from '../../../../../common/components/ResourceCalendar/types';
+import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
+import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
+import type {
+  BuildItemContext,
+  CalendarCellContext,
+  ItemMoveContext,
+  RowItemData,
+} from '../../../../../common/components/TimelineCalendar/types';
 import { getHoursCalendarData } from '../../hours.api';
 import type { StaffResource, HoursCategory, HoursItem as HoursEntry } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
@@ -19,14 +24,12 @@ import HoursItem from './HoursItem/HoursItem';
 const initialDate = new Date();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
 const getStaffResourceId = (resource: StaffResource) => resource.id;
-const getHoursItemId = (item: HoursEntry) => item.id;
-const canDropWithinStaff = ({ source, destination }: ItemDropContext<StaffResource, HoursEntry>) => source.resource.writable
-  && destination.resource.writable
-  && source.resource.id === destination.resource.id;
-const summarizeOverflow = ({ items, itemCount }: { items: readonly HoursEntry[]; itemCount: number }) => (
-  `${itemCount} ${itemCount === 1 ? 'Entry' : 'Entries'} - ${items.reduce((total, item) => total + item.hours, 0)} Hours`
-);
-
+export interface HoursCalendarItem { date: string; item: HoursEntry }
+const getHoursEntryId = (item: HoursEntry) => item.id;
+const getHoursCalendarItemId = (item: HoursCalendarItem) => item.item.id;
+const canMoveWithinStaff = ({ row, destinationRow }: ItemMoveContext<StaffResource, HoursCalendarItem>) => row.writable
+  && destinationRow.writable
+  && row.id === destinationRow.id;
 interface HoursCalendarProps {
   resources: StaffResource[];
   staffIds: string[];
@@ -53,9 +56,9 @@ export default function HoursCalendar({
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
     getHoursCalendarData({ start: start.key, end: end.key })
   ), []);
-  const calendar = usePeriodDataBuffer({
+  const calendar = useDataBuffer({
     load: loadRange,
-    getItemId: getHoursItemId,
+    getItemId: getHoursEntryId,
     errorMessage: 'Unable to load hours data',
   });
   useEffect(() => {
@@ -66,68 +69,68 @@ export default function HoursCalendar({
     ? resources.filter(resource => staffIds.includes(resource.id))
     : resources, [resources, staffIds]);
   const visibleData = useHoursCalendarData(calendar.data, categories, programIds, types, cycleId);
+  const visibleItems = useMemo<RowItemData<HoursCalendarItem>>(() => Object.fromEntries(
+    Object.entries(visibleData).map(([resourceId, periods]) => [
+      resourceId,
+      Object.entries(periods).flatMap(([date, items]) => items.map(item => ({ date, item }))),
+    ]),
+  ), [visibleData]);
 
-  const moveHours = ({ item, source, destination }: ItemDropContext<StaffResource, HoursEntry>) => onMove({
-    item,
-    source: { resourceId: source.resource.id, date: source.period.key },
-    destination: { resourceId: destination.resource.id, date: destination.period.key },
+  const moveHours = ({ item, row, destinationRow, originalRange, nextRange }: ItemMoveContext<StaffResource, HoursCalendarItem>) => onMove({
+    item: item.item,
+    source: { resourceId: row.id, date: originalRange.start },
+    destination: { resourceId: destinationRow.id, date: nextRange.start },
   });
-  const renderHoursItem = useCallback((resource: StaffResource, date: string, item: HoursEntry, closeOverflow?: () => void) => (
+  const renderHoursItem = useCallback((resource: StaffResource, date: string, item: HoursEntry) => (
     <HoursItem
       item={item}
-      onEdit={canWrite && resource.writable && !isEntryPending(item.id) ? () => { closeOverflow?.(); onEdit({ resourceId: resource.id, date, item }); } : undefined}
-      onDelete={canWrite && resource.writable && !isEntryPending(item.id) ? () => { closeOverflow?.(); onDelete({ resourceId: resource.id, date, item }); } : undefined}
+      onEdit={canWrite && resource.writable && !isEntryPending(item.id) ? () => onEdit({ resourceId: resource.id, date, item }) : undefined}
+      onDelete={canWrite && resource.writable && !isEntryPending(item.id) ? () => onDelete({ resourceId: resource.id, date, item }) : undefined}
     />
   ), [canWrite, isEntryPending, onDelete, onEdit]);
-  const buildItem = useCallback(({ resource, period, data: item }: BuildItemContext<StaffResource, HoursEntry>) => (
-    renderHoursItem(resource, period.key, item)
+  const buildItem = useCallback(({ row, range, data }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
+    renderHoursItem(row, range.start, data.item)
   ), [renderHoursItem]);
-  const buildOverflowItem = useCallback((
-    { resource, period, data: item }: BuildItemContext<StaffResource, HoursEntry>,
-    { close }: { close: () => void },
-  ) => renderHoursItem(resource, period.key, item, close), [renderHoursItem]);
   const openCellEntry = useCallback((
-    { resource, period }: CalendarCellContext<StaffResource, HoursEntry>,
+    { row, period }: CalendarCellContext<StaffResource, HoursCalendarItem>,
     source: 'regular' | 'task' | 'session',
-  ) => onAdd({ resourceId: resource.id, date: period.key, source }), [onAdd]);
+  ) => onAdd({ resourceId: row.id, date: period.key, source }), [onAdd]);
 
   return <>
     {(calendar.error || moveError) && <div className="hours-page__error" role="alert">
       <span>{moveError ?? calendar.error}</span>
       {calendar.error && <Button size="sm" variant="secondary" onClick={calendar.retry}>Retry</Button>}
     </div>}
-    <ResourceCalendar
-      resources={visibleResources}
-      data={visibleData}
+    <TimelineCalendar<StaffResource, HoursCalendarItem>
+      rows={visibleResources}
+      items={visibleItems}
+      getItemRange={data => ({ start: data.date, end: data.date })}
       initialDate={initialDate}
       positionStorageKey={HOURS_CALENDAR_POSITION_KEY}
       ariaLabel="Staff hours calendar"
-      resourceHeader="Name"
+      rowHeader="Name"
       onPeriodsBuilt={calendar.onPeriodsBuilt}
       onInitialPeriods={calendar.initialize}
       onPeriodsReset={calendar.reset}
-      onItemDrop={canWrite ? moveHours : undefined}
-      canDropItem={canDropWithinStaff}
-      getItemCapabilities={({ resource, data: item }) => ({
-        draggable: canWrite && resource.writable && !item.sessionId && !isEntryPending(item.id),
+      onItemMove={canWrite ? moveHours : undefined}
+      canItemMove={canMoveWithinStaff}
+      getItemCapabilities={({ row, data }) => ({
+        draggable: canWrite && row.writable && !data.item.sessionId && !isEntryPending(data.item.id),
       })}
-      maxVisibleItemsPerCell={7}
       rowHeight={112}
-      renderOverflowSummary={summarizeOverflow}
-      getCellActions={canWrite ? context => context.resource.writable ? [
+      getCellActions={canWrite ? context => context.row.writable ? [
         { id: 'session', label: 'Session Hours', onSelect: () => openCellEntry(context, 'session') },
         { id: 'task', label: 'Task Hours', onSelect: () => openCellEntry(context, 'task') },
         { id: 'regular', label: 'Regular Hours', onSelect: () => openCellEntry(context, 'regular') },
       ] : [] : undefined}
-      getResourceId={getStaffResourceId}
-      getItemId={getHoursItemId}
-      renderResource={({ resource }) => <div className="hours-resource">
-        <span aria-label={resource.name}>{formatCompactPersonName(resource.firstName, resource.lastName)}</span>
+      getRowId={getStaffResourceId}
+      getItemId={getHoursCalendarItemId}
+      renderRow={({ row }) => <div className="hours-resource">
+        <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>
       </div>}
-      selectedResourceId={selectedStaffId}
-      onResourceSelect={resource => onStaffSelect(resource.id)}
+      selectedRowId={selectedStaffId}
+      onRowSelect={row => onStaffSelect(row.id)}
       buildItem={buildItem}
-      buildOverflowItem={buildOverflowItem}
     />
   </>;
 }

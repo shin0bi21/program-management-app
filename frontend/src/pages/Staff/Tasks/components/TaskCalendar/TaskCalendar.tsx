@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import ResourceCalendar from '../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import { usePeriodDataBuffer } from '../../../../../common/components/ResourceCalendar/data/usePeriodDataBuffer';
-import type { PeriodRange } from '../../../../../common/components/ResourceCalendar/data/PeriodDataBuffer';
+import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
+import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import { getTasksCalendarData } from '../../tasks.api';
 import type { Task, TaskResource, TasksFilters } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
@@ -12,10 +12,12 @@ import {
 import TaskItem from './TaskItem/TaskItem';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
+const getTaskId = (task: Task) => task.id;
+const getTaskRange = (task: Task) => ({ start: task.startDate, end: task.dueDate });
 
-function getTaskCalendarCapabilities(task: Task, canWriteTask: boolean) {
+function getTaskCalendarCapabilities(task: Task, canWriteTask: boolean, taskPending: boolean) {
   const canAdjustDates = canWriteTask && canEditTask(task);
-  return { draggable: canAdjustDates, resizable: canAdjustDates };
+  return { draggable: canAdjustDates && !taskPending, resizable: canAdjustDates };
 }
 
 function canReassignTask(task: Task) {
@@ -61,9 +63,10 @@ export default function TaskCalendar({
       return data;
     }, {});
   }, [filters]);
-  const calendar = usePeriodDataBuffer({
+  const calendar = useDataBuffer({
     load: loadRange,
-    getItemId: task => task.id,
+    getItemId: getTaskId,
+    getItemRange: getTaskRange,
     errorMessage: 'Unable to load task calendar data',
   });
   const { upsertItem, removeItem } = calendar;
@@ -80,29 +83,26 @@ export default function TaskCalendar({
 
   return <>
     {calendar.error && <p className="form-error" role="alert">{calendar.error}</p>}
-    <ResourceCalendar
-      resources={visibleResources}
-      data={{}}
-      rangeData={calendar.rangeData}
+    <TimelineCalendar
+      rows={visibleResources}
+      items={calendar.items}
       onInitialPeriods={calendar.initialize}
       onPeriodsBuilt={calendar.onPeriodsBuilt}
       onPeriodsReset={calendar.reset}
-      getResourceId={resource => resource.id}
-      getItemId={task => task.id}
-      getItemRange={task => ({ start: task.startDate, end: task.dueDate })}
-      getItemCapabilities={({ data: task, range }) => range
-        ? getTaskCalendarCapabilities(task, canWrite && task.writable && !actions.isTaskPending(task.id))
-        : { draggable: canWrite && task.writable && !actions.isTaskPending(task.id) }}
-      renderResource={({ resource }) => <span aria-label={resource.name}>{formatCompactPersonName(resource.firstName, resource.lastName)}</span>}
-      selectedResourceId={selectedResourceId}
-      onResourceSelect={resource => onResourceSelect(resource.id)}
-      buildItem={() => null}
-      buildRangeItem={({ data: task }) => {
+      getRowId={row => row.id}
+      getItemId={getTaskId}
+      getItemRange={getTaskRange}
+      getItemCapabilities={({ data: task }) => (
+        getTaskCalendarCapabilities(task, canWrite && task.writable, actions.isTaskPending(task.id))
+      )}
+      renderRow={({ row }) => <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>}
+      selectedRowId={selectedResourceId}
+      onRowSelect={row => onResourceSelect(row.id)}
+      buildItem={({ data: task }) => {
         const actionsAvailable = canWrite && task.writable && !actions.isTaskPending(task.id);
         return <TaskItem
           task={task}
           selected={task.id === selectedTaskId}
-          onActivate={() => onTaskSelect(task)}
           onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setState(task, 'completed') : undefined}
           onCancel={actionsAvailable && canCancelTask(task) ? () => void actions.setState(task, 'cancelled') : undefined}
           onReopen={actionsAvailable && canReopenTask(task) ? () => void actions.setState(task, 'open') : undefined}
@@ -110,24 +110,25 @@ export default function TaskCalendar({
           onDelete={actionsAvailable && canDeleteTask(task) ? () => actions.requestDelete(task) : undefined}
         />;
       }}
-      onCellActivate={canWrite ? ({ resource, period }) => {
-        if (resource.writable) onAddTask({ startDate: period.key, dueDate: period.key, staffId: resource.id });
+      onItemActivate={({ data: task }) => onTaskSelect(task)}
+      onCellActivate={canWrite ? ({ row, period }) => {
+        if (row.writable) onAddTask({ startDate: period.key, dueDate: period.key, staffId: row.id });
       } : undefined}
-      onRangeResize={canWrite ? async ({ item: task, nextRange }) => {
+      onItemResize={canWrite ? async ({ item: task, nextRange }) => {
         const updatedTask = await actions.setTaskRange(task, nextRange, 'resize');
         if (updatedTask) onTaskSelect(updatedTask);
       } : undefined}
-      canRangeMove={({ item: task, resource, destinationResource }) => task.writable
+      canItemMove={({ item: task, row, destinationRow }) => task.writable
         && !actions.isTaskPending(task.id)
-        && destinationResource.writable
-        && (resource.id === destinationResource.id || canReassignTask(task))}
-      onRangeMove={canWrite ? async ({ item: task, nextRange, destinationResource }) => {
-        const updatedTask = await actions.setTaskRange(task, nextRange, 'move', destinationResource.id);
+        && destinationRow.writable
+        && (row.id === destinationRow.id || canReassignTask(task))}
+      onItemMove={canWrite ? async ({ item: task, nextRange, destinationRow }) => {
+        const updatedTask = await actions.setTaskRange(task, nextRange, 'move', destinationRow.id);
         if (updatedTask) onTaskSelect(updatedTask);
       } : undefined}
       ariaLabel="Task calendar"
       positionStorageKey={TASK_CALENDAR_POSITION_KEY}
-      resourceHeader="Staff"
+      rowHeader="Staff"
       rowHeight={112}
     />
   </>;

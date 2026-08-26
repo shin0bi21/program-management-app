@@ -21,7 +21,7 @@ const EXTERNAL_LIFECYCLES = new Set([
   'setInterval',
   'setTimeout',
 ]);
-const ROUTE_SURFACES = new Set(['ResourceCalendar', 'Table']);
+const ROUTE_SURFACES = new Set(['TimelineCalendar', 'Table']);
 // A reviewed exception must name its category and explain why it remains inline.
 const SUPPRESSION_PATTERN = /^[ \t]*\/\/[ \t]*pattern-review-ignore[ \t]+([a-z-]+)[ \t]*:[ \t]*(\S.*)$/gm;
 

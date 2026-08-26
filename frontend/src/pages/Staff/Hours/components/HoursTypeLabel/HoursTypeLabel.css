@@ -6,8 +6,8 @@
   font-weight: 700;
 }
 
-.resource-calendar__item-slot--compact .hours-item__type,
-.resource-calendar__item-slot--dense .hours-item__type {
+.timeline-calendar .positioned-item.compact .hours-item__type,
+.timeline-calendar .positioned-item.dense .hours-item__type {
   padding: 1px 3px;
   font-size: inherit;
 }

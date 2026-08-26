@@ -3,21 +3,21 @@ import type { MutableRefObject } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildInitialDayPeriods } from '../../../../../common/components/ResourceCalendar/periods/periods';
-import type { ResourceCalendarProps } from '../../../../../common/components/ResourceCalendar/types';
+import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
+import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import { getTasksCalendarData } from '../../tasks.api';
 import type { Task, TaskResource } from '../../types';
 import { makeTask } from '../../../../../tests/factories/task';
 import type { TaskCalendarCache } from '../../types';
 import TaskCalendar, { type TaskCalendarActions } from './TaskCalendar';
 
-type CalendarProps = ResourceCalendarProps<TaskResource, Task>;
+type CalendarProps = TimelineCalendarProps<TaskResource, Task>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
-vi.mock('../../../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
+vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   default: (props: CalendarProps) => {
     calendarState.props = props;
-    return <div aria-label="Task calendar">{props.resources.map(resource => <span key={resource.id}>{resource.name}</span>)}</div>;
+    return <div aria-label="Task calendar">{props.rows.map(resource => <span key={resource.id}>{resource.name}</span>)}</div>;
   },
 }));
 vi.mock('../../tasks.api', () => ({ getTasksCalendarData: vi.fn() }));
@@ -89,24 +89,24 @@ describe('TaskCalendar', () => {
       { search: '', staffIds: ['staff-1'], programIds: [], categories: [], statuses: [] },
       { start: expect.any(String), end: expect.any(String) },
     ));
-    await waitFor(() => expect(calendarState.props?.rangeData?.['staff-1']).toEqual([task]));
-    expect(calendarState.props?.resources).toEqual([resource]);
+    await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([task]));
+    expect(calendarState.props?.rows).toEqual([resource]);
     expect(calendarState.props?.positionStorageKey).toBe('resource-calendar:tasks:position');
     expect(calendarState.props?.rowHeight).toBe(112);
   });
 
   it('emits narrow resize and cross-resource move commands with selection changes', async () => {
     const rendered = renderCalendar();
-    await act(async () => calendarState.props?.onRangeResize?.({
-      resource,
+    await act(async () => calendarState.props?.onItemResize?.({
+      row: resource,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
       nextRange: { start: '2026-08-11', end: '2026-08-13' },
       edge: 'end',
     }));
-    await act(async () => calendarState.props?.onRangeMove?.({
-      resource,
-      destinationResource: coworker,
+    await act(async () => calendarState.props?.onItemMove?.({
+      row: resource,
+      destinationRow: coworker,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
       nextRange: { start: '2026-08-12', end: '2026-08-14' },
@@ -128,13 +128,25 @@ describe('TaskCalendar', () => {
     expect(rendered.onResourceSelect).not.toHaveBeenCalled();
   });
 
+  it('routes item activation through the shared calendar contract', () => {
+    const rendered = renderCalendar();
+
+    calendarState.props?.onItemActivate?.({
+      row: resource,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+    });
+
+    expect(rendered.onTaskSelect).toHaveBeenCalledWith(task);
+  });
+
   it('keeps the current selection when a range mutation fails', async () => {
     const rendered = renderCalendar();
     vi.mocked(rendered.actions.setTaskRange).mockResolvedValueOnce(null);
 
-    await act(async () => calendarState.props?.onRangeMove?.({
-      resource,
-      destinationResource: coworker,
+    await act(async () => calendarState.props?.onItemMove?.({
+      row: resource,
+      destinationRow: coworker,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
       nextRange: { start: '2026-08-12', end: '2026-08-14' },
@@ -147,8 +159,8 @@ describe('TaskCalendar', () => {
   it('builds lifecycle actions from task state and write capability', async () => {
     const rendered = renderCalendar({ selectedTaskId: 'task-1' });
     const openTask = { ...task, state: 'open' as const, hoursLogged: 1 };
-    const element = calendarState.props?.buildRangeItem?.({
-      resource,
+    const element = calendarState.props?.buildItem({
+      row: resource,
       data: openTask,
       range: { start: openTask.startDate, end: openTask.dueDate },
       visibleStart: { key: openTask.startDate, start: new Date(), end: new Date() },
@@ -165,36 +177,42 @@ describe('TaskCalendar', () => {
   });
 
   it('limits date changes and reassignment by task lifecycle', () => {
-    renderCalendar();
+    const rendered = renderCalendar();
     const range = { start: task.startDate, end: task.dueDate };
     const openTaskWithHours = { ...task, state: 'open' as const, hoursLogged: 1 };
     const completed = { ...task, state: 'completed' as const, status: 'completed' as const, hoursLogged: 1 };
 
-    expect(calendarState.props?.getItemCapabilities?.({ resource, data: task, range })).toEqual({
+    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: task, range })).toEqual({
       draggable: true,
       resizable: true,
     });
-    expect(calendarState.props?.getItemCapabilities?.({ resource, data: completed, range })).toEqual({
+    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: completed, range })).toEqual({
       draggable: false,
       resizable: false,
     });
-    expect(calendarState.props?.canRangeMove?.({
-      resource,
-      destinationResource: resource,
+    vi.mocked(rendered.actions.isTaskPending).mockReturnValue(true);
+    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: task, range })).toEqual({
+      draggable: false,
+      resizable: true,
+    });
+    vi.mocked(rendered.actions.isTaskPending).mockReturnValue(false);
+    expect(calendarState.props?.canItemMove?.({
+      row: resource,
+      destinationRow: resource,
       item: openTaskWithHours,
       originalRange: range,
       nextRange: range,
     })).toBe(true);
-    expect(calendarState.props?.canRangeMove?.({
-      resource,
-      destinationResource: coworker,
+    expect(calendarState.props?.canItemMove?.({
+      row: resource,
+      destinationRow: coworker,
       item: openTaskWithHours,
       originalRange: range,
       nextRange: range,
     })).toBe(false);
-    expect(calendarState.props?.canRangeMove?.({
-      resource,
-      destinationResource: coworker,
+    expect(calendarState.props?.canItemMove?.({
+      row: resource,
+      destinationRow: coworker,
       item: task,
       originalRange: range,
       nextRange: range,
@@ -204,7 +222,7 @@ describe('TaskCalendar', () => {
   it('opens a row-scoped add target only for writable resources', () => {
     const rendered = renderCalendar();
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
-    calendarState.props?.onCellActivate?.({ resource, resourceIndex: 0, period: periods[1], items: [] });
+    calendarState.props?.onCellActivate?.({ row: resource, rowIndex: 0, period: periods[1], items: [] });
     expect(rendered.onAddTask).toHaveBeenCalledWith({
       startDate: periods[1].key, dueDate: periods[1].key, staffId: 'staff-1',
     });
@@ -214,8 +232,8 @@ describe('TaskCalendar', () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
     renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
-    expect(calendarState.props?.onRangeResize).toBeUndefined();
-    expect(calendarState.props?.onRangeMove).toBeUndefined();
+    expect(calendarState.props?.onItemResize).toBeUndefined();
+    expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));

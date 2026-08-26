@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
+import type { RowPeriodData } from '../../../../../../common/components/TimelineCalendar/types';
 import type { HoursItem } from '../../../types';
 import type { HoursEntryType } from '../../../types';
 import { getHoursEntryType } from '../../../utils/hoursEntryType';
@@ -63,7 +63,7 @@ function filterPeriods(
 }
 
 export function useHoursCalendarData(
-  data: ResourcePeriodData<HoursItem>,
+  data: RowPeriodData<HoursItem>,
   categoryFilters: readonly string[],
   programFilters: readonly string[],
   typeFilters: readonly HoursEntryType[],
@@ -73,7 +73,7 @@ export function useHoursCalendarData(
   const filterKey = buildFilterKey(categoryFilters, programFilters, typeFilters, cycleId);
   const hasFilters = categoryFilters.length > 0 || programFilters.length > 0 || typeFilters.length > 0 || Boolean(cycleId);
 
-  return useMemo<ResourcePeriodData<HoursItem>>(() => {
+  return useMemo<RowPeriodData<HoursItem>>(() => {
     if (!hasFilters) return data;
 
     const previousResources = cacheRef.current.filterKey === filterKey

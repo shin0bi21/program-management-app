@@ -434,23 +434,23 @@ export function checkPaginatedTables(violations, file, source) {
   }
 }
 
-export function checkResourceCalendars(violations, file, source) {
-  const resourceCalendarPage = file.startsWith('frontend/src/pages/')
+export function checkTimelineCalendars(violations, file, source) {
+  const timelineCalendarPage = file.startsWith('frontend/src/pages/')
     && file.endsWith('.tsx')
     && !/\.(?:test|spec|story)\.tsx$/.test(file)
-    && source.includes('<ResourceCalendar');
-  if (!resourceCalendarPage) return;
+    && source.includes('<TimelineCalendar');
+  if (!timelineCalendarPage) return;
 
-  if (!source.includes('usePeriodDataBuffer')) {
+  if (!source.includes('useDataBuffer')) {
     violations.push(
-      `${file}:1 resource-calendar pages must load visible ranges through usePeriodDataBuffer.`,
+      `${file}:1 timeline-calendar pages must load visible ranges through useDataBuffer.`,
     );
   }
 
   const calendarOwner = /\/components\/[^/]*Calendar\/[^/]*Calendar\.tsx$/.test(file);
   if (!calendarOwner) {
     violations.push(
-      `${file}:1 ResourceCalendar must be owned by a cohesive page-private *Calendar component.`,
+      `${file}:1 TimelineCalendar must be owned by a cohesive page-private *Calendar component.`,
     );
   }
 
@@ -465,7 +465,7 @@ export function checkResourceCalendars(violations, file, source) {
   );
   if (missing.length) {
     violations.push(
-      `${file}:1 buffered resource calendars must wire the complete period lifecycle; missing ${missing.join(', ')}.`,
+      `${file}:1 buffered timeline calendars must wire the complete period lifecycle; missing ${missing.join(', ')}.`,
     );
   }
 }

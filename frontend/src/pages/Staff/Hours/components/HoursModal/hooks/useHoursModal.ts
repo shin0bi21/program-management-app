@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { dayKey } from '../../../../../../common/components/ResourceCalendar/periods/periods';
+import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';

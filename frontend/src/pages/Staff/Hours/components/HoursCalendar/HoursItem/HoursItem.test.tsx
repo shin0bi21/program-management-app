@@ -45,7 +45,7 @@ describe('HoursItem', () => {
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
       'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
-    expect(screen.getByText('Hours').closest('div')).toHaveClass('calendar-item-details__section-start');
+    expect(screen.getByText('Hours').closest('div')).toHaveClass('section-start');
   });
 
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
@@ -86,7 +86,7 @@ describe('HoursItem', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
-    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('calendar-item--menu-open');
+    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('menu-open');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();

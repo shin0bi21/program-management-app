@@ -8,7 +8,7 @@ import {
   checkFrontendOwnership,
   checkPaginatedTables,
   checkPreferenceControlOwnership,
-  checkResourceCalendars,
+  checkTimelineCalendars,
   checkRoutePageShell,
   checkRoutePageStructure,
   checkTestOwnership,
@@ -39,7 +39,7 @@ export function runEnforcementChecks(
       checkRoutePageShell(violations, file, source, routePageDirectories);
       checkPaginatedTables(violations, file, source);
       checkPreferenceControlOwnership(violations, file, source);
-      if (file.endsWith('.tsx')) checkResourceCalendars(violations, file, source);
+      if (file.endsWith('.tsx')) checkTimelineCalendars(violations, file, source);
       checkCalendarDataHooks(violations, file);
     }
   }

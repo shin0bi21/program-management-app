@@ -45,7 +45,7 @@ describe('TaskItem', () => {
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
       'Program', 'Category', 'Start', 'End', 'Logged', 'Notes',
     ]);
-    expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('calendar-item-details__section-start');
+    expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('section-start');
   });
 
   it('shows a dash when the task has no program', async () => {
@@ -56,15 +56,15 @@ describe('TaskItem', () => {
     expect(tooltip).not.toHaveTextContent('General');
   });
 
-  it('opens the floating action menu before invoking edit or delete', () => {
-    const onActivate = vi.fn();
+  it('opens the floating action menu while preserving calendar-wrapper activation', () => {
+    const onItemActivate = vi.fn();
     const onComplete = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
-    render(<div onClick={onActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
+    render(<div onClick={onItemActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, Active, 2026-08-10 to 2026-08-12. Open actions' }));
-    expect(onActivate).not.toHaveBeenCalled();
+    expect(onItemActivate).toHaveBeenCalledOnce();
     expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
@@ -84,22 +84,13 @@ describe('TaskItem', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('notifies the page when the task item is activated', () => {
-    const onActivate = vi.fn();
-    render(<TaskItem task={task} onActivate={onActivate} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop/ }));
-
-    expect(onActivate).toHaveBeenCalledOnce();
-  });
-
   it('keeps selected task styling independent of the transient action menu', () => {
     render(<TaskItem task={task} selected onComplete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
-    expect(item).toHaveClass('calendar-item--selected');
+    expect(item).toHaveClass('selected');
     fireEvent.click(item);
-    expect(item).toHaveClass('calendar-item--selected', 'calendar-item--menu-open');
+    expect(item).toHaveClass('selected', 'menu-open');
   });
 
   it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {
@@ -107,7 +98,7 @@ describe('TaskItem', () => {
 
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass('task-item--overdue');
-    expect(item.querySelector('.calendar-item__trailing')).toBeNull();
+    expect(item.querySelector('.trailing')).toBeNull();
 
     const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
@@ -128,7 +119,7 @@ describe('TaskItem', () => {
 
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass('task-item--completed');
-    expect(item.querySelector('.calendar-item__trailing')).toBeNull();
+    expect(item.querySelector('.trailing')).toBeNull();
     const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Completed');
     expect(tooltip).not.toHaveTextContent('Overdue');
