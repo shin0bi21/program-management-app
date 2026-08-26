@@ -25,6 +25,7 @@ Every frontend feature and component follows the colocated [frontend feature bre
 - A utility owns pure transforms, constants, date arithmetic, or external-library adaptation.
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
+- Give a styled component one root class and use short semantic descendant classes scoped through it, such as `.timeline-calendar > .header` and `.timeline-calendar .body .row`. Do not repeat the root name on every descendant. A surface rendered through a portal needs its own root class because it is outside the component DOM subtree.
 
 ```tsx
 function FeatureName(props: FeatureNameProps) {

@@ -3,14 +3,14 @@ import type { MutableRefObject } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import HoursCalendar from './HoursCalendar';
+import HoursCalendar, { type HoursCalendarItem } from './HoursCalendar';
 
-import { buildInitialDayPeriods } from '../../../../../common/components/ResourceCalendar/periods/periods';
+import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type {
   CalendarPeriod,
-  ResourceCalendarProps,
-  ResourcePeriodData,
-} from '../../../../../common/components/ResourceCalendar/types';
+  TimelineCalendarProps,
+  RowPeriodData,
+} from '../../../../../common/components/TimelineCalendar/types';
 import {
   getHoursCalendarData,
 } from '../../hours.api';
@@ -35,16 +35,16 @@ const coworker: StaffResource = {
   writable: false,
 };
 
-type CalendarProps = ResourceCalendarProps<StaffResource, HoursItem>;
+type CalendarProps = TimelineCalendarProps<StaffResource, HoursCalendarItem>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
-vi.mock('../../../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
+vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   default: (props: CalendarProps) => {
     calendarState.props = props;
     return (
       <div aria-label="Staff hours calendar">
-        {props.resources.map((item, index) => (
-          <div key={item.id}>{props.renderResource({ resource: item, index })}</div>
+        {props.rows.map((item, index) => (
+          <div key={item.id}>{props.renderRow({ row: item, index })}</div>
         ))}
       </div>
     );
@@ -79,7 +79,7 @@ function renderCalendar({
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
 }: {
-  data?: ResourcePeriodData<HoursItem>;
+  data?: RowPeriodData<HoursItem>;
   resources?: StaffResource[];
   staffIds?: string[];
   canWrite?: boolean;
@@ -143,17 +143,24 @@ describe('HoursCalendar', () => {
     const regularItem = buildItem();
     const sessionItem = buildItem({ sessionId: 'session-1', sessionLabel: 'Confidence' });
 
-    expect(props.resources).toEqual([resource]);
+    expect(props.rows).toEqual([resource]);
     expect(props.rowHeight).toBe(112);
-    expect(props.maxVisibleItemsPerCell).toBe(7);
     expect(props.positionStorageKey).toBe('resource-calendar:hours:position');
-    expect(props.selectedResourceId).toBe('staff-1');
-    expect(props.getItemCapabilities?.({ resource, period: periods[1], data: regularItem })).toEqual({ draggable: true });
-    expect(props.getItemCapabilities?.({ resource, period: periods[1], data: sessionItem })).toEqual({ draggable: false });
+    expect(props.selectedRowId).toBe('staff-1');
+    expect(props.getItemCapabilities?.({
+      row: resource,
+      data: { date: periods[1].key, item: regularItem },
+      range: { start: periods[1].key, end: periods[1].key },
+    })).toEqual({ draggable: true });
+    expect(props.getItemCapabilities?.({
+      row: resource,
+      data: { date: periods[1].key, item: sessionItem },
+      range: { start: periods[1].key, end: periods[1].key },
+    })).toEqual({ draggable: false });
 
     const actions = props.getCellActions?.({
-      resource,
-      resourceIndex: 0,
+      row: resource,
+      rowIndex: 0,
       period: periods[1],
       items: [],
     });
@@ -177,26 +184,9 @@ describe('HoursCalendar', () => {
       start: expect.any(String),
       end: expect.any(String),
     });
-    await waitFor(() => expect(calendarState.props?.data['staff-1'][periods[1].key]).toEqual([item]));
-  });
-
-  it('closes overflow before emitting an edit target', async () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
-    const item = buildItem();
-    const close = vi.fn();
-    const onEdit = vi.fn();
-    renderCalendar({ onEdit });
-    const overflowItem = calendarState.props?.buildOverflowItem?.(
-      { resource, period: periods[1], data: item },
-      { close },
-    );
-    render(<>{overflowItem}</>);
-
-    fireEvent.click(screen.getByRole('button', { name: /Program Delivery, 2 hours/ }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
-
-    expect(close).toHaveBeenCalledOnce();
-    expect(onEdit).toHaveBeenCalledWith({ resourceId: 'staff-1', date: periods[1].key, item });
+    await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([
+      { date: periods[1].key, item },
+    ]));
   });
 
   it('translates a calendar drop into the page-owned move action', async () => {
@@ -209,10 +199,12 @@ describe('HoursCalendar', () => {
     });
     await initializeCalendar(periods);
 
-    await act(async () => calendarState.props?.onItemDrop?.({
-      item,
-      source: { resource, period: periods[1] },
-      destination: { resource, period: periods[2] },
+    await act(async () => calendarState.props?.onItemMove?.({
+      row: resource,
+      destinationRow: resource,
+      item: { date: periods[1].key, item },
+      originalRange: { start: periods[1].key, end: periods[1].key },
+      nextRange: { start: periods[2].key, end: periods[2].key },
     }));
 
     expect(rendered.onMove).toHaveBeenCalledWith({
@@ -227,10 +219,19 @@ describe('HoursCalendar', () => {
     const props = calendarState.props!;
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
 
-    expect(props.onItemDrop).toBeUndefined();
+    expect(props.onItemMove).toBeUndefined();
     expect(props.getCellActions).toBeUndefined();
-    expect(props.getItemCapabilities?.({ resource, period: periods[1], data: buildItem() })).toEqual({ draggable: false });
-    const item = props.buildItem({ resource, period: periods[1], data: buildItem() });
+    const entry = buildItem();
+    const data = { date: periods[1].key, item: entry };
+    const range = { start: periods[1].key, end: periods[1].key };
+    expect(props.getItemCapabilities?.({ row: resource, data, range })).toEqual({ draggable: false });
+    const item = props.buildItem({
+      row: resource,
+      data,
+      range,
+      visibleStart: periods[1],
+      visibleEnd: periods[1],
+    });
     render(<>{item}</>);
     fireEvent.click(screen.getByRole('button', { name: /Program Delivery, 2 hours/ }));
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();

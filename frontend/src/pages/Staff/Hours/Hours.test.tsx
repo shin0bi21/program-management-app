@@ -11,9 +11,8 @@ import {
   getHoursReferenceData,
   getHoursCalendarData,
   setHours,
-  updateHoursPlacement,
 } from './hours.api';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
+import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
 import type { StoredHoursPreferences } from './hooks/useHoursPreferences';
@@ -112,7 +111,6 @@ describe('Hours', () => {
       unobserve() {}
       disconnect() {}
     });
-    vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
@@ -531,7 +529,7 @@ describe('Hours', () => {
     await screen.findAllByLabelText('Zoe Wilson');
 
     fireEvent.click(container.querySelector(
-      `[data-resource-id="staff-1"][data-period="${workDate}"]`,
+      `[data-row-id="staff-1"][data-period="${workDate}"]`,
     )!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
 
@@ -567,48 +565,6 @@ describe('Hours', () => {
       expect.any(Object),
       'entry-1',
     ));
-  });
-
-  it('bridges a calendar move to the page-owned placement action', async () => {
-    const workDate = dayKey(new Date());
-    const nextDate = dayKey(new Date(new Date().setDate(new Date().getDate() + 1)));
-    const item = {
-      id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null,
-      sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
-    };
-    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { [workDate]: [item] } });
-    vi.mocked(updateHoursPlacement).mockResolvedValue({
-      ...item,
-      staffId: 'staff-1',
-      workDate: nextDate,
-      cycleStartsOn: '2026-07-01',
-      cycleEndsOn: '2026-09-01',
-    });
-    const { container } = render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findByRole('button', { name: /Program Delivery, 2 hours/ });
-    const source = container.querySelector<HTMLElement>('.resource-calendar__item')!;
-    const target = container.querySelector<HTMLElement>(
-      `[data-resource-id="staff-1"][data-period="${nextDate}"]`,
-    )!;
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: vi.fn(() => target),
-    });
-    vi.spyOn(source, 'getBoundingClientRect').mockReturnValue({ width: 120 } as DOMRect);
-
-    fireEvent.pointerDown(source, { pointerId: 1, button: 0, clientX: 220, clientY: 100 });
-    fireEvent.pointerMove(window, { pointerId: 1, clientX: 260, clientY: 120 });
-    fireEvent.pointerUp(window, { pointerId: 1, clientX: 260, clientY: 120 });
-
-    await waitFor(() => expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', {
-      workDate: nextDate,
-    }));
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {

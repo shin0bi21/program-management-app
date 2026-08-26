@@ -13,8 +13,8 @@ import {
   updateTaskState,
 } from './tasks.api';
 import { setHours } from '../Hours/hours.api';
-import type { ResourceCalendarProps } from '../../../common/components/ResourceCalendar/types';
-import { buildInitialDayPeriods } from '../../../common/components/ResourceCalendar/periods/periods';
+import type { TimelineCalendarProps } from '../../../common/components/TimelineCalendar/types';
+import { buildInitialDayPeriods } from '../../../common/components/TimelineCalendar/utils/periods';
 import type { Task, TaskResource } from './types';
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
@@ -23,7 +23,7 @@ import Tasks from './Tasks';
 
 const HOURS_QUERY_KEY = ['hours'] as const;
 
-type TaskCalendarProps = ResourceCalendarProps<TaskResource, Task>;
+type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
   view: 'table' as 'table' | 'calendar',
   props: null as TaskCalendarProps | null,
@@ -78,11 +78,11 @@ vi.mock('../../../common/features/preferences/hooks/useUserPreference', async ()
 
   return { default: useMockUserPreference };
 });
-vi.mock('../../../common/components/ResourceCalendar/ResourceCalendar', () => ({
+vi.mock('../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   default: (props: TaskCalendarProps) => {
     calendarTestState.props = props;
     return <div aria-label="Task calendar">
-      {props.resources.map((resource, index) => <div key={resource.id}>{props.renderResource({ resource, index })}</div>)}
+      {props.rows.map((row, index) => <div key={row.id}>{props.renderRow({ row, index })}</div>)}
     </div>;
   },
 }));
@@ -263,7 +263,7 @@ describe('Tasks', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
-    await waitFor(() => expect(calendarTestState.props?.resources).toEqual([coworker]));
+    await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
   });
 
   it('applies task search only on submit and clears the backend filter explicitly', async () => {
@@ -356,11 +356,11 @@ describe('Tasks', () => {
       expect.objectContaining({ search: 'missing' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
     ));
-    await waitFor(() => expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]));
+    await waitFor(() => expect(calendarTestState.props?.items['staff-1']).toEqual([task]));
     expect(screen.getByRole('textbox', { name: 'Search tasks' })).toHaveValue('missing');
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
-    expect(calendarTestState.props?.rangeData?.['staff-1']).toEqual([task]);
+    expect(calendarTestState.props?.items['staff-1']).toEqual([task]);
   });
 
   it('reloads the calendar range when applied search changes', async () => {
@@ -439,7 +439,7 @@ describe('Tasks', () => {
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
-  it('clears the selected task when a calendar resource is selected', async () => {
+  it('clears the selected task when a calendar row is selected', async () => {
     calendarTestState.view = 'calendar';
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
@@ -447,19 +447,26 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     const start = new Date('2026-08-10T12:00:00');
     const end = new Date('2026-08-12T12:00:00');
-    const item = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+    const row: TaskResource = {
+      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
+    };
+    const item = calendarTestState.props!.buildItem({
+      row,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
       visibleStart: { key: task.startDate, start, end: start },
       visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { onActivate: () => void; selected?: boolean } };
+    }) as { props: { selected?: boolean } };
     expect(item.props.selected).toBe(false);
-    act(() => item.props.onActivate());
+    act(() => calendarTestState.props!.onItemActivate?.({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+    }));
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
 
-    const selectedItem = calendarTestState.props!.buildRangeItem!({
-      resource: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+    const selectedItem = calendarTestState.props!.buildItem({
+      row,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
       visibleStart: { key: task.startDate, start, end: start },
@@ -467,9 +474,7 @@ describe('Tasks', () => {
     }) as { props: { selected?: boolean } };
     expect(selectedItem.props.selected).toBe(true);
 
-    act(() => calendarTestState.props!.onResourceSelect?.({
-      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
-    }));
+    act(() => calendarTestState.props!.onRowSelect?.(row));
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
   });
 

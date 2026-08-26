@@ -1,6 +1,6 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import type { ResourcePeriodData } from '../../../common/components/ResourceCalendar/types';
+import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
 import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
 import type {
   HoursCategory,
@@ -19,7 +19,7 @@ export type SetHoursInput = SharedHoursInput & ({
   | { source: 'session'; sessionId: string });
 export interface UpdateHoursPlacementInput { workDate: string }
 
-export type HoursCalendarData = ResourcePeriodData<HoursItem>;
+export type HoursCalendarData = RowPeriodData<HoursItem>;
 
 export interface HoursSession {
   id: string;
