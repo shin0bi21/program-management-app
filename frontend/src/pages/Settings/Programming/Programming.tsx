@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import { DashboardCard, DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
@@ -31,7 +31,6 @@ export default function Programming() {
   const [programTarget, setProgramTarget] = useState<ProgramModalTarget>(undefined);
   const [cycleTarget, setCycleTarget] = useState<CycleModalTarget>(undefined);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const programSelection = useTableSelection(programs);
   const cycleSelection = useTableSelection(cycles);
 
@@ -127,17 +126,10 @@ export default function Programming() {
         onClose={() => setCycleTarget(undefined)}
         onSaved={refreshCycles}
       />
-      <Modal
-        isOpen={confirmAction !== null}
+      <ConfirmModal
+        action={confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
+      />
     </main>
   );
 }

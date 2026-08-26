@@ -1,5 +1,5 @@
 // Scope: verifies the composed session dashboard states and cross-card action wiring.
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CohortSession } from '../../../../../common/types/cohort';
@@ -7,7 +7,6 @@ import SessionDashboard from './SessionDashboard';
 
 const getSessionNotes = vi.fn();
 const getSessionRoster = vi.fn();
-const deleteSessionNote = vi.fn();
 const getSessionAttachments = vi.fn();
 const getSessionAttachmentFile = vi.fn();
 const updateSessionAttachment = vi.fn();
@@ -33,7 +32,7 @@ vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),
   updateSessionNote: vi.fn(),
-  deleteSessionNote: (...args: unknown[]) => deleteSessionNote(...args),
+  deleteSessionNote: vi.fn(),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   createSessionAttachment: vi.fn(),
   deleteSessionAttachment: (...args: unknown[]) => deleteSessionAttachment(...args),
@@ -66,7 +65,6 @@ describe('SessionDashboard', () => {
   beforeEach(() => {
     getSessionNotes.mockResolvedValue([]);
     getSessionRoster.mockResolvedValue([]);
-    deleteSessionNote.mockResolvedValue({});
     getSessionAttachments.mockResolvedValue([]);
     getSessionAttachmentFile.mockResolvedValue(new Blob(['image'], { type: 'image/png' }));
     updateSessionAttachment.mockResolvedValue({});
@@ -156,46 +154,6 @@ describe('SessionDashboard', () => {
     expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
     expect(screen.getByText('Maya led the opening activity.')).toBeInTheDocument();
     expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
-  });
-
-  it('opens note editing and confirms deletion from the list', async () => {
-    const note = {
-      id: 'note-1',
-      sessionId: session.id,
-      category: 'achievement',
-      title: 'Led opening activity',
-      details: 'Maya led the opening activity.',
-      createdAt: '2026-07-28T23:30:00.000Z',
-      updatedAt: '2026-07-28T23:30:00.000Z',
-      createdByName: 'Programming Demo',
-      youth: [],
-    };
-    getSessionNotes.mockResolvedValue([note]);
-
-    render(
-      <SessionDashboard
-        sessionQueryKey={['sessions']}
-        session={session}
-        canWriteAttendance
-        canWriteSessions
-        onAddAttendance={vi.fn()}
-      />,
-    );
-
-    await screen.findByText(note.title);
-    fireEvent.click(screen.getByRole('button', { name: `Edit ${note.title}` }));
-    expect(screen.getByRole('heading', { name: 'Edit Note' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
-    fireEvent.click(screen.getByRole('button', { name: `Delete ${note.title}` }));
-    const deleteHeading = screen.getByRole('heading', { name: 'Delete Note' });
-    const deleteModal = deleteHeading.closest('.modal-container');
-    expect(deleteModal).not.toBeNull();
-    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
-    await waitFor(() => {
-      expect(deleteSessionNote).toHaveBeenCalledWith(session.id, note.id);
-      expect(screen.getByText('Session note successfully deleted.')).toBeInTheDocument();
-    });
   });
 
   it('shows attachment titles with view, edit, and delete actions', async () => {

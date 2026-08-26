@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConfirmAction } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
+import type { ConfirmAction } from '../../../../../../common/components/ConfirmModal/types';
 import { deleteLeadNote, getLeadNotes } from '../../../leads.api';
 import type { Lead, LeadNote } from '../../../types';
 

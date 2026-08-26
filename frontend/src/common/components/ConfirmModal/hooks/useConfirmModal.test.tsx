@@ -2,7 +2,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type ConfirmAction, useConfirmModal } from './useConfirmModal';
+import type { ConfirmAction } from '../types';
+import { useConfirmModal } from './useConfirmModal';
 
 function deferred() {
   let resolve!: () => void;
@@ -26,6 +27,7 @@ function ConfirmHarness({
   return <>
     <span data-testid="status">{confirmation.status}</span>
     <span data-testid="message">{confirmation.statusMessage}</span>
+    <span data-testid="success-delay">{confirmation.successDelay}</span>
     {confirmation.footer}
   </>;
 }
@@ -64,5 +66,25 @@ describe('useConfirmModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('exposes success feedback for the modal-owned delayed close', async () => {
+    const onClose = vi.fn();
+    render(<ConfirmHarness
+      action={{
+        title: 'Delete',
+        message: 'Delete?',
+        successMessage: 'Deleted successfully',
+        onConfirm: vi.fn().mockResolvedValue(undefined),
+      }}
+      onClose={onClose}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('success'));
+    expect(screen.getByTestId('message')).toHaveTextContent('Deleted successfully');
+    expect(screen.getByTestId('success-delay')).toHaveTextContent('1200');
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

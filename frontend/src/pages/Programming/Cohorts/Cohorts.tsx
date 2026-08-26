@@ -5,10 +5,10 @@ import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -69,7 +69,6 @@ export default function Cohorts() {
   const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
   const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
   const refreshCycles = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -253,17 +252,10 @@ export default function Cohorts() {
             onUpdated={refreshCohorts}
           />
 
-          <Modal
-            isOpen={confirmAction !== null}
+          <ConfirmModal
+            action={confirmAction}
             onClose={() => setConfirmAction(null)}
-            title={confirmAction?.title ?? ''}
-            status={confirmModal.status}
-            statusMessage={confirmModal.statusMessage}
-            footer={confirmModal.footer}
-            successDelay={confirmModal.successDelay}
-          >
-            {confirmAction && <p>{confirmAction.message}</p>}
-          </Modal>
+          />
 
           <GenerateSessionsModal
             cohort={generationTarget}

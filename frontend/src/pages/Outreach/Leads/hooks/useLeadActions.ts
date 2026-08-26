@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
+import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import { COHORT_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';

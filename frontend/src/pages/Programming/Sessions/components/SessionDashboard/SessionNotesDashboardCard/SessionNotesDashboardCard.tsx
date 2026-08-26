@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../../../../../../common/components/Button/Button';
+import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../../../../common/components/ConfirmModal/types';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
 import SessionNoteDetails from '../../../../../../common/features/notes/components/SessionNoteDetails/SessionNoteDetails';
 import SessionNoteModal from '../../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
 import SessionNoteRow from '../../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
@@ -28,7 +29,6 @@ export default function SessionNotesDashboardCard({
     queryFn: ({ signal }) => getSessionNotes(session!.id, { signal }),
     enabled: session !== null,
   });
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
   const loadNotes = async () => { await query.refetch(); };
   useEffect(() => {
     setNoteTarget(null); setEditNote(null); setDetailNote(null); setConfirmAction(null);
@@ -59,8 +59,6 @@ export default function SessionNotesDashboardCard({
     <Modal isOpen={detailNote !== null} onClose={() => setDetailNote(null)} title={detailNote?.title ?? ''} footer={<Button variant="secondary" onClick={() => setDetailNote(null)}>Close</Button>}>
       {detailNote && <SessionNoteDetails note={detailNote} />}
     </Modal>
-    <Modal isOpen={confirmAction !== null} onClose={() => setConfirmAction(null)} title={confirmAction?.title ?? ''} footer={confirmModal.footer} status={confirmModal.status} statusMessage={confirmModal.statusMessage} successDelay={confirmModal.successDelay}>
-      <p>{confirmAction?.message}</p>
-    </Modal>
+    <ConfirmModal action={confirmAction} onClose={() => setConfirmAction(null)} />
   </>;
 }

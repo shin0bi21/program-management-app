@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -15,7 +15,6 @@ import HoursTable from './components/HoursTable/HoursTable';
 
 import { useAuth } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
-import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
 import useHoursTable from './components/HoursTable/hooks/useHoursTable';
 import useHoursActions from './hooks/useHoursActions';
 import useHoursData from './hooks/useHoursData';
@@ -133,11 +132,6 @@ export default function Hours() {
     isEntryPending: actions.isEntryPending,
     onEdit: openEditHoursModal,
     onDelete: actions.requestDelete,
-  });
-
-  const confirmModal = useConfirmModal({
-    action: actions.confirmAction,
-    onClose: actions.closeConfirmation,
   });
 
   // View configuration.
@@ -289,16 +283,9 @@ export default function Hours() {
       initialItem={hoursModalState?.mode === 'edit' ? hoursModalState.target.item : undefined}
     />
 
-    <Modal
-      isOpen={actions.confirmAction !== null}
+    <ConfirmModal
+      action={actions.confirmAction}
       onClose={actions.closeConfirmation}
-      title={actions.confirmAction?.title ?? ''}
-      status={confirmModal.status}
-      statusMessage={confirmModal.statusMessage}
-      footer={confirmModal.footer}
-      successDelay={confirmModal.successDelay}
-    >
-      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
-    </Modal>
+    />
   </>;
 }
