@@ -47,12 +47,32 @@
   border-radius: 5px;
 }
 
+.search-input .search-input__apply,
 .search-input .search-input__clear {
   min-width: 1.625rem;
-  padding-inline: 0.5rem;
+  padding-inline: 0;
   border-color: transparent;
-  font-size: 1.1rem;
   line-height: 1;
+}
+
+.search-input .search-input__clear {
+  border-color: transparent;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input .search-input__clear:hover {
+  border-color: transparent;
+  background: transparent;
+  color: var(--brand-accent);
+}
+
+.search-input:hover .search-input__clear,
+.search-input:focus-within .search-input__clear {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .search-input input:focus {
