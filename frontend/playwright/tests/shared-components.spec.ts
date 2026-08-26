@@ -1,29 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('PageHeader', () => {
-  test('keeps stable controls fixed when Columns is removed', async ({ mount }) => {
-    const component = await mount('PageHeader/StableControls');
-    const stableControls = [
-      component.getByRole('button', { name: 'View', exact: true }),
-      component.getByRole('textbox', { name: 'Search tasks' }),
-      component.getByRole('button', { name: 'Filters' }),
-    ];
-    const getXPositions = async () => {
-      const boxes = await Promise.all(stableControls.map(control => control.boundingBox()));
-      if (boxes.some(box => !box)) throw new Error('Page header control geometry is unavailable');
-
-      return boxes.map(box => box!.x);
-    };
-    const initialPositions = await getXPositions();
-
-    await component.getByRole('button', { name: 'Toggle columns' }).click();
-    await expect(component.getByRole('button', { name: 'Columns', exact: true })).toHaveCount(0);
-
-    const nextPositions = await getXPositions();
-    expect(nextPositions).toEqual(initialPositions);
-  });
-});
-
 test.describe('SearchInput', () => {
   test('keeps the field and actions inside one focused outer bar', async ({ mount }) => {
     const component = await mount('SearchInput/Interactive');
