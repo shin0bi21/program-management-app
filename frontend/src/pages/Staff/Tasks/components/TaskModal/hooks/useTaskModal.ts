@@ -103,9 +103,8 @@ export default function useTaskModal({
         staffId: draft.staffId,
       };
 
-      const savedTask = target.mode === 'edit'
-        ? await setTask(input, target.task.id)
-        : await setTask(input);
+      const taskId = target.mode === 'edit' ? target.task.id : undefined;
+      const savedTask = await setTask(input, taskId);
 
       setSubmitStatus('success');
       onSaved(savedTask);
