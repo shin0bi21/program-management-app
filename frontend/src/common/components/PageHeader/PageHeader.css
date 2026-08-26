@@ -36,16 +36,11 @@
   flex-wrap: nowrap;
 }
 
-.page-header-controls,
-.page-header-view-controls,
-.page-header-data-controls {
+.page-header-controls {
   display: flex;
   align-items: flex-end;
   gap: 10px;
   min-width: 0;
-}
-
-.page-header-controls {
   margin-left: auto;
 }
 
@@ -89,9 +84,7 @@
     order: 1;
   }
 
-  .page-header-controls,
-  .page-header-view-controls,
-  .page-header-data-controls {
+  .page-header-controls {
     display: contents;
   }
 
