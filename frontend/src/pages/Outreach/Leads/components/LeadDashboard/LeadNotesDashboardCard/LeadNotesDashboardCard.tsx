@@ -1,7 +1,7 @@
 import Button from '../../../../../../common/components/Button/Button';
+import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import { useConfirmModal } from '../../../../../../common/components/Modal/hooks/useConfirmModal';
 import NoteDetails from '../../../../../../common/features/notes/components/NoteDetails/NoteDetails';
 import NoteRow from '../../../../../../common/features/notes/components/NoteRow/NoteRow';
 import type { Lead } from '../../../types';
@@ -11,8 +11,6 @@ import './LeadNotesDashboardCard.css';
 
 export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead | null; canWrite: boolean }) {
   const notes = useLeadNotes(lead);
-  const confirmModal = useConfirmModal({ action: notes.confirmAction, onClose: notes.closeConfirmation });
-
   return <>
     <DashboardCard
       title="Follow-up Notes"
@@ -64,16 +62,9 @@ export default function LeadNotesDashboardCard({ lead, canWrite }: { lead: Lead 
         details={notes.selectedNote.details}
       />}
     </Modal>
-    <Modal
-      isOpen={notes.confirmAction !== null}
+    <ConfirmModal
+      action={notes.confirmAction}
       onClose={notes.closeConfirmation}
-      title={notes.confirmAction?.title ?? ''}
-      status={confirmModal.status}
-      statusMessage={confirmModal.statusMessage}
-      footer={confirmModal.footer}
-      successDelay={confirmModal.successDelay}
-    >
-      {notes.confirmAction && <p>{notes.confirmAction.message}</p>}
-    </Modal>
+    />
   </>;
 }

@@ -279,7 +279,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(await screen.findByText('Lead deleted')).toBeInTheDocument();
+    await waitFor(() => expect(deleteLead).toHaveBeenCalledWith('lead-1'));
     await waitFor(() => expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument());
   });
 
@@ -300,7 +300,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    expect(await screen.findByText('Lead deleted')).toBeInTheDocument();
+    await waitFor(() => expect(deleteLead).toHaveBeenCalledWith('lead-2'));
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
   });
 

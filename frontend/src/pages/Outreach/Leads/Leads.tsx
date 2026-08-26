@@ -3,9 +3,8 @@ import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -64,7 +63,6 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     onLeadSynced: syncSelectedLead,
     onLeadRemoved: removeSelectedLead,
   });
-  const confirmModal = useConfirmModal({ action: actions.confirmAction, onClose: actions.closeConfirmation });
 
   // Mutations and cache reconciliation.
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
@@ -168,17 +166,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       onClose={() => setSignUpTarget(null)}
       onSuccess={actions.reconcileSignUp}
     />
-    <Modal
-      isOpen={actions.confirmAction !== null}
+    <ConfirmModal
+      action={actions.confirmAction}
       onClose={actions.closeConfirmation}
-      title={actions.confirmAction?.title ?? ''}
-      status={confirmModal.status}
-      statusMessage={confirmModal.statusMessage}
-      footer={confirmModal.footer}
-      successDelay={confirmModal.successDelay}
-    >
-      {actions.confirmAction && <p>{actions.confirmAction.message}</p>}
-    </Modal>
+    />
   </>;
 }
 

@@ -87,7 +87,6 @@ describe('SessionNotesDashboardCard', () => {
     fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(api.deleteSessionNote).toHaveBeenCalledWith(session.id, note.id));
-    expect(await screen.findByText('Session note successfully deleted.')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(note.title)).not.toBeInTheDocument());
   });
 });

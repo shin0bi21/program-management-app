@@ -4,9 +4,9 @@ import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumnDef } from '../../../common/components/Table/Table.types';
@@ -42,7 +42,6 @@ export default function Users() {
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
   const [youthInviteOpen, setYouthInviteOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
 
   // Mutations and confirmation workflows.
   const requestRevoke = useCallback((account: Account) => setConfirmAction({
@@ -213,17 +212,10 @@ export default function Users() {
         />
       )}
 
-      <Modal
-        isOpen={!!confirmAction}
+      <ConfirmModal
+        action={confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
+      />
     </>
   );
 }

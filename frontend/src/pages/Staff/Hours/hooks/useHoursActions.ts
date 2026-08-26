@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { ConfirmAction } from '../../../../common/components/Modal/hooks/useConfirmModal';
+import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import {
   deleteHours,
   setHours,

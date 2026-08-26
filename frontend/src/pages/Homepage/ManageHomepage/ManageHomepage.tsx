@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 
 import HomepageImageList from './components/HomepageImageList/HomepageImageList';
@@ -17,11 +17,6 @@ export default function ManageHomepage() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageTarget, setImageTarget] = useState<ManagedHomepageImage | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({
-    action: confirmAction,
-    onClose: () => setConfirmAction(null),
-  });
-
   const openAddImage = () => {
     setImageTarget(null);
     setImageModalOpen(true);
@@ -66,17 +61,10 @@ export default function ManageHomepage() {
         onSaved={homepage.refresh}
       />
 
-      <Modal
-        isOpen={confirmAction !== null}
+      <ConfirmModal
+        action={confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
+      />
     </>
   );
 }

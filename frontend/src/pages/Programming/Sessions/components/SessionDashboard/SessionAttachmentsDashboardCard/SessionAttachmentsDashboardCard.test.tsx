@@ -112,7 +112,6 @@ describe('SessionAttachmentsDashboardCard', () => {
       session.id,
       attachment.id,
     ));
-    expect(await screen.findByText('Attachment successfully deleted.')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText(attachment.title)).not.toBeInTheDocument());
   });
 });

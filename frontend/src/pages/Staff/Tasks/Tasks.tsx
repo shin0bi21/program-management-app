@@ -2,8 +2,9 @@ import { useCallback, useState } from 'react';
 
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -15,10 +16,6 @@ import TaskTable from './components/TaskTable/TaskTable';
 import TaskModal from './components/TaskModal/TaskModal';
 
 import { useAuth } from '../../../auth/authContext';
-import {
-  type ConfirmAction,
-  useConfirmModal,
-} from '../../../common/components/Modal/hooks/useConfirmModal';
 import useTaskTable from './components/TaskTable/hooks/useTaskTable';
 import useTaskActions from './hooks/useTaskActions';
 import useTaskData from './hooks/useTaskData';
@@ -102,11 +99,6 @@ export default function Tasks() {
       edit: openEditTaskModal,
       requestDelete: openDeleteConfirmation,
     },
-  });
-
-  const confirmationModal = useConfirmModal({
-    action: confirmationState,
-    onClose: closeConfirmation,
   });
 
   // View configuration.
@@ -264,17 +256,10 @@ export default function Tasks() {
       onClose={closeHoursModal}
     />}
 
-    <Modal
-      isOpen={confirmationState !== null}
+    <ConfirmModal
+      action={confirmationState}
       onClose={closeConfirmation}
-      title={confirmationState?.title ?? ''}
-      status={confirmationModal.status}
-      statusMessage={confirmationModal.statusMessage}
-      footer={confirmationModal.footer}
-      successDelay={confirmationModal.successDelay}
-    >
-      {confirmationState && <p>{confirmationState.message}</p>}
-    </Modal>
+    />
   </>;
 }
 
