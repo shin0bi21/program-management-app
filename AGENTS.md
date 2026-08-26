@@ -12,10 +12,12 @@
 
 - Use this file as the single automatic agent entry point.
 - Use `.agents/skills/develop-feature/` for application changes. Its `SKILL.md` routes work through the human-facing owner documentation.
-- Before deep review or shipping, use `.agents/skills/split-changes/` to make the top-level split decision. A cohesive diff may remain one concern; a mixed diff must produce a concern map that becomes the source of truth for review and shipping.
+- After implementation and before deep review or shipping, use `.agents/skills/map-changes/` to produce the top-level concern map. A cohesive diff produces a one-concern map; a mixed diff produces multiple independently reviewable and shippable concerns.
 - Use `.agents/skills/review-changes/` for repeatable concern-level change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
-- Use the workflow order `split decision → concern review and focused verification → concern commit/PR/merge to develop → separately authorized deployment`. Do not infer deployment permission from commit or merge approval.
-- Split mixed work logically in one concern map, but ship it serially. Complete one concern through merge, return to a clean `develop`, synchronize it with `origin/develop`, and only then create or prepare the next concern branch.
+- Use the workflow order `implementation → concern map → concern review and focused verification → explicitly authorized concern commit/PR/merge to develop → separately authorized deployment`. Do not infer shipping permission from implementation or review, and do not infer deployment permission from commit or merge approval.
+- Treat every arrow in that workflow as a handoff boundary. Stop after the current phase and report its deliverable unless the user's current request explicitly includes the next phase.
+- A request for "full implementation" authorizes implementation, concern mapping, review, fixes, and re-review. It does not authorize shipping or deployment; each still requires its own explicit request.
+- Map mixed work logically in one concern map, but ship it serially. Complete one concern through merge, return to a clean `develop`, synchronize it with `origin/develop`, and only then create or prepare the next concern branch.
 - Start application work at the routing overview in `README.md`.
 - Read `docs/frontend/README.md` before changing frontend ownership, component, hook, query, or test structure, then follow the narrowest focused guide under `docs/frontend/`.
 - Read `docs/backend/README.md` before changing backend behavior, then follow the narrowest focused guide under `docs/backend/` for middleware, authentication, authorization, services, policies, database, errors, testing, API, or integrations.
