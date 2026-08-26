@@ -13,6 +13,7 @@ Use focused local checks while implementing, required GitHub checks as the merge
 | Test ownership and commands | [Testing](testing.md) |
 | Continuous integration | [CI](ci.md) |
 | Debugging | [Debugging](debugging.md) |
-| Review and shipping | [Review and shipping](review-and-shipping.md) |
+| Review | [Review](review.md) |
+| Shipping to `develop` | [Shipping](shipping.md) |
 | Reports | [Reports](reports.md) |
 | Production deployment | [Deployment](deployment.md) |

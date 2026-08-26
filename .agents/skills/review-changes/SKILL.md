@@ -7,10 +7,12 @@ description: Review tracked and untracked repository changes for correctness, re
 
 Review the current working tree without creating issues, branches, commits, pull requests, merges, or remote changes. Keep review repeatable so findings can be fixed and reviewed again before shipping.
 
+Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) for test ownership, focused runner selection, and evidence reuse.
+
 ## 1. Establish scope
 
 1. Read repository instructions and the relevant owner documentation.
-2. Reuse the latest `split-changes` concern map when one exists. If the working tree is large or mixed and no map exists, run the split workflow before deep review.
+2. Reuse the latest `map-changes` concern map. If no map exists, run the mapping workflow before deep review, even when the result is a single concern.
 3. Inspect branch state and the complete tracked and untracked diff only to verify that the selected concern and map are current.
 4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
 5. Identify affected features, ownership layers, and execution paths.
@@ -19,6 +21,8 @@ Review the current working tree without creating issues, branches, commits, pull
 8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area. If repository skills changed, also run `node scripts/agents/validate-skills.js` once.
 
 Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and missing focused tests are allowed; changing from implementation to review is not itself a reason to rerun tests.
+
+A review request authorizes the prerequisite `map-changes` phase when no current concern map exists. It does not authorize fixing findings, shipping, or deployment. A request for full implementation authorizes fixing and re-reviewing findings, but still does not authorize shipping or deployment.
 
 ## Orchestrate large reviews
 
@@ -84,4 +88,6 @@ Finish with:
 
 ## 5. Support repeated passes
 
-On later reviews, inspect the current repository state and verify prior findings rather than repeating stale conclusions. Do not ship merely because a review is clean; shipping requires a separate explicit request.
+On later reviews, inspect the current repository state and verify prior findings rather than repeating stale conclusions. If the diff materially changes the concern boundaries, return to `map-changes` before continuing deep review.
+
+After reporting findings, stop unless the user's current request explicitly authorizes fixes or full implementation. After an authorized fix pass, re-review the changed concern and report the result. Always stop at a clean review unless the user has separately and explicitly requested `ship-changes`.

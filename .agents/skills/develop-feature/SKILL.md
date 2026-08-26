@@ -55,3 +55,12 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.
 - After changing repository skills, run `node scripts/agents/validate-skills.js`.
 - Required pull-request checks provide the full merge gate. Do not treat implementation approval as deployment authorization.
+
+## Hand off for review and shipping
+
+1. After implementation verification, report the changed paths, acceptance-ledger status, and verification evidence, then stop unless the user's current request explicitly includes concern mapping or review.
+2. When the user requests "full implementation," continue through `map-changes`, `review-changes`, authorized fixes, and re-review without requiring another prompt between those phases.
+3. When mapping is authorized, hand the complete working tree and acceptance ledger to `map-changes` and use its result as the source of truth even when it contains only one concern.
+4. Never treat implementation or "full implementation" as authorization to enter `ship-changes`. Shipping and deployment each require a separate explicit request.
+
+Follow [`docs/workflows/review.md`](../../../docs/workflows/review.md) for the review boundary and [`docs/workflows/shipping.md`](../../../docs/workflows/shipping.md) for the separately authorized shipping boundary. Deployment remains a separate workflow requiring separate explicit authorization.
