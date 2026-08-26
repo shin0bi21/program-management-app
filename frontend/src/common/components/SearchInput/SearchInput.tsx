@@ -1,4 +1,6 @@
 import type { InputHTMLAttributes, KeyboardEvent } from 'react';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../Button/Button';
 import './SearchInput.css';
 
@@ -29,21 +31,33 @@ export default function SearchInput({
 
   return (
     <div className={`search-input${className ? ` ${className}` : ''}`}>
+      <Button
+        type="button"
+        size="sm"
+        className="search-input__apply"
+        aria-label="Search"
+        title="Search"
+        disabled={disabled}
+        onClick={onApply}
+      >
+        <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+      </Button>
       <label className="search-input__field">
         <span className="sr-only">{label}</span>
         <input type={type} value={value} disabled={disabled} onKeyDown={handleKeyDown} {...inputProps} />
       </label>
-      <Button type="button" size="sm" disabled={disabled} onClick={onApply}>Search</Button>
       <Button
         type="button"
-        variant="secondary"
+        variant="ghost"
         size="sm"
         className="search-input__clear"
         aria-label="Clear search"
         title="Clear search"
         disabled={disabled || (!String(value ?? '') && !appliedValue)}
         onClick={onClear}
-      >×</Button>
+      >
+        <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+      </Button>
     </div>
   );
 }

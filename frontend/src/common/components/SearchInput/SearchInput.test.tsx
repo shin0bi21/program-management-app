@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import SearchInput from './SearchInput';
 
 describe('SearchInput', () => {
-  it('applies with the Search button or Enter and exposes Clear', () => {
+  it('applies with Search or Enter and exposes Clear', () => {
     const onApply = vi.fn();
     const onClear = vi.fn();
     render(<SearchInput
@@ -17,13 +17,16 @@ describe('SearchInput', () => {
     />);
 
     const input = screen.getByRole('textbox', { name: 'Search tasks' });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    const searchButton = screen.getByRole('button', { name: 'Search' });
+    const clearButton = screen.getByRole('button', { name: 'Clear search' });
+
+    fireEvent.click(searchButton);
     expect(onApply).toHaveBeenCalledTimes(1);
 
     expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
     expect(onApply).toHaveBeenCalledTimes(2);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    fireEvent.click(clearButton);
     expect(onClear).toHaveBeenCalledOnce();
   });
 
