@@ -106,6 +106,7 @@ export default function useTaskPreferences({
   const applySearch = useCallback(() => {
     updatePreferences({ search: searchValue.trim() });
   }, [searchValue, updatePreferences]);
+
   const clearSearch = useCallback(() => {
     setSearchValue('');
     updatePreferences({ search: '' });

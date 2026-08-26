@@ -35,6 +35,17 @@
 - Keep endpoint-only request, filter, and payload types in their API adapter; keep component-, hook-, and page-only types beside that owner. Reserve a page-root `types.ts` for contracts genuinely shared by sibling page units.
 - Enforce separation of concerns at the lowest valid owner. Keep page-specific APIs, types, constants, hooks, and components inside that page; use `pages/<RouteFamily>/common/` only for code with real sibling-route consumers; promote code to global `common/features/` only when multiple route families genuinely consume it. Do not centralize code merely because values look similar or future reuse seems possible.
 
+## Readability
+
+- Organize non-trivial functions in execution or lifecycle order so they can be read from top to bottom without reconstructing the control flow.
+- Separate distinct phases inside a function with blank lines: setup and lookups, guards, derived values, state changes, validation, and side effects. This applies inside callbacks and methods, not only between top-level declarations; do not compress an entire flow into one uninterrupted block.
+- Name intermediate values and decisions when the name makes intent clearer than an inline expression. Avoid both repeated re-derivation and tiny helper extraction that scatters a cohesive flow.
+- Prefer scanability over speculative micro-optimizations. Add memoization, callback indirection, or caching when stable identity is part of the contract or evidence shows material value, not as a blanket default.
+- Let names, types, and structure explain obvious behavior. Add concise comments only for information a casual reader cannot recover from the code: intent, invariants, ordering constraints, assumptions, error behavior, or a deliberate exception to the usual pattern.
+- Place a comment immediately above the non-trivial statement group it explains, at the same indentation, with no blank line between the comment and that code. Describe what or why; do not translate each statement into English or leave commented-out code.
+- Document a subtle ordering requirement at the point where the order matters. For exported abstractions, add a one-sentence purpose or caller-visible constraint only when the name and TypeScript contract do not already say it clearly; avoid boilerplate parameter and return comments.
+- Keep comments accurate as behavior changes. A stale or redundant comment is worse than no comment.
+
 ## Testing
 
 - Use `docs/workflows/testing.md` as the canonical repository testing guide. Follow its suite ownership, focused/full runner selection, evidence-reuse, CI-gate, browser-test, and shell-check rules together with the affected frontend or backend owner guide.
