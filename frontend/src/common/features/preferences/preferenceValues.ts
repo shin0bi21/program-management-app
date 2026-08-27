@@ -30,6 +30,16 @@ export function resolvePreferenceStringArray(value: unknown): string[] {
     : [];
 }
 
+export function resolvePreferenceNumberRecord(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, number] => (
+      typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0
+    )),
+  );
+}
+
 export function resolveAvailablePreferenceIds(
   value: unknown,
   options: ReadonlyArray<{ id: string }> | undefined,

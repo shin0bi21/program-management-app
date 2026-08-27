@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
@@ -9,15 +9,19 @@ import type { CohortSession, SessionAttachment } from '../../../../../../common/
 import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentModal';
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 
 export default function SessionAttachmentsDashboardCard({
   queryKey,
   session,
   canWrite,
+  onErrorChange,
 }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
   canWrite: boolean;
+  onErrorChange?: PageErrorChangeHandler;
 }) {
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
   const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
@@ -28,6 +32,8 @@ export default function SessionAttachmentsDashboardCard({
     queryFn: ({ signal }) => getSessionAttachments(session!.id, { signal }),
     enabled: session !== null,
   });
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: query.refetch }), [query.refetch]);
+  usePageErrorReporter(onErrorChange, query.error ? 'Could not load session attachments.' : null, retryAction);
   const loadAttachments = async () => { await query.refetch(); };
   useEffect(() => {
     setAttachmentTarget(null); setEditAttachment(null); setDetailAttachment(null); setConfirmAction(null);
@@ -40,7 +46,7 @@ export default function SessionAttachmentsDashboardCard({
       action={canWrite ? <Button size="sm" variant="secondary" disabled={!session} aria-label="Add attachments" onClick={() => { if (session) setAttachmentTarget(session); }}>+ Add</Button> : undefined}
     >
       {session ? query.isLoading ? <p role="status">Loading attachments…</p>
-        : query.error ? <p role="alert">{query.error instanceof Error ? query.error.message : 'Could not load session attachments'}</p>
+        : query.error ? <UnavailableState compact title="Session attachments unavailable" onRetry={query.refetch} />
         : query.data?.length ? <div className="session-attachment-list">{query.data.map(attachment => <SessionAttachmentRow
           key={attachment.id}
           attachment={attachment}

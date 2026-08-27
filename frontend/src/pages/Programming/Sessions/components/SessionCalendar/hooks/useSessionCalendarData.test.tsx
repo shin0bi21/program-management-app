@@ -1,4 +1,4 @@
-// Scope: verifies calendar-range query activation, filter serialization, event mapping, and errors.
+// Owns calendar-range query activation, filter serialization, event mapping, and errors.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { DatesSetInfo } from '@fullcalendar/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

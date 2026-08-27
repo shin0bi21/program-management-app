@@ -1,4 +1,4 @@
-// Scope: verifies attachment card states, editor/viewer targeting, deletion, and list refresh behavior.
+// Owns attachment card states, editor/viewer targeting, deletion, and list refresh behavior.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

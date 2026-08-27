@@ -1,4 +1,5 @@
-// Scope: verifies cohort adapter filter serialization and cycle deletion endpoints.
+// @vitest-environment node
+// Owns cohort adapter filter serialization and cycle deletion endpoints.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../../http/client';
 import { deleteProgramCycle, getCohortPage } from './cohorts.api';
@@ -27,4 +28,3 @@ describe('cohort API', () => {
     expect(apiClient.delete).toHaveBeenCalledWith('/cohorts/cycles/cycle-1');
   });
 });
-// @vitest-environment node

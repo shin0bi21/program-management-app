@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters, type SessionSortKey } from '../../../../../common/types/cohort';
 import type { ListSort } from '../../../../../common/types/pagination';
@@ -17,14 +18,16 @@ interface SessionTableProps {
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onSelectedSessionResolved: (session: CohortSession | null) => void;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function SessionTable({
   queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
-  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved,
+  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved, onErrorChange,
 }: SessionTableProps) {
   const query = useSessionTableData(queryKey, filters, sorting, true);
   const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
+  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)
     || Boolean(filters.cohortId)
@@ -39,7 +42,7 @@ export default function SessionTable({
     data={query.sessions}
     loading={query.loading}
     refreshing={query.refreshing}
-    error={query.error ?? undefined}
+    unavailable={query.error ? { title: 'Sessions unavailable', onRetry: query.retry } : undefined}
     emptyMessage={hasFilters ? 'No sessions match your search and filters' : 'No sessions yet'}
     keyExtractor={session => session.id}
     selectedKey={selectedSessionId || null}

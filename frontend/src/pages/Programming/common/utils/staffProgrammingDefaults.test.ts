@@ -1,3 +1,5 @@
+// @vitest-environment node
+// Owns staff-specific default program and active-cohort selection rules.
 import { describe, expect, it } from 'vitest';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import type { Program } from '../../../../common/features/programs/types';
@@ -68,4 +70,3 @@ describe('staff programming defaults', () => {
     ], 'soft-skills')).toBeNull();
   });
 });
-// @vitest-environment node

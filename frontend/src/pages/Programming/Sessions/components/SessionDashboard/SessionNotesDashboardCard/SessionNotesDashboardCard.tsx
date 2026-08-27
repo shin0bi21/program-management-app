@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
@@ -10,15 +10,19 @@ import SessionNoteModal from '../../../../../../common/features/notes/components
 import SessionNoteRow from '../../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
 import { deleteSessionNote, getSessionNotes } from '../../../../../../common/features/programming/api/sessions.api';
 import type { CohortSession, SessionNote } from '../../../../../../common/types/cohort';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 
 export default function SessionNotesDashboardCard({
   queryKey,
   session,
   canWrite,
+  onErrorChange,
 }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
   canWrite: boolean;
+  onErrorChange?: PageErrorChangeHandler;
 }) {
   const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
@@ -29,6 +33,8 @@ export default function SessionNotesDashboardCard({
     queryFn: ({ signal }) => getSessionNotes(session!.id, { signal }),
     enabled: session !== null,
   });
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: query.refetch }), [query.refetch]);
+  usePageErrorReporter(onErrorChange, query.error ? 'Could not load session notes.' : null, retryAction);
   const loadNotes = async () => { await query.refetch(); };
   useEffect(() => {
     setNoteTarget(null); setEditNote(null); setDetailNote(null); setConfirmAction(null);
@@ -41,7 +47,7 @@ export default function SessionNotesDashboardCard({
       action={canWrite ? <Button size="sm" variant="secondary" disabled={!session} aria-label="Add notes" onClick={() => { if (session) setNoteTarget(session); }}>+ Add</Button> : undefined}
     >
       {session ? query.isLoading ? <p className="dashboard-card__empty">Loading notes…</p>
-        : query.error ? <p className="form-error">{query.error instanceof Error ? query.error.message : 'Could not load session notes'}</p>
+        : query.error ? <UnavailableState compact title="Session notes unavailable" onRetry={query.refetch} />
         : query.data?.length ? <div className="note-list">{query.data.map(note => <SessionNoteRow
           key={note.id}
           note={note}

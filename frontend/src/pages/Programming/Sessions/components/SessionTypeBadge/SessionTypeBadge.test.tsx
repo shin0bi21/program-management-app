@@ -1,4 +1,4 @@
-// Scope: verifies session-type presentation modifiers and supported appearances.
+// Owns session-type presentation modifiers and supported appearances.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

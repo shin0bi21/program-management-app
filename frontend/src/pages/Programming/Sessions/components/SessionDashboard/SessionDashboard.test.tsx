@@ -1,4 +1,4 @@
-// Scope: verifies the composed session dashboard states and cross-card action wiring.
+// Owns the composed session dashboard states and cross-card action wiring.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

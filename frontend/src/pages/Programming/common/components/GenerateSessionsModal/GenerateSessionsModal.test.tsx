@@ -1,4 +1,4 @@
-// Scope: verifies Generate Sessions field composition and pending-state wiring.
+// Owns Generate Sessions field composition and pending-state wiring.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

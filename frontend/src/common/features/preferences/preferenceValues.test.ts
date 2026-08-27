@@ -9,6 +9,7 @@ import {
   resolveAvailablePreferenceIds,
   resolveAvailablePreferenceValues,
   resolvePreferenceSorting,
+  resolvePreferenceNumberRecord,
   resolvePreferenceString,
   resolvePreferenceStringArray,
   resolvePreferenceValue,
@@ -48,6 +49,8 @@ describe('preference normalization primitives', () => {
     expect(resolvePreferenceValue('removed', ['calendar', 'table'], 'calendar')).toBe('calendar');
     expect(resolvePreferenceString('  workshop  ')).toBe('workshop');
     expect(resolvePreferenceStringArray(['staff-1', null, 3])).toEqual(['staff-1']);
+    expect(resolvePreferenceNumberRecord({ name: 240, invalid: 'wide', zero: 0 })).toEqual({ name: 240 });
+    expect(resolvePreferenceNumberRecord(['not', 'a', 'record'])).toEqual({});
   });
 
   it('preserves unverified selections and filters them once options are available', () => {
