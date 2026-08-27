@@ -1,5 +1,19 @@
-import { lineNumber, resolveImport } from '../utils.js';
+import { parseSourceFile } from '../../syntax.js';
+import { resolveImport } from '../utils.js';
 import { findRoutePageDirectory, siblingExists } from './shared.js';
+
+function moduleReferences(file, source) {
+  const sourceFile = parseSourceFile(file, source);
+  return [
+    ...sourceFile.getImportDeclarations(),
+    ...sourceFile.getExportDeclarations(),
+  ].flatMap((declaration) => {
+    const modulePath = declaration.getModuleSpecifierValue();
+    return modulePath == null
+      ? []
+      : [{ line: declaration.getStartLineNumber(), modulePath }];
+  });
+}
 
 export function checkFrontendOwnership(
   violations,
@@ -10,26 +24,25 @@ export function checkFrontendOwnership(
 ) {
   if (!file.startsWith('frontend/src/')) return;
 
-  const importPattern = /(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g;
-  for (const match of source.matchAll(importPattern)) {
-    const target = resolveImport(repoRoot, file, match[1]);
+  for (const { line, modulePath } of moduleReferences(file, source)) {
+    const target = resolveImport(repoRoot, file, modulePath);
     if (!target) continue;
 
     if (file.startsWith('frontend/src/common/components/')) {
       if (target.startsWith('frontend/src/pages/') || target.startsWith('frontend/src/common/features/')) {
-        violations.push(`${file}:${lineNumber(source, match.index)} common components cannot import features or pages (${match[1]}).`);
+        violations.push(`${file}:${line} common components cannot import features or pages (${modulePath}).`);
       }
       continue;
     }
 
     if (file.startsWith('frontend/src/common/features/') && target.startsWith('frontend/src/pages/')) {
-      violations.push(`${file}:${lineNumber(source, match.index)} common features cannot import pages (${match[1]}).`);
+      violations.push(`${file}:${line} common features cannot import pages (${modulePath}).`);
       continue;
     }
 
     const targetRoute = findRoutePageDirectory(target, routePageDirectories);
     if (/^frontend\/src\/pages\/[^/]+\/common\//.test(file) && targetRoute) {
-      violations.push(`${file}:${lineNumber(source, match.index)} page-family common code cannot import a route page's private code (${match[1]}).`);
+      violations.push(`${file}:${line} page-family common code cannot import a route page's private code (${modulePath}).`);
     }
   }
 }

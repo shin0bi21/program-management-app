@@ -103,6 +103,11 @@ When any file inside a route page changes, the structural pass also checks the p
 
 The enforcement layer checks high-confidence ownership, route-page structure, component/hook/page/API test colocation, centralized frontend documentation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, and accidental test markers. Page-owned remote collections use a matching `components/*Table/*Table.tsx` owner with their `use*TableData` hook colocated under that table's `hooks/` directory; `*ListView` and `*TableView` owners are not supported. The review layer highlights changed TSX files with inline workflow behavior, defensive normalization outside external boundaries, and page-root types that appear to have only one API or implementation consumer. These findings keep ownership decisions visible without blocking CI. Neither layer generates semantic tests or replaces behavior review. The [frontend guide](../frontend/README.md#find-the-right-guide) maps each rule family to its single documentation owner.
 
+Syntax-sensitive enforcement uses ts-morph so import/export boundaries and Express route
+handlers are checked as TypeScript nodes rather than source-text matches. File placement,
+colocation, and naming rules continue to use repository paths because those contracts do
+not require compiler analysis.
+
 ## Direct package commands
 
 Prefer repository runners for complete coverage. Direct commands are useful for focused development inside the relevant container:
