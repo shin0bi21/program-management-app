@@ -3,7 +3,15 @@ import type { FilterCardCategory } from '../../../../common/components/FilterCar
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
-import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
+import {
+  mergePreferenceDefaults,
+  resolveAvailablePreferenceIds,
+  resolveAvailablePreferenceValues,
+  resolvePreferenceNumberRecord,
+  resolvePreferenceSorting,
+  resolvePreferenceStringArray,
+  resolvePreferenceValue,
+} from '../../../../common/features/preferences/preferenceValues';
 import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
@@ -25,10 +33,16 @@ interface UseSessionControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
-
-function resolveSessionView(view: unknown): SessionView {
-  return view === 'table' ? 'table' : 'calendar';
-}
+const DEFAULT_SESSION_PREFERENCE: SessionPreference = {
+  view: 'calendar',
+  programIds: [],
+  cohortId: null,
+  sessionTypeIds: [],
+  statuses: [],
+  sorting: DEFAULT_SORTING,
+  columnWidths: {},
+  hiddenColumns: [],
+};
 
 export function useSessionControls({
   role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
@@ -54,6 +68,7 @@ export function useSessionControls({
     preference,
     loading: preferenceLoading,
     error,
+    loadError,
     initializePreference,
     save,
   } = useUserPreference<SessionPreference>('session-filters', tableKeys);
@@ -73,33 +88,34 @@ export function useSessionControls({
       || sessionTypesLoading
       || role === null
     ) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
+    const preferenceSource = loadError ? null : preference;
+    const resolved = mergePreferenceDefaults(DEFAULT_SESSION_PREFERENCE, preferenceSource);
     const assignedProgram = getSingleAssignedProgram(role, programs);
-    const restoredProgramIds = preference
-      ? programsError
-        ? preference.programIds
-        : preference.programIds.filter(id => availableProgramIds.has(id))
+    const restoredProgramIds = preferenceSource
+      ? resolveAvailablePreferenceIds(resolved.programIds, programs, !programsError)
       : assignedProgram ? [assignedProgram.id] : [];
-    const restoredCohortId = preference
-      ? cohortsError || cohorts.some(cohort => cohort.id === preference.cohortId)
-        ? preference.cohortId ?? ''
+    const restoredCohortId = preferenceSource
+      ? cohortsError || cohorts.some(cohort => cohort.id === resolved.cohortId)
+        ? resolved.cohortId ?? ''
         : ''
       : assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '';
-    const availableSessionTypeIds = new Set(sessionTypes.map(type => type.id));
-    const restoredSessionTypeIds = preference
-      ? sessionTypesError
-        ? preference.sessionTypeIds
-        : preference.sessionTypeIds.filter(id => availableSessionTypeIds.has(id))
+    const restoredSessionTypeIds = preferenceSource
+      ? resolveAvailablePreferenceIds(resolved.sessionTypeIds, sessionTypes, !sessionTypesError)
       : [];
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredColumnWidths = preference?.columnWidths ?? {};
-    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
+    const restoredStatuses = resolveAvailablePreferenceValues(
+      resolved.statuses,
+      [{ value: 'upcoming' }, { value: 'completed' }],
+      true,
+    );
+    const restoredColumnWidths = resolvePreferenceNumberRecord(resolved.columnWidths);
+    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
     const restored: SessionPreference = {
-      view: resolveSessionView(preference?.view),
+      view: resolvePreferenceValue(resolved.view, ['calendar', 'table'], DEFAULT_SESSION_PREFERENCE.view),
       programIds: restoredProgramIds,
       cohortId: restoredCohortId || null,
       sessionTypeIds: restoredSessionTypeIds,
-      statuses: preference?.statuses ?? [],
+      statuses: restoredStatuses,
       sorting: restoredSorting,
       columnWidths: restoredColumnWidths,
       hiddenColumns: restoredHiddenColumns,
@@ -114,7 +130,7 @@ export function useSessionControls({
     setHiddenColumnsState(restoredHiddenColumns);
     initializePreference(restored);
     setReady(true);
-  }, [cohorts, cohortsError, cohortsLoading, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, initializePreference, tableKeys]);
+  }, [cohorts, cohortsError, cohortsLoading, loadError, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, sessionTypes, sessionTypesError, sessionTypesLoading, initializePreference, tableKeys]);
 
   // Stable option sets shared by the header and Add Sessions modal.
   const filteredCohorts = useMemo(() => programIds.length
@@ -139,7 +155,11 @@ export function useSessionControls({
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
   }) => save(current => ({
-    view: resolveSessionView(next.view ?? current?.view ?? view),
+    view: resolvePreferenceValue(
+      next.view ?? current?.view ?? view,
+      ['calendar', 'table'],
+      DEFAULT_SESSION_PREFERENCE.view,
+    ),
     programIds: next.programIds ?? current?.programIds ?? programIds,
     cohortId: (next.cohortId ?? current?.cohortId ?? cohortId) || null,
     sessionTypeIds: next.sessionTypeIds ?? current?.sessionTypeIds ?? sessionTypeIds,

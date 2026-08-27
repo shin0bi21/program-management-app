@@ -1,4 +1,4 @@
-// Scope: verifies program-scoped cohort option loading through the shared query lifecycle.
+// Owns program-scoped cohort option loading through the shared query lifecycle.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

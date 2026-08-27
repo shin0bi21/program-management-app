@@ -1,7 +1,7 @@
 import { getCohorts } from '../../../../common/features/programming/api/cohorts.api';
 import type { ProgramCohort } from '../../../../common/types/cohort';
 import useListQuery from '../../../../query/hooks/useListQuery';
-import { COHORT_OPTIONS_QUERY_KEY } from '../queryKeys';
+import { COHORT_OPTIONS_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
 
 export function useCohorts(programId?: string, enabled = true) {
   const query = useListQuery<ProgramCohort>({

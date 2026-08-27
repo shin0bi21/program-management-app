@@ -1,4 +1,4 @@
-// Scope: verifies edit-session initialization, normalized updates, success ordering, and failure recovery.
+// Owns edit-session initialization, normalized updates, success ordering, and failure recovery.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';

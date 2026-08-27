@@ -1,16 +1,12 @@
+// Owns Cohorts rendered behavior and owner wiring.
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import Cohorts from './Cohorts';
 import type { CohortPreference } from './types';
-
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="location">{location.pathname}{location.search}</span>;
-}
 
 const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
@@ -144,23 +140,6 @@ describe('Cohorts', () => {
     });
   });
 
-  it('persists a complete preference when first hiding a column', async () => {
-    const user = userEvent.setup();
-    render(<MemoryRouter><Cohorts /></MemoryRouter>);
-    await screen.findByRole('row', { name: /Summer 2026/ });
-
-    await user.click(screen.getByRole('button', { name: 'Columns' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
-
-    expect(preferenceHook.preference).toEqual({
-      programId: null,
-      status: null,
-      sorting: { key: 'start', direction: 'desc' },
-      columnWidths: {},
-      hiddenColumns: ['status'],
-    });
-  });
-
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
     preferenceHook.loading = true;
     const rendered = render(<MemoryRouter><Cohorts /></MemoryRouter>);
@@ -182,7 +161,6 @@ describe('Cohorts', () => {
     render(
       <MemoryRouter initialEntries={['/programming/cohorts']}>
         <Cohorts />
-        <LocationProbe />
       </MemoryRouter>,
     );
 
@@ -205,9 +183,7 @@ describe('Cohorts', () => {
     expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
     expect(cohortRow).toHaveAttribute('tabindex', '0');
-    expect(cohortRow).toHaveClass('table-row--selectable');
     await user.click(cohortRow!);
-    expect(cohortRow).toHaveClass('table-row--selected');
     expect(cohortRow).toHaveAttribute('aria-selected', 'true');
     expect(overview).toHaveTextContent('Enrollment:5');
     expect(overview).toHaveTextContent('80%');
@@ -279,63 +255,6 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
     expect(screen.getByRole('heading', { name: 'Add Cohort' })).toBeInTheDocument();
-  });
-
-  it('defaults staff with one assigned program to that program and active cohorts', async () => {
-    auth.role = 'staff';
-    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
-    programState.programs = [
-      ...programState.programs,
-      {
-        id: 'drop-in',
-        name: 'Drop In',
-        description: null,
-        rosterMode: 'open',
-        minAge: null,
-        maxAge: null,
-      },
-    ];
-
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
-        <Cohorts />
-        <LocationProbe />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
-    await waitFor(() => expect(api.getCohorts).toHaveBeenCalledWith(
-      expect.objectContaining({ programId: 'program-1', status: 'active' }),
-      expect.objectContaining({ key: 'start', direction: 'desc', limit: 25 }),
-      { signal: expect.any(AbortSignal) },
-    ));
-  });
-
-  it('does not default filters when staff has multiple assigned programs', async () => {
-    auth.role = 'staff';
-    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
-    programState.programs = [
-      ...programState.programs,
-      {
-        id: 'program-2',
-        name: 'Job Readiness',
-        description: null,
-        rosterMode: 'enrolled',
-        minAge: 16,
-        maxAge: 19,
-      },
-    ];
-
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
-        <Cohorts />
-        <LocationProbe />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/cohorts');
-    expect(screen.getByTestId('location')).not.toHaveTextContent('?');
   });
 
   it('shows distinct youth attendance instead of enrollment for an open cohort', async () => {

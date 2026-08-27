@@ -27,7 +27,7 @@ describe('YouthReportModal', () => {
     render(<YouthReportModal cohort={cohort} youthId="youth-1" onClose={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
-    expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:youth-report');
+    expect(await screen.findByTitle('Summer 2026 Youth Report preview')).toHaveAttribute('src', 'blob:youth-report');
     expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveAttribute('href', 'blob:youth-report');
     expect(api.getReportPdf).toHaveBeenCalledWith(
       'cohort-1',
@@ -54,11 +54,11 @@ describe('YouthReportModal', () => {
       .mockReturnValueOnce('blob:second-report');
     const view = render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
 
-    expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:first-report');
+    expect(await screen.findByTitle('Summer 2026 Youth Report preview')).toHaveAttribute('src', 'blob:first-report');
 
     view.rerender(<YouthReportModal cohort={nextCohort} onClose={vi.fn()} />);
 
-    expect(await screen.findByTitle('Youth report PDF preview')).toHaveAttribute('src', 'blob:second-report');
+    expect(await screen.findByTitle('Fall 2026 Youth Report preview')).toHaveAttribute('src', 'blob:second-report');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:first-report');
 
     view.unmount();

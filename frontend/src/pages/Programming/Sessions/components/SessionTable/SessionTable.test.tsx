@@ -1,4 +1,4 @@
-// Scope: verifies session table query wiring, table states, selection resolution, and pagination contract.
+// Owns session table query wiring, table states, selection resolution, and pagination contract.
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,7 @@ const session = makeCohortSession();
 const tableState = vi.hoisted(() => ({
   sessions: [] as CohortSession[], loading: false, refreshing: false, error: '',
   hasNextPage: false, loadingNextPage: false, loadNextPage: vi.fn(),
+  retry: vi.fn(),
 }));
 const useSessionTableData = vi.hoisted(() => vi.fn(() => tableState));
 const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -28,6 +29,7 @@ const baseProps = {
   sorting: { key: 'date' as const, direction: 'desc' as const }, columnWidths: {}, selectedSessionId: '',
   onSessionSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
   onSelectedSessionResolved: vi.fn(),
+  onErrorChange: vi.fn(),
 };
 
 describe('SessionTable', () => {
@@ -60,7 +62,11 @@ describe('SessionTable', () => {
     await waitFor(() => expect(baseProps.onSelectedSessionResolved).toHaveBeenCalledWith(session));
     expect(tableProps.current).toEqual(expect.objectContaining({
       selectedKey: 'session-1', scrollToSelected: true, emptyMessage: 'No sessions yet',
-      error: 'Could not load sessions',
+      unavailable: { title: 'Sessions unavailable', onRetry: tableState.retry },
     }));
+    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Could not load sessions',
+      action: { label: 'Retry', onClick: tableState.retry },
+    });
   });
 });

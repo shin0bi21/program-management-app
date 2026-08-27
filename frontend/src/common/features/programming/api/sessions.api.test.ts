@@ -1,4 +1,5 @@
-// Scope: verifies session adapter list, attachment upload, and download-name contracts.
+// @vitest-environment node
+// Owns session adapter list, attachment upload, and download-name contracts.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../../http/client';
@@ -50,5 +51,3 @@ describe('session API', () => {
     })).toBe('Workshop - Photos.png');
   });
 });
-
-// @vitest-environment node

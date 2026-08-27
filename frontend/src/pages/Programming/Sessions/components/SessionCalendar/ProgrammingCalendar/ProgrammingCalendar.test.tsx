@@ -1,4 +1,4 @@
-// Scope: verifies FullCalendar configuration, responsive view changes, and domain event callbacks.
+// Owns FullCalendar configuration, responsive view changes, and domain event callbacks.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

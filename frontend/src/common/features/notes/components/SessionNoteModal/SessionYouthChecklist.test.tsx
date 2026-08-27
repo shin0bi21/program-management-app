@@ -1,4 +1,4 @@
-// Scope: verifies session-note roster loading, error, empty, selection, and disabled states.
+// Owns session-note roster loading, error, empty, selection, and disabled states.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

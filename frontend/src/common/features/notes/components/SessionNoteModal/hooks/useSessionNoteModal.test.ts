@@ -1,4 +1,4 @@
-// Scope: verifies session-note draft lifecycle, commands, validation, and refresh reconciliation.
+// Owns session-note draft lifecycle, commands, validation, and refresh reconciliation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,11 +8,11 @@ import {
   createSessionNote,
   getSessionRoster,
   updateSessionNote,
-} from '../../../../../features/programming/api/sessions.api';
+} from '../../../../programming/api/sessions.api';
 import type { SessionNote } from '../../../../../types/cohort';
 import useSessionNoteModal from './useSessionNoteModal';
 
-vi.mock('../../../../../features/programming/api/sessions.api', () => ({
+vi.mock('../../../../programming/api/sessions.api', () => ({
   createSessionNote: vi.fn(),
   getSessionRoster: vi.fn(),
   updateSessionNote: vi.fn(),

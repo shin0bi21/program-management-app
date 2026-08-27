@@ -50,6 +50,15 @@ export function useSessionCalendarData(
     start: nextRange.start.toISOString(),
     end: nextRange.end.toISOString(),
   }), []);
+  const retry = useCallback(() => { void query.refetch(); }, [query.refetch]);
 
-  return { sessions, events, error: query.error, isError: query.isError, isSuccess: query.isSuccess, onDatesSet };
+  return {
+    sessions,
+    events,
+    error: query.error,
+    isError: query.isError,
+    isSuccess: query.isSuccess,
+    onDatesSet,
+    retry,
+  };
 }

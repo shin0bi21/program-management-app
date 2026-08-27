@@ -4,13 +4,24 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
-import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
+import {
+  mergePreferenceDefaults,
+  resolvePreferenceSorting,
+  resolvePreferenceStringArray,
+} from '../../../../common/features/preferences/preferenceValues';
 import type { CohortSortKey } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
 import type { CohortPreference, CohortStatus } from '../types';
 
 const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
+const DEFAULT_COHORT_PREFERENCE: CohortPreference = {
+  programId: null,
+  status: null,
+  sorting: DEFAULT_SORTING,
+  columnWidths: {},
+  hiddenColumns: [],
+};
 
 export function useCohortControls(
   role: string | null,
@@ -34,6 +45,7 @@ export function useCohortControls(
     preference,
     loading: preferenceLoading,
     error,
+    loadError,
     initializePreference,
     save,
   } = useUserPreference<CohortPreference>('cohort-filters', tableKeys);
@@ -47,16 +59,18 @@ export function useCohortControls(
   // Restore preferences once their referenced program options are available.
   useEffect(() => {
     if (ready || preferenceLoading || programsLoading || role === null) return;
+    const preferenceSource = loadError ? null : preference;
+    const resolved = mergePreferenceDefaults(DEFAULT_COHORT_PREFERENCE, preferenceSource);
     const availableProgramIds = new Set(programs.map(program => program.id));
     const defaultProgram = getSingleAssignedProgram(role, programs)?.id ?? '';
-    const restoredProgramId = preference?.programId
-      && (programsError || availableProgramIds.has(preference.programId))
-      ? preference.programId
-      : preference ? '' : defaultProgram;
-    const restoredStatus = preference?.status ?? (role === 'staff' ? 'active' : '');
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredColumnWidths = preference?.columnWidths ?? {};
-    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restoredProgramId = resolved.programId
+      && (programsError || availableProgramIds.has(resolved.programId))
+      ? resolved.programId
+      : preferenceSource ? '' : defaultProgram;
+    const restoredStatus = resolved.status ?? (role === 'staff' ? 'active' : '');
+    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
+    const restoredColumnWidths = resolved.columnWidths ?? {};
+    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
     const restored: CohortPreference = {
       programId: restoredProgramId || null,
       status: restoredStatus || null,
@@ -71,7 +85,7 @@ export function useCohortControls(
     setHiddenColumnsState(restoredHiddenColumns);
     initializePreference(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
+  }, [loadError, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
 
   // Stable query and filter-card values.
   const tableFilters = useMemo(() => ready ? {

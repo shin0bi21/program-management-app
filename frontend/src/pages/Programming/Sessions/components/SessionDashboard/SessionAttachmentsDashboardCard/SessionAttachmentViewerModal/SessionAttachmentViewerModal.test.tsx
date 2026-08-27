@@ -1,4 +1,4 @@
-// Scope: verifies attachment preview/download states, zoom controls, errors, and browser-resource cleanup.
+// Owns session attachment loading and download wiring into the shared file viewer.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,17 +11,15 @@ const api = vi.hoisted(() => ({
   downloadSessionAttachment: vi.fn(),
   getSessionAttachmentFile: vi.fn(),
 }));
-const panzoom = vi.hoisted(() => ({
-  destroy: vi.fn(),
-  reset: vi.fn(),
-  zoomIn: vi.fn(),
-  zoomOut: vi.fn(),
-  zoomWithWheel: vi.fn(),
-}));
-
 vi.mock('../../../../../../../common/features/programming/api/sessions.api', () => api);
 vi.mock('@panzoom/panzoom', () => ({
-  default: vi.fn(() => panzoom),
+  default: vi.fn(() => ({
+    destroy: vi.fn(),
+    reset: vi.fn(),
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    zoomWithWheel: vi.fn(),
+  })),
 }));
 
 const session = makeCohortSession();
@@ -54,8 +52,8 @@ describe('SessionAttachmentViewerModal', () => {
     });
   });
 
-  it('loads an image preview, owns zoom controls, and releases viewer resources', async () => {
-    const view = renderWithQueryClient(
+  it('loads an image preview through the shared viewer', async () => {
+    renderWithQueryClient(
       <SessionAttachmentViewerModal
         session={session}
         attachment={attachment}
@@ -73,16 +71,6 @@ describe('SessionAttachmentViewerModal', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(panzoom.zoomIn).toHaveBeenCalledWith({ animate: true });
-    expect(panzoom.zoomOut).toHaveBeenCalledWith({ animate: true });
-    expect(panzoom.reset).toHaveBeenCalledWith({ animate: true });
-
-    view.unmount();
-    expect(panzoom.destroy).toHaveBeenCalledOnce();
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:attachment-preview');
   });
 
   it('uses the download fallback for file types that cannot be previewed', async () => {

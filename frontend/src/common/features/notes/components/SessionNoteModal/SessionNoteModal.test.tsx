@@ -1,4 +1,4 @@
-// Scope: verifies SessionNoteModal field, roster, error, and disabled-state wiring.
+// Owns SessionNoteModal field, roster, error, and disabled-state wiring.
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeCohortSession } from '../../../../../tests/factories/session';
@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({
   updateSessionNote: vi.fn(),
 }));
 
-vi.mock('../../../../features/programming/api/sessions.api', () => ({
+vi.mock('../../../programming/api/sessions.api', () => ({
   createSessionNote: api.createSessionNote,
   getSessionRoster: api.getSessionRoster,
   updateSessionNote: api.updateSessionNote,

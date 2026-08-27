@@ -1,4 +1,4 @@
-// Scope: verifies attendance summary language, unselected state, permissions, and management events.
+// Owns attendance summary language, unselected state, permissions, and management events.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

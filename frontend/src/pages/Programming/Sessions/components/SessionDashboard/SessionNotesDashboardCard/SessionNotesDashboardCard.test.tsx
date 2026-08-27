@@ -1,4 +1,4 @@
-// Scope: verifies notes card states, detail/edit targeting, deletion, and list refresh behavior.
+// Owns notes card states, detail/edit targeting, deletion, and list refresh behavior.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

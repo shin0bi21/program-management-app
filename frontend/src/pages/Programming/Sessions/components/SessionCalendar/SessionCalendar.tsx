@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { CohortSession } from '../../../../../common/types/cohort';
 import ProgrammingCalendar from './ProgrammingCalendar/ProgrammingCalendar';
 import { useSessionCalendarData } from './hooks/useSessionCalendarData';
 import './SessionCalendar.css';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 const noSessionTypeIds: string[] = [];
 
@@ -18,6 +20,7 @@ interface SessionCalendarProps {
   onSessionSelect: (session: CohortSession) => void;
   onSessionEdit?: (session: CohortSession) => void;
   onSessionDelete?: (session: CohortSession) => void;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function SessionCalendar({
@@ -32,6 +35,7 @@ export default function SessionCalendar({
   onSessionSelect,
   onSessionEdit,
   onSessionDelete,
+  onErrorChange,
 }: SessionCalendarProps) {
   const calendar = useSessionCalendarData(queryKey, {
     programIds: selectedProgramIds,
@@ -40,6 +44,11 @@ export default function SessionCalendar({
     statuses: selectedStatuses,
     search,
   }, selectedSessionId);
+  const errorMessage = calendar.error
+    ? calendar.error instanceof Error ? calendar.error.message : 'Could not load sessions'
+    : null;
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
+  usePageErrorReporter(onErrorChange, errorMessage, retryAction);
 
   useEffect(() => {
     if (calendar.isSuccess) onSessionsLoaded?.(calendar.sessions);
@@ -48,8 +57,7 @@ export default function SessionCalendar({
 
   return (
     <div className="sessions-calendar-view">
-      {calendar.error && <p className="form-error">{calendar.error instanceof Error ? calendar.error.message : 'Could not load sessions'}</p>}
-      <ProgrammingCalendar
+      {calendar.error ? <UnavailableState title="Sessions calendar unavailable" onRetry={calendar.retry} /> : <ProgrammingCalendar
         events={calendar.events}
         onDatesSet={calendar.onDatesSet}
         onEventSelect={sessionId => {
@@ -64,7 +72,7 @@ export default function SessionCalendar({
           const session = calendar.sessions.find(candidate => candidate.id === sessionId);
           if (session) onSessionDelete(session);
         } : undefined}
-      />
+      />}
     </div>
   );
 }

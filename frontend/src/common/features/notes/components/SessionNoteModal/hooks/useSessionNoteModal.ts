@@ -5,7 +5,7 @@ import {
   createSessionNote,
   getSessionRoster,
   updateSessionNote,
-} from '../../../../../features/programming/api/sessions.api';
+} from '../../../../programming/api/sessions.api';
 import type { SubmitStatus } from '../../../../../hooks/useSubmitStatus';
 import type {
   CohortSession,
