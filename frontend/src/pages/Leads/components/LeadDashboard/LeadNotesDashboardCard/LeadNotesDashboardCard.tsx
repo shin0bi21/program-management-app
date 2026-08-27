@@ -11,46 +11,38 @@ import './LeadNotesDashboardCard.css';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import LeadNoteEditModal from './LeadNoteEditModal';
+import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
 
-const statusLabel = (status: Lead['status'] | null) => status === null
-  ? 'Historical'
-  : status === 'signed_up'
-  ? 'Signed up'
-  : status.charAt(0).toUpperCase() + status.slice(1);
-
-const badgeCategory = (status: Lead['status'] | null) => status ?? 'historical';
-
-export default function LeadNotesDashboardCard({ lead, canWrite, onAddStatusUpdate, onErrorChange }: {
+export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }: {
   lead: Lead | null;
   canWrite: boolean;
-  onAddStatusUpdate: (lead: Lead) => void;
   onErrorChange?: PageErrorChangeHandler;
 }) {
   const notes = useLeadNotes(lead);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: notes.retry }), [notes.retry]);
   const title = lead && !notes.loading && !notes.error
-    ? `Status Updates (${notes.notes.length})`
-    : 'Status Updates';
-  usePageErrorReporter(onErrorChange, notes.error ? 'Could not load status updates.' : null, retryAction);
+    ? `Notes (${notes.notes.length})`
+    : 'Notes';
+  usePageErrorReporter(onErrorChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
   return <>
     <DashboardCard
       title={title}
-      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add status update" disabled={!lead || lead.status === 'signed_up'} onClick={() => lead && onAddStatusUpdate(lead)}>+ Add</Button> : undefined}
+      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>+ Add</Button> : undefined}
     >
       {!lead ? (
-        <p className="dashboard-card__empty">Select a lead to view status updates.</p>
+        <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>
       ) : notes.loading ? (
-        <p role="status">Loading status updates…</p>
+        <p role="status">Loading follow-up notes…</p>
       ) : notes.error ? (
-        <UnavailableState compact title="Status updates unavailable" onRetry={notes.retry} />
+        <UnavailableState compact title="Follow-up notes unavailable" onRetry={notes.retry} />
       ) : notes.notes.length ? (
         <div className="note-list">
           {notes.notes.map(note => (
             <NoteRow
               key={note.id}
-              ariaLabel="status update"
+              ariaLabel="follow-up note"
               compact
-              categoryBadge={<NoteCategoryBadge category={badgeCategory(note.category)} label={statusLabel(note.category)} />}
+              categoryBadge={<NoteCategoryBadge category="follow_up" label="Follow-up" />}
               date={note.createdAt}
               onView={() => notes.openDetails(note)}
               onEdit={canWrite ? () => notes.openEditor(note) : undefined}
@@ -58,22 +50,27 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onAddStatusUpda
           ))}
         </div>
       ) : (
-        <p className="dashboard-card__empty">No status updates recorded.</p>
+        <p className="dashboard-card__empty">No follow-up notes recorded.</p>
       )}
     </DashboardCard>
     <Modal
       isOpen={notes.selectedNote !== null}
       onClose={notes.closeDetails}
-      title="Status Update"
+      title="Follow-up Note"
       footer={<Button variant="secondary" onClick={notes.closeDetails}>Close</Button>}
     >
       {notes.selectedNote && <NoteDetails
-        categoryBadge={<NoteCategoryBadge category={badgeCategory(notes.selectedNote.category)} label={statusLabel(notes.selectedNote.category)} />}
+        categoryBadge={<NoteCategoryBadge category="follow_up" label="Follow-up" />}
         createdAt={notes.selectedNote.createdAt}
         createdByName={notes.selectedNote.createdByName}
         details={notes.selectedNote.details}
       />}
     </Modal>
+    <LeadNoteModal
+      lead={notes.creating ? lead : null}
+      onClose={notes.closeCreate}
+      onSaved={notes.handleCreated}
+    />
     <LeadNoteEditModal
       note={notes.editorTarget}
       onClose={notes.closeEditor}

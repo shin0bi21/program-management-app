@@ -6,7 +6,7 @@ import type { Lead } from '../../types';
 import LeadNoteModal from './LeadNoteModal';
 
 const api = vi.hoisted(() => ({
-  createLeadStatusNote: vi.fn(),
+  createLeadNote: vi.fn(),
 }));
 
 vi.mock('../../leads.api', () => api);
@@ -21,26 +21,25 @@ const details = 'Called and left a message.';
 describe('LeadNoteModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.createLeadStatusNote.mockResolvedValue({ note: { details }, lead });
+    api.createLeadNote.mockResolvedValue({ details });
   });
 
-  it('renders a preselected status update form', () => {
+  it('renders a fixed follow-up category form', () => {
     render(
       <LeadNoteModal
         lead={lead}
-        initialStatus="contacted"
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole('dialog', { name: 'Add Status Update' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Status')).toHaveTextContent('Contacted');
+    expect(screen.getByRole('dialog', { name: 'Add Follow-up Note' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Category')).toHaveTextContent('Follow-up');
     expect(screen.getByLabelText('Note *')).toHaveValue('');
   });
 
   it('disables the complete form while a save is pending', async () => {
-    api.createLeadStatusNote.mockReturnValue(new Promise(() => undefined));
+    api.createLeadNote.mockReturnValue(new Promise(() => undefined));
     render(
       <LeadNoteModal
         lead={lead}
@@ -52,12 +51,12 @@ describe('LeadNoteModal', () => {
     fireEvent.change(screen.getByLabelText('Note *'), {
       target: { value: details },
     });
-    fireEvent.submit(document.getElementById('lead-status-note-form')!);
+    fireEvent.submit(document.getElementById('lead-note-form')!);
 
-    expect(await screen.findByText('Adding status update...')).toBeInTheDocument();
-    expect(document.getElementById('lead-status-note-form')).toHaveAttribute('aria-busy', 'true');
+    expect(await screen.findByText('Adding follow-up note...')).toBeInTheDocument();
+    expect(document.getElementById('lead-note-form')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByLabelText('Note *')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add Update' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 });

@@ -15,7 +15,7 @@ const renderPage = (
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
-const createLeadStatusNote = vi.fn();
+const updateLeadStatus = vi.fn();
 const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
@@ -34,7 +34,7 @@ vi.mock('./leads.api', () => ({
   deleteLead: (...args: unknown[]) => deleteLead(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
-  createLeadStatusNote: (...args: unknown[]) => createLeadStatusNote(...args),
+  updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
 }));
 
 vi.mock('../../auth/authContext', () => ({
@@ -74,7 +74,7 @@ describe('Leads', () => {
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     });
-    createLeadStatusNote.mockReset();
+    updateLeadStatus.mockReset();
     updateLead.mockReset();
     deleteLead.mockReset();
     deleteLead.mockResolvedValue({ id: 'lead-1' });
@@ -154,23 +154,30 @@ describe('Leads', () => {
   it('keeps the selected dashboard synchronized with status responses', async () => {
     const initialLead = (await getLeads())[0];
     const updatedLead = { ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' };
-    createLeadStatusNote.mockResolvedValue({
-      lead: updatedLead,
-      note: {
-        id: 'note-1', leadId: initialLead.id, category: 'contacted', details: 'Called the family.',
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdByName: 'Staff User',
-      },
-    });
+    updateLeadStatus.mockResolvedValue(updatedLead);
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Called the family.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Update' }));
 
     expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
+  });
+
+  it('separates record, sign-up, and status actions', async () => {
+    renderPage();
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+
+    const edit = screen.getByRole('menuitem', { name: 'Edit' });
+    const signUp = screen.getByRole('menuitem', { name: 'Sign Up' });
+    const contacted = screen.getByRole('menuitem', { name: 'Mark Contacted' });
+    expect(signUp).toHaveClass('actions-menu-item--group-start');
+    expect(contacted).toHaveClass('actions-menu-item--group-start');
+    expect(edit).not.toHaveClass('actions-menu-item--group-start');
+    expect(screen.getByRole('menuitem', { name: 'Mark Deferred' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Mark Closed' })).toBeInTheDocument();
   });
 
   it('keeps the selected dashboard synchronized after editing', async () => {

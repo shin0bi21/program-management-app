@@ -7,7 +7,7 @@ const api = vi.hoisted(() => ({ updateLeadNote: vi.fn() }));
 vi.mock('../../../leads.api', () => api);
 
 const note = {
-  id: 'note-1', leadId: 'lead-1', category: 'contacted' as const,
+  id: 'note-1', leadId: 'lead-1', category: 'follow_up' as const,
   details: 'Called guardian.', createdAt: '2026-08-07T13:00:00.000Z',
   updatedAt: '2026-08-07T13:00:00.000Z', createdByName: 'Quinton Macnevin',
 };
@@ -21,11 +21,11 @@ it('updates only normalized details and keeps the recorded status disabled', asy
   const onSaved = vi.fn();
   render(<LeadNoteEditModal note={note} onClose={vi.fn()} onSaved={onSaved} />);
 
-  expect(screen.getByRole('button', { name: 'Recorded Status' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
   fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), {
     target: { value: ' Reached guardian. ' },
   });
-  fireEvent.submit(document.getElementById('lead-status-note-edit-form')!);
+  fireEvent.submit(document.getElementById('lead-note-edit-form')!);
 
   await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(note.leadId, note.id, 'Reached guardian.'));
   expect(onSaved).toHaveBeenCalledWith({ ...note, details: 'Reached guardian.' });

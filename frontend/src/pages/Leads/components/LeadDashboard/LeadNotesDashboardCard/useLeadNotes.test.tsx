@@ -12,7 +12,7 @@ vi.mock('../../../leads.api', () => ({ getLeadNotes: vi.fn() }));
 const lead = { id: 'lead-1', youthFirstName: 'Avery', youthLastName: 'Outreach' } as Lead;
 const otherLead = { ...lead, id: 'lead-2', youthFirstName: 'Taylor' };
 const note: LeadNote = {
-  id: 'note-1', leadId: lead.id, category: 'contacted', details: 'Called guardian.',
+  id: 'note-1', leadId: lead.id, category: 'follow_up', details: 'Called guardian.',
   createdAt: '2026-08-07T13:00:00.000Z', updatedAt: '2026-08-07T13:00:00.000Z',
   createdByName: 'Quinton Macnevin',
 };
