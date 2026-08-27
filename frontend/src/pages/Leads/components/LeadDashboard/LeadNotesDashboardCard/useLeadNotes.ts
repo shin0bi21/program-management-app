@@ -9,6 +9,7 @@ export default function useLeadNotes(lead: Lead | null) {
   const queryClient = useQueryClient();
   const [selectedNote, setSelectedNote] = useState<LeadNote | null>(null);
   const [editorTarget, setEditorTarget] = useState<LeadNote | null>(null);
+  const [creating, setCreating] = useState(false);
   const leadId = lead?.id ?? null;
   const query = useQuery({
     queryKey: leadNotesQueryKey(leadId),
@@ -22,6 +23,7 @@ export default function useLeadNotes(lead: Lead | null) {
   useEffect(() => {
     setSelectedNote(null);
     setEditorTarget(null);
+    setCreating(false);
   }, [leadId]);
 
   const openDetails = useCallback((note: LeadNote) => setSelectedNote(note), []);
@@ -31,10 +33,18 @@ export default function useLeadNotes(lead: Lead | null) {
     setEditorTarget(note);
   }, []);
   const closeEditor = useCallback(() => setEditorTarget(null), []);
+  const openCreate = useCallback(() => {
+    if (!lead) throw new Error('A selected lead is required to add a follow-up note');
+    setCreating(true);
+  }, [lead]);
+  const closeCreate = useCallback(() => setCreating(false), []);
   const handleSaved = useCallback((note: LeadNote) => {
     queryClient.setQueryData<LeadNote[]>(leadNotesQueryKey(note.leadId), current =>
       current?.map(candidate => candidate.id === note.id ? note : candidate) ?? [note],
     );
+  }, [queryClient]);
+  const handleCreated = useCallback((note: LeadNote) => {
+    queryClient.setQueryData<LeadNote[]>(leadNotesQueryKey(note.leadId), current => [note, ...(current ?? [])]);
   }, [queryClient]);
 
 
@@ -45,10 +55,14 @@ export default function useLeadNotes(lead: Lead | null) {
     retry: query.refetch,
     selectedNote,
     editorTarget,
+    creating,
     openDetails,
     closeDetails,
     openEditor,
     closeEditor,
+    openCreate,
+    closeCreate,
     handleSaved,
+    handleCreated,
   };
 }

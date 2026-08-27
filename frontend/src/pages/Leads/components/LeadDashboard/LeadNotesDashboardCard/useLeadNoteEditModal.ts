@@ -24,7 +24,7 @@ export default function useLeadNoteEditModal({ note, onSaved }: {
 
     const normalizedDetails = details.trim();
     if (!normalizedDetails) {
-      setError('Enter a status note.');
+      setError('Enter a follow-up note.');
       setSubmitStatus('error');
       return;
     }
@@ -37,7 +37,7 @@ export default function useLeadNoteEditModal({ note, onSaved }: {
       setSubmitStatus('success');
       onSaved(saved);
     } catch (cause) {
-      setError(getErrorMessage(cause, 'Could not update the status note'));
+      setError(getErrorMessage(cause, 'Could not update the follow-up note'));
       setSubmitStatus('error');
     } finally {
       submitLock.unlock();
@@ -48,8 +48,8 @@ export default function useLeadNoteEditModal({ note, onSaved }: {
     details,
     submitStatus,
     statusMessage: getSubmitStatusMessage(submitStatus, error, {
-      submitting: 'Saving status update...',
-      success: 'Status update saved.',
+      submitting: 'Saving follow-up note...',
+      success: 'Follow-up note saved.',
     }),
     updateDetails: setDetails,
     submit,

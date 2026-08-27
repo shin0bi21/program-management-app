@@ -5,11 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../http/client';
 import {
   createLead,
-  createLeadStatusNote,
+  createLeadNote,
   getLeadNotes,
   getLeads,
   signUpLead,
   updateLead,
+  updateLeadStatus,
 } from './leads.api';
 
 vi.mock('../../http/client', () => ({
@@ -34,18 +35,17 @@ describe('leads API', () => {
     );
   });
 
-  it('uses focused signup and status-note endpoints', () => {
+  it('uses focused signup, status, and note endpoints', () => {
     signUpLead('lead-1', 'cohort-1', 'health');
-    createLeadStatusNote('lead-1', 'contacted', 'Called guardian.');
+    updateLeadStatus('lead-1', 'contacted');
+    createLeadNote('lead-1', 'Called guardian.');
 
     expect(apiClient.post).toHaveBeenNthCalledWith(1, '/leads/lead-1/sign-up', {
       cohortId: 'cohort-1',
       noteCategory: 'health',
     });
-    expect(apiClient.post).toHaveBeenNthCalledWith(2, '/leads/lead-1/notes', {
-      category: 'contacted',
-      details: 'Called guardian.',
-    });
+    expect(apiClient.patch).toHaveBeenCalledWith('/leads/lead-1/status', { status: 'contacted' });
+    expect(apiClient.post).toHaveBeenNthCalledWith(2, '/leads/lead-1/notes', { details: 'Called guardian.' });
   });
 
   it('uses the Lead collection and record endpoints for create and update', () => {

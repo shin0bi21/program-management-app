@@ -7,6 +7,7 @@ import LeadNotesDashboardCard from './LeadNotesDashboardCard';
 const api = vi.hoisted(() => ({
   getLeadNotes: vi.fn(),
   updateLeadNote: vi.fn(),
+  createLeadNote: vi.fn(),
 }));
 
 vi.mock('../../../leads.api', () => api);
@@ -34,7 +35,7 @@ const lead: Lead = {
 const existingNote = {
   id: 'note-1',
   leadId: lead.id,
-  category: 'contacted' as const,
+  category: 'follow_up' as const,
   details: 'Called and left a message.',
   createdAt: '2026-08-07T13:00:00.000Z',
   updatedAt: '2026-08-07T13:00:00.000Z',
@@ -48,45 +49,34 @@ describe('LeadNotesDashboardCard', () => {
     api.updateLeadNote.mockResolvedValue({ ...existingNote, details: 'Reached guardian.' });
   });
 
-  it('edits note details without offering deletion or status changes', async () => {
-    render(<LeadNotesDashboardCard lead={lead} canWrite onAddStatusUpdate={vi.fn()} />);
+  it('edits note details without offering deletion or category changes', async () => {
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
 
-    await screen.findByText('Contacted');
-    expect(screen.queryByRole('button', { name: 'Delete status update' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit status update' }));
-    expect(screen.getByRole('button', { name: 'Recorded Status' })).toBeDisabled();
+    await screen.findByText('Follow-up');
+    expect(screen.queryByRole('button', { name: 'Delete follow-up note' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit follow-up note' }));
+    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: ' Reached guardian. ' } });
-    fireEvent.submit(document.getElementById('lead-status-note-edit-form')!);
+    fireEvent.submit(document.getElementById('lead-note-edit-form')!);
 
     await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id, 'Reached guardian.'));
   });
 
   it('shows status metadata only and opens full details', async () => {
-    render(<LeadNotesDashboardCard lead={lead} canWrite onAddStatusUpdate={vi.fn()} />);
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
 
-    expect(await screen.findByText('Contacted')).toBeInTheDocument();
+    expect(await screen.findByText('Follow-up')).toBeInTheDocument();
     expect(screen.queryByText(existingNote.details)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'View status update' }));
-    expect(screen.getByRole('heading', { name: 'Status Update' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View follow-up note' }));
+    expect(screen.getByRole('heading', { name: 'Follow-up Note' })).toBeInTheDocument();
     expect(screen.getByText(existingNote.details)).toBeInTheDocument();
     expect(screen.getByText(/Quinton Macnevin/)).toBeInTheDocument();
   });
 
-  it('delegates the standard add action and locks signed-up history', async () => {
-    const onAddStatusUpdate = vi.fn();
-    const view = render(<LeadNotesDashboardCard lead={lead} canWrite onAddStatusUpdate={onAddStatusUpdate} />);
-    await screen.findByText('Contacted');
-    fireEvent.click(screen.getByRole('button', { name: 'Add status update' }));
-    expect(onAddStatusUpdate).toHaveBeenCalledWith(lead);
-
-    view.rerender(<LeadNotesDashboardCard lead={{ ...lead, status: 'signed_up' }} canWrite onAddStatusUpdate={onAddStatusUpdate} />);
-    expect(screen.getByRole('button', { name: 'Add status update' })).toBeDisabled();
-  });
-
-  it('labels uncategorized migrated notes as historical', async () => {
-    api.getLeadNotes.mockResolvedValue([{ ...existingNote, category: null }]);
-    render(<LeadNotesDashboardCard lead={lead} canWrite onAddStatusUpdate={vi.fn()} />);
-
-    expect(await screen.findByText('Historical')).toBeInTheDocument();
+  it('opens the follow-up note form for signed-up leads', async () => {
+    render(<LeadNotesDashboardCard lead={{ ...lead, status: 'signed_up' }} canWrite />);
+    await screen.findByText('Follow-up');
+    fireEvent.click(screen.getByRole('button', { name: 'Add follow-up note' }));
+    expect(screen.getByRole('dialog', { name: 'Add Follow-up Note' })).toBeInTheDocument();
   });
 });

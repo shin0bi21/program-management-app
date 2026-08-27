@@ -28,16 +28,11 @@ export interface Lead {
 export interface LeadNote {
   id: string;
   leadId: string;
-  category: LeadStatus | null;
+  category: 'follow_up';
   details: string;
   createdAt: string;
   updatedAt: string;
   createdByName: string | null;
-}
-
-export interface CreateLeadStatusNoteResult {
-  note: LeadNote;
-  lead: Lead;
 }
 
 export interface LeadFilters {

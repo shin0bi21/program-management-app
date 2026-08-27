@@ -11,11 +11,11 @@ export default function LeadNoteEditModal({ note, onClose, onSaved }: {
 
   return <NoteModal
     isOpen={note !== null}
-    title="Edit Status Update"
-    formId="lead-status-note-edit-form"
-    categoryLabel="Recorded Status"
-    category={note?.category ?? 'historical'}
-    categoryOptions={[{ value: note?.category ?? 'historical', label: statusLabel(note?.category ?? null) }]}
+    title="Edit Follow-up Note"
+    formId="lead-note-edit-form"
+    categoryLabel="Category"
+    category="follow_up"
+    categoryOptions={[{ value: 'follow_up', label: 'Follow-up' }]}
     categoryDisabled
     details={workflow.details}
     submitLabel="Save"
@@ -27,9 +27,4 @@ export default function LeadNoteEditModal({ note, onClose, onSaved }: {
     onSubmit={workflow.submit}
     onClose={onClose}
   />;
-}
-
-function statusLabel(status: LeadNote['category']) {
-  if (status === null) return 'Historical';
-  return status === 'signed_up' ? 'Signed up' : status.charAt(0).toUpperCase() + status.slice(1);
 }

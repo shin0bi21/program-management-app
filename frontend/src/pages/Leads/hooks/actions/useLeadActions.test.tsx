@@ -3,11 +3,11 @@ import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { deleteLead } from '../../leads.api';
-import type { Lead, LeadNote } from '../../types';
+import { deleteLead, updateLeadStatus } from '../../leads.api';
+import type { Lead } from '../../types';
 import useLeadActions from './useLeadActions';
 
-vi.mock('../../leads.api', () => ({ deleteLead: vi.fn() }));
+vi.mock('../../leads.api', () => ({ deleteLead: vi.fn(), updateLeadStatus: vi.fn() }));
 
 const lead = { id: 'lead-1', youthFirstName: 'Avery', youthLastName: 'Outreach', status: 'new' } as Lead;
 const otherLead = { id: 'lead-2', youthFirstName: 'Sam', youthLastName: 'Stable' } as Lead;
@@ -27,20 +27,19 @@ function setup() {
 
 beforeEach(() => vi.clearAllMocks());
 
-it('reconciles a status note across the lead table, selection, and note query', async () => {
+it('reconciles a direct status response across the lead table and selection', async () => {
   const { client, wrapper } = setup();
   const variantKey = seedVariant(client, [lead, otherLead]);
-  client.setQueryData(['leads', lead.id, 'notes'], []);
   const onLeadSynced = vi.fn();
   const savedLead = { ...lead, status: 'contacted' } as Lead;
-  const note = { id: 'note-1', leadId: lead.id, category: 'contacted', details: 'Called mom.' } as LeadNote;
+  vi.mocked(updateLeadStatus).mockResolvedValue(savedLead);
   const { result } = renderHook(() => useLeadActions({ tableQueryKey: tableKey, onLeadSynced }), { wrapper });
 
-  await act(async () => result.current.reconcileStatusNote({ lead: savedLead, note }));
+  await act(async () => result.current.setStatus(lead, 'contacted'));
 
   expect(client.getQueryData<{ pages: { rows: Lead[] }[] }>(variantKey)?.pages[0].rows).toEqual([savedLead, otherLead]);
   expect(onLeadSynced).toHaveBeenCalledWith(savedLead);
-  expect(client.getQueryState(['leads', lead.id, 'notes'])?.isInvalidated).toBe(true);
+  expect(updateLeadStatus).toHaveBeenCalledWith(lead.id, 'contacted');
 });
 
 it('removes a confirmed lead from cached table variants', async () => {
