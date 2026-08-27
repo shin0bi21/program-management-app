@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import Button from '../../Button/Button';
+import Button from '../../../../../common/components/Button/Button';
 
 interface VerificationStepProps {
   email: string;
@@ -48,7 +48,7 @@ export default function VerificationStep({
         />
       </div>
 
-      {error && <p className="relogin-error">{error}</p>}
+      {error && <p className="relogin-error" role="alert">{error}</p>}
 
       <Button type="submit" fullWidth disabled={submitting}>
         {submitting ? 'Verifying...' : 'Verify'}
