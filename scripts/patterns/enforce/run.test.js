@@ -35,6 +35,32 @@ test('routes backend route files to async-handler enforcement', () => {
   assert.match(violations.join('\n'), /asyncHandler/);
 });
 
+test('requires the final route handler itself to use asyncHandler', () => {
+  const violations = violationsFor(
+    'backend/src/routes/example.ts',
+    "router.get('/example', handler /* asyncHandler(fakeHandler) */);",
+  );
+
+  assert.match(violations.join('\n'), /asyncHandler/);
+});
+
+test('ignores route-like source text outside the syntax tree', () => {
+  const violations = violationsFor(
+    'backend/src/routes/example.ts',
+    `
+      // router.get('/comment', handler);
+      const example = "router.post('/string', handler);";
+      router.get(
+        '/example',
+        middleware,
+        asyncHandler(handler),
+      );
+    `,
+  );
+
+  assert.deepEqual(violations, []);
+});
+
 test('does not run application-specific rules for documentation files', () => {
   assert.deepEqual(violationsFor('docs/example.md', 'A documentation change.'), []);
 });
