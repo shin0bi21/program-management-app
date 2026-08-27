@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { setYouthProfileNote } from '../../../../../common/features/youth/youth.api';
 import {
@@ -14,7 +14,6 @@ import { getErrorMessage } from '../../../../../http/errors';
 
 interface ProfileNoteDraft {
   category: YouthProfileNoteCategory;
-  title: string;
   details: string;
 }
 
@@ -27,7 +26,6 @@ export interface UseProfileNoteModalOptions {
 function buildDraft(note?: YouthProfileNote | null): ProfileNoteDraft {
   return {
     category: note?.category ?? 'general',
-    title: note?.title ?? '',
     details: note?.details ?? '',
   };
 }
@@ -59,20 +57,15 @@ export default function useProfileNoteModal({
   const selectCategory = (category: YouthProfileNoteCategory) => {
     setDraft(current => ({ ...current, category }));
   };
-  const updateTitle = (title: string) => {
-    setDraft(current => ({ ...current, title }));
-  };
   const updateDetails = (details: string) => {
     setDraft(current => ({ ...current, details }));
   };
 
   // Submission boundary.
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const title = draft.title.trim();
-    if (!title) {
-      setError('Enter a note title.');
+  const submit = async () => {
+    const details = draft.details.trim();
+    if (!details) {
+      setError('Enter a note.');
       setSubmitStatus('error');
       return;
     }
@@ -84,8 +77,7 @@ export default function useProfileNoteModal({
 
     const input = {
       category: draft.category,
-      title,
-      details: draft.details.trim() || null,
+      details,
     };
 
     let saved: YouthProfileNote;
@@ -111,7 +103,6 @@ export default function useProfileNoteModal({
     statusMessage,
     submissionComplete,
     selectCategory,
-    updateTitle,
     updateDetails,
     submit,
   };

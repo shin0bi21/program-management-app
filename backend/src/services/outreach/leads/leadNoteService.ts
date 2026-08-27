@@ -1,11 +1,14 @@
-import { sql } from '../../../db/client';
-import { NotFoundError } from '../../../errors';
+import crypto from 'crypto';
+import { asTransactionSql, sql } from '../../../db/client';
+import { ConflictError, NotFoundError } from '../../../errors';
 import type { SetLeadNoteInput } from '../../../validation/leadNoteSchemas';
+import { audit } from '../../shared/auditService';
+import { getLead } from './leadService';
 
 export async function getLeadNotes(leadId: string) {
   await assertLeadExists(leadId);
   return sql`
-    SELECT note.id, note.lead_id, note.details, note.created_at, note.updated_at,
+    SELECT note.id, note.lead_id, note.category, note.details, note.created_at, note.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name
     FROM lead_notes note
     LEFT JOIN users author ON author.id = note.created_by
@@ -14,40 +17,40 @@ export async function getLeadNotes(leadId: string) {
   `;
 }
 
-export function setLeadNote(leadId: string, data: SetLeadNoteInput, actorId: string, noteId?: string) {
-  return noteId
-    ? updateLeadNoteRecord(leadId, noteId, data, actorId)
-    : insertLeadNote(leadId, data, actorId);
-}
+export async function createLeadStatusNote(leadId: string, data: SetLeadNoteInput, actorId: string) {
+  const transactionId = crypto.randomUUID();
+  const noteId = await sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const leads = await tx<{ status: string }[]>`
+      SELECT status FROM leads WHERE id = ${leadId} FOR UPDATE
+    `;
+    if (!leads.length) throw new NotFoundError('Lead not found');
+    if (leads[0].status === 'signed_up') {
+      throw new ConflictError('Signed-up lead status cannot be changed');
+    }
 
-export async function deleteLeadNote(leadId: string, noteId: string) {
-  const rows = await sql`
-    DELETE FROM lead_notes
-    WHERE id = ${noteId} AND lead_id = ${leadId}
-    RETURNING id
-  `;
-  if (!rows.length) throw new NotFoundError('Lead note not found');
-}
+    const notes = await tx<{ id: string }[]>`
+      INSERT INTO lead_notes (lead_id, category, details, created_by, updated_by)
+      VALUES (${leadId}, ${data.category}, ${data.details}, ${actorId}, ${actorId})
+      RETURNING id
+    `;
+    await tx`
+      UPDATE leads
+      SET status = ${data.category},
+          status_updated_at = CASE WHEN status = ${data.category} THEN status_updated_at ELSE NOW() END,
+          updated_at = NOW(),
+          updated_by = ${actorId}
+      WHERE id = ${leadId}
+    `;
+    await audit(tx, actorId, transactionId, 'leads', leadId, 'UPDATE',
+      { status: leads[0].status }, { status: data.category });
+    return notes[0].id;
+  });
 
-async function insertLeadNote(leadId: string, data: SetLeadNoteInput, actorId: string) {
-  await assertLeadExists(leadId);
-  const rows = await sql`
-    INSERT INTO lead_notes (lead_id, details, created_by, updated_by)
-    VALUES (${leadId}, ${data.details}, ${actorId}, ${actorId})
-    RETURNING id
-  `;
-  return (await getLeadNotes(leadId)).find(note => note.id === rows[0].id)!;
-}
-
-async function updateLeadNoteRecord(leadId: string, noteId: string, data: SetLeadNoteInput, actorId: string) {
-  const rows = await sql`
-    UPDATE lead_notes
-    SET details = ${data.details}, updated_by = ${actorId}, updated_at = NOW()
-    WHERE id = ${noteId} AND lead_id = ${leadId}
-    RETURNING id
-  `;
-  if (!rows.length) throw new NotFoundError('Lead note not found');
-  return (await getLeadNotes(leadId)).find(note => note.id === noteId)!;
+  const notes = await getLeadNotes(leadId);
+  const note = notes.find(candidate => candidate.id === noteId);
+  if (!note) throw new NotFoundError('Lead status note not found after creation');
+  return { note, lead: await getLead(leadId) };
 }
 
 async function assertLeadExists(leadId: string) {

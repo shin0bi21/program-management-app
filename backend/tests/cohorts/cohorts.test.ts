@@ -18,15 +18,13 @@ function weekdayFor(date: string) {
 
 function sessionNoteInput(
   overrides: Partial<{
-    category: 'general' | 'attendance' | 'behaviour' | 'achievement' | 'follow_up';
-    title: string;
-    details: string | null;
+    category: 'general' | 'attendance' | 'behaviour' | 'achievement';
+    details: string;
     youthIds: string[];
   }> = {},
 ) {
   return {
     category: 'general' as const,
-    title: 'Session note',
     details: 'Session note details.',
     youthIds: [],
     ...overrides,
@@ -353,7 +351,6 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send(sessionNoteInput({
         category: 'achievement',
-        title: 'Youth-led discussion',
         details: 'Youth led the group discussion.',
         youthIds: [youthId, secondYouthId],
       }));
@@ -361,7 +358,6 @@ describe('Cohorts and attendance API', () => {
     expect(attached.body).toEqual(expect.objectContaining({
       sessionId,
       category: 'achievement',
-      title: 'Youth-led discussion',
       details: 'Youth led the group discussion.',
       youth: expect.arrayContaining([
         expect.objectContaining({ youthId }),
@@ -374,11 +370,11 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         category: 'general',
-        title: 'Extended session',
+        details: 'Extended session note.',
         youthIds: [],
       });
     expect(unlinked.status).toBe(201);
-    expect(unlinked.body.details).toBeNull();
+    expect(unlinked.body.details).toBe('Extended session note.');
     expect(unlinked.body.youth).toEqual([]);
 
     const notes = await request(app)
@@ -440,11 +436,11 @@ describe('Cohorts and attendance API', () => {
     const notes = await request(app)
       .get(`/api/cohorts/sessions/${sessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`);
-    const attached = notes.body.find((note: { title: string }) => (
-      note.title === 'Youth-led discussion'
+    const attached = notes.body.find((note: { details: string }) => (
+      note.details === 'Youth led the group discussion.'
     ));
-    const unlinked = notes.body.find((note: { title: string }) => (
-      note.title === 'Extended session'
+    const unlinked = notes.body.find((note: { details: string }) => (
+      note.details === 'Extended session note.'
     ));
 
     const updated = await request(app)
@@ -452,7 +448,6 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send(sessionNoteInput({
         category: 'behaviour',
-        title: 'Updated discussion note',
         details: 'Updated details.',
         youthIds: [secondYouthId],
       }));
@@ -460,7 +455,6 @@ describe('Cohorts and attendance API', () => {
     expect(updated.body).toEqual(expect.objectContaining({
       id: attached.id,
       category: 'behaviour',
-      title: 'Updated discussion note',
       details: 'Updated details.',
       youth: [expect.objectContaining({ youthId: secondYouthId })],
     }));
@@ -558,7 +552,6 @@ describe('Cohorts and attendance API', () => {
     expect(response.body).toEqual([
       expect.objectContaining({
         category: 'behaviour',
-        title: 'Updated discussion note',
         details: 'Updated details.',
         sessionId,
         cohortId,
@@ -722,8 +715,7 @@ describe('Cohorts and attendance API', () => {
       .post(`/api/cohorts/sessions/${openSessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send(sessionNoteInput({
-        category: 'follow_up',
-        title: 'Drop In follow-up',
+        category: 'general',
         details: 'Followed up after Drop In.',
         youthIds: [secondYouthId],
       }));
@@ -1102,7 +1094,7 @@ describe('Cohorts and attendance API', () => {
           },
         },
         notes: expect.arrayContaining([
-          expect.objectContaining({ category: 'behaviour', title: 'Updated discussion note', details: 'Updated details.' }),
+          expect.objectContaining({ category: 'behaviour', details: 'Updated details.' }),
         ]),
         timeline: expect.arrayContaining([
           expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),

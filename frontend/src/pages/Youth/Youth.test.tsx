@@ -1,4 +1,3 @@
-// Owns Youth rendered behavior and owner wiring.
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
@@ -99,22 +98,22 @@ describe('Youth', () => {
 
   it('shows success feedback after saving a new profile note without opening its details', async () => {
     youthApi.setYouthProfileNote.mockResolvedValue({
-      id: 'profile-note-new', youthId: 'youth-1', category: 'general', title: 'New profile note',
-      details: null, createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
+      id: 'profile-note-new', youthId: 'youth-1', category: 'general',
+      details: 'New profile note', createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
       createdByName: 'Bilal Khan',
     });
     render(<Youth />);
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
-    fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'New profile note' } });
+    fireEvent.change(screen.getByLabelText('Note *'), { target: { value: 'New profile note' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await screen.findByText('Profile note added.');
     expect(screen.getByRole('dialog', { name: 'Add Profile Note' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
     expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
-      title: 'New profile note',
+      details: 'New profile note',
     }));
   });
 
@@ -141,7 +140,7 @@ describe('Youth', () => {
 
   it('shows the selected profile contact and profile notes', async () => {
     youthApi.getYouthProfileNotes.mockResolvedValue([{
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general', title: 'Family follow-up',
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general',
       details: 'Youth profile note', createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
     }]);
     mockUseYouthTableData.mockReturnValue({
@@ -174,7 +173,8 @@ describe('Youth', () => {
     expect(screen.getByText('Soft Skills · Summer 2026')).toBeInTheDocument();
     expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
-    expect(await screen.findByText('Family follow-up')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View profile note' })).toBeInTheDocument();
+    expect(screen.queryByText('Youth profile note')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Profile Notes (1)' })).toBeInTheDocument();
   });
 

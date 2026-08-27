@@ -1,4 +1,3 @@
-// Owns profile-note editor, details, and delete-confirmation dialog composition.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -18,7 +17,6 @@ const note: YouthProfileNote = {
   id: 'note-1',
   youthId: 'youth-1',
   category: 'preference',
-  title: 'Learning preferences',
   details: 'Prefers written instructions.',
   createdAt: '2026-08-19T12:00:00.000Z',
   updatedAt: '2026-08-19T12:00:00.000Z',
@@ -47,7 +45,7 @@ describe('ProfileNoteDialogs', () => {
     const onRequestDelete = vi.fn();
     render(<ProfileNoteDialogs {...baseProps} onEdit={onEdit} onRequestDelete={onRequestDelete} />);
 
-    expect(screen.getByRole('dialog', { name: 'Learning preferences' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Profile Note' })).toBeInTheDocument();
     expect(screen.getByText('Prefers written instructions.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
@@ -69,7 +67,7 @@ describe('ProfileNoteDialogs', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Delete Profile Note' })).toHaveTextContent(
-      'Delete Learning preferences? This cannot be undone.',
+      'Delete this profile note? This cannot be undone.',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));

@@ -24,7 +24,7 @@ export interface LeadPreference {
   hiddenColumns?: string[];
 }
 
-const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'signed_up'];
+const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed', 'signed_up'];
 const externalSubmitterRoles: LeadSubmitterRole[] = ['youth', 'parent', 'guardian'];
 const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'created', direction: 'desc' };
 const DEFAULT_LEAD_PREFERENCE: LeadPreference = {

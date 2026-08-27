@@ -35,7 +35,7 @@ export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
 export type LeadOrigin = "external" | "internal";
 
-export type LeadStatus = "contacted" | "eligible" | "ineligible" | "new" | "signed_up";
+export type LeadStatus = "closed" | "contacted" | "deferred" | "eligible" | "ineligible" | "new" | "signed_up";
 
 export type LeadSubmitterRole = "guardian" | "parent" | "staff" | "youth";
 
@@ -171,6 +171,7 @@ export interface HomepageImages {
 }
 
 export interface LeadNotes {
+  category: LeadStatus | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   details: string;
@@ -281,10 +282,9 @@ export interface SessionNotes {
   category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  details: string | null;
+  details: string;
   id: Generated<string>;
   session_id: string;
-  title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -472,9 +472,8 @@ export interface YouthProfileNotes {
   category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  details: string | null;
+  details: string;
   id: Generated<string>;
-  title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
   youth_id: string;

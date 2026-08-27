@@ -15,16 +15,17 @@ import { formatShortDate } from '../../common/utils/date';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
 import LeadTable from './components/LeadTable/LeadTable';
 import LeadModal from './components/LeadModal/LeadModal';
+import LeadNoteModal from './components/LeadNoteModal/LeadNoteModal';
 import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import useLeadActions from './hooks/actions/useLeadActions';
 import useLeadData from './hooks/data/useLeadData';
 import { useLeadPreferences } from './hooks/preferences/useLeadPreferences';
 import useLeadSelection from './hooks/selection/useLeadSelection';
-import { LEAD_TABLE_KEYS, type Lead, type LeadOrigin, type LeadStatus } from './types';
+import { LEAD_TABLE_KEYS, type EditableLeadStatus, type Lead, type LeadOrigin } from './types';
 import './Leads.css';
 
-const editableStatuses: LeadStatus[] = ['contacted', 'eligible', 'ineligible'];
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
+const editableStatuses: EditableLeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed'];
 
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
@@ -65,6 +66,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
   const closeSignUpModal = () => setSignUpTarget(null);
 
+  // Status update modal.
+  const [statusNoteTarget, setStatusNoteTarget] = useState<{ lead: Lead; status?: EditableLeadStatus } | null>(null);
+  const closeStatusNoteModal = () => setStatusNoteTarget(null);
+
   // Table configuration.
   const columns: TableColumnDef<Lead>[] = [
     { id: 'firstName', header: 'First Name', accessorFn: lead => lead.youthFirstName },
@@ -100,7 +105,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
               id: status,
               label: `Mark ${title(status)}`,
               groupStart: index === 0,
-              onClick: () => void actions.setStatus(lead, status),
+              onClick: () => setStatusNoteTarget({ lead, status }),
             })),
             { id: 'sign-up', label: 'Sign Up', onClick: () => requestSignUp(lead) },
           ]}
@@ -142,7 +147,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           onClearAll={preferences.filters.clear}
         /> : undefined}
       />
-      <PageErrorOverlay errors={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]} />
+      <PageErrorOverlay errors={[preferences.error, data.programsError, viewError, dashboardError]} />
       {!preferences.ready ? <p role="status">Loading saved lead preferences…</p> : <PageBody
         ariaLabel={viewTitle}
         table={<LeadTable
@@ -158,7 +163,12 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           onColumnWidthsChange={preferences.table.setColumnWidths}
           onErrorChange={setViewError}
         />}
-        dashboard={<LeadDashboard lead={selection.selectedLead} canWrite={canWrite} onErrorChange={setDashboardError} />}
+        dashboard={<LeadDashboard
+          lead={selection.selectedLead}
+          canWrite={canWrite}
+          onAddStatusUpdate={lead => setStatusNoteTarget({ lead })}
+          onErrorChange={setDashboardError}
+        />}
       />}
     </main>
     <LeadModal
@@ -175,6 +185,12 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       lead={signUpTarget}
       onClose={closeSignUpModal}
       onSuccess={actions.reconcileSignUp}
+    />
+    <LeadNoteModal
+      lead={statusNoteTarget?.lead ?? null}
+      initialStatus={statusNoteTarget?.status}
+      onClose={closeStatusNoteModal}
+      onSaved={result => void actions.reconcileStatusNote(result)}
     />
     <ConfirmModal
       action={actions.confirmAction}

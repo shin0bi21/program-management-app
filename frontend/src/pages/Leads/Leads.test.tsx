@@ -1,4 +1,3 @@
-// Owns Leads rendered behavior and owner wiring.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,7 +15,7 @@ const renderPage = (
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
-const updateLeadStatus = vi.fn();
+const createLeadStatusNote = vi.fn();
 const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
@@ -32,12 +31,10 @@ vi.mock('./leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
   createLead: vi.fn(),
   updateLead: (...args: unknown[]) => updateLead(...args),
-  updateLeadStatus: (...args: unknown[]) => updateLeadStatus(...args),
   deleteLead: (...args: unknown[]) => deleteLead(...args),
   signUpLead: (...args: unknown[]) => signUpLead(...args),
   getLeadNotes: (...args: unknown[]) => getLeadNotes(...args),
-  setLeadNote: vi.fn(),
-  deleteLeadNote: vi.fn(),
+  createLeadStatusNote: (...args: unknown[]) => createLeadStatusNote(...args),
 }));
 
 vi.mock('../../auth/authContext', () => ({
@@ -77,7 +74,7 @@ describe('Leads', () => {
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     });
-    updateLeadStatus.mockReset();
+    createLeadStatusNote.mockReset();
     updateLead.mockReset();
     deleteLead.mockReset();
     deleteLead.mockResolvedValue({ id: 'lead-1' });
@@ -156,12 +153,21 @@ describe('Leads', () => {
 
   it('keeps the selected dashboard synchronized with status responses', async () => {
     const initialLead = (await getLeads())[0];
-    updateLeadStatus.mockResolvedValue({ ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' });
+    const updatedLead = { ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' };
+    createLeadStatusNote.mockResolvedValue({
+      lead: updatedLead,
+      note: {
+        id: 'note-1', leadId: initialLead.id, category: 'contacted', details: 'Called the family.',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdByName: 'Staff User',
+      },
+    });
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Mark Contacted' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Called the family.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Update' }));
 
     expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();

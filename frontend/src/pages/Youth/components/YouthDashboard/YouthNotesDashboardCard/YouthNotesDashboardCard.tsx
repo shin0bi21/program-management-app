@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import type { YouthProfileNote } from '../../../../../common/types/youth';
 import ProfileNoteRow from '../../ProfileNotes/ProfileNoteRow';
@@ -9,6 +10,7 @@ interface YouthNotesDashboardCardProps {
   selected: boolean;
   onSelectProfileNote: (note: YouthProfileNote) => void;
   canManageProfileNotes?: boolean;
+  onAddProfileNote?: () => void;
   onEditProfileNote?: (note: YouthProfileNote) => void;
   onDeleteProfileNote?: (note: YouthProfileNote) => void;
   profileNotesLoading?: boolean;
@@ -17,10 +19,12 @@ interface YouthNotesDashboardCardProps {
 }
 
 export default function YouthNotesDashboardCard({
-  profileNotes = [], selected, onSelectProfileNote, canManageProfileNotes = false, onEditProfileNote,
+  profileNotes = [], selected, onSelectProfileNote, canManageProfileNotes = false, onAddProfileNote, onEditProfileNote,
   onDeleteProfileNote, profileNotesLoading = false, profileNotesError, onRetry,
 }: YouthNotesDashboardCardProps) {
-  const title = selected && !profileNotesLoading ? `Profile Notes (${profileNotes.length})` : 'Profile Notes';
+  const title = selected && !profileNotesLoading && !profileNotesError
+    ? `Profile Notes (${profileNotes.length})`
+    : 'Profile Notes';
   let content: ReactNode;
   if (!selected) content = <p className="dashboard-card__empty">Select a row to view notes.</p>;
   else if (profileNotesLoading) content = <p className="dashboard-card__empty">Loading profile notes…</p>;
@@ -37,7 +41,10 @@ export default function YouthNotesDashboardCard({
   ))}</div>;
 
   return (
-    <DashboardCard title={title}>
+    <DashboardCard
+      title={title}
+      action={canManageProfileNotes ? <Button size="sm" variant="secondary" aria-label="Add profile note" disabled={!selected} onClick={onAddProfileNote}>+ Add</Button> : undefined}
+    >
       {content}
     </DashboardCard>
   );

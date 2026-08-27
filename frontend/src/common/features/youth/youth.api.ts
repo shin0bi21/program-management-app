@@ -69,8 +69,7 @@ export function inviteYouth(id: string, email: string) {
 
 export interface SetYouthProfileNoteInput {
   category: YouthProfileNoteCategory;
-  title: string;
-  details: string | null;
+  details: string;
 }
 
 export function getYouthProfileNotes(id: string, opts?: RequestOptions) {

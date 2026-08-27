@@ -45,8 +45,7 @@ export interface YouthProfileNote {
   id: string;
   youthId: string;
   category: YouthProfileNoteCategory;
-  title: string;
-  details: string | null;
+  details: string;
   createdAt: string;
   updatedAt: string;
   createdByName: string | null;

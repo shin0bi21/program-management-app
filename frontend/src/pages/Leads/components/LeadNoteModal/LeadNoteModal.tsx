@@ -1,61 +1,47 @@
-import FormField from '../../../../common/components/FormField/FormField';
-import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
+import NoteModal from '../../../../common/features/notes/components/NoteModal/NoteModal';
 
-import type { Lead, LeadNote } from '../../types';
+import type { CreateLeadStatusNoteResult, EditableLeadStatus, Lead } from '../../types';
 
 import useLeadNoteModal from './hooks/useLeadNoteModal';
 
 export default function LeadNoteModal({
   lead,
-  note,
+  initialStatus,
   onClose,
   onSaved,
 }: {
   lead: Lead | null;
-  note: LeadNote | null;
+  initialStatus?: EditableLeadStatus;
   onClose: () => void;
-  onSaved: (savedNote: LeadNote) => void;
+  onSaved: (result: CreateLeadStatusNoteResult) => void;
 }) {
-  const workflow = useLeadNoteModal({ lead, note, onSaved });
+  const workflow = useLeadNoteModal({ lead, initialStatus, onSaved });
 
   return (
-    <Modal
+    <NoteModal
       isOpen={lead !== null}
-      onClose={onClose}
-      title={note ? 'Edit Follow-up Note' : 'Add Follow-up Note'}
-      status={workflow.submitStatus}
+      title="Add Status Update"
+      formId="lead-status-note-form"
+      categoryLabel="Status"
+      category={workflow.category}
+      categoryOptions={[
+        { value: 'new', label: 'New' },
+        { value: 'contacted', label: 'Contacted' },
+        { value: 'eligible', label: 'Eligible' },
+        { value: 'ineligible', label: 'Ineligible' },
+        { value: 'deferred', label: 'Deferred' },
+        { value: 'closed', label: 'Closed' },
+      ]}
+      details={workflow.details}
+      submitLabel="Add Update"
+      submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       successDelay={900}
-      footer={(
-        <ModalFormFooter
-          formId="lead-note-form"
-          submitLabel={note ? 'Save' : 'Add Note'}
-          submitStatus={workflow.submitStatus}
-          onClose={onClose}
-        />
-      )}
-    >
-      <form
-        id="lead-note-form"
-        aria-busy={workflow.submitStatus === 'submitting'}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void workflow.submit();
-        }}
-      >
-        <FormField id="lead-note-details" label="Follow-up note *">
-          <textarea
-            id="lead-note-details"
-            rows={5}
-            maxLength={500}
-            value={workflow.details}
-            required
-            disabled={workflow.submissionComplete}
-            onChange={event => workflow.updateDetails(event.target.value)}
-          />
-        </FormField>
-      </form>
-    </Modal>
+      maxLength={500}
+      onCategoryChange={value => workflow.updateCategory(value as EditableLeadStatus)}
+      onDetailsChange={workflow.updateDetails}
+      onSubmit={workflow.submit}
+      onClose={onClose}
+    />
   );
 }

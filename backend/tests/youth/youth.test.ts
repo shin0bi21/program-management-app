@@ -610,14 +610,14 @@ describe('Youth API', () => {
       const invalidCategory = await request(app)
         .post(`/api/youth/${youthId}/notes`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ category: 'private', title: 'Test', details: null });
+        .send({ category: 'private', details: 'Test' });
       expect(invalidCategory.status).toBe(400);
 
-      const emptyTitle = await request(app)
+      const emptyNote = await request(app)
         .post(`/api/youth/${youthId}/notes`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ category: 'general', title: '   ', details: null });
-      expect(emptyTitle.status).toBe(400);
+        .send({ category: 'general', details: '   ' });
+      expect(emptyNote.status).toBe(400);
     });
 
     it('does not allow a note id to be used through another youth profile', async () => {
@@ -628,12 +628,12 @@ describe('Youth API', () => {
       const created = await request(app)
         .post(`/api/youth/${youthId}/notes`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ category: 'general', title: 'Scoped note', details: null });
+        .send({ category: 'general', details: 'Scoped note' });
 
       const update = await request(app)
         .put(`/api/youth/${otherYouth.body.id}/notes/${created.body.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ category: 'general', title: 'Moved note', details: null });
+        .send({ category: 'general', details: 'Moved note' });
       expect(update.status).toBe(404);
 
       const remove = await request(app)
@@ -647,16 +647,16 @@ describe('Youth API', () => {
 
     it('creates, lists, updates, and deletes typed notes', async () => {
       const created = await request(app).post(`/api/youth/${youthId}/notes`).set('Authorization', `Bearer ${adminToken}`).send({
-        category: 'health', title: 'Peanut allergy', details: 'Avoid peanuts',
+        category: 'health', details: 'Avoid peanuts',
       });
       expect(created.status).toBe(201);
-      expect(created.body).toEqual(expect.objectContaining({ youthId, category: 'health', title: 'Peanut allergy', details: 'Avoid peanuts' }));
+      expect(created.body).toEqual(expect.objectContaining({ youthId, category: 'health', details: 'Avoid peanuts' }));
 
       const listed = await request(app).get(`/api/youth/${youthId}/notes`).set('Authorization', `Bearer ${adminToken}`);
       expect(listed.body).toHaveLength(1);
 
       const updated = await request(app).put(`/api/youth/${youthId}/notes/${created.body.id}`).set('Authorization', `Bearer ${adminToken}`).send({
-        category: 'preference', title: 'Snack', details: 'Prefers apples',
+        category: 'preference', details: 'Prefers apples',
       });
       expect(updated.body).toEqual(expect.objectContaining({ category: 'preference', details: 'Prefers apples' }));
 
@@ -716,11 +716,11 @@ describe('Youth API', () => {
 
       const [linkedSessionNote] = await sql<{ id: string }[]>`
         INSERT INTO session_notes (
-          session_id, category, title, details, created_by, updated_by
+          session_id, category, details, created_by, updated_by
         )
         VALUES (
-          ${firstSessionId}, 'achievement', 'Strong participation',
-          'Led the opening activity', ${adminUserId}, ${adminUserId}
+          ${firstSessionId}, 'achievement', 'Led the opening activity',
+          ${adminUserId}, ${adminUserId}
         )
         RETURNING id
       `;
@@ -806,7 +806,7 @@ describe('Youth API', () => {
           status: 'present',
           sessionNotes: [expect.objectContaining({
             id: linkedSessionNoteId,
-            title: 'Strong participation',
+            details: 'Led the opening activity',
           })],
         }),
         expect.objectContaining({ id: secondSessionId, status: null, sessionNotes: [] }),

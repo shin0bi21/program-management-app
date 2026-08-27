@@ -1,7 +1,4 @@
-import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
-import FormField from '../../../../common/components/FormField/FormField';
-import Modal from '../../../../common/components/Modal/Modal';
-import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
+import NoteModal from '../../../../common/features/notes/components/NoteModal/NoteModal';
 
 import useProfileNoteModal from './hooks/useProfileNoteModal';
 
@@ -22,64 +19,27 @@ export default function ProfileNoteModal({
 }: ProfileNoteModalProps) {
   const workflow = useProfileNoteModal({ youthId, note, onSaved });
 
-  const footer = (
-    <ModalFormFooter
+  return (
+    <NoteModal
+      isOpen
+      title={note ? 'Edit Profile Note' : 'Add Profile Note'}
       formId="profile-note-form"
+      categoryLabel="Category"
+      category={workflow.draft.category}
+      categoryOptions={[
+        { value: 'general', label: 'General' },
+        { value: 'health', label: 'Health' },
+        { value: 'preference', label: 'Preference' },
+      ]}
+      details={workflow.draft.details}
       submitLabel="Save"
       submitStatus={workflow.submitStatus}
-      onClose={onClose}
-    />
-  );
-
-  return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title={note ? 'Edit Profile Note' : 'Add Profile Note'}
-      status={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       successDelay={1400}
-      footer={footer}
-    >
-      <form
-        id="profile-note-form"
-        aria-busy={workflow.submissionComplete || undefined}
-        onSubmit={workflow.submit}
-      >
-        <FormField id="profile-note-category" label="Type">
-          <FloatingSelect
-            id="profile-note-category"
-            ariaLabel="Type"
-            value={workflow.draft.category}
-            options={[
-              { value: 'general', label: 'General' },
-              { value: 'health', label: 'Health' },
-              { value: 'preference', label: 'Preference' },
-            ]}
-            onChange={value => workflow.selectCategory(value as YouthProfileNoteCategory)}
-            disabled={workflow.submissionComplete}
-          />
-        </FormField>
-
-        <FormField id="profile-note-title" label="Title *">
-          <input
-            id="profile-note-title"
-            value={workflow.draft.title}
-            onChange={event => workflow.updateTitle(event.target.value)}
-            disabled={workflow.submissionComplete}
-          />
-        </FormField>
-
-        <FormField id="profile-note-details" label="Details (optional)">
-          <textarea
-            id="profile-note-details"
-            rows={5}
-            value={workflow.draft.details}
-            onChange={event => workflow.updateDetails(event.target.value)}
-            disabled={workflow.submissionComplete}
-          />
-        </FormField>
-      </form>
-    </Modal>
+      onCategoryChange={value => workflow.selectCategory(value as YouthProfileNoteCategory)}
+      onDetailsChange={workflow.updateDetails}
+      onSubmit={workflow.submit}
+      onClose={onClose}
+    />
   );
 }

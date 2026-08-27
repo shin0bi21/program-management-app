@@ -32,7 +32,7 @@ const lead: Lead = {
 
 describe('LeadDashboard', () => {
   it('composes contact, intake, and follow-up cards for the selected lead', () => {
-    render(<LeadDashboard lead={lead} canWrite />);
+    render(<LeadDashboard lead={lead} canWrite onAddStatusUpdate={vi.fn()} />);
 
     expect(screen.getByText('519-555-0100')).toBeInTheDocument();
     expect(screen.getByText('Call after school.')).toBeInTheDocument();

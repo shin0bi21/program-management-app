@@ -1,0 +1,47 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { SessionNote } from '../../../../../common/types/cohort';
+import SessionAttendanceItem from './SessionAttendanceItem';
+
+vi.mock('../../../../../common/features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect', () => ({
+  default: () => <div aria-label="Attendance status" />,
+}));
+
+const note = {
+  id: 'note-1', sessionId: 'session-1', category: 'general', details: 'Checked in.',
+  createdAt: '2026-08-19T17:00:00.000Z', updatedAt: '2026-08-19T17:00:00.000Z',
+  createdByName: null, youth: [],
+} satisfies SessionNote;
+
+describe('SessionAttendanceItem', () => {
+  it('wires expanded note actions to the selected session note', () => {
+    const onViewNote = vi.fn();
+    const onEditNote = vi.fn();
+    const onUnlinkNote = vi.fn();
+    render(<SessionAttendanceItem
+      session={{
+        id: 'session-1', sessionTypeName: 'Workshop', theme: 'Communication',
+        startsAt: '2026-08-19T17:00:00.000Z', endsAt: '2026-08-19T18:00:00.000Z',
+        cancelledAt: null, status: 'present', notes: null, sessionNotes: [note],
+      }}
+      rosterMode="enrolled"
+      status="present"
+      canManageSessionNotes
+      notesExpanded
+      onStatusChange={vi.fn()}
+      onToggleNotes={vi.fn()}
+      onAddNote={vi.fn()}
+      onViewNote={onViewNote}
+      onEditNote={onEditNote}
+      onUnlinkNote={onUnlinkNote}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit session note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink session note' }));
+
+    expect(onViewNote).toHaveBeenCalledWith(note);
+    expect(onEditNote).toHaveBeenCalledWith(note);
+    expect(onUnlinkNote).toHaveBeenCalledWith(note);
+  });
+});

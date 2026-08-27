@@ -84,6 +84,18 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 |---|---|
 | `/public` | Unauthenticated homepage content and expression-of-interest intake |
 | `/expressions-of-interest` | Internal review, status updates, and lead conversion |
-| `/leads` | Lead intake, status, notes, and youth signup |
+| `/leads` | Lead intake, append-only status history, and youth signup |
+
+Lead workflow endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET/POST` | `/leads` | List Leads or create an internal Lead |
+| `PUT/DELETE` | `/leads/:id` | Update or delete an unsigned Lead |
+| `GET` | `/leads/:id/notes` | List status updates and uncategorized historical notes |
+| `POST` | `/leads/:id/notes` | Append a required status note and transactionally update Lead status |
+| `POST` | `/leads/:id/sign-up` | Create the youth profile and append the system-owned `signed_up` status update |
+
+Historical Lead notes may temporarily have a null category while they are manually classified. New status-note requests always require a category; historical updates are not editable or deletable through the API.
 
 For lifecycle, ownership, and implementation, see the [Backend guide](README.md) and the focused documents beside this file. Local commands, testing, and deployment are routed through the root application README.

@@ -16,8 +16,8 @@ type SessionTypeRow = { name: string };
 type TimelineRow = { youthId: string; sessionId: string; sessionTypeName: string; sessionTheme: string | null; startsAt: string; status: AttendanceStatus | null };
 type NoteRow = {
   id: string; youthId: string; sessionId: string; sessionTheme: string | null; startsAt: string;
-  category: 'general' | 'attendance' | 'behaviour' | 'achievement' | 'follow_up';
-  title: string; details: string | null;
+  category: 'general' | 'attendance' | 'behaviour' | 'achievement';
+  details: string;
 };
 
 const emptyCounts = () => ({ present: 0, late: 0, absent: 0, excused: 0, unmarked: 0 });
@@ -79,7 +79,7 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
 
   const notes = await sql<NoteRow[]>`
     SELECT note.id, link.youth_id, note.session_id, session.theme AS session_theme,
-      session.starts_at, note.category, note.title, note.details
+      session.starts_at, note.category, note.details
     FROM session_note_has_youth link
     INNER JOIN session_notes note ON note.id = link.note_id
     INNER JOIN cohort_sessions session ON session.id = note.session_id
@@ -125,7 +125,6 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
           sessionTheme: note.sessionTheme,
           startsAt: note.startsAt,
           category: note.category,
-          title: note.title,
           details: note.details,
         })),
         timeline: records.map(record => ({
