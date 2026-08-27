@@ -3,7 +3,16 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { resolvePreferenceSorting } from './preferenceValues';
+import {
+  haveSamePreferenceValues,
+  mergePreferenceDefaults,
+  resolveAvailablePreferenceIds,
+  resolveAvailablePreferenceValues,
+  resolvePreferenceSorting,
+  resolvePreferenceString,
+  resolvePreferenceStringArray,
+  resolvePreferenceValue,
+} from './preferenceValues';
 
 const fallback = { key: 'name', direction: 'asc' } as const;
 
@@ -26,5 +35,33 @@ describe('resolvePreferenceSorting', () => {
       ['name', 'email'],
       fallback,
     )).toBe(fallback);
+  });
+});
+
+describe('preference normalization primitives', () => {
+  it('merges current values with defaults and validates scalar values', () => {
+    expect(mergePreferenceDefaults(
+      { view: 'calendar', search: '' },
+      { view: 'table' },
+    )).toEqual({ view: 'table', search: '' });
+    expect(resolvePreferenceValue('table', ['calendar', 'table'], 'calendar')).toBe('table');
+    expect(resolvePreferenceValue('removed', ['calendar', 'table'], 'calendar')).toBe('calendar');
+    expect(resolvePreferenceString('  workshop  ')).toBe('workshop');
+    expect(resolvePreferenceStringArray(['staff-1', null, 3])).toEqual(['staff-1']);
+  });
+
+  it('preserves unverified selections and filters them once options are available', () => {
+    const ids = ['staff-1', 'removed-staff'];
+    const values = ['active', 'removed-status'];
+
+    expect(resolveAvailablePreferenceIds(ids, undefined, false)).toEqual(ids);
+    expect(resolveAvailablePreferenceIds(ids, [{ id: 'staff-1' }], true)).toEqual(['staff-1']);
+    expect(resolveAvailablePreferenceValues(values, undefined, false)).toEqual(values);
+    expect(resolveAvailablePreferenceValues(values, [{ value: 'active' }], true)).toEqual(['active']);
+  });
+
+  it('compares ordered preference values', () => {
+    expect(haveSamePreferenceValues(['a', 'b'], ['a', 'b'])).toBe(true);
+    expect(haveSamePreferenceValues(['a', 'b'], ['b', 'a'])).toBe(false);
   });
 });
