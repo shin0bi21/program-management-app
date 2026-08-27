@@ -1,4 +1,3 @@
-// Scope: verifies youth-attendance note dialogs pass the selected youth and session context.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -36,10 +35,12 @@ describe('YouthSessionNoteDialogs', () => {
         },
         note: null,
       }}
+      detailTarget={null}
       unlinkTarget={null}
       unlinking={false}
       unlinkError=""
       onCloseNote={onCloseNote}
+      onCloseDetails={vi.fn()}
       onNoteSaved={onNoteSaved}
       onCloseUnlink={vi.fn()}
       onConfirmUnlink={vi.fn()}

@@ -27,7 +27,6 @@ const noteStyles = {
   attendance: { label: 'Attendance', marker: 'AT', color: '#2563a6' },
   behaviour: { label: 'Behaviour', marker: 'B', color: '#b45309' },
   achievement: { label: 'Achievement', marker: 'AC', color: '#15803d' },
-  follow_up: { label: 'Follow-up', marker: 'F', color: '#7e22ce' },
 } as const;
 
 export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
@@ -209,8 +208,7 @@ function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
       .text(style.marker, margin + 1, doc.y + 2, { width: 10, align: 'center' });
     doc.font('Helvetica').fontSize(7).fillColor(style.color).text(`${style.label} · ${date} · ${session}`, margin + 18, doc.y - 10);
-    doc.moveDown(0.3).font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text(note.title);
-    if (note.details) doc.moveDown(0.15).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
+    doc.moveDown(0.3).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
     doc.moveDown(0.5).moveTo(margin, doc.y).lineTo(pageWidth - margin, doc.y).lineWidth(0.4).strokeColor('#eef0f2').stroke();
     doc.moveDown(0.7);
   });

@@ -1,4 +1,5 @@
-export type LeadStatus = 'new' | 'contacted' | 'eligible' | 'ineligible' | 'signed_up';
+export type LeadStatus = 'new' | 'contacted' | 'eligible' | 'ineligible' | 'deferred' | 'closed' | 'signed_up';
+export type EditableLeadStatus = Exclude<LeadStatus, 'signed_up'>;
 export type LeadOrigin = 'external' | 'internal';
 export type LeadSubmitterRole = 'youth' | 'parent' | 'guardian' | 'staff';
 export type LeadRelationship = 'parent' | 'sibling' | 'guardian';
@@ -27,10 +28,16 @@ export interface Lead {
 export interface LeadNote {
   id: string;
   leadId: string;
+  category: LeadStatus | null;
   details: string;
   createdAt: string;
   updatedAt: string;
   createdByName: string | null;
+}
+
+export interface CreateLeadStatusNoteResult {
+  note: LeadNote;
+  lead: Lead;
 }
 
 export interface LeadFilters {

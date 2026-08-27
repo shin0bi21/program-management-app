@@ -170,15 +170,13 @@ export type SessionNoteCategory =
   | 'general'
   | 'attendance'
   | 'behaviour'
-  | 'achievement'
-  | 'follow_up';
+  | 'achievement';
 
 export interface SessionNote {
   id: string;
   sessionId: string;
   category: SessionNoteCategory;
-  title: string;
-  details: string | null;
+  details: string;
   createdAt: string;
   updatedAt: string;
   createdByName: string | null;
@@ -197,8 +195,7 @@ export interface YouthSessionNote extends SessionNote {
 
 export interface CreateSessionNoteInput {
   category: SessionNoteCategory;
-  title: string;
-  details: string | null;
+  details: string;
   youthIds: string[];
 }
 

@@ -230,6 +230,7 @@ export default function Youth() {
             profileNotesError={profileNotes.error}
             onRetryProfileNotes={profileNotes.retry}
             onSelectProfileNote={profileNotes.openDetails}
+            onAddProfileNote={() => profileNotes.openEditor('new')}
             onEditProfileNote={profileNotes.openEditor}
             onDeleteProfileNote={profileNotes.requestDelete}
           />}

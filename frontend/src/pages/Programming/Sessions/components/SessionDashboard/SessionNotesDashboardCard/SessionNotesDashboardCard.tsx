@@ -36,13 +36,16 @@ export default function SessionNotesDashboardCard({
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: query.refetch }), [query.refetch]);
   usePageErrorReporter(onErrorChange, query.error ? 'Could not load session notes.' : null, retryAction);
   const loadNotes = async () => { await query.refetch(); };
+  const title = session && !query.isLoading && !query.error
+    ? `Session Notes (${query.data?.length ?? 0})`
+    : 'Session Notes';
   useEffect(() => {
     setNoteTarget(null); setEditNote(null); setDetailNote(null); setConfirmAction(null);
   }, [session?.id]);
 
   return <>
     <DashboardCard
-      title="Session Notes"
+      title={title}
       emptyMessage={session ? 'No notes.' : 'No session selected.'}
       action={canWrite ? <Button size="sm" variant="secondary" disabled={!session} aria-label="Add notes" onClick={() => { if (session) setNoteTarget(session); }}>+ Add</Button> : undefined}
     >
@@ -55,14 +58,14 @@ export default function SessionNotesDashboardCard({
           onView={setDetailNote}
           onEdit={canWrite ? value => { setEditNote(value); setNoteTarget(session); } : undefined}
           onDelete={canWrite ? value => setConfirmAction({
-            title: 'Delete Note', message: `Delete “${value.title}”? This cannot be undone.`, confirmLabel: 'Delete',
+            title: 'Delete Note', message: 'Delete this session note? This cannot be undone.', confirmLabel: 'Delete',
             confirmVariant: 'danger', successMessage: 'Session note successfully deleted.',
             onConfirm: async () => { await deleteSessionNote(session.id, value.id); await loadNotes(); if (detailNote?.id === value.id) setDetailNote(null); },
           }) : undefined}
         />)}</div> : <p className="dashboard-card__empty">No notes.</p> : undefined}
     </DashboardCard>
     <SessionNoteModal session={noteTarget} note={editNote} onClose={() => { setNoteTarget(null); setEditNote(null); }} onSaved={loadNotes} />
-    <Modal isOpen={detailNote !== null} onClose={() => setDetailNote(null)} title={detailNote?.title ?? ''} footer={<Button variant="secondary" onClick={() => setDetailNote(null)}>Close</Button>}>
+    <Modal isOpen={detailNote !== null} onClose={() => setDetailNote(null)} title="Session Note" footer={<Button variant="secondary" onClick={() => setDetailNote(null)}>Close</Button>}>
       {detailNote && <SessionNoteDetails note={detailNote} />}
     </Modal>
     <ConfirmModal action={confirmAction} onClose={() => setConfirmAction(null)} />

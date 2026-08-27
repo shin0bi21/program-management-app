@@ -10,6 +10,7 @@ describe('NoteRow', () => {
 
     render(
       <NoteRow
+        ariaLabel="profile note"
         title="Check-in"
         categoryBadge={<span>General</span>}
         date="2026-08-07T12:00:00.000Z"
@@ -21,9 +22,9 @@ describe('NoteRow', () => {
 
     expect(screen.getByText('Check-in')).toBeInTheDocument();
     expect(screen.getByText('General')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'View Check-in' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Check-in' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Check-in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View profile note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit profile note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete profile note' }));
     expect(onView).toHaveBeenCalledOnce();
     expect(onEdit).toHaveBeenCalledOnce();
     expect(onDelete).toHaveBeenCalledOnce();
@@ -32,6 +33,7 @@ describe('NoteRow', () => {
   it('does not expose management actions when they are unavailable', () => {
     render(
       <NoteRow
+        ariaLabel="profile note"
         title="Read only"
         categoryBadge={<span>General</span>}
         date="2026-08-07T12:00:00.000Z"
@@ -39,7 +41,7 @@ describe('NoteRow', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Edit Read only' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete Read only' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit profile note' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete profile note' })).not.toBeInTheDocument();
   });
 });

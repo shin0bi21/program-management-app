@@ -54,7 +54,7 @@ export default function ProfileNoteDialogs({
       <Modal
         isOpen={selectedNote !== null}
         onClose={onCloseDetails}
-        title={confirmingDelete ? 'Delete Profile Note' : selectedNote?.title || 'Profile Note'}
+        title={confirmingDelete ? 'Delete Profile Note' : 'Profile Note'}
         status={deleteError ? 'error' : deleting ? 'submitting' : 'idle'}
         statusMessage={deleteError || (deleting ? 'Deleting profile note...' : undefined)}
         footer={selectedNote && canManage ? confirmingDelete ? <>
@@ -66,7 +66,7 @@ export default function ProfileNoteDialogs({
         </> : <Button variant="secondary" onClick={onCloseDetails}>Close</Button>}
       >
         {selectedNote && (confirmingDelete
-          ? <p>Delete {selectedNote.title || 'this profile note'}? This cannot be undone.</p>
+          ? <p>Delete this profile note? This cannot be undone.</p>
           : <ProfileNoteDetails note={selectedNote} />)}
       </Modal>
     </>

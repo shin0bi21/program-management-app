@@ -53,7 +53,7 @@ const attendance = {
       cancelledAt: null, status: 'present' as const, notes: 'Participated fully',
       sessionNotes: [{
         id: 'note-1', sessionId: 'session-1', category: 'achievement' as const,
-        title: 'Strong participation', details: 'Led the opening activity.',
+        details: 'Led the opening activity.',
         createdAt: '2026-07-14T22:00:00.000Z', updatedAt: '2026-07-14T22:00:00.000Z',
         createdByName: 'Bilal Khan',
         youth: [{ youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test' }],
@@ -75,7 +75,7 @@ describe('YouthAttendanceModal', () => {
     sessionNoteApi.updateSessionNote.mockResolvedValue({});
   });
 
-  it('shows each linked session note with its full details inline', async () => {
+  it('shows note metadata in the row and full details on demand', async () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
@@ -87,11 +87,13 @@ describe('YouthAttendanceModal', () => {
     );
 
     expect(await screen.findByText('Notes (1)')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Strong participation' })).toBeInTheDocument();
     expect(screen.getByText('Achievement')).toBeInTheDocument();
-    expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
+    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
     expect(screen.queryByText('Bilal Khan')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'View Strong participation' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
+    const detailsDialog = screen.getByRole('dialog', { name: 'Session Note' });
+    expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
+    fireEvent.click(within(detailsDialog).getByText('Close'));
     expect(screen.getByText('Notes (0)')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Notes (0)' })).not.toBeInTheDocument();
     expect(screen.queryByText('No session notes linked to this youth.')).not.toBeInTheDocument();
@@ -101,9 +103,9 @@ describe('YouthAttendanceModal', () => {
     expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show all notes' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Show all notes' }));
-    expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View session note' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Hide all notes' }));
-    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View session note' })).not.toBeInTheDocument();
   });
 
   it('adds a prelinked youth note without showing link controls', async () => {
@@ -122,12 +124,12 @@ describe('YouthAttendanceModal', () => {
     expect(await screen.findByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Link youth' })).not.toBeInTheDocument();
     expect(sessionNoteApi.getSessionRoster).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Good teamwork' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Good teamwork' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
 
     await waitFor(() => expect(sessionNoteApi.createSessionNote).toHaveBeenCalledWith(
       'session-2',
-      expect.objectContaining({ title: 'Good teamwork', youthIds: ['youth-1'] }),
+      expect.objectContaining({ details: 'Good teamwork', youthIds: ['youth-1'] }),
     ));
     expect(screen.getByText('Session note successfully added.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
@@ -144,13 +146,13 @@ describe('YouthAttendanceModal', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Strong participation' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Updated participation' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit session note' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Updated participation' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(sessionNoteApi.updateSessionNote).toHaveBeenCalledWith(
       'session-1',
       'note-1',
-      expect.objectContaining({ title: 'Updated participation', youthIds: ['youth-1'] }),
+      expect.objectContaining({ details: 'Updated participation', youthIds: ['youth-1'] }),
     ));
 
     view.unmount();
@@ -163,7 +165,7 @@ describe('YouthAttendanceModal', () => {
         onSaved={vi.fn()}
       />,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Unlink Strong participation' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlink session note' }));
     expect(screen.getByText(/The session note will remain available/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Unlink' }));
     await waitFor(() => expect(sessionNoteApi.unlinkSessionNoteYouth).toHaveBeenCalledWith(

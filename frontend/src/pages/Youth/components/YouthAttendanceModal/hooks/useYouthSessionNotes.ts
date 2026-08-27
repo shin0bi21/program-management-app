@@ -18,6 +18,7 @@ export default function useYouthSessionNotes({
   refresh: () => Promise<unknown>;
 }) {
   const [noteTarget, setNoteTarget] = useState<SessionNoteTarget | null>(null);
+  const [detailTarget, setDetailTarget] = useState<SessionNote | null>(null);
   const [unlinkTarget, setUnlinkTarget] = useState<SessionNoteUnlinkTarget | null>(null);
   const [unlinking, setUnlinking] = useState(false);
   const [unlinkError, setUnlinkError] = useState('');
@@ -28,6 +29,7 @@ export default function useYouthSessionNotes({
 
   const reset = () => {
     setNoteTarget(null);
+    setDetailTarget(null);
     setUnlinkTarget(null);
     setUnlinkError('');
     setCollapsedSessionIds(new Set());
@@ -49,6 +51,8 @@ export default function useYouthSessionNotes({
   };
 
   const addNote = (session: YouthAttendanceSession) => setNoteTarget({ session, note: null });
+  const viewNote = (note: SessionNote) => setDetailTarget(note);
+  const closeDetails = () => setDetailTarget(null);
   const editNote = (session: YouthAttendanceSession, note: SessionNote) => setNoteTarget({ session, note });
   const closeNote = () => setNoteTarget(null);
   const noteSaved = async () => {
@@ -87,17 +91,20 @@ export default function useYouthSessionNotes({
 
   return {
     noteTarget,
+    detailTarget,
     unlinkTarget,
     unlinking,
     unlinkError,
     sessionsWithNotes,
     allExpanded,
-    isChildOpen: Boolean(noteTarget || unlinkTarget),
+    isChildOpen: Boolean(noteTarget || detailTarget || unlinkTarget),
     isExpanded: (sessionId: string) => !collapsedSessionIds.has(sessionId),
     reset,
     toggleAll,
     toggleSession,
     addNote,
+    viewNote,
+    closeDetails,
     editNote,
     closeNote,
     noteSaved,

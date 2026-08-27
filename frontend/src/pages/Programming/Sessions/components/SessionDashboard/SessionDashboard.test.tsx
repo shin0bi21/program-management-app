@@ -125,7 +125,6 @@ describe('SessionDashboard', () => {
       id: 'note-1',
       sessionId: session.id,
       category: 'achievement',
-      title: 'Led opening activity',
       details: 'Maya led the opening activity.',
       createdAt: '2026-07-28T23:30:00.000Z',
       updatedAt: '2026-07-28T23:30:00.000Z',
@@ -143,14 +142,14 @@ describe('SessionDashboard', () => {
       />,
     );
 
-    expect(await screen.findByText('Led opening activity')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Session Notes (1)' })).toBeInTheDocument();
     expect(screen.getByText('Achievement')).toBeInTheDocument();
     expect(screen.getByText('Jul 28, 2026')).toBeInTheDocument();
     expect(screen.queryByText('Maya led the opening activity.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Led opening activity' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Led opening activity' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'View Led opening activity' }));
-    expect(screen.getByRole('heading', { name: 'Led opening activity' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit session note' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete session note' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
+    expect(screen.getByRole('heading', { name: 'Session Note' })).toBeInTheDocument();
     expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
     expect(screen.getByText('Maya led the opening activity.')).toBeInTheDocument();
     expect(screen.getByText('Maya Thompson')).toBeInTheDocument();

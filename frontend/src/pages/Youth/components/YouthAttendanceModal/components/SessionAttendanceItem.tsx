@@ -16,6 +16,7 @@ export default function SessionAttendanceItem({
   onStatusChange,
   onToggleNotes,
   onAddNote,
+  onViewNote,
   onEditNote,
   onUnlinkNote,
 }: {
@@ -27,6 +28,7 @@ export default function SessionAttendanceItem({
   onStatusChange: (value: AttendanceStatus | '') => void;
   onToggleNotes: () => void;
   onAddNote: () => void;
+  onViewNote: (note: SessionNote) => void;
   onEditNote: (note: SessionNote) => void;
   onUnlinkNote: (note: SessionNote) => void;
 }) {
@@ -89,6 +91,7 @@ export default function SessionAttendanceItem({
               <SessionNoteCard
                 key={note.id}
                 note={note}
+                onView={() => onViewNote(note)}
                 onEdit={canManageSessionNotes ? () => onEditNote(note) : undefined}
                 onUnlink={canManageSessionNotes ? () => onUnlinkNote(note) : undefined}
               />

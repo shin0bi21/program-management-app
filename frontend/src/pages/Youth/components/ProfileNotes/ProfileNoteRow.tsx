@@ -19,7 +19,7 @@ export default function ProfileNoteRow({
 }) {
   return (
     <NoteRow
-      title={note.title}
+      ariaLabel="profile note"
       categoryBadge={<NoteCategoryBadge category={note.category} label={categoryLabel(note.category)} />}
       date={note.createdAt}
       onView={() => onView(note)}

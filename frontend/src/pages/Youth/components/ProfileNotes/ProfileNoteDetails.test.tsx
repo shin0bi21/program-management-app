@@ -9,7 +9,6 @@ const note: YouthProfileNote = {
   id: 'note-1',
   youthId: 'youth-1',
   category: 'health',
-  title: 'Allergy plan',
   details: 'Keep an epinephrine injector nearby.',
   createdAt: '2026-08-19T12:00:00.000Z',
   updatedAt: '2026-08-19T12:00:00.000Z',

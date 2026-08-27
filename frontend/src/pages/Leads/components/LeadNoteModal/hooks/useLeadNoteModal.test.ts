@@ -2,104 +2,88 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setLeadNote } from '../../../leads.api';
-import type { Lead, LeadNote } from '../../../types';
+import { createLeadStatusNote } from '../../../leads.api';
+import type { CreateLeadStatusNoteResult, Lead, LeadNote } from '../../../types';
 import useLeadNoteModal from './useLeadNoteModal';
 
-vi.mock('../../../leads.api', () => ({ setLeadNote: vi.fn() }));
+vi.mock('../../../leads.api', () => ({ createLeadStatusNote: vi.fn() }));
 
 const lead = {
   id: 'lead-1',
+  status: 'new',
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
 } as Lead;
 const note: LeadNote = {
   id: 'note-1',
   leadId: lead.id,
+  category: 'contacted',
   details: 'Called and left a message.',
   createdAt: '2026-08-07T13:00:00.000Z',
   updatedAt: '2026-08-07T13:00:00.000Z',
   createdByName: 'Quinton Macnevin',
 };
+const savedResult: CreateLeadStatusNoteResult = { note, lead: { ...lead, status: 'contacted' } };
 
 describe('useLeadNoteModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(setLeadNote).mockResolvedValue(note);
+    vi.mocked(createLeadStatusNote).mockResolvedValue(savedResult);
   });
 
   it('creates a normalized note and reports success', async () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => useLeadNoteModal({
       lead,
-      note: null,
       onSaved,
     }));
 
     act(() => result.current.updateDetails('  Called and left a message.  '));
     await act(() => result.current.submit());
 
-    expect(setLeadNote).toHaveBeenCalledWith(lead.id, note.details);
-    expect(onSaved).toHaveBeenCalledWith(note);
+    expect(createLeadStatusNote).toHaveBeenCalledWith(lead.id, 'new', note.details);
+    expect(onSaved).toHaveBeenCalledWith(savedResult);
     expect(result.current.submitStatus).toBe('success');
-    expect(result.current.statusMessage).toBe('Follow-up note added.');
-  });
-
-  it('initializes and updates the selected note', async () => {
-    const updatedNote = { ...note, details: 'Meeting booked.' };
-    vi.mocked(setLeadNote).mockResolvedValue(updatedNote);
-    const onSaved = vi.fn();
-    const { result } = renderHook(() => useLeadNoteModal({ lead, note, onSaved }));
-
-    expect(result.current.details).toBe(note.details);
-    act(() => result.current.updateDetails(updatedNote.details));
-    await act(() => result.current.submit());
-
-    expect(setLeadNote).toHaveBeenCalledWith(lead.id, updatedNote.details, note.id);
-    expect(onSaved).toHaveBeenCalledWith(updatedNote);
-    expect(result.current.statusMessage).toBe('Follow-up note updated.');
+    expect(result.current.statusMessage).toBe('Status updated.');
   });
 
   it('rejects a whitespace-only direct submission', async () => {
     const { result } = renderHook(() => useLeadNoteModal({
       lead,
-      note: null,
       onSaved: vi.fn(),
     }));
 
     act(() => result.current.updateDetails('   '));
     await act(() => result.current.submit());
 
-    expect(setLeadNote).not.toHaveBeenCalled();
+    expect(createLeadStatusNote).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.statusMessage).toBe('Enter a follow-up note.');
+    expect(result.current.statusMessage).toBe('Enter a status note.');
   });
 
   it('preserves the draft when equivalent target objects are recreated', () => {
     const onSaved = vi.fn();
     const view = renderHook(
-      ({ currentLead, currentNote }) => useLeadNoteModal({
+      ({ currentLead }) => useLeadNoteModal({
         lead: currentLead,
-        note: currentNote,
         onSaved,
       }),
-      { initialProps: { currentLead: lead, currentNote: note } },
+      { initialProps: { currentLead: lead } },
     );
 
     act(() => view.result.current.updateDetails('Draft in progress'));
-    view.rerender({ currentLead: { ...lead }, currentNote: { ...note } });
+    view.rerender({ currentLead: { ...lead } });
 
     expect(view.result.current.details).toBe('Draft in progress');
   });
 
   it('shows a save failure and permits a retry', async () => {
-    vi.mocked(setLeadNote)
+    vi.mocked(createLeadStatusNote)
       .mockRejectedValueOnce(new Error('Could not save note'))
-      .mockResolvedValueOnce(note);
+      .mockResolvedValueOnce(savedResult);
     const onSaved = vi.fn();
     const { result } = renderHook(() => useLeadNoteModal({
       lead,
-      note: null,
       onSaved,
     }));
     act(() => result.current.updateDetails(note.details));
@@ -110,8 +94,8 @@ describe('useLeadNoteModal', () => {
     expect(onSaved).not.toHaveBeenCalled();
 
     await act(() => result.current.submit());
-    expect(setLeadNote).toHaveBeenCalledTimes(2);
-    expect(onSaved).toHaveBeenCalledWith(note);
+    expect(createLeadStatusNote).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenCalledWith(savedResult);
     expect(result.current.submitStatus).toBe('success');
   });
 });

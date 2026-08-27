@@ -28,6 +28,7 @@ describe('YouthDashboard', () => {
       profileNotesLoading={false}
       profileNotesError={null}
       onSelectProfileNote={vi.fn()}
+      onAddProfileNote={vi.fn()}
       onEditProfileNote={vi.fn()}
       onDeleteProfileNote={vi.fn()}
     />);

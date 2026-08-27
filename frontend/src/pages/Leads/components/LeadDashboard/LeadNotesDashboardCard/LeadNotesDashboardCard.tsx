@@ -1,79 +1,76 @@
 import { useMemo } from 'react';
 import Button from '../../../../../common/components/Button/Button';
-import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
 import NoteDetails from '../../../../../common/features/notes/components/NoteDetails/NoteDetails';
+import NoteCategoryBadge from '../../../../../common/features/notes/components/NoteCategoryBadge/NoteCategoryBadge';
 import NoteRow from '../../../../../common/features/notes/components/NoteRow/NoteRow';
 import type { Lead } from '../../../types';
-import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
 import useLeadNotes from './useLeadNotes';
 import './LeadNotesDashboardCard.css';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
-export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }: {
+const statusLabel = (status: Lead['status'] | null) => status === null
+  ? 'Historical'
+  : status === 'signed_up'
+  ? 'Signed up'
+  : status.charAt(0).toUpperCase() + status.slice(1);
+
+const badgeCategory = (status: Lead['status'] | null) => status ?? 'historical';
+
+export default function LeadNotesDashboardCard({ lead, canWrite, onAddStatusUpdate, onErrorChange }: {
   lead: Lead | null;
   canWrite: boolean;
+  onAddStatusUpdate: (lead: Lead) => void;
   onErrorChange?: PageErrorChangeHandler;
 }) {
   const notes = useLeadNotes(lead);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: notes.retry }), [notes.retry]);
-  usePageErrorReporter(onErrorChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
+  const title = lead && !notes.loading && !notes.error
+    ? `Status Updates (${notes.notes.length})`
+    : 'Status Updates';
+  usePageErrorReporter(onErrorChange, notes.error ? 'Could not load status updates.' : null, retryAction);
   return <>
     <DashboardCard
-      title="Follow-up Notes"
-      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>Add follow-up</Button> : undefined}
+      title={title}
+      action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add status update" disabled={!lead || lead.status === 'signed_up'} onClick={() => lead && onAddStatusUpdate(lead)}>+ Add</Button> : undefined}
     >
       {!lead ? (
-        <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>
+        <p className="dashboard-card__empty">Select a lead to view status updates.</p>
       ) : notes.loading ? (
-        <p role="status">Loading follow-up notes…</p>
+        <p role="status">Loading status updates…</p>
       ) : notes.error ? (
-        <UnavailableState compact title="Follow-up notes unavailable" onRetry={notes.retry} />
+        <UnavailableState compact title="Status updates unavailable" onRetry={notes.retry} />
       ) : notes.notes.length ? (
         <div className="note-list">
           {notes.notes.map(note => (
             <NoteRow
               key={note.id}
-              title={note.details}
+              ariaLabel="status update"
               compact
-              emphasizeTitle={false}
-              categoryBadge={null}
-              author={note.createdByName || 'Former staff member'}
+              categoryBadge={<NoteCategoryBadge category={badgeCategory(note.category)} label={statusLabel(note.category)} />}
               date={note.createdAt}
               onView={() => notes.openDetails(note)}
-              onEdit={canWrite ? () => notes.openEdit(note) : undefined}
-              onDelete={canWrite ? () => notes.requestDelete(note) : undefined}
             />
           ))}
         </div>
       ) : (
-        <p className="dashboard-card__empty">No follow-up notes recorded.</p>
+        <p className="dashboard-card__empty">No status updates recorded.</p>
       )}
     </DashboardCard>
-    <LeadNoteModal
-      lead={notes.noteTarget?.lead ?? null}
-      note={notes.noteTarget?.note ?? null}
-      onClose={notes.closeEditor}
-      onSaved={notes.reconcileSavedNote}
-    />
     <Modal
       isOpen={notes.selectedNote !== null}
       onClose={notes.closeDetails}
-      title="Follow-up Note"
+      title="Status Update"
       footer={<Button variant="secondary" onClick={notes.closeDetails}>Close</Button>}
     >
       {notes.selectedNote && <NoteDetails
-        categoryBadge={null}
+        categoryBadge={<NoteCategoryBadge category={badgeCategory(notes.selectedNote.category)} label={statusLabel(notes.selectedNote.category)} />}
         createdAt={notes.selectedNote.createdAt}
         createdByName={notes.selectedNote.createdByName}
         details={notes.selectedNote.details}
       />}
     </Modal>
-    <ConfirmModal
-      action={notes.confirmAction}
-      onClose={notes.closeConfirmation}
-    />
   </>;
 }
