@@ -6,6 +6,7 @@ import { apiClient } from '../../http/client';
 import {
   createLead,
   createLeadNote,
+  deleteLeadNote,
   getLeadNotes,
   getLeads,
   signUpLead,
@@ -39,6 +40,7 @@ describe('leads API', () => {
     signUpLead('lead-1', 'cohort-1', 'health');
     updateLeadStatus('lead-1', 'contacted');
     createLeadNote('lead-1', 'Called guardian.');
+    deleteLeadNote('lead-1', 'note-1');
 
     expect(apiClient.post).toHaveBeenNthCalledWith(1, '/leads/lead-1/sign-up', {
       cohortId: 'cohort-1',
@@ -46,6 +48,7 @@ describe('leads API', () => {
     });
     expect(apiClient.patch).toHaveBeenCalledWith('/leads/lead-1/status', { status: 'contacted' });
     expect(apiClient.post).toHaveBeenNthCalledWith(2, '/leads/lead-1/notes', { details: 'Called guardian.' });
+    expect(apiClient.delete).toHaveBeenCalledWith('/leads/lead-1/notes/note-1');
   });
 
   it('uses the Lead collection and record endpoints for create and update', () => {
