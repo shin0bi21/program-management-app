@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import Button from '../../../../../common/components/Button/Button';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
@@ -20,6 +20,7 @@ import type {
 } from '../../types';
 import { useHoursCalendarData } from './hooks/useHoursCalendarData';
 import HoursItem from './HoursItem/HoursItem';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 const initialDate = new Date();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
@@ -38,7 +39,6 @@ interface HoursCalendarProps {
   types: HoursEntryType[];
   cycleId: string;
   canWrite: boolean;
-  moveError: string | null;
   selectedStaffId?: string;
   calendarCacheRef: React.MutableRefObject<HoursCalendarCache>;
   isEntryPending: (entryId: string) => boolean;
@@ -47,11 +47,12 @@ interface HoursCalendarProps {
   onDelete: (target: HoursEntryTarget) => void;
   onAdd: (target: { resourceId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
   onMove: (move: HoursEntryMove) => Promise<void>;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function HoursCalendar({
-  resources, staffIds, categories, programIds, types, cycleId, canWrite, moveError, selectedStaffId,
-  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove,
+  resources, staffIds, categories, programIds, types, cycleId, canWrite, selectedStaffId,
+  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onErrorChange,
 }: HoursCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
     getHoursCalendarData({ start: start.key, end: end.key })
@@ -61,6 +62,8 @@ export default function HoursCalendar({
     getItemId: getHoursEntryId,
     errorMessage: 'Unable to load hours data',
   });
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
+  usePageErrorReporter(onErrorChange, calendar.error, retryAction);
   useEffect(() => {
     calendarCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
@@ -96,11 +99,9 @@ export default function HoursCalendar({
     source: 'regular' | 'task' | 'session',
   ) => onAdd({ resourceId: row.id, date: period.key, source }), [onAdd]);
 
+  if (calendar.error) return <UnavailableState title="Hours calendar unavailable" onRetry={calendar.retry} />;
+
   return <>
-    {(calendar.error || moveError) && <div className="hours-page__error" role="alert">
-      <span>{moveError ?? calendar.error}</span>
-      {calendar.error && <Button size="sm" variant="secondary" onClick={calendar.retry}>Retry</Button>}
-    </div>}
     <TimelineCalendar<StaffResource, HoursCalendarItem>
       rows={visibleResources}
       items={visibleItems}

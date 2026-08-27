@@ -1,8 +1,8 @@
-// Scope: verifies table/calendar/dashboard selection synchronization and cycle context changes.
+// Owns table/calendar/dashboard selection synchronization and cycle context changes.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { makeHoursItem } from '../../../../tests/factories/hours';
+import { makeHoursItem } from '../../../../../tests/factories/hours';
 import useHoursSelection from './useHoursSelection';
 
 const resources = [

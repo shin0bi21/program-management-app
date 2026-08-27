@@ -1,16 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { setHours, type SetHoursInput } from '../../Hours/hours.api';
+import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
 import {
   deleteTask,
   updateTaskPlacement,
   updateTaskState,
-} from '../tasks.api';
-import type { Task } from '../types';
-import { removeInfiniteListRow } from '../../../../query/infiniteListCache';
+} from '../../tasks.api';
+import type { Task } from '../../types';
+import { removeInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-import type { TaskCalendarCache } from '../types';
+import type { TaskCalendarCache } from '../../types';
 
 const EMPTY_CALENDAR_CACHE: TaskCalendarCache = {
   upsert: () => undefined,

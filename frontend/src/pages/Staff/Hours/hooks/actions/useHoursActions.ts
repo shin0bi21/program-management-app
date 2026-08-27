@@ -1,19 +1,19 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
+import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import {
   deleteHours,
   setHours,
   type SetHoursInput,
   updateHoursPlacement,
-} from '../hours.api';
+} from '../../hours.api';
 
 import type {
   HoursCalendarCache,
   HoursEntryMove,
   HoursEntryTarget,
-} from '../types';
+} from '../../types';
 
 const EMPTY_CALENDAR_CACHE: HoursCalendarCache = {
   upsert: () => undefined,

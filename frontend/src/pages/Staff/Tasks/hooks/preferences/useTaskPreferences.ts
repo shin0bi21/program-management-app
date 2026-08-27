@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
-import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
-import type { ListSort } from '../../../../common/types/pagination';
+import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
+import useUserPreference from '../../../../../common/features/preferences/hooks/useUserPreference';
+import {
+  haveSamePreferenceValues,
+  mergePreferenceDefaults,
+  resolveAvailablePreferenceIds,
+  resolveAvailablePreferenceValues,
+  resolvePreferenceNumberRecord,
+  resolvePreferenceSorting,
+  resolvePreferenceString,
+  resolvePreferenceStringArray,
+  resolvePreferenceValue,
+} from '../../../../../common/features/preferences/preferenceValues';
+import type { ListSort } from '../../../../../common/types/pagination';
 
 import {
   type TaskCategory,
   type TaskStatus,
   type TaskReferenceData,
   type TaskSortKey,
-} from '../types';
+} from '../../types';
 
 type TasksView = 'calendar' | 'table';
 
@@ -61,17 +71,19 @@ export default function useTaskPreferences({
     preference: storedPreferences,
     loading,
     error,
+    loadError,
     initializePreference,
     save,
   } = useUserPreference<StoredTaskPreferences>('task-preferences', tableKeys);
 
-  const preserveUnverifiedSelections = referenceDataError;
+  const canVerifyOptions = !referenceDataError;
+  const preferenceSource = loadError ? null : storedPreferences;
   const preferences = useMemo(() => normalizeTaskPreferences(
-    storedPreferences,
+    preferenceSource,
     referenceData,
-    preserveUnverifiedSelections,
+    canVerifyOptions,
     tableKeys,
-  ), [referenceData, preserveUnverifiedSelections, storedPreferences, tableKeys]);
+  ), [canVerifyOptions, preferenceSource, referenceData, tableKeys]);
 
   const buildNextPreferences = useCallback((
     current: StoredTaskPreferences | TaskPreferences | null,
@@ -80,11 +92,11 @@ export default function useTaskPreferences({
     ...normalizeTaskPreferences(
       current,
       referenceData,
-      preserveUnverifiedSelections,
+      canVerifyOptions,
       tableKeys,
     ),
     ...patch,
-  }), [referenceData, preserveUnverifiedSelections, tableKeys]);
+  }), [canVerifyOptions, referenceData, tableKeys]);
 
   useEffect(() => {
     if (ready || loading || referenceDataLoading) return;
@@ -132,10 +144,10 @@ export default function useTaskPreferences({
     if (id === 'staff') updatePreferences({ staffIds: selected });
     if (id === 'program') updatePreferences({ programIds: selected });
     if (id === 'category') updatePreferences({
-      categories: filterAvailableValues(selected, referenceData?.categories),
+      categories: resolveAvailablePreferenceValues(selected, referenceData?.categories, true),
     });
     if (id === 'status') updatePreferences({
-      statuses: filterAvailableValues(selected, referenceData?.statuses),
+      statuses: resolveAvailablePreferenceValues(selected, referenceData?.statuses, true),
     });
   }, [referenceData, updatePreferences]);
 
@@ -147,13 +159,13 @@ export default function useTaskPreferences({
   }), [updatePreferences]);
 
   useEffect(() => {
-    if (!ready || referenceDataLoading || referenceDataError) return;
-    const normalized = normalizeTaskPreferences(storedPreferences, referenceData, false, tableKeys);
+    if (!ready || loadError || referenceDataLoading || referenceDataError) return;
+    const normalized = normalizeTaskPreferences(storedPreferences, referenceData, true, tableKeys);
     if (
-      haveSameValues(storedPreferences?.staffIds ?? [], normalized.staffIds)
-      && haveSameValues(storedPreferences?.programIds ?? [], normalized.programIds)
-      && haveSameValues(storedPreferences?.categories ?? [], normalized.categories)
-      && haveSameValues(storedPreferences?.statuses ?? [], normalized.statuses)
+      haveSamePreferenceValues(storedPreferences?.staffIds ?? [], normalized.staffIds)
+      && haveSamePreferenceValues(storedPreferences?.programIds ?? [], normalized.programIds)
+      && haveSamePreferenceValues(storedPreferences?.categories ?? [], normalized.categories)
+      && haveSamePreferenceValues(storedPreferences?.statuses ?? [], normalized.statuses)
     ) return;
 
     updatePreferences({
@@ -162,7 +174,7 @@ export default function useTaskPreferences({
       categories: normalized.categories,
       statuses: normalized.statuses,
     });
-  }, [ready, referenceData, referenceDataError, referenceDataLoading, storedPreferences, tableKeys, updatePreferences]);
+  }, [loadError, ready, referenceData, referenceDataError, referenceDataLoading, storedPreferences, tableKeys, updatePreferences]);
 
   // Table sorting.
   const setSorting = useCallback((sorting: ListSort<TaskSortKey>) => {
@@ -218,56 +230,25 @@ export default function useTaskPreferences({
 function normalizeTaskPreferences(
   preference: StoredTaskPreferences | TaskPreferences | null,
   referenceData: TaskReferenceData | undefined,
-  preserveUnverifiedSelections: boolean,
+  canVerifyOptions: boolean,
   tableKeys: readonly TaskSortKey[],
 ): TaskPreferences {
-  const resolved = {
-    ...DEFAULT_TASK_PREFERENCES,
-    ...preference,
-  };
-  const resourceIds = new Set(referenceData?.resources.map(resource => resource.id) ?? []);
-  const programIds = new Set(referenceData?.programs.map(program => program.id) ?? []);
-  const categories = preserveUnverifiedSelections
-    ? resolved.categories
-    : filterAvailableValues(resolved.categories, referenceData?.categories);
-  const statuses = preserveUnverifiedSelections
-    ? resolved.statuses
-    : filterAvailableValues(resolved.statuses, referenceData?.statuses);
+  const resolved = mergePreferenceDefaults(DEFAULT_TASK_PREFERENCES, preference);
 
   return {
     ...resolved,
-    view: resolved.view,
-    search: resolved.search.trim(),
-
-    staffIds: preserveUnverifiedSelections
-      ? resolved.staffIds
-      : resolved.staffIds.filter(id => resourceIds.has(id)),
-    programIds: preserveUnverifiedSelections
-      ? resolved.programIds
-      : resolved.programIds.filter(id => programIds.has(id)),
-    categories,
-    statuses,
-
+    view: resolvePreferenceValue(resolved.view, ['calendar', 'table'], DEFAULT_TASK_PREFERENCES.view),
+    search: resolvePreferenceString(resolved.search),
+    staffIds: resolveAvailablePreferenceIds(resolved.staffIds, referenceData?.resources, canVerifyOptions),
+    programIds: resolveAvailablePreferenceIds(resolved.programIds, referenceData?.programs, canVerifyOptions),
+    categories: resolveAvailablePreferenceValues(resolved.categories, referenceData?.categories, canVerifyOptions),
+    statuses: resolveAvailablePreferenceValues(resolved.statuses, referenceData?.statuses, canVerifyOptions),
     sorting: resolvePreferenceSorting(
       resolved.sorting,
       tableKeys,
       DEFAULT_TASK_PREFERENCES.sorting,
     ),
-    columnWidths: resolved.columnWidths ?? {},
-    hiddenColumns: resolved.hiddenColumns ?? [],
+    columnWidths: resolvePreferenceNumberRecord(resolved.columnWidths),
+    hiddenColumns: resolvePreferenceStringArray(resolved.hiddenColumns),
   };
-}
-
-function filterAvailableValues<T extends string>(
-  values: readonly string[],
-  options: ReadonlyArray<{ value: T }> | undefined,
-): T[] {
-  return (options ?? [])
-    .filter(option => values.includes(option.value))
-    .map(option => option.value);
-}
-
-function haveSameValues(current: readonly string[], next: readonly string[]) {
-  return current.length === next.length
-    && current.every((value, index) => value === next[index]);
 }

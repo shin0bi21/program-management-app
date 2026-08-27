@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getTaskReferenceData } from '../tasks.api';
+import { getTaskReferenceData } from '../../tasks.api';
 
 export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   const referenceDataQuery = useQuery({

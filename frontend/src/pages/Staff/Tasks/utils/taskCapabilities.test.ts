@@ -1,4 +1,5 @@
-// Scope: verifies task action availability across open, completed, and cancelled lifecycles.
+// @vitest-environment node
+// Owns task action availability across open, completed, and cancelled lifecycles.
 import { describe, expect, it } from 'vitest';
 
 import type { Task } from '../types';

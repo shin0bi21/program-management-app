@@ -1,4 +1,4 @@
-// Scope: verifies capability-gated Task row actions and emitted task commands.
+// Owns capability-gated Task row actions and emitted task commands.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

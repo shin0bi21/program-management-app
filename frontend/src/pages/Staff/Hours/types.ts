@@ -1,5 +1,3 @@
-import type { ListSort } from '../../../common/types/pagination';
-
 // Domain values and records.
 export type HoursCategory =
   | 'program_delivery'
@@ -60,7 +58,6 @@ export interface HoursTableRow {
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursEntryType = 'task' | 'session' | 'other';
-export type HoursView = 'calendar' | 'table';
 export type HoursEntryTarget = { resourceId: string; date: string; item: HoursItem };
 
 export type HoursEntryMove = {
@@ -72,16 +69,4 @@ export type HoursEntryMove = {
 export interface HoursCalendarCache {
   upsert: (resourceId: string, date: string, item: HoursItem) => void;
   remove: (itemId: string) => void;
-}
-
-export interface HoursPreferences {
-  view: HoursView;
-  staffIds: string[];
-  programIds: string[];
-  categories: HoursCategory[];
-  types: HoursEntryType[];
-  cycleId: string | null;
-  sorting: ListSort<HoursSortKey>;
-  columnWidths: Record<string, number>;
-  hiddenColumns: string[];
 }

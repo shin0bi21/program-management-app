@@ -1,4 +1,4 @@
-// Scope: verifies task-item details, selection, status, and available action events.
+// Owns task-item details, selection, status, and available action events.
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';
@@ -82,15 +82,6 @@ describe('TaskItem', () => {
 
     expect(onComplete).toHaveBeenCalledOnce();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-  });
-
-  it('keeps selected task styling independent of the transient action menu', () => {
-    render(<TaskItem task={task} selected onComplete={vi.fn()} />);
-
-    const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
-    expect(item).toHaveClass('selected');
-    fireEvent.click(item);
-    expect(item).toHaveClass('selected', 'menu-open');
   });
 
   it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {

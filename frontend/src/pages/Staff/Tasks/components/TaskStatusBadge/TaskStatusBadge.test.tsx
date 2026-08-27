@@ -1,4 +1,4 @@
-// Scope: verifies backend-derived task status labels and modifiers.
+// Owns backend-derived task status labels and modifiers.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

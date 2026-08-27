@@ -1,4 +1,4 @@
-// Scope: verifies rendered task fields, contextual locks, disabled wiring, and accessibility.
+// Owns rendered task fields, contextual locks, disabled wiring, and accessibility.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

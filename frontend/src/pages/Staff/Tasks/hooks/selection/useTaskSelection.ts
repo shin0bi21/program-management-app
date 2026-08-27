@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Task, TaskResource } from '../types';
+import type { Task, TaskResource } from '../../types';
 
 interface UseTaskSelectionOptions {
   resources: TaskResource[];

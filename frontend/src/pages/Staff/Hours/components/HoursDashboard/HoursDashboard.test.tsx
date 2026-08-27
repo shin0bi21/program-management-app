@@ -1,4 +1,4 @@
-// Scope: verifies Hours dashboard state composition and overview-card inputs.
+// Owns Hours dashboard state composition and overview-card inputs.
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -36,14 +36,20 @@ describe('HoursDashboard', () => {
   });
 
   it('renders loading and error states through both dashboard cards', () => {
+    const onErrorChange = vi.fn();
     overviewData.mockReturnValue({ status: 'loading' });
-    const { rerender } = render(<HoursDashboard {...baseProps} />);
+    const { rerender } = render(<HoursDashboard {...baseProps} onErrorChange={onErrorChange} />);
     expect(screen.getAllByText('Loading hours overview…')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
 
-    overviewData.mockReturnValue({ status: 'error', message: 'Overview offline' });
-    rerender(<HoursDashboard {...baseProps} cycle={{ ...cycle, id: 'cycle-2' }} />);
-    expect(screen.getAllByText('Overview offline')).toHaveLength(2);
+    const retry = vi.fn();
+    overviewData.mockReturnValue({ status: 'error', message: 'Overview offline', retry });
+    rerender(<HoursDashboard {...baseProps} cycle={{ ...cycle, id: 'cycle-2' }} onErrorChange={onErrorChange} />);
+    expect(screen.getAllByText('Hours overview unavailable')).toHaveLength(2);
+    expect(onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Overview offline',
+      action: { label: 'Retry', onClick: retry },
+    });
   });
 
   it('maps a ready overview into pay-period and cycle cards', () => {
