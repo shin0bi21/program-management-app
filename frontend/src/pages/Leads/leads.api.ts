@@ -6,7 +6,6 @@ import type {
   Lead,
   LeadFilters,
   LeadNote,
-  CreateLeadStatusNoteResult,
   LeadSortKey,
   EditableLeadStatus,
   LeadRelationship,
@@ -50,6 +49,8 @@ export const getLeads = (
 };
 export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/leads', data);
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);
+export const updateLeadStatus = (id: string, status: EditableLeadStatus) =>
+  apiClient.patch<Lead>(`/leads/${id}/status`, { status });
 export const deleteLead = (id: string) => apiClient.delete<{ id: string }>(`/leads/${id}`);
 export const signUpLead = (
   id: string,
@@ -61,7 +62,7 @@ export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts
     ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)
     : apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`);
-export const createLeadStatusNote = (leadId: string, category: EditableLeadStatus, details: string) =>
-  apiClient.post<CreateLeadStatusNoteResult>(`/leads/${leadId}/notes`, { category, details });
+export const createLeadNote = (leadId: string, details: string) =>
+  apiClient.post<LeadNote>(`/leads/${leadId}/notes`, { details });
 export const updateLeadNote = (leadId: string, noteId: string, details: string) =>
   apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details });

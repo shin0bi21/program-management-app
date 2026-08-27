@@ -80,7 +80,15 @@ export const leadIdSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
 });
 
+export const updateLeadStatusSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid lead ID') }),
+  body: z.object({
+    status: z.enum(['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed']),
+  }).strict(),
+});
+
 export type CreateLeadInput = z.infer<typeof createLeadSchema.shape.body>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema.shape.body>;
+export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema.shape.body>;
 export type SignUpLeadInput = z.infer<typeof signUpLeadSchema.shape.body>;
 export type LeadQuery = z.infer<typeof leadQuerySchema.shape.query>;

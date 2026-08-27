@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput } from '../../../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
 import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
@@ -162,6 +162,39 @@ export async function getLead(id: string) {
   return rows[0];
 }
 
+export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, actorId: string) {
+  const transactionId = crypto.randomUUID();
+
+  await sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const leads = await tx<Record<string, unknown>[]>`
+      SELECT ${leadColumns}
+      FROM leads
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+    if (!leads.length) throw new NotFoundError('Lead not found');
+
+    const lead = leads[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+    if (lead.status === 'signed_up' || lead.convertedYouthId) {
+      throw new ConflictError('Signed-up lead status cannot be changed');
+    }
+
+    const updatedLeads = await tx<Record<string, unknown>[]>`
+      UPDATE leads
+      SET status = ${data.status},
+          status_updated_at = CASE WHEN status = ${data.status} THEN status_updated_at ELSE NOW() END,
+          updated_at = NOW(),
+          updated_by = ${actorId}
+      WHERE id = ${id}
+      RETURNING ${leadColumns}
+    `;
+    await audit(tx, actorId, transactionId, 'leads', id, 'UPDATE', lead, updatedLeads[0]);
+  });
+
+  return getLead(id);
+}
+
 export async function deleteLead(id: string, actorId: string) {
   const transactionId = crypto.randomUUID();
   return sql.begin(async rawTx => {
@@ -291,16 +324,6 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       type: lead.contactRelationship,
     }], actorId, transactionId, trx);
 
-    await trx`
-      INSERT INTO lead_notes (lead_id, category, details, created_by, updated_by)
-      VALUES (
-        ${id},
-        'signed_up',
-        ${data.cohortId ? 'Signed up and enrolled in a cohort.' : 'Signed up as a youth profile.'},
-        ${actorId},
-        ${actorId}
-      )
-    `;
     await trx`
       UPDATE leads
       SET status = 'signed_up',

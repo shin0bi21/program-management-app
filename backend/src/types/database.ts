@@ -171,7 +171,7 @@ export interface HomepageImages {
 }
 
 export interface LeadNotes {
-  category: LeadStatus | null;
+  category: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   details: string;

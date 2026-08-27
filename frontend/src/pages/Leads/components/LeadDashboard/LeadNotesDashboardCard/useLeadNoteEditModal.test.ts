@@ -8,7 +8,7 @@ import useLeadNoteEditModal from './useLeadNoteEditModal';
 vi.mock('../../../leads.api', () => ({ updateLeadNote: vi.fn() }));
 
 const note = {
-  id: 'note-1', leadId: 'lead-1', category: 'contacted', details: 'Called guardian.',
+  id: 'note-1', leadId: 'lead-1', category: 'follow_up', details: 'Called guardian.',
   createdAt: '2026-08-07T13:00:00.000Z', updatedAt: '2026-08-07T13:00:00.000Z',
   createdByName: 'Quinton Macnevin',
 } as LeadNote;

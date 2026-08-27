@@ -4,8 +4,8 @@ import type { ConfirmAction } from '../../../../common/components/ConfirmModal/t
 import { COHORT_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
 import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
-import { deleteLead } from '../../leads.api';
-import type { CreateLeadStatusNoteResult, Lead } from '../../types';
+import { deleteLead, updateLeadStatus } from '../../leads.api';
+import type { EditableLeadStatus, Lead } from '../../types';
 
 interface UseLeadActionsOptions {
   tableQueryKey: readonly unknown[];
@@ -20,6 +20,7 @@ export default function useLeadActions({
 }: UseLeadActionsOptions) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [actionError, setActionError] = useState('');
   const actionGenerations = useRef(new Map<string, number>());
 
   const nextActionGeneration = useCallback((leadId: string) => {
@@ -27,6 +28,11 @@ export default function useLeadActions({
     actionGenerations.current.set(leadId, generation);
     return generation;
   }, []);
+
+  const isCurrentAction = useCallback(
+    (leadId: string, generation: number) => actionGenerations.current.get(leadId) === generation,
+    [],
+  );
 
   const refreshLeads = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: tableQueryKey });
@@ -38,9 +44,21 @@ export default function useLeadActions({
   }, [onLeadSynced, queryClient, tableQueryKey]);
 
   const syncLead = useCallback((lead: Lead) => {
+    setActionError('');
     nextActionGeneration(lead.id);
     applyLead(lead);
   }, [applyLead, nextActionGeneration]);
+
+  const setStatus = useCallback(async (lead: Lead, status: EditableLeadStatus) => {
+    setActionError('');
+    const generation = nextActionGeneration(lead.id);
+    try {
+      const savedLead = await updateLeadStatus(lead.id, status);
+      if (isCurrentAction(lead.id, generation)) applyLead(savedLead);
+    } catch {
+      if (isCurrentAction(lead.id, generation)) setActionError('Unable to update lead status.');
+    }
+  }, [applyLead, isCurrentAction, nextActionGeneration]);
 
   const requestDelete = useCallback((lead: Lead) => setConfirmAction({
     title: 'Delete Lead',
@@ -64,18 +82,14 @@ export default function useLeadActions({
     ]);
   }, [queryClient, syncLead]);
 
-  const reconcileStatusNote = useCallback(async (result: CreateLeadStatusNoteResult) => {
-    syncLead(result.lead);
-    await queryClient.invalidateQueries({ queryKey: ['leads', result.lead.id, 'notes'] });
-  }, [queryClient, syncLead]);
-
   return {
     confirmAction,
+    actionError,
     closeConfirmation: () => setConfirmAction(null),
     requestDelete,
+    setStatus,
     syncLead,
     refreshLeads,
     reconcileSignUp,
-    reconcileStatusNote,
   };
 }

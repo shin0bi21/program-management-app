@@ -2,11 +2,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createLeadStatusNote } from '../../../leads.api';
-import type { CreateLeadStatusNoteResult, Lead, LeadNote } from '../../../types';
+import { createLeadNote } from '../../../leads.api';
+import type { Lead, LeadNote } from '../../../types';
 import useLeadNoteModal from './useLeadNoteModal';
 
-vi.mock('../../../leads.api', () => ({ createLeadStatusNote: vi.fn() }));
+vi.mock('../../../leads.api', () => ({ createLeadNote: vi.fn() }));
 
 const lead = {
   id: 'lead-1',
@@ -17,18 +17,17 @@ const lead = {
 const note: LeadNote = {
   id: 'note-1',
   leadId: lead.id,
-  category: 'contacted',
+  category: 'follow_up',
   details: 'Called and left a message.',
   createdAt: '2026-08-07T13:00:00.000Z',
   updatedAt: '2026-08-07T13:00:00.000Z',
   createdByName: 'Quinton Macnevin',
 };
-const savedResult: CreateLeadStatusNoteResult = { note, lead: { ...lead, status: 'contacted' } };
 
 describe('useLeadNoteModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(createLeadStatusNote).mockResolvedValue(savedResult);
+    vi.mocked(createLeadNote).mockResolvedValue(note);
   });
 
   it('creates a normalized note and reports success', async () => {
@@ -41,10 +40,10 @@ describe('useLeadNoteModal', () => {
     act(() => result.current.updateDetails('  Called and left a message.  '));
     await act(() => result.current.submit());
 
-    expect(createLeadStatusNote).toHaveBeenCalledWith(lead.id, 'new', note.details);
-    expect(onSaved).toHaveBeenCalledWith(savedResult);
+    expect(createLeadNote).toHaveBeenCalledWith(lead.id, note.details);
+    expect(onSaved).toHaveBeenCalledWith(note);
     expect(result.current.submitStatus).toBe('success');
-    expect(result.current.statusMessage).toBe('Status updated.');
+    expect(result.current.statusMessage).toBe('Follow-up note added.');
   });
 
   it('rejects a whitespace-only direct submission', async () => {
@@ -56,9 +55,9 @@ describe('useLeadNoteModal', () => {
     act(() => result.current.updateDetails('   '));
     await act(() => result.current.submit());
 
-    expect(createLeadStatusNote).not.toHaveBeenCalled();
+    expect(createLeadNote).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.statusMessage).toBe('Enter a status note.');
+    expect(result.current.statusMessage).toBe('Enter a follow-up note.');
   });
 
   it('preserves the draft when equivalent target objects are recreated', () => {
@@ -78,9 +77,9 @@ describe('useLeadNoteModal', () => {
   });
 
   it('shows a save failure and permits a retry', async () => {
-    vi.mocked(createLeadStatusNote)
+    vi.mocked(createLeadNote)
       .mockRejectedValueOnce(new Error('Could not save note'))
-      .mockResolvedValueOnce(savedResult);
+      .mockResolvedValueOnce(note);
     const onSaved = vi.fn();
     const { result } = renderHook(() => useLeadNoteModal({
       lead,
@@ -94,8 +93,8 @@ describe('useLeadNoteModal', () => {
     expect(onSaved).not.toHaveBeenCalled();
 
     await act(() => result.current.submit());
-    expect(createLeadStatusNote).toHaveBeenCalledTimes(2);
-    expect(onSaved).toHaveBeenCalledWith(savedResult);
+    expect(createLeadNote).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenCalledWith(note);
     expect(result.current.submitStatus).toBe('success');
   });
 });
