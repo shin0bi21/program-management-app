@@ -21,8 +21,8 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }
   const notes = useLeadNotes(lead);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: notes.retry }), [notes.retry]);
   const title = lead && !notes.loading && !notes.error
-    ? `Follow-up Notes (${notes.notes.length})`
-    : 'Follow-up Notes';
+    ? `Notes (${notes.notes.length})`
+    : 'Notes';
   usePageErrorReporter(onErrorChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
   return <>
     <DashboardCard
