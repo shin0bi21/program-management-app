@@ -44,4 +44,14 @@ describe('NoteRow', () => {
     expect(screen.queryByRole('button', { name: 'Edit profile note' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete profile note' })).not.toBeInTheDocument();
   });
+
+  it('supports editing without exposing deletion', () => {
+    const onEdit = vi.fn();
+    render(<NoteRow ariaLabel="status update" categoryBadge={<span>Contacted</span>}
+      date="2026-08-07T12:00:00.000Z" onView={() => undefined} onEdit={onEdit} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit status update' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Delete status update' })).not.toBeInTheDocument();
+  });
 });

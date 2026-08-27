@@ -120,18 +120,23 @@ describe('Leads API', () => {
       statusUpdatedAt: expect.any(String),
     }));
 
-    const editUnavailable = await request(app)
+    const edited = await request(app)
       .put(`/api/leads/${lead.body.id}/notes/${created.body.note.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'eligible', details: 'Changed history.' });
-    expect(editUnavailable.status).toBe(404);
+      .send({ details: 'Corrected call details.' });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toEqual(expect.objectContaining({
+      id: created.body.note.id,
+      category: 'contacted',
+      details: 'Corrected call details.',
+    }));
 
     const listed = await request(app)
       .get(`/api/leads/${lead.body.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual([
-      expect.objectContaining({ id: created.body.note.id, category: 'contacted', details: 'Called and left a message.' }),
+      expect.objectContaining({ id: created.body.note.id, category: 'contacted', details: 'Corrected call details.' }),
     ]);
 
     const deleteUnavailable = await request(app)

@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import type { Lead } from '../../../types';
@@ -6,6 +6,7 @@ import LeadNotesDashboardCard from './LeadNotesDashboardCard';
 
 const api = vi.hoisted(() => ({
   getLeadNotes: vi.fn(),
+  updateLeadNote: vi.fn(),
 }));
 
 vi.mock('../../../leads.api', () => api);
@@ -44,6 +45,20 @@ describe('LeadNotesDashboardCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getLeadNotes.mockResolvedValue([existingNote]);
+    api.updateLeadNote.mockResolvedValue({ ...existingNote, details: 'Reached guardian.' });
+  });
+
+  it('edits note details without offering deletion or status changes', async () => {
+    render(<LeadNotesDashboardCard lead={lead} canWrite onAddStatusUpdate={vi.fn()} />);
+
+    await screen.findByText('Contacted');
+    expect(screen.queryByRole('button', { name: 'Delete status update' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit status update' }));
+    expect(screen.getByRole('button', { name: 'Recorded Status' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: ' Reached guardian. ' } });
+    fireEvent.submit(document.getElementById('lead-status-note-edit-form')!);
+
+    await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id, 'Reached guardian.'));
   });
 
   it('shows status metadata only and opens full details', async () => {

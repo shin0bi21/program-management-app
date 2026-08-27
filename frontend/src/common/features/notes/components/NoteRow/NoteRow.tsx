@@ -36,8 +36,6 @@ export default function NoteRow({
   compact = false,
   emphasizeTitle = true,
 }: NoteRowProps) {
-  const canManage = Boolean(onEdit && onDelete);
-
   return (
     <article className={`note-row${compact ? ' note-row--compact' : ''}`}>
       <div className="note-row__summary">
@@ -52,14 +50,16 @@ export default function NoteRow({
         <Button size="sm" variant="ghost" className="note-row__action" aria-label={`View ${ariaLabel}`} title="View note" onClick={onView}>
           <FontAwesomeIcon icon={faEye} aria-hidden="true" />
         </Button>
-        {canManage && <>
+        {onEdit &&
           <Button size="sm" variant="ghost" className="note-row__action" aria-label={editActionLabel} title="Edit note" onClick={onEdit}>
             <FontAwesomeIcon icon={faPen} aria-hidden="true" />
           </Button>
+        }
+        {onDelete &&
           <Button size="sm" variant="ghost" className="note-row__action note-row__action--danger" aria-label={deleteActionLabel} title={deleteActionLabel} onClick={onDelete}>
             <FontAwesomeIcon icon={deleteActionIcon} aria-hidden="true" />
           </Button>
-        </>}
+        }
       </div>
     </article>
   );

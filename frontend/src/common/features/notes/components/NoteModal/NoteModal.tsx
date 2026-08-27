@@ -12,6 +12,7 @@ interface NoteModalProps {
   categoryLabel: string;
   category: string;
   categoryOptions: Array<{ value: string; label: string }>;
+  categoryDisabled?: boolean;
   details: string;
   submitLabel: string;
   submitStatus: SubmitStatus;
@@ -32,6 +33,7 @@ export default function NoteModal({
   categoryLabel,
   category,
   categoryOptions,
+  categoryDisabled = false,
   details,
   submitLabel,
   submitStatus,
@@ -68,7 +70,7 @@ export default function NoteModal({
             value={category}
             options={categoryOptions}
             onChange={onCategoryChange}
-            disabled={submissionComplete}
+            disabled={categoryDisabled || submissionComplete}
           />
         </FormField>
         <FormField id={`${formId}-details`} label="Note *">

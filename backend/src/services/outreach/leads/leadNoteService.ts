@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import type { SetLeadNoteInput } from '../../../validation/leadNoteSchemas';
+import type { SetLeadNoteInput, UpdateLeadNoteInput } from '../../../validation/leadNoteSchemas';
 import { audit } from '../../shared/auditService';
 import { getLead } from './leadService';
 
@@ -51,6 +51,38 @@ export async function createLeadStatusNote(leadId: string, data: SetLeadNoteInpu
   const note = notes.find(candidate => candidate.id === noteId);
   if (!note) throw new NotFoundError('Lead status note not found after creation');
   return { note, lead: await getLead(leadId) };
+}
+
+export async function updateLeadNoteDetails(
+  leadId: string,
+  noteId: string,
+  data: UpdateLeadNoteInput,
+  actorId: string,
+) {
+  const transactionId = crypto.randomUUID();
+
+  await sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const notes = await tx<{ details: string }[]>`
+      SELECT details FROM lead_notes
+      WHERE id = ${noteId} AND lead_id = ${leadId}
+      FOR UPDATE
+    `;
+    if (!notes.length) throw new NotFoundError('Lead status note not found');
+
+    await tx`
+      UPDATE lead_notes
+      SET details = ${data.details}, updated_by = ${actorId}, updated_at = NOW()
+      WHERE id = ${noteId} AND lead_id = ${leadId}
+    `;
+    await audit(tx, actorId, transactionId, 'lead_notes', noteId, 'UPDATE',
+      { details: notes[0].details }, { details: data.details });
+  });
+
+  const notes = await getLeadNotes(leadId);
+  const note = notes.find(candidate => candidate.id === noteId);
+  if (!note) throw new NotFoundError('Lead status note not found after update');
+  return note;
 }
 
 async function assertLeadExists(leadId: string) {
