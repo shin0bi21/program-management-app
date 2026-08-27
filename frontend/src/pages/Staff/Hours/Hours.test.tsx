@@ -173,6 +173,7 @@ describe('Hours', () => {
     );
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
@@ -257,6 +258,29 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
+  });
+
+  it('keeps search visible and reloads the calendar when search is applied', async () => {
+    render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+
+    const search = await screen.findByRole('textbox', { name: 'Search hours' });
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalled());
+    vi.mocked(getHoursCalendarData).mockClear();
+
+    fireEvent.change(search, { target: { value: 'workshop' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith({
+      start: expect.any(String),
+      end: expect.any(String),
+      search: 'workshop',
+    }));
+    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
   });
 
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {

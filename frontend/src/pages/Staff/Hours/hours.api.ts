@@ -51,7 +51,7 @@ export interface HoursDashboardData {
   };
 }
 
-export interface HoursCalendarFilters { start?: string; end?: string; cycleId?: string }
+export interface HoursCalendarFilters { start?: string; end?: string; cycleId?: string; search?: string }
 
 export interface HoursTableFilters {
   staffIds: string[]; categories: HoursCategory[]; programIds: string[];
@@ -61,6 +61,7 @@ export function getHoursCalendarData(filters: HoursCalendarFilters = {}, opts?: 
   const params = new URLSearchParams();
   if (filters.start && filters.end) { params.set('start', filters.start); params.set('end', filters.end); }
   if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  if (filters.search) params.set('search', filters.search);
   const query = params.size ? `?${params}` : '';
   return apiClient.get<HoursCalendarData>(`/hours/calendar${query}`, opts);
 }

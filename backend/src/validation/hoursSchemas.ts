@@ -33,6 +33,7 @@ export const hoursCalendarQuerySchema = z.object({
     start: dateSchema.optional(),
     end: dateSchema.optional(),
     cycleId: z.string().uuid('Invalid cycle ID').optional(),
+    search: z.string().trim().max(120).optional().default(''),
   }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
     message: 'Start and end dates must be provided together',
     path: ['end'],

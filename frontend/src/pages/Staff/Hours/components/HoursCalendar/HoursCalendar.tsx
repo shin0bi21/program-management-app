@@ -38,6 +38,7 @@ interface HoursCalendarProps {
   programIds: string[];
   types: HoursEntryType[];
   cycleId: string;
+  search: string;
   canWrite: boolean;
   selectedStaffId?: string;
   calendarCacheRef: React.MutableRefObject<HoursCalendarCache>;
@@ -51,12 +52,12 @@ interface HoursCalendarProps {
 }
 
 export default function HoursCalendar({
-  resources, staffIds, categories, programIds, types, cycleId, canWrite, selectedStaffId,
+  resources, staffIds, categories, programIds, types, cycleId, search, canWrite, selectedStaffId,
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onErrorChange,
 }: HoursCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    getHoursCalendarData({ start: start.key, end: end.key })
-  ), []);
+    getHoursCalendarData({ start: start.key, end: end.key, search })
+  ), [search]);
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getHoursEntryId,

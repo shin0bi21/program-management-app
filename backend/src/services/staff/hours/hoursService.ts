@@ -18,6 +18,7 @@ import {
   hoursMutationColumns,
   hoursRecordColumns,
   hoursRecordFrom,
+  hoursSearchValue,
   type HoursRow,
 } from './hoursRecordQuery';
 import {
@@ -27,6 +28,7 @@ import {
 } from './hoursReferenceData';
 
 export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
+  const search = query.search ? `%${query.search}%` : null;
   const rows = await sql<HoursRow[]>`
     SELECT ${hoursRecordColumns}
     ${hoursRecordFrom}
@@ -34,6 +36,7 @@ export async function getHoursCalendarData(actor: AccessTokenPayload, query: Hou
       ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
       : sql`TRUE`}
       AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
+      AND ${search ? sql`${hoursSearchValue} ILIKE ${search}` : sql`TRUE`}
       AND ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
     ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;

@@ -20,6 +20,8 @@ Return named sections so route pages compose equivalent controls consistently:
 
 Omit sections the page does not use. Add domain-specific preference operations to the relevant section instead of exposing a general patch function.
 
+A page-level search applies consistently to every view that presents the same collection. Keep the control visible when switching views, pass the applied value to each table, list, or calendar query, and reload buffered calendar data when that value changes. If a view intentionally searches a different collection or does not support search, give that control a narrower owner instead of conditionally hiding the page-level search.
+
 ## Restore and save preferences
 
 Follow one lifecycle on every page:
