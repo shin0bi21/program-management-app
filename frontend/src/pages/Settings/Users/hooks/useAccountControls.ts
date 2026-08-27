@@ -4,10 +4,23 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
 import type { AccountRole, AccountSortKey, AccountStatus } from '../../../../common/types/account';
 import type { ListSort } from '../../../../common/types/pagination';
-import { resolvePreferenceSorting } from '../../../../common/features/preferences/preferenceValues';
+import {
+  mergePreferenceDefaults,
+  resolveAvailablePreferenceValues,
+  resolvePreferenceNumberRecord,
+  resolvePreferenceSorting,
+  resolvePreferenceStringArray,
+} from '../../../../common/features/preferences/preferenceValues';
 import type { AccountPreference } from '../types';
 
 const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
+const DEFAULT_ACCOUNT_PREFERENCE: AccountPreference = {
+  statuses: [],
+  roles: [],
+  sorting: DEFAULT_SORTING,
+  columnWidths: {},
+  hiddenColumns: [],
+};
 
 export function useAccountControls(
   isAdmin: boolean,
@@ -30,6 +43,7 @@ export function useAccountControls(
     preference,
     loading: preferenceLoading,
     error,
+    loadError,
     initializePreference,
     save,
   } = useUserPreference<AccountPreference>('account-filters', tableKeys);
@@ -43,12 +57,28 @@ export function useAccountControls(
   // Restore preferences before enabling the account query.
   useEffect(() => {
     if (ready || preferenceLoading) return;
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredColumnWidths = preference?.columnWidths ?? {};
-    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const resolved = mergePreferenceDefaults(
+      DEFAULT_ACCOUNT_PREFERENCE,
+      loadError ? null : preference,
+    );
+    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
+    const restoredStatuses = resolveAvailablePreferenceValues(
+      resolved.statuses,
+      [{ value: 'invited' }, { value: 'active' }, { value: 'inactive' }],
+      true,
+    );
+    const restoredRoles = isAdmin
+      ? resolveAvailablePreferenceValues(
+        resolved.roles,
+        [{ value: 'admin' }, { value: 'staff' }, { value: 'youth' }],
+        true,
+      )
+      : [];
+    const restoredColumnWidths = resolvePreferenceNumberRecord(resolved.columnWidths);
+    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
     const restored: AccountPreference = {
-      statuses: preference?.statuses ?? [],
-      roles: isAdmin ? preference?.roles ?? [] : [],
+      statuses: restoredStatuses,
+      roles: restoredRoles,
       sorting: restoredSorting,
       columnWidths: restoredColumnWidths,
       hiddenColumns: restoredHiddenColumns,
@@ -60,7 +90,7 @@ export function useAccountControls(
     setHiddenColumnsState(restoredHiddenColumns);
     initializePreference(restored);
     setReady(true);
-  }, [isAdmin, preference, preferenceLoading, ready, initializePreference, tableKeys]);
+  }, [isAdmin, loadError, preference, preferenceLoading, ready, initializePreference, tableKeys]);
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo(() => ready ? ({

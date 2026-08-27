@@ -1,4 +1,4 @@
-// Scope: verifies cycle table rendering and selection wiring.
+// Owns cycle table rendering and selection wiring.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { vi, it, expect } from 'vitest';
 import CycleTable from './CycleTable';

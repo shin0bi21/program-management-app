@@ -1,44 +1,24 @@
-import { render, screen } from '@testing-library/react';
+// Owns Account rendered behavior and owner wiring.
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Account from './Account';
 
-const mockUsePrograms = vi.fn();
+const mockUseAccountData = vi.fn();
 
-vi.mock('../../../auth/storage', () => ({
-  getUser: () => ({
-    firstName: 'Sofia',
-    lastName: 'Soft Skills',
-    email: 'softskills.staff@local.test',
-  }),
-}));
-vi.mock('../../../auth/authContext', () => ({
-  useAuth: () => ({ role: 'staff' }),
-}));
-vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: (options: unknown) => mockUsePrograms(options),
+vi.mock('./hooks/data/useAccountData', () => ({
+  default: () => mockUseAccountData(),
 }));
 
 describe('My Account', () => {
   beforeEach(() => {
-    mockUsePrograms.mockReturnValue({
-      programs: [
-        {
-          id: 'program-1',
-          name: 'Soft Skills',
-          rosterMode: 'enrolled',
-          minAge: 12,
-          maxAge: 15,
-        },
-        {
-          id: 'program-2',
-          name: 'Drop In',
-          rosterMode: 'open',
-          minAge: null,
-          maxAge: null,
-        },
-      ],
-      loading: false,
-      error: '',
+    mockUseAccountData.mockReturnValue({
+      name: 'Sofia Soft Skills',
+      email: 'softskills.staff@local.test',
+      role: 'staff',
+      programNames: 'Soft Skills, Drop In',
+      programsLoading: false,
+      programsError: null,
+      retryPrograms: vi.fn(),
     });
   });
 
@@ -49,6 +29,24 @@ describe('My Account', () => {
     expect(screen.getByText('softskills.staff@local.test')).toBeInTheDocument();
     expect(screen.getByText('staff')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills, Drop In')).toBeInTheDocument();
-    expect(mockUsePrograms).toHaveBeenCalledWith({ assignedOnly: true });
+  });
+
+  it('reports program failures through the page overlay and retries them', () => {
+    const retryPrograms = vi.fn();
+    mockUseAccountData.mockReturnValue({
+      name: 'Sofia Soft Skills',
+      email: 'softskills.staff@local.test',
+      role: 'staff',
+      programNames: '',
+      programsLoading: false,
+      programsError: 'Could not load assigned programs.',
+      retryPrograms,
+    });
+
+    render(<Account />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load assigned programs.');
+    expect(retryPrograms).toHaveBeenCalledTimes(1);
   });
 });
