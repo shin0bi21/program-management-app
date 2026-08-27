@@ -67,6 +67,7 @@ export function useExampleTableData(
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
     loadNextPage: query.loadNextPage,
+    retry: query.retry,
   };
 }
 ```
@@ -88,7 +89,10 @@ export default function ExampleTable(props: ExampleTableProps) {
     keyExtractor={row => row.id}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    error={tableData.error}
+    unavailable={tableData.error ? {
+      title: 'Examples unavailable',
+      onRetry: tableData.retry,
+    } : undefined}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
     onLoadNextPage={tableData.loadNextPage}
@@ -107,6 +111,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Use the canonical column `key` as the backend-supported sort key, and pass the owner’s canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
+- Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
 - Use controlled table selection only when selection has application meaning.
 
 ## Page integration
