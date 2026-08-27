@@ -255,6 +255,38 @@ describe('Table', () => {
     expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
   });
 
+  it('keeps the header and renders the shared unavailable state with retry', () => {
+    const onRetry = vi.fn();
+    render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[]}
+      unavailable={{ title: 'Accounts unavailable', onRetry }}
+      keyExtractor={row => row.id}
+    />);
+
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByText('Accounts unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('No rows found')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('keeps existing error consumers compatible during unavailable-state adoption', () => {
+    render(<Table
+      ariaLabel="Accounts"
+      columns={columns}
+      data={[]}
+      error="Unable to load accounts"
+      keyExtractor={row => row.id}
+    />);
+
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByText('Content unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load accounts')).toBeInTheDocument();
+  });
+
   it('keeps existing rows mounted and shows a sorting spinner while refreshing', () => {
     render(<Table
       ariaLabel="Accounts"
@@ -384,11 +416,12 @@ describe('Table', () => {
       ariaLabel="Accounts"
       columns={columns}
       data={[]}
-      error="Unable to load accounts"
+      unavailable={{ title: 'Accounts unavailable', message: 'Unable to load accounts' }}
       keyExtractor={row => row.id}
     />);
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Unable to load accounts' })).toHaveClass('table-error-cell');
+    expect(screen.getByText('Accounts unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load accounts')).toBeInTheDocument();
   });
 });

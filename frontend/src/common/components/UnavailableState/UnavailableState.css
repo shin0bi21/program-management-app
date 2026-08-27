@@ -1,0 +1,26 @@
+.unavailable-state {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.unavailable-state > strong {
+  color: var(--color-ink);
+  font-size: 1rem;
+}
+
+.unavailable-state > p {
+  max-width: 36rem;
+  margin: 0;
+}
+
+.unavailable-state--compact {
+  min-height: 110px;
+  padding: var(--space-3);
+}

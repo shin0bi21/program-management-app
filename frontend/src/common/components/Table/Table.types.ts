@@ -40,7 +40,13 @@ export interface TableProps<T> {
   /* === Loading / error states === */
   loading?: boolean;
   refreshing?: boolean;
+  /** @deprecated Prefer a domain-named unavailable state with an optional retry action. */
   error?: string;
+  unavailable?: {
+    title: string;
+    message?: string;
+    onRetry?: () => void;
+  };
   emptyMessage?: string;
 
   /* === Selection === */

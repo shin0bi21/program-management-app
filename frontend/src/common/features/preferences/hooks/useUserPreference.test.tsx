@@ -242,6 +242,40 @@ describe('useUserPreference', () => {
     );
   });
 
+  it('reports preference load failures separately from save failures', async () => {
+    getPreferenceMock.mockRejectedValue(new Error('Could not restore preferences'));
+    const { result } = renderHook(useTestPreference, { wrapper: createWrapper() });
+
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+
+    expect(result.current.loadError).toBe('Could not restore preferences');
+    expect(result.current.saveError).toBeNull();
+    expect(result.current.error).toBe('Could not restore preferences');
+  });
+
+  it('reports a save failure and clears it after a newer save succeeds', async () => {
+    setPreferenceMock
+      .mockRejectedValueOnce(new Error('Could not persist preferences'))
+      .mockImplementation(async (_key, value) => value);
+    const { result } = renderHook(useTestPreference, { wrapper: createWrapper() });
+    await act(async () => Promise.resolve());
+
+    await act(async () => {
+      result.current.save(filters(['active']));
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.saveError).toBe('Could not persist preferences');
+    expect(result.current.error).toBe('Could not persist preferences');
+
+    await act(async () => {
+      result.current.save(filters(['inactive']));
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(result.current.saveError).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
   it('flushes a pending preference when the page unmounts', async () => {
     setPreferenceMock.mockImplementation(async (_key, value) => value);
     const { result, unmount } = renderHook(useTestPreference, { wrapper: createWrapper() });
