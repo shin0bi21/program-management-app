@@ -13,7 +13,7 @@ const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
 const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
-const Leads = lazy(() => import('../pages/Outreach/Leads/Leads'));
+const Leads = lazy(() => import('../pages/Leads/Leads'));
 const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
 const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
 const Hours = lazy(() => import('../pages/Staff/Hours/Hours'));
@@ -108,11 +108,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/outreach" element={<Navigate to="/outreach/leads/external" replace />} />
-              <Route path="/outreach/expressions-of-interest" element={<Navigate to="/outreach/leads/external" replace />} />
-              <Route path="/outreach/leads" element={<Navigate to="/outreach/leads/external" replace />} />
+              <Route path="/outreach" element={<Navigate to="/leads/external" replace />} />
+              <Route path="/outreach/expressions-of-interest" element={<Navigate to="/leads/external" replace />} />
+              <Route path="/outreach/leads" element={<Navigate to="/leads/external" replace />} />
+              <Route path="/outreach/leads/external" element={<Navigate to="/leads/external" replace />} />
+              <Route path="/outreach/leads/internal" element={<Navigate to="/leads/internal" replace />} />
+              <Route path="/outreach/external" element={<Navigate to="/leads/external" replace />} />
+              <Route path="/outreach/internal" element={<Navigate to="/leads/internal" replace />} />
+              <Route path="/leads" element={<Navigate to="/leads/external" replace />} />
               <Route
-                path="/outreach/leads/external"
+                path="/leads/external"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
                     <Leads key="external" origin="external" />
@@ -120,7 +125,7 @@ function App() {
                 }
               />
               <Route
-                path="/outreach/leads/internal"
+                path="/leads/internal"
                 element={
                   <ProtectedRoute requiredPermission="read:outreach">
                     <Leads key="internal" origin="internal" />

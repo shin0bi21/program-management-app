@@ -338,7 +338,10 @@ function applyLeadFilters(filters: LeadQuery) {
   const originFilter = filters.origins.length
     ? sql`origin = ANY(${sql.array(filters.origins)}::lead_origin[])`
     : sql`TRUE`;
-  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${searchFilter}`;
+  const submitterRoleFilter = filters.submitterRoles.length
+    ? sql`submitted_by_role = ANY(${sql.array(filters.submitterRoles)}::lead_submitter_role[])`
+    : sql`TRUE`;
+  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${submitterRoleFilter} AND ${searchFilter}`;
 }
 
 function escapeLikePattern(value: string) {
