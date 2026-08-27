@@ -1,8 +1,8 @@
-# Frontend calendar
+# Calendars
 
 A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
-## Component structure
+## Organize calendar files
 
 ```text
 components/
@@ -55,9 +55,11 @@ function ExampleCalendar({ rows, filters, selection, actions }: Props) {
 }
 ```
 
-Every item has one inclusive `{ start, end }` range. A one-period record uses the same key for both values; a multi-period record uses its actual boundaries. Ranged records match overlap and appear once as complete records; never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months, and years.
+Every item has one inclusive `{ start, end }` range. A one-period record uses the same key for both values. A multi-period record uses its actual boundaries.
 
-## Calendar and item ownership
+Ranged records match overlap and appear once as complete records. Never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months and years.
+
+## Assign calendar and item ownership
 
 The shared `TimelineCalendar` owns row/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional row selection. A row can represent a resource, program, room, or another domain axis. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.
 
@@ -71,15 +73,15 @@ The shared `TimelineCalendar` owns row/period virtualization, grid semantics, na
 
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 
-## Persist and reconcile
+## Save and reconcile changes
 
 Send add, move, resize, status, and delete events through narrow APIs. Move and resize requests contain only the changed range and optional destination resource; the backend re-reads authoritative state.
 
-After success, reconcile the visible calendar buffer, selection, and affected dashboard. If the same record appears in a table, follow [table row operations](../table-view/rows.md). Preserve local calendar mutation overrides until confirmed server data arrives so stale loads cannot resurrect deletes or revert moves.
+After success, reconcile the visible calendar buffer, selection and affected dashboard. If the same record appears in a table, follow [table row operations](../tables/rows.md). Preserve local calendar mutation overrides until confirmed server data arrives so stale loads cannot resurrect deletes or revert moves.
 
 Persist durable filters with page preferences. Keep browser-local calendar position separate through a page-specific `positionStorageKey`.
 
-## Calendar tests
+## Test the calendar
 
 - The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
 - The page-calendar test owns capability mapping, selection, item construction, and exact callback-to-action wiring.

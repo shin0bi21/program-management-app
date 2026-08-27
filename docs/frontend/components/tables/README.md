@@ -1,8 +1,8 @@
-# Frontend table
+# Tables
 
 A page-owned `*Table` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the page table owns fetching, pagination, table states, and the shared `Table` integration.
 
-## Component structure
+## Organize table files
 
 ```text
 components/
@@ -16,7 +16,9 @@ components/
 
 Keep columns in the page-table owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the table component.
 
-Define page-table columns with the shared `TableColumnDef<T>` type, which narrows TanStack's native column definition to the flat, string-header contract supported by the shared table. Use the canonical backend sort key as `id`, put the user-facing string in `header`, use `size`, `enableResizing`, and `enableHiding`, and render from `row.original` in `cell`. Nested column groups are not supported. The shared table exposes that ID as `data-column-id` on header and data cells for column-specific styling.
+Define page-table columns with the shared `TableColumnDef<T>` type. It narrows TanStack's column definition to the flat, string-header contract supported by the shared table.
+
+Use the canonical backend sort key as `id`. Put the user-facing string in `header`, configure sizing with `size`, `enableResizing` and `enableHiding`, and render from `row.original` in `cell`. The shared table exposes the ID as `data-column-id` on header and data cells. Nested column groups are not supported.
 
 ```tsx
 const columns = useMemo<TableColumnDef<Example>[]>(() => [
@@ -38,7 +40,7 @@ const columns = useMemo<TableColumnDef<Example>[]>(() => [
 
 The shared `Table` renders TanStack header, row, visibility, sizing, sorting, and cell models end to end through its flat `TableColumnDef` contract.
 
-## Remote table-data hook
+## Load remote table data
 
 Wrap the typed API adapter with `useInfiniteListQuery`. Include every server-owned search, filter, and sort input in the query key, forward cancellation and cursors, and request 25 rows unless the domain documents another size.
 
@@ -76,7 +78,7 @@ Avoid a non-null assertion in production code by narrowing initialized filters b
 
 The backend applies permissions, search, filters, and sorting before cursor pagination, fetches `limit + 1`, and uses a deterministic secondary ID sort. Never fetch an unbounded collection or client-sort a cursor-paginated response.
 
-## Table component pattern
+## Render the table
 
 ```tsx
 export default function ExampleTable(props: ExampleTableProps) {
@@ -108,19 +110,21 @@ export default function ExampleTable(props: ExampleTableProps) {
 
 - Use durable row IDs and stable declarative columns.
 - Make user-facing data columns resizable; keep action columns fixed.
-- Use the canonical column `key` as the backend-supported sort key, and pass the owner’s canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
+- Use the canonical column `id` as the backend-supported sort key. Pass the owner's canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
 - Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
 - Use controlled table selection only when selection has application meaning.
 
-## Page integration
+## Connect page controls
 
-The page owns live search, applied filters, sorting preferences, hidden columns, widths, and view choice. Restore persisted preferences and required option data before enabling the list query. Keep a transient draft search value until the shared SearchInput commits it through its Search button or Enter key, then persist the trimmed applied search with the other preferences and pass it through the same filter object used by the query key, API adapter, and filtered-empty message. Clear resets the draft and persists an empty applied search. Do not debounce or defer search; the table-data hook must treat applied search like every other backend filter.
+The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
+
+Keep a draft search value until `SearchInput` commits it through its Search button or Enter key. Save the trimmed search with the other preferences. Pass it through the same filter object used by the query key, API adapter and filtered-empty message. Clear resets the draft and saves an empty search. Do not debounce or defer search.
 
 Persist one complete preference value after each control change. Use the preference owner's optimistic cached value as the source for consecutive functional updates so rapid changes compose into one current snapshot.
 
-## Table tests
+## Test the table
 
 - The table-data hook test owns query-key inputs, filter/sort serialization, page size, cursor forwarding, cancellation, and domain row shaping.
 - The page-table test owns columns, selection wiring, loading/error/empty states, pagination, and table-specific actions.

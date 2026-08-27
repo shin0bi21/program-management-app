@@ -2,7 +2,7 @@
 
 This document is the single source for page-table row identity, rendering, actions, and mutation reconciliation.
 
-## Row presentation
+## Render rows
 
 - Use a durable record ID as the row key.
 - Render values from the complete typed row returned by the list endpoint; do not cast transport data inside cells.
@@ -13,7 +13,7 @@ This document is the single source for page-table row identity, rendering, actio
 
 Columns may render cells directly. Extract a row-owned component only when a region has meaningful interaction, accessibility, or independently testable behavior; do not create a wrapper merely to mirror table markup.
 
-## Query ownership
+## Own query keys
 
 Give each remote table a stable list-key prefix that contains only cursor-list variants. Keep overview, dashboard, calendar, options, and direct-record queries on sibling keys rather than beneath a broad prefix that mutation code might invalidate accidentally.
 
@@ -26,7 +26,7 @@ const EXAMPLE_CALENDAR_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'calendar'] as const;
 
 Action owners receive the narrow keys they actually reconcile. Do not expose a `refreshExamples()` helper that invalidates the domain root when an operation affects only one row or one aggregate.
 
-## Mutation response contract
+## Define mutation responses
 
 The canonical table row is the complete projection rendered by the list endpoint. It may be the same shape as the domain record, or it may include joined names, capabilities, labels, and other server-derived fields. The backend list service and command service must share the row projection and mapping so command responses cannot drift from list responses.
 
@@ -41,7 +41,7 @@ interface CompleteWorkResult {
 
 The typed frontend API adapter owns this response shape. If calendar or detail consumers use another representation, derive it from an authoritative response projection or include that projection explicitly in the endpoint-specific envelope. Never synthesize server-owned row fields from stale cache data merely to avoid changing the API.
 
-## Row update contract
+## Update existing rows
 
 Every row-scoped edit, status change, placement change, assignment, or other update follows one pattern:
 
@@ -71,7 +71,7 @@ Use one named synchronization helper per table-row type when status, placement, 
 
 If an endpoint cannot return the complete canonical row, correct the backend projection and response contract instead of falling back to a table refresh.
 
-## Create and delete
+## Create and delete rows
 
 - After a confirmed delete, call `removeInfiniteListRow` and reconcile selection and other owners. Do not refetch the table.
 - Local deletion may leave a loaded page short; do not fetch a replacement row merely to fill the page. The next natural query restores authoritative pagination.
@@ -87,14 +87,14 @@ If an endpoint cannot return the complete canonical row, correct the backend pro
 
 Overview and dashboard queries are derived aggregates and may be invalidated by their exact key. Calendar buffers, selected-record state, and other mounted owners use their narrow adapters. A broad invalidation is forbidden when it would also match the table list.
 
-## Concurrency and failure
+## Handle concurrency and failure
 
 - Prevent overlapping mutations for the same row when the UI can trigger them.
 - Do not reconcile a failed response or leave an optimistic row change without an explicit rollback contract.
 - Use serialization, cancellation, or revisions only when overlapping work can genuinely reach the same row.
 - Focused commands must not submit a full cached record merely to change one field; the backend re-reads authoritative state and returns the final row.
 
-## Row tests
+## Test row behaviour
 
 For every update path, assert:
 

@@ -1,10 +1,10 @@
-# Frontend dashboard
+# Dashboards
 
 A page-owned `*Dashboard` composes selected-record details and aggregate overview cards inside `PageBody`'s dashboard region. It owns dashboard-specific loading, error, and empty presentation; the route page owns what resource or record selects it.
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
-## Data and hook pattern
+## Load dashboard data
 
 Keep a dashboard query in a focused `use*OverviewData` hook when the dashboard needs server aggregates not already held by the page. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
@@ -27,7 +27,7 @@ function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
-## Ownership rules
+## Assign dashboard ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.
 - Keep table and calendar selection semantics equivalent when both views select the same domain record.
@@ -36,6 +36,6 @@ Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. 
 - Page-wide actions stay in `PageHeader`; record-specific actions may live in the relevant card.
 - A mutation reconciles or invalidates the overview query separately from table row reconciliation.
 
-## Dashboard tests
+## Test the dashboard
 
 Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and query enablement. Hook tests own query keys, server inputs, cancellation, and response shaping. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.
