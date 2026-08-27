@@ -24,5 +24,14 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     enabled,
   });
 
-  return { sessions: query.rows, loading: query.loading, refreshing: query.refreshing, error: query.error, hasNextPage: query.hasNextPage, loadingNextPage: query.loadingNextPage, loadNextPage: query.loadNextPage };
+  return {
+    sessions: query.rows,
+    loading: query.loading,
+    refreshing: query.refreshing,
+    error: query.error,
+    hasNextPage: query.hasNextPage,
+    loadingNextPage: query.loadingNextPage,
+    loadNextPage: query.loadNextPage,
+    retry: query.retry,
+  };
 }

@@ -42,7 +42,7 @@ export default function useUserPreference<T extends object>(
 ) {
   const queryClient = useQueryClient();
   const queryKey = useMemo(() => ['user-preference', key] as const, [key]);
-  const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
   const pendingRef = useRef<T | null>(null);
   const queuedRef = useRef<T | null>(null);
@@ -62,7 +62,7 @@ export default function useUserPreference<T extends object>(
     mutationFn: (value: T) => setPreference(key, value),
   });
 
-  const setBaseline = useCallback((value: T) => {
+  const initializePreference = useCallback((value: T) => {
     const normalized = sanitizeColumns(value, columnKeys)!;
     void queryClient.cancelQueries({ queryKey, exact: true });
     latestValueRef.current = normalized;
@@ -79,11 +79,11 @@ export default function useUserPreference<T extends object>(
       try {
         await mutateAsync(value);
         if (latestValueRef.current === value) {
-          setError(null);
+          setSaveError(null);
         }
       } catch (cause) {
         if (latestValueRef.current === value) {
-          setError(cause instanceof Error ? cause.message : 'Could not save preferences');
+          setSaveError(cause instanceof Error ? cause.message : 'Could not save preferences');
         }
       }
     }
@@ -99,7 +99,7 @@ export default function useUserPreference<T extends object>(
     const value = sanitizeColumns(updated, columnKeys)!;
     void queryClient.cancelQueries({ queryKey, exact: true });
     queryClient.setQueryData(queryKey, value);
-    setError(null);
+    setSaveError(null);
     latestValueRef.current = value;
     pendingRef.current = value;
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
@@ -127,8 +127,10 @@ export default function useUserPreference<T extends object>(
   return {
     preference: query.data ?? null,
     loading: query.isLoading,
-    error: error ?? queryError,
-    setBaseline,
+    error: saveError ?? queryError,
+    loadError: queryError,
+    saveError,
+    initializePreference,
     save,
   };
 }

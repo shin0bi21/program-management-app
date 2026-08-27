@@ -1,5 +1,5 @@
-// Scope: verifies hours-item summaries, domain details, and emitted entry actions.
-import { fireEvent, render, screen } from '@testing-library/react';
+// Owns hours-item summaries, domain details, and emitted entry actions.
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import HoursItem from './HoursItem';
 
@@ -45,7 +45,7 @@ describe('HoursItem', () => {
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
       'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
-    expect(screen.getByText('Hours').closest('div')).toHaveClass('calendar-item-details__section-start');
+    expect(screen.getByText('Hours').closest('div')).toHaveClass('section-start');
   });
 
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
@@ -72,8 +72,9 @@ describe('HoursItem', () => {
     fireEvent.mouseEnter(screen.getByRole('button'));
 
     const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getAllByText('Healthy Relationships')).toHaveLength(1);
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Program', 'Category', 'Session', 'Hours', 'Notes',
+      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
     ]);
     expect(tooltip).toHaveTextContent('Program Delivery');
   });
@@ -85,7 +86,7 @@ describe('HoursItem', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
-    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('calendar-item--menu-open');
+    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('menu-open');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();

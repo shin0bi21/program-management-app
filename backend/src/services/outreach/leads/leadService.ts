@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
+import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput } from '../../../validation/leadSchemas';
 import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
@@ -156,22 +156,9 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
   return rows[0];
 }
 
-export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, actorId: string) {
-  const rows = await sql`
-    UPDATE leads
-    SET status = ${data.status},
-        status_updated_at = NOW(),
-        updated_at = NOW(),
-        updated_by = ${actorId}
-    WHERE id = ${id}
-      AND status != 'signed_up'
-    RETURNING ${leadColumns}
-  `;
-  if (!rows.length) {
-    const existing = await sql<{ status: string }[]>`SELECT status FROM leads WHERE id = ${id} LIMIT 1`;
-    if (!existing.length) throw new NotFoundError('Lead not found');
-    throw new ConflictError('Signed-up lead status cannot be changed');
-  }
+export async function getLead(id: string) {
+  const rows = await sql`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
+  if (!rows.length) throw new NotFoundError('Lead not found');
   return rows[0];
 }
 
@@ -278,8 +265,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     });
     if (lead.notes?.trim()) {
       await trx`
-        INSERT INTO youth_profile_notes (youth_id, category, title, details, created_by, updated_by)
-        VALUES (${youthId}, ${data.noteCategory}, ${lead.notes.trim()}, NULL, ${actorId}, ${actorId})
+        INSERT INTO youth_profile_notes (youth_id, category, details, created_by, updated_by)
+        VALUES (${youthId}, ${data.noteCategory}, ${lead.notes.trim()}, ${actorId}, ${actorId})
       `;
     }
 
@@ -304,6 +291,16 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       type: lead.contactRelationship,
     }], actorId, transactionId, trx);
 
+    await trx`
+      INSERT INTO lead_notes (lead_id, category, details, created_by, updated_by)
+      VALUES (
+        ${id},
+        'signed_up',
+        ${data.cohortId ? 'Signed up and enrolled in a cohort.' : 'Signed up as a youth profile.'},
+        ${actorId},
+        ${actorId}
+      )
+    `;
     await trx`
       UPDATE leads
       SET status = 'signed_up',
@@ -338,7 +335,10 @@ function applyLeadFilters(filters: LeadQuery) {
   const originFilter = filters.origins.length
     ? sql`origin = ANY(${sql.array(filters.origins)}::lead_origin[])`
     : sql`TRUE`;
-  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${searchFilter}`;
+  const submitterRoleFilter = filters.submitterRoles.length
+    ? sql`submitted_by_role = ANY(${sql.array(filters.submitterRoles)}::lead_submitter_role[])`
+    : sql`TRUE`;
+  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${submitterRoleFilter} AND ${searchFilter}`;
 }
 
 function escapeLikePattern(value: string) {

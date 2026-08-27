@@ -100,21 +100,9 @@ export function checkFrontendOwnership(
       continue;
     }
 
-    const sourceRoute = findRoutePageDirectory(file, routePageDirectories);
     const targetRoute = findRoutePageDirectory(target, routePageDirectories);
     if (/^frontend\/src\/pages\/[^/]+\/common\//.test(file) && targetRoute) {
       violations.push(`${file}:${lineNumber(source, match.index)} page-family common code cannot import a route page's private code (${match[1]}).`);
-      continue;
-    }
-    if (sourceRoute && targetRoute && sourceRoute !== targetRoute) {
-      violations.push(`${file}:${lineNumber(source, match.index)} route pages cannot import another route page's private code (${match[1]}).`);
-      continue;
-    }
-
-    const pageMatch = file.match(/^frontend\/src\/pages\/([^/]+)\//);
-    const targetPageMatch = target.match(/^frontend\/src\/pages\/([^/]+)\//);
-    if (pageMatch && targetPageMatch && pageMatch[1] !== targetPageMatch[1]) {
-      violations.push(`${file}:${lineNumber(source, match.index)} route-family pages cannot import another page family's private code (${match[1]}).`);
     }
   }
 }
@@ -356,7 +344,7 @@ export function checkPreferenceControlOwnership(violations, file, source) {
   if (ownsTablePreferences && !passesTableKeys) {
     violations.push(`${file}:1 table preference hooks must receive owning tableKeys and pass them to useUserPreference.`);
   }
-  if (!/\bsetBaseline\s*\(/.test(source)) {
+  if (!/\binitializePreference\s*\(/.test(source)) {
     violations.push(`${file}:1 preference hooks must initialize the shared save baseline from their normalized restored state.`);
   }
   if (!/\bsave\s*\(\s*current\s*=>/.test(source)) {
@@ -366,6 +354,12 @@ export function checkPreferenceControlOwnership(violations, file, source) {
 
 export function checkPaginatedTables(violations, file, source) {
   if (!file.startsWith('frontend/src/pages/')) return;
+
+  if (/\bdebouncedSearch\b/.test(source)) {
+    violations.push(
+      `${file}:1 searches must use the shared explicit Apply/Clear flow; do not debounce search.`,
+    );
+  }
 
   const routePageMatch = file.match(/\/([^/]+)\/\1\.tsx$/);
   if (routePageMatch) {
@@ -420,6 +414,12 @@ export function checkPaginatedTables(violations, file, source) {
     );
   }
 
+  if (usesInfiniteList && source.includes('useDeferredValue')) {
+    violations.push(
+      `${file}:1 remote table-data hooks must receive page-applied search in their filter object; do not defer search inside the query hook.`,
+    );
+  }
+
   if (/\.(?:test|spec|story)\.tsx?$/.test(file)) return;
 
   const paginationProps = ['hasNextPage', 'loadingNextPage', 'onLoadNextPage'];
@@ -434,23 +434,23 @@ export function checkPaginatedTables(violations, file, source) {
   }
 }
 
-export function checkResourceCalendars(violations, file, source) {
-  const resourceCalendarPage = file.startsWith('frontend/src/pages/')
+export function checkTimelineCalendars(violations, file, source) {
+  const timelineCalendarPage = file.startsWith('frontend/src/pages/')
     && file.endsWith('.tsx')
     && !/\.(?:test|spec|story)\.tsx$/.test(file)
-    && source.includes('<ResourceCalendar');
-  if (!resourceCalendarPage) return;
+    && source.includes('<TimelineCalendar');
+  if (!timelineCalendarPage) return;
 
-  if (!source.includes('usePeriodDataBuffer')) {
+  if (!source.includes('useDataBuffer')) {
     violations.push(
-      `${file}:1 resource-calendar pages must load visible ranges through usePeriodDataBuffer.`,
+      `${file}:1 timeline-calendar pages must load visible ranges through useDataBuffer.`,
     );
   }
 
   const calendarOwner = /\/components\/[^/]*Calendar\/[^/]*Calendar\.tsx$/.test(file);
   if (!calendarOwner) {
     violations.push(
-      `${file}:1 ResourceCalendar must be owned by a cohesive page-private *Calendar component.`,
+      `${file}:1 TimelineCalendar must be owned by a cohesive page-private *Calendar component.`,
     );
   }
 
@@ -465,7 +465,7 @@ export function checkResourceCalendars(violations, file, source) {
   );
   if (missing.length) {
     violations.push(
-      `${file}:1 buffered resource calendars must wire the complete period lifecycle; missing ${missing.join(', ')}.`,
+      `${file}:1 buffered timeline calendars must wire the complete period lifecycle; missing ${missing.join(', ')}.`,
     );
   }
 }

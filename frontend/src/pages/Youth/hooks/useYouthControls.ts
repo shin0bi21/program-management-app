@@ -4,7 +4,14 @@ import type { TableSorting } from '../../../common/components/Table/Table.types'
 import type { Program } from '../../../common/features/programs/types';
 import usePreferenceOptionRecovery from '../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
 import useUserPreference from '../../../common/features/preferences/hooks/useUserPreference';
-import { resolvePreferenceSorting } from '../../../common/features/preferences/preferenceValues';
+import {
+  mergePreferenceDefaults,
+  resolveAvailablePreferenceIds,
+  resolveAvailablePreferenceValues,
+  resolvePreferenceNumberRecord,
+  resolvePreferenceSorting,
+  resolvePreferenceStringArray,
+} from '../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../common/types/pagination';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
 import type { YouthPreference, YouthStatusFilter } from '../types';
@@ -18,6 +25,9 @@ interface UseYouthControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
+const DEFAULT_YOUTH_PREFERENCE: YouthPreference = {
+  statuses: ['active'], programIds: [], sorting: DEFAULT_SORTING, columnWidths: {}, hiddenColumns: [],
+};
 
 export function useYouthControls({
   role,
@@ -28,7 +38,7 @@ export function useYouthControls({
 }: UseYouthControlsOptions) {
   // Search and filter state.
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<YouthStatusFilter[]>([]);
   const [programFilters, setProgramFilters] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -43,30 +53,35 @@ export function useYouthControls({
     preference,
     loading: preferenceLoading,
     error,
-    setBaseline,
+    loadError,
+    initializePreference,
     save,
   } = useUserPreference<YouthPreference>('youth-profile-filters', tableKeys);
 
-  // Delay query changes until the user pauses typing.
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   // Restore preferences once their referenced program options are available.
   useEffect(() => {
     if (ready || preferenceLoading || programsLoading || role === null) return;
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    const restoredProgramIds = preference
-      ? programsError
-        ? preference.programIds
-        : preference.programIds.filter(programId => availableProgramIds.has(programId))
+    const preferenceSource = loadError ? null : preference;
+    const resolved = mergePreferenceDefaults(DEFAULT_YOUTH_PREFERENCE, preferenceSource);
+    const restoredProgramIds = preferenceSource
+      ? resolveAvailablePreferenceIds(resolved.programIds, programs, !programsError)
       : role === 'staff' ? programs.map(program => program.id) : [];
-    const restoredSorting = resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredColumnWidths = preference?.columnWidths ?? {};
-    const restoredHiddenColumns = preference?.hiddenColumns ?? [];
+    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
+    const restoredStatuses = resolveAvailablePreferenceValues(
+      resolved.statuses,
+      [{ value: 'active' }, { value: 'inactive' }],
+      true,
+    );
+    const restoredColumnWidths = resolvePreferenceNumberRecord(resolved.columnWidths);
+    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
     const restored: YouthPreference = {
-      statuses: preference?.statuses ?? ['active'],
+      statuses: restoredStatuses,
       programIds: restoredProgramIds,
       sorting: restoredSorting,
       columnWidths: restoredColumnWidths,
@@ -77,9 +92,9 @@ export function useYouthControls({
     setSortingState(restoredSorting);
     setColumnWidthsState(restoredColumnWidths);
     setHiddenColumnsState(restoredHiddenColumns);
-    setBaseline(restored);
+    initializePreference(restored);
     setReady(true);
-  }, [preference, preferenceLoading, programs, programsError, programsLoading, ready, role, setBaseline, tableKeys]);
+  }, [loadError, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {
@@ -112,11 +127,11 @@ export function useYouthControls({
 
   // Keep query inputs and FilterCard configuration stable between unrelated renders.
   const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
-    search: debouncedSearch,
+    search: appliedSearch,
     statuses: statusFilters,
     programIds: programFilters,
-  }) : null, [debouncedSearch, programFilters, ready, statusFilters]);
-  const hasActiveQueryFilters = Boolean(debouncedSearch || statusFilters.length || programFilters.length);
+  }) : null, [appliedSearch, programFilters, ready, statusFilters]);
+  const hasActiveQueryFilters = Boolean(appliedSearch || statusFilters.length || programFilters.length);
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -172,6 +187,9 @@ export function useYouthControls({
   return {
     search,
     setSearch,
+    appliedSearch,
+    applySearch,
+    clearSearch,
     queryFilters,
     statusFilters,
     programFilters,

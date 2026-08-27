@@ -1,4 +1,4 @@
-// Scope: verifies Youth table query ownership, pagination inputs, and row shaping.
+// Owns Youth table query ownership, pagination inputs, and row shaping.
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';

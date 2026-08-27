@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import Button from '../../../../../common/components/Button/Button';
+import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import Modal from '../../../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../../../common/components/Modal/hooks/useConfirmModal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 
 import { withdrawYouth } from '../../../../../common/features/programming/api/cohorts.api';
@@ -26,8 +27,10 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
   const [refreshError, setRefreshError] = useState('');
   const cohortId = cohort?.id;
 
-  const { enrolledYouth, search, setSearch, filterBySearch, loading, error, refresh } = useCohortRoster(cohort);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+  const {
+    enrolledYouth, search, setSearch, appliedSearch, applySearch, clearSearch,
+    filterBySearch, loading, error, refresh,
+  } = useCohortRoster(cohort);
   const visibleYouth = useMemo(() => filterBySearch(enrolledYouth), [enrolledYouth, filterBySearch]);
 
   useEffect(() => {
@@ -76,7 +79,10 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
         <SearchInput
           label="Search enrolled youth"
           value={search}
+          appliedValue={appliedSearch}
           onChange={event => setSearch(event.target.value)}
+          onApply={applySearch}
+          onClear={clearSearch}
           placeholder="Search by name or school"
         />
         <div className="manage-roster-list" aria-label="Current cohort roster">
@@ -102,17 +108,10 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
         onSuccess={async () => { await refresh(); await onSuccess(); }}
       />
 
-      <Modal
-        isOpen={confirmAction !== null}
+      <ConfirmModal
+        action={confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
+      />
     </>
   );
 }

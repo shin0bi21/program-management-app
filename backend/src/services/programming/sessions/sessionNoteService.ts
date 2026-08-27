@@ -14,7 +14,6 @@ export async function getSessionNotes(sessionId: string, actor: AccessTokenPaylo
       sn.id,
       sn.session_id,
       sn.category,
-      sn.title,
       sn.details,
       sn.created_at,
       sn.updated_at,
@@ -69,7 +68,6 @@ export async function createSessionNote(
       INSERT INTO session_notes (
         session_id,
         category,
-        title,
         details,
         created_by,
         updated_by
@@ -77,7 +75,6 @@ export async function createSessionNote(
       VALUES (
         ${sessionId},
         ${data.category},
-        ${data.title},
         ${data.details},
         ${actor.userId},
         ${actor.userId}
@@ -132,7 +129,6 @@ export async function updateSessionNote(
     await trx`
       UPDATE session_notes
       SET category = ${data.category},
-          title = ${data.title},
           details = ${data.details},
           updated_at = NOW(),
           updated_by = ${actor.userId}
@@ -198,7 +194,7 @@ export async function listSessionNotesForYouth(
 
   return sql`
     SELECT
-      sn.id, sn.session_id, sn.category, sn.title, sn.details, sn.created_at, sn.updated_at,
+      sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
       cs.theme AS session_theme, cs.starts_at, pc.id AS cohort_id,
       cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.roster_mode,

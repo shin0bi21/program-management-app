@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -35,7 +35,7 @@ export default function useAttendanceModal({
   const [roster, setRoster] = useState<SessionRosterMember[]>([]);
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [creatingYouth, setCreatingYouth] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -50,7 +50,7 @@ export default function useAttendanceModal({
     setRoster([]);
     setSelections({});
     setSearch('');
-    setDebouncedSearch('');
+    setAppliedSearch('');
     setCreatingYouth(false);
     setSubmitStatus('idle');
     setStatusMessage('');
@@ -71,15 +71,16 @@ export default function useAttendanceModal({
     ));
   }, [rosterQuery.data]);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
+  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setAppliedSearch('');
+  }, []);
 
   const searchQuery = useQuery<YouthProfile[]>({
-    queryKey: [...YOUTH_QUERY_KEY, 'search', debouncedSearch],
-    queryFn: ({ signal }) => getYouth(undefined, { search: debouncedSearch }, { signal }),
-    enabled: Boolean(isOpenRoster && debouncedSearch.length >= 2),
+    queryKey: [...YOUTH_QUERY_KEY, 'search', appliedSearch],
+    queryFn: ({ signal }) => getYouth(undefined, { search: appliedSearch }, { signal }),
+    enabled: Boolean(isOpenRoster && appliedSearch.length >= 2),
   });
 
   const searchResults = useMemo(() => {
@@ -165,6 +166,7 @@ export default function useAttendanceModal({
     roster,
     selections,
     search,
+    appliedSearch,
     searchResults,
     creatingYouth,
     isOpenRoster,
@@ -181,6 +183,8 @@ export default function useAttendanceModal({
     statusMessage: statusMessage || undefined,
     submissionComplete,
     setSearch,
+    applySearch,
+    clearSearch,
     addOpenAttendee,
     removeOpenAttendee,
     updateAttendanceStatus,

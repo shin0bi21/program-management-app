@@ -94,7 +94,7 @@ describe('Leads API', () => {
     }));
   });
 
-  it('records an authored chronological follow-up log for a lead', async () => {
+  it('records append-only status history and updates the lead atomically', async () => {
     const lead = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
@@ -104,44 +104,45 @@ describe('Leads API', () => {
     const created = await request(app)
       .post(`/api/leads/${lead.body.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ details: 'Called and left a message.' });
+      .send({ category: 'contacted', details: 'Called and left a message.' });
     expect(created.status).toBe(201);
-    expect(created.body).toEqual(expect.objectContaining({
+    expect(created.body.note).toEqual(expect.objectContaining({
       leadId: lead.body.id,
+      category: 'contacted',
       details: 'Called and left a message.',
       createdByName: expect.any(String),
       createdAt: expect.any(String),
     }));
 
-    const updated = await request(app)
-      .put(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
+    expect(created.body.lead).toEqual(expect.objectContaining({
+      id: lead.body.id,
+      status: 'contacted',
+      statusUpdatedAt: expect.any(String),
+    }));
+
+    const editUnavailable = await request(app)
+      .put(`/api/leads/${lead.body.id}/notes/${created.body.note.id}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ details: 'Called and left a voicemail.' });
-    expect(updated.status).toBe(200);
-    expect(updated.body.details).toBe('Called and left a voicemail.');
+      .send({ category: 'eligible', details: 'Changed history.' });
+    expect(editUnavailable.status).toBe(404);
 
     const listed = await request(app)
       .get(`/api/leads/${lead.body.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual([
-      expect.objectContaining({ id: created.body.id, details: 'Called and left a voicemail.' }),
+      expect.objectContaining({ id: created.body.note.id, category: 'contacted', details: 'Called and left a message.' }),
     ]);
 
-    const removed = await request(app)
-      .delete(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
+    const deleteUnavailable = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/${created.body.note.id}`)
       .set('Authorization', `Bearer ${staffToken}`);
-    expect(removed.status).toBe(200);
-
-    const missing = await request(app)
-      .delete(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(missing.status).toBe(404);
+    expect(deleteUnavailable.status).toBe(404);
 
     const invalid = await request(app)
       .post(`/api/leads/${lead.body.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ details: '   ' });
+      .send({ category: 'eligible', details: '   ' });
     expect(invalid.status).toBe(400);
   });
 
@@ -150,13 +151,13 @@ describe('Leads API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ ...payload, youthFirstName: 'Delete', youthLastName: `Flow-${Date.now()}` });
     const note = await request(app).post(`/api/leads/${created.body.id}/notes`)
-      .set('Authorization', `Bearer ${staffToken}`).send({ details: 'Delete with parent.' });
+      .set('Authorization', `Bearer ${staffToken}`).send({ category: 'closed', details: 'Delete with parent.' });
 
     const removed = await request(app).delete(`/api/leads/${created.body.id}`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(removed.status).toBe(200);
     const [remainingNote] = await sql<{ count: number }[]>`
-      SELECT COUNT(*)::int AS count FROM lead_notes WHERE id = ${note.body.id}
+      SELECT COUNT(*)::int AS count FROM lead_notes WHERE id = ${note.body.note.id}
     `;
     expect(remainingNote.count).toBe(0);
   });
@@ -272,41 +273,60 @@ describe('Leads API', () => {
     expect(res.body.every((lead: { recommendedProgramId: string }) => lead.recommendedProgramId === softSkillsProgramId)).toBe(true);
   });
 
+  it('filters leads by who submitted the outreach form', async () => {
+    const res = await request(app)
+      .get('/api/leads?origins=internal&submitterRoles=staff')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ youthFirstName: 'Event', submittedByRole: 'staff' }),
+    ]));
+    expect(res.body.every((lead: { submittedByRole: string }) => lead.submittedByRole === 'staff')).toBe(true);
+  });
+
   it('rejects unsupported lead filters', async () => {
     const res = await request(app)
       .get('/api/leads?statuses=reviewed')
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(400);
+
+    const invalidSubmitter = await request(app)
+      .get('/api/leads?submitterRoles=teacher')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(invalidSubmitter.status).toBe(400);
   });
 
-  it('updates a lead status and audit metadata', async () => {
+  it('supports deferred and closed status history', async () => {
     const [lead] = await sql<{ id: string }[]>`
       SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
     `;
 
     const res = await request(app)
-      .patch(`/api/leads/${lead.id}/status`)
+      .post(`/api/leads/${lead.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'eligible' });
+      .send({ category: 'deferred', details: 'Family asked us to call next month.' });
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(expect.objectContaining({
+    expect(res.status).toBe(201);
+    expect(res.body.lead).toEqual(expect.objectContaining({
       id: lead.id,
-      status: 'eligible',
+      status: 'deferred',
       updatedBy: staffUserId,
       statusUpdatedAt: expect.any(String),
     }));
+    expect(res.body.note).toEqual(expect.objectContaining({ category: 'deferred' }));
   });
 
-  it('does not allow signed_up through the generic status endpoint', async () => {
+  it('does not allow signed_up through status history creation', async () => {
     const [lead] = await sql<{ id: string }[]>`
       SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
     `;
     const res = await request(app)
-      .patch(`/api/leads/${lead.id}/status`)
+      .post(`/api/leads/${lead.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'signed_up' });
+      .send({ category: 'signed_up', details: 'Invalid direct signup.' });
 
     expect(res.status).toBe(400);
   });
@@ -357,10 +377,20 @@ describe('Leads API', () => {
     expect(profile).toEqual(expect.objectContaining({
       firstName: payload.youthFirstName,
     }));
-    const [profileNote] = await sql<{ category: string; title: string; details: string | null }[]>`
-      SELECT category, title, details FROM youth_profile_notes WHERE youth_id = ${convertedYouthId!}
+    const [profileNote] = await sql<{ category: string; details: string }[]>`
+      SELECT category, details FROM youth_profile_notes WHERE youth_id = ${convertedYouthId!}
     `;
-    expect(profileNote).toEqual({ category: 'preference', title: payload.notes, details: null });
+    expect(profileNote).toEqual({ category: 'preference', details: payload.notes });
+
+    const [signupStatusNote] = await sql<{ category: string; details: string }[]>`
+      SELECT category, details
+      FROM lead_notes
+      WHERE lead_id = ${lead.id} AND category = 'signed_up'
+    `;
+    expect(signupStatusNote).toEqual({
+      category: 'signed_up',
+      details: 'Signed up and enrolled in a cohort.',
+    });
 
     const [enrollment] = await sql<{ cohortId: string; youthId: string }[]>`
       SELECT cohort_id, youth_id
@@ -389,9 +419,9 @@ describe('Leads API', () => {
     expect(duplicate.status).toBe(409);
 
     const statusChange = await request(app)
-      .patch(`/api/leads/${lead.id}/status`)
+      .post(`/api/leads/${lead.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'contacted' });
+      .send({ category: 'contacted', details: 'Should not change signed-up history.' });
     expect(statusChange.status).toBe(409);
 
     const edit = await request(app)
@@ -512,11 +542,11 @@ describe('Leads API', () => {
     expect(notes.status).toBe(403);
   });
 
-  it('returns 404 when updating an unknown lead', async () => {
+  it('returns 404 when recording status for an unknown lead', async () => {
     const res = await request(app)
-      .patch('/api/leads/00000000-0000-4000-8000-000000000000/status')
+      .post('/api/leads/00000000-0000-4000-8000-000000000000/notes')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'ineligible' });
+      .send({ category: 'ineligible', details: 'No matching lead.' });
 
     expect(res.status).toBe(404);
   });

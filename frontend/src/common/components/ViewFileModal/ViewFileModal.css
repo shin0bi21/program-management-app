@@ -1,0 +1,66 @@
+.view-file-modal__preview {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  overflow: hidden;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.view-file-modal__preview img,
+.view-file-modal__preview iframe {
+  width: 100%;
+  height: min(70vh, 800px);
+  border: 0;
+}
+
+.view-file-modal__preview img {
+  object-fit: contain;
+}
+
+.view-file-modal__loading,
+.view-file-modal__footer,
+.view-file-modal__actions,
+.view-file-modal__footer > [role='toolbar'] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-file-modal__loading {
+  color: var(--color-muted);
+}
+
+.view-file-modal__footer {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.view-file-modal__actions {
+  margin-left: auto;
+}
+
+.view-file-modal__download {
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .view-file-modal__preview {
+    min-height: 220px;
+  }
+
+  .view-file-modal__preview img,
+  .view-file-modal__preview iframe {
+    height: 65vh;
+  }
+
+  .view-file-modal__footer,
+  .view-file-modal__actions {
+    flex-wrap: wrap;
+  }
+
+  .view-file-modal__actions {
+    justify-content: flex-end;
+  }
+}

@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import request from 'supertest';
+import { asTransactionSql } from '../../src/db/client';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
@@ -200,12 +203,126 @@ describe('User preferences API', () => {
       columnWidths: { firstName: 180, lastName: 200 },
     };
     const saved = await request(app)
-      .put('/api/preferences/task-filters')
+      .put('/api/preferences/task-preferences')
       .set('Authorization', `Bearer ${firstToken}`)
       .send(value);
 
     expect(saved.status).toBe(200);
     expect(saved.body).toEqual(value);
+  });
+
+  it('migrates task preferences to the preferences key without changing their value', async () => {
+    const rollback = new Error('rollback task preference migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-08-24_1_rename_task_preferences.sql',
+    ), 'utf8');
+    const value = {
+      view: 'table',
+      search: 'planning',
+      staffIds: [firstUserId],
+      hiddenColumns: ['program'],
+      columnWidths: { title: 280 },
+    };
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      await trx`
+        DELETE FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key IN ('task-filters', 'task-preferences')
+      `;
+      await trx`
+        INSERT INTO user_preferences (user_id, preference_key, value)
+        VALUES (${firstUserId}, 'task-filters', ${trx.json(value)})
+      `;
+
+      for (const statement of migration.split(';').map(part => part.trim()).filter(Boolean)) {
+        await trx.unsafe(statement);
+      }
+
+      const rows = await trx<Array<{ preferenceKey: string; value: typeof value }>>`
+        SELECT preference_key, value
+        FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key IN ('task-filters', 'task-preferences')
+      `;
+      expect(rows).toEqual([{ preferenceKey: 'task-preferences', value }]);
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
+  it('keeps the most recently updated task preference when both keys exist', async () => {
+    const rollback = new Error('rollback duplicate task preference migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-08-24_1_rename_task_preferences.sql',
+    ), 'utf8');
+    const legacyValue = { view: 'calendar', search: 'legacy' };
+    const currentValue = { view: 'table', search: 'current' };
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      await trx`
+        DELETE FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key IN ('task-filters', 'task-preferences')
+      `;
+      await trx`
+        INSERT INTO user_preferences (user_id, preference_key, value, updated_at)
+        VALUES
+          (${firstUserId}, 'task-filters', ${trx.json(legacyValue)}, NOW() - INTERVAL '1 hour'),
+          (${firstUserId}, 'task-preferences', ${trx.json(currentValue)}, NOW())
+      `;
+
+      for (const statement of migration.split(';').map(part => part.trim()).filter(Boolean)) {
+        await trx.unsafe(statement);
+      }
+
+      const rows = await trx<Array<{ preferenceKey: string; value: typeof currentValue }>>`
+        SELECT preference_key, value
+        FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key IN ('task-filters', 'task-preferences')
+      `;
+      expect(rows).toEqual([{ preferenceKey: 'task-preferences', value: currentValue }]);
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
+  it('renames the persisted task list view to the table view', async () => {
+    const rollback = new Error('rollback task list view migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-08-25_1_rename_task_list_view.sql',
+    ), 'utf8');
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      await trx`
+        INSERT INTO user_preferences (user_id, preference_key, value)
+        VALUES (
+          ${firstUserId},
+          'task-preferences',
+          ${trx.json({ view: 'list', staffIds: [] })}
+        )
+        ON CONFLICT (user_id, preference_key) DO UPDATE
+        SET value = EXCLUDED.value, updated_at = NOW()
+      `;
+
+      for (const statement of migration.split(';').map(part => part.trim()).filter(Boolean)) {
+        await trx.unsafe(statement);
+      }
+
+      const [preference] = await trx<Array<{ value: { view: string; staffIds: string[] } }>>`
+        SELECT value
+        FROM user_preferences
+        WHERE user_id = ${firstUserId}
+          AND preference_key = 'task-preferences'
+      `;
+      expect(preference.value).toEqual({ view: 'table', staffIds: [] });
+      throw rollback;
+    })).rejects.toBe(rollback);
   });
 
   it('rejects unknown preference keys and non-object preference values', async () => {

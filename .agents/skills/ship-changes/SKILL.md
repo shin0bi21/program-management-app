@@ -7,9 +7,13 @@ description: Ship approved repository changes through GitHub Issues, issue-numbe
 
 Turn approved working-tree changes into traceable, tested pull requests without losing unrelated work. Deep code review belongs to `review-changes`; perform only the final shipping audit here.
 
+Enter this workflow only after an explicit shipping request. Neither implementation, full implementation, mapping, review, nor approval of the code authorizes shipping. The request may authorize one named concern or all approved concerns in the current map; do not broaden its scope.
+
+Read [`docs/workflows/shipping.md`](../../../docs/workflows/shipping.md) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) when selecting or evaluating local verification evidence.
+
 Keep shipping single-threaded and serial. Do not delegate branch, stash, commit, pull-request, check-waiting, merge, or base-synchronization operations: they share mutable Git and GitHub state and must complete in one ordered workflow.
 
-Keep the shipping orchestrator on the strongest available model and reasoning tier. The only delegated prerequisite may be the complete read-only `split-changes` workflow, using that skill's single lightweight-worker policy. Do not spawn workers for mutable shipping operations.
+Keep the shipping orchestrator on the strongest available model and reasoning tier. The only delegated prerequisite may be the complete read-only `map-changes` workflow, using that skill's single lightweight-worker policy. Do not spawn workers for mutable shipping operations.
 
 Read [`docs/workflows/ci.md`](../../../docs/workflows/ci.md) when shipping a change to CI topology, required checks, or test-runner ownership.
 
@@ -28,7 +32,7 @@ This workflow ends after the approved changes are merged and pushed to `develop`
 2. Inventory the complete tracked and untracked diff.
 3. Inspect existing stashes without applying or dropping them.
 4. Check for GitHub Issues and pull requests that already cover the work.
-5. Use the latest approved `split-changes` concern map and concern-level reviews. If a large or mixed diff has no concern map, stop and run the split workflow before creating remote changes.
+5. Use the latest approved `map-changes` concern map and concern-level reviews. If no concern map exists, stop and run the mapping workflow before creating remote changes, even when the working tree appears cohesive.
 6. Do not ship with unresolved high- or medium-severity findings. List every remaining low-severity finding and require it to be fixed, explicitly accepted, or assigned to a concrete deferred concern before creating remote changes.
 
 Present the mapped issue and branch groups before remote changes without rediscovering them. State what will remain uncommitted or stashed. Obtain approval unless the user's request explicitly approves the complete issue-to-merge workflow.
@@ -79,7 +83,7 @@ For every isolated branch:
 6. After three unchanged polls, or if Actions is degraded or checks never register, preserve the branch and report a concrete CI-status blocker instead of waiting indefinitely or bypassing branch protection.
 7. Merge only into `develop` after checks pass and delete the remote feature branch.
 8. Switch local state to `develop`, fast-forward from `origin/develop`, and verify the working tree is clean and local `develop` equals its upstream.
-9. Only after that checkpoint, select the next concern, re-evaluate its scope against the updated base, and begin again at traceability.
+9. Only after that checkpoint, re-evaluate the remaining map. Continue with the next concern only when the current shipping request explicitly authorizes all remaining approved concerns; otherwise report the completed concern and wait for another handoff.
 
 Never prepare a batch of concern branches from the pre-merge base. Logical splitting happens upfront; physical branch preparation and shipping happen one concern at a time.
 

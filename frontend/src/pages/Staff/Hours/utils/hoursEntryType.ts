@@ -1,4 +1,4 @@
-import type { HoursItem } from '../../../../common/features/hours/types';
+import type { HoursItem } from '../types';
 import type { HoursEntryType } from '../types';
 
 export const HOURS_ENTRY_TYPE_LABELS: Record<HoursEntryType, string> = {

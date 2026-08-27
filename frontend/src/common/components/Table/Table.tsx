@@ -19,6 +19,7 @@ export default function Table<T>({
   loading = false,
   refreshing = false,
   error,
+  unavailable,
   emptyMessage = 'No rows found',
   keyExtractor,
   maxHeight = 'calc(100dvh - 200px)',
@@ -143,7 +144,10 @@ export default function Table<T>({
           data={data}
           loading={loading}
           refreshing={refreshing}
-          error={error}
+          unavailable={unavailable ?? (error ? {
+            title: 'Content unavailable',
+            message: error,
+          } : undefined)}
           emptyMessage={emptyMessage}
           keyExtractor={keyExtractor}
           selectedKey={selectedKey}

@@ -166,9 +166,9 @@ describe('Tasks API', () => {
     })).rejects.toBe(rollback);
   });
 
-  it('returns policy-scoped task options', async () => {
+  it('returns complete policy-scoped task reference data', async () => {
     const adminOptions = await request(app)
-      .get('/api/tasks/options')
+      .get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminOptions.status).toBe(200);
     expect(adminOptions.body.resources).toEqual(expect.arrayContaining([
@@ -177,10 +177,20 @@ describe('Tasks API', () => {
       expect.objectContaining({ id: unrelatedStaffId }),
     ]));
     expect(adminOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
+    expect(adminOptions.body.categories).toEqual(expect.arrayContaining([
+      { value: 'planning_prep', label: 'Planning / Prep' },
+    ]));
+    expect(adminOptions.body.statuses).toEqual([
+      { value: 'upcoming', label: 'Upcoming' },
+      { value: 'active', label: 'Active' },
+      { value: 'overdue', label: 'Overdue' },
+      { value: 'completed', label: 'Completed' },
+      { value: 'cancelled', label: 'Cancelled' },
+    ]);
     expect(adminOptions.body).not.toHaveProperty('cycles');
 
     const staffOptions = await request(app)
-      .get('/api/tasks/options')
+      .get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(staffOptions.status).toBe(200);
     expect(staffOptions.body.resources).toEqual(expect.arrayContaining([
@@ -206,7 +216,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${readOnlyToken}`)
       .send({ startDate: taskDate, dueDate: taskDate });
     const readOnlyOptions = await request(app)
-      .get('/api/tasks/options')
+      .get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${readOnlyToken}`);
 
     expect(deniedRead.status).toBe(403);
@@ -257,9 +267,9 @@ describe('Tasks API', () => {
     ]));
 
     const otherUpdate = await request(app)
-      .patch(`/api/tasks/${ownTask.body.id}/status`)
+      .patch(`/api/tasks/${ownTask.body.id}/state`)
       .set('Authorization', `Bearer ${secondStaffToken}`)
-      .send({ status: 'completed' });
+      .send({ state: 'completed' });
     expect(otherUpdate.status).toBe(404);
 
     const otherDelete = await request(app)
@@ -298,6 +308,29 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(second.status).toBe(200);
     expect(second.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} B` })], nextCursor: null });
+  });
+
+  it('searches tasks by their displayed category label', async () => {
+    const created = rememberTask(await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: `Category search target ${firstStaffId}`,
+        category: 'planning_prep',
+        startDate: taskDate,
+        dueDate: taskDate,
+        staffId: firstStaffId,
+      }));
+    expect(created.status).toBe(201);
+
+    const response = await request(app)
+      .get(`/api/tasks/list?staffIds=${firstStaffId}&search=${encodeURIComponent('Planning / Prep')}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: created.body.id, category: 'planning_prep' }),
+    ]));
   });
 
   it('filters the task list by readable staff resources', async () => {
@@ -358,7 +391,12 @@ describe('Tasks API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.rows).toEqual([
-        expect.objectContaining({ title: taskCase.title, status: 'open' }),
+        expect.objectContaining({
+          title: taskCase.title,
+          state: 'open',
+          status: taskCase.status,
+          statusLabel: taskCase.status[0].toUpperCase() + taskCase.status.slice(1),
+        }),
       ]);
     }
   });
@@ -403,7 +441,7 @@ describe('Tasks API', () => {
     const outside = await create('Outside calendar range', '2026-06-21', '2026-06-22');
 
     const response = await request(app)
-      .get('/api/tasks?start=2026-06-12&end=2026-06-15&includeClosed=true')
+      .get(`/api/tasks/calendar?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range`)
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
@@ -416,7 +454,7 @@ describe('Tasks API', () => {
     ]));
 
     const incompleteRange = await request(app)
-      .get('/api/tasks?start=2026-06-12')
+      .get('/api/tasks/calendar?start=2026-06-12')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(incompleteRange.status).toBe(400);
   });
@@ -450,24 +488,24 @@ describe('Tasks API', () => {
       title: 'Newer task title',
       details: 'Newer task details',
       category: 'planning_prep',
-      status: 'open',
+      state: 'open',
       startDate: '2026-08-10',
       dueDate: '2026-08-12',
     }));
 
     const cancelled = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'cancelled' });
+      .send({ state: 'cancelled' });
     expect(cancelled.status).toBe(200);
-    expect(cancelled.body.status).toBe('cancelled');
+    expect(cancelled.body.state).toBe('cancelled');
 
     const reopened = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'open' });
+      .send({ state: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body.status).toBe('open');
+    expect(reopened.body.state).toBe('open');
   });
 
   it('supports admin assignment and flexible date changes before or after logged time', async () => {
@@ -513,7 +551,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(taskWithHours.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        id: task.body.id, status: 'open', hoursLogged: 2,
+        id: task.body.id, state: 'open', hoursLogged: 2,
         loggedHoursByDate: [{ date: loggedWorkDate, hours: 2 }],
       }),
     ]));
@@ -526,23 +564,23 @@ describe('Tasks API', () => {
     expect(changedDates.body).toEqual(expect.objectContaining({
       title: 'Create marketing poster',
       details: 'Prepare the outreach poster',
-      status: 'open',
+      state: 'open',
       startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 2,
     }));
 
     const cancelled = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'cancelled' });
+      .send({ state: 'cancelled' });
     expect(cancelled.status).toBe(200);
-    expect(cancelled.body.status).toBe('cancelled');
+    expect(cancelled.body.state).toBe('cancelled');
 
     const reopened = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'open' });
+      .send({ state: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body.status).toBe('open');
+    expect(reopened.body.state).toBe('open');
 
     const changedAssignee = await request(app)
       .patch(`/api/tasks/${task.body.id}/placement`)
@@ -610,9 +648,9 @@ describe('Tasks API', () => {
       }));
     expect(cancelledTask.status).toBe(201);
     const cancelled = await request(app)
-      .patch(`/api/tasks/${cancelledTask.body.id}/status`)
+      .patch(`/api/tasks/${cancelledTask.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'cancelled' });
+      .send({ state: 'cancelled' });
     expect(cancelled.status).toBe(200);
 
     const cancelledEdit = await request(app)
@@ -648,9 +686,9 @@ describe('Tasks API', () => {
     expect(task.status).toBe(201);
 
     const zeroHourCompletion = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'completed' });
+      .send({ state: 'completed' });
     expect(zeroHourCompletion.status).toBe(409);
     expect(zeroHourCompletion.body.error).toBe('Tasks need logged time before they can be completed');
 
@@ -663,21 +701,21 @@ describe('Tasks API', () => {
       });
     expect(completedEntry.status).toBe(201);
     const completedTasks = await request(app)
-      .get('/api/tasks?includeClosed=true')
+      .get(`/api/tasks/calendar?start=${taskDate}&end=${taskDate}&staffIds=${firstStaffId}&statuses=completed`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(completedTasks.status).toBe(200);
     expect(completedTasks.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
+      expect.objectContaining({ id: task.body.id, state: 'completed', status: 'completed', hoursLogged: 1 }),
     ]));
 
     await sql`DELETE FROM time_entries WHERE id = ${completedEntry.body.id}`;
 
     const reopened = await request(app)
-      .patch(`/api/tasks/${task.body.id}/status`)
+      .patch(`/api/tasks/${task.body.id}/state`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ status: 'open' });
+      .send({ state: 'open' });
     expect(reopened.status).toBe(200);
-    expect(reopened.body).toEqual(expect.objectContaining({ status: 'open', completedAt: null }));
+    expect(reopened.body).toEqual(expect.objectContaining({ state: 'open', completedAt: null }));
 
     const deleted = await request(app)
       .delete(`/api/tasks/${task.body.id}`)

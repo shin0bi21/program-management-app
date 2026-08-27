@@ -1,3 +1,4 @@
+// Owns EditCohortModal rendered behavior and owner wiring.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

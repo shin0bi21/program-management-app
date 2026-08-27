@@ -3,6 +3,7 @@
    ──────────────────────────────────────────────────────── */
 
 .page-container {
+  position: relative;
   margin-left: 160px;
   min-height: 100vh;
   padding: 1rem 1.5rem;

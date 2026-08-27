@@ -1,13 +1,13 @@
-// Scope: verifies create/edit initialization, submission routing, and error lifecycle.
+// Owns create/edit initialization, submission routing, and error lifecycle.
 import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setTask } from '../../../../../../common/features/tasks/tasks.api';
+import { setTask } from '../../../tasks.api';
 import { makeTask } from '../../../../../../tests/factories/task';
 import useTaskModal from './useTaskModal';
 
-vi.mock('../../../../../../common/features/tasks/tasks.api', () => ({
+vi.mock('../../../tasks.api', () => ({
   setTask: vi.fn(),
 }));
 
@@ -23,17 +23,22 @@ describe('useTaskModal', () => {
     vi.mocked(setTask).mockResolvedValue(savedTask);
     const onSaved = vi.fn();
     const { result } = renderHook(() => useTaskModal({
-      isOpen: true,
-      initialStartDate: '2026-08-10',
-      initialDueDate: '2026-08-14',
-      fixedStaffId: 'staff-1',
+      target: {
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-14',
+          staffId: 'staff-1',
+        },
+      },
       onSaved,
     }));
 
     act(() => {
-      result.current.setTitle('  Prepare workshop  ');
-      result.current.setDetails('  Draft materials  ');
-      result.current.setProgramId('program-1');
+      result.current.updateDraft('title', '  Prepare workshop  ');
+      result.current.updateDraft('details', '  Draft materials  ');
+      result.current.updateDraft('category', 'outreach');
+      result.current.updateDraft('programId', 'program-1');
     });
     await act(() => result.current.submit(submitEvent));
 
@@ -45,7 +50,7 @@ describe('useTaskModal', () => {
       startDate: '2026-08-10',
       dueDate: '2026-08-14',
       staffId: 'staff-1',
-    });
+    }, undefined);
     expect(onSaved).toHaveBeenCalledWith(savedTask);
     expect(result.current.status).toBe('success');
     expect(result.current.statusMessage).toBe('Task created.');
@@ -61,12 +66,11 @@ describe('useTaskModal', () => {
     });
     vi.mocked(setTask).mockResolvedValue(task);
     const { result } = renderHook(() => useTaskModal({
-      isOpen: true,
-      task,
+      target: { mode: 'edit', task },
       onSaved: vi.fn(),
     }));
 
-    expect(result.current.title).toBe('Existing task');
+    expect(result.current.draft.title).toBe('Existing task');
     await act(() => result.current.submit(submitEvent));
 
     expect(setTask).toHaveBeenCalledWith(expect.objectContaining({
@@ -77,29 +81,55 @@ describe('useTaskModal', () => {
 
   it('moves the due date with a newly selected start date', () => {
     const { result } = renderHook(() => useTaskModal({
-      isOpen: true,
-      initialStartDate: '2026-08-10',
-      initialDueDate: '2026-08-14',
-      fixedStaffId: 'staff-1',
+      target: {
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-14',
+          staffId: 'staff-1',
+        },
+      },
       onSaved: vi.fn(),
     }));
 
     act(() => result.current.updateStartDate('2026-09-20'));
 
-    expect(result.current.startDate).toBe('2026-09-20');
-    expect(result.current.dueDate).toBe('2026-09-20');
+    expect(result.current.draft.startDate).toBe('2026-09-20');
+    expect(result.current.draft.dueDate).toBe('2026-09-20');
+  });
+
+  it('requires an explicit category before creating a task', async () => {
+    const { result } = renderHook(() => useTaskModal({
+      target: {
+        mode: 'add',
+        initialValues: { startDate: '2026-08-10', dueDate: '2026-08-10', staffId: 'staff-1' },
+      },
+      onSaved: vi.fn(),
+    }));
+
+    await act(() => result.current.submit(submitEvent));
+
+    expect(setTask).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('error');
+    expect(result.current.statusMessage).toBe('Select a category.');
   });
 
   it('keeps the modal open and presents a submission error', async () => {
     vi.mocked(setTask).mockRejectedValue(null);
     const onSaved = vi.fn();
     const { result } = renderHook(() => useTaskModal({
-      isOpen: true,
-      initialStartDate: '2026-08-10',
-      initialDueDate: '2026-08-10',
-      fixedStaffId: 'staff-1',
+      target: {
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-10',
+          staffId: 'staff-1',
+        },
+      },
       onSaved,
     }));
+
+    act(() => result.current.updateDraft('category', 'outreach'));
 
     await act(() => result.current.submit(submitEvent));
     await waitFor(() => expect(result.current.status).toBe('error'));
@@ -120,15 +150,22 @@ describe('useTaskModal', () => {
     vi.mocked(setTask).mockReturnValue(new Promise(resolve => { resolveSave = resolve; }));
     const onSaved = vi.fn();
     const { result } = renderHook(() => useTaskModal({
-      isOpen: true,
-      initialStartDate: '2026-08-10',
-      initialDueDate: '2026-08-10',
-      fixedStaffId: 'staff-1',
+      target: {
+        mode: 'add',
+        initialValues: {
+          startDate: '2026-08-10',
+          dueDate: '2026-08-10',
+          staffId: 'staff-1',
+        },
+      },
       onSaved,
     }));
 
     act(() => {
-      result.current.setTitle('Prepare workshop');
+      result.current.updateDraft('title', 'Prepare workshop');
+      result.current.updateDraft('category', 'outreach');
+    });
+    act(() => {
       void result.current.submit(submitEvent);
       void result.current.submit(submitEvent);
     });

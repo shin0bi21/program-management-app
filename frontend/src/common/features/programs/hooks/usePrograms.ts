@@ -14,5 +14,6 @@ export function usePrograms({ assignedOnly = false }: { assignedOnly?: boolean }
     upsertProgram: query.upsert,
     loading: query.loading,
     error: query.error,
+    retry: query.refetch,
   };
 }

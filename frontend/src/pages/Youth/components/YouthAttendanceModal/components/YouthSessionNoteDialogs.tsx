@@ -2,16 +2,20 @@ import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import type { YouthProfile } from '../../../../../common/types/youth';
 import SessionNoteModal from '../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal';
+import SessionNoteDetails from '../../../../../common/features/notes/components/SessionNoteDetails/SessionNoteDetails';
+import type { SessionNote } from '../../../../../common/types/cohort';
 import type { SessionNoteTarget, SessionNoteUnlinkTarget } from '../types';
 
 export default function YouthSessionNoteDialogs({
   youth,
   rosterMode,
   noteTarget,
+  detailTarget,
   unlinkTarget,
   unlinking,
   unlinkError,
   onCloseNote,
+  onCloseDetails,
   onNoteSaved,
   onCloseUnlink,
   onConfirmUnlink,
@@ -19,10 +23,12 @@ export default function YouthSessionNoteDialogs({
   youth: YouthProfile | null;
   rosterMode: 'enrolled' | 'open';
   noteTarget: SessionNoteTarget | null;
+  detailTarget: SessionNote | null;
   unlinkTarget: SessionNoteUnlinkTarget | null;
   unlinking: boolean;
   unlinkError: string;
   onCloseNote: () => void;
+  onCloseDetails: () => void;
   onNoteSaved: () => Promise<void>;
   onCloseUnlink: () => void;
   onConfirmUnlink: () => Promise<void>;
@@ -39,6 +45,15 @@ export default function YouthSessionNoteDialogs({
       />
 
       <Modal
+        isOpen={detailTarget !== null}
+        onClose={onCloseDetails}
+        title="Session Note"
+        footer={<Button variant="secondary" onClick={onCloseDetails}>Close</Button>}
+      >
+        {detailTarget && <SessionNoteDetails note={detailTarget} />}
+      </Modal>
+
+      <Modal
         isOpen={unlinkTarget !== null}
         onClose={onCloseUnlink}
         title="Unlink Session Note"
@@ -51,7 +66,7 @@ export default function YouthSessionNoteDialogs({
       >
         {unlinkTarget && youth && (
           <p>
-            Unlink {unlinkTarget.note.title} from {youth.firstName} {youth.lastName}?
+            Unlink this note from {youth.firstName} {youth.lastName}?
             {' '}The session note will remain available and any other youth links will be unchanged.
           </p>
         )}

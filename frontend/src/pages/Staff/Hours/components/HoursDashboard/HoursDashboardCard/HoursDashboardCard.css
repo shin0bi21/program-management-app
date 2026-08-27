@@ -110,20 +110,22 @@
 
 .hours-overview-card__breakdown {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin: var(--space-5) 0 0;
 }
 
-.hours-overview-card__breakdown div {
+.hours-overview-card__breakdown-row {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-line-soft);
+  border-left: 4px solid;
 }
 
 .hours-overview-card__breakdown dt {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  font-weight: 650;
 }
 
 .hours-overview-card__breakdown dd {
@@ -131,18 +133,36 @@
   font-weight: 700;
 }
 
-.hours-overview-card__dot {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.hours-overview-card__segments .hours-overview-card__tone-0 { background: #1f9d74; }
+.hours-overview-card__segments .hours-overview-card__tone-1 { background: #f5a623; }
+.hours-overview-card__segments .hours-overview-card__tone-2 { background: #b7b7af; }
+.hours-overview-card__segments .hours-overview-card__tone-3 { background: var(--brand-accent); }
+.hours-overview-card__segments .hours-overview-card__tone-4 { background: #8b6fc0; }
+
+.hours-overview-card__breakdown-row.hours-overview-card__tone-0 {
+  border-left-color: #1f9d74;
+  background: color-mix(in srgb, #1f9d74 10%, transparent);
 }
 
-.hours-overview-card__tone-0 { background: #1f9d74; }
-.hours-overview-card__tone-1 { background: #f5a623; }
-.hours-overview-card__tone-2 { background: #b7b7af; }
-.hours-overview-card__tone-3 { background: var(--brand-accent); }
-.hours-overview-card__tone-4 { background: #8b6fc0; }
+.hours-overview-card__breakdown-row.hours-overview-card__tone-1 {
+  border-left-color: #f5a623;
+  background: color-mix(in srgb, #f5a623 12%, transparent);
+}
+
+.hours-overview-card__breakdown-row.hours-overview-card__tone-2 {
+  border-left-color: #989890;
+  background: color-mix(in srgb, #b7b7af 14%, transparent);
+}
+
+.hours-overview-card__breakdown-row.hours-overview-card__tone-3 {
+  border-left-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 9%, transparent);
+}
+
+.hours-overview-card__breakdown-row.hours-overview-card__tone-4 {
+  border-left-color: #8b6fc0;
+  background: color-mix(in srgb, #8b6fc0 10%, transparent);
+}
 
 .hours-overview-card__no-breakdown {
   margin: var(--space-5) 0 0;

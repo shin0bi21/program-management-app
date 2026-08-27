@@ -2,11 +2,16 @@ import { useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import './HoursDashboardCard.css';
 
 interface EmptyHoursDashboardCardProps {
   title?: string;
   emptyMessage: string;
+  unavailable?: {
+    title: string;
+    onRetry?: () => void;
+  };
 }
 
 interface ReadyHoursDashboardCardProps extends EmptyHoursDashboardCardProps {
@@ -24,7 +29,7 @@ const compactDetailLabels = new Set(['Current Pay Period', 'Cycle']);
 export default function HoursDashboardCard(props: HoursDashboardCardProps) {
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const hasData = 'total' in props;
-  const { title, emptyMessage } = props;
+  const { title, emptyMessage, unavailable } = props;
   const total = hasData ? props.total : 0;
   const modalTitle = hasData ? props.modalTitle : '';
   const modalSubtitle = hasData ? props.modalSubtitle : '';
@@ -46,7 +51,7 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
       {details ? (
         <article className="dashboard-card hours-overview-card hours-overview-card--details">
           {title && <h2 className="hours-overview-card__accessible-title">{title}</h2>}
-          {hasData ? (
+          {unavailable ? <UnavailableState compact {...unavailable} /> : hasData ? (
             <div className="dashboard-card__compact-layout hours-overview-card__layout">
               <dl className="hours-overview-card__details">
                 {details.map(([label, value]) => (
@@ -67,7 +72,7 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
           emptyMessage={emptyMessage}
           action={breakdownAction}
         >
-          {hasData ? (
+          {unavailable ? <UnavailableState compact {...unavailable} /> : hasData ? (
             <>
               <strong className="hours-overview-card__metric">{total.toFixed(2)}</strong>
               <span className="hours-overview-card__context">{modalSubtitle}</span>
@@ -100,8 +105,8 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
             </div>
             <dl className="hours-overview-card__breakdown">
               {breakdown.map(([label, hours], index) => (
-                <div key={label}>
-                  <dt><span className={`hours-overview-card__dot hours-overview-card__tone-${index % 5}`} aria-hidden="true" />{label}</dt>
+                <div key={label} className={`hours-overview-card__breakdown-row hours-overview-card__tone-${index % 5}`}>
+                  <dt>{label}</dt>
                   <dd>{hours.toFixed(2)}</dd>
                 </div>
               ))}

@@ -4,7 +4,7 @@ import { ReAuthProvider } from './ReAuthProvider';
 import { reAuthCoordinator } from './reAuthCoordinator';
 import { useReAuth } from './reAuthContext';
 
-vi.mock('../../common/components/ReLoginModal/ReLoginModal', () => ({
+vi.mock('./components/ReLoginModal/ReLoginModal', () => ({
   default: ({ isOpen, onReAuthenticated }: {
     isOpen: boolean;
     onReAuthenticated: () => void;

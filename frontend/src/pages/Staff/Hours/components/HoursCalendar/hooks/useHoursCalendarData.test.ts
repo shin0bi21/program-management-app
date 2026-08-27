@@ -1,8 +1,8 @@
-// Scope: verifies Hours calendar filtering and stable derived range data.
+// Owns Hours calendar filtering and stable derived range data.
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
-import type { HoursItem } from '../../../../../../common/features/hours/types';
+import type { RowPeriodData } from '../../../../../../common/components/TimelineCalendar/types';
+import type { HoursItem } from '../../../types';
 import { useHoursCalendarData } from './useHoursCalendarData';
 
 const entry = (id: string, category: HoursItem['category']): HoursItem => ({
@@ -21,7 +21,7 @@ const entry = (id: string, category: HoursItem['category']): HoursItem => ({
 
 describe('useHoursCalendarData', () => {
   it('returns the source object unchanged when no filters are active', () => {
-    const data: ResourcePeriodData<HoursItem> = {
+    const data: RowPeriodData<HoursItem> = {
       first: { '2026-08-09': [entry('entry-1', 'meeting')] },
     };
 
@@ -33,7 +33,7 @@ describe('useHoursCalendarData', () => {
   it('preserves filtered data references for unchanged resources', () => {
     const firstResource = { '2026-08-09': [entry('entry-1', 'meeting')] };
     const secondResource = { '2026-08-09': [entry('entry-2', 'meeting')] };
-    const initial: ResourcePeriodData<HoursItem> = { first: firstResource, second: secondResource };
+    const initial: RowPeriodData<HoursItem> = { first: firstResource, second: secondResource };
     const { result, rerender } = renderHook(
       ({ data }) => useHoursCalendarData(data, ['meeting'], [], []),
       { initialProps: { data: initial } },
@@ -48,7 +48,7 @@ describe('useHoursCalendarData', () => {
 
   it('filters entries by their stored cycle ID', () => {
     const otherCycle = { ...entry('entry-2', 'meeting'), cycleId: 'cycle-2', cycleName: 'Fall 2026' };
-    const data: ResourcePeriodData<HoursItem> = {
+    const data: RowPeriodData<HoursItem> = {
       first: { '2026-08-09': [entry('entry-1', 'meeting'), otherCycle] },
     };
 
@@ -61,7 +61,7 @@ describe('useHoursCalendarData', () => {
     const periods = {
       '2026-08-09': [entry('entry-1', 'meeting'), entry('entry-2', 'other')],
     };
-    const data: ResourcePeriodData<HoursItem> = { first: periods };
+    const data: RowPeriodData<HoursItem> = { first: periods };
     const { result, rerender } = renderHook(
       ({ categories }) => useHoursCalendarData(data, categories, [], []),
       { initialProps: { categories: ['meeting'] } },
@@ -75,7 +75,7 @@ describe('useHoursCalendarData', () => {
   });
 
   it('filters entries by Task, Session, and Regular linkage type', () => {
-    const data: ResourcePeriodData<HoursItem> = {
+    const data: RowPeriodData<HoursItem> = {
       first: { '2026-08-09': [
         { ...entry('task-entry', 'meeting'), taskId: 'task-1' },
         { ...entry('session-entry', 'meeting'), sessionId: 'session-1' },

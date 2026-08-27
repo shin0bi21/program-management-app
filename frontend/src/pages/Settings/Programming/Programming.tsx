@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import { DashboardCard, DashboardCardGroup } from '../../../common/components/DashboardCard/DashboardCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
+import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
 import { deleteProgramCycle, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
@@ -21,21 +22,25 @@ import type { CycleModalTarget, ProgramModalTarget } from './types';
 import './Programming.css';
 
 export default function Programming() {
-  // Remote program and cycle data.
-  const { programs, upsertProgram, loading: programsLoading, error: programsError } = usePrograms();
-  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
-  const [cyclesLoading, setCyclesLoading] = useState(true);
+  // Page-local errors.
   const [cyclesError, setCyclesError] = useState<string | null>(null);
 
-  // Selection and dialog state.
-  const [programTarget, setProgramTarget] = useState<ProgramModalTarget>(undefined);
-  const [cycleTarget, setCycleTarget] = useState<CycleModalTarget>(undefined);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+  // Page data.
+  const {
+    programs,
+    upsertProgram,
+    loading: programsLoading,
+    error: programsError,
+    retry: retryPrograms,
+  } = usePrograms();
+  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
+  const [cyclesLoading, setCyclesLoading] = useState(true);
+
+  // Selection.
   const programSelection = useTableSelection(programs);
   const cycleSelection = useTableSelection(cycles);
 
-  // Cycle loading and mutations.
+  // Cycle data lifecycle.
   const refreshCycles = useCallback(async (signal?: AbortSignal) => {
     setCyclesLoading(true);
     try {
@@ -54,6 +59,16 @@ export default function Programming() {
     return () => controller.abort();
   }, [refreshCycles]);
 
+  // Program modal.
+  const [programTarget, setProgramTarget] = useState<ProgramModalTarget>(undefined);
+  const closeProgramModal = () => setProgramTarget(undefined);
+
+  // Cycle modal.
+  const [cycleTarget, setCycleTarget] = useState<CycleModalTarget>(undefined);
+  const closeCycleModal = () => setCycleTarget(undefined);
+
+  // Confirmation modal.
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
     setConfirmAction({
       title: 'Delete Cycle',
@@ -67,8 +82,9 @@ export default function Programming() {
       },
     });
   }, []);
+  const closeConfirmation = () => setConfirmAction(null);
 
-  // Table presentation and row actions.
+  // Table configuration.
   const programColumns = useMemo<TableColumnDef<Program>[]>(() => [
     { id: 'name', header: 'Program', accessorFn: program => program.name },
     { id: 'attendance', header: 'Attendance', accessorFn: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },
@@ -90,9 +106,20 @@ export default function Programming() {
     ) },
   ], [requestCycleDeletion]);
 
-  return (
+  // Render.
+  return <>
     <main className="page-container page-container--data programming-settings-page">
       <PageHeader title="Programming Settings" />
+      <PageErrorOverlay errors={[
+        programsError ? {
+          message: programsError,
+          action: { label: 'Retry', onClick: retryPrograms },
+        } : null,
+        cyclesError ? {
+          message: cyclesError,
+          action: { label: 'Retry', onClick: refreshCycles },
+        } : null,
+      ]} />
       <DashboardCardGroup ariaLabel="Program and cycle management">
         <DashboardCard title="Programs" action={<Button size="sm" onClick={() => setProgramTarget(null)}>+ Add Program</Button>}>
           <ProgramTable
@@ -100,6 +127,7 @@ export default function Programming() {
             programs={programs}
             loading={programsLoading}
             error={programsError ?? undefined}
+            onRetry={retryPrograms}
             selectedKey={programSelection.selectedKey}
             onRowSelect={programSelection.selectItem}
           />
@@ -110,34 +138,29 @@ export default function Programming() {
             cycles={cycles}
             loading={cyclesLoading}
             error={cyclesError ?? undefined}
+            onRetry={refreshCycles}
             selectedKey={cycleSelection.selectedKey}
             onRowSelect={cycleSelection.selectItem}
           />
         </DashboardCard>
       </DashboardCardGroup>
-      <ProgramModal
-        isOpen={programTarget !== undefined}
-        program={programTarget ?? null}
-        onClose={() => setProgramTarget(undefined)}
-        onSaved={upsertProgram}
-      />
-      <CycleModal
-        isOpen={cycleTarget !== undefined}
-        cycle={cycleTarget ?? null}
-        onClose={() => setCycleTarget(undefined)}
-        onSaved={refreshCycles}
-      />
-      <Modal
-        isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
     </main>
-  );
+
+    <ProgramModal
+      isOpen={programTarget !== undefined}
+      program={programTarget ?? null}
+      onClose={closeProgramModal}
+      onSaved={upsertProgram}
+    />
+    <CycleModal
+      isOpen={cycleTarget !== undefined}
+      cycle={cycleTarget ?? null}
+      onClose={closeCycleModal}
+      onSaved={refreshCycles}
+    />
+    <ConfirmModal
+      action={confirmAction}
+      onClose={closeConfirmation}
+    />
+  </>;
 }

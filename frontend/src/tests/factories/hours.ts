@@ -1,4 +1,4 @@
-import type { HoursItem } from '../../common/features/hours/types';
+import type { HoursItem } from '../../pages/Staff/Hours/types';
 
 export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
   return {
@@ -18,4 +18,3 @@ export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
     ...overrides,
   };
 }
-

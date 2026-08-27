@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Row } from '@tanstack/react-table';
 import TableRow from './TableRow';
 import type { TableNavigationKey } from '../Table.types';
+import UnavailableState from '../../UnavailableState/UnavailableState';
 
 interface TableBodyProps<T> {
   rows: Row<T>[];
@@ -9,7 +10,11 @@ interface TableBodyProps<T> {
   data: T[];
   loading: boolean;
   refreshing: boolean;
-  error?: string;
+  unavailable?: {
+    title: string;
+    message?: string;
+    onRetry?: () => void;
+  };
   emptyMessage: string;
   keyExtractor: (item: T) => string;
   selectedKey?: string | null;
@@ -25,7 +30,7 @@ export default function TableBody<T>({
   data,
   loading,
   refreshing,
-  error,
+  unavailable,
   emptyMessage,
   keyExtractor,
   selectedKey,
@@ -50,10 +55,12 @@ export default function TableBody<T>({
         <td colSpan={visibleColumnCount} className="table-state-cell">Loading...</td>
       </tr>
     );
-  } else if (error) {
+  } else if (unavailable) {
     content = (
       <tr className="table-error-row">
-        <td colSpan={visibleColumnCount} className="table-state-cell table-error-cell">{error}</td>
+        <td colSpan={visibleColumnCount} className="table-state-cell">
+          <UnavailableState {...unavailable} />
+        </td>
       </tr>
     );
   } else if (data.length === 0) {

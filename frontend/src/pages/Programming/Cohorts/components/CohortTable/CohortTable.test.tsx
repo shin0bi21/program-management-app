@@ -1,4 +1,4 @@
-// Scope: verifies cohort table data and control wiring.
+// Owns cohort table data and control wiring.
 import { render, screen } from '@testing-library/react';
 import { vi, it, expect } from 'vitest';
 import CohortTable from './CohortTable';

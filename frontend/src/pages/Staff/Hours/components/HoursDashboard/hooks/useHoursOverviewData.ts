@@ -1,25 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 
 import {
-  getHoursOverview,
-  type HoursOverviewResponse,
-} from '../../../../../../common/features/hours/hours.api';
+  getHoursDashboardData,
+  type HoursDashboardData,
+} from '../../../hours.api';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 export type HoursOverviewState =
   | { status: 'unavailable' }
   | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'ready'; data: HoursOverviewResponse };
+  | { status: 'error'; message: string; retry: () => void }
+  | { status: 'ready'; data: HoursDashboardData };
 
 export default function useHoursOverviewData(
   queryKey: readonly unknown[],
   staffId: string | null,
   cycleId: string | null,
 ): HoursOverviewState {
-  const { data, error, isLoading } = useQuery({
-    queryKey: [...queryKey, 'overview', staffId, cycleId],
-    queryFn: ({ signal }) => getHoursOverview(staffId!, cycleId!, { signal }),
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: [...queryKey, 'dashboard', staffId, cycleId],
+    queryFn: ({ signal }) => getHoursDashboardData(staffId!, cycleId!, { signal }),
     enabled: Boolean(staffId && cycleId),
   });
 
@@ -28,6 +28,7 @@ export default function useHoursOverviewData(
   if (error) return {
     status: 'error',
     message: getErrorMessage(error, 'Could not load the hours overview.'),
+    retry: refetch,
   };
   return data ? { status: 'ready', data } : { status: 'loading' };
 }

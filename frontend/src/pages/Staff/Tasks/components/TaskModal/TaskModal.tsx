@@ -3,43 +3,38 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
-import { TASK_CATEGORY_OPTIONS, type TaskCategory, type TaskProgram, type TaskResource } from '../../../../../common/features/tasks/types';
+import type { Task, TaskCategory, TaskModalState, TaskProgram, TaskResource } from '../../types';
 
-import useTaskModal, { type UseTaskModalOptions } from './hooks/useTaskModal';
+import useTaskModal from './hooks/useTaskModal';
 
 import './TaskModal.css';
 
-interface TaskModalProps extends UseTaskModalOptions {
+export interface TaskModalProps {
+  target: Exclude<TaskModalState, null>;
   resources: readonly TaskResource[];
   programs: readonly TaskProgram[];
+  categories: ReadonlyArray<{ value: TaskCategory; label: string }>;
+  onSaved: (task: Task) => void;
   onClose: () => void;
 }
 
-export default function TaskModal({
-  isOpen,
-  resources,
-  programs,
-  task,
-  initialStartDate,
-  initialDueDate,
-  fixedStaffId,
-  onSaved,
-  onClose,
-}: TaskModalProps) {
-  const modal = useTaskModal({
-    isOpen,
-    task,
-    initialStartDate,
-    initialDueDate,
-    fixedStaffId,
-    onSaved,
-  });
+export default function TaskModal(props: TaskModalProps) {
+  const {
+    target,
+    resources,
+    programs,
+    categories,
+    onClose,
+  } = props;
+  const modal = useTaskModal(props);
+  const isEdit = target.mode === 'edit';
+  const staffId = target.mode === 'add' ? target.initialValues.staffId : undefined;
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
-      title={task ? 'Edit Task' : 'Add Task'}
+      title={isEdit ? 'Edit Task' : 'Add Task'}
       maxWidth="620px"
       status={modal.status}
       statusMessage={modal.statusMessage}
@@ -50,9 +45,9 @@ export default function TaskModal({
           <Button
             type="submit"
             form="task-form"
-            disabled={modal.submissionComplete || !modal.staffId || !modal.startDate || !modal.dueDate}
+            disabled={modal.submissionComplete || !modal.draft.staffId || !modal.draft.category || !modal.draft.startDate || !modal.draft.dueDate}
           >
-            {task ? 'Save task' : 'Add task'}
+            {isEdit ? 'Save task' : 'Add task'}
           </Button>
         </>
       )}
@@ -61,53 +56,57 @@ export default function TaskModal({
         <FormField id="task-title" label="Task title *">
           <input
             id="task-title"
-            value={modal.title}
-            onChange={event => modal.setTitle(event.target.value)}
+            value={modal.draft.title}
+            onChange={event => modal.updateDraft('title', event.target.value)}
             maxLength={255}
             required
           />
         </FormField>
-        {!fixedStaffId && <FormField id="task-staff" label="Staff *">
+
+        {!staffId && <FormField id="task-staff" label="Staff *">
           <FloatingSelect
             id="task-staff"
-            value={modal.staffId}
+            value={modal.draft.staffId}
             options={resources.map(resource => ({ value: resource.id, label: resource.name }))}
-            onChange={modal.setStaffId}
+            onChange={value => modal.updateDraft('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"
             disabled={modal.submissionComplete}
           />
         </FormField>}
+
         <div className="task-modal__field-row">
           <FormField id="task-program" label="Program (optional)">
             <FloatingSelect
               id="task-program"
-              value={modal.programId}
+              value={modal.draft.programId}
               options={programs.map(program => ({ value: program.id, label: program.name }))}
-              onChange={modal.setProgramId}
+              onChange={value => modal.updateDraft('programId', value)}
               placeholder="Select a program"
               ariaLabel="Task program"
               disabled={modal.submissionComplete}
-              action={modal.programId ? { label: 'Clear program', onSelect: () => modal.setProgramId('') } : undefined}
+              action={modal.draft.programId ? { label: 'Clear program', onSelect: () => modal.updateDraft('programId', '') } : undefined}
             />
           </FormField>
+
           <FormField id="task-category" label="Category *">
             <FloatingSelect
               id="task-category"
-              value={modal.category}
-              options={TASK_CATEGORY_OPTIONS}
-              onChange={value => modal.setCategory(value as TaskCategory)}
+              value={modal.draft.category}
+              options={categories}
+              onChange={value => modal.updateDraft('category', value as TaskCategory)}
               ariaLabel="Task category"
               disabled={modal.submissionComplete}
             />
           </FormField>
         </div>
+
         <div className="task-modal__field-row">
           <FormField id="task-start-date" label="Start date *">
             <input
               id="task-start-date"
               type="date"
-              value={modal.startDate}
+              value={modal.draft.startDate}
               onChange={event => modal.updateStartDate(event.target.value)}
               disabled={modal.submissionComplete}
               required
@@ -117,9 +116,9 @@ export default function TaskModal({
             <input
               id="task-due-date"
               type="date"
-              value={modal.dueDate}
-              min={modal.startDate || undefined}
-              onChange={event => modal.setDueDate(event.target.value)}
+              value={modal.draft.dueDate}
+              min={modal.draft.startDate || undefined}
+              onChange={event => modal.updateDraft('dueDate', event.target.value)}
               disabled={modal.submissionComplete}
               required
             />
@@ -128,8 +127,8 @@ export default function TaskModal({
         <FormField id="task-details" label="Details (optional)">
           <textarea
             id="task-details"
-            value={modal.details}
-            onChange={event => modal.setDetails(event.target.value)}
+            value={modal.draft.details}
+            onChange={event => modal.updateDraft('details', event.target.value)}
             rows={4}
             maxLength={2000}
           />

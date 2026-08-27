@@ -5,7 +5,7 @@ import {
   createSessionNote,
   getSessionRoster,
   updateSessionNote,
-} from '../../../../../features/programming/api/sessions.api';
+} from '../../../../programming/api/sessions.api';
 import type { SubmitStatus } from '../../../../../hooks/useSubmitStatus';
 import type {
   CohortSession,
@@ -17,7 +17,6 @@ import useSubmitLock from '../../../../../hooks/useSubmitLock';
 
 interface SessionNoteDraft {
   category: SessionNoteCategory;
-  title: string;
   details: string;
   selectedYouthIds: string[];
 }
@@ -33,7 +32,6 @@ export interface UseSessionNoteModalOptions {
 function buildDraft(note: SessionNote | null, initialYouthId?: string): SessionNoteDraft {
   return {
     category: note?.category ?? 'general',
-    title: note?.title ?? '',
     details: note?.details ?? '',
     selectedYouthIds: note?.youth.map(youth => youth.youthId)
       ?? (initialYouthId ? [initialYouthId] : []),
@@ -77,9 +75,6 @@ export default function useSessionNoteModal({
   const updateCategory = (category: SessionNoteCategory) => {
     setDraft(current => ({ ...current, category }));
   };
-  const updateTitle = (title: string) => {
-    setDraft(current => ({ ...current, title }));
-  };
   const updateDetails = (details: string) => {
     setDraft(current => ({ ...current, details }));
   };
@@ -94,10 +89,10 @@ export default function useSessionNoteModal({
 
   const submit = async () => {
     if (!session) return;
-    const title = draft.title.trim();
-    if (!title) {
+    const details = draft.details.trim();
+    if (!details) {
       setSubmitStatus('error');
-      setStatusMessage('Enter a note title.');
+      setStatusMessage('Enter a note.');
       return;
     }
 
@@ -108,8 +103,7 @@ export default function useSessionNoteModal({
 
     const data = {
       category: draft.category,
-      title,
-      details: draft.details.trim() || null,
+      details,
       youthIds: draft.selectedYouthIds,
     };
 
@@ -150,7 +144,6 @@ export default function useSessionNoteModal({
     statusMessage: statusMessage || undefined,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
     updateCategory,
-    updateTitle,
     updateDetails,
     toggleYouth,
     submit,

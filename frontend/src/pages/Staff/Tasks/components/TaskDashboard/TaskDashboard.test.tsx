@@ -1,8 +1,8 @@
-// Scope: verifies dashboard query wiring, card composition, selected-task hours, and errors.
+// Owns dashboard query wiring, card composition, selected-task hours, and errors.
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Task } from '../../../../../common/features/tasks/types';
+import type { Task } from '../../types';
 import TaskDashboard from './TaskDashboard';
 
 const overviewProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -13,13 +13,19 @@ const overviewHook = vi.hoisted(() => ({
   error: null as string | null,
   queryKey: null as readonly unknown[] | null,
   resourceId: null as string | null,
+  retry: vi.fn(),
 }));
 
 vi.mock('./hooks/useTaskOverviewData', () => ({
   default: (queryKey: readonly unknown[], resourceId: string) => {
     overviewHook.queryKey = queryKey;
     overviewHook.resourceId = resourceId;
-    return { tasks: overviewHook.tasks, loading: overviewHook.loading, error: overviewHook.error };
+    return {
+      tasks: overviewHook.tasks,
+      loading: overviewHook.loading,
+      error: overviewHook.error,
+      retry: overviewHook.retry,
+    };
   },
 }));
 vi.mock('./TaskOverviewDashboardCard/TaskOverviewDashboardCard', () => ({
@@ -69,15 +75,21 @@ describe('TaskDashboard', () => {
     overviewHook.error = 'Unable to load task overview.';
     overviewHook.tasks = [];
 
+    const onErrorChange = vi.fn();
     render(<TaskDashboard
       queryKey={['tasks']}
       resourceId="staff-1"
       resourceName="Zoe Wilson"
       today="2026-08-11"
       selectedTask={task}
+      onErrorChange={onErrorChange}
     />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Unable to load task overview.');
+    expect(onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Unable to load task overview.',
+      action: { label: 'Retry', onClick: overviewHook.retry },
+    });
+    expect(screen.getByText('Task overview unavailable')).toBeInTheDocument();
     expect(screen.getByText('Task hours card')).toBeInTheDocument();
   });
 

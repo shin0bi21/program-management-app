@@ -129,6 +129,7 @@ export default function YouthAttendanceModal({
                   onStatusChange={value => updateStatus(session.id, value)}
                   onToggleNotes={() => sessionNotes.toggleSession(session.id)}
                   onAddNote={() => sessionNotes.addNote(session)}
+                  onViewNote={sessionNotes.viewNote}
                   onEditNote={note => sessionNotes.editNote(session, note)}
                   onUnlinkNote={note => sessionNotes.requestUnlink(session, note)}
                 />
@@ -142,10 +143,12 @@ export default function YouthAttendanceModal({
         youth={youth}
         rosterMode={attendance?.cohort.rosterMode ?? cohort?.rosterMode ?? 'enrolled'}
         noteTarget={sessionNotes.noteTarget}
+        detailTarget={sessionNotes.detailTarget}
         unlinkTarget={sessionNotes.unlinkTarget}
         unlinking={sessionNotes.unlinking}
         unlinkError={sessionNotes.unlinkError}
         onCloseNote={sessionNotes.closeNote}
+        onCloseDetails={sessionNotes.closeDetails}
         onNoteSaved={sessionNotes.noteSaved}
         onCloseUnlink={sessionNotes.closeUnlink}
         onConfirmUnlink={sessionNotes.confirmUnlink}

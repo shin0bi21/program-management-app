@@ -1,3 +1,4 @@
+// Owns useCohortControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
@@ -8,7 +9,8 @@ const preferenceHook = vi.hoisted(() => ({
   preference: null as CohortPreference | null,
   loading: false,
   error: null as string | null,
-  setBaseline: vi.fn(),
+  loadError: null as string | null,
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -30,6 +32,7 @@ describe('useCohortControls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     preferenceHook.preference = null;
+    preferenceHook.loadError = null;
   });
 
   it('preserves hidden columns when a resize follows immediately', async () => {
@@ -46,7 +49,7 @@ describe('useCohortControls', () => {
     const { result } = renderHook(() => (
       useCohortControls('admin', programs, false, tableKeys, null)
     ));
-    await waitFor(() => expect(preferenceHook.setBaseline).toHaveBeenCalled());
+    await waitFor(() => expect(preferenceHook.initializePreference).toHaveBeenCalled());
 
     act(() => {
       result.current.setHiddenColumns(['status']);
@@ -57,6 +60,16 @@ describe('useCohortControls', () => {
     expect(persisted.hiddenColumns).toEqual(['status']);
     expect(persisted.columnWidths).toEqual({ cohort: 240 });
     expect(persisted.sorting).toEqual({ key: 'program', direction: 'asc' });
+  });
+
+  it('uses role defaults when saved preferences cannot be loaded', async () => {
+    preferenceHook.preference = { programId: 'program-1', status: 'completed' };
+    preferenceHook.loadError = 'offline';
+    const { result } = renderHook(() => useCohortControls('staff', programs, false, tableKeys, null));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.programId).toBe('program-1');
+    expect(result.current.status).toBe('active');
   });
 
   it('scrubs removed programs and obsolete sorting before establishing the baseline', async () => {
@@ -73,7 +86,7 @@ describe('useCohortControls', () => {
 
     expect(result.current.programId).toBe('');
     expect(result.current.sorting).toEqual({ key: 'start', direction: 'desc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       programId: null,
       sorting: { key: 'start', direction: 'desc' },
     }));

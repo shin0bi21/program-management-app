@@ -8,7 +8,7 @@ import {
   checkFrontendOwnership,
   checkPaginatedTables,
   checkPreferenceControlOwnership,
-  checkResourceCalendars,
+  checkTimelineCalendars,
   checkRoutePageShell,
   checkRoutePageStructure,
   checkTestOwnership,
@@ -17,7 +17,7 @@ import {
 } from './frontend.js';
 
 const repoRoot = '/repo';
-const leadsPage = 'frontend/src/pages/Outreach/Leads';
+const leadsPage = 'frontend/src/pages/Leads';
 const homepagePage = 'frontend/src/pages/Homepage';
 const manageHomepagePage = 'frontend/src/pages/Homepage/ManageHomepage';
 const routePageDirectories = [manageHomepagePage, homepagePage, leadsPage];
@@ -44,7 +44,7 @@ test('discovers nested route pages before their route-family parent', () => {
   );
 });
 
-test('rejects imports from a sibling route page', () => {
+test('allows imports from a sibling route page', () => {
   const violations = violationsFor(
     checkFrontendOwnership,
     `${manageHomepagePage}/ManageHomepage.tsx`,
@@ -53,7 +53,19 @@ test('rejects imports from a sibling route page', () => {
     repoRoot,
   );
 
-  assert.match(violations[0], /another route page's private code/);
+  assert.deepEqual(violations, []);
+});
+
+test('allows imports across route families', () => {
+  const violations = violationsFor(
+    checkFrontendOwnership,
+    `${leadsPage}/Leads.tsx`,
+    "import Homepage from '../../Homepage/Homepage';",
+    routePageDirectories,
+    repoRoot,
+  );
+
+  assert.deepEqual(violations, []);
 });
 
 test('allows a nested route page to import its page-family common owner', () => {
@@ -288,8 +300,8 @@ test('checks an owner when its test is deleted', () => {
 
 test('accepts the normalized functional preference lifecycle', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference('lead-filters', tableKeys);
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference('lead-filters', tableKeys);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -305,8 +317,8 @@ test('accepts the normalized functional preference lifecycle', () => {
 
 test('accepts a route-selected preference key with owning table keys', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference(preferenceKey, tableKeys);
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference(preferenceKey, tableKeys);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -322,11 +334,11 @@ test('accepts a route-selected preference key with owning table keys', () => {
 
 test('accepts formatted owning table keys with a trailing argument comma', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference<LeadPreference>(
+    const { initializePreference, save } = useUserPreference<LeadPreference>(
       'lead-filters',
       tableKeys,
     );
-    setBaseline(restored);
+    initializePreference(restored);
     save(current => ({ ...current, hiddenColumns }));
   `;
 
@@ -342,8 +354,8 @@ test('accepts formatted owning table keys with a trailing argument comma', () =>
 
 test('allows filter-only preferences without table column keys', () => {
   const source = `
-    const { setBaseline, save } = useUserPreference('lead-filters');
-    setBaseline(restored);
+    const { initializePreference, save } = useUserPreference('lead-filters');
+    initializePreference(restored);
     save(current => ({ ...current, statuses }));
   `;
 
@@ -409,6 +421,26 @@ test('accepts an infinite-list hook colocated under a canonical table', () => {
     'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTasks.ts',
     'useInfiniteListQuery({ limit: 25 });',
   ), []);
+});
+
+test('rejects deferred search inside a remote table-data hook', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTaskTableData.ts',
+    'useDeferredValue(search); useInfiniteListQuery({ limit: 25 });',
+  );
+
+  assert.match(violations.join('\n'), /receive page-applied search/);
+});
+
+test('rejects debounced page search', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Youth/hooks/useYouthControls.ts',
+    'const debouncedSearch = useDebounce(search);',
+  );
+
+  assert.match(violations.join('\n'), /explicit Apply\/Clear flow/);
 });
 
 test('rejects a route page importing its table owner private data hook', () => {
@@ -483,22 +515,22 @@ test('requires the complete paginated-table contract', () => {
   assert.match(violations[0], /loadingNextPage, onLoadNextPage/);
 });
 
-test('reports missing ResourceCalendar ownership, buffering, and lifecycle wiring', () => {
+test('reports missing TimelineCalendar ownership, buffering, and lifecycle wiring', () => {
   const violations = violationsFor(
-    checkResourceCalendars,
+    checkTimelineCalendars,
     'frontend/src/pages/Staff/Tasks/Tasks.tsx',
-    '<ResourceCalendar />',
+    '<TimelineCalendar />',
   );
 
-  assert.match(violations.join('\n'), /usePeriodDataBuffer/);
+  assert.match(violations.join('\n'), /useDataBuffer/);
   assert.match(violations.join('\n'), /\*Calendar component/);
   assert.match(violations.join('\n'), /complete period lifecycle/);
 });
 
-test('accepts a fully wired page-owned ResourceCalendar view', () => {
+test('accepts a fully wired page-owned TimelineCalendar view', () => {
   const source = `
-    usePeriodDataBuffer();
-    <ResourceCalendar
+    useDataBuffer();
+    <TimelineCalendar
       onInitialPeriods={onInitialPeriods}
       onPeriodsBuilt={onPeriodsBuilt}
       onPeriodsReset={onPeriodsReset}
@@ -507,7 +539,7 @@ test('accepts a fully wired page-owned ResourceCalendar view', () => {
   `;
 
   assert.deepEqual(violationsFor(
-    checkResourceCalendars,
+    checkTimelineCalendars,
     'frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx',
     source,
   ), []);

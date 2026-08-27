@@ -1,4 +1,4 @@
-// Scope: verifies cycle create/edit initialization, payloads, callback ordering, errors, and reopen resets.
+// Owns cycle create/edit initialization, payloads, callback ordering, errors, and reopen resets.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

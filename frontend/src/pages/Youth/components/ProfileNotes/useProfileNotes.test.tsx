@@ -1,3 +1,4 @@
+// Owns useProfileNotes state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,8 +19,7 @@ const note: YouthProfileNote = {
   id: 'note-1',
   youthId: 'youth-1',
   category: 'health',
-  title: 'Allergy plan',
-  details: null,
+  details: 'Allergy plan',
   createdAt: '2026-08-19T12:00:00.000Z',
   updatedAt: '2026-08-19T12:00:00.000Z',
   createdByName: 'Admin User',
@@ -81,7 +81,7 @@ describe('useProfileNotes', () => {
     });
     await waitFor(() => expect(result.current.notes).toEqual([note]));
 
-    const savedNote = { ...note, title: 'Updated allergy plan' };
+    const savedNote = { ...note, details: 'Updated allergy plan' };
     act(() => result.current.openEditor(note));
     act(() => result.current.handleSaved(savedNote));
 

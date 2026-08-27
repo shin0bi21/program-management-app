@@ -67,6 +67,7 @@ export function useExampleTableData(
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
     loadNextPage: query.loadNextPage,
+    retry: query.retry,
   };
 }
 ```
@@ -88,7 +89,10 @@ export default function ExampleTable(props: ExampleTableProps) {
     keyExtractor={row => row.id}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    error={tableData.error}
+    unavailable={tableData.error ? {
+      title: 'Examples unavailable',
+      onRetry: tableData.retry,
+    } : undefined}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
     onLoadNextPage={tableData.loadNextPage}
@@ -107,13 +111,14 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Use the canonical column `key` as the backend-supported sort key, and pass the owner’s canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
+- Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
 - Use controlled table selection only when selection has application meaning.
 
 ## Page integration
 
-The page owns live search, applied filters, sorting preferences, hidden columns, widths, and view choice. Restore persisted controls and required option data before enabling the list query. Debounce or defer search once, and build both the query and filtered-empty message from the same applied value.
+The page owns live search, applied filters, sorting preferences, hidden columns, widths, and view choice. Restore persisted preferences and required option data before enabling the list query. Keep a transient draft search value until the shared SearchInput commits it through its Search button or Enter key, then persist the trimmed applied search with the other preferences and pass it through the same filter object used by the query key, API adapter, and filtered-empty message. Clear resets the draft and persists an empty applied search. Do not debounce or defer search; the table-data hook must treat applied search like every other backend filter.
 
-Persist one complete preference value after each control change. Each handler updates page-owned React state and saves the resulting full snapshot; it must not rebuild preferences from a stale cached preference value.
+Persist one complete preference value after each control change. Use the preference owner's optimistic cached value as the source for consecutive functional updates so rapid changes compose into one current snapshot.
 
 ## Table tests
 

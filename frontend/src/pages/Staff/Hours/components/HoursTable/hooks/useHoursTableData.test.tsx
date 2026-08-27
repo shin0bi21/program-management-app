@@ -1,14 +1,14 @@
-// Scope: verifies Hours table request serialization and cursor accumulation.
+// Owns Hours table request serialization and cursor accumulation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getHoursList } from '../../../../../../common/features/hours/hours.api';
+import { getHoursTableData } from '../../../hours.api';
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import useHoursTableData from './useHoursTableData';
 
-vi.mock('../../../../../../common/features/hours/hours.api', () => ({
-  getHoursList: vi.fn(),
+vi.mock('../../../hours.api', () => ({
+  getHoursTableData: vi.fn(),
 }));
 
 const row = {
@@ -25,11 +25,11 @@ describe('useHoursTableData', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('sends the complete table controls through the cursor API', async () => {
-    vi.mocked(getHoursList).mockResolvedValue({ rows: [row], nextCursor: null });
+    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [row], nextCursor: null });
     const client = createTestQueryClient();
     const filters = {
       staffIds: ['staff-1'], categories: ['meeting' as const], programIds: ['program-1'],
-      types: ['other' as const], cycleId: 'cycle-1', search: ' team ',
+      types: ['other' as const], cycleId: 'cycle-1', search: 'team',
     };
     const sorting = { key: 'date' as const, direction: 'desc' as const };
     const { result } = renderHook(
@@ -38,16 +38,15 @@ describe('useHoursTableData', () => {
     );
 
     await waitFor(() => expect(result.current.rows).toEqual([row]));
-    expect(result.current.appliedSearch).toBe(' team ');
-    expect(getHoursList).toHaveBeenCalledWith(
-      { ...filters, search: ' team ' },
+    expect(getHoursTableData).toHaveBeenCalledWith(
+      filters,
       { signal: expect.any(AbortSignal) },
       { ...sorting, cursor: undefined, limit: 25 },
     );
   });
 
   it('loads the next cursor without replacing the first page', async () => {
-    vi.mocked(getHoursList).mockImplementation(async (_filters, _options, pagination) => (
+    vi.mocked(getHoursTableData).mockImplementation(async (_filters, _options, pagination) => (
       pagination.cursor
         ? { rows: [{ ...row, id: 'entry-2' }], nextCursor: null }
         : { rows: [row], nextCursor: 'cursor-2' }
@@ -65,7 +64,7 @@ describe('useHoursTableData', () => {
     await waitFor(() => expect(result.current.rows).toEqual([row]));
     act(() => result.current.loadNextPage());
     await waitFor(() => expect(result.current.rows.map(item => item.id)).toEqual(['entry-1', 'entry-2']));
-    expect(getHoursList).toHaveBeenLastCalledWith(
+    expect(getHoursTableData).toHaveBeenLastCalledWith(
       expect.any(Object),
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ cursor: 'cursor-2' }),

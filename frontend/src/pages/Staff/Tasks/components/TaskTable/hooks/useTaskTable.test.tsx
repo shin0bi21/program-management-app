@@ -1,4 +1,4 @@
-// Scope: verifies task columns and permission-aware row actions.
+// Owns task columns and permission-aware row actions.
 import { render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CellContext } from '@tanstack/react-table';
@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Task } from '../../../../../../common/features/tasks/types';
+import type { Task } from '../../../types';
 import { makeTask } from '../../../../../../tests/factories/task';
 import useTaskTable from './useTaskTable';
 
@@ -22,13 +22,12 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 function renderTable(canWrite: boolean) {
   const actions = {
     isTaskPending: vi.fn(() => false),
-    setStatus: vi.fn().mockResolvedValue(undefined),
+    setState: vi.fn().mockResolvedValue(undefined),
     edit: vi.fn(),
     requestDelete: vi.fn(),
   };
   const rendered = renderHook(() => useTaskTable({
     canWrite,
-    today: '2026-08-11',
     actions,
   }));
   return { ...rendered, actions };
@@ -61,7 +60,7 @@ describe('useTaskTable', () => {
 
     const status = rendered.result.current.columns.find(column => column.id === 'status')!;
     render(<>{renderCell(status, task)}</>);
-    expect(screen.getByText('Active')).toHaveClass('task-status-badge--active');
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('builds capability-gated actions and forwards the selected action', async () => {
@@ -76,6 +75,6 @@ describe('useTaskTable', () => {
 
     render(<button onClick={actionMenu.items[0].onClick}>Cancel</button>);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(rendered.actions.setStatus).toHaveBeenCalledWith(task, 'cancelled');
+    expect(rendered.actions.setState).toHaveBeenCalledWith(task, 'cancelled');
   });
 });

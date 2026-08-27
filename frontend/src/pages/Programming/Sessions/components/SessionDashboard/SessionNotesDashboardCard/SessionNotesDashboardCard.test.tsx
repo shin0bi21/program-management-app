@@ -1,4 +1,3 @@
-// Scope: verifies notes card states, detail/edit targeting, deletion, and list refresh behavior.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +23,6 @@ const note = {
   id: 'note-1',
   sessionId: session.id,
   category: 'achievement',
-  title: 'Led opening activity',
   details: 'Maya led the opening activity.',
   createdAt: '2026-07-28T23:30:00.000Z',
   updatedAt: '2026-07-28T23:30:00.000Z',
@@ -62,12 +60,12 @@ describe('SessionNotesDashboardCard', () => {
     api.getSessionNotes.mockResolvedValue([note]);
     renderWithQueryClient(<SessionNotesDashboardCard queryKey={queryKey} session={session} canWrite />);
 
-    expect(await screen.findByText(note.title)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View session note' })).toBeInTheDocument();
+    expect(screen.queryByText(note.details)).not.toBeInTheDocument();
     expect(screen.getByText('Achievement')).toBeInTheDocument();
     expect(screen.getByText('Jul 28, 2026')).toBeInTheDocument();
-    expect(screen.queryByText(note.details)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: `View ${note.title}` }));
-    expect(screen.getByRole('heading', { name: note.title })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
+    expect(screen.getByRole('heading', { name: 'Session Note' })).toBeInTheDocument();
     expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
     expect(screen.getByText(note.details)).toBeInTheDocument();
     expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
@@ -77,17 +75,16 @@ describe('SessionNotesDashboardCard', () => {
     api.getSessionNotes.mockResolvedValueOnce([note]).mockResolvedValue([]);
     renderWithQueryClient(<SessionNotesDashboardCard queryKey={queryKey} session={session} canWrite />);
 
-    await screen.findByText(note.title);
-    fireEvent.click(screen.getByRole('button', { name: `Edit ${note.title}` }));
+    await screen.findByRole('button', { name: 'Edit session note' });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit session note' }));
     expect(screen.getByRole('heading', { name: 'Edit Note' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    fireEvent.click(screen.getByRole('button', { name: `Delete ${note.title}` }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete session note' }));
     const deleteModal = screen.getByRole('heading', { name: 'Delete Note' }).closest('.modal-container');
     fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(api.deleteSessionNote).toHaveBeenCalledWith(session.id, note.id));
-    expect(await screen.findByText('Session note successfully deleted.')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText(note.title)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(note.details)).not.toBeInTheDocument());
   });
 });

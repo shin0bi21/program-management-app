@@ -1,4 +1,5 @@
 import Table from '../../../../../common/components/Table/Table';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import { ACCOUNT_TABLE_KEYS, type Account, type AccountFilters, type AccountSortKey } from '../../../../../common/types/account';
 import type { ListSort } from '../../../../../common/types/pagination';
@@ -14,10 +15,12 @@ interface UserTableProps {
   hasActiveQueryFilters: boolean;
   onSortingChange: (sorting: ListSort<AccountSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function UserTable(props: UserTableProps) {
   const tableData = useUserTableData(props.queryKey, props.filters, props.sorting);
+  usePageErrorReporter(props.onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
   return <Table
     ariaLabel="Accounts"
     columns={props.columns}
@@ -25,7 +28,7 @@ export default function UserTable(props: UserTableProps) {
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    error={tableData.error}
+    unavailable={tableData.error ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
     emptyMessage={props.hasActiveQueryFilters ? 'No accounts match these filters' : 'No accounts found'}
     keyExtractor={account => account.id}
     sorting={props.sorting}

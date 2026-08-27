@@ -6,6 +6,7 @@ import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../common/components/FilterCard/FilterCard';
 import PageBody from '../../common/components/PageBody/PageBody';
+import PageErrorOverlay, { type PageErrorItem } from '../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import type { CellContext } from '@tanstack/react-table';
@@ -27,11 +28,13 @@ import type { YouthProfile } from './types';
 import './Youth.css';
 
 export default function Youth() {
-  // Application services and permission capabilities.
+  // Page-local errors.
+  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+
+  // Permissions and services.
   const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
-  const canManageSessionNotes = permissions.includes('write:sessions');
   const canManageAttendance = permissions.includes('read:attendance')
     && permissions.includes('write:attendance')
     && permissions.includes('read:sessions');
@@ -39,7 +42,7 @@ export default function Youth() {
     && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
 
-  // Shared options and persisted page controls.
+  // Page data and preferences.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: role === 'staff' });
   const controls = useYouthControls({
     role,
@@ -49,35 +52,50 @@ export default function Youth() {
     tableKeys: YOUTH_TABLE_KEYS,
   });
   const {
-    search, setSearch, queryFilters, statusFilters, programFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferencesError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
 
-  // Remote records and selection.
+  // Selection.
   const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
   const selectedProfileId = selectedProfile?.id ?? null;
   const selectProfile = setSelectedProfile;
-  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
-  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    cohort: YouthProfile['cohorts'][number];
-    youthId: string;
-  } | null>(null);
+
+  // Profile-note actions and dialogs.
   const profileNotes = useProfileNotes(selectedProfileId);
   const openProfileNoteEditor = profileNotes.openEditor;
+
+  // Youth modal.
+  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const closeYouthModal = () => setModalTarget(null);
+
+  // Primary-contact modal.
+  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
+  const closeContactModal = () => setContactTarget(null);
+
+  // Attendance modal.
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const closeAttendanceModal = () => setAttendanceTarget(null);
 
   // Keep cohort-specific dialogs aligned with the selected profile.
   useEffect(() => {
     setAttendanceTarget(null);
   }, [selectedProfileId]);
 
-  // Page actions and table presentation.
+  // Attendance-report modal.
+  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
+    cohort: YouthProfile['cohorts'][number];
+    youthId: string;
+  } | null>(null);
+  const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
+
+  // Page actions.
   const handleSaveYouth = () => {
     void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
   };
 
+  // Table configuration.
   const youthColumns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
     {
       id: 'firstName',
@@ -143,6 +161,7 @@ export default function Youth() {
     }] : []),
   ], [canWrite, openProfileNoteEditor, selectProfile]);
 
+  // Render.
   return (
     <>
       <main className="page-container page-container--data">
@@ -152,7 +171,10 @@ export default function Youth() {
           search={<SearchInput
             label="Search youth"
             value={search}
+            appliedValue={appliedSearch}
             onChange={event => setSearch(event.target.value)}
+            onApply={applySearch}
+            onClear={clearSearch}
             placeholder="Search youth, school, or program"
           />}
           columns={controlsReady ? <ColumnVisibilityMenu
@@ -167,8 +189,15 @@ export default function Youth() {
             onClearAll={controls.clearFilters}
           /> : undefined}
         />
-        {preferencesError && <p className="form-error" role="alert">{preferencesError}</p>}
-        {programsError && <p className="form-error" role="alert">{programsError}</p>}
+        <PageErrorOverlay errors={[
+          preferencesError,
+          programsError,
+          viewError,
+          profileNotes.error ? {
+            message: profileNotes.error,
+            action: { label: 'Retry', onClick: profileNotes.retry },
+          } : null,
+        ]} />
 
         {!controlsReady ? <p role="status">Loading saved youth preferences…</p> : <PageBody
           ariaLabel="Youth profiles"
@@ -184,6 +213,7 @@ export default function Youth() {
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}
+            onErrorChange={setViewError}
           />}
           dashboard={<YouthDashboard
             profile={selectedProfile}
@@ -198,7 +228,9 @@ export default function Youth() {
             profileNotes={profileNotes.notes}
             profileNotesLoading={profileNotes.loading}
             profileNotesError={profileNotes.error}
+            onRetryProfileNotes={profileNotes.retry}
             onSelectProfileNote={profileNotes.openDetails}
+            onAddProfileNote={() => profileNotes.openEditor('new')}
             onEditProfileNote={profileNotes.openEditor}
             onDeleteProfileNote={profileNotes.requestDelete}
           />}
@@ -208,14 +240,13 @@ export default function Youth() {
       <YouthModal
         isOpen={modalTarget !== null}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
-        onClose={() => setModalTarget(null)}
+        onClose={closeYouthModal}
         onSuccess={handleSaveYouth}
       />
       <YouthAttendanceModal
         youth={selectedProfile}
         cohort={attendanceTarget}
-        canManageSessionNotes={canManageSessionNotes}
-        onClose={() => setAttendanceTarget(null)}
+        onClose={closeAttendanceModal}
         onSaved={() => Promise.all([
           queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
           queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
@@ -225,13 +256,13 @@ export default function Youth() {
       {attendanceReportTarget && <YouthReportModal
         cohort={attendanceReportTarget.cohort}
         youthId={attendanceReportTarget.youthId}
-        onClose={() => setAttendanceReportTarget(null)}
+        onClose={closeAttendanceReportModal}
       />}
       <YouthModal
         isOpen={contactTarget !== null}
         youthData={contactTarget ?? undefined}
         mode="contact"
-        onClose={() => setContactTarget(null)}
+        onClose={closeContactModal}
         onSuccess={handleSaveYouth}
       />
 

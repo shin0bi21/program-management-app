@@ -1,4 +1,4 @@
-// Scope: verifies schedule draft lifecycle, frequency payloads, validation, and refresh outcomes.
+// Owns schedule draft lifecycle, frequency payloads, validation, and refresh outcomes.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

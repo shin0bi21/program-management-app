@@ -1,4 +1,4 @@
-import type { HoursItem } from '../../../../../common/features/hours/types';
+import type { HoursItem } from '../../types';
 import { getHoursEntryType, HOURS_ENTRY_TYPE_LABELS } from '../../utils/hoursEntryType';
 import './HoursTypeLabel.css';
 

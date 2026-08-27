@@ -69,12 +69,15 @@ export default function AttendanceModal({
         {workflow.isOpenRoster && (
           <OpenAttendancePicker
             search={workflow.search}
+            appliedSearch={workflow.appliedSearch}
             searchResults={workflow.searchResults}
             searching={workflow.searching}
             disabled={workflow.submissionComplete
               || workflow.rosterLoading
               || workflow.rosterUnavailable}
             onSearchChange={workflow.setSearch}
+            onSearchApply={workflow.applySearch}
+            onSearchClear={workflow.clearSearch}
             onCreateProfile={workflow.startCreatingYouth}
             onCheckIn={workflow.addOpenAttendee}
           />

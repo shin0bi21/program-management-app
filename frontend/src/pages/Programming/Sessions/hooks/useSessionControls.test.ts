@@ -1,3 +1,4 @@
+// Owns useSessionControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
@@ -9,9 +10,10 @@ const preferenceHook = vi.hoisted<{
   preference: SessionPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  loadError: string | null;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, loadError: null, initializePreference: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -36,6 +38,7 @@ describe('useSessionControls', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.loadError = null;
   });
 
   it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
@@ -54,6 +57,21 @@ describe('useSessionControls', () => {
     });
   });
 
+  it('uses role defaults when saved preferences cannot be loaded', async () => {
+    preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'] };
+    preferenceHook.loadError = 'offline';
+    const { result } = renderHook(() => useSessionControls({
+      role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.view).toBe('calendar');
+    expect(result.current.programIds).toEqual(['program-1']);
+    expect(result.current.cohortId).toBe('cohort-1');
+    expect(result.current.statuses).toEqual([]);
+  });
+
   it('rejects a stale stored list view and establishes the calendar default', async () => {
     preferenceHook.preference = {
       view: 'list' as never,
@@ -70,7 +88,31 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.view).toBe('calendar');
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
+  });
+
+  it('scrubs malformed status and column-width preferences', async () => {
+    preferenceHook.preference = {
+      view: 'table',
+      programIds: [],
+      cohortId: null,
+      sessionTypeIds: [],
+      statuses: 'completed' as never,
+      columnWidths: { theme: 240, status: 'wide' } as never,
+    };
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.statuses).toEqual([]);
+    expect(result.current.columnWidths).toEqual({ theme: 240 });
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
+      statuses: [],
+      columnWidths: { theme: 240 },
+    }));
   });
 
   it('defaults staff with one assigned program to its active cohort', async () => {
@@ -137,7 +179,7 @@ describe('useSessionControls', () => {
 
     expect(result.current.sessionTypeIds).toEqual([]);
     expect(result.current.sorting).toEqual({ key: 'date', direction: 'desc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       sessionTypeIds: [],
       sorting: { key: 'date', direction: 'desc' },
     }));

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Split Changes"
-  short_description: "Map large diffs into reviewable concern groups"
-  default_prompt: "Use $split-changes to divide the current working tree into independently reviewable and shippable concerns."

@@ -1,4 +1,4 @@
-// Scope: verifies attachment create/edit initialization, payloads, linked youth, success, and failure recovery.
+// Owns attachment create/edit initialization, payloads, linked youth, success, and failure recovery.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

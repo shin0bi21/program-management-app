@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getTasks } from '../../../../../../common/features/tasks/tasks.api';
+import { getTaskDashboardData } from '../../../tasks.api';
 
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],
@@ -10,9 +10,10 @@ export default function useTaskOverviewData(
     data: tasks = [],
     error,
     isLoading,
+    refetch,
   } = useQuery({
     queryKey: [...taskQueryKey, 'overview', resourceId],
-    queryFn: ({ signal }) => getTasks({ staffId: resourceId }, { signal }),
+    queryFn: ({ signal }) => getTaskDashboardData(resourceId, { signal }),
   });
 
   return {
@@ -21,5 +22,6 @@ export default function useTaskOverviewData(
     error: error
       ? 'Unable to load task overview.'
       : null,
+    retry: refetch,
   };
 }

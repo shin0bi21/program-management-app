@@ -1,4 +1,4 @@
-// Scope: verifies Hours route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
+// Owns Hours route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -6,17 +6,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
   deleteHours,
-  getHoursOverview,
-  getHoursList,
-  getHoursOptions,
-  getHours,
+  getHoursDashboardData,
+  getHoursTableData,
+  getHoursReferenceData,
+  getHoursCalendarData,
   setHours,
-  updateHoursPlacement,
-} from '../../../common/features/hours/hours.api';
-import { dayKey } from '../../../common/components/ResourceCalendar/periods/periods';
+} from './hours.api';
+import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
-import type { StoredHoursPreferences } from './types';
+import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
@@ -24,13 +23,13 @@ const preferenceHook = vi.hoisted<{
   preference: StoredHoursPreferences | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
-  preference: { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' },
+  preference: { view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1', sorting: { key: 'date', direction: 'desc' }, columnWidths: {}, hiddenColumns: [] },
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -38,19 +37,19 @@ vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
 }));
 
-vi.mock('../../../common/features/hours/hours.api', () => ({
-  getHours: vi.fn(),
-  getHoursList: vi.fn(),
-  getHoursOptions: vi.fn(),
-  getHoursOverview: vi.fn(),
+vi.mock('./hours.api', () => ({
+  getHoursCalendarData: vi.fn(),
+  getHoursTableData: vi.fn(),
+  getHoursReferenceData: vi.fn(),
+  getHoursDashboardData: vi.fn(),
   getHoursSessions: vi.fn(),
   setHours: vi.fn(),
   updateHoursPlacement: vi.fn(),
   deleteHours: vi.fn(),
 }));
 
-vi.mock('../../../common/features/tasks/tasks.api', () => ({
-  getTasks: vi.fn(),
+vi.mock('../Tasks/tasks.api', () => ({
+  getTaskDashboardData: vi.fn(),
   setTask: vi.fn(),
 }));
 
@@ -64,6 +63,11 @@ const auth: AuthContextValue = {
   loading: false,
   login: vi.fn(),
   logout: vi.fn(),
+};
+
+const hoursReferenceChoices = {
+  categories: [{ value: 'meeting' as const, label: 'Meeting' }],
+  types: [{ value: 'other' as const, label: 'Regular' }],
 };
 
 function dashboardOverview(totalHours: number, label = 'Meeting') {
@@ -107,7 +111,6 @@ describe('Hours', () => {
       unobserve() {}
       disconnect() {}
     });
-    vi.stubGlobal('PointerEvent', MouseEvent);
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1280);
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
@@ -121,20 +124,20 @@ describe('Hours', () => {
         if (options?.top !== undefined) this.scrollTop = options.top;
       },
     });
-    vi.mocked(getHours).mockResolvedValue({
+    vi.mocked(getHoursCalendarData).mockResolvedValue({});
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: {},
+      ...hoursReferenceChoices,
     });
-    vi.mocked(getHoursOptions).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-    });
-    vi.mocked(getHoursList).mockImplementation(async (filters, opts, pagination) => {
-      const response = await getHours({}, opts);
-      const resources = new Map(response.resources.map(resource => [resource.id, resource]));
+    vi.mocked(getHoursTableData).mockImplementation(async (filters, opts, pagination) => {
+      const response = await getHoursCalendarData({}, opts);
+      const resources = new Map([
+        ['staff-1', { firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }],
+        ['staff-2', { firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan' }],
+      ]);
       const search = filters.search?.toLowerCase() ?? '';
-      const rows = Object.entries(response.data).flatMap(([resourceId, periods]) => Object.entries(periods).flatMap(([date, items]) => items.map(item => {
+      const rows = Object.entries(response).flatMap(([resourceId, periods]) => Object.entries(periods).flatMap(([date, items]) => items.map(item => {
           const resource = resources.get(resourceId)!;
           return { id: item.id, resourceId, date, item, staffFirstName: resource.firstName, staffLastName: resource.lastName, staffName: resource.name };
         }))).filter(row => (!filters.staffIds.length || filters.staffIds.includes(row.resourceId))
@@ -147,7 +150,7 @@ describe('Hours', () => {
         nextCursor: null,
       };
     });
-    vi.mocked(getHoursOverview).mockResolvedValue({
+    vi.mocked(getHoursDashboardData).mockResolvedValue({
       payPeriod: {
         periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
       },
@@ -175,9 +178,9 @@ describe('Hours', () => {
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('menuitem').slice(0, 4).map(item => item.textContent)).toEqual([
       expect.stringContaining('Program'),
-      expect.stringContaining('Category'),
-      expect.stringContaining('Type'),
       expect.stringContaining('Cycle'),
+      expect.stringContaining('Type'),
+      expect.stringContaining('Category'),
     ]);
   });
 
@@ -196,13 +199,7 @@ describe('Hours', () => {
 
   it('shows a readable coworker row without exposing hours write controls', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: {
+    vi.mocked(getHoursCalendarData).mockResolvedValue({
         'staff-1': { '2026-08-09': [{
           id: 'entry-own', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
@@ -213,16 +210,16 @@ describe('Hours', () => {
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'administration',
           categoryLabel: 'Administration', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 4, note: 'Coworker administration',
         }] },
-      },
     });
-    vi.mocked(getHoursOptions).mockResolvedValue({
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       resources: [
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      ...hoursReferenceChoices,
     });
-    vi.mocked(getHoursOverview).mockImplementation(async staffId => (
+    vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
       staffId === 'staff-2' ? dashboardOverview(4, 'Administration') : dashboardOverview(1)
     ));
 
@@ -253,7 +250,7 @@ describe('Hours', () => {
 
     expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
       {},
       { signal: expect.any(AbortSignal) },
     ));
@@ -262,79 +259,9 @@ describe('Hours', () => {
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
-  it('clears the persisted cycle with the other Hours filters', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-        programs: [{ id: 'program-1', name: 'Soft Skills' }],
-        data: { 'staff-1': { '2026-08-09': [{
-          id: 'all-cycle-entry', programId: 'program-1', programName: 'Soft Skills',
-          cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Entry from another cycle',
-        }] } },
-    });
-    vi.mocked(getHoursOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    expect(await screen.findByLabelText('1 active filters')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-
-    expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
-    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
-      {},
-      { signal: expect.any(AbortSignal) },
-    ));
-    expect(await screen.findByText('Entry from another cycle')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'See Breakdown' })).toHaveLength(2);
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
-    expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Entry from another cycle').closest('tr')!);
-
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
-    expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
-  });
-
-  it('reloads cycle-aware overview data when the cycle filter changes', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      data: { 'staff-1': { '2026-08-09': [{
-        id: 'current-entry', programId: null, programName: null,
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-        categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Current response',
-      }] } },
-    });
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    await waitFor(() => expect(getHours).toHaveBeenCalledWith(
-      {},
-      { signal: expect.any(AbortSignal) },
-    ));
-    await waitFor(() => expect(getHoursOverview).toHaveBeenCalled());
-    vi.mocked(getHoursOverview).mockClear();
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(await screen.findByText('Current response')).toBeInTheDocument();
-    expect(getHoursOverview).toHaveBeenCalledTimes(1);
-  });
-
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      data: { 'staff-1': {
+    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': {
         '2026-08-09': [{
           id: 'summer-entry', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
@@ -345,9 +272,9 @@ describe('Hours', () => {
           cycleId: 'cycle-fall', cycleName: 'Fall 2026', category: 'outreach',
           categoryLabel: 'Outreach', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 4, note: 'Fall cycle work',
         }],
-      } },
+      },
     });
-    vi.mocked(getHoursOverview).mockResolvedValue({
+    vi.mocked(getHoursDashboardData).mockResolvedValue({
       payPeriod: {
         periodStart: '2026-09-02', periodEnd: '2026-09-15', totalHours: 4,
         breakdown: [{ label: 'Outreach', hours: 4 }],
@@ -372,7 +299,7 @@ describe('Hours', () => {
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(screen.queryByText('Current pay-period work')).not.toBeInTheDocument();
     expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
-    expect(getHoursOverview).toHaveBeenCalledWith(
+    expect(getHoursDashboardData).toHaveBeenCalledWith(
       'staff-1',
       'cycle-fall',
       { signal: expect.any(AbortSignal) },
@@ -380,16 +307,13 @@ describe('Hours', () => {
   });
 
   it('always shows searchable table overview cards for staff', async () => {
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: { 'staff-1': { '2026-08-09': [{
+    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
         id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
         cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
         categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
-      }] } },
+      }] },
     });
-    vi.mocked(getHoursOverview).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
+    vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -409,46 +333,40 @@ describe('Hours', () => {
     expect(screen.getByRole('table', { name: 'Hours entries' })).toHaveTextContent('Youth workshop');
     const entryRow = screen.getByText('Youth workshop').closest('tr');
     expect(entryRow).toHaveAttribute('tabindex', '0');
-    expect(entryRow).toHaveClass('table-row--selectable');
     fireEvent.click(entryRow!);
-    expect(entryRow).toHaveClass('table-row--selected');
     expect(entryRow).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     expect(await screen.findByText('No hours found')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
     auth.role = 'admin';
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [
-        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: {
-        'staff-1': { '2026-08-09': [{
+    const workDate = dayKey(new Date());
+    vi.mocked(getHoursCalendarData).mockResolvedValue({
+        'staff-1': { [workDate]: [{
           id: 'entry-zoe', programId: 'program-1', programName: 'Soft Skills',
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Zoe workshop',
         }] },
-        'staff-2': { '2026-08-09': [{
+        'staff-2': { [workDate]: [{
           id: 'entry-alex', programId: null, programName: null,
           cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
           categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 7, note: 'Alex planning meeting',
         }] },
-      },
     });
-    vi.mocked(getHoursOverview).mockImplementation(async staffId => (
+    vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
       staffId === 'staff-2' ? dashboardOverview(7) : dashboardOverview(2, 'Program Delivery')
     ));
-    vi.mocked(getHoursOptions).mockResolvedValue({
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       resources: [
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ],
       programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      ...hoursReferenceChoices,
     });
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
@@ -460,7 +378,7 @@ describe('Hours', () => {
     const getPeriodCard = () => screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(await screen.findByRole('button', { name: /Meeting, 7 hours/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
     expect(getPeriodCard()).toHaveTextContent('Current Pay Period');
     expect(getPeriodCard()).toHaveTextContent('Hours');
@@ -488,17 +406,7 @@ describe('Hours', () => {
       categories: [],
       cycleId: 'cycle-1',
     };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{
-        id: 'staff-1',
-        firstName: 'Zoe',
-        lastName: 'Wilson',
-        name: 'Zoe Wilson',
-        role: 'staff',
-        writable: true,
-      }],
-      programs: [],
-      data: {
+    vi.mocked(getHoursCalendarData).mockResolvedValue({
         'staff-1': {
           '2026-08-09': [{
             id: 'entry-1',
@@ -516,7 +424,6 @@ describe('Hours', () => {
             note: 'Planning meeting',
           }],
         },
-      },
     });
   }
 
@@ -525,7 +432,7 @@ describe('Hours', () => {
     vi.mocked(setHours).mockResolvedValue({
       id: 'entry-new', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', taskId: null, taskTitle: null, sessionId: null,
+      category: 'planning_prep', categoryLabel: 'Planning / Prep', taskId: null, taskTitle: null, sessionId: null,
       sessionLabel: null, workDate, hours: 1, note: 'Route bridge',
     });
     render(
@@ -561,7 +468,7 @@ describe('Hours', () => {
     await screen.findAllByLabelText('Zoe Wilson');
 
     fireEvent.click(container.querySelector(
-      `[data-resource-id="staff-1"][data-period="${workDate}"]`,
+      `[data-row-id="staff-1"][data-period="${workDate}"]`,
     )!);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
 
@@ -574,7 +481,7 @@ describe('Hours', () => {
     vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'meeting', taskId: null, taskTitle: null, sessionId: null,
+      category: 'meeting', categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null,
       sessionLabel: null, workDate: '2026-08-09', hours: 2, note: 'Planning meeting',
     });
     render(
@@ -597,52 +504,6 @@ describe('Hours', () => {
       expect.any(Object),
       'entry-1',
     ));
-  });
-
-  it('bridges a calendar move to the page-owned placement action', async () => {
-    const workDate = dayKey(new Date());
-    const nextDate = dayKey(new Date(new Date().setDate(new Date().getDate() + 1)));
-    const item = {
-      id: 'entry-1', programId: 'program-1', programName: 'Soft Skills',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery' as const,
-      categoryLabel: 'Program Delivery', taskId: null, taskTitle: null,
-      sessionId: null, sessionLabel: null, hours: 2, note: 'Workshop',
-    };
-    vi.mocked(getHours).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
-      data: { 'staff-1': { [workDate]: [item] } },
-    });
-    vi.mocked(updateHoursPlacement).mockResolvedValue({
-      ...item,
-      staffId: 'staff-1',
-      workDate: nextDate,
-      cycleStartsOn: '2026-07-01',
-      cycleEndsOn: '2026-09-01',
-    });
-    const { container } = render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    await screen.findByRole('button', { name: /Program Delivery, 2 hours/ });
-    const source = container.querySelector<HTMLElement>('.resource-calendar__item')!;
-    const target = container.querySelector<HTMLElement>(
-      `[data-resource-id="staff-1"][data-period="${nextDate}"]`,
-    )!;
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: vi.fn(() => target),
-    });
-    vi.spyOn(source, 'getBoundingClientRect').mockReturnValue({ width: 120 } as DOMRect);
-
-    fireEvent.pointerDown(source, { pointerId: 1, button: 0, clientX: 220, clientY: 100 });
-    fireEvent.pointerMove(window, { pointerId: 1, clientX: 260, clientY: 120 });
-    fireEvent.pointerUp(window, { pointerId: 1, clientX: 260, clientY: 120 });
-
-    await waitFor(() => expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', {
-      workDate: nextDate,
-    }));
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {

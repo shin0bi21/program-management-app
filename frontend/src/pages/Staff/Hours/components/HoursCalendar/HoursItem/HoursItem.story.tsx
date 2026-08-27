@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import ResourceCalendar from '../../../../../../common/components/ResourceCalendar/ResourceCalendar';
-import type { ResourcePeriodData } from '../../../../../../common/components/ResourceCalendar/types';
-import type { HoursItem as HoursEntry } from '../../../../../../common/features/hours/types';
+import TimelineCalendar from '../../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import type { RowItemData } from '../../../../../../common/components/TimelineCalendar/types';
+import type { HoursItem as HoursEntry } from '../../../types';
 import HoursItem from './HoursItem';
 
 interface StoryResource {
@@ -34,21 +34,23 @@ const secondItem: HoursEntry = {
   hours: 1,
   note: 'Planning meeting',
 };
-const data: ResourcePeriodData<HoursEntry> = {
-  'staff-1': {
-    '2026-08-09': [firstItem],
-    '2026-08-10': [secondItem],
-  },
-  'staff-2': {
-    '2026-08-09': [{
+interface StoryHoursItem { date: string; item: HoursEntry }
+const items: RowItemData<StoryHoursItem> = {
+  'staff-1': [
+    { date: '2026-08-09', item: firstItem },
+    { date: '2026-08-10', item: secondItem },
+  ],
+  'staff-2': [{
+    date: '2026-08-09',
+    item: {
       ...firstItem,
       id: 'entry-3',
       category: 'administration',
       categoryLabel: 'Administrative',
       hours: 1.5,
       note: 'Operations follow-up',
-    }],
-  },
+    },
+  }],
 };
 
 export function InteractiveHoursItems() {
@@ -57,27 +59,29 @@ export function InteractiveHoursItems() {
   const [selectionCount, setSelectionCount] = useState(0);
   return (
     <div style={{ height: '420px', padding: '16px' }}>
-      <ResourceCalendar
-        resources={resources}
-        data={data}
+      <TimelineCalendar<StoryResource, StoryHoursItem>
+        rows={resources}
+        items={items}
+        getItemRange={data => ({ start: data.date, end: data.date })}
         initialDate={new Date(2026, 7, 9)}
         ariaLabel="Browser-tested hours calendar"
-        getResourceId={resource => resource.id}
-        getItemId={item => item.id}
-        renderResource={({ resource }) => resource.name}
-        selectedResourceId={selectedResourceId}
-        onResourceSelect={resource => {
-          setSelectedResourceId(resource.id);
+        getRowId={row => row.id}
+        getItemId={data => data.item.id}
+        renderRow={({ row }) => row.name}
+        selectedRowId={selectedResourceId}
+        onRowSelect={row => {
+          setSelectedResourceId(row.id);
           setSelectionCount(count => count + 1);
         }}
-        buildItem={({ data: item }) => (
+        buildItem={({ data }) => (
           <HoursItem
-            item={item}
-            onEdit={() => setActionRecord(`edit:${item.id}`)}
-            onDelete={() => setActionRecord(`delete:${item.id}`)}
+            item={data.item}
+            onEdit={() => setActionRecord(`edit:${data.item.id}`)}
+            onDelete={() => setActionRecord(`delete:${data.item.id}`)}
           />
         )}
-        onItemDrop={() => undefined}
+        getItemCapabilities={() => ({ draggable: true })}
+        onItemMove={() => undefined}
       />
       <input hidden readOnly data-testid="hours-item-action" value={actionRecord} />
       <input hidden readOnly data-testid="selected-resource" value={selectedResourceId} />

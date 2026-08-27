@@ -1,4 +1,4 @@
-// Scope: verifies Hours table query-state wiring and domain empty-state copy.
+// Owns Hours table query-state wiring and domain empty-state copy.
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,7 +12,7 @@ const tableState = vi.hoisted(() => ({
   hasNextPage: false,
   loadingNextPage: false,
   loadNextPage: vi.fn(),
-  appliedSearch: '',
+  retry: vi.fn(),
 }));
 const useHoursTableData = vi.hoisted(() => vi.fn(() => tableState));
 const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -41,6 +41,7 @@ const baseProps = {
   onRowSelect: vi.fn(),
   onSortingChange: vi.fn(),
   onColumnWidthsChange: vi.fn(),
+  onErrorChange: vi.fn(),
 };
 
 describe('HoursTable', () => {
@@ -48,7 +49,7 @@ describe('HoursTable', () => {
     vi.clearAllMocks();
     Object.assign(tableState, {
       rows: [], loading: false, refreshing: false, error: null,
-      hasNextPage: false, loadingNextPage: false, appliedSearch: '',
+      hasNextPage: false, loadingNextPage: false,
     });
     tableProps.current = null;
   });
@@ -73,7 +74,6 @@ describe('HoursTable', () => {
       data: [],
       loading: false,
       refreshing: false,
-      error: undefined,
       hiddenColumnKeys: [],
       selectedKey: null,
       onRowSelect: baseProps.onRowSelect,
@@ -92,15 +92,18 @@ describe('HoursTable', () => {
     expect(baseProps.onSortingChange).toHaveBeenCalledWith({ key: 'hours', direction: 'asc' });
   });
 
-  it('forwards table-data errors while keeping the standard empty message', () => {
-    tableState.appliedSearch = 'planning';
+  it('reports table-data errors while keeping the standard empty message', () => {
     tableState.error = 'Could not load hours.';
     render(<HoursTable {...baseProps} search="planning" />);
 
     expect(tableProps.current).toEqual(expect.objectContaining({
-      error: 'Could not load hours.',
       emptyMessage: 'No hours found',
+      unavailable: { title: 'Hours unavailable', onRetry: tableState.retry },
     }));
+    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Could not load hours.',
+      action: { label: 'Retry', onClick: tableState.retry },
+    });
   });
 
   it('uses the standard empty message for cycle-only and unfiltered results', () => {

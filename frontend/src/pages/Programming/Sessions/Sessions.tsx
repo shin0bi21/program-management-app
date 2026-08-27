@@ -5,10 +5,11 @@ import { useAuth } from '../../../auth/authContext';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
+import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { CellContext } from '@tanstack/react-table';
@@ -41,12 +42,17 @@ const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Sessions() {
-  // Application services and route state.
+  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
+
+  // Permissions and application services.
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { permissions, role } = useAuth();
+  const canWriteAttendance = permissions.includes('write:attendance');
+  const canWriteSessions = permissions.includes('write:sessions');
 
-  // Shared options used by filters and session forms.
+  // Page data and preferences.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
   const {
@@ -55,26 +61,13 @@ export default function Sessions() {
     error: sessionTypesError,
   } = useSessionTypes();
 
-  // Page dialogs and selected records.
-  const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
-  const [addSessionsOpen, setAddSessionsOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
-  const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
-  const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
-
-  // URL selection and permission capabilities.
   const selectedSessionId = searchParams.get('session') ?? '';
-  const canWriteAttendance = permissions.includes('write:attendance');
-  const canWriteSessions = permissions.includes('write:sessions');
   const clearSelectedSession = useCallback(() => {
     const next = new URLSearchParams(searchParams);
     next.delete('session');
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
-  // Persisted filters, sorting, and view controls.
   const controls = useSessionControls({
     role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
@@ -82,11 +75,41 @@ export default function Sessions() {
     tableKeys: SESSION_TABLE_KEYS,
   });
   const {
-    search, debouncedSearch, view, programIds: selectedProgramIds, cohortId,
+    search, appliedSearch, view, programIds: selectedProgramIds, cohortId,
     sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, ready: filtersReady,
     sorting, columnWidths, filterCategories, schedulableCohorts,
   } = controls;
 
+  // Selection and actions.
+  const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
+  const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
+  const selectSession = (session: Pick<CohortSession, 'id'>) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('session', session.id);
+    setSearchParams(next);
+  };
+
+  const refreshSessionQueries = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+  ]).then(() => undefined);
+
+  // Attendance modal.
+  const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
+  const closeAttendanceModal = () => setAttendanceTarget(null);
+
+  // Generate sessions modal.
+  const [addSessionsOpen, setAddSessionsOpen] = useState(false);
+  const openAddSessionsModal = () => setAddSessionsOpen(true);
+  const closeAddSessionsModal = () => setAddSessionsOpen(false);
+
+  // Edit session modal.
+  const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
+  const closeEditSessionModal = () => setEditTarget(null);
+
+  // Confirmation modal.
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const requestSessionDeletion = useCallback(
     (session: CohortSession) => {
       setConfirmAction({
@@ -112,13 +135,9 @@ export default function Sessions() {
     },
     [clearSelectedSession, queryClient, selectedSessionId],
   );
+  const closeConfirmation = () => setConfirmAction(null);
 
-  const selectSession = (session: Pick<CohortSession, 'id'>) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('session', session.id);
-    setSearchParams(next);
-  };
-
+  // Table configuration.
   const columns = useMemo<TableColumnDef<CohortSession>[]>(
     () => [
       { id: 'program', header: 'Program', accessorFn: session => session.programName },
@@ -189,15 +208,10 @@ export default function Sessions() {
     [canWriteAttendance, canWriteSessions, requestSessionDeletion],
   );
 
+  // Derived presentation.
   const selectedSession = view === 'calendar'
     ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
     : selectedTableSession?.id === selectedSessionId ? selectedTableSession : null;
-
-  const refreshSessionQueries = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-  ]).then(() => undefined);
 
   return (
     <>
@@ -209,7 +223,7 @@ export default function Sessions() {
             title="Sessions"
             actions={
               canWriteSessions ? (
-                <Button onClick={() => setAddSessionsOpen(true)} disabled={!schedulableCohorts.length}>
+                <Button onClick={openAddSessionsModal} disabled={!schedulableCohorts.length}>
                   + Add
                 </Button>
               ) : undefined
@@ -218,7 +232,10 @@ export default function Sessions() {
               <SearchInput
                 label="Search sessions"
                 value={search}
+                appliedValue={appliedSearch}
                 onChange={(event) => controls.setSearch(event.target.value)}
+                onApply={controls.applySearch}
+                onClear={controls.clearSearch}
                 placeholder="Search titles, themes, descriptions, or cohorts"
               />
             }
@@ -249,10 +266,14 @@ export default function Sessions() {
               ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
               : undefined}
           />
-          {controls.error && <p className="form-error" role="alert">{controls.error}</p>}
-          {programsError && <p className="form-error" role="alert">{programsError}</p>}
-          {cohortsError && <p className="form-error" role="alert">{cohortsError}</p>}
-          {sessionTypesError && <p className="form-error" role="alert">{sessionTypesError}</p>}
+          <PageErrorOverlay errors={[
+            controls.error,
+            programsError,
+            cohortsError,
+            sessionTypesError,
+            viewError,
+            ...dashboardErrors,
+          ]} />
           {!filtersReady ? (
             <p role="status">Loading saved filters…</p>
           ) : view === 'table' ? (
@@ -268,7 +289,7 @@ export default function Sessions() {
                     cohortId: cohortId || undefined,
                     sessionTypeIds: selectedSessionTypeIds,
                     statuses: statusFilters,
-                    search: debouncedSearch || undefined,
+                    search: appliedSearch || undefined,
                   }}
                   sorting={sorting}
                   columnWidths={columnWidths}
@@ -277,6 +298,7 @@ export default function Sessions() {
                   onSessionSelect={selectSession}
                   onSortingChange={controls.setSorting}
                   onColumnWidthsChange={controls.setColumnWidths}
+                  onErrorChange={setViewError}
                 />
               }
               dashboard={
@@ -286,6 +308,7 @@ export default function Sessions() {
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}
                   onAddAttendance={setAttendanceTarget}
+                  onErrorsChange={setDashboardErrors}
                 />
               }
             />
@@ -300,7 +323,7 @@ export default function Sessions() {
                   selectedSessionId={selectedSessionId}
                   selectedSessionTypeIds={selectedSessionTypeIds}
                   selectedStatuses={statusFilters}
-                  search={debouncedSearch}
+                  search={appliedSearch}
                   onSessionsLoaded={setCalendarSessions}
                   onSessionSelect={(session) => {
                     setCalendarSessions((current) =>
@@ -314,6 +337,7 @@ export default function Sessions() {
                   onSessionDelete={canWriteSessions
                     ? session => requestSessionDeletion(session)
                     : undefined}
+                  onErrorChange={setViewError}
                 />
               }
               dashboard={
@@ -323,42 +347,44 @@ export default function Sessions() {
                   canWriteAttendance={canWriteAttendance}
                   canWriteSessions={canWriteSessions}
                   onAddAttendance={setAttendanceTarget}
+                  onErrorsChange={setDashboardErrors}
                 />
               }
             />
           )}
-          <AttendanceModal
-            session={attendanceTarget}
-            onClose={() => setAttendanceTarget(null)}
-            onSaved={() => Promise.all([
-              refreshSessionQueries(),
-              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-            ]).then(() => undefined)}
-          />
-          <EditSessionModal session={editTarget} onClose={() => setEditTarget(null)} onUpdated={refreshSessionQueries} />
-          <Modal
-            isOpen={confirmAction !== null}
-            onClose={() => setConfirmAction(null)}
-            title={confirmAction?.title ?? ''}
-            status={confirmModal.status}
-            statusMessage={confirmModal.statusMessage}
-            footer={confirmModal.footer}
-            successDelay={confirmModal.successDelay}
-          >
-            {confirmAction && <p>{confirmAction.message}</p>}
-          </Modal>
-          <GenerateSessionsModal
-            cohort={null}
-            cohorts={schedulableCohorts}
-            isOpen={addSessionsOpen}
-            initialCohortId={cohortId || schedulableCohorts[0]?.id}
-            onClose={() => setAddSessionsOpen(false)}
-            onSuccess={async () => {
-              await Promise.all([refreshSessionQueries(), refreshCohorts()]);
-            }}
-          />
         </div>
       </main>
+
+      <AttendanceModal
+        session={attendanceTarget}
+        onClose={closeAttendanceModal}
+        onSaved={() => Promise.all([
+          refreshSessionQueries(),
+          queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
+        ]).then(() => undefined)}
+      />
+
+      <EditSessionModal
+        session={editTarget}
+        onClose={closeEditSessionModal}
+        onUpdated={refreshSessionQueries}
+      />
+
+      <GenerateSessionsModal
+        cohort={null}
+        cohorts={schedulableCohorts}
+        isOpen={addSessionsOpen}
+        initialCohortId={cohortId || schedulableCohorts[0]?.id}
+        onClose={closeAddSessionsModal}
+        onSuccess={async () => {
+          await Promise.all([refreshSessionQueries(), refreshCohorts()]);
+        }}
+      />
+
+      <ConfirmModal
+        action={confirmAction}
+        onClose={closeConfirmation}
+      />
     </>
   );
 }

@@ -27,7 +27,6 @@ const noteStyles = {
   attendance: { label: 'Attendance', marker: 'AT', color: '#2563a6' },
   behaviour: { label: 'Behaviour', marker: 'B', color: '#b45309' },
   achievement: { label: 'Achievement', marker: 'AC', color: '#15803d' },
-  follow_up: { label: 'Follow-up', marker: 'F', color: '#7e22ce' },
 } as const;
 
 export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
@@ -78,34 +77,66 @@ function createSessionTypeColorMap(youth: ReportYouth) {
 }
 
 function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
-  const columns = [...youth.attendanceBreakdown.bySessionType, youth.attendanceBreakdown.total];
-  const gap = 6;
-  const width = (contentWidth - (gap * (columns.length - 1))) / columns.length;
+  const summary = youth.attendanceBreakdown.total;
+  const metrics = [
+    ['On time', summary.present],
+    ['Late', summary.late],
+    ['Absent', summary.absent],
+    ['Excused', summary.excused],
+    ['Unmarked', summary.unmarked],
+  ] as const;
   const top = doc.y;
-  const height = 102;
+  const metricWidth = 58;
+  const metricGap = 12;
 
-  columns.forEach((column, index) => {
-    const left = margin + (index * (width + gap));
-    const headerColor = column.name === 'Total' ? totalColor : (colors.get(column.name) ?? muted);
-    doc.roundedRect(left, top, width, 22, 5).fillColor(headerColor).fill();
-    doc.rect(left, top + 12, width, 10).fillColor(headerColor).fill();
-    doc.roundedRect(left, top, width, height, 5).lineWidth(0.7).strokeColor(border).stroke();
-    const headerTextColor = headerColor === sessionTypeColors['Guest Speaker'] ? '#1f2937' : '#ffffff';
-    doc.fillColor(headerTextColor).font('Helvetica-Bold').fontSize(7).text(column.name, left + 3, top + 7, { width: width - 6, align: 'center' });
-    const metrics = [
-      ['On time', column.present], ['Late', column.late], ['Absent', column.absent],
-      ['Excused', column.excused], ['Unmarked', column.unmarked],
-    ] as const;
-    metrics.forEach(([label, value], metricIndex) => {
-      const y = top + 27 + (metricIndex * 11);
-      doc.font('Helvetica').fontSize(6.5).fillColor(muted).text(label, left + 4, y, { width: width - 20 });
-      doc.font('Helvetica-Bold').fillColor('#1f2937').text(String(value), left + width - 17, y, { width: 12, align: 'right' });
-    });
-    doc.moveTo(left, top + 84).lineTo(left + width, top + 84).strokeColor(border).stroke();
-    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#1f2937').text(attendanceRate(column), left + 3, top + 90, { width: width - 6, align: 'center' });
+  metrics.forEach(([label, value], index) => {
+    const left = margin + (index * (metricWidth + metricGap));
+    doc.font('Helvetica-Bold').fontSize(15).fillColor('#1f2937')
+      .text(String(value), left, top, { width: metricWidth });
+    doc.font('Helvetica').fontSize(7).fillColor(muted)
+      .text(label, left, top + 19, { width: metricWidth });
   });
+
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(totalColor)
+    .text(attendanceRate(summary), margin + 365, top + 8, { width: contentWidth - 365, align: 'right' });
+  doc.moveTo(margin, top + 38).lineTo(pageWidth - margin, top + 38)
+    .lineWidth(0.5).strokeColor(border).stroke();
+
   resetTextFlow(doc);
-  doc.y = top + height + 14;
+  doc.y = top + 50;
+
+  youth.attendanceBreakdown.bySessionType.forEach(column => {
+    ensureSpace(doc, 51);
+    const sectionTop = doc.y;
+    const accentColor = colors.get(column.name) ?? muted;
+
+    doc.save().fillOpacity(0.08).rect(margin, sectionTop, contentWidth, 44).fillColor(accentColor).fill().restore();
+    doc.rect(margin, sectionTop, 4, 44).fillColor(accentColor).fill();
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#1f2937')
+      .text(column.name, margin + 13, sectionTop + 9, { width: 150, height: 11, ellipsis: true });
+    doc.font('Helvetica').fontSize(6.5).fillColor(accentColor)
+      .text(attendanceRate(column), margin + 13, sectionTop + 24, { width: 150 });
+
+    const sectionMetrics = [
+      ['On time', column.present],
+      ['Late', column.late],
+      ['Absent', column.absent],
+      ['Excused', column.excused],
+      ['Unmarked', column.unmarked],
+    ] as const;
+    sectionMetrics.forEach(([label, value], index) => {
+      const left = margin + 184 + (index * 68);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
+        .text(String(value), left, sectionTop + 8, { width: 55, align: 'right' });
+      doc.font('Helvetica').fontSize(6).fillColor(muted)
+        .text(label, left, sectionTop + 23, { width: 55, align: 'right' });
+    });
+
+    resetTextFlow(doc);
+    doc.y = sectionTop + 51;
+  });
+
+  doc.y += 5;
 }
 
 function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
@@ -177,8 +208,7 @@ function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
       .text(style.marker, margin + 1, doc.y + 2, { width: 10, align: 'center' });
     doc.font('Helvetica').fontSize(7).fillColor(style.color).text(`${style.label} · ${date} · ${session}`, margin + 18, doc.y - 10);
-    doc.moveDown(0.3).font('Helvetica-Bold').fontSize(9).fillColor('#1f2937').text(note.title);
-    if (note.details) doc.moveDown(0.15).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
+    doc.moveDown(0.3).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
     doc.moveDown(0.5).moveTo(margin, doc.y).lineTo(pageWidth - margin, doc.y).lineWidth(0.4).strokeColor('#eef0f2').stroke();
     doc.moveDown(0.7);
   });
@@ -193,6 +223,7 @@ function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
   drawBreakdown(doc, youth, colors);
+  ensureSpace(doc, 215);
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
     .text('Attendance Timeline', margin, doc.y, { width: contentWidth });

@@ -6,11 +6,12 @@ export const leadStatusSchema = z.enum([
   'contacted',
   'eligible',
   'ineligible',
+  'deferred',
+  'closed',
   'signed_up',
 ]);
 export const leadOriginSchema = z.enum(['external', 'internal']);
-
-const editableLeadStatusSchema = z.enum(['new', 'contacted', 'eligible', 'ineligible']);
+export const leadSubmitterRoleSchema = z.enum(['youth', 'parent', 'guardian', 'staff']);
 
 const commaSeparatedStatuses = z.preprocess(value => {
   if (value === undefined) return [];
@@ -30,12 +31,19 @@ const commaSeparatedOrigins = z.preprocess(value => {
   return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
 }, z.array(leadOriginSchema).max(2));
 
+const commaSeparatedSubmitterRoles = z.preprocess(value => {
+  if (value === undefined) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(item => typeof item === 'string' ? item.split(',') : item);
+}, z.array(leadSubmitterRoleSchema).max(4));
+
 export const leadQuerySchema = z.object({
   query: z.object({
     search: z.string().trim().max(120).optional().default(''),
     statuses: commaSeparatedStatuses,
     programIds: commaSeparatedProgramIds,
     origins: commaSeparatedOrigins,
+    submitterRoles: commaSeparatedSubmitterRoles,
     ...cursorListFields(['firstName', 'lastName', 'school', 'program', 'status', 'created'], 'created', 'desc'),
   }),
 });
@@ -60,11 +68,6 @@ export const updateLeadSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
 });
 
-export const updateLeadStatusSchema = z.object({
-  body: z.object({ status: editableLeadStatusSchema }).strict(),
-  params: z.object({ id: z.string().uuid('Invalid lead ID') }),
-});
-
 export const signUpLeadSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
   body: z.object({
@@ -79,6 +82,5 @@ export const leadIdSchema = z.object({
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema.shape.body>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema.shape.body>;
-export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema.shape.body>;
 export type SignUpLeadInput = z.infer<typeof signUpLeadSchema.shape.body>;
 export type LeadQuery = z.infer<typeof leadQuerySchema.shape.query>;

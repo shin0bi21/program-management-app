@@ -1,4 +1,4 @@
-// Scope: verifies account-control restoration, permission-aware filters, and atomic preference updates.
+// Owns account-control restoration, permission-aware filters, and atomic preference updates.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,9 +9,10 @@ const preferenceHook = vi.hoisted<{
   preference: AccountPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  loadError: string | null;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, setBaseline: vi.fn(), save: vi.fn() }));
+}>(() => ({ preference: null, loading: false, error: null, loadError: null, initializePreference: vi.fn(), save: vi.fn() }));
 
 vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
@@ -25,6 +26,7 @@ describe('useAccountControls', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.loadError = null;
   });
 
   it('restores saved filters and table controls', async () => {
@@ -40,7 +42,7 @@ describe('useAccountControls', () => {
     expect(result.current).toMatchObject({
       sorting: { key: 'email', direction: 'desc' }, columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(preferenceHook.preference);
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(preferenceHook.preference);
   });
 
   it('limits role filters to administrators', async () => {
@@ -51,6 +53,15 @@ describe('useAccountControls', () => {
 
     expect(admin.result.current.filterCategories.map(category => category.id)).toEqual(['status', 'role']);
     expect(staff.result.current.filterCategories.map(category => category.id)).toEqual(['status']);
+  });
+
+  it('uses defaults when saved preferences cannot be loaded', async () => {
+    preferenceHook.preference = { statuses: ['inactive'], roles: ['admin'] };
+    preferenceHook.loadError = 'offline';
+    const { result } = renderHook(() => useAccountControls(true, tableKeys));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.queryFilters).toEqual({ search: '', roles: [], statuses: [] });
   });
 
   it('preserves each latest control during immediate updates', async () => {
@@ -89,8 +100,22 @@ describe('useAccountControls', () => {
       search: '', roles: [], statuses: ['active'],
     });
     expect(result.current.sorting).toEqual({ key: 'name', direction: 'asc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       roles: [], sorting: { key: 'name', direction: 'asc' },
     }));
+  });
+
+  it('scrubs malformed filters and column widths', async () => {
+    preferenceHook.preference = {
+      statuses: 'active' as never,
+      roles: ['staff', 'removed-role' as never],
+      columnWidths: { email: 260, status: 'wide' } as never,
+    };
+    const { result } = renderHook(() => useAccountControls(true, tableKeys));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.queryFilters).toEqual({ search: '', roles: ['staff'], statuses: [] });
+    expect(result.current.columnWidths).toEqual({ email: 260 });
   });
 });

@@ -104,12 +104,6 @@ docker compose exec backend npm run seed:admin
 The migration command applies pending migrations and regenerates database
 types. The admin seed is idempotent and uses the `ADMIN_*` values from `.env`.
 
-Optionally seed deterministic programming demo data:
-
-```bash
-docker compose exec backend npm run seed:programming-demo
-```
-
 ## 6. Verify the application
 
 Open:

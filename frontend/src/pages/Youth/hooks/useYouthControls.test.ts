@@ -1,3 +1,4 @@
+// Owns useYouthControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
@@ -8,13 +9,15 @@ const preferenceHook = vi.hoisted<{
   preference: YouthPreference | null;
   loading: boolean;
   error: string | null;
-  setBaseline: ReturnType<typeof vi.fn>;
+  loadError: string | null;
+  initializePreference: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
 }>(() => ({
   preference: null,
   loading: false,
   error: null,
-  setBaseline: vi.fn(),
+  loadError: null,
+  initializePreference: vi.fn(),
   save: vi.fn(),
 }));
 
@@ -38,6 +41,7 @@ describe('useYouthControls', () => {
     preferenceHook.preference = null;
     preferenceHook.loading = false;
     preferenceHook.error = null;
+    preferenceHook.loadError = null;
   });
 
   it('waits for the authenticated role before applying staff defaults', async () => {
@@ -62,6 +66,16 @@ describe('useYouthControls', () => {
     }));
   });
 
+  it('uses role defaults when saved preferences cannot be loaded', async () => {
+    preferenceHook.preference = { statuses: ['inactive'], programIds: [] } as YouthPreference;
+    preferenceHook.loadError = 'offline';
+    const { result } = renderHook(() => useYouthControls({ role: 'staff', programs, programsLoading: false, tableKeys }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.statusFilters).toEqual(['active']);
+    expect(result.current.programFilters).toEqual(['program-1']);
+  });
+
   it('uses the option-scrubbed preference as the shared save baseline', async () => {
     preferenceHook.preference = {
       statuses: ['active'],
@@ -78,7 +92,7 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith({
       statuses: ['active'],
       programIds: [],
       sorting: { key: 'firstName', direction: 'asc' },
@@ -128,8 +142,28 @@ describe('useYouthControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.sorting).toEqual({ key: 'firstName', direction: 'asc' });
-    expect(preferenceHook.setBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       sorting: { key: 'firstName', direction: 'asc' },
+    }));
+  });
+
+  it('scrubs malformed status and column-width preferences', async () => {
+    preferenceHook.preference = {
+      statuses: 'active' as never,
+      programIds: [],
+      columnWidths: { firstName: 220, status: 'wide' } as never,
+    };
+    const { result } = renderHook(() => useYouthControls({
+      role: 'admin', programs, programsLoading: false, tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.statusFilters).toEqual([]);
+    expect(result.current.columnWidths).toEqual({ firstName: 220 });
+    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
+      statuses: [],
+      columnWidths: { firstName: 220 },
     }));
   });
 });

@@ -1,5 +1,4 @@
-// Scope: owns profile-note create/edit initialization, normalized commands, and validation.
-import type { FormEvent } from 'react';
+// Owns profile-note create/edit initialization, normalized commands, and validation.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,16 +14,11 @@ const note: YouthProfileNote = {
   id: 'note-1',
   youthId: 'youth-1',
   category: 'health',
-  title: 'Allergy plan',
-  details: 'Carry medication.',
+  details: 'Allergy plan: carry medication.',
   createdAt: '2026-08-19T12:00:00.000Z',
   updatedAt: '2026-08-19T12:00:00.000Z',
   createdByName: 'Admin User',
 };
-
-function submitEvent() {
-  return { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
-}
 
 describe('useProfileNoteModal', () => {
   beforeEach(() => {
@@ -42,18 +36,15 @@ describe('useProfileNoteModal', () => {
 
     expect(result.current.draft).toEqual({
       category: 'health',
-      title: 'Allergy plan',
-      details: 'Carry medication.',
+      details: 'Allergy plan: carry medication.',
     });
     act(() => {
-      result.current.updateTitle('  Updated plan  ');
       result.current.updateDetails('  Updated details.  ');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).toHaveBeenCalledWith('youth-1', {
       category: 'health',
-      title: 'Updated plan',
       details: 'Updated details.',
     }, 'note-1');
     expect(onSaved).toHaveBeenCalledWith(note);
@@ -65,27 +56,26 @@ describe('useProfileNoteModal', () => {
       onSaved: vi.fn(),
     }));
 
-    act(() => result.current.updateTitle('Check in'));
-    await act(async () => result.current.submit(submitEvent()));
+    act(() => result.current.updateDetails('Check in'));
+    await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).toHaveBeenCalledWith('youth-1', {
       category: 'general',
-      title: 'Check in',
-      details: null,
+      details: 'Check in',
     });
   });
 
-  it('rejects a blank title before calling the API', async () => {
+  it('rejects a blank note before calling the API', async () => {
     const { result } = renderHook(() => useProfileNoteModal({
       youthId: 'youth-1',
       onSaved: vi.fn(),
     }));
 
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.statusMessage).toBe('Enter a note title.');
+    expect(result.current.statusMessage).toBe('Enter a note.');
   });
 
   it('preserves the draft when the same note record is recreated', () => {
@@ -95,10 +85,10 @@ describe('useProfileNoteModal', () => {
       { initialProps: options },
     );
 
-    act(() => result.current.updateTitle('Keep this draft'));
+    act(() => result.current.updateDetails('Keep this draft'));
     rerender({ ...options, note: { ...note, details: 'Refreshed remotely.' } });
 
-    expect(result.current.draft.title).toBe('Keep this draft');
+    expect(result.current.draft.details).toBe('Keep this draft');
   });
 
   it('reports a save failure and allows a retry', async () => {
@@ -108,16 +98,16 @@ describe('useProfileNoteModal', () => {
       youthId: 'youth-1',
       onSaved,
     }));
-    act(() => result.current.updateTitle('Retry this note'));
+    act(() => result.current.updateDetails('Retry this note'));
 
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(result.current.submitStatus).toBe('error');
     expect(result.current.statusMessage).toBe('Save failed');
     expect(onSaved).not.toHaveBeenCalled();
 
     vi.mocked(setYouthProfileNote).mockResolvedValue(note);
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).toHaveBeenCalledTimes(2);
     expect(onSaved).toHaveBeenCalledWith(note);

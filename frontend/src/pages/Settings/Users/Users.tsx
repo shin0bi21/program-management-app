@@ -4,9 +4,10 @@ import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import Modal from '../../../common/components/Modal/Modal';
-import { useConfirmModal, type ConfirmAction } from '../../../common/components/Modal/hooks/useConfirmModal';
+import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumnDef } from '../../../common/components/Table/Table.types';
@@ -24,27 +25,33 @@ import './Users.css';
 const ACCOUNTS_TABLE_QUERY_KEY = ['accounts', 'table'] as const;
 
 export default function Users() {
-  // Services and permissions.
+  // Page-local errors.
+  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+
+  // Permissions and services.
   const queryClient = useQueryClient();
   const { role, permissions } = useAuth();
   const isAdmin = role === 'admin';
   const canWrite = permissions.includes('write:accounts');
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
-  // Controls and remote records.
+  // Page data and preferences.
   const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
   const {
-    search, setSearch, queryFilters, statusFilters, roleFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
-  // Dialog state.
+  // Account modal.
   const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
-  const [youthInviteOpen, setYouthInviteOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const confirmModal = useConfirmModal({ action: confirmAction, onClose: () => setConfirmAction(null) });
+  const closeAccountModal = () => setModalTarget(null);
 
-  // Mutations and confirmation workflows.
+  // Youth-invitation modal.
+  const [youthInviteOpen, setYouthInviteOpen] = useState(false);
+  const closeYouthInviteModal = () => setYouthInviteOpen(false);
+
+  // Confirmation modal.
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const requestRevoke = useCallback((account: Account) => setConfirmAction({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
@@ -71,8 +78,9 @@ export default function Users() {
       },
     });
   }, [queryClient]);
+  const closeConfirmation = () => setConfirmAction(null);
 
-  // Table presentation.
+  // Table configuration.
   const columns = useMemo<TableColumnDef<Account>[]>(() => {
     const accountColumns: TableColumnDef<Account>[] = [
       {
@@ -128,6 +136,7 @@ export default function Users() {
     }];
   }, [canWrite, isAdmin, requestRevoke, requestStatusToggle]);
 
+  // Render.
   return (
     <>
       <main className="page-container manage-accounts-page">
@@ -150,7 +159,15 @@ export default function Users() {
               ) : null}
             </div>
           )}
-          search={<SearchInput label="Search accounts" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or email" />}
+          search={<SearchInput
+            label="Search accounts"
+            value={search}
+            appliedValue={appliedSearch}
+            onChange={event => setSearch(event.target.value)}
+            onApply={applySearch}
+            onClear={clearSearch}
+            placeholder="Search by name or email"
+          />}
           columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
           filters={controlsReady ? <FilterCard
             categories={filterCategories}
@@ -159,7 +176,7 @@ export default function Users() {
             onClearAll={controls.clearFilters}
           /> : undefined}
         />
-        {preferenceError && <p className="form-error" role="alert">{preferenceError}</p>}
+        <PageErrorOverlay errors={[preferenceError, viewError]} />
 
         {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <section className="accounts-panel" aria-label="Accounts">
           <UserTable
@@ -172,6 +189,7 @@ export default function Users() {
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}
+            onErrorChange={setViewError}
           />
         </section>}
       </main>
@@ -180,7 +198,7 @@ export default function Users() {
         <AccountModal
           isOpen
           account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
-          onClose={() => setModalTarget(null)}
+          onClose={closeAccountModal}
           onSuccess={savedAccount => {
             if (modalTarget === 'new') {
               void queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
@@ -195,7 +213,7 @@ export default function Users() {
         <YouthModal
           isOpen
           showLoginEmail
-          onClose={() => setYouthInviteOpen(false)}
+          onClose={closeYouthInviteModal}
           onSuccess={() => {
             void Promise.all([
               queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY }),
@@ -205,17 +223,10 @@ export default function Users() {
         />
       )}
 
-      <Modal
-        isOpen={!!confirmAction}
-        onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title ?? ''}
-        status={confirmModal.status}
-        statusMessage={confirmModal.statusMessage}
-        footer={confirmModal.footer}
-        successDelay={confirmModal.successDelay}
-      >
-        {confirmAction && <p>{confirmAction.message}</p>}
-      </Modal>
+      <ConfirmModal
+        action={confirmAction}
+        onClose={closeConfirmation}
+      />
     </>
   );
 }

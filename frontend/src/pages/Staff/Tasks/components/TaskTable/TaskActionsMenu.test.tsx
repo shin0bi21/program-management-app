@@ -1,4 +1,4 @@
-// Scope: verifies capability-gated Task row actions and emitted task commands.
+// Owns capability-gated Task row actions and emitted task commands.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -8,11 +8,11 @@ import TaskActionsMenu from './TaskActionsMenu';
 describe('TaskActionsMenu', () => {
   it('renders allowed actions and emits the selected status command', () => {
     const task = makeTask();
-    const setStatus = vi.fn().mockResolvedValue(undefined);
+    const setState = vi.fn().mockResolvedValue(undefined);
     render(<TaskActionsMenu
       task={task}
       isTaskPending={() => false}
-      setStatus={setStatus}
+      setState={setState}
       edit={vi.fn()}
       requestDelete={vi.fn()}
     />);
@@ -22,6 +22,6 @@ describe('TaskActionsMenu', () => {
       'Set Cancelled', 'Edit', 'Delete',
     ]);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Set Cancelled' }));
-    expect(setStatus).toHaveBeenCalledWith(task, 'cancelled');
+    expect(setState).toHaveBeenCalledWith(task, 'cancelled');
   });
 });

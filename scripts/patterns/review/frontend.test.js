@@ -86,7 +86,7 @@ test('allows a Calendar owner to own one range loader and buffer-adapter effect'
       useEffect(() => {
         calendarCacheRef.current = { upsert: calendar.upsertItem };
       }, [calendar.upsertItem, calendarCacheRef]);
-      return <ResourceCalendar load={loadRange} />;
+      return <TimelineCalendar load={loadRange} />;
     }
   `;
 
@@ -108,7 +108,7 @@ test('still reports mixed workflow state inside a Calendar owner', () => {
       const [editorState] = useState(null);
       useEffect(() => {}, []);
       const loadRange = async () => getTasks();
-      return <ResourceCalendar load={loadRange} editorState={editorState} />;
+      return <TimelineCalendar load={loadRange} editorState={editorState} />;
     }
   `;
 
@@ -140,6 +140,52 @@ test('allows boundary normalization inside API adapters', () => {
     findingsFor('frontend/src/common/features/things/things.api.ts', source),
     [],
   );
+});
+
+test('flags an API-only contract exported from a page types file', () => {
+  const file = 'frontend/src/pages/Things/types.ts';
+  const findings = findingsFor(file, 'export interface SetThingInput { name: string }', {
+    repositorySources: new Map([
+      [file, 'export interface SetThingInput { name: string }'],
+      ['frontend/src/pages/Things/things.api.ts', 'function save(input: SetThingInput) {}'],
+    ]),
+    routePageDirectories: ['frontend/src/pages/Things'],
+  });
+
+  assert.match(
+    findings.join('\n'),
+    /\[review-type-ownership\].*SetThingInput.*keep endpoint-only contracts in the API adapter/,
+  );
+});
+
+test('flags a page-local contract exported from a page types file', () => {
+  const file = 'frontend/src/pages/Things/types.ts';
+  const findings = findingsFor(file, 'export type ThingModalState = null | { mode: \'add\' };', {
+    repositorySources: new Map([
+      [file, 'export type ThingModalState = null | { mode: \'add\' };'],
+      ['frontend/src/pages/Things/Things.tsx', 'const state: ThingModalState = null;'],
+    ]),
+    routePageDirectories: ['frontend/src/pages/Things'],
+  });
+
+  assert.match(
+    findings.join('\n'),
+    /\[review-type-ownership\].*ThingModalState.*keep owner-local contracts beside that component, hook, or page/,
+  );
+});
+
+test('allows a page type consumed by multiple sibling units', () => {
+  const file = 'frontend/src/pages/Things/types.ts';
+  const source = 'export interface Thing { id: string }';
+
+  assert.deepEqual(findingsFor(file, source, {
+    repositorySources: new Map([
+      [file, source],
+      ['frontend/src/pages/Things/hooks/useThings.ts', 'const thing: Thing = value;'],
+      ['frontend/src/pages/Things/components/ThingTable/ThingTable.tsx', 'function Row({ thing }: { thing: Thing }) {}'],
+    ]),
+    routePageDirectories: ['frontend/src/pages/Things'],
+  }), []);
 });
 
 test('does not warn only because a focused leaf has no components or hooks directory', () => {

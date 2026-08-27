@@ -1,4 +1,4 @@
-// Scope: verifies session-note draft lifecycle, commands, validation, and refresh reconciliation.
+// Owns session-note draft lifecycle, commands, validation, and refresh reconciliation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,11 +8,11 @@ import {
   createSessionNote,
   getSessionRoster,
   updateSessionNote,
-} from '../../../../../features/programming/api/sessions.api';
+} from '../../../../programming/api/sessions.api';
 import type { SessionNote } from '../../../../../types/cohort';
 import useSessionNoteModal from './useSessionNoteModal';
 
-vi.mock('../../../../../features/programming/api/sessions.api', () => ({
+vi.mock('../../../../programming/api/sessions.api', () => ({
   createSessionNote: vi.fn(),
   getSessionRoster: vi.fn(),
   updateSessionNote: vi.fn(),
@@ -23,7 +23,6 @@ const note: SessionNote = {
   id: 'note-1',
   sessionId: session.id,
   category: 'achievement',
-  title: 'Original title',
   details: 'Original details.',
   createdAt: '2026-08-19T12:00:00.000Z',
   updatedAt: '2026-08-19T12:00:00.000Z',
@@ -53,19 +52,16 @@ describe('useSessionNoteModal', () => {
 
     expect(result.current.draft).toEqual({
       category: 'achievement',
-      title: 'Original title',
       details: 'Original details.',
       selectedYouthIds: ['youth-1'],
     });
     act(() => {
-      result.current.updateTitle('  Updated title  ');
       result.current.updateDetails('  Updated details.  ');
     });
     await act(async () => result.current.submit());
 
     expect(updateSessionNote).toHaveBeenCalledWith(session.id, note.id, {
       category: 'achievement',
-      title: 'Updated title',
       details: 'Updated details.',
       youthIds: ['youth-1'],
     });
@@ -85,20 +81,19 @@ describe('useSessionNoteModal', () => {
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.roster).toHaveLength(1));
-    act(() => result.current.updateTitle('Attendance follow-up'));
+    act(() => result.current.updateDetails('Attendance follow-up'));
     await act(async () => result.current.submit());
 
     expect(createSessionNote).toHaveBeenCalledWith(session.id, {
       category: 'general',
-      title: 'Attendance follow-up',
-      details: null,
+      details: 'Attendance follow-up',
       youthIds: ['youth-1'],
     });
     expect(onSaved).toHaveBeenCalledOnce();
     expect(result.current.submitStatus).toBe('success');
   });
 
-  it('rejects a blank title before calling the API', async () => {
+  it('rejects a blank note before calling the API', async () => {
     const { result } = renderHook(() => useSessionNoteModal({
       session,
       onSaved: vi.fn(),
@@ -108,7 +103,7 @@ describe('useSessionNoteModal', () => {
 
     expect(createSessionNote).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.statusMessage).toBe('Enter a note title.');
+    expect(result.current.statusMessage).toBe('Enter a note.');
   });
 
   it('preserves the draft when equal session and note records are recreated', () => {
@@ -122,10 +117,10 @@ describe('useSessionNoteModal', () => {
       { initialProps: options, wrapper: wrapper() },
     );
 
-    act(() => result.current.updateTitle('Keep this draft'));
+    act(() => result.current.updateDetails('Keep this draft'));
     rerender({ ...options, session: { ...session }, note: { ...note } });
 
-    expect(result.current.draft.title).toBe('Keep this draft');
+    expect(result.current.draft.details).toBe('Keep this draft');
   });
 
   it('does not make a saved note retryable when refresh fails', async () => {
@@ -133,7 +128,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved: vi.fn().mockRejectedValue(new Error('Refresh failed')),
     }), { wrapper: wrapper() });
-    act(() => result.current.updateTitle('Saved note'));
+    act(() => result.current.updateDetails('Saved note'));
 
     await act(async () => result.current.submit());
 
@@ -149,7 +144,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved,
     }), { wrapper: wrapper() });
-    act(() => result.current.updateTitle('Retry this note'));
+    act(() => result.current.updateDetails('Retry this note'));
 
     await act(async () => result.current.submit());
 

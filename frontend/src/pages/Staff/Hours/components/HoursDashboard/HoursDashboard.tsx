@@ -1,31 +1,60 @@
-import type { StaffResource } from '../../../../../common/features/hours/types';
+import { useMemo } from 'react';
+import type { StaffResource } from '../../types';
 import type { ProgramCycle } from '../../../../../common/types/cohort';
 import { formatShortDateRange } from '../../../../../common/utils/date';
 import HoursDashboardCard from './HoursDashboardCard/HoursDashboardCard';
 import useHoursOverviewData from './hooks/useHoursOverviewData';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 
 interface HoursDashboardProps {
   queryKey: readonly unknown[];
   staff: StaffResource | null;
   cycle: ProgramCycle | null;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function HoursDashboard({
   queryKey,
   staff,
   cycle,
+  onErrorChange,
 }: HoursDashboardProps) {
   const overviewData = useHoursOverviewData(
     queryKey,
     staff?.id ?? null,
     cycle?.id ?? null,
   );
+  const retry = overviewData.status === 'error' ? overviewData.retry : undefined;
+  const retryAction = useMemo(
+    () => retry ? { label: 'Retry', onClick: retry } : undefined,
+    [retry],
+  );
+  usePageErrorReporter(
+    onErrorChange,
+    overviewData.status === 'error' ? overviewData.message : null,
+    retryAction,
+  );
   const unavailableMessage = staff && cycle
     ? 'Hours overview is unavailable.'
     : 'Select a staff member to view their hours overview.';
   const stateMessage = overviewData.status === 'loading'
     ? 'Loading hours overview…'
-    : overviewData.status === 'error' ? overviewData.message : unavailableMessage;
+    : unavailableMessage;
+
+  if (overviewData.status === 'error') {
+    return <>
+      <HoursDashboardCard
+        title="Hours This Pay Period"
+        emptyMessage=""
+        unavailable={{ title: 'Hours overview unavailable', onRetry: overviewData.retry }}
+      />
+      <HoursDashboardCard
+        title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
+        emptyMessage=""
+        unavailable={{ title: 'Hours overview unavailable', onRetry: overviewData.retry }}
+      />
+    </>;
+  }
 
   if (overviewData.status !== 'ready') {
     const showTitles = Boolean(staff);

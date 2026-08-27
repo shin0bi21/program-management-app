@@ -1,35 +1,61 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { setTask } from '../../../../../../common/features/tasks/tasks.api';
-import type { Task, TaskCategory } from '../../../../../../common/features/tasks/types';
+import { setTask } from '../../../tasks.api';
+import type { TaskCategory } from '../../../types';
 import { getSubmitStatusMessage, useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
+import type { TaskModalProps } from '../TaskModal';
 
-export interface UseTaskModalOptions {
-  isOpen: boolean;
-  task?: Task;
-  initialStartDate?: string;
-  initialDueDate?: string;
-  fixedStaffId?: string;
-  onSaved: (task: Task) => void;
+type UseTaskModalOptions = Pick<TaskModalProps,
+  | 'target'
+  | 'onSaved'
+>;
+
+interface TaskDraft {
+  title: string;
+  details: string;
+  category: TaskCategory | '';
+  programId: string;
+  startDate: string;
+  dueDate: string;
+  staffId: string;
+}
+
+function getInitialDraft(target: TaskModalProps['target']): TaskDraft {
+  if (target.mode === 'add') {
+    return {
+      title: '',
+      details: '',
+      category: '',
+      programId: '',
+      startDate: target.initialValues.startDate,
+      dueDate: target.initialValues.dueDate,
+      staffId: target.initialValues.staffId ?? '',
+    };
+  }
+
+  return {
+    title: target.task.title,
+    details: target.task.details ?? '',
+    category: target.task.category,
+    programId: target.task.programId ?? '',
+    startDate: target.task.startDate,
+    dueDate: target.task.dueDate,
+    staffId: target.task.assignee.id,
+  };
 }
 
 export default function useTaskModal({
-  isOpen,
-  task,
-  initialStartDate,
-  initialDueDate,
-  fixedStaffId,
+  target,
   onSaved,
 }: UseTaskModalOptions) {
+  const initialDraftRef = useRef(getInitialDraft(target));
+  initialDraftRef.current = getInitialDraft(target);
+  const targetKey = target.mode === 'edit'
+    ? target.task
+    : `${target.initialValues.startDate}:${target.initialValues.dueDate}:${target.initialValues.staffId ?? ''}`;
   const submittingRef = useRef(false);
-  const [title, setTitle] = useState('');
-  const [details, setDetails] = useState('');
-  const [category, setCategory] = useState<TaskCategory>('outreach');
-  const [programId, setProgramId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [staffId, setStaffId] = useState('');
+  const [draft, setDraft] = useState(initialDraftRef.current);
   const {
     submitStatus,
     setSubmitStatus,
@@ -40,26 +66,27 @@ export default function useTaskModal({
 
   // Reset the create/edit form whenever a modal lifecycle begins.
   useEffect(() => {
-    if (!isOpen) return;
     submittingRef.current = false;
-    setTitle(task?.title ?? '');
-    setDetails(task?.details ?? '');
-    setCategory(task?.category ?? 'outreach');
-    setProgramId(task?.programId ?? '');
-    setStartDate(task?.startDate ?? initialStartDate ?? '');
-    setDueDate(task?.dueDate ?? initialDueDate ?? '');
-    setStaffId(task?.assignee.id ?? fixedStaffId ?? '');
+    setDraft(initialDraftRef.current);
     resetStatus();
-  }, [fixedStaffId, initialDueDate, initialStartDate, isOpen, resetStatus, task]);
+  }, [resetStatus, targetKey]);
+
+  const updateDraft = <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => {
+    setDraft(current => ({ ...current, [key]: value }));
+  };
 
   const updateStartDate = (value: string) => {
-    setStartDate(value);
-    setDueDate(value);
+    setDraft(current => ({ ...current, startDate: value, dueDate: value }));
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submittingRef.current) return;
+    if (!draft.category) {
+      setError('Select a category.');
+      setSubmitStatus('error');
+      return;
+    }
 
     submittingRef.current = true;
     setSubmitStatus('submitting');
@@ -67,48 +94,36 @@ export default function useTaskModal({
 
     try {
       const input = {
-        title: title.trim(),
-        details: details.trim() || null,
-        category,
-        programId: programId || null,
-        startDate,
-        dueDate,
-        staffId,
+        title: draft.title.trim(),
+        details: draft.details.trim() || null,
+        category: draft.category,
+        programId: draft.programId || null,
+        startDate: draft.startDate,
+        dueDate: draft.dueDate,
+        staffId: draft.staffId,
       };
 
-      const savedTask = task
-        ? await setTask(input, task.id)
-        : await setTask(input);
+      const taskId = target.mode === 'edit' ? target.task.id : undefined;
+      const savedTask = await setTask(input, taskId);
 
       setSubmitStatus('success');
       onSaved(savedTask);
     } catch (cause) {
       submittingRef.current = false;
-      setError(getErrorMessage(cause, task ? 'Unable to update task' : 'Unable to create task'));
+      setError(getErrorMessage(cause, target.mode === 'edit' ? 'Unable to update task' : 'Unable to create task'));
       setSubmitStatus('error');
     }
   };
 
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
-    submitting: task ? 'Updating task…' : 'Creating task…',
-    success: task ? 'Task updated.' : 'Task created.',
+    submitting: target.mode === 'edit' ? 'Updating task…' : 'Creating task…',
+    success: target.mode === 'edit' ? 'Task updated.' : 'Task created.',
   });
 
   return {
-    title,
-    setTitle,
-    details,
-    setDetails,
-    category,
-    setCategory,
-    programId,
-    setProgramId,
-    startDate,
+    draft,
+    updateDraft,
     updateStartDate,
-    dueDate,
-    setDueDate,
-    staffId,
-    setStaffId,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
     status: submitStatus,
     statusMessage,
