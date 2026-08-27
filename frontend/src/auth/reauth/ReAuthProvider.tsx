@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
-import ReLoginModal from '../../common/components/ReLoginModal/ReLoginModal';
+import ReLoginModal from './components/ReLoginModal/ReLoginModal';
 import { ReAuthContext, type ReAuthContextValue } from './reAuthContext';
 import { reAuthCoordinator } from './reAuthCoordinator';
 

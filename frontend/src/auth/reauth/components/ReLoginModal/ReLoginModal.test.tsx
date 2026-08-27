@@ -1,21 +1,21 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { login, resend2FA, verify2FA } from '../../../auth/auth.api';
-import { getUser, setAuthData } from '../../../auth/storage';
+import { login, resend2FA, verify2FA } from '../../../auth.api';
+import { getUser, setAuthData } from '../../../storage';
 import ReLoginModal from './ReLoginModal';
 
-vi.mock('../../../auth/auth.api', () => ({
+vi.mock('../../../auth.api', () => ({
   login: vi.fn(),
   verify2FA: vi.fn(),
   resend2FA: vi.fn(),
 }));
 
-vi.mock('../../../auth/storage', () => ({
+vi.mock('../../../storage', () => ({
   getUser: vi.fn(),
   setAuthData: vi.fn(),
 }));
 
-vi.mock('../../../auth/deviceFingerprint', () => ({
+vi.mock('../../../deviceFingerprint', () => ({
   getDeviceFingerprint: () => 'device-fingerprint',
   getDeviceName: () => 'Test browser',
 }));
