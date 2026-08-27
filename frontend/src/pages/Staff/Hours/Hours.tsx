@@ -153,12 +153,14 @@ export default function Hours() {
 
   const hoursCalendar = (
     <HoursCalendar
+      key={preferences.search.appliedValue}
       resources={pageData.resources}
       staffIds={preferences.filters.staffIds}
       categories={preferences.filters.categories}
       programIds={preferences.filters.programIds}
       types={preferences.filters.types}
       cycleId={preferences.filters.cycleId ?? ''}
+      search={preferences.search.appliedValue}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
       calendarCacheRef={actions.calendarCacheRef}
@@ -191,7 +193,7 @@ export default function Hours() {
           ]}
         /> : undefined}
 
-        search={preferences.ready && preferences.view === 'table' ? <SearchInput
+        search={preferences.ready ? <SearchInput
           label="Search hours"
           value={preferences.search.value}
           appliedValue={preferences.search.appliedValue}

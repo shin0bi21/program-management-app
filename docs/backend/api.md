@@ -27,7 +27,7 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/calendar` | Get resources and logged hours shaped for a calendar date range |
+| `GET` | `/calendar` | Get policy-scoped, searchable logged hours shaped for a calendar date range |
 | `GET` | `/table` | Get cursor-paginated, policy-scoped logged hours shaped for the table |
 | `GET` | `/reference-data` | List task staff, programs, categories, and status choices |
 | `GET` | `/dashboard` | Get cycle-based pay-period and biweekly data shaped for one staff dashboard |

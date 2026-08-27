@@ -6,6 +6,7 @@ import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 import {
   hoursRecordColumns,
   hoursRecordFrom,
+  hoursSearchValue,
   type HoursRow,
 } from './hoursRecordQuery';
 import { getHoursCategoryLabel } from './hoursReferenceData';
@@ -26,8 +27,7 @@ export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQ
       staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
       CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
       ${sortValue} AS cursor_value,
-      CONCAT_WS(' ', staff.first_name, staff.last_name, program.name, cycle.name, entry.category::text,
-        task.title, session.theme, entry.note, entry.work_date::text) AS search_value
+      ${hoursSearchValue} AS search_value
     ${hoursRecordFrom}
     WHERE ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
       AND ${query.staffIds.length ? sql`entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql`TRUE`}

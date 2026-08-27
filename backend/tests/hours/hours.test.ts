@@ -155,6 +155,37 @@ describe('Hours API', () => {
     ]);
   });
 
+  it('searches policy-scoped calendar entries with the same fields as the table', async () => {
+    const marker = `Calendar search ${firstStaffId}`;
+    const created = await request(app)
+      .post('/api/hours')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({
+        source: 'regular',
+        staffId: firstStaffId,
+        programId,
+        category: 'meeting',
+        workDate,
+        hours: 1,
+        note: marker,
+      });
+    expect(created.status).toBe(201);
+
+    const matched = await request(app)
+      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&search=${encodeURIComponent(marker)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(matched.status).toBe(200);
+    expect(matched.body[firstStaffId][workDate]).toEqual([
+      expect.objectContaining({ id: created.body.id, note: marker }),
+    ]);
+
+    const unmatched = await request(app)
+      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&search=missing-calendar-entry`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(unmatched.status).toBe(200);
+    expect(unmatched.body).toEqual({});
+  });
+
   it('returns separate options and cursor-paginates the filtered hours list', async () => {
     const marker = `Paginated hours ${firstStaffId}`;
     for (const hours of [1, 2]) {

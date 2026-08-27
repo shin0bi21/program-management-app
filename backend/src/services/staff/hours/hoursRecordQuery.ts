@@ -50,6 +50,19 @@ export const hoursRecordFrom = sql`
   LEFT JOIN cohort_sessions session ON session.id = entry.session_id
 `;
 
+/** Searchable hours values shared by calendar and table collection reads. */
+export const hoursSearchValue = sql`CONCAT_WS(' ',
+  staff.first_name,
+  staff.last_name,
+  program.name,
+  cycle.name,
+  entry.category::text,
+  task.title,
+  session.theme,
+  entry.note,
+  entry.work_date::text
+)`;
+
 /** Canonical hours response returned by insert and update commands. */
 export const hoursMutationColumns = sql`
   id,
