@@ -66,3 +66,5 @@ export const createLeadNote = (leadId: string, details: string) =>
   apiClient.post<LeadNote>(`/leads/${leadId}/notes`, { details });
 export const updateLeadNote = (leadId: string, noteId: string, details: string) =>
   apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details });
+export const deleteLeadNote = (leadId: string, noteId: string) =>
+  apiClient.delete<{ id: string }>(`/leads/${leadId}/notes/${noteId}`);

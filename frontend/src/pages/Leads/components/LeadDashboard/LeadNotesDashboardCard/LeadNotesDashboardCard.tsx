@@ -12,6 +12,7 @@ import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../.
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import LeadNoteEditModal from './LeadNoteEditModal';
 import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
+import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
 
 export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }: {
   lead: Lead | null;
@@ -46,6 +47,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }
               date={note.createdAt}
               onView={() => notes.openDetails(note)}
               onEdit={canWrite ? () => notes.openEditor(note) : undefined}
+              onDelete={canWrite ? () => notes.requestDelete(note) : undefined}
             />
           ))}
         </div>
@@ -76,5 +78,6 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }
       onClose={notes.closeEditor}
       onSaved={notes.handleSaved}
     />
+    <ConfirmModal action={notes.confirmAction} onClose={notes.closeConfirmation} />
   </>;
 }

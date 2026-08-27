@@ -136,16 +136,77 @@ describe('Leads API', () => {
     const [unchangedLead] = await sql<{ status: string }[]>`SELECT status FROM leads WHERE id = ${lead.body.id}`;
     expect(unchangedLead.status).toBe('new');
 
-    const deleteUnavailable = await request(app)
+    const deleted = await request(app)
       .delete(`/api/leads/${lead.body.id}/notes/${created.body.id}`)
       .set('Authorization', `Bearer ${staffToken}`);
-    expect(deleteUnavailable.status).toBe(404);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ id: created.body.id });
+
+    const afterDelete = await request(app)
+      .get(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(afterDelete.body).toEqual([]);
+
+    const [deleteAudit] = await sql<Array<{
+      action: string;
+      oldLeadId: string | null;
+      oldDetails: string | null;
+      newData: unknown;
+    }>>`
+      SELECT action, old_data->>'leadId' AS old_lead_id,
+        old_data->>'details' AS old_details, new_data
+      FROM audit_log
+      WHERE table_name = 'lead_notes' AND record_id = ${created.body.id} AND action = 'DELETE'
+    `;
+    expect(deleteAudit).toEqual({
+      action: 'DELETE',
+      oldLeadId: lead.body.id,
+      oldDetails: 'Corrected call details.',
+      newData: null,
+    });
 
     const invalid = await request(app)
       .post(`/api/leads/${lead.body.id}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ details: '   ' });
     expect(invalid.status).toBe(400);
+  });
+
+  it('validates and authorizes follow-up note deletion without removing rejected notes', async () => {
+    const lead = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'ProtectedNote' });
+    const note = await request(app)
+      .post(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ details: 'Keep after rejected deletion.' });
+    const readOnlyToken = generateToken(
+      staffUserId,
+      'staff',
+      'lead-read-only@test.local',
+      ['read:outreach'],
+    );
+
+    const forbidden = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/${note.body.id}`)
+      .set('Authorization', `Bearer ${readOnlyToken}`);
+    expect(forbidden.status).toBe(403);
+
+    const invalid = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/not-a-uuid`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(invalid.status).toBe(400);
+
+    const unknown = await request(app)
+      .delete(`/api/leads/${lead.body.id}/notes/00000000-0000-4000-8000-000000000000`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(unknown.status).toBe(404);
+
+    const [persistedNote] = await sql<{ details: string }[]>`
+      SELECT details FROM lead_notes WHERE id = ${note.body.id}
+    `;
+    expect(persistedNote.details).toBe('Keep after rejected deletion.');
   });
 
   it('lets staff delete an unsigned lead and its follow-up notes', async () => {

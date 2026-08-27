@@ -74,6 +74,23 @@ export async function updateLeadNoteDetails(
   return note;
 }
 
+export async function deleteLeadNote(leadId: string, noteId: string, actorId: string) {
+  const transactionId = crypto.randomUUID();
+
+  return sql.begin(async rawTx => {
+    const tx = asTransactionSql(rawTx);
+    const notes = await tx<Record<string, unknown>[]>`
+      DELETE FROM lead_notes
+      WHERE id = ${noteId} AND lead_id = ${leadId}
+      RETURNING id, lead_id, category, details, created_at, updated_at, created_by, updated_by
+    `;
+    if (!notes.length) throw new NotFoundError('Lead note not found');
+
+    await audit(tx, actorId, transactionId, 'lead_notes', noteId, 'DELETE', notes[0], null);
+    return { id: noteId };
+  });
+}
+
 async function assertLeadExists(leadId: string) {
   const rows = await sql`SELECT 1 FROM leads WHERE id = ${leadId} LIMIT 1`;
   if (!rows.length) throw new NotFoundError('Lead not found');

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createLead, deleteLead, getLeads, signUpLead, updateLead, updateLeadStatus } from '../services/outreach/leads/leadService';
-import { createLeadNote, getLeadNotes, updateLeadNoteDetails } from '../services/outreach/leads/leadNoteService';
+import { createLeadNote, deleteLeadNote, getLeadNotes, updateLeadNoteDetails } from '../services/outreach/leads/leadNoteService';
 import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
 import type { SetLeadNoteInput, UpdateLeadNoteInput } from '../validation/leadNoteSchemas';
 
@@ -52,4 +52,9 @@ export const handleUpdateLeadNote = async (req: Request, res: Response) => {
     req.body as UpdateLeadNoteInput,
     actorId,
   ));
+};
+
+export const handleDeleteLeadNote = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.json(await deleteLeadNote(req.params.id, req.params.noteId, actorId));
 };

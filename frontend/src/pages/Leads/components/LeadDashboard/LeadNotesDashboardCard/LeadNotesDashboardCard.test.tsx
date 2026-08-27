@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   getLeadNotes: vi.fn(),
   updateLeadNote: vi.fn(),
   createLeadNote: vi.fn(),
+  deleteLeadNote: vi.fn(),
 }));
 
 vi.mock('../../../leads.api', () => api);
@@ -49,17 +50,29 @@ describe('LeadNotesDashboardCard', () => {
     api.updateLeadNote.mockResolvedValue({ ...existingNote, details: 'Reached guardian.' });
   });
 
-  it('edits note details without offering deletion or category changes', async () => {
+  it('edits note details without offering category changes', async () => {
     render(<LeadNotesDashboardCard lead={lead} canWrite />);
 
     await screen.findByText('Follow-up');
-    expect(screen.queryByRole('button', { name: 'Delete follow-up note' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete follow-up note' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Edit follow-up note' }));
     expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: ' Reached guardian. ' } });
     fireEvent.submit(document.getElementById('lead-note-edit-form')!);
 
     await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id, 'Reached guardian.'));
+  });
+
+  it('confirms deletion and removes the note from the card count', async () => {
+    api.deleteLeadNote.mockResolvedValue({ id: existingNote.id });
+    render(<LeadNotesDashboardCard lead={lead} canWrite />);
+
+    await screen.findByText('Notes (1)');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete follow-up note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(api.deleteLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id));
+    expect(await screen.findByText('Notes (0)')).toBeInTheDocument();
   });
 
   it('shows status metadata only and opens full details', async () => {

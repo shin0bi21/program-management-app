@@ -94,9 +94,9 @@ Lead workflow endpoints:
 | `PUT/DELETE` | `/leads/:id` | Update or delete an unsigned Lead |
 | `PATCH` | `/leads/:id/status` | Directly update an unsigned Lead's status |
 | `GET/POST` | `/leads/:id/notes` | List or add `follow_up` notes independently of Lead status |
-| `PUT` | `/leads/:id/notes/:noteId` | Edit note details; Lead notes cannot be deleted |
+| `PUT/DELETE` | `/leads/:id/notes/:noteId` | Edit or delete a follow-up note |
 | `POST` | `/leads/:id/sign-up` | Create the youth profile and set the system-owned `signed_up` status |
 
-Every Lead note has the `follow_up` category. Note details are editable and notes are not deletable through the API. Lead status is managed separately; staff may assign `new`, `contacted`, `eligible`, `ineligible`, `deferred`, or `closed`, while `signed_up` remains system-controlled.
+Every Lead note has the `follow_up` category. Note details are editable and notes may be deleted independently of Lead status. Lead status is managed separately; staff may assign `new`, `contacted`, `eligible`, `ineligible`, `deferred`, or `closed`, while `signed_up` remains system-controlled.
 
 For lifecycle, ownership, and implementation, see the [Backend guide](README.md) and the focused documents beside this file. Local commands, testing, and deployment are routed through the root application README.
