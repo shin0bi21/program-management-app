@@ -128,7 +128,7 @@ export default function HoursModal({
               onChange={event => workflow.setCompleteTask(event.target.checked)}
               disabled={submissionComplete}
             />
-            Mark task complete
+            Task completed
           </label>
         )}
 
