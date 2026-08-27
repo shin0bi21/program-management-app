@@ -1,4 +1,4 @@
-// Scope: verifies ProfileNoteModal field and submission-state wiring.
+// Owns ProfileNoteModal field and submission-state wiring.
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

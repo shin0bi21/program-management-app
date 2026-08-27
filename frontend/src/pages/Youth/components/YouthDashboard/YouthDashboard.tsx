@@ -17,6 +17,7 @@ interface YouthDashboardProps {
   profileNotes: YouthProfileNote[];
   profileNotesLoading: boolean;
   profileNotesError: string | null;
+  onRetryProfileNotes?: () => void;
   onSelectProfileNote: (note: YouthProfileNote) => void;
   onEditProfileNote: (note: YouthProfileNote) => void;
   onDeleteProfileNote: (note: YouthProfileNote) => void;
@@ -33,6 +34,7 @@ export default function YouthDashboard({
   profileNotes,
   profileNotesLoading,
   profileNotesError,
+  onRetryProfileNotes,
   onSelectProfileNote,
   onEditProfileNote,
   onDeleteProfileNote,
@@ -77,6 +79,7 @@ export default function YouthDashboard({
       onDeleteProfileNote={onDeleteProfileNote}
       profileNotesLoading={profileNotesLoading}
       profileNotesError={profileNotesError}
+      onRetry={onRetryProfileNotes}
     />
   </>;
 }

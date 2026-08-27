@@ -99,6 +99,7 @@ export default function useProfileNotes(selectedYouthId: string | null) {
     notes: query.data ?? [],
     loading: query.isLoading,
     error: query.error ? 'Could not load profile notes' : null,
+    retry: query.refetch,
     editorTarget,
     selectedNote,
     confirmingDelete,

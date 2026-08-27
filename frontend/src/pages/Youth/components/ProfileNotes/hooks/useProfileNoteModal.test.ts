@@ -1,4 +1,4 @@
-// Scope: owns profile-note create/edit initialization, normalized commands, and validation.
+// Owns profile-note create/edit initialization, normalized commands, and validation.
 import type { FormEvent } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

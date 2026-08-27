@@ -32,5 +32,6 @@ export default function useYouthTableData(
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
     loadNextPage: query.loadNextPage,
+    retry: query.retry,
   };
 }
