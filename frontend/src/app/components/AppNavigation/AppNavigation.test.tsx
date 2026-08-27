@@ -65,7 +65,7 @@ describe('AppNavigation', () => {
     expect(screen.getByRole('menuitem', { name: 'My Account' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Outreach' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Leads' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
   });
 
@@ -90,17 +90,17 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
-  it('shows Outreach as top-level navigation for users with outreach access', () => {
+  it('shows Leads as top-level navigation for users with outreach access', () => {
     authState.permissions = ['read:outreach'];
     authState.role = 'staff';
 
     render(
-      <MemoryRouter initialEntries={['/outreach/expressions-of-interest']}>
+      <MemoryRouter initialEntries={['/leads/external']}>
         <AppNavigation />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Outreach' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Leads' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'External Leads' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Internal Leads' })).toBeInTheDocument();
   });
@@ -149,7 +149,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Calendar' })).not.toBeInTheDocument();
   });
 
-  it('places Programming before Outreach in application navigation', () => {
+  it('places Programming before Leads in application navigation', () => {
     authState.permissions = [
       'read:programs',
       'read:cohorts',
@@ -165,9 +165,9 @@ describe('AppNavigation', () => {
     );
 
     const programming = screen.getByRole('button', { name: 'Programming' });
-    const outreach = screen.getByRole('button', { name: 'Outreach' });
+    const leads = screen.getByRole('button', { name: 'Leads' });
     expect(
-      programming.compareDocumentPosition(outreach) & Node.DOCUMENT_POSITION_FOLLOWING,
+      programming.compareDocumentPosition(leads) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

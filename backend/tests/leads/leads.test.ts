@@ -272,12 +272,30 @@ describe('Leads API', () => {
     expect(res.body.every((lead: { recommendedProgramId: string }) => lead.recommendedProgramId === softSkillsProgramId)).toBe(true);
   });
 
+  it('filters leads by who submitted the outreach form', async () => {
+    const res = await request(app)
+      .get('/api/leads?origins=internal&submitterRoles=staff')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ youthFirstName: 'Event', submittedByRole: 'staff' }),
+    ]));
+    expect(res.body.every((lead: { submittedByRole: string }) => lead.submittedByRole === 'staff')).toBe(true);
+  });
+
   it('rejects unsupported lead filters', async () => {
     const res = await request(app)
       .get('/api/leads?statuses=reviewed')
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(400);
+
+    const invalidSubmitter = await request(app)
+      .get('/api/leads?submitterRoles=teacher')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(invalidSubmitter.status).toBe(400);
   });
 
   it('updates a lead status and audit metadata', async () => {

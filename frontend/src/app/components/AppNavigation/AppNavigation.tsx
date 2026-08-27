@@ -14,7 +14,7 @@ export default function AppNavigation() {
     permissions, active, go, isActive, toggleMenu,
   } = navigation;
   const {
-    canManageHomepage, canViewYouth, canViewOutreach, canViewCohorts,
+    canManageHomepage, canViewYouth, canViewLeads, canViewCohorts,
     canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming,
     canViewTasks, canViewHours, canViewStaff,
   } = permissions;
@@ -115,16 +115,16 @@ export default function AppNavigation() {
                 </button>
               )}
 
-              {canViewOutreach && (
+              {canViewLeads && (
                 <button
-                  ref={refs.outreach}
-                  onClick={() => toggleMenu('outreach')}
+                  ref={refs.leads}
+                  onClick={() => toggleMenu('leads')}
                   aria-haspopup="menu"
-                  aria-expanded={menus.outreach.isOpen}
-                  className={`sidebar-link${active.outreach || menus.outreach.isOpen ? ' active' : ''}`}
+                  aria-expanded={menus.leads.isOpen}
+                  className={`sidebar-link${active.leads || menus.leads.isOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBullhorn} /></span>
-                  <span>Outreach</span>
+                  <span>Leads</span>
                 </button>
               )}
 
@@ -164,24 +164,24 @@ export default function AppNavigation() {
         </FloatingMenuPanel>
       )}
 
-      {canViewOutreach && menus.outreach.position && (
+      {canViewLeads && menus.leads.position && (
         <FloatingMenuPanel
-          menuRef={menus.outreach.menuRef}
-          position={menus.outreach.position}
-          onClose={menus.outreach.close}
+          menuRef={menus.leads.menuRef}
+          position={menus.leads.position}
+          onClose={menus.leads.close}
           className="settings-flyout"
         >
           <button
             role="menuitem"
-            onClick={() => go('/outreach/leads/external')}
-            className={`settings-flyout-item${isActive('/outreach/leads/external') ? ' active' : ''}`}
+            onClick={() => go('/leads/external')}
+            className={`settings-flyout-item${isActive('/leads/external') ? ' active' : ''}`}
           >
             External Leads
           </button>
           <button
             role="menuitem"
-            onClick={() => go('/outreach/leads/internal')}
-            className={`settings-flyout-item${isActive('/outreach/leads/internal') ? ' active' : ''}`}
+            onClick={() => go('/leads/internal')}
+            className={`settings-flyout-item${isActive('/leads/internal') ? ' active' : ''}`}
           >
             Internal Leads
           </button>

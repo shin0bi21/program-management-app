@@ -17,7 +17,7 @@ import {
 } from './frontend.js';
 
 const repoRoot = '/repo';
-const leadsPage = 'frontend/src/pages/Outreach/Leads';
+const leadsPage = 'frontend/src/pages/Leads';
 const homepagePage = 'frontend/src/pages/Homepage';
 const manageHomepagePage = 'frontend/src/pages/Homepage/ManageHomepage';
 const routePageDirectories = [manageHomepagePage, homepagePage, leadsPage];
