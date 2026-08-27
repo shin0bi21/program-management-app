@@ -63,3 +63,5 @@ export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
     : apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`);
 export const createLeadStatusNote = (leadId: string, category: EditableLeadStatus, details: string) =>
   apiClient.post<CreateLeadStatusNoteResult>(`/leads/${leadId}/notes`, { category, details });
+export const updateLeadNote = (leadId: string, noteId: string, details: string) =>
+  apiClient.put<LeadNote>(`/leads/${leadId}/notes/${noteId}`, { details });

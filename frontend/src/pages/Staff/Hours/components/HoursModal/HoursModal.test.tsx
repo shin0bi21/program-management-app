@@ -96,7 +96,7 @@ describe('HoursModal', () => {
     expect(screen.queryByRole('menuitemradio', { name: 'Completed report' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Prepare workshop' }));
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(screen.queryByRole('checkbox', { name: 'Mark task complete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Task completed' })).not.toBeInTheDocument();
   });
 
   it('puts session selection before its date and hours', () => {
@@ -181,7 +181,7 @@ describe('HoursModal', () => {
     expect(document.getElementById('hours-assigned-task')?.closest('.hours-form__source')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
-      'Staff member', 'Task *', 'Mark task complete', 'Date', 'Hours', 'Note',
+      'Staff member', 'Task *', 'Task completed', 'Date', 'Hours', 'Note',
     ]);
   });
 
