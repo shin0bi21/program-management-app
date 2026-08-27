@@ -1,4 +1,4 @@
-// Scope: verifies account-table query activation, filter serialization, and cursor-page accumulation.
+// Owns account-table query activation, filter serialization, and cursor-page accumulation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

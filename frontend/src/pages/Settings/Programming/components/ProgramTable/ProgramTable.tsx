@@ -7,6 +7,7 @@ interface ProgramTableProps {
   programs: Program[];
   loading: boolean;
   error?: string;
+  onRetry?: () => void;
   selectedKey: string | null;
   onRowSelect: (program: Program) => void;
 }
@@ -17,7 +18,7 @@ export default function ProgramTable(props: ProgramTableProps) {
     columns={props.columns}
     data={props.programs}
     loading={props.loading}
-    error={props.error}
+    unavailable={props.error ? { title: 'Programs unavailable', onRetry: props.onRetry } : undefined}
     keyExtractor={program => program.id}
     selectedKey={props.selectedKey}
     onRowSelect={props.onRowSelect}

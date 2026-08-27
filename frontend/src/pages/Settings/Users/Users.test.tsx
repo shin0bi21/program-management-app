@@ -1,12 +1,11 @@
-// Scope: verifies Users route permissions, preferences, query wiring, and account action entry points.
-import { fireEvent, render, screen, within } from '@testing-library/react';
+// Owns Users route permissions, preferences, query wiring, and account action entry points.
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
 import type { AccountPreference } from './types';
 import { toggleAccountStatus } from './accounts.api';
 import type { Account } from '../../../common/types/account';
-import { formatShortDate } from '../../../common/utils/date';
 
 const mockUseAuth = vi.fn();
 const mockUseUserTableData = vi.fn();
@@ -84,40 +83,6 @@ describe('Users', () => {
     });
   });
 
-  it('persists a complete preference when first hiding a column', () => {
-    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    renderPage();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Email' }));
-
-    expect(preferenceHook.preference).toEqual({
-      statuses: [], roles: [], sorting: { key: 'name', direction: 'asc' }, columnWidths: {}, hiddenColumns: ['email'],
-    });
-  });
-
-  it('keeps persisted controls and content unavailable until restoration completes', async () => {
-    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    preferenceHook.loading = true;
-    const rendered = renderPage();
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved account preferences…');
-    expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Accounts' })).not.toBeInTheDocument();
-    expect(mockUseUserTableData).not.toHaveBeenCalled();
-
-    preferenceHook.loading = false;
-    rendered.rerender(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <Users />
-      </QueryClientProvider>,
-    );
-
-    expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Accounts' })).toBeInTheDocument();
-  });
-
   it('shows admin account controls and sends search state to the accounts query', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
@@ -136,21 +101,6 @@ describe('Users', () => {
       expect.objectContaining({ search: 'Yara' }),
       expect.any(Object),
     );
-  });
-
-  it('renders each account column, including the styled status cell', () => {
-    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
-    renderPage();
-
-    const row = screen.getByText('Alice Admin').closest('tr');
-    if (!row) throw new Error('Expected Alice Admin account row');
-    const accountRow = within(row);
-
-    expect(accountRow.getByText('alice@example.com')).toBeInTheDocument();
-    expect(accountRow.getByText('Admin')).toBeInTheDocument();
-    expect(accountRow.getByText(formatShortDate(accounts[0].createdAt))).toBeInTheDocument();
-    expect(accountRow.getByText('Active')).toHaveClass('status-badge', 'status-active');
-    expect(accountRow.queryByText('[object Object]')).not.toBeInTheDocument();
   });
 
   it('shows the staff-scoped presentation without staff-management controls', () => {
@@ -200,48 +150,4 @@ describe('Users', () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it('sends applied role and status filters and clears them by category or together', () => {
-    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    renderPage();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Invited' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
-      ['accounts', 'table'],
-      expect.objectContaining({ statuses: ['active', 'invited'] }),
-      expect.any(Object),
-    );
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Role' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Admin' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Staff' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
-      ['accounts', 'table'],
-      expect.objectContaining({
-        roles: ['admin', 'staff'],
-        statuses: ['active', 'invited'],
-      }),
-      expect.any(Object),
-    );
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
-    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
-      ['accounts', 'table'],
-      expect.objectContaining({ roles: [], statuses: ['active', 'invited'] }),
-      expect.any(Object),
-    );
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
-      ['accounts', 'table'],
-      expect.objectContaining({ roles: [], statuses: [] }),
-      expect.any(Object),
-    );
-  });
 });

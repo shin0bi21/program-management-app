@@ -1,4 +1,4 @@
-// Scope: verifies program table rendering and selection wiring.
+// Owns program table rendering and selection wiring.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { vi, it, expect } from 'vitest';
 import ProgramTable from './ProgramTable';

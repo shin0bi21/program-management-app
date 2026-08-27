@@ -1,4 +1,4 @@
-// Scope: verifies Settings Programming route composition, selection, modal entry, and deletion wiring.
+// Owns Settings Programming route composition, selection, modal entry, and deletion wiring.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';

@@ -1,4 +1,4 @@
-// Scope: verifies account-form initialization, payloads, immediate reconciliation, and failure recovery.
+// Owns account-form initialization, payloads, immediate reconciliation, and failure recovery.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
