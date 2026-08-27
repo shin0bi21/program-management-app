@@ -1,8 +1,8 @@
-# Frontend shared ownership
+# Frontend ownership
 
 Choose the narrowest owner that can state the complete behavior. File placement follows dependency direction and rendered ownership, not file length.
 
-## Ownership boundaries
+## Choose the narrowest owner
 
 | Owner | Responsibility |
 |---|---|
@@ -15,28 +15,20 @@ Choose the narrowest owner that can state the complete behavior. File placement 
 
 Never import a page from common code. Pages and their nested components may import another page's route-owned code directly when that page remains the clearest owner. Promote a contract only when ownership itself becomes shared; a second consumer alone is not enough.
 
-Every frontend feature and component follows the colocated [frontend feature breakdown](../README.md#feature-breakdown). This guide decides where that owner belongs and when behavior should move to a nested or shared owner.
+Every frontend feature and component follows the colocated [owner structure](../README.md#organize-an-owner). This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
-## Component, hook, API, and utility pattern
+## Assign each file one location
 
-- A component owns rendering, accessibility, and interaction presentation.
-- A hook owns coherent stateful policy, effects, subscriptions, observers, asynchronous transitions, or coordinated callbacks.
 - An API adapter owns endpoint paths and request/response typing through the centralized HTTP client.
 - A utility owns pure transforms, constants, date arithmetic, or external-library adaptation.
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
-- Give a styled component one root class and use short semantic descendant classes scoped through it, such as `.timeline-calendar > .header` and `.timeline-calendar .body .row`. Do not repeat the root name on every descendant. A surface rendered through a portal needs its own root class because it is outside the component DOM subtree.
 
-```tsx
-function FeatureName(props: FeatureNameProps) {
-  const workflow = useFeatureName(props.input);
-  return <FeaturePresentation value={workflow.value} onChange={workflow.change} />;
-}
-```
+The [components guide](../components/README.md) owns component and hook extraction,
+rendering contracts, styling boundaries and component-level testing. This guide owns only
+where the resulting owner belongs.
 
-Extract when a region or behavior has a meaningful name and independent contract. Do not create ceremonial one-line components/hooks, hide a short cohesive lifecycle, or split solely to reduce line count.
-
-## Boundary validation
+## Validate uncertain inputs
 
 Validate and normalize where uncertainty enters:
 
@@ -48,7 +40,7 @@ Validate and normalize where uncertainty enters:
 
 Inside a typed owner, do not manufacture required values with placeholders, cast arbitrary strings into finite unions, or preserve compatibility branches for impossible states. Correct the boundary instead.
 
-## Tests and automation
+## Test at the owning boundary
 
 Colocate each component, hook, API adapter, and page test with its narrowest public owner. Test behavior where it is owned and add consumer wiring coverage only when correctness crosses owners.
 
