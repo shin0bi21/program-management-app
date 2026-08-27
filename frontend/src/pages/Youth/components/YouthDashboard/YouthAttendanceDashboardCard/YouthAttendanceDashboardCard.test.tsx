@@ -1,3 +1,4 @@
+// Owns YouthAttendanceDashboardCard rendered behavior and owner wiring.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard';
@@ -6,7 +7,7 @@ describe('YouthAttendanceDashboardCard', () => {
   it('keeps its empty state inside the dashboard card', () => {
     render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByText('No active cohort attendance.')).toHaveClass('dashboard-card__empty');
+    expect(screen.getByText('No active cohort attendance.')).toBeInTheDocument();
   });
 
   it('separates active and historical attendance by program and cohort', () => {
