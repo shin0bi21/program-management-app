@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getProgramCycles } from '../../../../common/features/programming/api/cohorts.api';
-import { getHoursReferenceData } from '../hours.api';
+import { getProgramCycles } from '../../../../../common/features/programming/api/cohorts.api';
+import { getHoursReferenceData } from '../../hours.api';
 
 export default function useHoursData(
   referenceDataQueryKey: readonly unknown[],

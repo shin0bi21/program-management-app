@@ -1,4 +1,4 @@
-// Scope: verifies Hours overview query inputs and selected-context state transitions.
+// Owns Hours overview query inputs and selected-context state transitions.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -51,7 +51,11 @@ describe('useHoursOverviewData', () => {
 
     vi.mocked(getHoursDashboardData).mockRejectedValueOnce(new Error('Overview offline'));
     rerender({ staffId: 'staff-1', cycleId: 'cycle-2' });
-    await waitFor(() => expect(result.current).toEqual({ status: 'error', message: 'Overview offline' }));
+    await waitFor(() => expect(result.current).toEqual({
+      status: 'error',
+      message: 'Overview offline',
+      retry: expect.any(Function),
+    }));
   });
 
   it('does not label old staff data as the newly selected staff', async () => {

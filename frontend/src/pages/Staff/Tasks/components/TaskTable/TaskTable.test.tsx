@@ -1,4 +1,4 @@
-// Scope: verifies task-table query wiring, table state, empty messaging, and pagination ownership.
+// Owns task-table query wiring, table state, empty messaging, and pagination ownership.
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,6 +7,7 @@ import TaskTable from './TaskTable';
 const tableState = vi.hoisted(() => ({
   rows: [], loading: false, refreshing: false, error: null as string | null,
   hasNextPage: false, loadingNextPage: false, loadNextPage: vi.fn(),
+  retry: vi.fn(),
 }));
 const useTaskTableData = vi.hoisted(() => vi.fn(() => tableState));
 const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -25,6 +26,7 @@ const baseProps = {
   columns: [], hiddenColumnKeys: [], staffIds: [], programIds: [], categories: [], statuses: [], search: '',
   sorting: { key: 'dueDate' as const, direction: 'asc' as const }, columnWidths: {}, selectedTaskId: null,
   onTaskSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
+  onErrorChange: vi.fn(),
 };
 
 describe('TaskTable', () => {
@@ -48,7 +50,6 @@ describe('TaskTable', () => {
       data: [],
       loading: false,
       refreshing: false,
-      error: undefined,
       emptyMessage: 'No tasks match these filters',
       selectedKey: null,
       onRowSelect: baseProps.onTaskSelect,
@@ -71,7 +72,12 @@ describe('TaskTable', () => {
     tableState.error = 'Unable to load tasks.';
     rerender(<TaskTable {...baseProps} search="missing" />);
     expect(tableProps.current).toEqual(expect.objectContaining({
-      emptyMessage: 'No tasks match these filters', error: 'Unable to load tasks.',
+      emptyMessage: 'No tasks match these filters',
+      unavailable: { title: 'Tasks unavailable', onRetry: tableState.retry },
     }));
+    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Unable to load tasks.',
+      action: { label: 'Retry', onClick: tableState.retry },
+    });
   });
 });

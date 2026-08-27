@@ -9,7 +9,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 export type HoursOverviewState =
   | { status: 'unavailable' }
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; retry: () => void }
   | { status: 'ready'; data: HoursDashboardData };
 
 export default function useHoursOverviewData(
@@ -17,7 +17,7 @@ export default function useHoursOverviewData(
   staffId: string | null,
   cycleId: string | null,
 ): HoursOverviewState {
-  const { data, error, isLoading } = useQuery({
+  const { data, error, isLoading, refetch } = useQuery({
     queryKey: [...queryKey, 'dashboard', staffId, cycleId],
     queryFn: ({ signal }) => getHoursDashboardData(staffId!, cycleId!, { signal }),
     enabled: Boolean(staffId && cycleId),
@@ -28,6 +28,7 @@ export default function useHoursOverviewData(
   if (error) return {
     status: 'error',
     message: getErrorMessage(error, 'Could not load the hours overview.'),
+    retry: refetch,
   };
   return data ? { status: 'ready', data } : { status: 'loading' };
 }

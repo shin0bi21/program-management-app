@@ -1,4 +1,4 @@
-// Scope: verifies save/delete reconciliation across calendar, table, overview, and task caches.
+// Owns save/delete reconciliation across calendar, table, overview, and task caches.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,15 +6,15 @@ import {
   deleteHours,
   setHours,
   updateHoursPlacement,
-} from '../hours.api';
-import { makeHoursItem } from '../../../../tests/factories/hours';
+} from '../../hours.api';
+import { makeHoursItem } from '../../../../../tests/factories/hours';
 import {
   createQueryClientWrapper,
   createTestQueryClient,
-} from '../../../../tests/queryClientTestUtils';
+} from '../../../../../tests/queryClientTestUtils';
 import useHoursActions from './useHoursActions';
 
-vi.mock('../hours.api', () => ({
+vi.mock('../../hours.api', () => ({
   deleteHours: vi.fn(),
   setHours: vi.fn(),
   updateHoursPlacement: vi.fn(),

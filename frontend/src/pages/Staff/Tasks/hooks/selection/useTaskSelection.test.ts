@@ -1,8 +1,8 @@
-// Scope: verifies cross-view task/resource selection and action synchronization.
+// Owns cross-view task/resource selection and action synchronization.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { makeTask } from '../../../../tests/factories/task';
+import { makeTask } from '../../../../../tests/factories/task';
 import useTaskSelection from './useTaskSelection';
 
 const resources = [

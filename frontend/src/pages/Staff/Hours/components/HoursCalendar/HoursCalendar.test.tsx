@@ -1,4 +1,4 @@
-// Scope: verifies Hours calendar data, capabilities, and domain action wiring.
+// Owns Hours calendar data, capabilities, and domain action wiring.
 import type { MutableRefObject } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +78,7 @@ function renderCalendar({
   onDelete = vi.fn(),
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
+  onErrorChange = vi.fn(),
 }: {
   data?: RowPeriodData<HoursItem>;
   resources?: StaffResource[];
@@ -88,6 +89,7 @@ function renderCalendar({
   onDelete?: ReturnType<typeof vi.fn>;
   onStaffSelect?: ReturnType<typeof vi.fn>;
   onMove?: ReturnType<typeof vi.fn>;
+  onErrorChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
   const calendarCacheRef: MutableRefObject<HoursCalendarCache> = {
@@ -103,7 +105,6 @@ function renderCalendar({
         cycleId="cycle-1"
         canWrite={canWrite}
         isEntryPending={() => false}
-        moveError={null}
         selectedStaffId="staff-1"
         calendarCacheRef={calendarCacheRef}
         onStaffSelect={onStaffSelect}
@@ -111,6 +112,7 @@ function renderCalendar({
         onDelete={onDelete}
         onAdd={onAdd}
         onMove={onMove}
+        onErrorChange={onErrorChange}
       />
   );
   return {
@@ -121,6 +123,7 @@ function renderCalendar({
     onDelete,
     onStaffSelect,
     onMove,
+    onErrorChange,
   };
 }
 
@@ -242,13 +245,17 @@ describe('HoursCalendar', () => {
     vi.mocked(getHoursCalendarData)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({});
-    renderCalendar();
+    const { onErrorChange } = renderCalendar();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    expect(await screen.findByRole('alert')).toHaveTextContent('offline');
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      message: 'offline',
+      action: expect.objectContaining({ label: 'Retry' }),
+    })));
+    const reportedError = onErrorChange.mock.calls[onErrorChange.mock.calls.length - 1]?.[0];
+    act(() => reportedError.action.onClick());
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(null));
   });
 });

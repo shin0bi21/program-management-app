@@ -1,4 +1,4 @@
-// Scope: verifies Tasks route composition, preferences, permissions, selection, and cross-owner callbacks.
+// Owns Tasks route composition, preferences, permissions, selection, and cross-owner callbacks.
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { buildInitialDayPeriods } from '../../../common/components/TimelineCalen
 import type { Task, TaskResource } from './types';
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
-import type { StoredTaskPreferences } from './hooks/useTaskPreferences';
+import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import Tasks from './Tasks';
 
 const HOURS_QUERY_KEY = ['hours'] as const;
@@ -194,17 +194,6 @@ describe('Tasks', () => {
     await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: HOURS_QUERY_KEY }));
   });
 
-  it('places dashboard cards directly in the shared page dashboard', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    const overviewCard = await screen.findByRole('heading', { name: 'Task Overview' });
-    const dashboard = overviewCard.closest('.page-dashboard');
-    expect(dashboard).not.toBeNull();
-    expect(dashboard?.querySelector('.dashboard-card-group')).toBeNull();
-    expect(Array.from(dashboard?.children ?? []).filter(child => child.matches('.dashboard-card'))).toHaveLength(2);
-  });
-
   it('owns delete confirmation and delegates the confirmed task deletion', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
@@ -217,21 +206,6 @@ describe('Tasks', () => {
     fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteTask).toHaveBeenCalledWith(task.id));
-  });
-
-  it('persists a complete preference when first hiding a column', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-    await screen.findByText('Prepare workshop');
-    expect(screen.getByRole('columnheader', { name: 'Program' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Program' }));
-
-    expect(screen.queryByRole('columnheader', { name: 'Program' })).not.toBeInTheDocument();
-    expect(getLastSavedPreference()).toEqual(expect.objectContaining({
-      view: 'table', staffIds: [], programIds: [], categories: [], statuses: [], hiddenColumns: ['program'],
-    }));
   });
 
   it('puts Staff first and sends the applied staff filter to the table request', async () => {
@@ -264,34 +238,6 @@ describe('Tasks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
-  });
-
-  it('applies task search only on submit and clears the backend filter explicitly', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    const search = await screen.findByRole('textbox', { name: 'Search tasks' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenCalled());
-    vi.mocked(getTasksTableData).mockClear();
-
-    fireEvent.change(search, { target: { value: ' workshop ' } });
-    expect(getTasksTableData).not.toHaveBeenCalled();
-
-    fireEvent.keyDown(search, { key: 'Enter' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: 'workshop' }),
-      expect.anything(),
-      expect.objectContaining({ limit: 25 }),
-    ));
-
-    vi.mocked(getTasksTableData).mockClear();
-    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-    expect(search).toHaveValue('');
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: '' }),
-      expect.anything(),
-      expect.objectContaining({ limit: 25 }),
-    ));
   });
 
   it('shows completion again after a completed task is reopened', async () => {

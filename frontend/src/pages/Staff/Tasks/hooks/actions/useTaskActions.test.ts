@@ -1,18 +1,18 @@
-// Scope: verifies task placement, status, deletion, synchronization, errors, and hours invalidation.
+// Owns task placement, status, deletion, synchronization, errors, and hours invalidation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteTask, updateTaskPlacement, updateTaskState } from '../tasks.api';
-import type { Task } from '../types';
-import { setHours } from '../../Hours/hours.api';
-import { makeTask } from '../../../../tests/factories/task';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
+import { deleteTask, updateTaskPlacement, updateTaskState } from '../../tasks.api';
+import type { Task } from '../../types';
+import { setHours } from '../../../Hours/hours.api';
+import { makeTask } from '../../../../../tests/factories/task';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import useTaskActions from './useTaskActions';
 
-vi.mock('../tasks.api', () => ({
+vi.mock('../../tasks.api', () => ({
   deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(),
 }));
-vi.mock('../../Hours/hours.api', () => ({ setHours: vi.fn() }));
+vi.mock('../../../Hours/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
 

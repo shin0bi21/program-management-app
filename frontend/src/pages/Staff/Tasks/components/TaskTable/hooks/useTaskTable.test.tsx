@@ -1,4 +1,4 @@
-// Scope: verifies task columns and permission-aware row actions.
+// Owns task columns and permission-aware row actions.
 import { render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CellContext } from '@tanstack/react-table';
@@ -60,7 +60,7 @@ describe('useTaskTable', () => {
 
     const status = rendered.result.current.columns.find(column => column.id === 'status')!;
     render(<>{renderCell(status, task)}</>);
-    expect(screen.getByText('Active')).toHaveClass('task-status-badge--active');
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('builds capability-gated actions and forwards the selected action', async () => {

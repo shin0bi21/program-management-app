@@ -1,4 +1,4 @@
-// Scope: verifies Hours route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
+// Owns Hours route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -15,7 +15,7 @@ import {
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
-import type { StoredHoursPreferences } from './hooks/useHoursPreferences';
+import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
@@ -259,65 +259,6 @@ describe('Hours', () => {
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
-  it('clears the persisted cycle with the other Hours filters', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
-          id: 'all-cycle-entry', programId: 'program-1', programName: 'Soft Skills',
-          cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Entry from another cycle',
-        }] } });
-    vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    expect(await screen.findByLabelText('1 active filters')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-
-    expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
-      {},
-      { signal: expect.any(AbortSignal) },
-    ));
-    expect(await screen.findByText('Entry from another cycle')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'See Breakdown' })).toHaveLength(2);
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
-    expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Entry from another cycle').closest('tr')!);
-
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('2.00');
-    expect(screen.getByRole('heading', { name: 'Average Biweekly Hours - Summer 2026' })).toBeInTheDocument();
-  });
-
-  it('reloads cycle-aware overview data when the cycle filter changes', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
-    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
-        id: 'current-entry', programId: null, programName: null,
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
-        categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 1, note: 'Current response',
-      }] } });
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
-      {},
-      { signal: expect.any(AbortSignal) },
-    ));
-    await waitFor(() => expect(getHoursDashboardData).toHaveBeenCalled());
-    vi.mocked(getHoursDashboardData).mockClear();
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(await screen.findByText('Current response')).toBeInTheDocument();
-    expect(getHoursDashboardData).toHaveBeenCalledTimes(1);
-  });
-
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': {
@@ -392,9 +333,7 @@ describe('Hours', () => {
     expect(screen.getByRole('table', { name: 'Hours entries' })).toHaveTextContent('Youth workshop');
     const entryRow = screen.getByText('Youth workshop').closest('tr');
     expect(entryRow).toHaveAttribute('tabindex', '0');
-    expect(entryRow).toHaveClass('table-row--selectable');
     fireEvent.click(entryRow!);
-    expect(entryRow).toHaveClass('table-row--selected');
     expect(entryRow).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });

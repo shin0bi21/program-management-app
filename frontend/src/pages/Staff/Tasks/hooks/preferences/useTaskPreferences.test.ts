@@ -1,8 +1,8 @@
-// Scope: verifies canonical task preference restoration, persistence, search, filters, and table settings.
+// Owns canonical task preference restoration, persistence, search, filters, and table settings.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { TaskReferenceData } from '../types';
+import type { TaskReferenceData } from '../../types';
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 const preferenceHook = vi.hoisted<{
@@ -25,7 +25,7 @@ type PreferenceUpdate = StoredTaskPreferences | (
   (current: StoredTaskPreferences | null) => StoredTaskPreferences
 );
 
-vi.mock('../../../../common/features/preferences/hooks/useUserPreference', async () => {
+vi.mock('../../../../../common/features/preferences/hooks/useUserPreference', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
 
   const useMockUserPreference = (key: string) => {
@@ -49,6 +49,8 @@ vi.mock('../../../../common/features/preferences/hooks/useUserPreference', async
       preference,
       loading: preferenceHook.loading,
       error: preferenceHook.error,
+      loadError: preferenceHook.error,
+      saveError: null,
       initializePreference,
       save,
     };
@@ -131,6 +133,31 @@ describe('useTaskPreferences', () => {
       view: 'calendar', search: 'workshop', programIds: ['program-1'],
     }));
     expect(preferenceHook.key).toHaveBeenCalledWith('task-preferences');
+  });
+
+  it('uses defaults for the page visit when loading saved preferences fails', async () => {
+    preferenceHook.preference = {
+      view: 'table',
+      search: 'saved search',
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+    };
+    preferenceHook.error = 'Could not load saved preferences';
+
+    const { result } = renderHook(() => usePreferences());
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toMatchObject({
+      error: 'Could not load saved preferences',
+      view: 'calendar',
+      search: { value: '', appliedValue: '' },
+      filters: { staffIds: [], programIds: [], categories: [], statuses: [] },
+      table: {
+        sorting: { key: 'startDate', direction: 'asc' },
+        columnWidths: {},
+        hiddenColumns: [],
+      },
+    });
   });
 
   it('composes rapid updates through one optimistic preference source', async () => {

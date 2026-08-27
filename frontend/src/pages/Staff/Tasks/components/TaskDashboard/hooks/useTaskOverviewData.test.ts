@@ -1,4 +1,4 @@
-// Scope: verifies selected-resource overview loading, query ownership, and errors.
+// Owns selected-resource overview loading, query ownership, and errors.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,4 +1,4 @@
-// Scope: verifies buffered task loading, resource filtering, lifecycle actions, range changes, and read-only behavior.
+// Owns buffered task loading, resource filtering, lifecycle actions, range changes, and read-only behavior.
 import type { MutableRefObject } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,6 +35,7 @@ function renderCalendar({
   staffIds = [] as string[],
   canWrite = true,
   selectedTaskId = null as string | null,
+  onErrorChange = vi.fn(),
 } = {}) {
   const actions: TaskCalendarActions = {
     isTaskPending: vi.fn(() => false),
@@ -69,8 +70,9 @@ function renderCalendar({
     actions={actions}
     calendarCacheRef={calendarCacheRef}
     {...callbacks}
+    onErrorChange={onErrorChange}
   />);
-  return { actions, calendarCacheRef, ...callbacks };
+  return { actions, calendarCacheRef, onErrorChange, ...callbacks };
 }
 
 describe('TaskCalendar', () => {
@@ -230,14 +232,18 @@ describe('TaskCalendar', () => {
 
   it('removes mutation callbacks in read-only mode and reports range-load errors', async () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
-    renderCalendar({ canWrite: false });
+    const { onErrorChange } = renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     expect(calendarState.props?.onItemResize).toBeUndefined();
     expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Task request failed');
-    expect(screen.getByLabelText('Task calendar')).toBeInTheDocument();
+    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      message: 'Task request failed',
+      action: expect.objectContaining({ label: 'Retry' }),
+    })));
+    expect(screen.getByText('Task calendar unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import { getTasksCalendarData } from '../../tasks.api';
@@ -10,6 +11,7 @@ import {
   canCancelTask, canCompleteTask, canDeleteTask, canEditTask, canReopenTask,
 } from '../../utils/taskCapabilities';
 import TaskItem from './TaskItem/TaskItem';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 const getTaskId = (task: Task) => task.id;
@@ -48,11 +50,12 @@ interface TaskCalendarProps {
   onResourceSelect: (resourceId: string) => void;
   onAddTask: (initialValues: AddTaskModalInitialValues) => void;
   onEditTask: (task: Task) => void;
+  onErrorChange?: PageErrorChangeHandler;
 }
 
 export default function TaskCalendar({
   resources, filters, canWrite, selectedResourceId, selectedTaskId, actions, calendarCacheRef,
-  onTaskSelect, onResourceSelect, onAddTask, onEditTask,
+  onTaskSelect, onResourceSelect, onAddTask, onEditTask, onErrorChange,
 }: TaskCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
     const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key });
@@ -70,6 +73,8 @@ export default function TaskCalendar({
     errorMessage: 'Unable to load task calendar data',
   });
   const { upsertItem, removeItem } = calendar;
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
+  usePageErrorReporter(onErrorChange, calendar.error, retryAction);
   useEffect(() => {
     calendarCacheRef.current = {
       upsert: task => upsertItem(task.assignee.id, task.startDate, task),
@@ -81,8 +86,9 @@ export default function TaskCalendar({
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
     : resources, [filters.staffIds, resources]);
 
+  if (calendar.error) return <UnavailableState title="Task calendar unavailable" onRetry={calendar.retry} />;
+
   return <>
-    {calendar.error && <p className="form-error" role="alert">{calendar.error}</p>}
     <TimelineCalendar
       rows={visibleResources}
       items={calendar.items}

@@ -1,4 +1,4 @@
-// Scope: verifies resource task overview groups and report navigation.
+// Owns resource task overview groups and report navigation.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../types';

@@ -10,6 +10,7 @@ export default function useTaskOverviewData(
     data: tasks = [],
     error,
     isLoading,
+    refetch,
   } = useQuery({
     queryKey: [...taskQueryKey, 'overview', resourceId],
     queryFn: ({ signal }) => getTaskDashboardData(resourceId, { signal }),
@@ -21,5 +22,6 @@ export default function useTaskOverviewData(
     error: error
       ? 'Unable to load task overview.'
       : null,
+    retry: refetch,
   };
 }

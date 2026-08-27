@@ -1,4 +1,4 @@
-// Scope: verifies task-table control serialization and cursor-page accumulation.
+// Owns task-table control serialization and cursor-page accumulation.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

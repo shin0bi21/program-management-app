@@ -6,6 +6,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
+import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -17,10 +18,10 @@ import TaskModal from './components/TaskModal/TaskModal';
 
 import { useAuth } from '../../../auth/authContext';
 import useTaskTable from './components/TaskTable/hooks/useTaskTable';
-import useTaskActions from './hooks/useTaskActions';
-import useTaskData from './hooks/useTaskData';
-import useTaskPreferences from './hooks/useTaskPreferences';
-import useTaskSelection from './hooks/useTaskSelection';
+import useTaskActions from './hooks/actions/useTaskActions';
+import useTaskData from './hooks/data/useTaskData';
+import useTaskPreferences from './hooks/preferences/useTaskPreferences';
+import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { getTaskDashboardData } from './tasks.api';
@@ -35,6 +36,8 @@ const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 export default function Tasks() {
+  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
 
   // Permissions.
   const { permissions } = useAuth();
@@ -102,11 +105,6 @@ export default function Tasks() {
   });
 
   // View configuration.
-  const taskError = getTaskError(
-    actions.actionError,
-    preferences.error,
-    pageData.referenceDataError,
-  );
   const loggableTask = getLoggableTask(selection.selectedTask, canWrite);
 
   const taskTable = (
@@ -126,6 +124,7 @@ export default function Tasks() {
       onTaskSelect={selection.selectTask}
       onSortingChange={preferences.table.setSorting}
       onColumnWidthsChange={preferences.table.setColumnWidths}
+      onErrorChange={setViewError}
     />
   );
 
@@ -162,6 +161,7 @@ export default function Tasks() {
       onResourceSelect={selection.selectResource}
       onAddTask={openAddTaskModal}
       onEditTask={openEditTaskModal}
+      onErrorChange={setViewError}
     />
   );
 
@@ -218,7 +218,16 @@ export default function Tasks() {
         /> : undefined}
       />
 
-      {taskError && <p className="form-error" role="alert">{taskError}</p>}
+      <PageErrorOverlay errors={[
+        actions.actionError,
+        preferences.error,
+        pageData.referenceDataError ? {
+          message: 'Unable to load task options.',
+          details: 'Staff, programs, and task categories could not be loaded.',
+        } : null,
+        viewError,
+        dashboardError,
+      ]} />
       {!preferences.ready ? <p role="status">Loading saved task preferences…</p> : <PageBody
         ariaLabel="Task overview and assignments"
         dashboard={selection.selectedResource ? <TaskDashboard
@@ -228,6 +237,7 @@ export default function Tasks() {
           today={today}
           selectedTask={selection.selectedTask}
           onLogHours={loggableTask ? openHoursModal : undefined}
+          onErrorChange={setDashboardError}
         /> : null}
         {...viewContent}
       />}
@@ -261,17 +271,6 @@ export default function Tasks() {
       onClose={closeConfirmation}
     />
   </>;
-}
-
-// Page helpers.
-function getTaskError(
-  actionError: string,
-  preferenceError: string | null,
-  referenceDataError: unknown,
-) {
-  return actionError
-    || preferenceError
-    || (referenceDataError ? 'Unable to load task reference data.' : '');
 }
 
 function getLoggableTask(task: Task | null, canWrite: boolean) {

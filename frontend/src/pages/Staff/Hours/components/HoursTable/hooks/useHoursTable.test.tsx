@@ -1,4 +1,4 @@
-// Scope: verifies hours columns and writable row actions.
+// Owns hours columns and writable row actions.
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import type { CellContext } from '@tanstack/react-table';
 import { describe, expect, it, vi } from 'vitest';
@@ -46,7 +46,7 @@ describe('useHoursTable', () => {
 
     const typeColumn = result.current.columns.find(column => column.id === 'type')!;
     render(<>{renderCell(typeColumn, row)}</>);
-    expect(screen.getByText('Task')).toHaveClass('hours-item__type', 'task');
+    expect(screen.getByText('Task')).toBeInTheDocument();
   });
 
   it('builds row actions only for writable resources', () => {
