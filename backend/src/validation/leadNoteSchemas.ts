@@ -8,4 +8,9 @@ const noteBody = z.object({
 
 export const leadNotesSchema = z.object({ params: leadParams });
 export const createLeadNoteSchema = z.object({ params: leadParams, body: noteBody });
+export const updateLeadNoteSchema = z.object({
+  params: leadParams.extend({ noteId: z.string().uuid('Invalid note ID') }),
+  body: noteBody.pick({ details: true }),
+});
 export type SetLeadNoteInput = z.infer<typeof noteBody>;
+export type UpdateLeadNoteInput = z.infer<typeof updateLeadNoteSchema>['body'];

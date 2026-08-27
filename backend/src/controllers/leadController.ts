@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createLead, deleteLead, getLeads, signUpLead, updateLead } from '../services/outreach/leads/leadService';
-import { createLeadStatusNote, getLeadNotes } from '../services/outreach/leads/leadNoteService';
+import { createLeadStatusNote, getLeadNotes, updateLeadNoteDetails } from '../services/outreach/leads/leadNoteService';
 import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput } from '../validation/leadSchemas';
-import type { SetLeadNoteInput } from '../validation/leadNoteSchemas';
+import type { SetLeadNoteInput, UpdateLeadNoteInput } from '../validation/leadNoteSchemas';
 
 export const handleGetLeads = async (req: Request, res: Response) => {
   const filters = req.query as unknown as LeadQuery;
@@ -37,4 +37,14 @@ export const handleGetLeadNotes = async (req: Request, res: Response) => {
 export const handleSetLeadNote = async (req: Request, res: Response) => {
   const actorId = (req as AuthRequest).user!.userId;
   res.status(201).json(await createLeadStatusNote(req.params.id, req.body as SetLeadNoteInput, actorId));
+};
+
+export const handleUpdateLeadNote = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.json(await updateLeadNoteDetails(
+    req.params.id,
+    req.params.noteId,
+    req.body as UpdateLeadNoteInput,
+    actorId,
+  ));
 };

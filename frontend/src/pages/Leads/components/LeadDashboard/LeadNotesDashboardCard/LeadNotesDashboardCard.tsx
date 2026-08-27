@@ -10,6 +10,7 @@ import useLeadNotes from './useLeadNotes';
 import './LeadNotesDashboardCard.css';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
+import LeadNoteEditModal from './LeadNoteEditModal';
 
 const statusLabel = (status: Lead['status'] | null) => status === null
   ? 'Historical'
@@ -52,6 +53,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onAddStatusUpda
               categoryBadge={<NoteCategoryBadge category={badgeCategory(note.category)} label={statusLabel(note.category)} />}
               date={note.createdAt}
               onView={() => notes.openDetails(note)}
+              onEdit={canWrite ? () => notes.openEditor(note) : undefined}
             />
           ))}
         </div>
@@ -72,5 +74,10 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onAddStatusUpda
         details={notes.selectedNote.details}
       />}
     </Modal>
+    <LeadNoteEditModal
+      note={notes.editorTarget}
+      onClose={notes.closeEditor}
+      onSaved={notes.handleSaved}
+    />
   </>;
 }
