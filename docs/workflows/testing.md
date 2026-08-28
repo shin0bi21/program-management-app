@@ -46,7 +46,8 @@ Place each behavior at its narrowest authoritative owner. A broader consumer tes
 | Stateful hook | Initialization, meaningful input changes, loading/error state, reset or reopen behavior, cache effects, callback ordering, and cleanup when the hook owns those behaviors. Test stale-response protection only when overlapping requests can reach the same state. |
 | Shared component | Public rendering and accessibility contract, supported states, emitted events, keyboard behavior available in jsdom, and controlled-prop wiring. Test generic behavior once here. |
 | Form or modal workflow | Applicable create/edit initialization, required and dependent fields, direct form submission, submit-lock and disabled-state wiring, success, failure recovery, reset/reopen behavior, and callback/API payload ordering. Shared Modal and submit-lock mechanics stay at their shared owners. |
-| List, table, or calendar view | Initial loading, background refresh, error, empty and filtered-empty states, pagination/range loading, sorting/filter wiring, selection, permission-aware actions, and exact domain callback payloads. Shared mechanics remain covered by their shared owner. |
+| Page-owned table | Domain query inputs and rows; wiring for initial loading, background refresh, unavailable/retry, empty and filtered-empty copy, pagination state, sorting, selection, permissions, and exact callbacks. Shared `Table` rendering and `useInfiniteListQuery` mechanics are tested once by those shared owners. |
+| Page-owned calendar | Domain range inputs and items; wiring for initial range loading, unavailable/retry, range changes, selection, permissions, capabilities, and exact callbacks. Do not invent a refresh state when the calendar contract does not expose one. Shared buffering, rendering, and interaction mechanics are tested once by their shared owners. |
 | Route page | Route composition, permission-dependent controls, preference restoration and first save, dialog entry paths, view switching, selected-record context, and callback-to-adapter wiring that crosses child owners. Do not repeat internal hook or shared-component tests. |
 | Playwright browser scenario | Real layout, scrolling, sticky positioning, focus geometry and return, portals, observers, pointer capture, drag/resize, virtualization, clipping, cancellation, and responsive behavior that jsdom cannot prove. |
 
@@ -60,6 +61,58 @@ For every applicable owner, cover the meaningful state and event lifecycle rathe
 6. accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
 
 Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Shared components and hooks own generic mechanics once; consumers prove only their domain values and cross-owner wiring. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
+
+### Page test scaffold sections
+
+Use these section names when planning or generating a non-trivial page test suite. Create only the owners the page needs, and keep each behavior in one authoritative section.
+
+#### API adapter
+
+- Prove the exact method, path, domain query or payload serialization, cancellation forwarding, response shaping, and boundary normalization.
+- Do not repeat React Query, table, calendar, or route behavior here.
+
+#### Page-wide data hook
+
+- Prove domain query composition, derived collections, and any loading or error decisions added by the hook.
+- Do not retest raw React Query state passthrough unless the hook transforms or coordinates it.
+
+#### Preferences, selection, and actions
+
+- Preferences prove restoration, normalization, complete saves, recovery, and meaningful dependency changes.
+- Selection proves domain reconciliation when resources or records change.
+- Actions prove exact commands, pending locks, success reconciliation, failure recovery, and cross-domain invalidation.
+
+#### Table data hook
+
+- Prove the complete domain query key and inputs, sorting, page size, cursor forwarding, cancellation, and domain row shaping.
+- `useInfiniteListQuery` owns generic initial loading, background refresh, cursor accumulation, retry, cache, and stale-response mechanics.
+
+#### Table component
+
+- Prove that domain rows and the hook's loading, refreshing, unavailable/retry, and pagination values reach the shared `Table` contract.
+- Prove domain-specific empty versus filtered-empty copy, sorting, selection, permissions, columns, and action callbacks.
+- Use representative non-default states to prove wiring; do not repeat how the shared `Table` renders those states.
+
+#### Calendar component and data adaptation
+
+- Prove domain range inputs, item shaping, capability mapping, selection, permission-aware actions, and exact move, resize, or cell callbacks that the page supports.
+- Prove initial range-load and unavailable/retry wiring. Test background refresh only if the page calendar exposes a distinct domain refresh contract; calendars do not inherit the table refresh or pagination checklist.
+- Shared `useDataBuffer` and `TimelineCalendar` owners prove generic buffering, range accumulation, rendering, and interaction mechanics.
+
+#### Dashboard, modal, and focused components
+
+- Dashboards prove selection-driven composition and domain loading, error, empty, and card wiring.
+- Modal hooks prove initialization, transitions, validation, submission locks, success, failure recovery, and reset or reopen behavior; modal components prove fields and emitted values.
+- Focused components prove only their public domain rendering, accessibility, and events.
+
+#### Route page
+
+- Prove permission-dependent controls, restored values reaching owners, view switching, selected context, dialog entry paths, and callbacks that cross child boundaries.
+- Do not repeat a child hook or component's internal lifecycle tests.
+
+#### Browser scenarios
+
+- Add Playwright only for behavior that depends on real layout, scrolling, focus geometry, portals, observers, pointer capture, drag or resize, virtualization, clipping, cancellation, or responsive behavior.
 
 `test-ui.sh`, focused frontend runners, and normal PR CI all use Vitest; Vitest selects Node or jsdom per file. Pull-request CI runs one frontend job: related tests for source changes or the complete collection for configuration, dependency, and runner changes, followed by the frontend build. Playwright is not included in that job or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 

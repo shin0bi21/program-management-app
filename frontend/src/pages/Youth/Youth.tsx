@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
@@ -12,10 +11,8 @@ import SearchInput from '../../common/components/SearchInput/SearchInput';
 import type { CellContext } from '@tanstack/react-table';
 import type { TableColumnDef } from '../../common/components/Table/Table.types';
 import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../common/features/programming/queryKeys';
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
-import { YOUTH_QUERY_KEY } from '../../common/features/youth/queryKeys';
 import { YOUTH_TABLE_KEYS } from '../../common/types/youth';
 import { calculateAge } from '../../common/utils/time';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
@@ -23,6 +20,8 @@ import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 import YouthDashboard from './components/YouthDashboard/YouthDashboard';
 import YouthTable from './components/YouthTable/YouthTable';
+import { useYouthActions } from './hooks/actions/useYouthActions';
+import { useYouthSelection } from './hooks/selection/useYouthSelection';
 import { useYouthControls } from './hooks/useYouthControls';
 import type { YouthProfile } from './types';
 import './Youth.css';
@@ -32,7 +31,6 @@ export default function Youth() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
 
   // Permissions and services.
-  const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
   const canManageAttendance = permissions.includes('read:attendance')
@@ -57,10 +55,17 @@ export default function Youth() {
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
 
-  // Selection.
-  const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
-  const selectedProfileId = selectedProfile?.id ?? null;
-  const selectProfile = setSelectedProfile;
+  // Selection and selection-dependent workflow synchronization.
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
+  const { selectedProfile, selectedProfileId, selectProfile, reconcileSavedProfile } = useYouthSelection({
+    onSelectedProfileIdChange: closeAttendanceModal,
+  });
+
+  // Page actions.
+  const { reconcileCreatedYouth, reconcileSavedYouth, refreshAttendance } = useYouthActions({
+    onYouthReconciled: reconcileSavedProfile,
+  });
 
   // Profile-note actions and dialogs.
   const profileNotes = useProfileNotes(selectedProfileId);
@@ -74,26 +79,12 @@ export default function Youth() {
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const closeContactModal = () => setContactTarget(null);
 
-  // Attendance modal.
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
-  const closeAttendanceModal = () => setAttendanceTarget(null);
-
-  // Keep cohort-specific dialogs aligned with the selected profile.
-  useEffect(() => {
-    setAttendanceTarget(null);
-  }, [selectedProfileId]);
-
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
     cohort: YouthProfile['cohorts'][number];
     youthId: string;
   } | null>(null);
   const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
-
-  // Page actions.
-  const handleSaveYouth = () => {
-    void queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY });
-  };
 
   // Table configuration.
   const youthColumns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
@@ -207,7 +198,7 @@ export default function Youth() {
             hiddenColumnKeys={hiddenColumns}
             selectedProfileId={selectedProfileId}
             hasActiveQueryFilters={hasActiveQueryFilters}
-            onSelectedProfileResolved={setSelectedProfile}
+            onSelectedProfileResolved={selectProfile}
             onRowSelect={selectProfile}
             sorting={sorting}
             onSortingChange={controls.setSorting}
@@ -241,17 +232,13 @@ export default function Youth() {
         isOpen={modalTarget !== null}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={closeYouthModal}
-        onSuccess={handleSaveYouth}
+        onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
       />
       <YouthAttendanceModal
         youth={selectedProfile}
         cohort={attendanceTarget}
         onClose={closeAttendanceModal}
-        onSaved={() => Promise.all([
-          queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-          queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
-          queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-        ]).then(() => undefined)}
+        onSaved={refreshAttendance}
       />
       {attendanceReportTarget && <YouthReportModal
         cohort={attendanceReportTarget.cohort}
@@ -263,7 +250,7 @@ export default function Youth() {
         youthData={contactTarget ?? undefined}
         mode="contact"
         onClose={closeContactModal}
-        onSuccess={handleSaveYouth}
+        onSuccess={reconcileSavedYouth}
       />
 
       <ProfileNoteDialogs

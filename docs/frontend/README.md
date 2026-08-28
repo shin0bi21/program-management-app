@@ -12,6 +12,7 @@ restating its contract. Start with the question your change needs to answer:
 | How does a route coordinate controls, views and workflows? | [Pages](pages/README.md) |
 | How should restored page controls behave? | [Page preferences](pages/preferences.md) |
 | How should a rendered surface behave? | [Components](components/README.md) |
+| How do I scaffold a page or established component owner? | [Scaffolding](scaffolding.md) |
 | How do the header, body and overlays fit together? | [Page structure](pages/structure.md) |
 | Which rules apply across pages and components? | [Architecture](architecture/README.md) |
 | Who owns local state, remote data and mutations? | [State and data](architecture/state-and-data.md) |

@@ -1,25 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
-import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { ACCOUNT_TABLE_KEYS, type Account, type AccountStatus } from '../../../common/types/account';
 import { formatShortDate } from '../../../common/utils/date';
-import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../query/infiniteListCache';
-import { revokeAccountInvite, toggleAccountStatus } from './accounts.api';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
+import useAccountActions from './hooks/actions/useAccountActions';
 import { useAccountControls } from './hooks/useAccountControls';
+import useAccountModals from './hooks/useAccountModals';
 import './Users.css';
 
 const ACCOUNTS_TABLE_QUERY_KEY = ['accounts', 'table'] as const;
@@ -29,7 +27,6 @@ export default function Users() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
 
   // Permissions and services.
-  const queryClient = useQueryClient();
   const { role, permissions } = useAuth();
   const isAdmin = role === 'admin';
   const canWrite = permissions.includes('write:accounts');
@@ -42,43 +39,14 @@ export default function Users() {
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
-  // Account modal.
-  const [modalTarget, setModalTarget] = useState<Account | 'new' | null>(null);
-  const closeAccountModal = () => setModalTarget(null);
 
-  // Youth-invitation modal.
-  const [youthInviteOpen, setYouthInviteOpen] = useState(false);
-  const closeYouthInviteModal = () => setYouthInviteOpen(false);
+  // Page-spanning account actions and cache reconciliation.
+  const { revokeInvite, toggleStatus, syncSavedAccount, syncYouthInvitation } = useAccountActions({
+    accountTableQueryKey: ACCOUNTS_TABLE_QUERY_KEY,
+  });
 
-  // Confirmation modal.
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const requestRevoke = useCallback((account: Account) => setConfirmAction({
-    title: 'Revoke Invitation',
-    message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
-    confirmLabel: 'Revoke',
-    confirmVariant: 'danger',
-    successMessage: 'Invitation revoked',
-    onConfirm: async () => {
-      await revokeAccountInvite(account.id);
-      removeInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, account.id);
-    },
-  }), [queryClient]);
-
-  const requestStatusToggle = useCallback((account: Account) => {
-    const activating = account.status === 'inactive';
-    setConfirmAction({
-      title: activating ? 'Activate Account' : 'Deactivate Account',
-      message: `${activating ? 'Activate' : 'Deactivate'} login access for ${account.firstName} ${account.lastName}?`,
-      confirmLabel: activating ? 'Activate' : 'Deactivate',
-      confirmVariant: activating ? 'primary' : 'danger',
-      successMessage: activating ? 'Account activated' : 'Account deactivated',
-      onConfirm: async () => {
-        const savedAccount = await toggleAccountStatus(account.id);
-        replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
-      },
-    });
-  }, [queryClient]);
-  const closeConfirmation = () => setConfirmAction(null);
+  // Account, youth-invitation, and confirmation modal workflows.
+  const modals = useAccountModals({ revokeInvite, toggleStatus });
 
   // Table configuration.
   const columns = useMemo<TableColumnDef<Account>[]>(() => {
@@ -119,27 +87,27 @@ export default function Users() {
           ariaLabel={`More actions for ${account.firstName} ${account.lastName}`}
           items={[
             ...(isAdmin && account.role !== 'youth'
-              ? [{ id: 'edit', label: 'Edit', onClick: () => setModalTarget(account) }]
+              ? [{ id: 'edit', label: 'Edit', onClick: () => modals.account.open(account) }]
               : []),
             ...(account.status === 'invited'
-              ? [{ id: 'revoke', label: 'Revoke Invite', variant: 'danger' as const, onClick: () => requestRevoke(account) }]
+              ? [{ id: 'revoke', label: 'Revoke Invite', variant: 'danger' as const, onClick: () => modals.confirmation.requestRevoke(account) }]
               : []),
             ...(account.status === 'active'
-              ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => requestStatusToggle(account) }]
+              ? [{ id: 'deactivate', label: 'Deactivate', variant: 'danger' as const, onClick: () => modals.confirmation.requestStatusToggle(account) }]
               : []),
             ...(account.status === 'inactive'
-              ? [{ id: 'activate', label: 'Activate', onClick: () => requestStatusToggle(account) }]
+              ? [{ id: 'activate', label: 'Activate', onClick: () => modals.confirmation.requestStatusToggle(account) }]
               : []),
           ]}
         />
       ),
     }];
-  }, [canWrite, isAdmin, requestRevoke, requestStatusToggle]);
+  }, [canWrite, isAdmin, modals.account, modals.confirmation]);
 
   // Render.
   return (
     <>
-      <main className="page-container manage-accounts-page">
+      <main className="page-container page-container--data manage-accounts-page">
         <PageHeader
           title="Users"
           actions={(
@@ -148,14 +116,14 @@ export default function Users() {
                 <ActionsMenu
                   triggerLabel="+ Add"
                   items={[
-                    { id: 'invite-staff', label: 'Invite Staff', onClick: () => setModalTarget('new') },
-                    { id: 'invite-youth', label: 'Invite Youth', onClick: () => setYouthInviteOpen(true) },
+                    { id: 'invite-staff', label: 'Invite Staff', onClick: modals.account.openNew },
+                    { id: 'invite-youth', label: 'Invite Youth', onClick: modals.youthInvite.show },
                   ]}
                 />
               ) : canInviteYouth ? (
-                <Button onClick={() => setYouthInviteOpen(true)}>+ Add</Button>
+                <Button onClick={modals.youthInvite.show}>+ Add</Button>
               ) : isAdmin && canWrite ? (
-                <Button onClick={() => setModalTarget('new')}>+ Add</Button>
+                <Button onClick={modals.account.openNew}>+ Add</Button>
               ) : null}
             </div>
           )}
@@ -178,8 +146,10 @@ export default function Users() {
         />
         <PageErrorOverlay errors={[preferenceError, viewError]} />
 
-        {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <section className="accounts-panel" aria-label="Accounts">
-          <UserTable
+        {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <PageBody
+          ariaLabel="Account records"
+          dashboard={null}
+          table={<UserTable
             queryKey={ACCOUNTS_TABLE_QUERY_KEY}
             filters={queryFilters}
             columns={columns}
@@ -190,42 +160,31 @@ export default function Users() {
             columnWidths={columnWidths}
             onColumnWidthsChange={controls.setColumnWidths}
             onErrorChange={setViewError}
-          />
-        </section>}
+          />}
+        />}
       </main>
 
-      {isAdmin && canWrite && modalTarget !== null && (
+      {isAdmin && canWrite && modals.account.target !== null && (
         <AccountModal
           isOpen
-          account={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
-          onClose={closeAccountModal}
-          onSuccess={savedAccount => {
-            if (modalTarget === 'new') {
-              void queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY });
-            } else {
-              replaceInfiniteListRow(queryClient, ACCOUNTS_TABLE_QUERY_KEY, savedAccount);
-            }
-          }}
+          account={modals.account.target !== 'new' ? modals.account.target : undefined}
+          onClose={modals.account.close}
+          onSuccess={savedAccount => syncSavedAccount(savedAccount, modals.account.target === 'new')}
         />
       )}
 
-      {youthInviteOpen && (
+      {modals.youthInvite.open && (
         <YouthModal
           isOpen
           showLoginEmail
-          onClose={closeYouthInviteModal}
-          onSuccess={() => {
-            void Promise.all([
-              queryClient.invalidateQueries({ queryKey: ACCOUNTS_TABLE_QUERY_KEY }),
-              queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-            ]);
-          }}
+          onClose={modals.youthInvite.close}
+          onSuccess={syncYouthInvitation}
         />
       )}
 
       <ConfirmModal
-        action={confirmAction}
-        onClose={closeConfirmation}
+        action={modals.confirmation.action}
+        onClose={modals.confirmation.close}
       />
     </>
   );

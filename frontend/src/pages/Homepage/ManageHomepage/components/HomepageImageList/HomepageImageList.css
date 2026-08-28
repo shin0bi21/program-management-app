@@ -7,14 +7,7 @@
   gap: 0.75rem;
 }
 
-.homepage-management-section-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.homepage-management-section-heading h2 {
+.homepage-management-section h2 {
   margin: 0;
   font-size: 1.15rem;
 }
@@ -103,20 +96,9 @@
   white-space: nowrap;
 }
 
-.homepage-management-empty,
-.homepage-management-error {
+.homepage-management-empty {
   margin: 0;
   padding: var(--space-4);
   text-align: center;
   color: var(--color-muted);
-}
-
-.homepage-management-error {
-  color: var(--color-danger);
-}
-
-@media (max-width: 768px) {
-  .homepage-management-section-heading {
-    align-items: flex-start;
-  }
 }

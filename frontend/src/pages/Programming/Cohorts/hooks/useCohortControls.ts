@@ -12,7 +12,16 @@ import {
 import type { CohortSortKey } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-import type { CohortPreference, CohortStatus } from '../types';
+
+export type CohortStatus = 'active' | 'upcoming' | 'completed';
+
+export interface CohortPreference {
+  programId: string | null;
+  status: CohortStatus | null;
+  sorting?: ListSort<CohortSortKey>;
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}
 
 const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
 const DEFAULT_COHORT_PREFERENCE: CohortPreference = {

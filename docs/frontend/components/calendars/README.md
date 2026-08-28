@@ -2,6 +2,8 @@
 
 A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
+Calendars follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with the calendar-specific contracts below.
+
 ## Organize calendar files
 
 ```text
@@ -17,6 +19,8 @@ components/
       ExampleItem.test.tsx
       ExampleItem.story.tsx          when browser interaction matters
 ```
+
+The calendar component and test are required. Add `useExampleCalendarData` only when loaded records need page-owned adaptation, and add `ExampleItem` only when an item has meaningful domain presentation. A browser story is optional even when the item owner exists.
 
 The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 

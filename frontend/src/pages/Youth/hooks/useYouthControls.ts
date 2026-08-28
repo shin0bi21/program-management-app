@@ -14,7 +14,16 @@ import {
 } from '../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../common/types/pagination';
 import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
-import type { YouthPreference, YouthStatusFilter } from '../types';
+
+export type YouthStatusFilter = 'active' | 'inactive';
+
+export interface YouthPreference {
+  statuses: YouthStatusFilter[];
+  programIds: string[];
+  sorting?: ListSort<YouthSortKey>;
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}
 
 interface UseYouthControlsOptions {
   role: string | null;

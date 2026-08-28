@@ -2,6 +2,8 @@
 
 A page-owned `*Table` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the page table owns fetching, pagination, table states, and the shared `Table` integration.
 
+Tables follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with the table-specific contracts below.
+
 ## Organize table files
 
 ```text
@@ -11,7 +13,9 @@ components/
     ExampleTable.test.tsx
     hooks/
       useExampleTableData.ts      remote query and row shaping
+      useExampleTableData.test.ts
       useExampleTable.tsx         columns and table-only preference adapters, when substantial
+      useExampleTable.test.tsx
 ```
 
 Keep columns in the page-table owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the table component.

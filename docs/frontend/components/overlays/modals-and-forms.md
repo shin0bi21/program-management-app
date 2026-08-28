@@ -4,6 +4,20 @@ A page-owned modal owns one form draft, validation, submission lifecycle, and fa
 
 Keep one-off props beside the component. A non-trivial workflow hook owns initialization, draft transitions, validation, submit locking, API errors, reset, and the authoritative success callback.
 
+Form modals follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with this workflow-specific shape:
+
+```text
+components/
+  ExampleModal/
+    ExampleModal.tsx
+    ExampleModal.test.tsx
+    hooks/
+      useExampleModal.ts
+      useExampleModal.test.ts
+```
+
+The modal component and test are required. Add the workflow hook and its test when the modal owns non-trivial state or asynchronous coordination; keep a simple focused dialog in its component instead of generating a pass-through hook.
+
 ## Open the modal from its owner
 
 Represent mutually exclusive add and edit lifecycles with one discriminated page state plus `null` for closed.

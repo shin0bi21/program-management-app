@@ -48,6 +48,7 @@ describe('Programming settings', () => {
     render(<MemoryRouter><Programming /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: 'Programming Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Program and cycle management' })).toBeInTheDocument();
     const programRow = screen.getByText('Soft Skills').closest('tr');
     expect(programRow).toHaveAttribute('tabindex', '0');
     await user.click(programRow!);
@@ -109,5 +110,19 @@ describe('Programming settings', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle cannot be deleted because it is still in use');
     expect(screen.getByText('Fall 2026')).toBeInTheDocument();
+  });
+
+  it('retries cycle loading without forwarding the click event as an abort signal', async () => {
+    const user = userEvent.setup();
+    programmingApi.getProgramCycles
+      .mockRejectedValueOnce(new Error('Cycle service unavailable'))
+      .mockResolvedValueOnce([]);
+    render(<MemoryRouter><Programming /></MemoryRouter>);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cycle service unavailable');
+    await user.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+
+    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalledTimes(2));
+    expect(programmingApi.getProgramCycles).toHaveBeenLastCalledWith(undefined);
   });
 });

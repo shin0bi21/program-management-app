@@ -4,6 +4,23 @@ A page-owned `*Dashboard` composes selected-record details and aggregate overvie
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
+Dashboards follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with these optional dashboard-specific owners:
+
+```text
+components/
+  ExampleDashboard/
+    ExampleDashboard.tsx
+    ExampleDashboard.test.tsx
+    hooks/
+      useExampleOverviewData.ts
+      useExampleOverviewData.test.ts
+    ExampleOverviewDashboardCard/
+      ExampleOverviewDashboardCard.tsx
+      ExampleOverviewDashboardCard.test.tsx
+```
+
+The dashboard component and test are required. Add the overview-data hook only for dashboard-owned remote data, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.
+
 ## Load dashboard data
 
 Keep a dashboard query in a focused `use*OverviewData` hook when the dashboard needs server aggregates not already held by the page. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.

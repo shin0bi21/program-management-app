@@ -10,7 +10,11 @@ import { getDeviceFingerprint, getDeviceName } from '../../../../auth/deviceFing
 import { getErrorMessage } from '../../../../http/errors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
 import { formatTime } from '../../../../common/utils/time';
-import type { VerifyPasswordFormData } from '../types';
+
+interface VerifyPasswordFormData {
+  code: string;
+  trustDevice?: boolean;
+}
 
 const verifyPasswordSchema = z.object({
   code: z.string().length(6, 'Code must be 6 digits').regex(/^\d{6}$/, 'Code must be numeric'),

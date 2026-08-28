@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import Button from '../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
-import { type ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 
-import { withdrawYouth } from '../../../../../common/features/programming/api/cohorts.api';
 import type { ProgramCohort } from '../../../../../common/types/cohort';
-import type { YouthProfile } from '../../../../../common/types/youth';
 
 import { useCohortRoster } from '../../hooks/useCohortRoster';
 import EnrollYouthModal from '../EnrollYouthModal/EnrollYouthModal';
+import { useManageRosterModal } from './hooks/useManageRosterModal';
 
 import './ManageRosterModal.css';
 
@@ -22,59 +20,28 @@ interface ManageRosterModalProps {
 }
 
 export default function ManageRosterModal({ cohort, onClose, onSuccess }: ManageRosterModalProps) {
-  const [addingYouth, setAddingYouth] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [refreshError, setRefreshError] = useState('');
-  const cohortId = cohort?.id;
-
   const {
     enrolledYouth, search, setSearch, appliedSearch, applySearch, clearSearch,
     filterBySearch, loading, error, refresh,
   } = useCohortRoster(cohort);
   const visibleYouth = useMemo(() => filterBySearch(enrolledYouth), [enrolledYouth, filterBySearch]);
-
-  useEffect(() => {
-    setAddingYouth(false);
-    setConfirmAction(null);
-    setRefreshError('');
-  }, [cohortId]);
-
-  const requestWithdrawal = (profile: YouthProfile) => {
-    if (!cohort) return;
-
-    setRefreshError('');
-    setConfirmAction({
-      title: 'Withdraw Youth',
-      message: `Withdraw ${profile.firstName} ${profile.lastName} from ${cohort.programName} - ${cohort.name}? Their existing attendance history will be kept.`,
-      confirmLabel: 'Withdraw',
-      confirmVariant: 'danger',
-      successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
-      onConfirm: async () => {
-        await withdrawYouth(cohort.id, profile.id);
-        try {
-          await Promise.all([refresh(), onSuccess()]);
-        } catch {
-          setRefreshError('Youth was withdrawn, but the roster could not refresh. Reload to see it.');
-        }
-      },
-    });
-  };
+  const workflow = useManageRosterModal({ cohort, refresh, onSuccess });
 
   return (
     <>
       <Modal
-        isOpen={cohort !== null && !addingYouth && confirmAction === null}
+        isOpen={cohort !== null && !workflow.addingYouth && workflow.confirmAction === null}
         onClose={onClose}
         title={cohort ? `${cohort.programName} - ${cohort.name} Roster` : ''}
         footer={(
           <>
             <Button variant="secondary" onClick={onClose}>Close</Button>
-            <Button onClick={() => setAddingYouth(true)}>Add Youth</Button>
+            <Button onClick={workflow.openEnrollment}>Add Youth</Button>
           </>
         )}
       >
-        {(error || refreshError) && (
-          <p className="form-error" role="alert">{error || refreshError}</p>
+        {(error || workflow.refreshError) && (
+          <p className="form-error" role="alert">{error || workflow.refreshError}</p>
         )}
         <SearchInput
           label="Search enrolled youth"
@@ -94,7 +61,7 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
                 <strong>{profile.firstName} {profile.lastName}</strong>
                 {profile.schoolName && <small>{profile.schoolName}</small>}
               </span>
-              <Button size="sm" variant="ghost" onClick={() => requestWithdrawal(profile)}>Withdraw</Button>
+              <Button size="sm" variant="ghost" onClick={() => workflow.requestWithdrawal(profile)}>Withdraw</Button>
             </div>
           )) : (
             <p className="page-empty">{enrolledYouth.length ? 'No enrolled youth match your search.' : 'No youth are currently enrolled.'}</p>
@@ -103,14 +70,14 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
       </Modal>
 
       <EnrollYouthModal
-        cohort={addingYouth ? cohort : null}
-        onClose={() => setAddingYouth(false)}
-        onSuccess={async () => { await refresh(); await onSuccess(); }}
+        cohort={workflow.addingYouth ? cohort : null}
+        onClose={workflow.closeEnrollment}
+        onSuccess={workflow.enrollmentSucceeded}
       />
 
       <ConfirmModal
-        action={confirmAction}
-        onClose={() => setConfirmAction(null)}
+        action={workflow.confirmAction}
+        onClose={workflow.closeConfirmation}
       />
     </>
   );

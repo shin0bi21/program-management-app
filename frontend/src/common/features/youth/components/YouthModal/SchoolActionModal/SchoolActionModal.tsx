@@ -1,13 +1,10 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent } from 'react';
 
 import Button from '../../../../../components/Button/Button';
 import FormField from '../../../../../components/FormField/FormField';
 import Modal from '../../../../../components/Modal/Modal';
-import useSubmitLock from '../../../../../hooks/useSubmitLock';
-
-import { createSchool, deleteSchool, setSchool } from '../schools/schools.api';
 import type { School } from '../schools/types';
-import { getErrorMessage } from '../../../../../../http/errors';
+import useSchoolActionModal from './hooks/useSchoolActionModal';
 
 export type SchoolAction =
   | { type: 'add' }
@@ -22,80 +19,42 @@ interface Props {
 }
 
 export default function SchoolActionModal({ action, onClose, onUpsert, onDelete }: Props) {
-  const [name, setName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const submitLock = useSubmitLock();
-
-  useEffect(() => {
-    setName(action && action.type === 'edit' ? action.school.name : '');
-    setSubmitting(false);
-    setError('');
-  }, [action]);
+  const workflow = useSchoolActionModal({ action, onUpsert, onDelete });
 
   if (!action) return null;
 
-  const deleting = action.type === 'delete';
-  const editing = action.type === 'edit';
-  const school = action.type === 'add' ? undefined : action.school;
-
-  const submit = async () => {
-    const trimmedName = name.trim();
-    if (!deleting && !trimmedName) return;
-    if (!submitLock.tryLock()) return;
-
-    setSubmitting(true);
-    setError('');
-
-    try {
-      if (deleting && school) {
-        await deleteSchool(school.id);
-        onDelete(school);
-      } else {
-        onUpsert(editing && school
-          ? await setSchool({ id: school.id, name: trimmedName })
-          : await createSchool(trimmedName));
-      }
-    } catch (err) {
-      setError(getErrorMessage(err, deleting ? 'Failed to delete school' : 'Failed to save school'));
-    } finally {
-      submitLock.unlock();
-      setSubmitting(false);
-    }
-  };
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void submit();
+    void workflow.submit();
   };
 
-  const title = deleting ? 'Delete School' : editing ? 'Edit School' : 'Add School';
-  const submitLabel = deleting ? 'Delete' : editing ? 'Save' : 'Add';
+  const title = workflow.deleting ? 'Delete School' : workflow.editing ? 'Edit School' : 'Add School';
+  const submitLabel = workflow.deleting ? 'Delete' : workflow.editing ? 'Save' : 'Add';
 
   return (
     <Modal
       isOpen
       onClose={onClose}
       title={title}
-      status={error ? 'error' : submitting ? 'submitting' : 'idle'}
-      statusMessage={error || (submitting ? (deleting ? 'Deleting school...' : 'Saving school...') : undefined)}
+      status={workflow.error ? 'error' : workflow.submitting ? 'submitting' : 'idle'}
+      statusMessage={workflow.error || (workflow.submitting ? (workflow.deleting ? 'Deleting school...' : 'Saving school...') : undefined)}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose} disabled={workflow.submitting}>Cancel</Button>
           <Button
-            type={deleting ? 'button' : 'submit'}
-            form={deleting ? undefined : 'school-action-form'}
-            variant={deleting ? 'danger' : 'primary'}
-            onClick={deleting ? () => void submit() : undefined}
-            disabled={submitting || (!deleting && !name.trim())}
+            type={workflow.deleting ? 'button' : 'submit'}
+            form={workflow.deleting ? undefined : 'school-action-form'}
+            variant={workflow.deleting ? 'danger' : 'primary'}
+            onClick={workflow.deleting ? () => void workflow.submit() : undefined}
+            disabled={workflow.submitting || (!workflow.deleting && !workflow.name.trim())}
           >
             {submitLabel}
           </Button>
         </>
       )}
     >
-      {deleting ? (
-        <p>Delete {school?.name}? Schools assigned to youth profiles cannot be deleted.</p>
+      {workflow.deleting ? (
+        <p>Delete {workflow.school?.name}? Schools assigned to youth profiles cannot be deleted.</p>
       ) : (
         <form id="school-action-form" onSubmit={handleSubmit}>
           <FormField id="school-name" label="School Name *">
@@ -103,8 +62,9 @@ export default function SchoolActionModal({ action, onClose, onUpsert, onDelete 
               id="school-name"
               autoFocus
               required
-              value={name}
-              onChange={event => setName(event.target.value)}
+              value={workflow.name}
+              onChange={event => workflow.setName(event.target.value)}
+              disabled={workflow.submitting}
             />
           </FormField>
         </form>

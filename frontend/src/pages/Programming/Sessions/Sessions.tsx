@@ -1,27 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { CellContext } from '@tanstack/react-table';
-import type { TableColumnDef } from '../../../common/components/Table/Table.types';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { deleteSession } from '../../../common/features/programming/api/sessions.api';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
+import { SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
 import { SESSION_TABLE_KEYS, type CohortSession } from '../../../common/types/cohort';
-import { formatShortDate } from '../../../common/utils/date';
-import { removeInfiniteListRow } from '../../../query/infiniteListCache';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
 import { useSessionTypes } from '../common/hooks/useSessionTypes';
@@ -30,14 +20,12 @@ import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
-import SessionTypeBadge from './components/SessionTypeBadge/SessionTypeBadge';
+import useSessionTable from './components/SessionTable/hooks/useSessionTable';
+import useSessionActions from './hooks/actions/useSessionActions';
+import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
 import './Sessions.css';
 
-const timeFormatter = new Intl.DateTimeFormat('en-CA', {
-  hour: 'numeric',
-  minute: '2-digit',
-});
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
@@ -46,8 +34,6 @@ export default function Sessions() {
   const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
 
   // Permissions and application services.
-  const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { permissions, role } = useAuth();
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
@@ -61,17 +47,12 @@ export default function Sessions() {
     error: sessionTypesError,
   } = useSessionTypes();
 
-  const selectedSessionId = searchParams.get('session') ?? '';
-  const clearSelectedSession = useCallback(() => {
-    const next = new URLSearchParams(searchParams);
-    next.delete('session');
-    setSearchParams(next);
-  }, [searchParams, setSearchParams]);
+  const selection = useSessionSelection();
 
   const controls = useSessionControls({
     role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
-    onFiltersChanged: clearSelectedSession,
+    onFiltersChanged: selection.clearSelectedSession,
     tableKeys: SESSION_TABLE_KEYS,
   });
   const {
@@ -81,19 +62,7 @@ export default function Sessions() {
   } = controls;
 
   // Selection and actions.
-  const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
-  const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
-  const selectSession = (session: Pick<CohortSession, 'id'>) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('session', session.id);
-    setSearchParams(next);
-  };
-
-  const refreshSessionQueries = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-  ]).then(() => undefined);
+  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -108,110 +77,60 @@ export default function Sessions() {
   const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
   const closeEditSessionModal = () => setEditTarget(null);
 
-  // Confirmation modal.
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const requestSessionDeletion = useCallback(
-    (session: CohortSession) => {
-      setConfirmAction({
-        title: 'Delete Session',
-        message: `Delete the ${session.theme} session for the ${session.programName} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
-        confirmLabel: 'Delete',
-        confirmVariant: 'danger',
-        successMessage: 'Session deleted',
-        onConfirm: async () => {
-          await deleteSession(session.id);
-          removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
-          setCalendarSessions(current => current.filter(candidate => candidate.id !== session.id));
-          if (selectedSessionId === session.id) {
-            setSelectedTableSession(null);
-            clearSelectedSession();
-          }
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-            queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-          ]);
-        },
-      });
-    },
-    [clearSelectedSession, queryClient, selectedSessionId],
-  );
-  const closeConfirmation = () => setConfirmAction(null);
-
   // Table configuration.
-  const columns = useMemo<TableColumnDef<CohortSession>[]>(
-    () => [
-      { id: 'program', header: 'Program', accessorFn: session => session.programName },
-      { id: 'cohort', header: 'Cohort', accessorFn: session => session.cohortName },
-      { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
-      { id: 'date', header: 'Date', size: 135, accessorFn: session => formatShortDate(session.startsAt) },
-      {
-        id: 'time',
-        header: 'Time',
-        size: 165,
-        accessorFn: session =>
-          `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
-      },
-      {
-        id: 'type',
-        header: 'Type',
-        size: 135,
-        accessorFn: session => session.sessionTypeName,
-        cell: ({ row: { original: session } }) => <SessionTypeBadge name={session.sessionTypeName} />,
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        size: 110,
-        accessorFn: session => session.state,
-        cell: ({ row: { original: session } }) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
-      },
-      ...(canWriteAttendance || canWriteSessions
-        ? [
-            {
-              id: 'actions',
-              size: 40,
-              enableResizing: false,
-              enableHiding: false,
-              header: '',
+  const columns = useSessionTable({
+    canWriteAttendance,
+    canWriteSessions,
+    onTakeAttendance: setAttendanceTarget,
+    onEdit: setEditTarget,
+    onDelete: actions.requestDelete,
+  });
 
-              cell: ({ row: { original: session } }: CellContext<CohortSession, unknown>) => (
-                <ActionsMenu
-                  ariaLabel={`More actions for ${session.theme}`}
-                  items={[
-                    ...(canWriteAttendance
-                      ? [
-                          {
-                            id: 'attendance',
-                            label: 'Take Attendance',
-                            onClick: () => setAttendanceTarget(session),
-                          },
-                        ]
-                      : []),
-                    ...(canWriteSessions
-                      ? [
-                          { id: 'edit', label: 'Edit Session', onClick: () => setEditTarget(session) },
-                          {
-                            id: 'delete',
-                            label: 'Delete Session',
-                            variant: 'danger' as const,
-                            onClick: () => requestSessionDeletion(session),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              ),
-            },
-          ]
-        : []),
-    ],
-    [canWriteAttendance, canWriteSessions, requestSessionDeletion],
-  );
-
-  // Derived presentation.
-  const selectedSession = view === 'calendar'
-    ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
-    : selectedTableSession?.id === selectedSessionId ? selectedTableSession : null;
+  // View initialization and presentation.
+  const selectedSession = selection.getSelectedSession(view);
+  const dashboard = <SessionDashboard
+    sessionQueryKey={SESSION_QUERY_KEY}
+    session={selectedSession}
+    canWriteAttendance={canWriteAttendance}
+    canWriteSessions={canWriteSessions}
+    onAddAttendance={setAttendanceTarget}
+    onErrorsChange={setDashboardErrors}
+  />;
+  const table = <SessionTable
+    queryKey={SESSION_TABLE_QUERY_KEY}
+    columns={columns}
+    hiddenColumnKeys={controls.hiddenColumns}
+    filters={{
+      programIds: selectedProgramIds,
+      cohortId: cohortId || undefined,
+      sessionTypeIds: selectedSessionTypeIds,
+      statuses: statusFilters,
+      search: appliedSearch || undefined,
+    }}
+    sorting={sorting}
+    columnWidths={columnWidths}
+    selectedSessionId={selection.selectedSessionId}
+    onSelectedSessionResolved={selection.setSelectedTableSession}
+    onSessionSelect={selection.selectSession}
+    onSortingChange={controls.setSorting}
+    onColumnWidthsChange={controls.setColumnWidths}
+    onErrorChange={setViewError}
+  />;
+  const calendar = <SessionCalendar
+    queryKey={SESSION_CALENDAR_QUERY_KEY}
+    selectedProgramIds={selectedProgramIds}
+    selectedCohortId={cohortId}
+    selectedSessionId={selection.selectedSessionId}
+    selectedSessionTypeIds={selectedSessionTypeIds}
+    selectedStatuses={statusFilters}
+    search={appliedSearch}
+    onSessionsLoaded={selection.setCalendarSessions}
+    onSessionSelect={selection.selectCalendarSession}
+    onSessionEdit={canWriteSessions ? setEditTarget : undefined}
+    onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
+    onErrorChange={setViewError}
+  />;
+  const viewContent = view === 'table' ? { table } : { calendar };
 
   return (
     <>
@@ -274,100 +193,24 @@ export default function Sessions() {
             viewError,
             ...dashboardErrors,
           ]} />
-          {!filtersReady ? (
-            <p role="status">Loading saved filters…</p>
-          ) : view === 'table' ? (
-            <PageBody
-              ariaLabel="Sessions and overview"
-              table={
-                <SessionTable
-                  queryKey={SESSION_TABLE_QUERY_KEY}
-                  columns={columns}
-                  hiddenColumnKeys={controls.hiddenColumns}
-                  filters={{
-                    programIds: selectedProgramIds,
-                    cohortId: cohortId || undefined,
-                    sessionTypeIds: selectedSessionTypeIds,
-                    statuses: statusFilters,
-                    search: appliedSearch || undefined,
-                  }}
-                  sorting={sorting}
-                  columnWidths={columnWidths}
-                  selectedSessionId={selectedSessionId}
-                  onSelectedSessionResolved={setSelectedTableSession}
-                  onSessionSelect={selectSession}
-                  onSortingChange={controls.setSorting}
-                  onColumnWidthsChange={controls.setColumnWidths}
-                  onErrorChange={setViewError}
-                />
-              }
-              dashboard={
-                <SessionDashboard
-                  sessionQueryKey={SESSION_QUERY_KEY}
-                  session={selectedSession}
-                  canWriteAttendance={canWriteAttendance}
-                  canWriteSessions={canWriteSessions}
-                  onAddAttendance={setAttendanceTarget}
-                  onErrorsChange={setDashboardErrors}
-                />
-              }
-            />
-          ) : (
-            <PageBody
-              ariaLabel="Sessions calendar and overview"
-              calendar={
-                <SessionCalendar
-                  queryKey={SESSION_CALENDAR_QUERY_KEY}
-                  selectedProgramIds={selectedProgramIds}
-                  selectedCohortId={cohortId}
-                  selectedSessionId={selectedSessionId}
-                  selectedSessionTypeIds={selectedSessionTypeIds}
-                  selectedStatuses={statusFilters}
-                  search={appliedSearch}
-                  onSessionsLoaded={setCalendarSessions}
-                  onSessionSelect={(session) => {
-                    setCalendarSessions((current) =>
-                      current.some((candidate) => candidate.id === session.id)
-                        ? current
-                        : [...current, session],
-                    );
-                    selectSession(session);
-                  }}
-                  onSessionEdit={canWriteSessions ? setEditTarget : undefined}
-                  onSessionDelete={canWriteSessions
-                    ? session => requestSessionDeletion(session)
-                    : undefined}
-                  onErrorChange={setViewError}
-                />
-              }
-              dashboard={
-                <SessionDashboard
-                  sessionQueryKey={SESSION_QUERY_KEY}
-                  session={selectedSession}
-                  canWriteAttendance={canWriteAttendance}
-                  canWriteSessions={canWriteSessions}
-                  onAddAttendance={setAttendanceTarget}
-                  onErrorsChange={setDashboardErrors}
-                />
-              }
-            />
-          )}
+          {!filtersReady ? <p role="status">Loading saved filters…</p> : <PageBody
+            ariaLabel={view === 'table' ? 'Sessions and overview' : 'Sessions calendar and overview'}
+            dashboard={dashboard}
+            {...viewContent}
+          />}
         </div>
       </main>
 
       <AttendanceModal
         session={attendanceTarget}
         onClose={closeAttendanceModal}
-        onSaved={() => Promise.all([
-          refreshSessionQueries(),
-          queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-        ]).then(() => undefined)}
+        onSaved={actions.refreshAttendance}
       />
 
       <EditSessionModal
         session={editTarget}
         onClose={closeEditSessionModal}
-        onUpdated={refreshSessionQueries}
+        onUpdated={actions.refreshSessionQueries}
       />
 
       <GenerateSessionsModal
@@ -377,13 +220,13 @@ export default function Sessions() {
         initialCohortId={cohortId || schedulableCohorts[0]?.id}
         onClose={closeAddSessionsModal}
         onSuccess={async () => {
-          await Promise.all([refreshSessionQueries(), refreshCohorts()]);
+          await Promise.all([actions.refreshSessionQueries(), refreshCohorts()]);
         }}
       />
 
       <ConfirmModal
-        action={confirmAction}
-        onClose={closeConfirmation}
+        action={actions.confirmAction}
+        onClose={actions.closeConfirmation}
       />
     </>
   );
