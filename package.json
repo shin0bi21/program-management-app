@@ -3,20 +3,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "report:ci": "node scripts/reports/ci-report.js",
+    "report:ci": "node scripts/reports/ci-report.ts",
     "report:loc": "bash scripts/reports/loc-report.sh",
-    "scaffold:frontend": "node scripts/agents/scaffold-frontend.js",
+    "scaffold:frontend": "node scripts/agents/scaffold-frontend.ts",
+    "snapshot:changes": "node scripts/agents/snapshot-changes.ts",
     "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns scripts/reports scripts/tests",
     "lint:fix": "npm run lint -- --fix",
-    "validate:skills": "node scripts/agents/validate-skills.js"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "validate:skills": "node scripts/agents/validate-skills.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "24.13.3",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.9.0",
     "ts-morph": "^28.0.0",
+    "typescript": "6.0.3",
     "typescript-eslint": "^8.66.0"
   }
 }

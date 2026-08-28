@@ -45,7 +45,7 @@ Release pull requests also run the independent `Enforce develop → main only`
 job. Keeping this repository policy in its own job gives branch protection a
 stable required-check identity without coupling it to lint or shell analysis.
 
-[`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
+[`scripts/ci/select-tests.ts`](../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests. This replaces the previous two always-on shards, which reduced wall time but repeated setup and always billed the complete frontend collection.
 
@@ -60,6 +60,7 @@ The shared selector applies these rules locally and in CI:
 
 - Documentation-only changes skip paid application jobs.
 - Repository automation changes run static checks.
+- Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
 - Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
 - Shared backend infrastructure, migrations, dependencies, and unmapped backend paths run the full backend suite.
 - Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
@@ -137,7 +138,7 @@ Start from the failed GitHub job and run its stable repository command where one
 | Browser component behavior | `bash scripts/tests/frontend/test-browser.sh` |
 | Full local application gate | `bash scripts/tests/test-app.sh` |
 | Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `bash scripts/tests/test-app.sh --changed` |
-| Repository patterns | `node scripts/patterns/check-patterns.js --changed` |
+| Repository patterns | `node scripts/patterns/check-patterns.ts --changed` |
 
 CI also owns framework and production steps such as backend migrations and generated-type drift checks, frontend builds, image builds, Compose validation, and nginx validation. Inspect the failed workflow step for its exact command. [Testing](testing.md) owns runner selection; [local development](local-development.md) owns Docker, migrations, dependencies, and environment diagnostics.
 

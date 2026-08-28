@@ -52,8 +52,9 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Follow `docs/workflows/testing.md` for test ownership, runner selection, and evidence reuse.
 - During implementation, use the narrow runner under `scripts/tests/backend/` or `scripts/tests/frontend/` that owns the changed feature. Record the tested diff and do not rerun an unchanged suite for the same diff.
 - When affected suites are unclear, run `bash scripts/tests/test-app.sh --plan-changed`, then execute the selected suites. Use `--changed` when that selected set is itself the appropriate verification.
-- Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.
-- After changing repository skills, run `node scripts/agents/validate-skills.js`.
+- Before handoff, run `node scripts/agents/snapshot-changes.ts --json` and record its workspace fingerprint, changed-path inventory, and selected checks with the verification evidence. Regenerate the snapshot after any further change.
+- Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.ts --changed`, and `git diff --check`.
+- After changing repository skills, run `node scripts/agents/validate-skills.ts`.
 - Required pull-request checks provide the full merge gate. Do not treat implementation approval as deployment authorization.
 
 ## Hand off for review and shipping

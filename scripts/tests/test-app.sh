@@ -105,7 +105,7 @@ run_changed_suites() {
     return
   fi
 
-  commands="$(printf '%s\n' "$changed_files" | node scripts/ci/select-tests.js --commands)"
+  commands="$(printf '%s\n' "$changed_files" | node scripts/ci/select-tests.ts --commands)"
 
   echo ""
   echo "=========================================="

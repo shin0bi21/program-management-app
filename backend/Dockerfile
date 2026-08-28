@@ -15,14 +15,15 @@ CMD ["tail", "-f", "/dev/null"]
 
 # ── Build stage — compile TypeScript ─────────────────────────────────────────
 FROM base AS builder
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci
-COPY . .
+COPY tsconfig.base.json /tsconfig.base.json
+COPY backend/. .
 RUN npm run build && test -f dist/db/scripts/backfill-homepage-image-variants.js
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM base AS prod
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/db/migrations ./dist/db/migrations
