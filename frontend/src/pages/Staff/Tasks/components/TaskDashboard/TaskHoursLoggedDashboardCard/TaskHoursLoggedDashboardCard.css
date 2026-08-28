@@ -107,6 +107,11 @@
   font-weight: 700;
 }
 
+.task-hours-breakdown__list dt,
+.task-hours-breakdown__list strong {
+  font-size: .8rem;
+}
+
 .task-hours-breakdown__list progress {
   width: 100%;
   accent-color: var(--brand-accent);
