@@ -5,6 +5,7 @@
   "scripts": {
     "report:ci": "node scripts/reports/ci-report.js",
     "report:loc": "bash scripts/reports/loc-report.sh",
+    "scaffold:frontend": "node scripts/agents/scaffold-frontend.js",
     "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns scripts/reports scripts/tests",
     "lint:fix": "npm run lint -- --fix",
     "validate:skills": "node scripts/agents/validate-skills.js"
@@ -15,6 +16,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.9.0",
+    "ts-morph": "^28.0.0",
     "typescript-eslint": "^8.66.0"
   }
 }

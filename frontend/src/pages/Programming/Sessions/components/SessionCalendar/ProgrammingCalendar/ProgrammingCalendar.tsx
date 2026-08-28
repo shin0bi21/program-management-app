@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import FullCalendar, { type CalendarRef, type DatesSetInfo, type EventInput } from '@fullcalendar/react';
+import FullCalendar, { type DatesSetInfo, type EventInput } from '@fullcalendar/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
@@ -10,6 +9,7 @@ import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/theme.css';
 import '@fullcalendar/react/themes/classic/palette.css';
 import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
+import { useProgrammingCalendar } from './hooks/useProgrammingCalendar';
 import './ProgrammingCalendar.css';
 
 interface ProgrammingCalendarProps {
@@ -26,36 +26,6 @@ const calendarPlugins = [
   timeGridPlugin,
   listPlugin,
 ];
-
-const mobileCalendarQuery = '(max-width: 1000px)';
-
-const isMobileCalendar = () => {
-  if (typeof window === 'undefined') return false;
-  if (typeof window.matchMedia === 'function') {
-    return window.matchMedia(mobileCalendarQuery).matches;
-  }
-  return window.innerWidth <= 1000;
-};
-
-function useMobileCalendar() {
-  const [mobile, setMobile] = useState(isMobileCalendar);
-
-  useEffect(() => {
-    if (typeof window.matchMedia === 'function') {
-      const media = window.matchMedia(mobileCalendarQuery);
-      const update = (event: MediaQueryListEvent) => setMobile(event.matches);
-      setMobile(media.matches);
-      media.addEventListener('change', update);
-      return () => media.removeEventListener('change', update);
-    }
-
-    const update = () => setMobile(isMobileCalendar());
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
-  return mobile;
-}
 
 const eventTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Toronto',
@@ -87,12 +57,7 @@ export default function ProgrammingCalendar({
   onEventEdit,
   onEventDelete,
 }: ProgrammingCalendarProps) {
-  const mobile = useMobileCalendar();
-  const calendarRef = useRef<CalendarRef | null>(null);
-
-  useEffect(() => {
-    calendarRef.current?.getApi().changeView(mobile ? 'timeGridDay' : 'dayGridMonth');
-  }, [mobile]);
+  const { mobile, calendarRef } = useProgrammingCalendar();
 
   return (
     <section className="programming-calendar" aria-label="Programming calendar">

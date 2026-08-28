@@ -16,7 +16,10 @@ vi.mock('react-router-dom', async () => ({
 
 function renderResetPassword(path = '/reset-password?token=reset-token') {
   function wrapper({ children }: PropsWithChildren) {
-    return <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>;
+    return <MemoryRouter
+      initialEntries={[path]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >{children}</MemoryRouter>;
   }
 
   return renderHook(() => useResetPassword(), { wrapper });

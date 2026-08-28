@@ -33,7 +33,7 @@ const defaultProps = {
   images,
   loading: false,
   error: null,
-  onAdd: vi.fn(),
+  onRetry: vi.fn(),
   onEdit: vi.fn(),
   onDelete: vi.fn(),
   onReorder: vi.fn(),
@@ -45,7 +45,7 @@ describe('HomepageImageList', () => {
     expect(screen.getByText('Loading images…')).toBeInTheDocument();
 
     rerender(<HomepageImageList {...defaultProps} images={[]} error="Could not load images" />);
-    expect(screen.getByText('Could not load images')).toBeInTheDocument();
+    expect(screen.getByText('Homepage images unavailable')).toBeInTheDocument();
 
     rerender(<HomepageImageList {...defaultProps} images={[]} />);
     expect(screen.getByText('No homepage images')).toBeInTheDocument();
@@ -54,28 +54,24 @@ describe('HomepageImageList', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('emits add, edit, and delete actions', async () => {
+  it('emits edit and delete actions', async () => {
     const user = userEvent.setup();
-    const onAdd = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(
       <HomepageImageList
         {...defaultProps}
         images={[images[0]]}
-        onAdd={onAdd}
         onEdit={onEdit}
         onDelete={onDelete}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '+ Add' }));
     await user.click(screen.getByRole('button', { name: 'More actions for First image.' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit Image' }));
     await user.click(screen.getByRole('button', { name: 'More actions for First image.' }));
     await user.click(screen.getByRole('menuitem', { name: 'Delete Image' }));
 
-    expect(onAdd).toHaveBeenCalledOnce();
     expect(onEdit).toHaveBeenCalledWith(images[0]);
     expect(onDelete).toHaveBeenCalledWith(images[0]);
   });

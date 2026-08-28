@@ -35,6 +35,7 @@ export function useSessionCalendarData(
     queryFn: ({ signal }) => getSessions(requestFilters!, { signal }),
     enabled: requestFilters !== null,
   });
+  const { refetch } = query;
   const sessions = query.data ?? noSessions;
   const events = useMemo<EventInput[]>(() => sessions.map(session => ({
     id: session.id,
@@ -50,7 +51,7 @@ export function useSessionCalendarData(
     start: nextRange.start.toISOString(),
     end: nextRange.end.toISOString(),
   }), []);
-  const retry = useCallback(() => { void query.refetch(); }, [query.refetch]);
+  const retry = useCallback(() => { void refetch(); }, [refetch]);
 
   return {
     sessions,

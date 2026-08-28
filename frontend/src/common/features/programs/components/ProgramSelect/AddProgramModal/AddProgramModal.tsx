@@ -1,21 +1,8 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import FormField from '../../../../../components/FormField/FormField';
 import Modal from '../../../../../components/Modal/Modal';
 import ModalFormFooter from '../../../../../components/Modal/components/ModalFormFooter';
-import { useSubmitStatus, type SubmitStatus } from '../../../../../hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../../http/errors';
-import { createProgram } from '../../../programs.api';
 import type { Program } from '../../../types';
-
-const addProgramSchema = z.object({
-  name: z.string().trim().min(1, 'Program name is required').max(120),
-});
-
-type AddProgramFormValues = z.infer<typeof addProgramSchema>;
+import useAddProgramModal from './hooks/useAddProgramModal';
 
 interface AddProgramModalProps {
   isOpen: boolean;
@@ -24,60 +11,24 @@ interface AddProgramModalProps {
   onCreated: (program: Program) => void;
 }
 
-function getStatusMessage(status: SubmitStatus, error: string) {
-  if (status === 'submitting') return 'Adding program...';
-  if (status === 'success') return 'Program added!';
-  if (status === 'error') return error;
-  return undefined;
-}
-
 export default function AddProgramModal({
   isOpen,
   programsError,
   onClose,
   onCreated,
 }: AddProgramModalProps) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<AddProgramFormValues>({
-    resolver: zodResolver(addProgramSchema),
-    defaultValues: { name: '' },
-  });
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-
-  // Reopening starts a fresh form and submission lifecycle.
-  useEffect(() => {
-    if (!isOpen) return;
-    reset({ name: '' });
-    resetStatus();
-  }, [isOpen, reset, resetStatus]);
-
-  const submit = async ({ name }: AddProgramFormValues) => {
-    setSubmitStatus('submitting');
-    setError('');
-    try {
-      const program = await createProgram(name);
-      onCreated(program);
-      setSubmitStatus('success');
-    } catch (cause) {
-      setError(getErrorMessage(cause, 'Unable to add program'));
-      setSubmitStatus('error');
-    }
-  };
+  const workflow = useAddProgramModal({ isOpen, onCreated });
 
   const close = () => {
     onClose();
-    resetStatus();
+    workflow.resetStatus();
   };
 
   const footer = (
     <ModalFormFooter
       formId="add-program-form"
       submitLabel="Add Program"
-      submitStatus={submitStatus}
+      submitStatus={workflow.submitStatus}
       onClose={close}
     />
   );
@@ -86,18 +37,18 @@ export default function AddProgramModal({
       isOpen={isOpen}
       onClose={close}
       title="Add Program"
-      status={submitStatus}
+      status={workflow.submitStatus}
       successDelay={500}
-      statusMessage={getStatusMessage(submitStatus, error)}
+      statusMessage={workflow.statusMessage}
       footer={footer}
     >
-      <form id="add-program-form" onSubmit={handleSubmit(submit)} noValidate>
+      <form id="add-program-form" onSubmit={workflow.submit} noValidate>
         <FormField
           id="new-program-name"
           label="Program Name *"
-          error={errors.name?.message || programsError || undefined}
+          error={workflow.errors.name?.message || programsError || undefined}
         >
-          <input id="new-program-name" autoFocus {...register('name')} />
+          <input id="new-program-name" autoFocus disabled={workflow.submissionComplete} {...workflow.register('name')} />
         </FormField>
       </form>
     </Modal>

@@ -2,8 +2,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
-import type { YouthPreference } from '../types';
-import { useYouthControls } from './useYouthControls';
+import { useYouthControls, type YouthPreference } from './useYouthControls';
 
 const preferenceHook = vi.hoisted<{
   preference: YouthPreference | null;

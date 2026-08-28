@@ -18,6 +18,16 @@
   color: var(--color-danger-dark);
 }
 
+.status-deferred {
+  background: var(--color-status-upcoming-bg);
+  color: var(--color-status-upcoming);
+}
+
+.status-closed {
+  background: var(--ink-08);
+  color: var(--color-muted);
+}
+
 .status-signed_up {
   background: var(--color-success-bg);
   color: var(--color-success);

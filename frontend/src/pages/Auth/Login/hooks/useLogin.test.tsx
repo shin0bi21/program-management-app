@@ -1,3 +1,4 @@
+// Owns login submission, authentication reconciliation, navigation, and failures.
 import type { PropsWithChildren } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { act, renderHook } from '@testing-library/react';

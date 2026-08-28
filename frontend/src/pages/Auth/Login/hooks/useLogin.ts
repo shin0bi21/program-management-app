@@ -9,7 +9,11 @@ import { useAuth } from '../../../../auth/authContext';
 import { getDeviceFingerprint } from '../../../../auth/deviceFingerprint';
 import { getErrorMessage } from '../../../../http/errors';
 import { getLastAuthPath, setAuthData } from '../../../../auth/storage';
-import type { LoginFormData } from '../types';
+
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -32,18 +36,11 @@ export const useLogin = () => {
       const deviceFingerprint = getDeviceFingerprint();
       const response = await login(data.email, data.password, deviceFingerprint);
 
-      // Check if login was successful without verification (trusted device)
       if (response.token) {
-        // Store token and user data
         setAuthData(response.token, response.user);
-
-        // Update auth context
         updateAuthState();
-
-        // Navigate to last visited authenticated page, or settings as default
         navigate(getLastAuthPath(response.user.id));
       } else if (response.requiresVerification) {
-        // Redirect to verification page
         navigate('/verify-password', { state: { userId: response.userId } });
       }
     } catch (err: unknown) {

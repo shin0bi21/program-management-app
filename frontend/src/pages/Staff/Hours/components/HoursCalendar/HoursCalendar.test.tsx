@@ -72,6 +72,7 @@ function renderCalendar({
   data = {},
   resources = [resource],
   staffIds = [],
+  search = '',
   canWrite = true,
   onAdd = vi.fn(),
   onEdit = vi.fn(),
@@ -83,6 +84,7 @@ function renderCalendar({
   data?: RowPeriodData<HoursItem>;
   resources?: StaffResource[];
   staffIds?: string[];
+  search?: string;
   canWrite?: boolean;
   onAdd?: ReturnType<typeof vi.fn>;
   onEdit?: ReturnType<typeof vi.fn>;
@@ -103,6 +105,7 @@ function renderCalendar({
         programIds={[]}
         types={[]}
         cycleId="cycle-1"
+        search={search}
         canWrite={canWrite}
         isEntryPending={() => false}
         selectedStaffId="staff-1"
@@ -176,16 +179,20 @@ describe('HoursCalendar', () => {
     });
   });
 
-  it('loads the initialized calendar range and exposes it through the calendar data prop', async () => {
+  it('loads the initialized calendar range with search and exposes it through the calendar data prop', async () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     const item = buildItem();
-    renderCalendar({ data: { 'staff-1': { [periods[1].key]: [item] } } });
+    renderCalendar({
+      data: { 'staff-1': { [periods[1].key]: [item] } },
+      search: 'workshop',
+    });
 
     await initializeCalendar(periods);
 
     expect(getHoursCalendarData).toHaveBeenCalledWith({
       start: expect.any(String),
       end: expect.any(String),
+      search: 'workshop',
     });
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([
       { date: periods[1].key, item },

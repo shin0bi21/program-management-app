@@ -16,6 +16,9 @@ interface ModalProps {
   successDelay?: number;
   // Disable the X close button (e.g. while a request is in-flight)
   disableClose?: boolean;
+  // Keep dialog semantics and focus management without offering dismissal.
+  dismissible?: boolean;
+  ariaDescribedBy?: string;
 }
 
 export default function Modal({
@@ -29,10 +32,12 @@ export default function Modal({
   statusMessage,
   successDelay = 0,
   disableClose = false,
+  dismissible = true,
+  ariaDescribedBy,
 }: ModalProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const titleId = useId();
-  const closeDisabled = disableClose || status === 'submitting' || status === 'success';
+  const closeDisabled = !dismissible || disableClose || status === 'submitting' || status === 'success';
   // Keep a ref to onClose so the timer always calls the latest version
   // without needing it as an effect dependency
   const onCloseRef = useRef(onClose);
@@ -58,12 +63,13 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={ariaDescribedBy}
         tabIndex={-1}
         style={{ maxWidth }}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="modal-close" aria-label="Close" onClick={onClose} disabled={closeDisabled}>&times;</button>
+          {dismissible && <button type="button" className="modal-close" aria-label="Close" onClick={onClose} disabled={closeDisabled}>&times;</button>}
         </div>
 
         {status !== 'idle' && (

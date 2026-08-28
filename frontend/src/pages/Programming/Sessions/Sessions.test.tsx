@@ -4,8 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
-import type { SessionPreference } from './types';
+import type { SessionPreference } from './hooks/useSessionControls';
 import Sessions from './Sessions';
+
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
 function LocationProbe() {
@@ -237,7 +239,7 @@ describe('Sessions', () => {
     ]);
 
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -261,7 +263,7 @@ describe('Sessions', () => {
 
   it('highlights a linked session and opens attendance from its actions menu', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -292,7 +294,7 @@ describe('Sessions', () => {
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']}>
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
         <Sessions />
         <LocationProbe />
       </MemoryRouter>,
@@ -319,7 +321,7 @@ describe('Sessions', () => {
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
     preferenceHook.loading = true;
     const rendered = render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -332,7 +334,7 @@ describe('Sessions', () => {
 
     preferenceHook.loading = false;
     rendered.rerender(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -343,7 +345,7 @@ describe('Sessions', () => {
 
   it('opens the add sessions flow from the page header', async () => {
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
@@ -362,7 +364,7 @@ describe('Sessions', () => {
   it('switches between table and calendar views on the same page', async () => {
     preferenceHook.preference = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     render(
-      <MemoryRouter initialEntries={['/programming/sessions']}>
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );

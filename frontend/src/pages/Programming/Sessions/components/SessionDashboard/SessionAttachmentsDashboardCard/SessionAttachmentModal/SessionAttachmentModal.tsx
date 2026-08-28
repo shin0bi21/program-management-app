@@ -1,19 +1,8 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import {
-  createSessionAttachment,
-  getSessionRoster,
-  updateSessionAttachment,
-} from '../../../../../../../common/features/programming/api/sessions.api';
 import FormField from '../../../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
-import type { SubmitStatus } from '../../../../../../../common/hooks/useSubmitStatus';
-import type {
-  CohortSession,
-  SessionAttachment,
-  SessionRosterMember,
-} from '../../../../../../../common/types/cohort';
+import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';
+import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
 import './SessionAttachmentModal.css';
 
 export default function SessionAttachmentModal({
@@ -29,51 +18,8 @@ export default function SessionAttachmentModal({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-  const rosterQuery = useQuery<SessionRosterMember[]>({
-    queryKey: [...queryKey, session?.id, 'roster'],
-    queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
-    enabled: session !== null,
-  });
-  const roster = rosterQuery.data ?? [];
-
-  useEffect(() => {
-    if (!session) return;
-    setSelectedYouthIds(attachment?.youth.map(youth => youth.youthId) ?? []);
-    setSelectedFile(null);
-    setSubmitStatus('idle');
-    setStatusMessage('');
-  }, [attachment, session]);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!session) return;
-    const form = new FormData(event.currentTarget);
-    if (!attachment && !selectedFile?.size) return;
-    setSubmitStatus('submitting');
-    setStatusMessage(attachment ? 'Saving attachment...' : 'Uploading attachment...');
-    try {
-      const description = String(form.get('description') ?? '').trim();
-      const data = {
-        title: String(form.get('title')).trim(),
-        description: description || null,
-        youthIds: selectedYouthIds,
-      };
-      if (attachment) await updateSessionAttachment(session.id, attachment.id, data);
-      else await createSessionAttachment(session.id, { ...data, file: selectedFile! });
-      await onSaved();
-      setStatusMessage(attachment ? 'Attachment successfully updated.' : 'Attachment successfully added.');
-      setSubmitStatus('success');
-    } catch (cause) {
-      setStatusMessage(cause instanceof Error ? cause.message : `Could not ${attachment ? 'update' : 'add'} attachment`);
-      setSubmitStatus('error');
-    }
-  };
-
-  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+  const workflow = useSessionAttachmentModal({ queryKey, session, attachment, onSaved });
+  const { roster, rosterQuery, selectedYouthIds, setSelectedFile, submitStatus, statusMessage, submissionComplete, toggleYouth, submit } = workflow;
 
   return (
     <Modal
@@ -85,9 +31,9 @@ export default function SessionAttachmentModal({
       successDelay={1200}
       footer={<ModalFormFooter formId="session-attachment-form" submitLabel={attachment ? 'Save' : 'Add Attachment'} submitStatus={submitStatus} onClose={onClose} />}
     >
-      <form id="session-attachment-form" onSubmit={event => void submit(event)}>
+      <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
         <FormField id="session-attachment-title" label="Title">
-          <input key={`${attachment?.id ?? 'new'}-title`} id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} required />
+          <input key={`${attachment?.id ?? 'new'}-title`} id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
         </FormField>
         {!attachment && <FormField id="session-attachment-file" label="File">
           <input
@@ -95,12 +41,13 @@ export default function SessionAttachmentModal({
             name="file"
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.docx"
+            disabled={submissionComplete}
             onChange={event => setSelectedFile(event.currentTarget.files?.[0] ?? null)}
             required
           />
         </FormField>}
         <FormField id="session-attachment-description" label="Description (optional)">
-          <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} />
+          <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
         </FormField>
         <fieldset className="session-attachment-youth" disabled={submissionComplete}>
           <legend>Link youth</legend>
@@ -117,9 +64,7 @@ export default function SessionAttachmentModal({
                   <input
                     type="checkbox"
                     checked={selectedYouthIds.includes(youth.youthId)}
-                    onChange={() => setSelectedYouthIds(current => current.includes(youth.youthId)
-                      ? current.filter(id => id !== youth.youthId)
-                      : [...current, youth.youthId])}
+                    onChange={() => toggleYouth(youth.youthId)}
                   />
                   <span>{youth.firstName} {youth.lastName}</span>
                 </label>

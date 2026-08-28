@@ -11,7 +11,14 @@ import {
   resolvePreferenceSorting,
   resolvePreferenceStringArray,
 } from '../../../../common/features/preferences/preferenceValues';
-import type { AccountPreference } from '../types';
+
+export interface AccountPreference {
+  statuses: AccountStatus[];
+  roles: AccountRole[];
+  sorting?: ListSort<AccountSortKey>;
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}
 
 const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
 const DEFAULT_ACCOUNT_PREFERENCE: AccountPreference = {

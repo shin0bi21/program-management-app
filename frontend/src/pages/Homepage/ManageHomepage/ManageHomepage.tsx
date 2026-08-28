@@ -1,69 +1,60 @@
-import { useState } from 'react';
-
+import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
+import PageBody from '../../../common/components/PageBody/PageBody';
+import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 
 import HomepageImageList from './components/HomepageImageList/HomepageImageList';
 import HomepageImageModal from './components/HomepageImageModal/HomepageImageModal';
+import { useHomepageModals } from './hooks/useHomepageModals';
 import { useManagedHomepage } from './hooks/useManagedHomepage';
-
-import type { ManagedHomepageImage } from './types';
 
 import './ManageHomepage.css';
 
 export default function ManageHomepage() {
+  // Data and actions.
   const homepage = useManagedHomepage();
-  const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [imageTarget, setImageTarget] = useState<ManagedHomepageImage | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const openAddImage = () => {
-    setImageTarget(null);
-    setImageModalOpen(true);
-  };
 
-  const openEditImage = (image: ManagedHomepageImage) => {
-    setImageTarget(image);
-    setImageModalOpen(true);
-  };
+  // Modal workflows.
+  const modals = useHomepageModals({ deleteImage: homepage.deleteImage });
 
-  const confirmDeleteImage = (image: ManagedHomepageImage) => setConfirmAction({
-    title: 'Delete Homepage Image',
-    message: `Delete “${image.caption}”? This cannot be undone.`,
-    confirmLabel: 'Delete',
-    confirmVariant: 'danger',
-    successMessage: 'Homepage image deleted',
-    onConfirm: () => homepage.deleteImage(image.id),
-  });
-
+  // Render.
   return (
     <>
-      <div className="page-container homepage-management-page">
-        <PageHeader title="Manage Homepage" />
-
-        <div className="homepage-management-content">
-          <HomepageImageList
+      <main className="page-container page-container--data homepage-management-page">
+        <PageHeader
+          title="Manage Homepage"
+          actions={<Button size="sm" onClick={modals.image.openNew}>+ Add</Button>}
+        />
+        <PageErrorOverlay errors={[homepage.error ? {
+          message: homepage.error,
+          action: { label: 'Retry', onClick: homepage.refresh },
+        } : null]} />
+        <PageBody
+          ariaLabel="Homepage image management"
+          dashboard={null}
+          table={<HomepageImageList
             images={homepage.images}
             loading={homepage.loading}
             error={homepage.error}
-            onAdd={openAddImage}
-            onEdit={openEditImage}
-            onDelete={confirmDeleteImage}
+            onRetry={homepage.refresh}
+            onEdit={modals.image.openEdit}
+            onDelete={modals.deletion.open}
             onReorder={homepage.reorderImages}
-          />
-        </div>
-      </div>
+          />}
+        />
+      </main>
 
       <HomepageImageModal
-        image={imageTarget}
-        isOpen={imageModalOpen}
-        onClose={() => setImageModalOpen(false)}
+        image={modals.image.target}
+        isOpen={modals.image.open}
+        onClose={modals.image.close}
         onSaved={homepage.refresh}
       />
 
       <ConfirmModal
-        action={confirmAction}
-        onClose={() => setConfirmAction(null)}
+        action={modals.deletion.action}
+        onClose={modals.deletion.close}
       />
     </>
   );

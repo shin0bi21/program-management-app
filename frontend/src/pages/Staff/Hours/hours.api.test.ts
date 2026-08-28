@@ -23,14 +23,14 @@ describe('hours API', () => {
     const controller = new AbortController();
 
     getHoursCalendarData(
-      { start: '2026-08-01', end: '2026-08-31', cycleId: 'cycle-1' },
+      { start: '2026-08-01', end: '2026-08-31', cycleId: 'cycle-1', search: 'follow up' },
       { signal: controller.signal },
     );
     getHoursDashboardData('staff-1', 'cycle-1', { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(
       1,
-      '/hours/calendar?start=2026-08-01&end=2026-08-31&cycleId=cycle-1',
+      '/hours/calendar?start=2026-08-01&end=2026-08-31&cycleId=cycle-1&search=follow+up',
       { signal: controller.signal },
     );
     expect(apiClient.get).toHaveBeenNthCalledWith(

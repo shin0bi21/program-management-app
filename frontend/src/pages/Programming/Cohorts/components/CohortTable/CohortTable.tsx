@@ -21,35 +21,48 @@ interface CohortTableProps {
   onErrorChange?: PageErrorChangeHandler;
 }
 
-export default function CohortTable(props: CohortTableProps) {
-  const tableData = useCohortTableData(props.queryKey, props.filters, props.sorting);
-  usePageErrorReporter(props.onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
+export default function CohortTable({
+  queryKey,
+  filters,
+  columns,
+  hiddenColumnKeys,
+  sorting,
+  columnWidths,
+  selectedKey,
+  hasActiveQueryFilters,
+  onRowSelect,
+  onSortingChange,
+  onColumnWidthsChange,
+  onErrorChange,
+}: CohortTableProps) {
+  const tableData = useCohortTableData(queryKey, filters, sorting);
+  usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
 
   useEffect(() => {
-    if (!tableData.loading && props.selectedKey && !tableData.rows.some(cohort => cohort.id === props.selectedKey)) {
-      props.onRowSelect(null);
+    if (!tableData.loading && selectedKey && !tableData.rows.some(cohort => cohort.id === selectedKey)) {
+      onRowSelect(null);
     }
-  }, [props.selectedKey, props.onRowSelect, tableData.loading, tableData.rows]);
+  }, [onRowSelect, selectedKey, tableData.loading, tableData.rows]);
 
   return <Table
     ariaLabel="Cohorts"
-    columns={props.columns}
-    hiddenColumnKeys={props.hiddenColumnKeys}
+    columns={columns}
+    hiddenColumnKeys={hiddenColumnKeys}
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
     unavailable={tableData.error ? { title: 'Cohorts unavailable', onRetry: tableData.retry } : undefined}
     keyExtractor={cohort => cohort.id}
-    selectedKey={props.selectedKey}
-    onRowSelect={cohort => props.onRowSelect(cohort)}
-    sorting={props.sorting}
+    selectedKey={selectedKey}
+    onRowSelect={cohort => onRowSelect(cohort)}
+    sorting={sorting}
     sortableColumns={['program', 'cohort', 'start', 'end', 'status']}
-    onSortingChange={sorting => props.onSortingChange(sorting as ListSort<CohortSortKey>)}
-    columnWidths={props.columnWidths}
-    onColumnWidthsChange={props.onColumnWidthsChange}
+    onSortingChange={nextSorting => onSortingChange(nextSorting as ListSort<CohortSortKey>)}
+    columnWidths={columnWidths}
+    onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
     onLoadNextPage={tableData.loadNextPage}
-    emptyMessage={props.hasActiveQueryFilters ? 'No cohorts match your search and filters' : 'No cohorts yet'}
+    emptyMessage={hasActiveQueryFilters ? 'No cohorts match your search and filters' : 'No cohorts yet'}
   />;
 }

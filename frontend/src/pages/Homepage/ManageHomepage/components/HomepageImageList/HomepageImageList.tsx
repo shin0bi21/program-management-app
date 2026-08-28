@@ -3,7 +3,7 @@ import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
-import Button from '../../../../../common/components/Button/Button';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 import type { ManagedHomepageImage } from '../../types';
 
@@ -13,7 +13,7 @@ interface HomepageImageListProps {
   images: ManagedHomepageImage[];
   loading: boolean;
   error: string | null;
-  onAdd: () => void;
+  onRetry: () => void;
   onEdit: (image: ManagedHomepageImage) => void;
   onDelete: (image: ManagedHomepageImage) => void;
   onReorder: (sourceImageId: string, targetImageId: string) => void | Promise<void>;
@@ -23,7 +23,7 @@ export default function HomepageImageList({
   images,
   loading,
   error,
-  onAdd,
+  onRetry,
   onEdit,
   onDelete,
   onReorder,
@@ -41,15 +41,12 @@ export default function HomepageImageList({
       className="homepage-management-section homepage-management-images"
       aria-labelledby="homepage-images-title"
     >
-      <div className="homepage-management-section-heading">
-        <h2 id="homepage-images-title">Manage Images</h2>
-        <Button size="sm" onClick={onAdd}>+ Add</Button>
-      </div>
+      <h2 id="homepage-images-title">Manage Images</h2>
       <div className="homepage-image-list" role="list" aria-label="Homepage hero images">
         {loading ? (
           <p className="homepage-management-empty">Loading images…</p>
         ) : error ? (
-          <p className="homepage-management-error">{error}</p>
+          <UnavailableState title="Homepage images unavailable" onRetry={onRetry} />
         ) : images.length ? (
           <>
             <div className="homepage-image-list__header" aria-hidden="true">

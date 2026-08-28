@@ -1,15 +1,3 @@
-export interface HomepageImage {
-  id: string;
-  imageUrl: string;
-  mobileUrl: string;
-  thumbnailUrl: string;
-  altText: string;
-  caption: string;
-  displayOrder: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface HomepageSession {
   id: string;
   cohortId: string;

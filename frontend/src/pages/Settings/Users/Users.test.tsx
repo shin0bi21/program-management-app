@@ -3,9 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
-import type { AccountPreference } from './types';
-import { toggleAccountStatus } from './accounts.api';
-import type { Account } from '../../../common/types/account';
+import type { AccountPreference } from './hooks/useAccountControls';
 
 const mockUseAuth = vi.fn();
 const mockUseUserTableData = vi.fn();
@@ -122,32 +120,15 @@ describe('Users', () => {
     expect(screen.getByText('Yara Youth')).toBeInTheDocument();
   });
 
-  it('replaces a toggled account in every cached table variant without refetching', async () => {
+  it('opens the account status confirmation from the table action', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const firstKey = ['accounts', 'table', { statuses: ['active'] }] as const;
-    const secondKey = ['accounts', 'table', { search: 'Alice' }] as const;
-    const activeAccount = accounts[0] as Account;
-    const unaffectedAccount = accounts[1] as Account;
-    const savedAccount = { ...activeAccount, status: 'inactive' } as Account;
-    for (const [key, rows] of [[firstKey, [activeAccount, unaffectedAccount]], [secondKey, [activeAccount]]] as const) {
-      client.setQueryData(key, { pages: [{ rows, nextCursor: null }], pageParams: [undefined] });
-    }
-    const cachedUnaffectedAccount = client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows[1];
-    const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined);
-    vi.mocked(toggleAccountStatus).mockResolvedValue(savedAccount);
-    renderPage(client);
+    renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Alice Admin' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
 
-    expect(await screen.findByText('Account deactivated')).toBeInTheDocument();
-    expect(toggleAccountStatus).toHaveBeenCalledWith('admin-1');
-    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows).toEqual([savedAccount, unaffectedAccount]);
-    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(firstKey)?.pages[0].rows[1]).toBe(cachedUnaffectedAccount);
-    expect(client.getQueryData<{ pages: { rows: Account[] }[] }>(secondKey)?.pages[0].rows).toEqual([savedAccount]);
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Deactivate Account' })).toBeInTheDocument();
+    expect(screen.getByText('Deactivate login access for Alice Admin?')).toBeInTheDocument();
   });
 
 });

@@ -1,21 +1,22 @@
-import { checkBackendControllers, checkBackendRoutes } from './backend.js';
+import { checkBackendControllers } from './backend/controllers.js';
+import { checkBackendRoutes } from './backend/routes.js';
+import { checkCalendarDataHooks, checkTimelineCalendars } from './frontend/calendars.js';
+import { checkCentralizedHttp, checkFocusedAdapters } from './frontend/data.js';
+import { checkDashboardNames } from './frontend/dashboards.js';
 import {
   checkApiStructure,
-  checkCalendarDataHooks,
   checkCentralizedFrontendDocumentation,
-  checkCentralizedHttp,
-  checkFocusedAdapters,
   checkFrontendOwnership,
-  checkPaginatedTables,
-  checkPreferenceControlOwnership,
-  checkTimelineCalendars,
-  checkRoutePageShell,
-  checkRoutePageStructure,
   checkTestOwnership,
+} from './frontend/ownership.js';
+import { checkRoutePageShell, checkRoutePageStructure } from './frontend/pages.js';
+import { checkPreferenceControlOwnership } from './frontend/preferences.js';
+import {
   collectRoutePageDirectories,
   collectStructureCheckFiles,
-} from './frontend.js';
-import { checkDashboardNames, checkFocusedTests, checkVocabulary } from './quality.js';
+} from './frontend/shared.js';
+import { checkPaginatedTables } from './frontend/tables.js';
+import { checkFocusedTests } from './quality.js';
 
 export { collectRoutePageDirectories, collectStructureCheckFiles };
 
@@ -26,7 +27,6 @@ export function runEnforcementChecks(
   repoRoot,
   { routePageDirectories = [] } = {},
 ) {
-  checkVocabulary(violations, file, source);
   if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)) checkFocusedTests(violations, file, source);
 
   if (file.startsWith('frontend/src/')) {

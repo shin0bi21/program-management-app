@@ -1,5 +1,5 @@
 // Owns attachment create/edit initialization, payloads, linked youth, success, and failure recovery.
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -132,6 +132,36 @@ describe('SessionAttachmentModal', () => {
 
     expect(await screen.findByText('Upload failed')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Add Attachment' })).toBeInTheDocument();
+  });
+
+  it('locks the complete form while an upload is pending', async () => {
+    const user = userEvent.setup();
+    let resolveUpload!: () => void;
+    api.createSessionAttachment.mockReturnValue(new Promise(resolve => {
+      resolveUpload = () => resolve({});
+    }));
+    const onSaved = vi.fn().mockResolvedValue(undefined);
+    renderWithQueryClient(
+      <SessionAttachmentModal
+        queryKey={queryKey}
+        session={session}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Workshop photo' } });
+    await user.upload(
+      screen.getByLabelText('File'),
+      new File(['photo'], 'workshop.png', { type: 'image/png' }),
+    );
+    fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(screen.getByLabelText('Title')).toBeDisabled());
+    expect(screen.getByLabelText('File')).toBeDisabled();
+    expect(screen.getByLabelText('Description (optional)')).toBeDisabled();
+    await act(async () => resolveUpload());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
   });
 
   it('resets selection and status when a different attachment target opens', async () => {

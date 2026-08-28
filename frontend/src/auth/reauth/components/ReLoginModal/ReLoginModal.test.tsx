@@ -43,6 +43,9 @@ describe('ReLoginModal', () => {
 
     render(<ReLoginModal isOpen onReAuthenticated={onReAuthenticated} />);
 
+    expect(screen.getByRole('dialog', { name: 'Session Expired' })).toHaveAccessibleDescription(
+      'Your session has expired. Please enter your password to continue.',
+    );
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'correct-password' },
     });

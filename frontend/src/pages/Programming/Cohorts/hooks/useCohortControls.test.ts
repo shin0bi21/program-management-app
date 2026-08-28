@@ -2,8 +2,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
-import type { CohortPreference } from '../types';
-import { useCohortControls } from './useCohortControls';
+import { useCohortControls, type CohortPreference } from './useCohortControls';
 
 const preferenceHook = vi.hoisted(() => ({
   preference: null as CohortPreference | null,

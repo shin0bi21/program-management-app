@@ -1,32 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
-import { removeInfiniteListRow } from '../../../query/infiniteListCache';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import type { CellContext } from '@tanstack/react-table';
-import type { TableColumnDef } from '../../../common/components/Table/Table.types';
-import { deleteCohort, getProgramCycles } from '../../../common/features/programming/api/cohorts.api';
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
-import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { YOUTH_QUERY_KEY } from '../../../common/features/youth/queryKeys';
-import { COHORT_TABLE_KEYS, type ProgramCohort, type ProgramCycle } from '../../../common/types/cohort';
-import { formatShortDate } from '../../../common/utils/date';
+import { COHORT_TABLE_KEYS, type ProgramCohort } from '../../../common/types/cohort';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
-import { COHORT_OPTIONS_QUERY_KEY, SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import CohortTable from './components/CohortTable/CohortTable';
+import useCohortTable from './components/CohortTable/hooks/useCohortTable';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
+import useCohortActions from './hooks/actions/useCohortActions';
+import useCohortData from './hooks/data/useCohortData';
+import useCohortSelection from './hooks/selection/useCohortSelection';
 import { useCohortControls } from './hooks/useCohortControls';
 import './Cohorts.css';
 
@@ -36,13 +29,12 @@ export default function Cohorts() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
 
   // Permissions and application services.
-  const queryClient = useQueryClient();
   const { permissions, role } = useAuth();
   const canWriteCohorts = permissions.includes('write:cohorts');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data and preferences.
-  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
+  const { programs, programsLoading, programsError, cycles, cyclesError } = useCohortData();
   const controls = useCohortControls(
     role,
     programs,
@@ -55,33 +47,12 @@ export default function Cohorts() {
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
     hasActiveQueryFilters, ready: controlsReady,
   } = controls;
-  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
-  const [cyclesError, setCyclesError] = useState<string | null>(null);
-  const refreshCycles = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setCycles(await getProgramCycles(signal ? { signal } : undefined));
-      setCyclesError(null);
-    } catch (cause) {
-      if (signal?.aborted) return;
-      setCyclesError(cause instanceof Error ? cause.message : 'Could not load cycles');
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void refreshCycles(controller.signal);
-    return () => controller.abort();
-  }, [refreshCycles]);
-
   // Selection and actions.
-  const [selectedCohort, setSelectedCohort] = useState<ProgramCohort | null>(null);
-  const refreshCohorts = useCallback(
-    () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: COHORT_TABLE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY }),
-    ]).then(() => undefined),
-    [queryClient],
-  );
+  const selection = useCohortSelection();
+  const actions = useCohortActions({
+    tableQueryKey: COHORT_TABLE_QUERY_KEY,
+    onCohortRemoved: selection.removeSelectedCohort,
+  });
 
   // Add cohort modal.
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
@@ -104,69 +75,14 @@ export default function Cohorts() {
   const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
   const closeEditCohortModal = () => setEditCohortTarget(null);
 
-  // Confirmation modal.
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const closeConfirmation = () => setConfirmAction(null);
-
   // Table configuration.
-  const columns = useMemo<TableColumnDef<ProgramCohort>[]>(
-    () => [
-      { id: 'program', header: 'Program', accessorFn: cohort => cohort.programName },
-      { id: 'cohort', header: 'Cycle', accessorFn: cohort => cohort.cycleName },
-      { id: 'start', header: 'Start', size: 140, accessorFn: cohort => formatShortDate(cohort.startsOn) },
-      { id: 'end', header: 'End', size: 140, accessorFn: cohort => formatShortDate(cohort.endsOn) },
-      {
-        id: 'status',
-        header: 'Status',
-        size: 120,
-        accessorFn: cohort => cohort.state,
-        cell: ({ row: { original: cohort } }) => <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>,
-      },
-      ...(canWriteCohorts
-        ? [
-            {
-              id: 'actions',
-              size: 40,
-              enableResizing: false,
-              enableHiding: false,
-              header: '',
-
-              cell: ({ row: { original: cohort } }: CellContext<ProgramCohort, unknown>) => (
-                <ActionsMenu
-                  ariaLabel={`More actions for ${cohort.name}`}
-                  items={[
-                    ...(cohort.rosterMode === 'enrolled'
-                      ? [{ id: 'manage-roster', label: 'Manage Roster', onClick: () => setRosterTarget(cohort) }]
-                      : []),
-                    { id: 'add-sessions', label: 'Add Sessions', onClick: () => setGenerationTarget(cohort) },
-                    { id: 'edit', label: 'Edit Cohort', onClick: () => setEditCohortTarget(cohort) },
-                    {
-                      id: 'delete',
-                      label: 'Delete Cohort',
-                      variant: 'danger' as const,
-                      onClick: () =>
-                        setConfirmAction({
-                          title: 'Delete Cohort',
-                          message: `Delete ${cohort.programName} · ${cohort.name}? Its sessions and enrollments will also be deleted. Cohorts with attendance cannot be deleted.`,
-                          confirmLabel: 'Delete',
-                          confirmVariant: 'danger',
-                          successMessage: 'Cohort deleted',
-                          onConfirm: async () => {
-                            await deleteCohort(cohort.id);
-                            removeInfiniteListRow(queryClient, COHORT_TABLE_QUERY_KEY, cohort.id);
-                            await queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY });
-                          },
-                        }),
-                    },
-                  ]}
-                />
-              ),
-            },
-          ]
-        : []),
-    ],
-    [canWriteCohorts, queryClient],
-  );
+  const columns = useCohortTable({
+    canWrite: canWriteCohorts,
+    onManageRoster: setRosterTarget,
+    onGenerateSessions: setGenerationTarget,
+    onEdit: setEditCohortTarget,
+    onDelete: actions.requestDelete,
+  });
 
   return (
     <>
@@ -213,8 +129,8 @@ export default function Cohorts() {
                 filters={tableFilters}
                 columns={columns}
                 hiddenColumnKeys={hiddenColumns}
-                selectedKey={selectedCohort?.id ?? null}
-                onRowSelect={setSelectedCohort}
+                selectedKey={selection.selectedCohort?.id ?? null}
+                onRowSelect={selection.setSelectedCohort}
                 sorting={sorting}
                 onSortingChange={controls.setSorting}
                 columnWidths={columnWidths}
@@ -228,18 +144,18 @@ export default function Cohorts() {
                 title="Youth Overview"
                 className="cohort-overview-card"
                 emptyMessage="No cohort selected."
-                action={selectedCohort ? <Button
+                action={selection.selectedCohort ? <Button
                   size="sm"
                   variant="secondary"
-                  disabled={!canViewYouthReport || selectedCohort.rosterMode === 'open'}
-                  title={selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
-                  onClick={() => setReportTarget(selectedCohort)}
+                  disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
+                  title={selection.selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
+                  onClick={() => setReportTarget(selection.selectedCohort)}
                 >View Report</Button> : undefined}
               >
-                {selectedCohort ? (
+                {selection.selectedCohort ? (
                   <dl className="cohort-overview">
-                    <div><dt>{selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selectedCohort.rosterMode === 'enrolled' ? selectedCohort.enrolledCount : selectedCohort.uniqueAttendeeCount}</dd></div>
-                    <div><dt>Average attendance:</dt><dd>{selectedCohort.averageAttendance === null ? '—' : `${selectedCohort.averageAttendance}%`}</dd></div>
+                    <div><dt>{selection.selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.rosterMode === 'enrolled' ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
+                    <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
                   </dl>
                 ) : undefined}
               </DashboardCard>
@@ -255,16 +171,13 @@ export default function Cohorts() {
         cycles={cycles}
         initialProgramId={selectedProgramId}
         onClose={closeCohortModal}
-        onCreated={refreshCohorts}
+        onCreated={actions.refreshCohorts}
       />
 
       <ManageRosterModal
         cohort={rosterTarget}
         onClose={closeRosterModal}
-        onSuccess={() => Promise.all([
-          refreshCohorts(),
-          queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-        ]).then(() => undefined)}
+        onSuccess={actions.refreshRoster}
       />
 
       {reportTarget && <YouthReportModal cohort={reportTarget} onClose={closeReportModal} />}
@@ -273,23 +186,18 @@ export default function Cohorts() {
         cohort={editCohortTarget}
         cycles={cycles}
         onClose={closeEditCohortModal}
-        onUpdated={refreshCohorts}
+        onUpdated={actions.refreshCohorts}
       />
 
       <GenerateSessionsModal
         cohort={generationTarget}
         onClose={closeGenerationModal}
-        onSuccess={async () => {
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
-            refreshCohorts(),
-          ]);
-        }}
+        onSuccess={actions.refreshGeneratedSessions}
       />
 
       <ConfirmModal
-        action={confirmAction}
-        onClose={closeConfirmation}
+        action={actions.confirmAction}
+        onClose={actions.closeConfirmation}
       />
     </>
   );

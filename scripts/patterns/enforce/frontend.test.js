@@ -80,7 +80,27 @@ test('allows a nested route page to import its page-family common owner', () => 
   assert.deepEqual(violations, []);
 });
 
-test('requires the standard route-page files', () => {
+test('checks import and export declarations without matching source text', () => {
+  const file = 'frontend/src/common/components/Example/Example.tsx';
+  const source = `
+    const documentation = "import Thing from '../../../pages/Leads/Leads'";
+    // export { Thing } from '../../../pages/Leads/Leads';
+    export { saveLead } from '../../../pages/Leads/leads.api';
+  `;
+  const violations = violationsFor(
+    checkFrontendOwnership,
+    file,
+    source,
+    routePageDirectories,
+    repoRoot,
+  );
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /:4 common components cannot import features or pages/);
+  assert.match(violations[0], /leads\.api/);
+});
+
+test('requires the route entry and test while keeping types optional', () => {
   const violations = violationsFor(
     checkRoutePageStructure,
     `${leadsPage}/Leads.tsx`,
@@ -88,7 +108,18 @@ test('requires the standard route-page files', () => {
     [`${leadsPage}/Leads.tsx`],
   );
 
-  assert.match(violations[0], /Leads\.test\.tsx, types\.ts/);
+  assert.match(violations[0], /Leads\.test\.tsx/);
+  assert.doesNotMatch(violations[0], /types\.ts/);
+
+  assert.deepEqual(
+    violationsFor(
+      checkRoutePageStructure,
+      `${leadsPage}/Leads.tsx`,
+      routePageDirectories,
+      [`${leadsPage}/Leads.tsx`, `${leadsPage}/Leads.test.tsx`],
+    ),
+    [],
+  );
 });
 
 test('allows a route page to delegate all styling without owning CSS', () => {

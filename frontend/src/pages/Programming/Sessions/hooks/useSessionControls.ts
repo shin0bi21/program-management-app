@@ -15,7 +15,20 @@ import {
 import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
 import type { ListSort } from '../../../../common/types/pagination';
 import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
-import type { SessionPreference, SessionStatusFilter, SessionView } from '../types';
+import type { SessionStatusFilter } from '../types';
+
+type SessionView = 'calendar' | 'table';
+
+export interface SessionPreference {
+  view: SessionView;
+  programIds: string[];
+  cohortId: string | null;
+  sessionTypeIds: string[];
+  statuses: SessionStatusFilter[];
+  sorting?: ListSort<SessionSortKey>;
+  columnWidths?: Record<string, number>;
+  hiddenColumns?: string[];
+}
 
 interface UseSessionControlsOptions {
   role: string | null;

@@ -1,13 +1,9 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { updateSession } from '../../../../../common/features/programming/api/sessions.api';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import type { CohortSession } from '../../../../../common/types/cohort';
-import { getErrorMessage } from '../../../../../http/errors';
-import { useSessionTypes } from '../../../common/hooks/useSessionTypes';
+import { useEditSessionModal } from './hooks/useEditSessionModal';
 
 const localDateTime = (value: string) => {
   const date = new Date(value);
@@ -21,40 +17,9 @@ interface EditSessionModalProps {
 }
 
 export default function EditSessionModal({ session, onClose, onUpdated }: EditSessionModalProps) {
-  const [status, setStatus] = useState<SubmitStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-  const { sessionTypes } = useSessionTypes();
-  const [sessionTypeId, setSessionTypeId] = useState('');
-
-  useEffect(() => {
-    if (!session) return;
-    setStatus('idle');
-    setStatusMessage('');
-    setSessionTypeId(session.sessionTypeId);
-  }, [session]);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!session) return;
-    const form = new FormData(event.currentTarget);
-    setStatus('submitting');
-    setStatusMessage('Updating session...');
-    try {
-      await updateSession(session.id, {
-        sessionTypeId,
-        theme: String(form.get('theme')).trim(),
-        startsAt: new Date(String(form.get('startsAt'))).toISOString(),
-        endsAt: new Date(String(form.get('endsAt'))).toISOString(),
-        description: String(form.get('description')).trim() || null,
-      });
-      await onUpdated();
-      setStatusMessage('Session updated successfully.');
-      setStatus('success');
-    } catch (cause) {
-      setStatusMessage(getErrorMessage(cause, 'Could not update session'));
-      setStatus('error');
-    }
-  };
+  const {
+    status, statusMessage, submissionComplete, sessionTypeId, setSessionTypeId, sessionTypes, submit,
+  } = useEditSessionModal(session, onUpdated);
 
   return (
     <Modal
@@ -82,10 +47,11 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
               value={sessionTypeId}
               onChange={setSessionTypeId}
               options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
+              disabled={submissionComplete}
             />
           </FormField>
           <FormField id="edit-session-theme" label="Title / Theme">
-            <input id="edit-session-theme" name="theme" required defaultValue={session.theme} maxLength={160} />
+            <input id="edit-session-theme" name="theme" required defaultValue={session.theme} maxLength={160} disabled={submissionComplete} />
           </FormField>
           <div className="form-row edit-session-time-row">
             <FormField id="edit-session-start" label="Starts at">
@@ -95,6 +61,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
                 type="datetime-local"
                 required
                 defaultValue={localDateTime(session.startsAt)}
+                disabled={submissionComplete}
               />
             </FormField>
             <FormField id="edit-session-end" label="Ends at">
@@ -104,6 +71,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
                 type="datetime-local"
                 required
                 defaultValue={localDateTime(session.endsAt)}
+                disabled={submissionComplete}
               />
             </FormField>
           </div>
@@ -113,6 +81,7 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
               name="description"
               defaultValue={session.description ?? ''}
               maxLength={5000}
+              disabled={submissionComplete}
             />
           </FormField>
         </form>

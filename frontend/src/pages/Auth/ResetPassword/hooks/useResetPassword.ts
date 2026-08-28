@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 import { resetPassword } from '../../../../auth/auth.api';
 import { getErrorMessage } from '../../../../http/errors';
-import type { ResetPasswordFormData } from '../types';
+
+interface ResetPasswordFormData {
+  password: string;
+  confirmPassword: string;
+}
 
 const resetPasswordSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),

@@ -7,6 +7,7 @@ import { useContacts } from '../../../contacts/hooks/useContacts';
 import { useAddresses } from './hooks/useAddresses';
 import { useSchools } from './schools/hooks/useSchools';
 import { useSubmitStatus } from '../../../../hooks/useSubmitStatus';
+import useSubmitLock from '../../../../hooks/useSubmitLock';
 import { youthSchema, type YouthFormData } from './youthSchema';
 import type { YouthProfile } from '../../../../types/youth';
 
@@ -29,6 +30,7 @@ interface UseYouthModalProps {
 
 export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false }: UseYouthModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { tryLock, unlock } = useSubmitLock();
 
   const {
     register,
@@ -85,6 +87,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     resetAddresses();
     resetContacts();
     resetStatus();
+    unlock();
   };
 
   const handleClose = () => {
@@ -93,6 +96,8 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
   };
 
   const onValid = async (data: YouthFormData) => {
+    if (!tryLock()) return;
+
     setSubmitStatus('submitting');
     setError('');
 
@@ -100,6 +105,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     if (addressError) {
       setError(addressError);
       setSubmitStatus('error');
+      unlock();
       return;
     }
 
@@ -107,6 +113,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     if (contactError) {
       setError(contactError);
       setSubmitStatus('error');
+      unlock();
       return;
     }
 
@@ -128,6 +135,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     } catch (err: unknown) {
       setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
       setSubmitStatus('error');
+      unlock();
       return;
     }
 
