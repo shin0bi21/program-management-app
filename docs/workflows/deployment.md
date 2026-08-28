@@ -80,11 +80,11 @@ test suite.
 
 Every pull request runs:
 
-- merge-path enforcement for `main`;
-- ESLint, shell syntax checks, and ShellCheck;
-- backend typechecking, clean-database migrations, checksum validation,
-  generated database-type drift detection, API tests, and build;
-- frontend tests, typechecking, and build.
+- Merge-path enforcement for `main`.
+- ESLint, shell syntax checks, and ShellCheck.
+- Backend typechecking, clean-database migrations, checksum validation,
+  generated database-type drift detection, API tests, and build.
+- Frontend tests, typechecking, and build.
 
 Production containers are also built when a pull request targets `main`, or
 when a pull request to `develop` changes a Dockerfile, production Compose or

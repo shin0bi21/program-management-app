@@ -61,7 +61,7 @@ In a route family, give each route its own page owner. Keep behaviour shared by 
 | Hook | Owns |
 |---|---|
 | `use*Data` | Remote options, loading/error state, and derived option collections needed across children |
-| `use*Preferences` | One-time restoration, canonical defaults, complete atomic saves, draft/applied search, filters, view, sorting, widths, and hidden columns |
+| `use*Preferences` | Restoration and complete saves for page controls. The [preferences guide](preferences.md) owns the full contract. |
 | `use*Selection` | Selected resource/row identity, reconciliation when options change, and synchronization after mutations |
 | `use*Actions` | Page-spanning mutations and reconciliation across table, calendar, dashboard, selection, and related domains |
 
@@ -78,16 +78,16 @@ A cohesive page workflow may consume its natural query hook directly. Omit `data
 
 Initialize dependencies in this order when they exist:
 
-1. page constants and pure helpers;
-2. page-local error state;
-3. permissions and application services;
-4. page data, preferences, filters, and current view;
-5. selection;
-6. page-spanning actions and mutation reconciliation;
-7. domain-named modal and confirmation workflows;
-8. table configuration and view composition;
-9. derived errors and child presentation;
-10. the page shell followed by dialogs.
+1. Define page constants and pure helpers.
+2. Initialize page-local error state.
+3. Load permissions and application services.
+4. Load page data, preferences, filters, and the current view.
+5. Initialize selection.
+6. Connect page-spanning actions and mutation reconciliation.
+7. Initialize each modal and confirmation workflow beside its domain state.
+8. Configure tables and compose the active view.
+9. Derive errors and other values passed to child components.
+10. Render the page shell followed by dialogs.
 
 Keep these phases in dependency order even when a page does not need every phase. Place
 state beside the phase that owns it: selection state belongs with selection, while a modal
@@ -187,6 +187,9 @@ Apply the ownership ladder once per behavior:
 A consumer may assert a child value or callback when that proves wiring across its boundary. It must not repeat an imported owner's fallback, styling, focus, close, loading or internal state tests.
 
 Route pages do not repeat preference-hook restoration and persistence matrices. They prove only that restored domain values reach the correct page controls or body owner.
+
+For example, a route test can restore `view: 'calendar'` and assert that the calendar reaches
+`PageBody`. The preference-hook test owns how that value was normalized, cached, and saved.
 
 ## Continue to the owning guide
 

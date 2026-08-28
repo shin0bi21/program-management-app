@@ -17,11 +17,11 @@ Keep product behavior with its capability even when several pages use it. Use `s
 
 Order a main service so it is easy to scan:
 
-1. primary reads;
-2. `set` and focused commands;
-3. delete;
-4. secondary public operations;
-5. private helpers.
+1. Put primary reads first.
+2. Follow with `set` and focused commands.
+3. Put delete operations next.
+4. Add secondary public operations after the main write lifecycle.
+5. Finish with private helpers.
 
 When the same full-record form adds and edits a record, expose one `set<Domain>` operation with an optional ID. Share validation, permissions, transaction work, and response mapping. Keep the insert and locked update SQL in small private branches instead of hiding the difference in an upsert.
 

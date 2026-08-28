@@ -32,11 +32,11 @@ where the resulting owner belongs.
 
 Validate and normalize where uncertainty enters:
 
-- API responses;
-- persisted or legacy data;
-- user input;
-- permissions and authentication state;
-- browser APIs and asynchronous failures.
+- Validate API responses.
+- Normalize persisted or legacy data.
+- Validate user input.
+- Treat permissions and authentication state as boundary inputs.
+- Validate browser APIs and asynchronous failures at their boundary.
 
 Inside a typed owner, do not manufacture required values with placeholders, cast arbitrary strings into finite unions, or preserve compatibility branches for impossible states. Correct the boundary instead.
 

@@ -8,6 +8,10 @@ Documentation follows the application structure. Enter the broad owner, read its
 
 Each directory README owns only its level’s overview and routing. Focused child documents own their component, layer, or workflow patterns and examples.
 
+Write rules as standalone sentences that a person can scan and an agent can execute without
+reconstructing context across list items. Use tables for concise comparisons, concrete examples
+to ground unfamiliar ownership terms, and links instead of repeating details owned elsewhere.
+
 | Area | Start here |
 |---|---|
 | Frontend application | [Frontend](docs/frontend/README.md) |

@@ -4,11 +4,11 @@
 
 Separate these decisions explicitly:
 
-- route capability: which permission allows an actor to attempt the operation;
-- resource visibility: which resource rows the actor may discover;
-- record visibility: whether a visible resource exposes every record or only records matching additional domain metadata;
-- mutation scope: which visible records the actor may create, update, move, or delete;
-- UI capability: which controls and interaction mechanics must be available for each returned resource or record.
+- **Route capability:** Which permission allows an actor to attempt the operation?
+- **Resource visibility:** Which resource rows may the actor discover?
+- **Record visibility:** Does a visible resource expose every record or only records matching additional domain metadata?
+- **Mutation scope:** Which visible records may the actor create, update, move, or delete?
+- **UI capability:** Which controls and interaction mechanics must be available for each returned resource or record?
 
 Do not infer one decision from another. In particular, shared program membership may make an entire coworker resource visible without filtering that coworker's records by program, and readable data does not imply writable data. Ask the user when any dimension is product-specific or ambiguous.
 

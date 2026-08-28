@@ -159,11 +159,11 @@ Adding or removing native enum values has different PostgreSQL semantics. Confir
 
 In the same change, search for both the stored value and its user-facing label, then update:
 
-- backend request schemas and typed service mappings;
-- frontend unions, options, filters, and labels;
-- API and UI tests;
-- deterministic seed scripts and fixtures;
-- integration documentation when the value crosses an external boundary.
+- Update backend request schemas and typed service mappings.
+- Update frontend unions, options, filters, and labels.
+- Update API and UI tests.
+- Update deterministic seed scripts and fixtures.
+- Update integration documentation when the value crosses an external boundary.
 
 Run the migration against a fresh test database, regenerate `src/types/database.ts`, run affected backend and frontend tests, and query the database to confirm the old value no longer exists.
 
