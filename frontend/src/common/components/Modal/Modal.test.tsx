@@ -1,5 +1,5 @@
 // Scope: verifies Modal-owned delayed-success closure and timer cleanup.
-import { act, render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Modal from './Modal';
@@ -52,5 +52,16 @@ describe('Modal success lifecycle', () => {
     unmount();
     act(() => vi.runAllTimers());
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('supports a non-dismissible dialog without losing shared dialog semantics', () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} title="Session expired" dismissible={false}>
+        Sign in again
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Session expired' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
   });
 });

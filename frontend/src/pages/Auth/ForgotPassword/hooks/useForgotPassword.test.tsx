@@ -1,3 +1,4 @@
+// Owns the Forgot Password request lifecycle and user-facing request state.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

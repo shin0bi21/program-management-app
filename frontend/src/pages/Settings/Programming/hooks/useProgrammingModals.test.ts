@@ -1,0 +1,31 @@
+// Owns Programming Settings program and cycle modal target transitions.
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+
+import useProgrammingModals from './useProgrammingModals';
+
+describe('useProgrammingModals', () => {
+  it('distinguishes closed, create, and edit targets for each modal', () => {
+    const { result } = renderHook(() => useProgrammingModals());
+
+    expect(result.current.program.target).toBeUndefined();
+    act(() => result.current.program.open(null));
+    expect(result.current.program.target).toBeNull();
+    act(() => result.current.program.open({
+      id: 'program-1',
+      name: 'Skills',
+      description: null,
+      rosterMode: 'open',
+      minAge: null,
+      maxAge: null,
+    }));
+    expect(result.current.program.target?.id).toBe('program-1');
+    act(() => result.current.program.close());
+    expect(result.current.program.target).toBeUndefined();
+
+    act(() => result.current.cycle.open(null));
+    expect(result.current.cycle.target).toBeNull();
+    act(() => result.current.cycle.close());
+    expect(result.current.cycle.target).toBeUndefined();
+  });
+});

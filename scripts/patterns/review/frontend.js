@@ -82,6 +82,9 @@ function collectMetrics(file, source) {
     externalLifecycles: 0,
     queryHooks: 0,
     renderedRouteSurfaces: new Set(),
+    renderedPageViews: new Set(),
+    rendersPageBody: false,
+    rendersPageHeader: false,
     stateHooks: 0,
     emptyFilterFallbacks: [],
     compatibilityNormalizations: [],
@@ -152,6 +155,9 @@ function collectMetrics(file, source) {
     if (node.type === 'JSXOpeningElement') {
       const name = jsxName(node.name);
       if (name && ROUTE_SURFACES.has(name)) metrics.renderedRouteSurfaces.add(name);
+      if (name === 'PageBody') metrics.rendersPageBody = true;
+      if (name === 'PageHeader') metrics.rendersPageHeader = true;
+      if (name && /(?:Table|Calendar|List)$/.test(name)) metrics.renderedPageViews.add(name);
     }
 
     for (const key of visitorKeys[node.type] ?? []) {
@@ -224,7 +230,7 @@ function isCalendarOwner(file) {
   return /\/components\/[^/]*Calendar\/[^/]*Calendar\.tsx$/.test(file);
 }
 
-function hasInlineWorkflow(file, metrics) {
+function hasInlineWorkflow(file, metrics, routeDirectory) {
   if (isCalendarOwner(file)) {
     return metrics.stateHooks > 0
       || metrics.effects > 1
@@ -241,6 +247,10 @@ function hasInlineWorkflow(file, metrics) {
     metrics.cacheCalls > 0,
     metrics.externalLifecycles > 0,
   ].filter(Boolean).length;
+
+  // Route pages legitimately own selection and mutually exclusive overlay targets.
+  // Report them only when they also absorb effects, remote work, or cache lifecycles.
+  if (routeDirectory) return coordinatedSignals > 0;
 
   return metrics.stateHooks >= 3
     || coordinatedSignals >= 2
@@ -270,10 +280,13 @@ function ownerDirectoryContext(file, repositoryFiles, routeDirectory) {
 
 const FILE_RULES = [
   {
-    category: 'review-page-styles',
-    appliesTo: ({ hasPageStyles, routeDirectory }) => routeDirectory && !hasPageStyles,
-    message: () => (
-      'route page has no page-owned CSS; confirm its presentation is fully delegated to styled child components.'
+    category: 'review-page-shell',
+    appliesTo: ({ metrics, routeDirectory }) => routeDirectory
+      && metrics.rendersPageHeader
+      && metrics.renderedPageViews.size > 0
+      && !metrics.rendersPageBody,
+    message: ({ metrics }) => (
+      `data route renders ${[...metrics.renderedPageViews].join(' and ')} without the shared PageBody shell.`
     ),
   },
   {
@@ -286,7 +299,9 @@ const FILE_RULES = [
   },
   {
     category: 'review-inline-workflow',
-    appliesTo: ({ file, metrics }) => file.endsWith('.tsx') && hasInlineWorkflow(file, metrics),
+    appliesTo: ({ file, metrics, routeDirectory }) => (
+      file.endsWith('.tsx') && hasInlineWorkflow(file, metrics, routeDirectory)
+    ),
     message: ({ metrics, directoryContext }) => (
       `TSX file contains inline workflow behavior (${describeMetrics(metrics)})${directoryContext}.`
     ),

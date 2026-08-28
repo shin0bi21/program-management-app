@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,11 +45,24 @@ describe('ManageHomepage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Manage Homepage' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Homepage image management' })).toBeInTheDocument();
     expect(screen.getByText('Adventure Bay trip.')).toBeInTheDocument();
     expect(document.querySelector('.homepage-image-row__thumbnail')).toHaveAttribute(
       'src',
       '/programming/adventure_bay.png',
     );
+  });
+
+  it('reports page-owned errors through the shared overlay with a retry action', async () => {
+    const user = userEvent.setup();
+    homepage.error = 'Could not load homepage images';
+    renderPage();
+
+    const errorOverlay = screen.getByRole('alert');
+    expect(errorOverlay).toHaveTextContent('Could not load homepage images');
+    await user.click(within(errorOverlay).getByRole('button', { name: 'Retry' }));
+
+    expect(homepage.refresh).toHaveBeenCalledOnce();
   });
 
   it('opens the page-owned image editor from the image list', async () => {

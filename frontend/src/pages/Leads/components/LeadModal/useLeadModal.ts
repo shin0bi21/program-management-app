@@ -8,6 +8,7 @@ import {
   type OutreachFormValues,
 } from '../../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
+import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../http/errors';
 import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
@@ -34,6 +35,7 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   lead?: Lead;
 }) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { tryLock, unlock } = useSubmitLock();
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<OutreachFormValues>({
     resolver: zodResolver(outreachFormSchema),
     defaultValues: outreachFormDefaultValues,
@@ -46,6 +48,7 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   const resetForm = () => {
     reset(outreachFormDefaultValues);
     resetStatus();
+    unlock();
   };
   const handleClose = () => {
     resetForm();
@@ -53,6 +56,8 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   };
 
   const onValid = async (data: OutreachFormValues) => {
+    if (!tryLock()) return;
+
     setSubmitStatus('submitting');
     setError('');
 
@@ -72,6 +77,7 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
     } catch (err) {
       setError(getErrorMessage(err, lead ? 'Unable to update lead' : 'Unable to create lead'));
       setSubmitStatus('error');
+      unlock();
       return;
     }
 

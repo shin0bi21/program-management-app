@@ -6,7 +6,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import Cohorts from './Cohorts';
-import type { CohortPreference } from './types';
+
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
+import type { CohortPreference } from './hooks/useCohortControls';
 
 const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
@@ -142,7 +144,7 @@ describe('Cohorts', () => {
 
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
     preferenceHook.loading = true;
-    const rendered = render(<MemoryRouter><Cohorts /></MemoryRouter>);
+    const rendered = render(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading saved cohort preferences…');
     expect(screen.queryByRole('button', { name: 'Columns' })).not.toBeInTheDocument();
@@ -150,7 +152,7 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('table', { name: 'Cohorts' })).not.toBeInTheDocument();
 
     preferenceHook.loading = false;
-    rendered.rerender(<MemoryRouter><Cohorts /></MemoryRouter>);
+    rendered.rerender(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Cohorts' })).toBeInTheDocument();
@@ -159,7 +161,7 @@ describe('Cohorts', () => {
   it('shows all cohorts by default and can display a selected program', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -204,7 +206,7 @@ describe('Cohorts', () => {
   it('shows success feedback after adding a cohort', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -224,7 +226,7 @@ describe('Cohorts', () => {
   it('removes a deleted cohort without refetching the table', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -246,7 +248,7 @@ describe('Cohorts', () => {
     auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );
@@ -280,7 +282,7 @@ describe('Cohorts', () => {
     }]);
 
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );

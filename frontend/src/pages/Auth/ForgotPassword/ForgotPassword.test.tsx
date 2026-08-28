@@ -1,3 +1,4 @@
+// Owns Forgot Password route rendering, validation wiring, and navigation.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

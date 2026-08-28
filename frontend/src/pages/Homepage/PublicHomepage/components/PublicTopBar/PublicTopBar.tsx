@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import logoUrl from '../../../../../assets/logo.webp';
 import logo160Url from '../../../../../assets/logo-160.webp';
@@ -8,13 +8,14 @@ import { useFloatingMenu } from '../../../../../common/components/FloatingMenu/h
 import FloatingMenuPanel from '../../../../../common/components/FloatingMenu/FloatingMenuPanel';
 import { scrollToHomepageSection } from '../../hooks/useSectionRouting';
 import { getHomepageSectionByPath, HOMEPAGE_NAV_SECTIONS } from '../../utils/homepageSections';
+import usePublicTopBarScroll from './hooks/usePublicTopBarScroll';
 import './PublicTopBar.css';
 
 export default function PublicTopBar() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const activeSectionId = getHomepageSectionByPath(location.pathname)?.id;
-  const [scrolled, setScrolled] = useState(false);
+  const scrolled = usePublicTopBarScroll();
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
   const {
@@ -28,12 +29,6 @@ export default function PublicTopBar() {
     { side: 'bottom', align: 'end' },
     { widthEstimate: 220, heightEstimate: 240 },
   );
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   const handleSectionClick = () => {
     close();

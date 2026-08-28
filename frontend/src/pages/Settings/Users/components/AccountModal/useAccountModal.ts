@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteAccount, updateAccount } from '../../accounts.api';
 import { getErrorMessage } from '../../../../../http/errors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import type { Account } from '../../../../../common/types/account';
 import { accountSchema, type AccountFormData } from './accountSchema';
 
@@ -24,6 +25,7 @@ interface AccountModalControllerProps {
 
 export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { tryLock, unlock } = useSubmitLock();
   const {
     register,
     control,
@@ -35,8 +37,9 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
   const handleClose = useCallback(() => {
     reset(defaultValues);
     resetStatus();
+    unlock();
     onClose();
-  }, [onClose, reset, resetStatus]);
+  }, [onClose, reset, resetStatus, unlock]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -48,9 +51,12 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();
-  }, [account, isOpen, reset, resetStatus]);
+    unlock();
+  }, [account, isOpen, reset, resetStatus, unlock]);
 
   const onValid = async (data: AccountFormData) => {
+    if (!tryLock()) return;
+
     setSubmitStatus('submitting');
     setError('');
 
@@ -69,6 +75,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     } catch (err) {
       setError(getErrorMessage(err, account ? 'Failed to update account' : 'Failed to send invitation'));
       setSubmitStatus('error');
+      unlock();
       return;
     }
 

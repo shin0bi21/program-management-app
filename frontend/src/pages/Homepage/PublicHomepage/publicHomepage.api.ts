@@ -2,7 +2,19 @@ import type { PublicOutreachFormValues } from '../../../common/features/outreach
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import { apiUrl } from '../../../http/transport';
-import type { HomepageImage, HomepageSession } from './types';
+import type { HomepageSession } from './types';
+
+export interface HomepageImage {
+  id: string;
+  imageUrl: string;
+  mobileUrl: string;
+  thumbnailUrl: string;
+  altText: string;
+  caption: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type PublicLeadPayload = Omit<PublicOutreachFormValues, 'notes'> & { notes?: string };
 

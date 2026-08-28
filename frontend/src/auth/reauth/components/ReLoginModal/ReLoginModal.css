@@ -1,36 +1,5 @@
-.relogin-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(2px);
-}
-
-.relogin-modal {
-  background: var(--color-white);
-  border-radius: 12px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.relogin-header {
+.relogin-description {
   margin-bottom: 1.5rem;
-}
-
-.relogin-header h2 {
-  margin: 0 0 0.4rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.relogin-header p {
-  margin: 0;
   font-size: 0.9rem;
   color: var(--color-muted);
 }

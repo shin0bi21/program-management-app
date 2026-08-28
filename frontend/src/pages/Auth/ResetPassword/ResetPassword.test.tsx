@@ -8,7 +8,14 @@ import ResetPassword from './ResetPassword';
 vi.mock('../../../auth/auth.api', () => ({ resetPassword: vi.fn() }));
 
 function renderPage(path = '/reset-password?token=reset-token') {
-  return render(<MemoryRouter initialEntries={[path]}><ResetPassword /></MemoryRouter>);
+  return render(
+    <MemoryRouter
+      initialEntries={[path]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <ResetPassword />
+    </MemoryRouter>,
+  );
 }
 
 describe('ResetPassword', () => {

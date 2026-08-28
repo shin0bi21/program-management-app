@@ -100,7 +100,7 @@ test('checks import and export declarations without matching source text', () =>
   assert.match(violations[0], /leads\.api/);
 });
 
-test('requires the standard route-page files', () => {
+test('requires the route entry and test while keeping types optional', () => {
   const violations = violationsFor(
     checkRoutePageStructure,
     `${leadsPage}/Leads.tsx`,
@@ -108,7 +108,18 @@ test('requires the standard route-page files', () => {
     [`${leadsPage}/Leads.tsx`],
   );
 
-  assert.match(violations[0], /Leads\.test\.tsx, types\.ts/);
+  assert.match(violations[0], /Leads\.test\.tsx/);
+  assert.doesNotMatch(violations[0], /types\.ts/);
+
+  assert.deepEqual(
+    violationsFor(
+      checkRoutePageStructure,
+      `${leadsPage}/Leads.tsx`,
+      routePageDirectories,
+      [`${leadsPage}/Leads.tsx`, `${leadsPage}/Leads.test.tsx`],
+    ),
+    [],
+  );
 });
 
 test('allows a route page to delegate all styling without owning CSS', () => {

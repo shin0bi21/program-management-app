@@ -5,7 +5,10 @@ import { z } from 'zod';
 
 import { forgotPassword } from '../../../../auth/auth.api';
 import { getErrorMessage } from '../../../../http/errors';
-import type { ForgotPasswordFormData } from '../types';
+
+interface ForgotPasswordFormData {
+  email: string;
+}
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),

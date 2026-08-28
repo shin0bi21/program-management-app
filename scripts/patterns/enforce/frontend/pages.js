@@ -22,7 +22,6 @@ export function checkRoutePageStructure(
   const requiredFiles = new Set([
     `${pageName}.tsx`,
     `${pageName}.test.tsx`,
-    'types.ts',
   ]);
   const isPageApi = path => /^[a-z][A-Za-z0-9]*\.api\.ts$/.test(path);
   const isPageApiTest = path => /^[a-z][A-Za-z0-9]*\.api\.test\.ts$/.test(path);
@@ -46,7 +45,7 @@ export function checkRoutePageStructure(
       required => !repositoryFiles.includes(`${routeDirectory}/${required}`),
     );
     if (missing.length) {
-      violations.push(`${file}:1 route pages require TSX, test, and types files; missing ${missing.join(', ')}.`);
+      violations.push(`${file}:1 route pages require a TSX entry and colocated test; missing ${missing.join(', ')}.`);
     }
 
     const rootPrefix = `${routeDirectory}/`;

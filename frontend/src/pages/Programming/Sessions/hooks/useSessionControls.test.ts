@@ -3,8 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
 import type { ProgramCohort, SessionType } from '../../../../common/types/cohort';
-import type { SessionPreference } from '../types';
-import { useSessionControls } from './useSessionControls';
+import { type SessionPreference, useSessionControls } from './useSessionControls';
 
 const preferenceHook = vi.hoisted<{
   preference: SessionPreference | null;

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
-import type { YouthPreference } from './types';
+import type { YouthPreference } from './hooks/useYouthControls';
 
 const mockUseYouthTableData = vi.fn();
 const youthApi = vi.hoisted(() => ({
@@ -40,8 +40,20 @@ vi.mock('../../auth/authContext', () => ({
 }));
 
 vi.mock('../../common/features/youth/components/YouthModal/YouthModal', () => ({
-  default: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) => isOpen
-    ? <div data-testid="youth-modal">{mode ?? 'full'}</div>
+  default: ({ isOpen, mode, youthData, onSuccess }: {
+    isOpen: boolean;
+    mode?: string;
+    youthData?: ReturnType<typeof makeYouthProfile>;
+    onSuccess: (profile: ReturnType<typeof makeYouthProfile>) => void;
+  }) => isOpen
+    ? <div data-testid="youth-modal">
+      {mode ?? 'full'}
+      {youthData && <button onClick={() => onSuccess({
+        ...youthData,
+        firstName: 'Authoritative',
+        contacts: [{ id: 'contact-saved', phoneNumber: '416-555-0199', type: 'guardian' }],
+      })}>Complete save</button>}
+    </div>
     : null,
 }));
 vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
@@ -59,7 +71,7 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
     ariaLabel: string;
     items: Array<{ id: string; label: string; onClick: () => void }>;
   }) => <>
-    <button aria-label={ariaLabel}>{items[0].label}</button>
+    <button aria-label={ariaLabel} onClick={items[0].onClick}>{items[0].label}</button>
     {items.slice(1).map(item => <button key={item.id} onClick={item.onClick}>{item.label}</button>)}
   </>,
 }));
@@ -227,5 +239,15 @@ describe('Youth', () => {
     fireEvent.click(addContact);
 
     expect(screen.getByTestId('youth-modal')).toHaveTextContent('contact');
+  });
+
+  it('reconciles an authoritative contact save into the selected dashboard', () => {
+    render(<Youth />);
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
+
+    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
   });
 });

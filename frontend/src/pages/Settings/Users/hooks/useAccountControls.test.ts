@@ -2,8 +2,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AccountPreference } from '../types';
-import { useAccountControls } from './useAccountControls';
+import { type AccountPreference, useAccountControls } from './useAccountControls';
 
 const preferenceHook = vi.hoisted<{
   preference: AccountPreference | null;

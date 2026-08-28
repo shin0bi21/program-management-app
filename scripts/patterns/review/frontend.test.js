@@ -18,20 +18,39 @@ test('flags a route entry that renders a table instead of delegating to a view',
   assert.match(findings.join('\n'), /\[review-owner-boundary\].*renders Table directly/);
 });
 
-test('advises review when a route page delegates all styling', () => {
+test('flags a data route that renders an owned view without PageBody', () => {
+  const file = 'frontend/src/pages/Users/Users.tsx';
+  const source = `
+    export default function Users() {
+      return <main><PageHeader title="Users" /><UserTable /></main>;
+    }
+  `;
+  const findings = findingsFor(file, source, {
+    repositoryFiles: [file, 'frontend/src/pages/Users/Users.css'],
+    routePageDirectories: ['frontend/src/pages/Users'],
+  });
+
+  assert.match(findings.join('\n'), /\[review-page-shell\].*UserTable.*without the shared PageBody/);
+});
+
+test('accepts a data route that delegates its owned view through PageBody', () => {
+  const file = 'frontend/src/pages/Users/Users.tsx';
+  const source = `
+    export default function Users() {
+      return <main><PageHeader title="Users" /><PageBody table={<UserTable />} /></main>;
+    }
+  `;
+
+  assert.deepEqual(findingsFor(file, source, {
+    repositoryFiles: [file, 'frontend/src/pages/Users/Users.css'],
+    routePageDirectories: ['frontend/src/pages/Users'],
+  }), []);
+});
+
+test('allows a route page to delegate all styling', () => {
   const file = 'frontend/src/pages/Login/Login.tsx';
   const findings = findingsFor(file, 'export default function Login() { return <AuthLayout />; }', {
     repositoryFiles: [file],
-    routePageDirectories: ['frontend/src/pages/Login'],
-  });
-
-  assert.match(findings.join('\n'), /\[review-page-styles\].*no page-owned CSS/);
-});
-
-test('does not advise style review when the route owns CSS', () => {
-  const file = 'frontend/src/pages/Login/Login.tsx';
-  const findings = findingsFor(file, 'export default function Login() { return <AuthLayout />; }', {
-    repositoryFiles: [file, 'frontend/src/pages/Login/Login.css'],
     routePageDirectories: ['frontend/src/pages/Login'],
   });
 
@@ -74,6 +93,43 @@ test('allows cohesive page-owned modal entry state', () => {
     repositoryFiles: [file, 'frontend/src/pages/Tasks/Tasks.css'],
     routePageDirectories: ['frontend/src/pages/Tasks'],
   }), []);
+});
+
+test('allows several route-owned selection and overlay targets without remote workflow signals', () => {
+  const file = 'frontend/src/pages/Tasks/Tasks.tsx';
+  const source = `
+    import { useState } from 'react';
+    export default function Tasks() {
+      const [selection] = useState(null);
+      const [taskModalState] = useState(null);
+      const [hoursModalState] = useState(null);
+      const [confirmationState] = useState(null);
+      return <TaskPage selection={selection} taskModalState={taskModalState}
+        hoursModalState={hoursModalState} confirmationState={confirmationState} />;
+    }
+  `;
+
+  assert.deepEqual(findingsFor(file, source, {
+    repositoryFiles: [file, 'frontend/src/pages/Tasks/Tasks.css'],
+    routePageDirectories: ['frontend/src/pages/Tasks'],
+  }), []);
+});
+
+test('reports a route page that owns cache or remote lifecycles', () => {
+  const file = 'frontend/src/pages/Tasks/Tasks.tsx';
+  const source = `
+    import { useQueryClient } from '@tanstack/react-query';
+    export default function Tasks() {
+      const queryClient = useQueryClient();
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      return <TaskPage onRefresh={refresh} />;
+    }
+  `;
+
+  assert.match(findingsFor(file, source, {
+    repositoryFiles: [file, 'frontend/src/pages/Tasks/Tasks.css'],
+    routePageDirectories: ['frontend/src/pages/Tasks'],
+  }).join('\n'), /\[review-inline-workflow\]/);
 });
 
 test('allows a Calendar owner to own one range loader and buffer-adapter effect', () => {

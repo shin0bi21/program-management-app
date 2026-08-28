@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { useResetPassword } from './hooks/useResetPassword';
+
 import AuthLayout from '../../../common/components/AuthLayout/AuthLayout';
 import Button from '../../../common/components/Button/Button';
+
+import { useResetPassword } from './hooks/useResetPassword';
 
 export default function ResetPassword() {
   const { form, error, message, onSubmit, token } = useResetPassword();

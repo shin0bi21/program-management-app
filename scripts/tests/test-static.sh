@@ -27,7 +27,7 @@ echo "Running ESLint..."
 npm run lint
 
 echo "Running script tests..."
-node --test scripts/ci/*.test.js scripts/patterns/enforce/*.test.js scripts/patterns/review/*.test.js scripts/reports/*.test.js
+node --test scripts/agents/*.test.js scripts/ci/*.test.js scripts/patterns/enforce/*.test.js scripts/patterns/review/*.test.js scripts/reports/*.test.js
 
 echo "Checking report commands..."
 loc_total=$(bash scripts/reports/loc-report.sh app | awk '/^TOTAL/{print $2}')

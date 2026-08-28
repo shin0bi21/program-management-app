@@ -1,11 +1,9 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
-import { getErrorMessage } from '../../../../../http/errors';
-import { createHomepageImage, updateHomepageImage } from '../../manageHomepage.api';
 import type { ManagedHomepageImage } from '../../types';
+import useHomepageImageModal from './hooks/useHomepageImageModal';
 
 interface HomepageImageModalProps {
   image: ManagedHomepageImage | null;
@@ -15,43 +13,13 @@ interface HomepageImageModalProps {
 }
 
 export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: HomepageImageModalProps) {
-  const [status, setStatus] = useState<SubmitStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setStatus('idle');
-    setStatusMessage('');
-    setSelectedFile(null);
-  }, [image, isOpen]);
+  const workflow = useHomepageImageModal({ image, isOpen, onSaved });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const caption = String(form.get('caption')).trim();
-    setStatus('submitting');
-    setStatusMessage(image ? 'Saving homepage image...' : 'Uploading homepage image...');
-
-    try {
-      if (image) {
-        await updateHomepageImage(image.id, { caption });
-      } else {
-        if (!selectedFile?.size) {
-          throw new Error('Choose an image to upload');
-        }
-        await createHomepageImage({
-          image: selectedFile,
-          caption,
-        });
-      }
-      await onSaved();
-      setStatus('success');
-      setStatusMessage(image ? 'Homepage image updated.' : 'Homepage image added.');
-    } catch (cause) {
-      setStatus('error');
-      setStatusMessage(getErrorMessage(cause, 'Could not save homepage image'));
-    }
+    await workflow.submit(caption);
   };
 
   return (
@@ -59,14 +27,14 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
       isOpen={isOpen}
       onClose={onClose}
       title="Manage Images"
-      status={status}
-      statusMessage={statusMessage}
+      status={workflow.status}
+      statusMessage={workflow.statusMessage}
       successDelay={1200}
       footer={(
         <ModalFormFooter
           formId="homepage-image-form"
           submitLabel={image ? 'Save' : 'Add Image'}
-          submitStatus={status}
+          submitStatus={workflow.status}
           onClose={onClose}
         />
       )}
@@ -79,7 +47,8 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
               name="image"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(event) => setSelectedFile(event.currentTarget.files?.[0] ?? null)}
+              disabled={workflow.submissionComplete}
+              onChange={(event) => workflow.setSelectedFile(event.currentTarget.files?.[0] ?? null)}
               required
             />
           </FormField>
@@ -92,6 +61,7 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
             rows={3}
             maxLength={500}
             required
+            disabled={workflow.submissionComplete}
           />
         </FormField>
       </form>
