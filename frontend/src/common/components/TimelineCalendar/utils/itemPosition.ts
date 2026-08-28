@@ -38,7 +38,7 @@ export function positionItems<TItemData>(
     const isVisible = startIndex >= 0 && endIndex >= 0 && startIndex <= endIndex;
 
     return isVisible ? [{ item, range, startIndex, endIndex }] : [];
-  }).sort((left, right) => left.startIndex - right.startIndex || left.endIndex - right.endIndex);
+  }).sort((left, right) => left.startIndex - right.startIndex || right.endIndex - left.endIndex);
 
   const positioned: Array<Omit<PositionedItem<TItemData>, 'laneCount'>> = [];
   visible.forEach(item => {

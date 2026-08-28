@@ -22,6 +22,19 @@ describe('positionItems', () => {
     ]);
   });
 
+  it('places the longer item in the upper lane when items start together', () => {
+    const items = [
+      { id: 'short', start: '2026-08-10', end: '2026-08-11' },
+      { id: 'long', start: '2026-08-10', end: '2026-08-13' },
+    ];
+    const positioned = positionItems(items, periods, item => ({ start: item.start, end: item.end }));
+
+    expect(positioned.map(item => ({ id: item.item.id, lane: item.lane }))).toEqual([
+      { id: 'long', lane: 0 },
+      { id: 'short', lane: 1 },
+    ]);
+  });
+
   it('uses the same positioning for one-period items', () => {
     const positioned = positionItems([
       { id: 'a', date: '2026-08-10' },
