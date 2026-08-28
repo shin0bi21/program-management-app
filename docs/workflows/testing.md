@@ -53,12 +53,12 @@ Place each behavior at its narrowest authoritative owner. A broader consumer tes
 
 For every applicable owner, cover the meaningful state and event lifecycle rather than only its happy-path snapshot:
 
-1. initial, loading, success, empty, and error presentation;
-2. user actions and their exact emitted or persisted values;
-3. transitions when props, targets, permissions, or dependent inputs change;
-4. repeat, reopen, retry, cancellation, and unmount cleanup paths when the owner exposes them;
-5. overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation only when the owner permits those paths;
-6. accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
+1. Cover initial, loading, success, empty, and error presentation.
+2. Assert user actions and their exact emitted or persisted values.
+3. Exercise transitions when props, targets, permissions, or dependent inputs change.
+4. Cover repeat, reopen, retry, cancellation, and unmount cleanup paths when the owner exposes them.
+5. Test overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation only when the owner permits those paths.
+6. Verify accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
 
 Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Shared components and hooks own generic mechanics once; consumers prove only their domain values and cross-owner wiring. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
 

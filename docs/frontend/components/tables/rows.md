@@ -98,12 +98,12 @@ Overview and dashboard queries are derived aggregates and may be invalidated by 
 
 For every update path, assert:
 
-- the exact focused API payload;
-- the canonical response replaces the row in every matching cached variant;
-- cached variants that do not contain the row remain unchanged and do not gain it;
-- unaffected row references are preserved;
-- active filter and sort differences do not trigger invalidation, an additional list request, or table refreshing state;
-- selection, calendar, dashboard, and related-area reconciliation occurs only where required;
-- failed and duplicate actions do not reconcile stale data.
+- Assert the exact focused API payload.
+- Confirm that the canonical response replaces the row in every matching cached variant.
+- Confirm that cached variants without the row remain unchanged and do not gain it.
+- Preserve unaffected row references.
+- Verify that active filter and sort differences do not trigger invalidation, another list request, or table refreshing state.
+- Reconcile selection, calendar, dashboard, and related areas only where required.
+- Confirm that failed and duplicate actions do not reconcile stale data.
 
 For delete, assert local removal without a list request or page backfill. For create invalidation, assert the exact list prefix and authoritative reloaded result. For responses spanning application areas, assert every returned existing row is replaced and only the explicitly derived or created owners are invalidated.
