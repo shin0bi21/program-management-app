@@ -65,11 +65,33 @@ export default tseslint.config(
   },
   {
     files: [
-      'scripts/agents/**/*.js',
-      'scripts/ci/**/*.js',
-      'scripts/patterns/**/*.js',
-      'scripts/reports/**/*.js',
+      '**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'frontend/playwright/**/*.{js,jsx,ts,tsx}',
     ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='only']",
+          message: 'Focused test markers must not be committed.',
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='skip']",
+          message: 'Skipped test markers must not be committed.',
+        },
+        ...['fdescribe', 'fit'].map(name => ({
+          selector: `CallExpression[callee.type='Identifier'][callee.name='${name}']`,
+          message: 'Focused test markers must not be committed.',
+        })),
+        ...['xdescribe', 'xit', 'xtest'].map(name => ({
+          selector: `CallExpression[callee.type='Identifier'][callee.name='${name}']`,
+          message: 'Skipped test markers must not be committed.',
+        })),
+      ],
+    },
+  },
+  {
+    files: ['scripts/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

@@ -28,9 +28,9 @@ This workflow ends after the approved changes are merged and pushed to `develop`
 
 ## 1. Audit the shipping input
 
-1. Confirm the current branch and upstream state with `git status --short --branch`.
-2. Inventory the complete tracked and untracked diff.
-3. Inspect existing stashes without applying or dropping them.
+1. Run `node scripts/agents/snapshot-changes.ts --json` and compare its branch, upstream, complete change inventory, stashes, and fingerprint with the approved concern map and review evidence.
+2. Inspect raw Git state only to resolve snapshot mismatches or concern-level isolation details.
+3. Inspect existing stashes without applying or dropping them when their purpose remains ambiguous after the snapshot.
 4. Check for GitHub Issues and pull requests that already cover the work.
 5. Use the latest approved `map-changes` concern map and concern-level reviews. If no concern map exists, stop and run the mapping workflow before creating remote changes, even when the working tree appears cohesive.
 6. Do not ship with unresolved high- or medium-severity findings. List every remaining low-severity finding and require it to be fixed, explicitly accepted, or assigned to a concrete deferred concern before creating remote changes.
@@ -61,7 +61,7 @@ Use patch-based restoration when concerns overlap in a file. Never bundle an unr
 
 For every isolated branch:
 
-1. Run `node scripts/patterns/check-patterns.js --changed`. If repository skills changed, also run `node scripts/agents/validate-skills.js`.
+1. Run `node scripts/patterns/check-patterns.ts --changed`. If repository skills changed, also run `node scripts/agents/validate-skills.ts`.
 2. Run the concern map's narrow authoritative suites against the isolated branch. Reuse prior evidence only when it covers that exact isolated diff; do not repeat equivalent runners.
 3. Fix branch-introduced failures and rerun only failed or affected focused checks.
 4. Review `git diff --check`, the final diff, and `git status`.

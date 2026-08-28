@@ -33,6 +33,7 @@ docker compose down
 | Frontend React, TypeScript, or CSS | No command normally; Vite reloads it |
 | Frontend Vite configuration or `.env` | `docker compose restart frontend` |
 | Backend TypeScript | `docker compose restart backend` |
+| Shared `tsconfig.base.json` | `docker compose restart frontend backend` |
 | Root `.env` used by the backend | `docker compose up -d --force-recreate backend` |
 | Pull frontend lockfile changes | `docker compose exec frontend npm ci`, then restart frontend |
 | Pull backend lockfile changes | `docker compose exec backend npm ci`, then restart backend |
@@ -46,8 +47,8 @@ docker compose down
 | Install the Playwright browser | `cd frontend && npm run test:browser:install` |
 | Run browser component tests | `cd frontend && npm run test:browser` |
 | Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
-| Check changed architecture patterns | `node scripts/patterns/check-patterns.js --changed` |
-| Validate repository skills | `node scripts/agents/validate-skills.js` |
+| Check changed architecture patterns | `node scripts/patterns/check-patterns.ts --changed` |
+| Validate repository skills | `node scripts/agents/validate-skills.ts` |
 | Report repository lines of code | `npm run report:loc` |
 
 Never edit an applied migration. Add a new migration instead.

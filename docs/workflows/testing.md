@@ -15,9 +15,11 @@ Run test commands from the repository root. The supported test workflow uses the
 
 The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope.
 
-Static analysis includes shell syntax, ShellCheck, repository lint, script tests, report smoke checks, local Markdown-link validation, and repository-skill validation.
+Static analysis includes shell syntax, ShellCheck, repository lint, strict root-script type checking, script tests, report smoke checks, local Markdown-link validation, and repository-skill validation.
 
-Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.js`](../../scripts/ci/select-tests.js). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Hours tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
+Repository Node programs under `scripts/` execute directly as TypeScript on Node 24. `tsconfig.json` type-checks those scripts with Node16 module semantics and erasable-syntax enforcement; Node still executes them without reading that config. `tsconfig.base.json` contains only compiler policy shared by root scripts, frontend, and backend, while each environment retains its own module resolution, libraries, types, JSX, and emit settings.
+
+Pass `--changed` to route committed branch changes plus staged, unstaged, and untracked files through [`scripts/ci/select-tests.ts`](../../scripts/ci/select-tests.ts). Recognized backend domains run focused Jest paths, including declared integration consumers; for example, Task changes also run Hours tests. Shared backend infrastructure, migrations, dependencies, and unmapped paths conservatively escalate to the full backend suite.
 
 Frontend source changes run `vitest --changed` against the comparison base. Vitest follows imports, so changing a component or hook selects its own tests and tests for importing components and route pages. Frontend configuration, dependencies, and test-runner changes run the complete frontend suite. The comparison base defaults to `origin/develop` before falling back to the remote default branch; override it with `TEST_APP_BASE_REF` or a positional base revision, such as `bash scripts/tests/test-app.sh --changed HEAD~1`.
 
@@ -146,15 +148,15 @@ Check `scripts/tests/backend/` and `scripts/tests/frontend/` for the complete cu
 Use the deterministic repository checks before review or handoff:
 
 ```bash
-node scripts/patterns/check-patterns.js --changed
-node scripts/agents/validate-skills.js
+node scripts/patterns/check-patterns.ts --changed
+node scripts/agents/validate-skills.ts
 ```
 
-`check-patterns.js` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.
+`check-patterns.ts` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.
 
 When any file inside a route page changes, the structural pass also checks the page entry and its current root files. Existing loose query-key, capability, utility, or view-type files therefore cannot remain hidden merely because the changed file was already one of the standard page files.
 
-The enforcement layer checks high-confidence ownership, route-page structure, component/hook/page/API test colocation, centralized frontend documentation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, dashboard naming, and accidental test markers. Page-owned remote collections use a matching `components/*Table/*Table.tsx` owner with their `use*TableData` hook colocated under that table's `hooks/` directory; `*ListView` and `*TableView` owners are not supported. The review layer highlights changed TSX files with inline workflow behavior, defensive normalization outside external boundaries, and page-root types that appear to have only one API or implementation consumer. These findings keep ownership decisions visible without blocking CI. Neither layer generates semantic tests or replaces behavior review. The [frontend guide](../frontend/README.md#find-the-right-guide) maps each rule family to its single documentation owner.
+The enforcement layer checks high-confidence ownership, route-page structure, component/hook/page/API test colocation, centralized frontend documentation, API placement, normalized functional saves for persisted controls, page-owned keys for table column preferences, centralized HTTP, route wrappers, migration immutability, focused mutations, remote-list wiring, buffered calendars, and dashboard naming. Page-owned remote collections use a matching `components/*Table/*Table.tsx` owner with their `use*TableData` hook colocated under that table's `hooks/` directory; `*ListView` and `*TableView` owners are not supported. ESLint separately rejects focused and skipped test markers such as `.only`, `.skip`, `fit`, and `xit`. The review layer highlights changed TSX files with inline workflow behavior, defensive normalization outside external boundaries, and page-root types that appear to have only one API or implementation consumer. These findings keep ownership decisions visible without blocking CI. Neither layer generates semantic tests or replaces behavior review. The [frontend guide](../frontend/README.md#find-the-right-guide) maps each rule family to its single documentation owner.
 
 Syntax-sensitive enforcement uses ts-morph so import/export boundaries and Express route
 handlers are checked as TypeScript nodes rather than source-text matches. File placement,
@@ -199,8 +201,8 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 - Frontend tests are colocated with the component, hook, page, or feature they exercise.
 - Frontend tests that need TanStack Query use `frontend/src/tests/queryClientTestUtils.tsx`. Create a fresh client per test, use `renderWithQueryClient` for components, and use `createQueryClientWrapper` for hooks so cache state and retry behavior cannot leak between tests.
 - Repeated, structurally complete domain fixtures live under `frontend/src/tests/factories/`. Factories provide one valid canonical object and accept typed overrides; keep scenario-specific values in the owning test instead of adding one-off factory variants.
-- Register backend ownership and integration consumers in `scripts/ci/select-tests.js`. Frontend source ownership is derived from Vitest's dependency graph rather than a manually maintained page map.
-- Add or update `scripts/ci/select-tests.test.js` whenever a new repository path category changes routing behavior. Unrecognized paths deliberately select the full application plan.
+- Register backend ownership and integration consumers in `scripts/ci/select-tests.ts`. Frontend source ownership is derived from Vitest's dependency graph rather than a manually maintained page map.
+- Add or update `scripts/ci/select-tests.test.ts` whenever a new repository path category changes routing behavior. Unrecognized paths deliberately select the full application plan.
 - When a backend route is added, mount it in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 
 See [`local-development.md`](local-development.md) for container lifecycle, logs, migrations, and reset commands.

@@ -15,7 +15,7 @@ Before deep review, map the working tree into one or more independently reviewab
 Review tracked and untracked changes for correctness, regressions, security, authorization, ownership boundaries, maintainability, and test adequacy. Use successful focused test evidence while the exact concern diff remains unchanged. Run:
 
 ```bash
-node scripts/patterns/check-patterns.js --changed
+node scripts/patterns/check-patterns.ts --changed
 git diff --check
 ```
 

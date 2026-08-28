@@ -49,6 +49,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
       - name: Plan checks from changed ownership paths
         id: plan
         env:
@@ -56,7 +61,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           git diff --name-only --diff-filter=ACDMR "$BASE_SHA"...HEAD \
-            | node scripts/ci/select-tests.js --github-output "$GITHUB_OUTPUT" --base-ref "$BASE_REF"
+            | node scripts/ci/select-tests.ts --github-output "$GITHUB_OUTPUT" --base-ref "$BASE_REF"
 
   quality:
     name: Lint & Shell Analysis
@@ -245,7 +250,7 @@ jobs:
           persist-credentials: false
 
       - name: Build backend production image
-        run: docker build --target prod backend
+        run: docker build -f backend/Dockerfile --target prod .
 
   production-frontend-image:
     name: Frontend Production Image
@@ -260,7 +265,7 @@ jobs:
           persist-credentials: false
 
       - name: Build frontend/nginx production image
-        run: docker build --tag be-original-frontend-ci frontend
+        run: docker build -f frontend/Dockerfile --tag be-original-frontend-ci .
 
       - name: Validate production nginx configuration
         run: |
