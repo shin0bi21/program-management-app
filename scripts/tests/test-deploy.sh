@@ -48,7 +48,7 @@ done
 
 (
   # ShellCheck cannot see these functions being called through sourced deploy code.
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2317,SC2329
   git() {
     case "$*" in
       "status --porcelain") return ;;
@@ -60,7 +60,7 @@ done
       *) echo "Unexpected git invocation: $*" >&2; return 1 ;;
     esac
   }
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2317,SC2329
   reexecute_deploy() {
     printf '%s\n' "$@" > "$REEXECUTED_ARGUMENTS"
   }
