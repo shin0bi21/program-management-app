@@ -3,7 +3,8 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TEST_REPO="$(mktemp -d /tmp/myapp-deployment-test.XXXXXX)"
-trap 'rm -rf -- "$TEST_REPO"' EXIT
+REEXECUTED_ARGUMENTS="$(mktemp /tmp/myapp-deployment-arguments.XXXXXX)"
+trap 'rm -rf -- "$TEST_REPO"; rm -f -- "$REEXECUTED_ARGUMENTS"' EXIT
 
 git -C "$TEST_REPO" init -q
 git -C "$TEST_REPO" config user.name "Deploy Plan Test"
@@ -33,7 +34,46 @@ BASE_REVISION="$(commit_test_state baseline)"
 export DEPLOY_REPO_ROOT="$TEST_REPO"
 # The absolute source path is computed so the test can run from any directory.
 # shellcheck disable=SC1090
-source "$PROJECT_ROOT/scripts/deploy.sh"
+source "$PROJECT_ROOT/scripts/deploy/main.sh"
+
+for required_function in \
+  parse_arguments initialize_process synchronize_repository load_environment \
+  load_revision_state classify_changes print_deployment_plan deploy_backend \
+  deploy_frontend deploy_infrastructure cleanup; do
+  declare -F "$required_function" > /dev/null || {
+    echo "FAIL: deploy component did not define $required_function"
+    exit 1
+  }
+done
+
+(
+  # ShellCheck cannot see these functions being called through sourced deploy code.
+  # shellcheck disable=SC2329
+  git() {
+    case "$*" in
+      "status --porcelain") return ;;
+      "fetch origin main") return ;;
+      "rev-parse HEAD") echo old-revision ;;
+      "rev-parse origin/main") echo new-revision ;;
+      "reset --hard new-revision") return ;;
+      "log -1 --oneline new-revision") echo new-revision ;;
+      *) echo "Unexpected git invocation: $*" >&2; return 1 ;;
+    esac
+  }
+  # shellcheck disable=SC2329
+  reexecute_deploy() {
+    printf '%s\n' "$@" > "$REEXECUTED_ARGUMENTS"
+  }
+
+  # shellcheck disable=SC2034
+  DEPLOY_BOOTSTRAPPED=false
+  synchronize_repository --plan
+)
+
+[ "$(tr -d '\n' < "$REEXECUTED_ARGUMENTS")" = "--plan" ] || {
+  echo "FAIL: repository bootstrap did not preserve deploy arguments"
+  exit 1
+}
 
 assert_plan() {
   local label="$1"
@@ -46,7 +86,7 @@ assert_plan() {
   local expected_migrations="$8"
   local expected_infrastructure="$9"
 
-  # These globals are consumed by functions sourced from deploy.sh.
+  # These globals are consumed by functions sourced from deploy/main.sh.
   # shellcheck disable=SC2034
   TARGET_SHA="$target"
   # shellcheck disable=SC2034
