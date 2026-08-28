@@ -152,7 +152,7 @@
 
 @media (min-width: 1360px) {
   .public-topbar {
-    height: 3.824vw;
+    height: 3.75vw;
     padding-inline: 4vw;
   }
 
@@ -165,18 +165,18 @@
   }
 
   .topbar-link {
-    padding: 0.588vw 1.03vw;
-    border-radius: 0.441vw;
-    font-size: 1.082vw;
+    padding: 0.5vw 1vw;
+    border-radius: 0.375vw;
+    font-size: 1vw;
   }
 
   .topbar-login-btn.btn {
-    margin-left: 1.47vw;
-    min-height: 2.647vw;
-    border-width: 0.074vw;
-    padding: 0.662vw 1.618vw;
+    margin-left: 1.25vw;
+    min-height: 2.25vw;
+    border-width: 0.075vw;
+    padding: 0.5vw 1.5vw;
     border-radius: 0.588vw;
-    font-size: 1.082vw;
+    font-size: 1vw;
   }
 }
 
