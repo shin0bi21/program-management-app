@@ -9,7 +9,7 @@ See [Continuous integration](ci.md) for pull-request checks, failure reproductio
 ```text
 feature → PR to develop → standard CI
 develop → PR to main → standard CI + production image validation
-main push → SSH to Lightsail → scripts/deploy.sh → public smoke checks
+main push → SSH to Lightsail → scripts/deploy/main.sh → public smoke checks
 ```
 
 ## One-time GitHub setup
@@ -101,7 +101,7 @@ The deployment job then:
 3. Changes into `LIGHTSAIL_APP_PATH`.
 4. Refuses to continue if the server repository has uncommitted changes.
 5. Synchronizes the server checkout to `origin/main`.
-6. Runs `./scripts/deploy.sh`.
+6. Runs `./scripts/deploy/main.sh`.
 7. Requests the public `/health` endpoint and homepage over HTTPS, retrying
    briefly while the replacement containers become externally reachable.
 
@@ -114,7 +114,7 @@ selects the smallest safe flow:
 | Frontend only | Rebuild and replace nginx/frontend |
 | Backend only | Rebuild and replace backend, then verify health |
 | Database migrations | Snapshot, migrate with rollback protection, then deploy backend |
-| Production infrastructure | Run the conservative full deployment flow |
+| Production infrastructure or shared TypeScript policy | Run the conservative full deployment flow |
 | Documentation/development tooling only | Do not rebuild production containers |
 
 Missing revision markers cause a full deployment. This is expected on the first
@@ -147,7 +147,7 @@ Run the deployment manually when required:
 
 ```bash
 cd /home/ubuntu/my-webapp
-./scripts/deploy.sh
+./scripts/deploy/main.sh
 ```
 
 Preview what the smart deployment would do without changing containers, the
@@ -155,7 +155,7 @@ database, or revision markers:
 
 ```bash
 cd /home/ubuntu/my-webapp
-./scripts/deploy.sh --plan
+./scripts/deploy/main.sh --plan
 ```
 
 Deployment logs are written to `logs/deploy.log` by default.
@@ -170,8 +170,10 @@ Deployment logs are written to `logs/deploy.log` by default.
 5. Confirm the server can fetch `origin/main`.
 6. Review `logs/deploy.log` on Lightsail.
 
-For the implementation, classification rules, and rollback behavior, see
-[`scripts/deploy.sh`](../../scripts/deploy.sh).
+The executable entry point is
+[`scripts/deploy/main.sh`](../../scripts/deploy/main.sh). Its supporting steps
+are the numbered files in the same directory, including change classification,
+database safeguards, service replacement, and rollback cleanup.
 
 ## Dependency and security automation
 

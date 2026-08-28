@@ -70,7 +70,7 @@ test('shared TypeScript policy validates both applications without deployment', 
 });
 
 test('deployment inputs preserve production validation and image routing', () => {
-  for (const file of ['scripts/deploy.sh', 'nginx.conf']) {
+  for (const file of ['scripts/deploy/main.sh', 'scripts/deploy/05-classify-changes.sh', 'nginx.conf']) {
     const plan = selectTests([file]);
     assert.equal(plan.deploy, true);
     assert.equal(plan.backendImage, true);

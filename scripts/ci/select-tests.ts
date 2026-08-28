@@ -100,7 +100,7 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
     if (file.startsWith('docs/') || file.endsWith('.md')) continue;
 
     // Deployment inputs require both image builds and Compose validation.
-    if (file === 'scripts/deploy.sh' || file === 'scripts/tests/test-deploy.sh'
+    if (file.startsWith('scripts/deploy/') || file === 'scripts/tests/test-deploy.sh'
       || file === 'docker-compose.prod.yml' || file === 'nginx.conf') {
       plan.deploy = true;
       plan.static = true;
