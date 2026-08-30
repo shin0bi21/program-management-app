@@ -9,8 +9,7 @@
     "snapshot:changes": "node scripts/agents/snapshot-changes.ts",
     "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns scripts/reports scripts/tests",
     "lint:fix": "npm run lint -- --fix",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "validate:skills": "node scripts/agents/validate-skills.ts"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
