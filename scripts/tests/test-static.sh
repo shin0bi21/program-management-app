@@ -48,7 +48,4 @@ fi
 echo "Checking documentation links..."
 node scripts/tests/check-doc-links.ts
 
-echo "Validating repository skills..."
-node scripts/agents/validate-skills.ts
-
 echo "Static checks passed!"

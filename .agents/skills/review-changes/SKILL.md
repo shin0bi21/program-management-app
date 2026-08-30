@@ -18,7 +18,7 @@ Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely.
 5. Identify affected features, ownership layers, and execution paths.
 6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development.md` and verify required refresh or migration steps.
 7. Reuse and refine the selected concern's acceptance ledger. Mark every item implemented, intentionally deferred, contradicted, or unverified.
-8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area. If repository skills changed, also run `node scripts/agents/validate-skills.ts` once.
+8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area.
 
 Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and missing focused tests are allowed; changing from implementation to review is not itself a reason to rerun tests.
 

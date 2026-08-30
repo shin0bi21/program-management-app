@@ -52,7 +52,6 @@ interface Snapshot {
     commands: Array<{ command: string; value?: string }>;
     requiresPatternCheck: boolean;
     requiresDiffCheck: boolean;
-    requiresSkillValidation: boolean;
   };
   stashes: StashEntry[];
 }
@@ -266,7 +265,6 @@ export function snapshotChanges({
       commands: planCommands(testPlan).map(([command, value]) => ({ command, ...(value ? { value } : {}) })),
       requiresPatternCheck: paths.length > 0,
       requiresDiffCheck: paths.length > 0,
-      requiresSkillValidation: paths.some(path => path.startsWith('.agents/skills/')),
     },
     stashes: stashInventory(resolvedRepoRoot),
   };

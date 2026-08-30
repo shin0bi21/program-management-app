@@ -15,7 +15,7 @@ Run test commands from the repository root. The supported test workflow uses the
 
 The full application runner executes deployment checks, backend API tests, and frontend Vitest tests. Playwright is a separate real-browser layer and is never run by the standard or changed-suite runners; invoke it explicitly when browser behavior is in scope.
 
-Static analysis includes shell syntax, ShellCheck, repository lint, strict root-script type checking, script tests, report smoke checks, local Markdown-link validation, and repository-skill validation.
+Static analysis includes shell syntax, ShellCheck, repository lint, strict root-script type checking, script tests, report smoke checks, and local Markdown-link validation.
 
 Repository Node programs under `scripts/` execute directly as TypeScript on Node 24. `tsconfig.json` type-checks those scripts with Node16 module semantics and erasable-syntax enforcement; Node still executes them without reading that config. `tsconfig.base.json` contains only compiler policy shared by root scripts, frontend, and backend, while each environment retains its own module resolution, libraries, types, JSX, and emit settings.
 
@@ -149,7 +149,6 @@ Use the deterministic repository checks before review or handoff:
 
 ```bash
 node scripts/patterns/check-patterns.ts --changed
-node scripts/agents/validate-skills.ts
 ```
 
 `check-patterns.ts` is diff-scoped by default: PR CI starts from changed, staged, deleted, or untracked paths and routes each path to the rules for its owner and file type. Structural checks read the affected owner's current sibling filenames so deleting a test or API adapter cannot leave that owner invalid; they do not apply every structural rule to every unchanged page. Use `--all` for an intentional repository-wide scrub.

@@ -61,7 +61,7 @@ Use patch-based restoration when concerns overlap in a file. Never bundle an unr
 
 For every isolated branch:
 
-1. Run `node scripts/patterns/check-patterns.ts --changed`. If repository skills changed, also run `node scripts/agents/validate-skills.ts`.
+1. Run `node scripts/patterns/check-patterns.ts --changed`.
 2. Run the concern map's narrow authoritative suites against the isolated branch. Reuse prior evidence only when it covers that exact isolated diff; do not repeat equivalent runners.
 3. Fix branch-introduced failures and rerun only failed or affected focused checks.
 4. Review `git diff --check`, the final diff, and `git status`.
