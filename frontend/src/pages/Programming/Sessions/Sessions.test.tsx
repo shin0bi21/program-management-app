@@ -1,5 +1,5 @@
 // Owns Sessions route composition, permissions, controls, selection, and cross-owner callbacks.
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -282,8 +282,6 @@ describe('Sessions', () => {
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Communication' }));
-    expect(screen.getByRole('menuitem', { name: 'Edit Session' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Delete Session' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Take Attendance' }));
 
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
@@ -354,11 +352,7 @@ describe('Sessions', () => {
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
-    const addSessionsHeading = screen.getByRole('heading', { name: 'Add Sessions' });
-    expect(addSessionsHeading).toBeInTheDocument();
-    expect(within(addSessionsHeading.closest('.modal-container') as HTMLElement).getByRole('button', { name: 'Cohort' })).toHaveTextContent('Soft Skills · Summer 2026');
-    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 
   it('switches between table and calendar views on the same page', async () => {

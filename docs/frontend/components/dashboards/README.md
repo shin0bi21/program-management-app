@@ -55,4 +55,4 @@ Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. 
 
 ## Test the dashboard
 
-Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and query enablement. Hook tests own query keys, server inputs, cancellation, and response shaping. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.
+Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and representative query-state wiring. Hook tests own query keys, enabled conditions, server inputs, cancellation, and domain response shaping; they do not repeat generic TanStack Query fetching, caching, retry, or refresh semantics. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.

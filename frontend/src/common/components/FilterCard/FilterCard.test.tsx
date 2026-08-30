@@ -62,11 +62,10 @@ describe('FilterCard', () => {
     expect(onClearAll).toHaveBeenCalledOnce();
   });
 
-  it('moves focus into each menu view', () => {
+  it('moves focus into the selected filter-category view', () => {
     render(<Harness />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.getByRole('menuitem', { name: 'Status' })).toHaveFocus();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }));
     expect(screen.getByRole('menuitem', { name: 'Back to filter categories' })).toHaveFocus();
   });

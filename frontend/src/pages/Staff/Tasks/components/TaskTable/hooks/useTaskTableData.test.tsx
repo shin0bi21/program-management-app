@@ -1,4 +1,4 @@
-// Owns task-table control serialization and cursor-page accumulation.
+// Owns task-table control serialization, query identity, and cursor forwarding.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,7 +35,7 @@ describe('useTaskTableData', () => {
     );
   });
 
-  it('appends the next cursor page', async () => {
+  it('forwards the server cursor when loading the next page', async () => {
     vi.mocked(getTasksTableData).mockImplementation(async (_filters, _options, pagination) => (
       pagination.cursor
         ? { rows: [{ ...task, id: 'task-2' }], nextCursor: null }
@@ -52,12 +52,13 @@ describe('useTaskTableData', () => {
       { wrapper: createQueryClientWrapper(client) },
     );
 
-    await waitFor(() => expect(result.current.rows).toEqual([task]));
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true));
     act(() => result.current.loadNextPage());
-    await waitFor(() => expect(result.current.rows.map(item => item.id)).toEqual(['task-1', 'task-2']));
-    expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.any(Object), { signal: expect.any(AbortSignal) }, expect.objectContaining({ cursor: 'cursor-2' }),
-    );
+    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      { signal: expect.any(AbortSignal) },
+      expect.objectContaining({ cursor: 'cursor-2' }),
+    ));
   });
 
   it('starts a fresh server-timing query when the current date changes', async () => {
@@ -79,5 +80,33 @@ describe('useTaskTableData', () => {
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(1));
     rerender({ today: '2026-08-12' });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(2));
+  });
+
+  it('starts a fresh query when its base key, filters, or sorting changes', async () => {
+    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: null });
+    const client = createTestQueryClient();
+    const initialProps = {
+      queryKey: ['tasks', 'table', 'first'] as readonly unknown[],
+      filters: { search: 'workshop' } as Parameters<typeof useTaskTableData>[1],
+      sorting: { key: 'dueDate', direction: 'asc' } as Parameters<typeof useTaskTableData>[2],
+      today: '2026-08-11',
+    };
+    const { rerender } = renderHook(
+      ({ queryKey, filters, sorting, today }) => useTaskTableData(queryKey, filters, sorting, today),
+      { initialProps, wrapper: createQueryClientWrapper(client) },
+    );
+
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(1));
+    rerender({ ...initialProps, queryKey: ['tasks', 'table', 'second'] });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(2));
+    rerender({ ...initialProps, queryKey: ['tasks', 'table', 'second'], filters: { search: 'new' } });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(3));
+    rerender({
+      ...initialProps,
+      queryKey: ['tasks', 'table', 'second'],
+      filters: { search: 'new' },
+      sorting: { key: 'dueDate', direction: 'desc' },
+    });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(4));
   });
 });

@@ -37,84 +37,33 @@ The frontend layers are:
 - UI components, React hooks, storage, DOM geometry, and browser-global behavior use Vitest with jsdom. jsdom is the configured default, so these tests need no environment annotation.
 - Layout, scrolling, pointer, and real-browser behavior use Playwright.
 
-## Frontend test matrix
+## Frontend test ownership
 
-Place each behavior at its narrowest authoritative owner. A broader consumer test is required only when correctness depends on wiring across that boundary.
+Place each behavior at its narrowest authoritative owner. The owner tests the behavior it creates; a parent or consumer tests only the domain values and coordination it adds. A broader test is required only when correctness crosses that boundary.
 
-| Owner | Applicable coverage |
+Lifecycle coverage is conditional, not a checklist for every component. Test setup, meaningful updates, repeat or reopen behavior, cancellation, and cleanup only when the owner exposes them. Cover loading, empty, error, concurrency, rollback, or retry states only when they are part of that owner's contract.
+
+The same user action may appear at two layers only when the assertions prove different outcomes. A child can prove that clicking Delete emits `onDelete(record)`; its route can invoke that callback to prove that confirmation reaches the adapter. The route does not repeat the child's open, close, focus, styling, or keyboard mechanics.
+
+Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
+
+Use the focused guide for the surface-specific contract:
+
+| Owner | Guide |
 |---|---|
-| Pure utility or finite policy | Representative inputs, boundaries, invalid values that are part of the contract, and exhaustive finite cases. Use the Node environment. |
-| API adapter | Exact method, path, query/body serialization, typed response shaping, and boundary normalization. Mock the centralized client rather than browser UI. |
-| Stateful hook | Initialization, meaningful input changes, loading/error state, reset or reopen behavior, cache effects, callback ordering, and cleanup when the hook owns those behaviors. Test stale-response protection only when overlapping requests can reach the same state. |
-| Shared component | Public rendering and accessibility contract, supported states, emitted events, keyboard behavior available in jsdom, and controlled-prop wiring. Test generic behavior once here. |
-| Form or modal workflow | Applicable create/edit initialization, required and dependent fields, direct form submission, submit-lock and disabled-state wiring, success, failure recovery, reset/reopen behavior, and callback/API payload ordering. Shared Modal and submit-lock mechanics stay at their shared owners. |
-| Page-owned table | Domain query inputs and rows; wiring for initial loading, background refresh, unavailable/retry, empty and filtered-empty copy, pagination state, sorting, selection, permissions, and exact callbacks. Shared `Table` rendering and `useInfiniteListQuery` mechanics are tested once by those shared owners. |
-| Page-owned calendar | Domain range inputs and items; wiring for initial range loading, unavailable/retry, range changes, selection, permissions, capabilities, and exact callbacks. Do not invent a refresh state when the calendar contract does not expose one. Shared buffering, rendering, and interaction mechanics are tested once by their shared owners. |
-| Route page | Route composition, permission-dependent controls, preference restoration and first save, dialog entry paths, view switching, selected-record context, and callback-to-adapter wiring that crosses child owners. Do not repeat internal hook or shared-component tests. |
-| Playwright browser scenario | Real layout, scrolling, sticky positioning, focus geometry and return, portals, observers, pointer capture, drag/resize, virtualization, clipping, cancellation, and responsive behavior that jsdom cannot prove. |
-
-For every applicable owner, cover the meaningful state and event lifecycle rather than only its happy-path snapshot:
-
-1. Cover initial, loading, success, empty, and error presentation.
-2. Assert user actions and their exact emitted or persisted values.
-3. Exercise transitions when props, targets, permissions, or dependent inputs change.
-4. Cover repeat, reopen, retry, cancellation, and unmount cleanup paths when the owner exposes them.
-5. Test overlapping asynchronous work, stale completion, optimistic rollback, or cache reconciliation only when the owner permits those paths.
-6. Verify accessible names, roles, disabled states, focus behavior, and keyboard activation at the layer capable of proving them.
-
-Start a non-trivial test file with a short scope comment stating what that suite owns. Describe tests by observable behavior. Shared components and hooks own generic mechanics once; consumers prove only their domain values and cross-owner wiring. Avoid private implementation assertions, duplicate consumer coverage, arbitrary sleeps, and mocks that bypass the callback or adapter boundary under test.
-
-### Page test scaffold sections
-
-Use these section names when planning or generating a non-trivial page test suite. Create only the owners the page needs, and keep each behavior in one authoritative section.
-
-#### API adapter
-
-- Prove the exact method, path, domain query or payload serialization, cancellation forwarding, response shaping, and boundary normalization.
-- Do not repeat React Query, table, calendar, or route behavior here.
-
-#### Page-wide data hook
-
-- Prove domain query composition, derived collections, and any loading or error decisions added by the hook.
-- Do not retest raw React Query state passthrough unless the hook transforms or coordinates it.
-
-#### Preferences, selection, and actions
-
-- Preferences prove restoration, normalization, complete saves, recovery, and meaningful dependency changes.
-- Selection proves domain reconciliation when resources or records change.
-- Actions prove exact commands, pending locks, success reconciliation, failure recovery, and cross-domain invalidation.
-
-#### Table data hook
-
-- Prove the complete domain query key and inputs, sorting, page size, cursor forwarding, cancellation, and domain row shaping.
-- `useInfiniteListQuery` owns generic initial loading, background refresh, cursor accumulation, retry, cache, and stale-response mechanics.
-
-#### Table component
-
-- Prove that domain rows and the hook's loading, refreshing, unavailable/retry, and pagination values reach the shared `Table` contract.
-- Prove domain-specific empty versus filtered-empty copy, sorting, selection, permissions, columns, and action callbacks.
-- Use representative non-default states to prove wiring; do not repeat how the shared `Table` renders those states.
-
-#### Calendar component and data adaptation
-
-- Prove domain range inputs, item shaping, capability mapping, selection, permission-aware actions, and exact move, resize, or cell callbacks that the page supports.
-- Prove initial range-load and unavailable/retry wiring. Test background refresh only if the page calendar exposes a distinct domain refresh contract; calendars do not inherit the table refresh or pagination checklist.
-- Shared `useDataBuffer` and `TimelineCalendar` owners prove generic buffering, range accumulation, rendering, and interaction mechanics.
-
-#### Dashboard, modal, and focused components
-
-- Dashboards prove selection-driven composition and domain loading, error, empty, and card wiring.
-- Modal hooks prove initialization, transitions, validation, submission locks, success, failure recovery, and reset or reopen behavior; modal components prove fields and emitted values.
-- Focused components prove only their public domain rendering, accessibility, and events.
-
-#### Route page
-
-- Prove permission-dependent controls, restored values reaching owners, view switching, selected context, dialog entry paths, and callbacks that cross child boundaries.
-- Do not repeat a child hook or component's internal lifecycle tests.
-
-#### Browser scenarios
-
-- Add Playwright only for behavior that depends on real layout, scrolling, focus geometry, portals, observers, pointer capture, drag or resize, virtualization, clipping, cancellation, or responsive behavior.
+| API adapters, pure utilities and finite policy rules | [State and data](../frontend/architecture/state-and-data.md#test-adapters-and-pure-policy) |
+| Route composition, selection, actions and cross-child workflows | [Pages](../frontend/pages/README.md#test-page-orchestration) |
+| Components and stateful component hooks | [Components](../frontend/components/README.md#test-components-and-hooks) |
+| Queries, mutations, cache state and generic stateful hooks | [State and data](../frontend/architecture/state-and-data.md#test-state-and-data) |
+| Restored and saved page controls | [Page preferences](../frontend/pages/preferences.md#test-preference-behaviour) |
+| Page header, body and overlay slots | [Page structure](../frontend/pages/structure.md#test-the-shell-boundary) |
+| Remote tables and controlled selection | [Tables](../frontend/components/tables/README.md#test-the-table) |
+| Table row commands and reconciliation | [Table rows](../frontend/components/tables/rows.md#test-row-behaviour) |
+| Timeline calendars and item interactions | [Calendars](../frontend/components/calendars/README.md#test-the-calendar) |
+| Dashboards and overview cards | [Dashboards](../frontend/components/dashboards/README.md#test-the-dashboard) |
+| Floating and blocking overlays | [Overlays](../frontend/components/overlays/README.md#test-overlay-boundaries) |
+| Modal forms and submission workflows | [Modals and forms](../frontend/components/overlays/modals-and-forms.md#test-the-modal-workflow) |
+| Application sidebar and route navigation | [App navigation](../frontend/components/navigation/README.md#test-app-navigation) |
 
 `test-ui.sh`, focused frontend runners, and normal PR CI all use Vitest; Vitest selects Node or jsdom per file. Pull-request CI runs one frontend job: related tests for source changes or the complete collection for configuration, dependency, and runner changes, followed by the frontend build. Playwright is not included in that job or in `test-app.sh`; it runs through its explicit local command and the scheduled/manual workflow.
 
@@ -198,7 +147,7 @@ The backend uses Node16 TypeScript module resolution. Jest strips explicit `.js`
 
 - Backend API suites live under `backend/tests/<domain>/` and share the app/database helpers in `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they exercise.
-- Frontend tests that need TanStack Query use `frontend/src/tests/queryClientTestUtils.tsx`. Create a fresh client per test, use `renderWithQueryClient` for components, and use `createQueryClientWrapper` for hooks so cache state and retry behavior cannot leak between tests.
+- Frontend tests that need TanStack Query use `frontend/src/tests/queryClientTestUtils.tsx`. Create a fresh client per test, use `renderWithQueryClient` for components, and use `createQueryClientWrapper` for hooks so cache state and retry behavior cannot leak between tests. Treat the client as a harness: query-wrapper suites prove behavior the repository adds, while domain query-hook suites prove only their domain contract.
 - Repeated, structurally complete domain fixtures live under `frontend/src/tests/factories/`. Factories provide one valid canonical object and accept typed overrides; keep scenario-specific values in the owning test instead of adding one-off factory variants.
 - Register backend ownership and integration consumers in `scripts/ci/select-tests.ts`. Frontend source ownership is derived from Vitest's dependency graph rather than a manually maintained page map.
 - Add or update `scripts/ci/select-tests.test.ts` whenever a new repository path category changes routing behavior. Unrecognized paths deliberately select the full application plan.

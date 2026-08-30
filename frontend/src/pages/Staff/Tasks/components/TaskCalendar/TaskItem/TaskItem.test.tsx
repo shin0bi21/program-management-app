@@ -73,7 +73,7 @@ describe('TaskItem', () => {
     expect(onDelete).not.toHaveBeenCalled();
   });
 
-  it('invokes mark complete from the task action menu', () => {
+  it('emits mark complete from the task action menu', () => {
     const onComplete = vi.fn();
     render(<TaskItem task={task} onComplete={onComplete} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
@@ -81,7 +81,6 @@ describe('TaskItem', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Set Completed' }));
 
     expect(onComplete).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {

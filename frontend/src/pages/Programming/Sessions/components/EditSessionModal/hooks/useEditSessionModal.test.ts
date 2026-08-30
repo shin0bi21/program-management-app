@@ -29,6 +29,69 @@ function makeSubmitEvent() {
 describe('useEditSessionModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('normalizes the update command and awaits owner reconciliation', async () => {
+    const session = makeCohortSession();
+    vi.mocked(updateSession).mockResolvedValue(session);
+    const onUpdated = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
+    act(() => result.current.setSessionTypeId('type-2'));
+
+    await act(() => result.current.submit(makeSubmitEvent()));
+
+    expect(updateSession).toHaveBeenCalledWith(session.id, {
+      sessionTypeId: 'type-2',
+      theme: 'Career Stories',
+      startsAt: new Date('2026-08-10T13:00').toISOString(),
+      endsAt: new Date('2026-08-10T15:00').toISOString(),
+      description: null,
+    });
+    expect(onUpdated).toHaveBeenCalledOnce();
+    expect(result.current).toMatchObject({
+      status: 'success',
+      statusMessage: 'Session updated successfully.',
+    });
+  });
+
+  it('reports failures and permits retry', async () => {
+    const session = makeCohortSession();
+    vi.mocked(updateSession)
+      .mockRejectedValueOnce(new Error('Session overlaps another session'))
+      .mockResolvedValueOnce(session);
+    const onUpdated = vi.fn();
+    const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
+    act(() => result.current.setSessionTypeId('type-1'));
+
+    await act(() => result.current.submit(makeSubmitEvent()));
+    expect(result.current).toMatchObject({
+      status: 'error',
+      statusMessage: 'Session overlaps another session',
+    });
+
+    await act(() => result.current.submit(makeSubmitEvent()));
+    expect(updateSession).toHaveBeenCalledTimes(2);
+    expect(onUpdated).toHaveBeenCalledOnce();
+  });
+
+  it('resets workflow state for a different session target', async () => {
+    const first = makeCohortSession();
+    const second = makeCohortSession({ id: 'session-2', sessionTypeId: 'type-2' });
+    vi.mocked(updateSession).mockRejectedValue(new Error('Update failed'));
+    const { result, rerender } = renderHook(
+      ({ session }) => useEditSessionModal(session, vi.fn()),
+      { initialProps: { session: first } },
+    );
+    act(() => result.current.setSessionTypeId('type-1'));
+    await act(() => result.current.submit(makeSubmitEvent()));
+    expect(result.current.status).toBe('error');
+
+    rerender({ session: second });
+    await waitFor(() => expect(result.current).toMatchObject({
+      status: 'idle',
+      statusMessage: '',
+      sessionTypeId: 'type-2',
+    }));
+  });
+
   it('locks same-tick submissions until the save workflow settles', async () => {
     let resolveUpdate!: () => void;
     vi.mocked(updateSession).mockReturnValue(new Promise(resolve => {

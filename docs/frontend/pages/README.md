@@ -164,8 +164,7 @@ The example shows ownership and dependency order, not mandatory prop wrappers. P
 
 ## Connect the route
 
-- Mount authenticated routes lazily in `frontend/src/app/App.tsx` and wrap them in `ProtectedRoute` with the backend-aligned read permission.
-- Update navigation visibility, active state, desktop/mobile behavior, and tests with the route.
+- Follow [App navigation](../components/navigation/README.md) for route registration, required permissions, destination visibility, grouping, active state, desktop/mobile behavior, and their tests. The route-page test does not repeat them.
 - Create a route-family layout only when sibling routes share persistent rendered UI, state, or coordination—not merely a URL prefix or permission.
 - Restore saved preferences before rendering dependent queries or misleading defaults.
 
@@ -175,26 +174,22 @@ Follow [Page structure](structure.md) for header, body and page-level error comp
 
 Route tests own permission-dependent actions, control wiring, preference restoration, view switching, selection context, dialog entry paths and cross-child coordination. Child components and hooks own their internal behaviour.
 
-Use Playwright when correctness depends on real focus, layout, scrolling, observers, portals or pointer geometry.
-
-Apply the ownership ladder once per behavior:
-
-- API adapter tests own exact methods, paths, serialization, cancellation, and response normalization.
-- Hooks own restoration, persistence, asynchronous state, retries, cleanup, concurrency, and cache reconciliation.
-- Child components own their rendered domain states, accessible controls, lifecycle wiring, and emitted domain values.
-- Route pages own only orchestration across those owners: permissions, page-body and dashboard inputs, selected context, view and dialog entry, and callbacks crossing child boundaries.
-
-A consumer may assert a child value or callback when that proves wiring across its boundary. It must not repeat an imported owner's fallback, styling, focus, close, loading or internal state tests.
+Use Playwright when correctness depends on real focus geometry, layout, scrolling, observers, portals or pointer behavior.
 
 Route pages do not repeat preference-hook restoration and persistence matrices. They prove only that restored domain values reach the correct page controls or body owner.
 
 For example, a route test can restore `view: 'calendar'` and assert that the calendar reaches
 `PageBody`. The preference-hook test owns how that value was normalized, cached, and saved.
 
+When a child callback starts a page workflow, mock the child at its public prop boundary. For example, invoke a captured `onDelete(task)`, confirm through the route-owned dialog, and assert `deleteTask(task.id)`. The child suite owns turning its Delete click into `onDelete(task)`; the route suite owns confirmation and persistence.
+
+The cross-cutting [testing guide](../../workflows/testing.md#frontend-test-ownership) explains the narrowest-owner rule and runner selection.
+
 ## Continue to the owning guide
 
 - [Page preferences](preferences.md) owns restored and saved controls.
 - [Page structure](structure.md) owns header, body and overlay composition.
 - [Components](../components/README.md) routes tables, calendars, dashboards and overlays.
+- [App navigation](../components/navigation/README.md) owns the application sidebar and visible route destinations.
 - [State and data](../architecture/state-and-data.md) owns general state, query and mutation flow.
 - [Frontend ownership](../architecture/ownership.md) decides where page-private and shared code lives.

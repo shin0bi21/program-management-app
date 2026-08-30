@@ -75,9 +75,6 @@ describe('Programming settings', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Maximum age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Add Program' }));
 
-    expect(programsApi.createProgram).toHaveBeenCalledWith({
-      name: 'Job Readiness', description: null, rosterMode: 'enrolled', minAge: 16, maxAge: 19,
-    });
     await waitFor(() => expect(programState.upsertProgram).toHaveBeenCalledWith(created));
     expect(await screen.findByText('Program added successfully.')).toBeInTheDocument();
   });

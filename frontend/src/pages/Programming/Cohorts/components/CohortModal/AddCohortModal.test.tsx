@@ -49,11 +49,7 @@ describe('AddCohortModal', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Fall 2026' }));
     fireEvent.submit(document.getElementById('add-cohort-form')!);
 
-    await waitFor(() => expect(createCohort).toHaveBeenCalledWith({
-      programId: 'program-2',
-      cycleId: 'cycle-2',
-    }));
-    expect(onCreated).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
     expect(screen.getByText('Job Readiness successfully added to Fall 2026.')).toBeInTheDocument();
   });
 
@@ -77,8 +73,7 @@ describe('AddCohortModal', () => {
     expect(screen.getByRole('dialog', { name: 'Add Cohort' })).toBeInTheDocument();
   });
 
-  it('resets its selections and status each time it opens', async () => {
-    vi.mocked(createCohort).mockRejectedValue(new Error('Cohort already exists'));
+  it('renders selections for the current open target', async () => {
     const props = {
       programs,
       cycles,
@@ -89,14 +84,10 @@ describe('AddCohortModal', () => {
     const { rerender } = render(<AddCohortModal isOpen {...props} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Soft Skills'));
-    fireEvent.submit(document.getElementById('add-cohort-form')!);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cohort already exists');
-
     rerender(<AddCohortModal isOpen={false} {...props} />);
     rerender(<AddCohortModal isOpen {...props} initialProgramId="program-2" />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Job Readiness'));
     expect(screen.getByRole('button', { name: 'Cycle' })).toHaveTextContent('Summer 2026');
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

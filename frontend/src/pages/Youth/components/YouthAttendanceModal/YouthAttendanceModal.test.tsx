@@ -87,7 +87,6 @@ describe('YouthAttendanceModal', () => {
     );
 
     expect(await screen.findByText('Notes (1)')).toBeInTheDocument();
-    expect(screen.getByText('Achievement')).toBeInTheDocument();
     expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
     expect(screen.queryByText('Bilal Khan')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View session note' }));

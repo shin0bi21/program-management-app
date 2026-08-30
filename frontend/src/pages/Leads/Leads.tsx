@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../../auth/authContext';
-import ActionsMenu from '../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../common/components/ConfirmModal/ConfirmModal';
@@ -9,23 +8,19 @@ import PageBody from '../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
-import type { CellContext } from '@tanstack/react-table';
-import type { TableColumnDef } from '../../common/components/Table/Table.types';
-import { formatShortDate } from '../../common/utils/date';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
 import LeadTable from './components/LeadTable/LeadTable';
+import useLeadTable from './components/LeadTable/hooks/useLeadTable';
 import LeadModal from './components/LeadModal/LeadModal';
 import SignUpLeadModal from './components/SignUpLeadModal/SignUpLeadModal';
 import useLeadActions from './hooks/actions/useLeadActions';
 import useLeadData from './hooks/data/useLeadData';
 import { useLeadPreferences } from './hooks/preferences/useLeadPreferences';
 import useLeadSelection from './hooks/selection/useLeadSelection';
-import { LEAD_TABLE_KEYS, type EditableLeadStatus, type Lead, type LeadOrigin } from './types';
+import { LEAD_TABLE_KEYS, type Lead, type LeadOrigin } from './types';
 import './Leads.css';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
-const editableStatuses: EditableLeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed'];
-
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
@@ -66,47 +61,14 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const closeSignUpModal = () => setSignUpTarget(null);
 
   // Table configuration.
-  const columns: TableColumnDef<Lead>[] = [
-    { id: 'firstName', header: 'First Name', accessorFn: lead => lead.youthFirstName },
-    { id: 'lastName', header: 'Last Name', accessorFn: lead => lead.youthLastName },
-    ...(origin === 'external' ? [{
-      id: 'submittedByRole',
-      header: 'Filled Out By',
-      accessorFn: (lead: Lead) => title(lead.submittedByRole),
-    }] : []),
-    { id: 'school', header: 'School', accessorFn: lead => lead.school },
-    { id: 'program', header: 'Eligible Program', accessorFn: lead => lead.recommendedProgramName ?? '—' },
-    {
-      id: 'status',
-      header: 'Status',
-      size: 120,
-      accessorFn: lead => lead.status,
-      cell: ({ row: { original: lead } }) => <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span>,
-    },
-    { id: 'created', header: 'Created', size: 130, accessorFn: lead => formatShortDate(lead.createdAt) },
-    ...(canWrite ? [{
-      id: 'actions' as const,
-      size: 40,
-      enableResizing: false,
-      enableHiding: false,
-      header: '',
-
-      cell: ({ row: { original: lead } }: CellContext<Lead, unknown>) => lead.status === 'signed_up' ? null : <ActionsMenu
-          ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
-          items={[
-            { id: 'edit', label: 'Edit', onClick: () => setModalTarget(lead) },
-            { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => actions.requestDelete(lead) },
-            { id: 'sign-up', label: 'Sign Up', groupStart: true, onClick: () => requestSignUp(lead) },
-            ...editableStatuses.filter(status => status !== lead.status).map((status, index) => ({
-              id: status,
-              label: `Mark ${title(status)}`,
-              groupStart: index === 0,
-              onClick: () => void actions.setStatus(lead, status),
-            })),
-          ]}
-        />,
-    }] : []),
-  ];
+  const { columns } = useLeadTable({
+    origin,
+    canWrite,
+    onEdit: setModalTarget,
+    onDelete: actions.requestDelete,
+    onSignUp: requestSignUp,
+    onStatusChange: actions.setStatus,
+  });
 
   // Derived presentation.
   const viewTitle = origin === 'external' ? 'External Leads' : 'Internal Leads';
@@ -185,8 +147,4 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       onClose={actions.closeConfirmation}
     />
   </>;
-}
-
-function title(value: string) {
-  return value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 }

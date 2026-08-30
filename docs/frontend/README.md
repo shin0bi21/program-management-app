@@ -10,6 +10,7 @@ restating its contract. Start with the question your change needs to answer:
 | Question | Guide |
 |---|---|
 | How does a route coordinate controls, views and workflows? | [Pages](pages/README.md) |
+| How does a route appear in the application sidebar? | [App navigation](components/navigation/README.md) |
 | How should restored page controls behave? | [Page preferences](pages/preferences.md) |
 | How should a rendered surface behave? | [Components](components/README.md) |
 | How do I scaffold a page or established component owner? | [Scaffolding](scaffolding.md) |
@@ -23,6 +24,7 @@ restating its contract. Start with the question your change needs to answer:
 | Dependency direction, placement, colocation and extraction | [Ownership](architecture/ownership.md) |
 | Generic local state, queries, API adapters and mutation flow | [State and data](architecture/state-and-data.md) |
 | Route orchestration | [Pages](pages/README.md) |
+| Route registration, navigation visibility, grouping and active state | [App navigation](components/navigation/README.md) |
 | Saved page controls | [Page preferences](pages/preferences.md) |
 | Header, body, errors and overlays | [Page structure](pages/structure.md) |
 | Table rendering, remote pagination and row reconciliation | [Tables](components/tables/README.md) and [table rows](components/tables/rows.md) |
@@ -37,7 +39,7 @@ the narrower behavior owner documents the complete contract and the other guide 
 
 ```text
 frontend/src/
-  app/                    route composition and root failure handling
+  app/                    route composition, application navigation and root failure handling
   auth/                   authentication state and durable session storage
   http/                   API URL, authenticated transport and typed errors
   query/                  QueryClient and generic cache and list adapters
