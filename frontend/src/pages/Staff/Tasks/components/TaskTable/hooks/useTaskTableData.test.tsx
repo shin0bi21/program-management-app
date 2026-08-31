@@ -87,10 +87,13 @@ describe('useTaskTableData', () => {
     const client = createTestQueryClient();
     const initialProps = {
       queryKey: ['tasks', 'table', 'first'] as readonly unknown[],
-      filters: { search: 'workshop' } as Parameters<typeof useTaskTableData>[1],
+      filters: {
+        staffIds: [], programIds: [], categories: [], statuses: [], search: 'workshop',
+      } as Parameters<typeof useTaskTableData>[1],
       sorting: { key: 'dueDate', direction: 'asc' } as Parameters<typeof useTaskTableData>[2],
       today: '2026-08-11',
     };
+    const changedFilters = { ...initialProps.filters, search: 'new' };
     const { rerender } = renderHook(
       ({ queryKey, filters, sorting, today }) => useTaskTableData(queryKey, filters, sorting, today),
       { initialProps, wrapper: createQueryClientWrapper(client) },
@@ -99,12 +102,12 @@ describe('useTaskTableData', () => {
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(1));
     rerender({ ...initialProps, queryKey: ['tasks', 'table', 'second'] });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(2));
-    rerender({ ...initialProps, queryKey: ['tasks', 'table', 'second'], filters: { search: 'new' } });
+    rerender({ ...initialProps, queryKey: ['tasks', 'table', 'second'], filters: changedFilters });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(3));
     rerender({
       ...initialProps,
       queryKey: ['tasks', 'table', 'second'],
-      filters: { search: 'new' },
+      filters: changedFilters,
       sorting: { key: 'dueDate', direction: 'desc' },
     });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledTimes(4));
