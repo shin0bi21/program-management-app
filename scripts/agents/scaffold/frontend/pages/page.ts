@@ -3,8 +3,7 @@ import { join } from 'node:path';
 import type { ScaffoldContext, ScaffoldPlan } from '../index.ts';
 
 export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPlan {
-  const normalizedPath = pagePath.replaceAll('\\', '/').replace(/^\/+|\/+$/g, '');
-  const parts = normalizedPath.split('/').filter(Boolean);
+  const parts = pagePath.split('/');
   if (parts.length < 1 || parts.length > 2) {
     throw new Error('Page path must contain a page name with at most one route family.');
   }
@@ -12,7 +11,6 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
 
   const name = parts[parts.length - 1];
   const directory = join(context.frontendRoot, 'pages', ...parts);
-  context.assertInside(directory, join(context.frontendRoot, 'pages'), 'Page destination');
 
   const pageHeaderImport = context.relativeImport(
     directory,

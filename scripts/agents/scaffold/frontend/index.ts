@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { lstatSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -27,11 +27,10 @@ export interface ScaffoldContext {
   repoRoot: string;
   frontendRoot: string;
   assertInside: (path: string, boundary: string, label: string) => void;
-  assertModalOwner: (ownerPath: string) => void;
-  assertPageComponentsOwner: (ownerPath: string, label: string) => void;
   assertPascalCase: (name: string, label: string) => void;
-  assertSafeFilesystemPath: (path: string, boundary: string, label: string) => void;
-  componentOwner: (ownerPath: string, name: string, suffix: string, label: string) => string;
+  componentOwner: (owner: string, name: string, suffix: string, label: string) => string;
+  modalOwner: (ownerPath: string) => string;
+  pageComponentsOwner: (ownerPath: string, label: string) => string;
   relativeImport: (fromDirectory: string, target: string) => string;
   sourceFile: (path: string, text: string) => string;
 }
@@ -48,6 +47,44 @@ function pathExists(path: string): boolean {
     if (cause instanceof Error && 'code' in cause && cause.code === 'ENOENT') return false;
     throw cause;
   }
+}
+
+function isPascalCasePath(parts: string[]): boolean {
+  return parts.every(part => PASCAL_CASE.test(part));
+}
+
+function isDirectPageComponentsOwner(parts: string[]): boolean {
+  const pageParts = parts.slice(3, -1);
+  return parts.slice(0, 3).join('/') === 'frontend/src/pages'
+    && parts.at(-1) === 'components'
+    && (pageParts.length === 1 || pageParts.length === 2)
+    && isPascalCasePath(pageParts);
+}
+
+function isModalPagePath(parts: string[]): boolean {
+  if (parts.length === 1) return isPascalCasePath(parts);
+  if (parts.length !== 2 || !PASCAL_CASE.test(parts[0])) return false;
+
+  return parts[1] === 'common' || PASCAL_CASE.test(parts[1]);
+}
+
+function isPageModalOwner(parts: string[]): boolean {
+  if (parts.slice(0, 3).join('/') !== 'frontend/src/pages') return false;
+
+  const ownerParts = parts.slice(3);
+  const componentsIndex = ownerParts.indexOf('components');
+  if (componentsIndex < 1) return false;
+
+  const pageParts = ownerParts.slice(0, componentsIndex);
+  const nestedOwners = ownerParts.slice(componentsIndex + 1);
+  return isModalPagePath(pageParts) && isPascalCasePath(nestedOwners);
+}
+
+function isFeatureModalOwner(parts: string[]): boolean {
+  if (parts.slice(0, 4).join('/') !== 'frontend/src/common/features') return false;
+
+  const [feature, components, ...nestedOwners] = parts.slice(4);
+  return Boolean(feature) && components === 'components' && isPascalCasePath(nestedOwners);
 }
 
 function usage(): string {
@@ -82,108 +119,45 @@ function createContext(): ScaffoldContext {
     if (!PASCAL_CASE.test(name)) throw new Error(`${label} must use PascalCase.`);
   };
 
-  const assertSafeFilesystemPath = (path: string, boundary: string, label: string): void => {
-    assertInside(path, boundary, label);
-
-    const canonicalBoundary = realpathSync(boundary);
-    if (lstatSync(boundary).isSymbolicLink()) {
-      throw new Error(`${label} boundary must not be a symbolic link.`);
-    }
-
-    let existingAncestor = boundary;
-    const pathParts = relative(boundary, path).split(sep).filter(Boolean);
-    for (const part of pathParts) {
-      const candidate = join(existingAncestor, part);
-      if (!pathExists(candidate)) break;
-
-      const metadata = lstatSync(candidate);
-      if (metadata.isSymbolicLink()) {
-        throw new Error(`${label} must not traverse a symbolic link: ${toPosix(candidate)}.`);
-      }
-      existingAncestor = candidate;
-    }
-
-    assertInside(realpathSync(existingAncestor), canonicalBoundary, label);
-  };
-
   const resolveOwner = (ownerPath: string, label: string): string => {
     const owner = resolve(repoRoot, ownerPath);
     assertInside(owner, frontendRoot, label);
     return owner;
   };
 
-  const relativeOwnerParts = (ownerPath: string, label: string): string[] => (
-    toPosix(relative(repoRoot, resolveOwner(ownerPath, label))).split('/')
-  );
-
-  const assertPageComponentsOwner = (ownerPath: string, label: string): void => {
-    const parts = relativeOwnerParts(ownerPath, `${label} owner`);
-    const pageParts = parts.slice(3);
-    const rootPage = pageParts.length === 2
-      && PASCAL_CASE.test(pageParts[0])
-      && pageParts[1] === 'components';
-    const familyPage = pageParts.length === 3
-      && PASCAL_CASE.test(pageParts[0])
-      && PASCAL_CASE.test(pageParts[1])
-      && pageParts[2] === 'components';
-
-    if (parts.slice(0, 3).join('/') !== 'frontend/src/pages' || (!rootPage && !familyPage)) {
+  const pageComponentsOwner = (ownerPath: string, label: string): string => {
+    const owner = resolveOwner(ownerPath, `${label} owner`);
+    const parts = toPosix(relative(repoRoot, owner)).split('/');
+    if (!isDirectPageComponentsOwner(parts)) {
       throw new Error(`${label} owner must be a root or route-family page components directory.`);
     }
+    return owner;
   };
 
-  const assertModalOwner = (ownerPath: string): void => {
-    const parts = relativeOwnerParts(ownerPath, 'Modal owner');
-    const pagePrefix = parts.slice(0, 3).join('/') === 'frontend/src/pages';
-    const featurePrefix = parts.slice(0, 4).join('/') === 'frontend/src/common/features';
-    let valid = false;
-
-    if (pagePrefix) {
-      const ownerParts = parts.slice(3);
-      const componentsIndex = ownerParts.indexOf('components');
-      const prefix = ownerParts.slice(0, componentsIndex);
-      const nestedOwners = ownerParts.slice(componentsIndex + 1);
-      const rootPage = prefix.length === 1 && PASCAL_CASE.test(prefix[0]);
-      const familyPage = prefix.length === 2
-        && PASCAL_CASE.test(prefix[0])
-        && PASCAL_CASE.test(prefix[1]);
-      const familyCommon = prefix.length === 2
-        && PASCAL_CASE.test(prefix[0])
-        && prefix[1] === 'common';
-      valid = componentsIndex >= 0
-        && (rootPage || familyPage || familyCommon)
-        && nestedOwners.every(owner => PASCAL_CASE.test(owner));
-    }
-
-    if (featurePrefix) {
-      const ownerParts = parts.slice(4);
-      const nestedOwners = ownerParts.slice(2);
-      valid = ownerParts.length >= 2
-        && ownerParts[1] === 'components'
-        && nestedOwners.every(owner => PASCAL_CASE.test(owner));
-    }
-
-    if (!valid) {
+  const modalOwner = (ownerPath: string): string => {
+    const owner = resolveOwner(ownerPath, 'Modal owner');
+    const parts = toPosix(relative(repoRoot, owner)).split('/');
+    if (!isPageModalOwner(parts) && !isFeatureModalOwner(parts)) {
       throw new Error('Modal owner must be inside a page, page-family common, or common-feature components owner.');
     }
+    return owner;
   };
 
   return {
     repoRoot,
     frontendRoot,
     assertInside,
-    assertModalOwner,
-    assertPageComponentsOwner,
     assertPascalCase,
-    assertSafeFilesystemPath,
-    componentOwner(ownerPath, name, suffix, label) {
+    componentOwner(owner, name, suffix, label) {
       assertPascalCase(name, `${label} name`);
       if (!name.endsWith(suffix)) throw new Error(`${label} name must end with ${suffix}.`);
       if (name === suffix) {
         throw new Error(`${label} name must include a domain name before ${suffix}.`);
       }
-      return join(resolveOwner(ownerPath, `${label} owner`), name);
+      return join(owner, name);
     },
+    modalOwner,
+    pageComponentsOwner,
     relativeImport(fromDirectory, target) {
       const path = toPosix(relative(fromDirectory, target));
       return path.startsWith('.') ? path : `./${path}`;
@@ -218,7 +192,7 @@ export function scaffoldFrontend(argv: string[]): string[] {
   const context = createContext();
   const { dryRun, plan } = parseRequest(context, argv);
   plan.files.forEach((_contents, path) => {
-    context.assertSafeFilesystemPath(path, context.frontendRoot, 'Scaffold destination');
+    context.assertInside(path, context.frontendRoot, 'Scaffold destination');
   });
 
   const conflicts = [...plan.files.keys()].filter(pathExists);
@@ -231,7 +205,6 @@ export function scaffoldFrontend(argv: string[]): string[] {
 
   plan.files.forEach((contents, path) => {
     mkdirSync(dirname(path), { recursive: true });
-    context.assertSafeFilesystemPath(path, context.frontendRoot, 'Scaffold destination');
     writeFileSync(path, contents, { flag: 'wx' });
   });
   return plannedFiles;

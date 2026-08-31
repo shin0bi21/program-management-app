@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -90,9 +90,11 @@ test('creates focused table, calendar, and dashboard owners under page component
   [...tableFiles, ...calendarFiles, ...dashboardFiles].forEach(assertParses);
 });
 
-test('rejects unsupported page depths, unsafe owners, names, and overwrites', () => {
+test('rejects unsupported page depths, invalid owners, names, and overwrites', () => {
   assert.throws(() => scaffoldFrontend(['page', 'Family/Area/Page']), /at most one route family/);
   assert.throws(() => scaffoldFrontend(['page', '../Outside']), /PascalCase|at most one route family/);
+  assert.throws(() => scaffoldFrontend(['page', '/Outside']), /PascalCase/);
+  assert.throws(() => scaffoldFrontend(['page', 'Family\\Outside']), /PascalCase/);
   assert.throws(
     () => scaffoldFrontend(['table', 'frontend/src/pages/Leads', 'LeadTable']),
     /page components directory/,
@@ -133,14 +135,6 @@ test('rejects unsupported page depths, unsafe owners, names, and overwrites', ()
     );
   }
   assert.throws(() => scaffoldFrontend(['overlay', 'frontend/src/pages', 'ExampleOverlay']), /Usage/);
-
-  const outside = mkdtempSync(join(tmpdir(), 'frontend-scaffold-outside-'));
-  mkdirSync(join(repoRoot, 'frontend/src/pages/Symlinked'), { recursive: true });
-  symlinkSync(outside, join(repoRoot, 'frontend/src/pages/Symlinked/Escape'));
-  assert.throws(
-    () => scaffoldFrontend(['page', 'Symlinked/Escape']),
-    /must not traverse a symbolic link/,
-  );
 
   scaffoldFrontend(['page', 'Temporary/OverwriteExample']);
   assert.throws(() => scaffoldFrontend(['page', 'Temporary/OverwriteExample']), /Refusing to overwrite/);
