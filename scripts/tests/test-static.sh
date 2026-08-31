@@ -32,6 +32,7 @@ npm run typecheck
 echo "Running script tests..."
 node --test \
   scripts/agents/*.test.ts \
+  scripts/agents/scaffold/frontend/*.test.ts \
   scripts/ci/*.test.ts \
   scripts/patterns/enforce/*.test.ts \
   scripts/patterns/enforce/frontend/*.test.ts \

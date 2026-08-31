@@ -1,12 +1,13 @@
 # Frontend scaffolding
 
-Use the repository scaffolder to apply established owner contracts to a route page, form modal, remote table, timeline calendar, or dashboard. Every preset follows the general [component-owner structure](README.md#organize-an-owner), then adds only the naming, required subowners, tests, and implementation checklist specific to that contract. The scaffolder uses ts-morph to create and format TypeScript syntax, validates names and destinations, previews changes, and refuses to overwrite existing files.
+Use the frontend scaffolder to create the required files for a route page or an established page-owned surface. It formats TypeScript with ts-morph, previews planned paths, validates destinations, and refuses to overwrite files. Generated source and `it.todo` cases are explicit implementation placeholders, not completed product behavior.
 
-Do not add a generic component or overlay preset. Components are too varied to justify placeholder structure beyond the general owner pattern, and overlay placement does not identify whether the correct interaction is a dialog, floating menu, tooltip, or specialized data surface.
+The scaffolder creates only the selected owner's required files. Add optional CSS, API adapters, types, hooks, nested components, stories, and utilities only when the owner needs them. Start with [Frontend](README.md) to choose the owner and [Testing](../workflows/testing.md#frontend-test-ownership) to place its tests.
 
-## Preview before writing
+## Commands
 
 ```bash
+npm run scaffold:frontend -- page Leads --dry-run
 npm run scaffold:frontend -- page Staff/Schedules --dry-run
 npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal --dry-run
 npm run scaffold:frontend -- table frontend/src/pages/Staff/Schedules/components ScheduleTable --dry-run
@@ -14,40 +15,20 @@ npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/compone
 npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboard --dry-run
 ```
 
-Remove `--dry-run` to create the files and directories.
+Remove `--dry-run` to write the displayed files.
 
-## Page scaffold
+## Choose a preset
 
-The page command accepts a path below `frontend/src/pages/`. Every path segment uses PascalCase. It creates the page component, route test, `IMPLEMENTATION.md`, and these owner directories:
+| Preset | Destination and output | Follow next |
+|---|---|---|
+| `page <PagePath>` | Accepts `Page` or `RouteFamily/Page`; creates the route component and colocated test. | [Pages](pages/README.md) |
+| `modal <owner-path> <NameModal>` | Creates a non-trivial form-modal component, workflow hook, and their colocated tests inside a page, page-family common, or common-feature component owner. Use a focused component instead when no workflow hook is justified. | [Modals and forms](components/overlays/modals-and-forms.md) |
+| `table <page-components-path> <NameTable>` | Creates a remote page-table component, table-data hook, and their colocated tests under a root or route-family page's direct `components/` directory. | [Tables](components/tables/README.md) |
+| `calendar <page-components-path> <NameCalendar>` | Creates the required page-calendar component and colocated test. Add a data hook, item owner, story, and browser test only when their contracts apply. | [Calendars](components/calendars/README.md) |
+| `dashboard <page-components-path> <NameDashboard>` | Creates the required page-dashboard component and colocated test. Add overview-data and card owners only when they own meaningful behavior. | [Dashboards](components/dashboards/README.md) |
 
-```text
-components/
-hooks/
-  actions/
-  data/
-  preferences/
-  selection/
-utils/
-```
+Names use PascalCase and the component presets require their documented suffix. Owner paths are repository-relative and must stay inside an allowed frontend owner.
 
-The component orders implementation sections as page-local errors, permissions and services, data and preferences, selection and actions, modal workflows, view/body initialization, derived presentation, and render. Its implementation checklist mirrors the canonical test-owner sections in [Testing](../workflows/testing.md#page-test-scaffold-sections): API, page data, preferences/selection/actions, table, calendar, dashboard/modal/components, route, and browser scenarios. Delete sections and directories the page does not need; the scaffold is an ownership prompt, not a requirement to create pass-through hooks or duplicate shared behavior tests.
+## Finish the owner
 
-## Modal scaffold
-
-The modal command accepts a repository-relative owner path below `frontend/src/` and a PascalCase name ending in `Modal`. It creates a form-modal component, workflow hook, colocated tests, and a checklist covering target ownership, initialization, field locks, validation, submission, recovery, and authoritative reconciliation. Use it for a non-trivial form workflow; create a simple focused dialog manually when it does not warrant a workflow hook. Follow [Modals and forms](components/overlays/modals-and-forms.md).
-
-## Table scaffold
-
-The table command requires a PascalCase name ending in `Table`. It creates the table component and test, its required `use*TableData` hook and test, and a contract checklist. The generated TODOs separate domain query/cursor behavior from representative shared-Table wiring and leave generic pagination mechanics with `useInfiniteListQuery`. Follow [Tables](components/tables/README.md).
-
-## Calendar scaffold
-
-The calendar command requires a PascalCase name ending in `Calendar`. It creates the required calendar component and test plus a contract checklist. Add a `use*CalendarData` hook only when loaded records need page-owned adaptation, an `*Item` owner only for meaningful domain presentation, and a browser story only when real browser behavior is in scope. Follow [Calendars](components/calendars/README.md).
-
-## Dashboard scaffold
-
-The dashboard command requires a PascalCase name ending in `Dashboard`. It creates the required dashboard component and test plus a contract checklist. Add `use*OverviewData` only for dashboard-owned remote data and add `*DashboardCard` owners only for meaningful card contracts. Follow [Dashboards](components/dashboards/README.md).
-
-## Finish the scaffold
-
-Generated placeholders compile but do not represent completed product behavior. Follow the linked owner guide, implement the checklist, remove obsolete TODOs, and run focused tests, builds, pattern checks, and `git diff --check`.
+Replace source TODOs and every `it.todo` with the behavior required by the linked owner guide. Remove placeholders the owner does not need, then run the focused frontend test, build, pattern, and diff checks described in [Testing](../workflows/testing.md).

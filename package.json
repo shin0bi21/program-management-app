@@ -5,7 +5,7 @@
   "scripts": {
     "report:ci": "node scripts/reports/ci-report.ts",
     "report:loc": "bash scripts/reports/loc-report.sh",
-    "scaffold:frontend": "node scripts/agents/scaffold-frontend.ts",
+    "scaffold:frontend": "node scripts/agents/scaffold/frontend/index.ts",
     "snapshot:changes": "node scripts/agents/snapshot-changes.ts",
     "lint": "eslint frontend/src frontend/vite.config.ts frontend/playwright.config.ts frontend/playwright backend/src backend/tests scripts/agents scripts/ci scripts/patterns scripts/reports scripts/tests",
     "lint:fix": "npm run lint -- --fix",
