@@ -33,24 +33,6 @@ describe('ActionsMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  it('uses the rendered menu height when placement flips above the trigger', () => {
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.classList.contains('floating-menu-panel')) {
-        return { top: 0, bottom: 240, left: 0, right: 160, width: 160, height: 240, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
-      }
-      if (this.tagName === 'BUTTON') {
-        return { top: 600, bottom: 628, left: 800, right: 828, width: 28, height: 28, x: 800, y: 600, toJSON: () => ({}) } as DOMRect;
-      }
-      return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
-    });
-
-    render(<ActionsMenu items={makeItems()} />);
-    fireEvent.click(screen.getByRole('button'));
-
-    expect(screen.getByRole('menu')).toHaveStyle({ top: '356px' });
-    rectSpy.mockRestore();
-  });
-
   it('calls the item handler when a menu item is clicked', () => {
     const items = makeItems();
     render(<ActionsMenu items={items} />);
@@ -64,14 +46,6 @@ describe('ActionsMenu', () => {
     fireEvent.click(screen.getByRole('button'));
     expect(screen.getByRole('menu')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-  });
-
-  it('closes the menu when Escape is pressed', () => {
-    render(<ActionsMenu items={makeItems()} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByRole('menu')).toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 

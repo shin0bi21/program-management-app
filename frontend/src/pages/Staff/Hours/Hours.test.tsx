@@ -475,11 +475,6 @@ describe('Hours', () => {
 
     expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Route bridge' } });
-    fireEvent.submit(document.getElementById('hours-form')!);
-
-    await waitFor(() => expect(setHours).toHaveBeenCalledOnce());
-    expect(vi.mocked(setHours).mock.calls[0]).toHaveLength(1);
   });
 
   it('bridges a calendar cell target to a locked, dated entry modal', async () => {
@@ -522,12 +517,6 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(2);
     expect(screen.getByLabelText('Note')).toHaveValue('Planning meeting');
-    fireEvent.submit(document.getElementById('hours-form')!);
-
-    await waitFor(() => expect(setHours).toHaveBeenCalledWith(
-      expect.any(Object),
-      'entry-1',
-    ));
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {

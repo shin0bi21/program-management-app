@@ -1,4 +1,4 @@
-// Owns Hours table request serialization and cursor accumulation.
+// Owns Hours table request serialization and cursor forwarding.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,7 +45,7 @@ describe('useHoursTableData', () => {
     );
   });
 
-  it('loads the next cursor without replacing the first page', async () => {
+  it('forwards the server cursor when loading the next page', async () => {
     vi.mocked(getHoursTableData).mockImplementation(async (_filters, _options, pagination) => (
       pagination.cursor
         ? { rows: [{ ...row, id: 'entry-2' }], nextCursor: null }
@@ -61,13 +61,42 @@ describe('useHoursTableData', () => {
       { wrapper: createQueryClientWrapper(client) },
     );
 
-    await waitFor(() => expect(result.current.rows).toEqual([row]));
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true));
     act(() => result.current.loadNextPage());
-    await waitFor(() => expect(result.current.rows.map(item => item.id)).toEqual(['entry-1', 'entry-2']));
-    expect(getHoursTableData).toHaveBeenLastCalledWith(
+    await waitFor(() => expect(getHoursTableData).toHaveBeenLastCalledWith(
       expect.any(Object),
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ cursor: 'cursor-2' }),
+    ));
+  });
+
+  it('starts a fresh query when its base key, filters, or sorting changes', async () => {
+    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [row], nextCursor: null });
+    const client = createTestQueryClient();
+    const initialProps = {
+      queryKey: ['hours', 'table', 'first'] as readonly unknown[],
+      filters: {
+        staffIds: [], categories: [], programIds: [], types: [], search: 'team',
+      } as Parameters<typeof useHoursTableData>[1],
+      sorting: { key: 'date', direction: 'desc' } as Parameters<typeof useHoursTableData>[2],
+    };
+    const changedFilters = { ...initialProps.filters, search: 'new' };
+    const { rerender } = renderHook(
+      ({ queryKey, filters, sorting }) => useHoursTableData(queryKey, filters, sorting),
+      { initialProps, wrapper: createQueryClientWrapper(client) },
     );
+
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledTimes(1));
+    rerender({ ...initialProps, queryKey: ['hours', 'table', 'second'] });
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledTimes(2));
+    rerender({ ...initialProps, queryKey: ['hours', 'table', 'second'], filters: changedFilters });
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledTimes(3));
+    rerender({
+      ...initialProps,
+      queryKey: ['hours', 'table', 'second'],
+      filters: changedFilters,
+      sorting: { key: 'date', direction: 'asc' },
+    });
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledTimes(4));
   });
 });

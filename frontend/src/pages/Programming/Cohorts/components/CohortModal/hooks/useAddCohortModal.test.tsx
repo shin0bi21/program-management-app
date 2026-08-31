@@ -45,4 +45,38 @@ describe('useAddCohortModal', () => {
       statusMessage: 'Job Readiness successfully added to Summer 2026.',
     });
   });
+
+  it('reports failures, unlocks retry, and resets for a new open target', async () => {
+    vi.mocked(createCohort)
+      .mockRejectedValueOnce(new Error('Cohort already exists'))
+      .mockResolvedValueOnce({} as never);
+    const onCreated = vi.fn();
+    const options = {
+      programs,
+      cycles,
+      initialProgramId: 'program-1',
+      onCreated,
+    };
+    const { result, rerender } = renderHook(
+      ({ isOpen, initialProgramId }) => useAddCohortModal({ ...options, isOpen, initialProgramId }),
+      { initialProps: { isOpen: true, initialProgramId: 'program-1' } },
+    );
+
+    await waitFor(() => expect(result.current.programId).toBe('program-1'));
+    await act(() => result.current.submit(submitEvent));
+    expect(result.current).toMatchObject({ status: 'error', statusMessage: 'Cohort already exists' });
+
+    await act(() => result.current.submit(submitEvent));
+    expect(createCohort).toHaveBeenCalledTimes(2);
+    expect(onCreated).toHaveBeenCalledOnce();
+
+    rerender({ isOpen: false, initialProgramId: 'program-1' });
+    rerender({ isOpen: true, initialProgramId: 'program-2' });
+    await waitFor(() => expect(result.current).toMatchObject({
+      programId: 'program-2',
+      cycleId: 'cycle-1',
+      status: 'idle',
+      statusMessage: '',
+    }));
+  });
 });

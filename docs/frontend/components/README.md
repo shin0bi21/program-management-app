@@ -19,6 +19,7 @@ Extract a component when a rendered region has a clear name and an independent c
 
 | Surface | Guide |
 |---|---|
+| Application sidebar and route navigation | [App navigation](navigation/README.md) |
 | Page header and body regions | [Page structure](../pages/structure.md) |
 | Remote tables and pagination | [Tables](tables/README.md) |
 | Table rows and mutations | [Table rows](tables/rows.md) |
@@ -35,6 +36,12 @@ A component owns its rendering, accessibility and presentation-level interaction
 
 Use a hook when behaviour needs restoration, derived state, effects, subscriptions, observers or asynchronous coordination. Do not create a hook only to rename a `useState` value.
 
-Keep each component's test beside it. Test the rendered states, accessible controls and values the component emits. Test stateful policy in its owning hook and cross-component coordination in the route page.
+## Test components and hooks
 
-Use Playwright when correctness depends on a real browser, including focus, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/testing.md) explains runner selection.
+Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
+
+Lifecycle is conditional. A hook that installs an observer tests its options, callback guards, meaningful dependency changes, and cleanup. A badge that only renders a label and modifier tests those outputs; it does not need mount, rerender, and unmount tests.
+
+A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
+
+Use jsdom for semantic focus and keyboard interactions it can observe. Use Playwright when correctness depends on real focus geometry, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/testing.md) explains runner selection.

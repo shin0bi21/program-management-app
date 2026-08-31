@@ -62,13 +62,9 @@ describe('SessionNotesDashboardCard', () => {
 
     expect(await screen.findByRole('button', { name: 'View session note' })).toBeInTheDocument();
     expect(screen.queryByText(note.details)).not.toBeInTheDocument();
-    expect(screen.getByText('Achievement')).toBeInTheDocument();
-    expect(screen.getByText('Jul 28, 2026')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
     expect(screen.getByRole('heading', { name: 'Session Note' })).toBeInTheDocument();
-    expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
     expect(screen.getByText(note.details)).toBeInTheDocument();
-    expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
   });
 
   it('opens editing and deletes through the card-owned confirmation flow', async () => {

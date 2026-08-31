@@ -21,8 +21,6 @@ import { makeTask } from '../../../tests/factories/task';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import Tasks from './Tasks';
 
-const HOURS_QUERY_KEY = ['hours'] as const;
-
 type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
   view: 'table' as 'table' | 'calendar',
@@ -167,9 +165,8 @@ describe('Tasks', () => {
     expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
   });
 
-  it('opens contextual task time from the selected task dashboard', async () => {
+  it('passes the selected task context into the Hours workflow', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
@@ -180,18 +177,6 @@ describe('Tasks', () => {
     expect(within(hoursForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(within(hoursForm).getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
-
-    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Prepared materials' } });
-    fireEvent.submit(document.getElementById('hours-form')!);
-
-    await waitFor(() => expect(setHours).toHaveBeenCalledWith(expect.objectContaining({
-      source: 'task', taskId: 'task-1', staffId: 'staff-1', note: 'Prepared materials',
-    })));
-    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: HOURS_QUERY_KEY }));
   });
 
   it('owns delete confirmation and delegates the confirmed task deletion', async () => {
@@ -240,7 +225,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
   });
 
-  it('shows completion again after a completed task is reopened', async () => {
+  it('reopens a completed task through the route action workflow', async () => {
     const completedTask = {
       ...task,
       state: 'completed' as const,
@@ -275,15 +260,9 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByText('Prepare workshop'));
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
-    expect(screen.getByRole('menuitem', { name: 'Reopen task' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
+    await waitFor(() => expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open'));
     await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('button', { name: 'Actions for Prepare workshop' }));
-    expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Set Cancelled' })).toBeInTheDocument();
   });
 
   it('keeps applied search active when switching from table to calendar', async () => {

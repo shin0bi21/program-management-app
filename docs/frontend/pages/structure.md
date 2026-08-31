@@ -2,6 +2,8 @@
 
 The page structure gives data-heavy routes a consistent header and body. The route page supplies content and coordinates behaviour; shared shell components own the layout.
 
+The application [sidebar and route navigation](../components/navigation/README.md) sit outside this page structure. Do not recreate application navigation inside `PageHeader` or `PageBody`.
+
 ## Compose the page
 
 Render one `main.page-container.page-container--data` with one `PageHeader`, followed by one `PageBody`.

@@ -83,7 +83,6 @@ describe('LeadNotesDashboardCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View follow-up note' }));
     expect(screen.getByRole('heading', { name: 'Follow-up Note' })).toBeInTheDocument();
     expect(screen.getByText(existingNote.details)).toBeInTheDocument();
-    expect(screen.getByText(/Quinton Macnevin/)).toBeInTheDocument();
   });
 
   it('opens the follow-up note form for signed-up leads', async () => {

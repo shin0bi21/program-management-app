@@ -44,7 +44,7 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Keep finite values, nullable fields, identifiers, permissions, errors, and canonical domain vocabulary aligned across persistence, backend types, HTTP contracts, frontend adapters, and UI state.
 - Prefer explicit invariants and loud failures over fallback chains that manufacture required values.
 - Reject compressed business logic. Extract named decisions and helpers so policy, filtering, mutation, and formatting rules are independently readable and testable.
-- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary.
+- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary. Follow the ownership examples in `docs/workflows/testing.md`; do not repeat shared UI/query mechanics or move controlled domain state into a shared component test.
 - When a decision establishes a reusable repository pattern, update the narrowest canonical owner guide in the same change.
 
 ## Execute and verify

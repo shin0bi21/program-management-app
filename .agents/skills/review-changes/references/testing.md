@@ -4,7 +4,10 @@ Require tests proportionate to changed behavior.
 
 - Test generic shared behavior once at its owning component or hook.
 - Add consumer integration coverage when correctness depends on prop wiring, permissions, API adapters, or domain callbacks.
+- Require each layer to assert its own outcome: an owner proves public rendering, emitted values, and external lifecycles it actually owns; a consumer proves only cross-boundary wiring. The same click may appear at both layers when the assertions differ.
 - Reject consumer tests that mock the shared owner and never invoke the callback whose API wiring is under review. Require an explicit callback-to-adapter assertion with the exact payload.
+- For domain table-data hooks, require query-key and input composition, page size, enabled gates, row shaping, and cursor plus `AbortSignal` forwarding. Leave accumulation, deduplication, loading/refresh classification, and pagination mechanics to `useInfiniteListQuery`.
+- Treat the shared Table as controlled: its suite owns generic rendering, keyboard/focus, pagination triggers, and callback emission; page/domain owners own selection state and test only domain rows, columns, copy, capabilities, and representative wiring.
 - Cover API validation, permissions, success, not-found, conflict, and destructive paths as applicable.
 - For resource-scoped access, cover own, shared-readable, unrelated, and administrator resources; include a record whose metadata does not match the relationship granting resource visibility so an accidental per-record filter cannot pass.
 - Cover database constraints, migrations, backward compatibility, and transaction behavior.

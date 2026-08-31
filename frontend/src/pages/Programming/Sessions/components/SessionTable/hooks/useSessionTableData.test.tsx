@@ -1,4 +1,4 @@
-// Owns session table filter serialization and cursor-page accumulation.
+// Owns session-table control serialization and cursor forwarding.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,7 +35,7 @@ describe('useSessionTableData', () => {
     );
   });
 
-  it('appends the next cursor page', async () => {
+  it('forwards the server cursor when loading the next page', async () => {
     vi.mocked(getSessions).mockImplementation(async (_filters, _options, pagination) => (
       pagination.cursor
         ? { rows: [{ ...session, id: 'session-2' }], nextCursor: null }
@@ -47,11 +47,37 @@ describe('useSessionTableData', () => {
       { wrapper: createQueryClientWrapper(client) },
     );
 
-    await waitFor(() => expect(result.current.sessions).toEqual([session]));
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true));
     act(() => result.current.loadNextPage());
-    await waitFor(() => expect(result.current.sessions.map(item => item.id)).toEqual(['session-1', 'session-2']));
-    expect(getSessions).toHaveBeenLastCalledWith(
+    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
       expect.any(Object), { signal: expect.any(AbortSignal) }, expect.objectContaining({ cursor: 'cursor-2' }),
+    ));
+  });
+
+  it('starts a fresh query when its base key, filters, or sorting changes', async () => {
+    vi.mocked(getSessions).mockResolvedValue({ rows: [session], nextCursor: null });
+    const client = createTestQueryClient();
+    const initialProps = {
+      queryKey: ['sessions', 'table', 'first'] as readonly unknown[],
+      filters: { search: 'communication' } as Parameters<typeof useSessionTableData>[1],
+      sorting: { key: 'date', direction: 'desc' } as Parameters<typeof useSessionTableData>[2],
+    };
+    const { rerender } = renderHook(
+      ({ queryKey, filters, sorting }) => useSessionTableData(queryKey, filters, sorting),
+      { initialProps, wrapper: createQueryClientWrapper(client) },
     );
+
+    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(1));
+    rerender({ ...initialProps, queryKey: ['sessions', 'table', 'second'] });
+    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(2));
+    rerender({ ...initialProps, queryKey: ['sessions', 'table', 'second'], filters: { search: 'career' } });
+    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(3));
+    rerender({
+      ...initialProps,
+      queryKey: ['sessions', 'table', 'second'],
+      filters: { search: 'career' },
+      sorting: { key: 'date', direction: 'asc' },
+    });
+    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(4));
   });
 });

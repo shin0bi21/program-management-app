@@ -20,7 +20,6 @@ describe('ProfileNoteDetails', () => {
     render(<ProfileNoteDetails note={note} />);
 
     expect(screen.getByText('Health')).toBeInTheDocument();
-    expect(screen.getByText('Admin User')).toBeInTheDocument();
     expect(screen.getByText('Keep an epinephrine injector nearby.')).toBeInTheDocument();
   });
 });

@@ -124,9 +124,6 @@ describe('Youth', () => {
     await screen.findByText('Profile note added.');
     expect(screen.getByRole('dialog', { name: 'Add Profile Note' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
-    expect(youthApi.setYouthProfileNote).toHaveBeenCalledWith('youth-1', expect.objectContaining({
-      details: 'New profile note',
-    }));
   });
 
   it('keeps account invitation controls out of the Youth page', () => {

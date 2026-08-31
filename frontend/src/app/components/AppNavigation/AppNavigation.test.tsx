@@ -1,22 +1,25 @@
+// Owns rendered application destinations, auth actions, and desktop/mobile navigation wiring.
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import AppNavigation from './AppNavigation';
 
 const authState = vi.hoisted(() => ({
+  isAuthenticated: true,
   permissions: [] as string[],
   role: 'youth',
+  logout: vi.fn(),
 }));
 
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => ({
-    isAuthenticated: true,
+    isAuthenticated: authState.isAuthenticated,
     permissions: authState.permissions,
     role: authState.role,
     loading: false,
     login: vi.fn(),
-    logout: vi.fn(),
+    logout: authState.logout,
   }),
 }));
 
@@ -35,6 +38,13 @@ function CurrentPath() {
 }
 
 describe('AppNavigation', () => {
+  beforeEach(() => {
+    authState.isAuthenticated = true;
+    authState.permissions = [];
+    authState.role = 'youth';
+    authState.logout.mockReset();
+  });
+
   it('opens the public homepage when an authenticated user clicks the logo', async () => {
     const user = userEvent.setup();
 
@@ -249,6 +259,43 @@ describe('AppNavigation', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Hours' }));
 
     expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/hours');
+  });
+
+  it('renders public login navigation and the authenticated logout action', async () => {
+    const user = userEvent.setup();
+    authState.isAuthenticated = false;
+    const view = render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppNavigation />
+        <CurrentPath />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/login');
+
+    authState.isAuthenticated = true;
+    view.rerender(
+      <MemoryRouter initialEntries={['/']}>
+        <AppNavigation />
+        <CurrentPath />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Logout' }));
+    expect(authState.logout).toHaveBeenCalledOnce();
+  });
+
+  it('opens and dismisses the mobile sidebar through its trigger and backdrop', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><AppNavigation /></MemoryRouter>);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(screen.getByRole('button', { name: 'Close menu' })).toHaveAttribute('aria-expanded', 'true');
+    expect(document.querySelector('.sidebar')).toHaveClass('sidebar--open');
+
+    await user.click(document.querySelector('.sidebar-backdrop') as HTMLElement);
+    expect(screen.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
+    expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
   it('shows programming management in Settings only with program write access', () => {

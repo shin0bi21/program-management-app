@@ -90,5 +90,6 @@ Persist durable filters with page preferences. Keep browser-local calendar posit
 - The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
 - The page-calendar test owns capability mapping, selection, item construction, and exact callback-to-action wiring.
 - The page test owns shared controls, view switching, dialog entry, and cross-view selection.
-- Shared calendar tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable cleanup.
-- Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation, unmount cleanup, and mobile geometry.
+- `useDataBuffer` tests own generic range loading, accumulation, stale-result protection, mutation overrides, and buffer cleanup. Page-calendar tests do not repeat those mechanics.
+- Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable interaction cleanup.
+- Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, real-browser cancellation and unmount behavior, and mobile geometry.
