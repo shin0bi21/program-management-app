@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import type { ScaffoldContext, ScaffoldPlan } from '../../index.ts';
 
 export function modalPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
-  context.assertModalOwner(ownerPath);
-  const directory = context.componentOwner(ownerPath, name, 'Modal', 'Modal');
+  const owner = context.modalOwner(ownerPath);
+  const directory = context.componentOwner(owner, name, 'Modal', 'Modal');
   const modalImport = context.relativeImport(
     directory,
     join(context.frontendRoot, 'common/components/Modal/Modal'),

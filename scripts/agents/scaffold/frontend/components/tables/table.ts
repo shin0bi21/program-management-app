@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import type { ScaffoldContext, ScaffoldPlan } from '../../index.ts';
 
 export function tablePlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
-  context.assertPageComponentsOwner(ownerPath, 'Table');
-  const directory = context.componentOwner(ownerPath, name, 'Table', 'Table');
+  const owner = context.pageComponentsOwner(ownerPath, 'Table');
+  const directory = context.componentOwner(owner, name, 'Table', 'Table');
   const hookName = `use${name}Data`;
   const title = name.replace(/Table$/, '');
   const component = context.sourceFile(join(directory, `${name}.tsx`), `

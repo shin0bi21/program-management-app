@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import type { ScaffoldContext, ScaffoldPlan } from '../../index.ts';
 
 export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
-  context.assertPageComponentsOwner(ownerPath, 'Dashboard');
-  const directory = context.componentOwner(ownerPath, name, 'Dashboard', 'Dashboard');
+  const owner = context.pageComponentsOwner(ownerPath, 'Dashboard');
+  const directory = context.componentOwner(owner, name, 'Dashboard', 'Dashboard');
   const title = name.replace(/Dashboard$/, '');
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 export default function ${name}() {
