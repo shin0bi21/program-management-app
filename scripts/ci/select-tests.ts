@@ -4,7 +4,6 @@ import { appendFileSync } from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-type BackendSuite = keyof typeof BACKEND_TEST_PATHS;
 type BackendMode = 'none' | 'focused' | 'full';
 type FrontendMode = 'none' | 'related' | 'full';
 
@@ -23,41 +22,142 @@ export interface TestPlan {
 
 type PlanCommand = [command: string, value: string];
 
-// Backend domains map to their authoritative Jest directories. A domain can
-// intentionally include consumer coverage, as Tasks and Hours do below.
-const BACKEND_TEST_PATHS = {
-  accounts: ['tests/accounts'],
-  auth: ['tests/auth'],
-  cohorts: ['tests/cohorts'],
-  homepage: ['tests/homepage'],
-  outreach: ['tests/public', 'tests/expressionOfInterest', 'tests/leads'],
-  preferences: ['tests/preferences'],
-  programs: ['tests/programs'],
-  schools: ['tests/schools'],
-  tasks: ['tests/tasks'],
-  hours: ['tests/hours'],
-  youth: ['tests/youth'],
+type SourceDirectory = `${string}/`;
+type BackendDomain = {
+  testPaths: readonly string[];
+  sourceDirectories?: readonly SourceDirectory[];
+  sourceFiles: readonly string[];
+};
+
+// Each domain declares its authoritative tests and the source files they own.
+// Directories end in a slash; conventional files match exactly.
+const BACKEND_DOMAINS = {
+  accounts: {
+    testPaths: ['tests/accounts'],
+    sourceDirectories: ['services/accounts/'],
+    sourceFiles: [
+      'controllers/accountController.ts',
+      'policies/accountPolicy.ts',
+      'routes/accountRoutes.ts',
+      'validation/accountSchemas.ts',
+    ],
+  },
+  auth: {
+    testPaths: ['tests/auth'],
+    sourceDirectories: ['services/auth/'],
+    sourceFiles: ['controllers/authController.ts', 'routes/authRoutes.ts', 'validation/authSchemas.ts'],
+  },
+  cohorts: {
+    testPaths: ['tests/cohorts'],
+    sourceDirectories: ['services/programming/cohorts/', 'services/programming/sessions/'],
+    sourceFiles: ['controllers/cohortController.ts', 'routes/cohortRoutes.ts', 'validation/cohortSchemas.ts'],
+  },
+  homepage: {
+    testPaths: ['tests/homepage'],
+    sourceFiles: [
+      'controllers/homepageController.ts',
+      'routes/homepageRoutes.ts',
+      'services/homepageService.ts',
+      'validation/homepageSchemas.ts',
+    ],
+  },
+  outreach: {
+    testPaths: ['tests/public', 'tests/expressionOfInterest', 'tests/leads'],
+    sourceDirectories: ['services/outreach/'],
+    sourceFiles: [
+      'controllers/leadController.ts',
+      'controllers/publicController.ts',
+      'routes/leadRoutes.ts',
+      'routes/publicRoutes.ts',
+      'validation/leadNoteSchemas.ts',
+      'validation/leadSchemas.ts',
+      'validation/publicSchemas.ts',
+    ],
+  },
+  preferences: {
+    testPaths: ['tests/preferences'],
+    sourceFiles: [
+      'controllers/preferenceController.ts',
+      'routes/preferenceRoutes.ts',
+      'services/preferenceService.ts',
+      'validation/preferenceSchemas.ts',
+    ],
+  },
+  programs: {
+    testPaths: ['tests/programs'],
+    sourceFiles: [
+      'controllers/programController.ts',
+      'routes/programRoutes.ts',
+      'services/programService.ts',
+      'validation/programSchemas.ts',
+    ],
+  },
+  schools: {
+    testPaths: ['tests/schools'],
+    sourceFiles: ['controllers/schoolController.ts', 'routes/schoolRoutes.ts', 'validation/schoolSchemas.ts'],
+  },
+  tasks: {
+    testPaths: ['tests/tasks'],
+    sourceDirectories: ['services/staff/tasks/'],
+    sourceFiles: [
+      'controllers/taskController.ts',
+      'policies/taskPolicy.ts',
+      'routes/taskRoutes.ts',
+      'validation/taskSchemas.ts',
+    ],
+  },
+  hours: {
+    testPaths: ['tests/hours'],
+    sourceDirectories: ['services/staff/hours/'],
+    sourceFiles: [
+      'controllers/hoursController.ts',
+      'policies/hoursPolicy.ts',
+      'routes/hoursRoutes.ts',
+      'validation/hoursSchemas.ts',
+    ],
+  },
+  youth: {
+    testPaths: ['tests/youth'],
+    sourceDirectories: ['services/youth/'],
+    sourceFiles: [
+      'controllers/youthController.ts',
+      'routes/youthRoutes.ts',
+      'validation/youthProfileNoteSchemas.ts',
+      'validation/youthSchemas.ts',
+    ],
+  },
+} as const satisfies Record<string, BackendDomain>;
+
+type BackendSuite = keyof typeof BACKEND_DOMAINS;
+
+const RELATED_BACKEND_SUITES: Partial<Record<BackendSuite, readonly BackendSuite[]>> = {
+  tasks: ['hours'],
+  hours: ['tasks'],
+};
+
+const SHARED_BACKEND_FILES: Readonly<Record<string, readonly BackendSuite[]>> = {
+  'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours'],
 };
 
 // Match a backend source or test file to the smallest safe domain suite. Files
 // without a known owner return null so the caller can fail closed to all tests.
 function backendSuitesFor(file: string): BackendSuite[] | null {
-  if (/backend\/(?:tests\/tasks\/|src\/(?:controllers\/taskController|policies\/taskPolicy|routes\/taskRoutes|services\/staff\/tasks\/|validation\/taskSchemas))/.test(file)) {
-    return ['tasks', 'hours'];
+  const sharedSuites = SHARED_BACKEND_FILES[file];
+  if (sharedSuites) return [...sharedSuites];
+
+  const sourcePath = file.startsWith('backend/src/') ? file.slice('backend/src/'.length) : null;
+
+  for (const suite of Object.keys(BACKEND_DOMAINS) as BackendSuite[]) {
+    const domain: BackendDomain = BACKEND_DOMAINS[suite];
+    const ownsTest = domain.testPaths.some(testPath => file.startsWith(`backend/${testPath}/`));
+    const ownsSource = sourcePath !== null && (
+      domain.sourceFiles.includes(sourcePath)
+      || domain.sourceDirectories?.some(directory => sourcePath.startsWith(directory))
+    );
+
+    if (ownsTest || ownsSource) return [suite, ...(RELATED_BACKEND_SUITES[suite] ?? [])];
   }
-  if (/backend\/(?:tests\/hours\/|src\/(?:controllers\/hoursController|policies\/hoursPolicy|routes\/hoursRoutes|services\/staff\/hours\/|validation\/hoursSchemas))/.test(file)) {
-    return ['hours', 'tasks'];
-  }
-  if (file === 'backend/src/policies/staffResourcePolicy.ts') return ['tasks', 'hours'];
-  if (/backend\/(?:tests\/auth\/|src\/(?:controllers\/auth|routes\/auth|services\/auth|validation\/auth))/.test(file)) return ['auth'];
-  if (/backend\/(?:tests\/accounts\/|src\/(?:controllers\/account|policies\/account|routes\/account|services\/account|validation\/account))/.test(file)) return ['accounts'];
-  if (/backend\/(?:tests\/youth\/|src\/(?:controllers\/youth|routes\/youth|services\/youth|validation\/youth))/.test(file)) return ['youth'];
-  if (/backend\/(?:tests\/schools\/|src\/(?:controllers\/school|routes\/school|services\/school|validation\/school))/.test(file)) return ['schools'];
-  if (/backend\/(?:tests\/programs\/|src\/(?:controllers\/program|routes\/program|services\/programService|validation\/program))/.test(file)) return ['programs'];
-  if (/backend\/(?:tests\/cohorts\/|src\/(?:controllers\/(?:cohort|session)|routes\/(?:cohort|session)|services\/(?:cohort|session|programming\/cohorts\/|programming\/sessions\/)|validation\/(?:cohort|session)))/.test(file)) return ['cohorts'];
-  if (/backend\/(?:tests\/homepage\/|src\/(?:controllers\/homepage|routes\/homepage|services\/homepage|validation\/homepage))/.test(file)) return ['homepage'];
-  if (/backend\/(?:tests\/preferences\/|src\/(?:controllers\/preference|routes\/preference|services\/preference|validation\/preference))/.test(file)) return ['preferences'];
-  if (/backend\/(?:tests\/(?:leads|expressionOfInterest|public)\/|src\/(?:controllers\/(?:lead|expressionOfInterest|public)|routes\/(?:lead|expressionOfInterest|public)|services\/(?:lead|outreach\/)|validation\/(?:lead|expressionOfInterest|public)))/.test(file)) return ['outreach'];
+
   return null;
 }
 
@@ -216,7 +316,7 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
   // Resolve selected backend domains into one deduplicated Jest invocation.
   if (plan.backendMode === 'focused') {
     plan.backendTestPaths = [...backendSuites]
-      .flatMap(suite => BACKEND_TEST_PATHS[suite])
+      .flatMap(suite => BACKEND_DOMAINS[suite].testPaths)
       .filter((path, index, paths) => paths.indexOf(path) === index);
   }
 
