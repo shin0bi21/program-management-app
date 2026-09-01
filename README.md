@@ -8,6 +8,8 @@ Documentation follows the application structure. Enter the broad owner, read its
 
 Each directory README owns only its level’s overview and routing. Focused child documents own their component, layer, or workflow patterns and examples.
 
+Start each README with a plain-language description and the guidance readers need most. Put directory layouts and links to related guides at the end so they support the explanation instead of interrupting it.
+
 Write rules as standalone sentences that a person can scan and an agent can execute without
 reconstructing context across list items. Use tables for concise comparisons, concrete examples
 to ground unfamiliar ownership terms, and links instead of repeating details owned elsewhere.
