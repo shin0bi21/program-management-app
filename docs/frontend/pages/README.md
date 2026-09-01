@@ -1,6 +1,6 @@
 # Frontend pages
 
-A route page is the orchestration owner. It connects permissions, options, saved preferences, selection, cross-view actions and dialogs. Child components own substantial rendering and remote-data behaviour.
+A route page brings together everything needed for one screen. It loads page-level data and saved settings, tracks selection, connects actions, and opens dialogs. Tables, calendars, and other child components handle their own rendering and data.
 
 ## Understand page composition
 
@@ -17,7 +17,7 @@ app route
   → auth, http, and query infrastructure
 ```
 
-The page selects and coordinates its route-specific views. [Page structure](structure.md) defines the header, body and overlay regions. Shared product capabilities, generic interface code and application infrastructure remain downstream dependencies.
+The page chooses which views to show and passes them what they need. See [Page structure](structure.md) for how the header, body, and dialogs fit together. Reusable features, components, and application services live outside the page.
 
 ## Organize page files
 
