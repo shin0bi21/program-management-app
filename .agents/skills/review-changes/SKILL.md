@@ -62,8 +62,9 @@ For the selected concern group:
 4. Match every user action to its mutation breadth. Focused commands such as status, placement, reorder, assignment, and resize must not replace unrelated fields from a cached record; verify locked authoritative reads and concurrent-change regression tests.
 5. For authorization changes, independently trace route capability, resource discovery, record reads, locked mutations, returned UI capabilities, and every consumer affordance. Test own, shared-readable, unrelated, and administrator cases rather than treating “permission coverage” as one checkbox.
 6. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
-7. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
-8. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
+7. Review new and changed code for cognitive complexity, verbose methods, and defensive clutter. Prefer concise execution-order methods and clean, thorough structures that make behavior explicit without speculative abstractions, redundant guards, or duplicated sources of truth.
+8. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
+9. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
 
 Treat inconsistent nearby code as historical context, not as a pattern to reproduce. Passing tests, lint, or typecheck do not override a correctness or maintainability finding.
 
