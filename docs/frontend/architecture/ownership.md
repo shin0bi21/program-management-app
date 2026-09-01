@@ -15,7 +15,7 @@ Choose the narrowest owner that can state the complete behavior. File placement 
 
 Never import a page from common code. Pages and their nested components may import another page's route-owned code directly when that page remains the clearest owner. Promote a contract only when ownership itself becomes shared; a second consumer alone is not enough.
 
-Every frontend feature and component follows the colocated [owner structure](../README.md#organize-an-owner). This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
+Keep each frontend feature and component with its implementation, tests, and focused supporting files. This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
 ## Assign each file one location
 

@@ -2,25 +2,15 @@
 
 The frontend uses React, TypeScript, and Vite. Start with the guide for the part of the interface you are changing.
 
-## Find the right guide
+## Develop a frontend change
 
-Use this table to find the right guide. Each rule is explained in one place so the documentation does not repeat itself.
+1. Choose the page, component or architectural owner.
+2. Read the narrowest guide for each changed surface.
+3. Inspect the owner's types, API adapter, hooks, component and tests.
+4. Keep route, permission, API, state, rendering and test contracts aligned.
+5. Follow the [testing guide](../workflows/testing.md) for focused verification and required checks.
 
-| What are you changing? | Guide |
-|---|---|
-| A page or route workflow | [Pages](pages/README.md) |
-| The header, body, errors, or dialogs on a page | [Page structure](pages/structure.md) |
-| Sidebar navigation or route visibility | [App navigation](components/navigation/README.md) |
-| Saved page controls | [Page preferences](pages/preferences.md) |
-| Tables and table rows | [Tables](components/tables/README.md) and [table rows](components/tables/rows.md) |
-| Calendars | [Calendars](components/calendars/README.md) |
-| Dashboards | [Dashboards](components/dashboards/README.md) |
-| Modals and other overlays | [Overlays](components/overlays/README.md) |
-| Shared components | [Components](components/README.md) |
-| Frontend architecture | [Architecture](architecture/README.md) |
-| State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
-| Where code should live | [Ownership](architecture/ownership.md) |
-| Creating a new page or component | [Scaffolding](scaffolding.md) |
+Browser-sensitive interactions use Playwright stories under `frontend/playwright/gallery/` and specs under `frontend/playwright/tests/`.
 
 ## Understand the source structure
 
@@ -41,12 +31,22 @@ frontend/src/
 
 Preserve the dependency direction `pages → common/features → common/components`. Root infrastructure remains below those layers. The [ownership guide](architecture/ownership.md) explains route-family `common/` code and when to promote an owner.
 
-## Develop a frontend change
+## Find the right guide
 
-1. Choose the page, component or architectural owner.
-2. Read the narrowest guide for each changed surface.
-3. Inspect the owner's types, API adapter, hooks, component and tests.
-4. Keep route, permission, API, state, rendering and test contracts aligned.
-5. Follow the [testing guide](../workflows/testing.md) for focused verification and required checks.
+Use this table to find the right guide. Each rule is explained in one place so the documentation does not repeat itself.
 
-Browser-sensitive interactions use Playwright stories under `frontend/playwright/gallery/` and specs under `frontend/playwright/tests/`.
+| What are you changing? | Guide |
+|---|---|
+| A page or route workflow | [Pages](pages/README.md) |
+| The header, body, errors, or dialogs on a page | [Pages](pages/README.md#place-page-content-and-errors) |
+| Sidebar navigation or route visibility | [App navigation](components/navigation/README.md) |
+| Saved page controls | [Page preferences](pages/preferences.md) |
+| Tables and table rows | [Tables](components/tables/README.md) and [table rows](components/tables/rows.md) |
+| Calendars | [Calendars](components/calendars/README.md) |
+| Dashboards | [Dashboards](components/dashboards/README.md) |
+| Modals and other overlays | [Overlays](components/overlays/README.md) |
+| Shared components | [Components](components/README.md) |
+| Frontend architecture | [Architecture](architecture/README.md) |
+| State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
+| Where code should live | [Ownership](architecture/ownership.md) |
+| Creating a new page or component | [Scaffolding](scaffolding.md) |

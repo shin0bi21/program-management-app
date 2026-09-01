@@ -6,20 +6,6 @@ The backend is an Express 4 and TypeScript HTTP API. Zod validates request input
 HTTP request → route + middleware → controller → service → PostgreSQL
 ```
 
-## Layers
-
-| Layer | Responsibility |
-|---|---|
-| `backend/src/index.ts` | Application composition, global middleware, route mounting, health check, and process lifecycle |
-| `backend/src/routes/` | Endpoint definitions and ordered middleware chains |
-| `backend/src/middleware/` | Authentication, authorization, rate limiting, validation, request IDs, uploads, and error handling |
-| `backend/src/policies/` | Record-scope predicates and assertions applied by services |
-| `backend/src/controllers/` | Thin HTTP adapters that extract input, call services, and send successful responses |
-| `backend/src/services/` | Business rules, transactions, SQL, audit writes, and external-operation coordination |
-| `backend/src/validation/` | Zod schemas for request parameters, queries, and bodies |
-| `backend/src/db/` | Shared PostgreSQL client and transaction helpers |
-| `backend/src/types/` | Runtime-independent contracts and generated database types |
-
 Dependencies flow from routes through middleware and controllers to services and the database. Controllers do not contain business logic or SQL; services do not depend on controllers or routes. Every Express 4 async route handler uses `asyncHandler`.
 
 Protected routes normally apply middleware in this order:
@@ -31,25 +17,6 @@ Protected routes normally apply middleware in this order:
 5. `asyncHandler(controller)`
 
 Services use parameterized `sql` templates. The owner of a multi-write operation opens one transaction, nested helpers join it, and audit entries commit or roll back with the mutation. Routes authorize capabilities; policies constrain authoritative reads and locked mutations. Required environment variables use `requireEnv()`, and user-controlled values interpolated into email HTML are escaped.
-
-## Feature structure
-
-```text
-backend/
-├── db/migrations/<date>_add_example.sql # only when persistence changes
-├── src/policies/examplePolicy.ts
-├── src/services/<product-area>/<capability>/
-│   ├── exampleListService.ts
-│   ├── exampleRecordQuery.ts
-│   ├── exampleService.ts
-│   └── exampleFilters.ts                 # only when filters need a separate owner
-├── src/validation/exampleSchemas.ts
-├── src/controllers/exampleController.ts
-├── src/routes/exampleRoutes.ts
-└── tests/example/
-```
-
-Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`; do not name backend folders after temporary page layouts. A standalone service may stay directly under `src/services/`.
 
 ## Development flow
 
@@ -78,6 +45,39 @@ All paths are under `/api`; route files remain authoritative for exact validatio
 | `/time-entries` | Timesheets, range/list views, placement, and overview data |
 
 See the [backend API reference](api.md) for endpoint-level details.
+
+## Layers
+
+| Layer | Responsibility |
+|---|---|
+| `backend/src/index.ts` | Application composition, global middleware, route mounting, health check, and process lifecycle |
+| `backend/src/routes/` | Endpoint definitions and ordered middleware chains |
+| `backend/src/middleware/` | Authentication, authorization, rate limiting, validation, request IDs, uploads, and error handling |
+| `backend/src/policies/` | Record-scope predicates and assertions applied by services |
+| `backend/src/controllers/` | Thin HTTP adapters that extract input, call services, and send successful responses |
+| `backend/src/services/` | Business rules, transactions, SQL, audit writes, and external-operation coordination |
+| `backend/src/validation/` | Zod schemas for request parameters, queries, and bodies |
+| `backend/src/db/` | Shared PostgreSQL client and transaction helpers |
+| `backend/src/types/` | Runtime-independent contracts and generated database types |
+
+## Feature structure
+
+```text
+backend/
+├── db/migrations/<date>_add_example.sql # only when persistence changes
+├── src/policies/examplePolicy.ts
+├── src/services/<product-area>/<capability>/
+│   ├── exampleListService.ts
+│   ├── exampleRecordQuery.ts
+│   ├── exampleService.ts
+│   └── exampleFilters.ts                 # only when filters need a separate owner
+├── src/validation/exampleSchemas.ts
+├── src/controllers/exampleController.ts
+├── src/routes/exampleRoutes.ts
+└── tests/example/
+```
+
+Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`; do not name backend folders after temporary page layouts. A standalone service may stay directly under `src/services/`.
 
 ## Guides
 
