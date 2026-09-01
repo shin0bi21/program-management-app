@@ -29,8 +29,8 @@ function createRepository(): string {
 
 test('snapshots committed and working-tree changes with shared test routing', () => {
   const repoRoot = createRepository();
-  mkdirSync(join(repoRoot, 'backend/src/services'), { recursive: true });
-  writeFileSync(join(repoRoot, 'backend/src/services/accountService.ts'), 'export const value = 1;\n');
+  mkdirSync(join(repoRoot, 'backend/src/services/accounts'), { recursive: true });
+  writeFileSync(join(repoRoot, 'backend/src/services/accounts/accountService.ts'), 'export const value = 1;\n');
   command(repoRoot, 'git', ['add', '.']);
   command(repoRoot, 'git', ['commit', '-m', 'Add account service']);
   mkdirSync(join(repoRoot, 'frontend/src/pages'), { recursive: true });
@@ -40,9 +40,9 @@ test('snapshots committed and working-tree changes with shared test routing', ()
   const snapshot = snapshotChanges({ repoRoot, baseRef: 'develop~1' });
 
   assert.deepEqual(snapshot.changes.paths, [
-    'backend/src/services/accountService.ts', 'docs/guide.md', 'frontend/src/pages/Example.tsx',
+    'backend/src/services/accounts/accountService.ts', 'docs/guide.md', 'frontend/src/pages/Example.tsx',
   ]);
-  assert.deepEqual(snapshot.classifications.backend, ['backend/src/services/accountService.ts']);
+  assert.deepEqual(snapshot.classifications.backend, ['backend/src/services/accounts/accountService.ts']);
   assert.equal(snapshot.verification.plan.backendMode, 'focused');
   assert.equal(snapshot.verification.plan.frontendMode, 'related');
   assert.match(snapshot.git.fingerprint, /^sha256:[a-f0-9]{64}$/);

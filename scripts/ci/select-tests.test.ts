@@ -17,10 +17,40 @@ test('Task backend changes select Task and Hours integration suites', () => {
 });
 
 test('domain backend changes select only their authoritative suite', () => {
-  const plan = selectTests(['backend/src/services/preferenceService.ts']);
+  const cases = [
+    ['backend/src/services/accounts/accountService.ts', ['tests/accounts']],
+    ['backend/src/services/auth/authService.ts', ['tests/auth']],
+    ['backend/src/services/programming/cohorts/cohortService.ts', ['tests/cohorts']],
+    ['backend/src/services/homepageService.ts', ['tests/homepage']],
+    ['backend/src/services/outreach/leads/leadService.ts', ['tests/public', 'tests/expressionOfInterest', 'tests/leads']],
+    ['backend/src/services/preferenceService.ts', ['tests/preferences']],
+    ['backend/src/services/programService.ts', ['tests/programs']],
+    ['backend/src/routes/schoolRoutes.ts', ['tests/schools']],
+    ['backend/src/services/youth/youthService.ts', ['tests/youth']],
+  ] as const;
+
+  for (const [file, testPaths] of cases) {
+    const plan = selectTests([file]);
+
+    assert.equal(plan.backendMode, 'focused', file);
+    assert.deepEqual(plan.backendTestPaths, testPaths, file);
+  }
+});
+
+test('shared backend files select every domain that consumes them', () => {
+  const plan = selectTests(['backend/src/policies/staffResourcePolicy.ts']);
 
   assert.equal(plan.backendMode, 'focused');
-  assert.deepEqual(plan.backendTestPaths, ['tests/preferences']);
+  assert.deepEqual(plan.backendTestPaths, ['tests/tasks', 'tests/hours']);
+});
+
+test('domain-like source filenames do not receive focused coverage', () => {
+  for (const file of [
+    'backend/src/controllers/authorizationPolicy.ts',
+    'backend/src/services/accountingService.ts',
+  ]) {
+    assert.equal(selectTests([file]).backendMode, 'full', file);
+  }
 });
 
 test('shared backend and migration changes escalate to the full backend suite', () => {
