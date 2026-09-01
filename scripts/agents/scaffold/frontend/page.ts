@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import type { ScaffoldContext, ScaffoldPlan } from '../index.ts';
+import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
 
 export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPlan {
   const parts = pagePath.split('/');

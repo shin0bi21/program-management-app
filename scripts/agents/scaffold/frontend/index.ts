@@ -6,11 +6,11 @@ import { pathToFileURL } from 'node:url';
 
 import { Project, QuoteKind } from 'ts-morph';
 
-import { calendarPlan } from './components/calendars/calendar.ts';
-import { dashboardPlan } from './components/dashboards/dashboard.ts';
-import { modalPlan } from './components/overlays/modal.ts';
-import { tablePlan } from './components/tables/table.ts';
-import { pagePlan } from './pages/page.ts';
+import { calendarPlan } from './calendar.ts';
+import { dashboardPlan } from './dashboard.ts';
+import { modalPlan } from './modal.ts';
+import { pagePlan } from './page.ts';
+import { tablePlan } from './table.ts';
 
 const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/;
 const FORMAT_SETTINGS = {

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import type { ScaffoldContext, ScaffoldPlan } from '../../index.ts';
+import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
 
 export function modalPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
   const owner = context.modalOwner(ownerPath);
