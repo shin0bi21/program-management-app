@@ -8,8 +8,6 @@ interface CycleTableProps {
   loading: boolean;
   error?: string;
   onRetry?: () => void;
-  selectedKey: string | null;
-  onRowSelect: (cycle: ProgramCycle) => void;
 }
 
 export default function CycleTable(props: CycleTableProps) {
@@ -20,8 +18,6 @@ export default function CycleTable(props: CycleTableProps) {
     loading={props.loading}
     unavailable={props.error ? { title: 'Cycles unavailable', onRetry: props.onRetry } : undefined}
     keyExtractor={cycle => cycle.id}
-    selectedKey={props.selectedKey}
-    onRowSelect={props.onRowSelect}
     emptyMessage="No cycles yet"
   />;
 }

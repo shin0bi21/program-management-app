@@ -12,16 +12,12 @@ import useProgramTable from './components/ProgramTable/hooks/useProgramTable';
 import ProgramModal from './components/ProgramModal/ProgramModal';
 import useProgrammingActions from './hooks/actions/useProgrammingActions';
 import useProgrammingData from './hooks/data/useProgrammingData';
-import useProgrammingSelection from './hooks/selection/useProgrammingSelection';
 import useProgrammingModals from './hooks/useProgrammingModals';
 import './Programming.css';
 
 export default function Programming() {
   // Page data.
   const data = useProgrammingData();
-
-  // Selection.
-  const { programSelection, cycleSelection } = useProgrammingSelection(data.programs, data.cycles);
 
   // Actions.
   const {
@@ -51,8 +47,6 @@ export default function Programming() {
       loading={data.programsLoading}
       error={data.programsError ?? undefined}
       onRetry={data.retryPrograms}
-      selectedKey={programSelection.selectedKey}
-      onRowSelect={programSelection.selectItem}
     />
   </DashboardCard>;
 
@@ -66,8 +60,6 @@ export default function Programming() {
       loading={data.cyclesLoading}
       error={data.cyclesError ?? undefined}
       onRetry={data.refreshCycles}
-      selectedKey={cycleSelection.selectedKey}
-      onRowSelect={cycleSelection.selectItem}
     />
   </DashboardCard>;
 
