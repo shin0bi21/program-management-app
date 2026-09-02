@@ -1,21 +1,15 @@
 import { useEffect, useMemo } from 'react';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionListFilters } from '../../../../../common/types/cohort';
 import ProgrammingCalendar from './ProgrammingCalendar/ProgrammingCalendar';
 import { useSessionCalendarData } from './hooks/useSessionCalendarData';
 import './SessionCalendar.css';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
-const noSessionTypeIds: string[] = [];
-
 interface SessionCalendarProps {
   queryKey: readonly unknown[];
-  selectedProgramIds: string[];
-  selectedCohortId: string;
+  filters: SessionListFilters;
   selectedSessionId: string;
-  selectedSessionTypeIds?: string[];
-  selectedStatuses: Array<'upcoming' | 'completed'>;
-  search: string;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
   onSessionEdit?: (session: CohortSession) => void;
@@ -25,25 +19,15 @@ interface SessionCalendarProps {
 
 export default function SessionCalendar({
   queryKey,
-  selectedProgramIds,
-  selectedCohortId,
+  filters,
   selectedSessionId,
-  selectedSessionTypeIds = noSessionTypeIds,
-  selectedStatuses,
-  search,
   onSessionsLoaded,
   onSessionSelect,
   onSessionEdit,
   onSessionDelete,
   onErrorChange,
 }: SessionCalendarProps) {
-  const calendar = useSessionCalendarData(queryKey, {
-    programIds: selectedProgramIds,
-    cohortId: selectedCohortId,
-    sessionTypeIds: selectedSessionTypeIds,
-    statuses: selectedStatuses,
-    search,
-  }, selectedSessionId);
+  const calendar = useSessionCalendarData(queryKey, filters, selectedSessionId);
   const errorMessage = calendar.error
     ? calendar.error instanceof Error ? calendar.error.message : 'Could not load sessions'
     : null;

@@ -2,19 +2,18 @@ import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { CohortSortKey, ProgramCohort } from '../../../../../common/types/cohort';
+import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../../../../common/types/cohort';
 import type { ListSort } from '../../../../../common/types/pagination';
 import useCohortTableData from './hooks/useCohortTableData';
 
 interface CohortTableProps {
   queryKey: readonly unknown[];
-  filters: { programId?: string; search?: string; status?: string } | null;
+  filters: CohortListFilters | null;
   columns: TableColumnDef<ProgramCohort>[];
   hiddenColumnKeys: string[];
   sorting: ListSort<CohortSortKey>;
   columnWidths: Record<string, number>;
   selectedKey: string | null;
-  hasActiveQueryFilters: boolean;
   onRowSelect: (cohort: ProgramCohort | null) => void;
   onSortingChange: (sorting: ListSort<CohortSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
@@ -29,13 +28,13 @@ export default function CohortTable({
   sorting,
   columnWidths,
   selectedKey,
-  hasActiveQueryFilters,
   onRowSelect,
   onSortingChange,
   onColumnWidthsChange,
   onErrorChange,
 }: CohortTableProps) {
   const tableData = useCohortTableData(queryKey, filters, sorting);
+  const hasFilters = Boolean(filters?.programId || filters?.search || filters?.status);
   usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
 
   useEffect(() => {
@@ -63,6 +62,6 @@ export default function CohortTable({
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
     onLoadNextPage={tableData.loadNextPage}
-    emptyMessage={hasActiveQueryFilters ? 'No cohorts match your search and filters' : 'No cohorts yet'}
+    emptyMessage={hasFilters ? 'No cohorts match your search and filters' : 'No cohorts yet'}
   />;
 }

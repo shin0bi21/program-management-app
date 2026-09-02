@@ -10,13 +10,12 @@ import type {
   RowItemData,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { getHoursCalendarData } from '../../hours.api';
-import type { StaffResource, HoursCategory, HoursItem as HoursEntry } from '../../types';
+import type { StaffResource, HoursFilters, HoursItem as HoursEntry } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type {
   HoursCalendarCache,
   HoursEntryMove,
   HoursEntryTarget,
-  HoursEntryType,
 } from '../../types';
 import { useHoursCalendarData } from './hooks/useHoursCalendarData';
 import HoursItem from './HoursItem/HoursItem';
@@ -33,12 +32,7 @@ const canMoveWithinStaff = ({ row, destinationRow }: ItemMoveContext<StaffResour
   && row.id === destinationRow.id;
 interface HoursCalendarProps {
   resources: StaffResource[];
-  staffIds: string[];
-  categories: HoursCategory[];
-  programIds: string[];
-  types: HoursEntryType[];
-  cycleId: string;
-  search: string;
+  filters: HoursFilters;
   canWrite: boolean;
   selectedStaffId?: string;
   calendarCacheRef: React.MutableRefObject<HoursCalendarCache>;
@@ -52,12 +46,12 @@ interface HoursCalendarProps {
 }
 
 export default function HoursCalendar({
-  resources, staffIds, categories, programIds, types, cycleId, search, canWrite, selectedStaffId,
+  resources, filters, canWrite, selectedStaffId,
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onErrorChange,
 }: HoursCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    getHoursCalendarData({ start: start.key, end: end.key, search })
-  ), [search]);
+    getHoursCalendarData({ start: start.key, end: end.key, search: filters.search })
+  ), [filters.search]);
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getHoursEntryId,
@@ -69,10 +63,16 @@ export default function HoursCalendar({
     calendarCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
   }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
-  const visibleResources = useMemo(() => staffIds.length
-    ? resources.filter(resource => staffIds.includes(resource.id))
-    : resources, [resources, staffIds]);
-  const visibleData = useHoursCalendarData(calendar.data, categories, programIds, types, cycleId);
+  const visibleResources = useMemo(() => filters.staffIds.length
+    ? resources.filter(resource => filters.staffIds.includes(resource.id))
+    : resources, [filters.staffIds, resources]);
+  const visibleData = useHoursCalendarData(
+    calendar.data,
+    filters.categories,
+    filters.programIds,
+    filters.types,
+    filters.cycleId,
+  );
   const visibleItems = useMemo<RowItemData<HoursCalendarItem>>(() => Object.fromEntries(
     Object.entries(visibleData).map(([resourceId, periods]) => [
       resourceId,

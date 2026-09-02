@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -25,7 +25,13 @@ import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { getTaskDashboardData } from './tasks.api';
-import { TASK_TABLE_KEYS, type AddTaskModalInitialValues, type Task, type TaskModalState } from './types';
+import {
+  TASK_TABLE_KEYS,
+  type AddTaskModalInitialValues,
+  type Task,
+  type TaskModalState,
+  type TasksFilters,
+} from './types';
 
 import './Tasks.css';
 
@@ -52,6 +58,21 @@ export default function Tasks() {
     referenceDataError: Boolean(pageData.referenceDataError),
     tableKeys: TASK_TABLE_KEYS,
   });
+
+  // Filter configuration.
+  const taskFilters = useMemo<TasksFilters>(() => ({
+    search: preferences.search.appliedValue,
+    staffIds: preferences.filters.staffIds,
+    programIds: preferences.filters.programIds,
+    categories: preferences.filters.categories,
+    statuses: preferences.filters.statuses,
+  }), [
+    preferences.filters.categories,
+    preferences.filters.programIds,
+    preferences.filters.staffIds,
+    preferences.filters.statuses,
+    preferences.search.appliedValue,
+  ]);
 
   // Selection and actions.
   const selection = useTaskSelection({ resources: pageData.resources });
@@ -112,11 +133,7 @@ export default function Tasks() {
       queryKey={TASK_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
-      staffIds={preferences.filters.staffIds}
-      programIds={preferences.filters.programIds}
-      categories={preferences.filters.categories}
-      statuses={preferences.filters.statuses}
-      search={preferences.search.appliedValue}
+      filters={taskFilters}
       today={today}
       sorting={preferences.table.sorting}
       columnWidths={preferences.table.columnWidths}
@@ -128,25 +145,11 @@ export default function Tasks() {
     />
   );
 
-  const calendarDataKey = JSON.stringify([
-    preferences.search.appliedValue,
-    preferences.filters.staffIds,
-    preferences.filters.programIds,
-    preferences.filters.categories,
-    preferences.filters.statuses,
-  ]);
-
   const taskCalendar = (
     <TaskCalendar
-      key={calendarDataKey}
+      key={JSON.stringify(taskFilters)}
       resources={pageData.resources}
-      filters={{
-        search: preferences.search.appliedValue,
-        staffIds: preferences.filters.staffIds,
-        programIds: preferences.filters.programIds,
-        categories: preferences.filters.categories,
-        statuses: preferences.filters.statuses,
-      }}
+      filters={taskFilters}
       canWrite={canWrite}
       selectedResourceId={selection.selectedResourceId}
       selectedTaskId={selection.selectedTaskId}
@@ -171,7 +174,7 @@ export default function Tasks() {
 
   // Render.
   return <>
-    <main className="page-container page-container--data">
+    <main className="page-container">
       <PageHeader
         title="Tasks"
 

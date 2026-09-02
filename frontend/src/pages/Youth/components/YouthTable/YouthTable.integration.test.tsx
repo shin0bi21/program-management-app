@@ -33,7 +33,6 @@ describe('YouthTable selection reconciliation', () => {
           sorting={{ key: 'firstName', direction: 'asc' }}
           columnWidths={{}}
           selectedProfileId={profile.id}
-          hasActiveQueryFilters={false}
           onSelectedProfileResolved={setSelectedProfile}
           onRowSelect={setSelectedProfile}
           onSortingChange={vi.fn()}

@@ -13,7 +13,7 @@ import {
   resolvePreferenceStringArray,
 } from '../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../common/types/pagination';
-import type { YouthFilters, YouthSortKey } from '../../../common/types/youth';
+import type { YouthSortKey } from '../../../common/types/youth';
 
 export type YouthStatusFilter = 'active' | 'inactive';
 
@@ -134,14 +134,6 @@ export function useYouthControls({
     onReconcile: reconcileProgramFilters,
   });
 
-  // Keep query inputs and FilterCard configuration stable between unrelated renders.
-  const queryFilters = useMemo<YouthFilters | null>(() => ready ? ({
-    search: appliedSearch,
-    statuses: statusFilters,
-    programIds: programFilters,
-  }) : null, [appliedSearch, programFilters, ready, statusFilters]);
-  const hasActiveQueryFilters = Boolean(appliedSearch || statusFilters.length || programFilters.length);
-
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
       id: 'program',
@@ -199,7 +191,6 @@ export function useYouthControls({
     appliedSearch,
     applySearch,
     clearSearch,
-    queryFilters,
     statusFilters,
     programFilters,
     sorting,
@@ -210,7 +201,6 @@ export function useYouthControls({
     setHiddenColumns,
     ready,
     error,
-    hasActiveQueryFilters,
     filterCategories,
     applyFilter,
     clearFilters,

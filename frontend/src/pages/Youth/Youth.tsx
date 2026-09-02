@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -10,7 +10,7 @@ import SearchInput from '../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../common/features/programming/components/YouthReportModal/YouthReportModal';
 import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import YouthModal from '../../common/features/youth/components/YouthModal/YouthModal';
-import { YOUTH_TABLE_KEYS } from '../../common/types/youth';
+import { YOUTH_TABLE_KEYS, type YouthFilters } from '../../common/types/youth';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
@@ -47,10 +47,17 @@ export default function Youth() {
     tableKeys: YOUTH_TABLE_KEYS,
   });
   const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, programFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, programFilters, sorting,
     columnWidths, hiddenColumns, error: preferencesError, filterCategories,
-    hasActiveQueryFilters, ready: controlsReady,
+    ready: controlsReady,
   } = controls;
+
+  // Filter configuration.
+  const youthFilters = useMemo<YouthFilters | null>(() => controlsReady ? {
+    search: appliedSearch,
+    statuses: statusFilters,
+    programIds: programFilters,
+  } : null, [appliedSearch, controlsReady, programFilters, statusFilters]);
 
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
@@ -97,7 +104,7 @@ export default function Youth() {
   // Render.
   return (
     <>
-      <main className="page-container page-container--data">
+      <main className="page-container">
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -136,10 +143,9 @@ export default function Youth() {
           ariaLabel="Youth profiles"
           table={<YouthTable
             columns={youthColumns}
-            filters={queryFilters}
+            filters={youthFilters}
             hiddenColumnKeys={hiddenColumns}
             selectedProfileId={selectedProfileId}
-            hasActiveQueryFilters={hasActiveQueryFilters}
             onSelectedProfileResolved={selectProfile}
             onRowSelect={selectProfile}
             sorting={sorting}

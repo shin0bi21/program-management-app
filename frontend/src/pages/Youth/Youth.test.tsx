@@ -162,7 +162,7 @@ describe('Youth', () => {
           programName: 'Soft Skills',
           rosterMode: 'enrolled',
           startsOn: '2026-06-30',
-          endsOn: '2026-08-31',
+          endsOn: '2999-12-31',
           enrolledOn: '2026-06-30',
           withdrawnOn: null,
           presentCount: 8,
@@ -191,7 +191,7 @@ describe('Youth', () => {
     const profile = makeYouthProfile({
       cohorts: [{
         id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
-        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2026-08-31',
+        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
       }],
@@ -210,7 +210,7 @@ describe('Youth', () => {
     const profile = makeYouthProfile({
       cohorts: [{
         id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
-        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2026-08-31',
+        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
       }],

@@ -11,7 +11,7 @@ import {
   resolvePreferenceStringArray,
 } from '../../../../common/features/preferences/preferenceValues';
 import type { ListSort } from '../../../../common/types/pagination';
-import type { LeadFilters, LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
+import type { LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
 
 export interface LeadPreference {
   search: string;
@@ -96,10 +96,6 @@ export function useLeadPreferences(
     setReady(true);
   }, [loadError, origin, preference, preferenceLoading, programs, programsError, programsLoading, ready, initializePreference, tableKeys]);
 
-  // Keep query inputs and FilterCard configuration stable between unrelated renders.
-  const queryFilters = useMemo<LeadFilters | null>(() => ready
-    ? ({ search: appliedSearch, statuses: statusFilters, programIds: programFilters, origins: [origin], submitterRoles: submitterRoleFilters })
-    : null, [appliedSearch, origin, programFilters, ready, statusFilters, submitterRoleFilters]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
     { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
@@ -206,10 +202,8 @@ export function useLeadPreferences(
     filters: {
       statuses: statusFilters,
       programIds: programFilters,
-      origins: [origin] as LeadOrigin[],
       submitterRoles: submitterRoleFilters,
       definitions: filterCategories,
-      query: queryFilters,
       apply: applyFilter,
       clear: clearFilters,
     },

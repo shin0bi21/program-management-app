@@ -58,6 +58,16 @@ export interface HoursTableRow {
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursEntryType = 'task' | 'session' | 'other';
+
+export interface HoursFilters {
+  staffIds: string[];
+  categories: HoursCategory[];
+  programIds: string[];
+  types: HoursEntryType[];
+  cycleId?: string;
+  search: string;
+}
+
 export type HoursEntryTarget = { resourceId: string; date: string; item: HoursItem };
 
 export type HoursEntryMove = {

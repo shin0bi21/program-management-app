@@ -29,12 +29,14 @@ const baseProps = {
   queryKey: ['hours', 'table'] as const,
   columns: [],
   hiddenColumnKeys: [],
-  staffIds: ['staff-1'],
-  categories: ['meeting' as const],
-  programIds: ['program-1'],
-  types: ['other' as const],
-  cycleId: 'cycle-1',
-  search: '',
+  filters: {
+    staffIds: ['staff-1'],
+    categories: ['meeting' as const],
+    programIds: ['program-1'],
+    types: ['other' as const],
+    cycleId: 'cycle-1',
+    search: '',
+  },
   sorting: { key: 'date' as const, direction: 'desc' as const },
   columnWidths: {},
   selectedRowId: null,
@@ -59,14 +61,7 @@ describe('HoursTable', () => {
 
     expect(useHoursTableData).toHaveBeenCalledWith(
       baseProps.queryKey,
-      {
-        staffIds: baseProps.staffIds,
-        categories: baseProps.categories,
-        programIds: baseProps.programIds,
-        types: baseProps.types,
-        cycleId: baseProps.cycleId,
-        search: baseProps.search,
-      },
+      baseProps.filters,
       baseProps.sorting,
     );
     expect(tableProps.current).toEqual(expect.objectContaining({
@@ -94,7 +89,7 @@ describe('HoursTable', () => {
 
   it('reports table-data errors while keeping the standard empty message', () => {
     tableState.error = 'Could not load hours.';
-    render(<HoursTable {...baseProps} search="planning" />);
+    render(<HoursTable {...baseProps} filters={{ ...baseProps.filters, search: 'planning' }} />);
 
     expect(tableProps.current).toEqual(expect.objectContaining({
       emptyMessage: 'No hours found',
@@ -108,19 +103,19 @@ describe('HoursTable', () => {
 
   it('uses the standard empty message for cycle-only and unfiltered results', () => {
     const noOtherFilters = {
-      ...baseProps,
+      ...baseProps.filters,
       staffIds: [],
       categories: [],
       programIds: [],
       types: [],
     };
-    const { rerender } = render(<HoursTable {...noOtherFilters} />);
+    const { rerender } = render(<HoursTable {...baseProps} filters={noOtherFilters} />);
 
     expect(tableProps.current).toEqual(expect.objectContaining({
       emptyMessage: 'No hours found',
     }));
 
-    rerender(<HoursTable {...noOtherFilters} cycleId={undefined} />);
+    rerender(<HoursTable {...baseProps} filters={{ ...noOtherFilters, cycleId: undefined }} />);
     expect(tableProps.current).toEqual(expect.objectContaining({
       emptyMessage: 'No hours found',
     }));

@@ -65,7 +65,7 @@ export default function Programming() {
 
   // Render.
   return <>
-    <main className="page-container page-container--data programming-settings-page">
+    <main className="page-container programming-settings-page">
       <PageHeader title="Programming Settings" />
       <PageErrorOverlay errors={[
         data.programsError ? {

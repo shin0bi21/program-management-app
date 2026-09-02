@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -11,7 +11,7 @@ import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import { SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { SESSION_TABLE_KEYS, type CohortSession } from '../../../common/types/cohort';
+import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from '../../../common/types/cohort';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import { useCohorts } from '../common/hooks/useCohorts';
 import { useSessionTypes } from '../common/hooks/useSessionTypes';
@@ -61,6 +61,15 @@ export default function Sessions() {
     sorting, columnWidths, filterCategories, schedulableCohorts,
   } = controls;
 
+  // Filter configuration.
+  const sessionFilters = useMemo<SessionListFilters>(() => ({
+    programIds: selectedProgramIds,
+    cohortId: cohortId || undefined,
+    sessionTypeIds: selectedSessionTypeIds,
+    statuses: statusFilters,
+    search: appliedSearch || undefined,
+  }), [appliedSearch, cohortId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+
   // Selection and actions.
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
 
@@ -88,6 +97,7 @@ export default function Sessions() {
 
   // View initialization and presentation.
   const selectedSession = selection.getSelectedSession(view);
+
   const dashboard = <SessionDashboard
     sessionQueryKey={SESSION_QUERY_KEY}
     session={selectedSession}
@@ -96,17 +106,12 @@ export default function Sessions() {
     onAddAttendance={setAttendanceTarget}
     onErrorsChange={setDashboardErrors}
   />;
+
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
     columns={columns}
     hiddenColumnKeys={controls.hiddenColumns}
-    filters={{
-      programIds: selectedProgramIds,
-      cohortId: cohortId || undefined,
-      sessionTypeIds: selectedSessionTypeIds,
-      statuses: statusFilters,
-      search: appliedSearch || undefined,
-    }}
+    filters={sessionFilters}
     sorting={sorting}
     columnWidths={columnWidths}
     selectedSessionId={selection.selectedSessionId}
@@ -116,14 +121,11 @@ export default function Sessions() {
     onColumnWidthsChange={controls.setColumnWidths}
     onErrorChange={setViewError}
   />;
+
   const calendar = <SessionCalendar
     queryKey={SESSION_CALENDAR_QUERY_KEY}
-    selectedProgramIds={selectedProgramIds}
-    selectedCohortId={cohortId}
+    filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
-    selectedSessionTypeIds={selectedSessionTypeIds}
-    selectedStatuses={statusFilters}
-    search={appliedSearch}
     onSessionsLoaded={selection.setCalendarSessions}
     onSessionSelect={selection.selectCalendarSession}
     onSessionEdit={canWriteSessions ? setEditTarget : undefined}
@@ -134,71 +136,72 @@ export default function Sessions() {
 
   return (
     <>
-      <main className="page-container page-container--data">
-        <div
-          className={`sessions-page data-page${view === 'calendar' ? ' sessions-page--calendar' : ''}`}
-        >
-          <PageHeader
-            title="Sessions"
-            actions={
-              canWriteSessions ? (
-                <Button onClick={openAddSessionsModal} disabled={!schedulableCohorts.length}>
-                  + Add
-                </Button>
-              ) : undefined
-            }
-            search={
-              <SearchInput
-                label="Search sessions"
-                value={search}
-                appliedValue={appliedSearch}
-                onChange={(event) => controls.setSearch(event.target.value)}
-                onApply={controls.applySearch}
-                onClear={controls.clearSearch}
-                placeholder="Search titles, themes, descriptions, or cohorts"
-              />
-            }
-            filters={filtersReady ? (
-              <FilterCard
-                categories={filterCategories}
-                values={{
-                  program: selectedProgramIds,
-                  cohort: cohortId ? [cohortId] : [],
-                  status: statusFilters,
-                  type: selectedSessionTypeIds,
-                }}
-                onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
-                onClearAll={controls.clearFilters}
-              />
-            ) : undefined}
-            view={filtersReady ? (
-              <ViewMenu
-                value={view}
-                options={[
-                  { value: 'calendar', label: 'Calendar' },
-                  { value: 'table', label: 'Table' },
-                ]}
-                onChange={controls.setView}
-              />
-            ) : undefined}
-            columns={filtersReady && view === 'table'
-              ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
-              : undefined}
-          />
-          <PageErrorOverlay errors={[
-            controls.error,
-            programsError,
-            cohortsError,
-            sessionTypesError,
-            viewError,
-            ...dashboardErrors,
-          ]} />
-          {!filtersReady ? <p role="status">Loading saved filters…</p> : <PageBody
-            ariaLabel={view === 'table' ? 'Sessions and overview' : 'Sessions calendar and overview'}
-            dashboard={dashboard}
-            {...viewContent}
-          />}
-        </div>
+      <main className="page-container sessions-page" data-view={view}>
+        <PageHeader
+          title="Sessions"
+          actions={
+            canWriteSessions ? (
+              <Button onClick={openAddSessionsModal} disabled={!schedulableCohorts.length}>
+                + Add
+              </Button>
+            ) : undefined
+          }
+
+          search={
+            <SearchInput
+              label="Search sessions"
+              value={search}
+              appliedValue={appliedSearch}
+              onChange={(event) => controls.setSearch(event.target.value)}
+              onApply={controls.applySearch}
+              onClear={controls.clearSearch}
+              placeholder="Search titles, themes, descriptions, or cohorts"
+            />
+          }
+
+          filters={filtersReady ? (
+            <FilterCard
+              categories={filterCategories}
+              values={{
+                program: selectedProgramIds,
+                cohort: cohortId ? [cohortId] : [],
+                status: statusFilters,
+                type: selectedSessionTypeIds,
+              }}
+              onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
+              onClearAll={controls.clearFilters}
+            />
+          ) : undefined}
+
+          view={filtersReady ? (
+            <ViewMenu
+              value={view}
+              options={[
+                { value: 'calendar', label: 'Calendar' },
+                { value: 'table', label: 'Table' },
+              ]}
+              onChange={controls.setView}
+            />
+          ) : undefined}
+
+          columns={filtersReady && view === 'table'
+            ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
+            : undefined}
+        />
+        <PageErrorOverlay errors={[
+          controls.error,
+          programsError,
+          cohortsError,
+          sessionTypesError,
+          viewError,
+          ...dashboardErrors,
+        ]} />
+
+        {!filtersReady ? <p role="status">Loading saved filters…</p> : <PageBody
+          ariaLabel={view === 'table' ? 'Sessions and overview' : 'Sessions calendar and overview'}
+          dashboard={dashboard}
+          {...viewContent}
+        />}
       </main>
 
       <AttendanceModal
