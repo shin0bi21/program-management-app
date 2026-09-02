@@ -1,4 +1,3 @@
-// Owns Hours route composition, permissions, persisted controls, selection, dashboards, and modal/action bridges.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';

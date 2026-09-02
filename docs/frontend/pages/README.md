@@ -86,6 +86,26 @@ selection context, dialog entry paths and cross-child coordination. A preference
 owns defaults, restoration, normalization, saving and recovery. Child component and hook tests
 own their internal behavior.
 
+Organize route tests in the same lifecycle order as the route component, omitting sections the
+page does not need:
+
+1. Page-local error state.
+2. Permissions and application services.
+3. Page data, covering its loading and populated states.
+4. Saved preferences and the current view, covering delayed restoration and restored controls.
+5. Filter configuration shared by every page data view.
+6. Selection and page-spanning actions.
+7. Modal and confirmation workflows.
+8. Table, calendar, dashboard and body initialization.
+9. Derived errors and presentation state.
+10. Final page-shell and dialog rendering.
+
+Use short section comments with these owner names when a suite has several tests. Keep a test
+under the phase that owns its asserted outcome: for example, a delete confirmation belongs to
+modal and confirmation workflows, while clearing the selected dashboard after confirmed
+deletion belongs to selection and page-spanning actions. Order tests within a phase from the
+default or successful path through permission, empty, failure and recovery variants.
+
 Mock a child at its public prop boundary when its callback starts a route workflow. Use
 Playwright only when correctness depends on real focus, geometry, layout, scrolling, observers,
 portals or pointer behavior. Follow the cross-cutting [testing guide](../../workflows/testing.md)

@@ -1,4 +1,3 @@
-// Owns Cohorts rendered behavior and owner wiring.
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
