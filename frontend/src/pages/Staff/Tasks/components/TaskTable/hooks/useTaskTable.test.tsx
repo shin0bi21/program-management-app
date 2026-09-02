@@ -1,21 +1,19 @@
 // Owns task columns and permission-aware row actions.
 import { render, renderHook, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { CellContext } from '@tanstack/react-table';
-import { describe, expect, it, vi } from 'vitest';
+import type { CellContext, ColumnDef } from '@tanstack/react-table';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { ColumnDef } from '@tanstack/react-table';
 import type { Task } from '../../../types';
 import { makeTask } from '../../../../../../tests/factories/task';
+import type { TaskTableActions } from '../TaskActionsMenu';
 import useTaskTable from './useTaskTable';
 
-const actionMenu = vi.hoisted<{ items: ActionItem[] }>(() => ({ items: [] }));
+const taskActionsMenu = vi.hoisted(() => vi.fn());
 
-vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
-  default: ({ items }: { items: ActionItem[] }) => {
-    actionMenu.items = items;
-    return <div data-testid="actions-menu" />;
+vi.mock('../TaskActionsMenu', () => ({
+  default: (props: TaskTableActions & { task: Task }) => {
+    taskActionsMenu(props);
+    return <div data-testid="task-actions-menu" />;
   },
 }));
 
@@ -42,6 +40,8 @@ function renderCell(column: ColumnDef<Task>, task: Task) {
 }
 
 describe('useTaskTable', () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it('returns data columns only for read-only users', () => {
     const rendered = renderTable(false);
     const task = makeTask();
@@ -63,18 +63,19 @@ describe('useTaskTable', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
-  it('builds capability-gated actions and forwards the selected action', async () => {
-    const user = userEvent.setup();
+  it('adds the action column for writers and wires its task and action contract', () => {
     const task = makeTask();
     const rendered = renderTable(true);
     const actionColumn = rendered.result.current.columns.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, task)}</>);
-    expect(screen.getByTestId('actions-menu')).toBeInTheDocument();
-    expect(actionMenu.items.map(item => item.label)).toEqual(['Set Cancelled', 'Edit', 'Delete']);
-
-    render(<button onClick={actionMenu.items[0].onClick}>Cancel</button>);
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(rendered.actions.setState).toHaveBeenCalledWith(task, 'cancelled');
+    expect(screen.getByTestId('task-actions-menu')).toBeInTheDocument();
+    expect(taskActionsMenu).toHaveBeenCalledWith({
+      task,
+      isTaskPending: rendered.actions.isTaskPending,
+      setState: rendered.actions.setState,
+      edit: rendered.actions.edit,
+      requestDelete: rendered.actions.requestDelete,
+    });
   });
 });

@@ -146,11 +146,8 @@ describe('SessionCalendar', () => {
     render(
       <SessionCalendar
         queryKey={['sessions', 'calendar']}
-        selectedProgramIds={[]}
-        selectedCohortId=""
+        filters={{}}
         selectedSessionId="session-1"
-        selectedStatuses={[]}
-        search=""
         onSessionsLoaded={onSessionsLoaded}
         onSessionSelect={onSessionSelect}
         onSessionEdit={onSessionEdit}
@@ -175,10 +172,6 @@ describe('SessionCalendar', () => {
     expect(getSessions).toHaveBeenCalledWith({
       start: '2026-07-01T00:00:00.000Z',
       end: '2026-08-01T00:00:00.000Z',
-      programIds: [],
-      cohortId: undefined,
-      statuses: [],
-      search: undefined,
     }, { signal: expect.any(AbortSignal) });
     expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
     expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
@@ -196,11 +189,8 @@ describe('SessionCalendar', () => {
     render(
       <SessionCalendar
         queryKey={['sessions', 'calendar']}
-        selectedProgramIds={['program-1', 'program-2']}
-        selectedCohortId=""
+        filters={{ programIds: ['program-1', 'program-2'] }}
         selectedSessionId=""
-        selectedStatuses={[]}
-        search=""
         onSessionSelect={vi.fn()}
       />,
     );
@@ -222,11 +212,8 @@ describe('SessionCalendar', () => {
     render(
       <SessionCalendar
         queryKey={['sessions', 'calendar']}
-        selectedProgramIds={[]}
-        selectedCohortId=""
+        filters={{ statuses: ['upcoming'] }}
         selectedSessionId=""
-        selectedStatuses={['upcoming']}
-        search=""
         onSessionSelect={vi.fn()}
       />,
     );

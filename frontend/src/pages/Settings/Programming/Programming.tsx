@@ -1,19 +1,14 @@
-import { useMemo } from 'react';
-import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
-import type { TableColumnDef } from '../../../common/components/Table/Table.types';
-import useTableSelection from '../../../common/components/Table/hooks/useTableSelection';
-import type { Program } from '../../../common/features/programs/types';
-import type { ProgramCycle } from '../../../common/types/cohort';
-import { formatShortDate } from '../../../common/utils/date';
 import CycleModal from './components/CycleModal/CycleModal';
 import CycleTable from './components/CycleTable/CycleTable';
+import useCycleTable from './components/CycleTable/hooks/useCycleTable';
 import ProgramTable from './components/ProgramTable/ProgramTable';
+import useProgramTable from './components/ProgramTable/hooks/useProgramTable';
 import ProgramModal from './components/ProgramModal/ProgramModal';
 import useProgrammingActions from './hooks/actions/useProgrammingActions';
 import useProgrammingData from './hooks/data/useProgrammingData';
@@ -23,10 +18,6 @@ import './Programming.css';
 export default function Programming() {
   // Page data.
   const data = useProgrammingData();
-
-  // Selection.
-  const programSelection = useTableSelection(data.programs);
-  const cycleSelection = useTableSelection(data.cycles);
 
   // Actions.
   const {
@@ -39,26 +30,11 @@ export default function Programming() {
   const modals = useProgrammingModals();
 
   // Table configuration.
-  const programColumns = useMemo<TableColumnDef<Program>[]>(() => [
-    { id: 'name', header: 'Program', accessorFn: program => program.name },
-    { id: 'attendance', header: 'Attendance', accessorFn: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required' },
-    { id: 'ages', header: 'Ages', size: 120, accessorFn: program => program.minAge === null ? 'All ages' : `${program.minAge}–${program.maxAge}` },
-    { id: 'actions', header: '', size: 40, enableResizing: false, enableHiding: false, cell: ({ row: { original: program } }) => (
-      <ActionsMenu ariaLabel={`Actions for ${program.name}`} items={[{ id: 'edit', label: 'Edit Program', onClick: () => modals.program.open(program) }]} />
-    ) },
-  ], [modals.program]);
-
-  const cycleColumns = useMemo<TableColumnDef<ProgramCycle>[]>(() => [
-    { id: 'name', header: 'Cycle', accessorFn: cycle => cycle.name },
-    { id: 'start', header: 'Start', size: 140, accessorFn: cycle => formatShortDate(cycle.startsOn) },
-    { id: 'end', header: 'End', size: 140, accessorFn: cycle => formatShortDate(cycle.endsOn) },
-    { id: 'actions', header: '', size: 40, enableResizing: false, enableHiding: false, cell: ({ row: { original: cycle } }) => (
-      <ActionsMenu ariaLabel={`Actions for ${cycle.name}`} items={[
-        { id: 'edit', label: 'Edit Cycle', onClick: () => modals.cycle.open(cycle) },
-        { id: 'delete', label: 'Delete Cycle', variant: 'danger', onClick: () => requestCycleDeletion(cycle) },
-      ]} />
-    ) },
-  ], [modals.cycle, requestCycleDeletion]);
+  const { columns: programColumns } = useProgramTable(modals.program.open);
+  const { columns: cycleColumns } = useCycleTable({
+    onEdit: modals.cycle.open,
+    onDelete: requestCycleDeletion,
+  });
 
   // View composition.
   const programsPanel = <DashboardCard
@@ -71,8 +47,6 @@ export default function Programming() {
       loading={data.programsLoading}
       error={data.programsError ?? undefined}
       onRetry={data.retryPrograms}
-      selectedKey={programSelection.selectedKey}
-      onRowSelect={programSelection.selectItem}
     />
   </DashboardCard>;
 
@@ -86,14 +60,12 @@ export default function Programming() {
       loading={data.cyclesLoading}
       error={data.cyclesError ?? undefined}
       onRetry={data.refreshCycles}
-      selectedKey={cycleSelection.selectedKey}
-      onRowSelect={cycleSelection.selectItem}
     />
   </DashboardCard>;
 
   // Render.
   return <>
-    <main className="page-container page-container--data programming-settings-page">
+    <main className="page-container programming-settings-page">
       <PageHeader title="Programming Settings" />
       <PageErrorOverlay errors={[
         data.programsError ? {

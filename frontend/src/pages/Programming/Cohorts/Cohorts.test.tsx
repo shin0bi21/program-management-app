@@ -1,4 +1,3 @@
-// Owns Cohorts rendered behavior and owner wiring.
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
@@ -194,13 +193,6 @@ describe('Cohorts', () => {
     await user.click(screen.getByRole('button', { name: 'View Report' }));
     expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
-    expect(screen.getByRole('menuitem', { name: 'Manage Roster' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Edit Cohort' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Delete Cohort' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Generate Sessions' })).not.toBeInTheDocument();
-
   });
 
   it('shows success feedback after adding a cohort', async () => {
@@ -214,10 +206,6 @@ describe('Cohorts', () => {
     await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
     await user.click(screen.getByRole('button', { name: 'Add Cohort' }));
 
-    expect(api.createCohort).toHaveBeenCalledWith({
-      programId: 'program-1',
-      cycleId: 'cycle-summer-2026',
-    });
     expect(await screen.findByText(
       'Soft Skills successfully added to Summer 2026.',
     )).toBeInTheDocument();

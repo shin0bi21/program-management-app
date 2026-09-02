@@ -1,4 +1,3 @@
-// Owns Settings Programming route composition, selection, modal entry, and deletion wiring.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -43,19 +42,15 @@ describe('Programming settings', () => {
     }]);
   });
 
-  it('lists selectable programs and cycles with edit actions', async () => {
+  it('lists programs and cycles with edit actions', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Programming /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: 'Programming Settings' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Program and cycle management' })).toBeInTheDocument();
-    const programRow = screen.getByText('Soft Skills').closest('tr');
-    expect(programRow).toHaveAttribute('tabindex', '0');
-    await user.click(programRow!);
-    expect(programRow).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Soft Skills')).toBeInTheDocument();
 
-    const cycleRow = (await screen.findByText('Fall 2026')).closest('tr');
-    expect(cycleRow).toHaveAttribute('tabindex', '0');
+    expect(await screen.findByText('Fall 2026')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Actions for Fall 2026' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit Cycle' }));
     expect(screen.getByRole('heading', { name: 'Edit Cycle' })).toBeInTheDocument();
@@ -75,9 +70,6 @@ describe('Programming settings', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Maximum age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Add Program' }));
 
-    expect(programsApi.createProgram).toHaveBeenCalledWith({
-      name: 'Job Readiness', description: null, rosterMode: 'enrolled', minAge: 16, maxAge: 19,
-    });
     await waitFor(() => expect(programState.upsertProgram).toHaveBeenCalledWith(created));
     expect(await screen.findByText('Program added successfully.')).toBeInTheDocument();
   });

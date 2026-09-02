@@ -21,7 +21,7 @@ The output is a logical concern map, not authorization to materialize every conc
 
 ## 1. Inventory the whole change
 
-1. Inspect branch status and every tracked and untracked path.
+1. Run `node scripts/agents/snapshot-changes.ts --json` to collect branch state, every committed branch and working-tree path, path classifications, selected checks, stashes, and the workspace fingerprint. Treat this snapshot as the factual inventory; inspect raw Git state only when resolving an ambiguity it exposes.
 2. Read enough diff and repository structure to identify behavior, ownership, migrations, tests, documentation, tooling, and generated artifacts.
 3. Reconstruct the user-request ledger from available context and changed canonical documentation.
 4. Distinguish intentional feature work from unrelated pre-existing changes and generated output.
@@ -75,6 +75,8 @@ Return one compact concern map as the source for `review-changes` and `ship-chan
 - dependency edges;
 - focused test plan and reusable evidence without duplicate suite execution;
 - leftovers and uncertain ownership.
+
+Include the snapshot fingerprint in the map. Downstream workflows must regenerate the snapshot and compare that fingerprint before reusing the map; a changed fingerprint requires inspecting the path and diff changes and updating the map when its concern boundaries no longer hold.
 
 Downstream workflows must reuse this map and update it only when the diff materially changes. They must not rediscover the same groups from scratch.
 

@@ -99,13 +99,6 @@ export function useAccountControls(
     setReady(true);
   }, [isAdmin, loadError, preference, preferenceLoading, ready, initializePreference, tableKeys]);
 
-  // Keep query inputs and FilterCard configuration stable between unrelated renders.
-  const queryFilters = useMemo(() => ready ? ({
-    search: appliedSearch,
-    roles: roleFilters,
-    statuses: statusFilters,
-  }) : null, [appliedSearch, ready, roleFilters, statusFilters]);
-  const hasActiveQueryFilters = Boolean(appliedSearch || roleFilters.length || statusFilters.length);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'status', label: 'Status', options: [
       { value: 'active', label: 'Active' },
@@ -167,8 +160,8 @@ export function useAccountControls(
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
-    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, roleFilters, sorting, setSorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, roleFilters, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters,
   };
 }

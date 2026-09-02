@@ -52,8 +52,7 @@ Do not claim a durable improvement from a tiny sample. Record a dated baseline i
 1. Keep the change at the narrowest ownership layer. Avoid duplicating package commands across workflows when a repository runner is the canonical interface.
 2. Verify workflow dependencies, conditions, path classification, concurrency groups, cache keys, timeouts, permissions, and required-check names.
 3. Run `bash -n` and `shellcheck` for changed shell scripts when available.
-4. Run `node scripts/agents/validate-skills.js` when repository skills change.
-5. Run the narrow affected runner and `bash scripts/tests/test-static.sh` when the change affects executable test or static-analysis behavior.
-6. Review the final workflow graph against `docs/workflows/ci.md` and update that document in the same concern when architecture, ownership, or operation changes.
+4. Run the narrow affected runner and `bash scripts/tests/test-static.sh` when the change affects executable test or static-analysis behavior.
+5. Review the final workflow graph against `docs/workflows/ci.md` and update that document in the same concern when architecture, ownership, or operation changes.
 
 Report checks run, unverified GitHub-only behavior, expected wall-time effect, expected runner-minute effect, and any required-check or branch-protection follow-up.

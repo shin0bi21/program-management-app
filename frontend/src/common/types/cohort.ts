@@ -95,6 +95,13 @@ export interface SessionListFilters {
   statuses?: Array<'upcoming' | 'completed'>;
   search?: string;
 }
+
+export interface CohortListFilters {
+  programId?: string;
+  search?: string;
+  status?: string;
+}
+
 export const SESSION_TABLE_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
 

@@ -44,7 +44,7 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Keep finite values, nullable fields, identifiers, permissions, errors, and canonical domain vocabulary aligned across persistence, backend types, HTTP contracts, frontend adapters, and UI state.
 - Prefer explicit invariants and loud failures over fallback chains that manufacture required values.
 - Reject compressed business logic. Extract named decisions and helpers so policy, filtering, mutation, and formatting rules are independently readable and testable.
-- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary.
+- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary. Follow the ownership examples in `docs/workflows/testing.md`; do not repeat shared UI/query mechanics or move controlled domain state into a shared component test.
 - When a decision establishes a reusable repository pattern, update the narrowest canonical owner guide in the same change.
 
 ## Execute and verify
@@ -52,8 +52,8 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Follow `docs/workflows/testing.md` for test ownership, runner selection, and evidence reuse.
 - During implementation, use the narrow runner under `scripts/tests/backend/` or `scripts/tests/frontend/` that owns the changed feature. Record the tested diff and do not rerun an unchanged suite for the same diff.
 - When affected suites are unclear, run `bash scripts/tests/test-app.sh --plan-changed`, then execute the selected suites. Use `--changed` when that selected set is itself the appropriate verification.
-- Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.js --changed`, and `git diff --check`.
-- After changing repository skills, run `node scripts/agents/validate-skills.js`.
+- Before handoff, run `node scripts/agents/snapshot-changes.ts --json` and record its workspace fingerprint, changed-path inventory, and selected checks with the verification evidence. Regenerate the snapshot after any further change.
+- Before handoff, run applicable build or type checks, `node scripts/patterns/check-patterns.ts --changed`, and `git diff --check`.
 - Required pull-request checks provide the full merge gate. Do not treat implementation approval as deployment authorization.
 
 ## Hand off for review and shipping

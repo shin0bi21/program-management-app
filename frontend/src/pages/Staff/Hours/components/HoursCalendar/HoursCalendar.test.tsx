@@ -100,12 +100,7 @@ function renderCalendar({
   const result = render(
       <HoursCalendar
         resources={resources}
-        staffIds={staffIds}
-        categories={[]}
-        programIds={[]}
-        types={[]}
-        cycleId="cycle-1"
-        search={search}
+        filters={{ staffIds, categories: [], programIds: [], types: [], cycleId: 'cycle-1', search }}
         canWrite={canWrite}
         isEntryPending={() => false}
         selectedStaffId="staff-1"

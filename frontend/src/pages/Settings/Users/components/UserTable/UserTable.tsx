@@ -12,7 +12,6 @@ interface UserTableProps {
   hiddenColumnKeys: string[];
   sorting: ListSort<AccountSortKey>;
   columnWidths: Record<string, number>;
-  hasActiveQueryFilters: boolean;
   onSortingChange: (sorting: ListSort<AccountSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onErrorChange?: PageErrorChangeHandler;
@@ -20,6 +19,7 @@ interface UserTableProps {
 
 export default function UserTable(props: UserTableProps) {
   const tableData = useUserTableData(props.queryKey, props.filters, props.sorting);
+  const hasFilters = Boolean(props.filters?.search || props.filters?.roles?.length || props.filters?.statuses?.length);
   usePageErrorReporter(props.onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
   return <Table
     ariaLabel="Accounts"
@@ -29,7 +29,7 @@ export default function UserTable(props: UserTableProps) {
     loading={tableData.loading}
     refreshing={tableData.refreshing}
     unavailable={tableData.error ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
-    emptyMessage={props.hasActiveQueryFilters ? 'No accounts match these filters' : 'No accounts found'}
+    emptyMessage={hasFilters ? 'No accounts match these filters' : 'No accounts found'}
     keyExtractor={account => account.id}
     sorting={props.sorting}
     sortableColumns={ACCOUNT_TABLE_KEYS}

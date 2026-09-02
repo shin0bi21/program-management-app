@@ -1,197 +1,140 @@
 # Frontend pages
 
-A route page is the orchestration owner. It connects permissions, options, saved preferences, selection, cross-view actions and dialogs. Child components own substantial rendering and remote-data behaviour.
+A route page assembles one screen. It loads page data and saved controls, defines filters,
+coordinates selection and actions, composes the active view, and opens dialogs. Child tables,
+calendars and dashboards own their data presentation.
 
-## Understand page composition
+## Build the page in scaffold order
 
-```text
-app route
-  → page
-      → page header
-      → page body
-          → dashboard or summary
-          → table, calendar or timeline
-      → overlays
-  → common/features
-  → common/components, hooks, and utilities
-  → auth, http, and query infrastructure
-```
+Keep the route component in this execution order, omitting phases the page does not need:
 
-The page selects and coordinates its route-specific views. [Page structure](structure.md) defines the header, body and overlay regions. Shared product capabilities, generic interface code and application infrastructure remain downstream dependencies.
+1. Define page constants and pure helpers.
+2. Initialize page-local error state.
+3. Load permissions and application services.
+4. Load page data.
+5. Restore saved preferences and the current view.
+6. Define one page filter object.
+7. Initialize selection and page-spanning actions.
+8. Initialize modal and confirmation workflows.
+9. Configure tables, calendars and dashboards, then choose the active view.
+10. Derive errors and other presentation values.
+11. Render the page shell followed by dialogs.
 
-## Organize page files
+Keep state beside the phase that owns it. Selection state belongs with selection; a modal
+target and its open and close handlers belong together in that modal workflow. Do not collect
+every `useState` call at the top when that separates state from its lifecycle.
 
-```text
-ExamplePage/
-  ExamplePage.tsx
-  ExamplePage.test.tsx
-  ExamplePage.css                 only for route-owned styles
-  examplePage.api.ts              one page-owned endpoint group, when needed
-  examplePage.api.test.ts
-  types.ts                        contracts shared by sibling page units
-  hooks/
-    data/
-      useExampleData.ts
-      useExampleData.test.ts
-    preferences/
-      useExamplePreferences.ts
-      useExamplePreferences.test.ts
-    selection/
-      useExampleSelection.ts
-      useExampleSelection.test.ts
-    actions/
-      useExampleActions.ts
-      useExampleActions.test.ts
-  components/
-    ExampleTable/
-    ExampleCalendar/
-    ExampleDashboard/
-    ExampleModal/
-  utils/                          pure helpers shared by sibling page units
-```
+The generated page scaffold uses the same sections. See the
+[Tasks page](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
+[Hours page](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
 
-On a complex page, group data, preference, selection and action hooks into role-named folders. Keep each test beside its implementation.
+## Load page data
 
-Keep cohesive workflows, such as authentication or section routing, under their natural owner. Do not force them into an unrelated role folder. Create only the folders the page needs.
+Load only the remote options and records needed to coordinate the whole page. A table or
+calendar keeps its own collection query. Preserve the dependency path
+`data → preferences → selection → actions`.
 
-In a route family, give each route its own page owner. Keep behaviour shared by sibling routes in the route family's `common/` directory.
+## Save page preferences
 
-## Assign page hooks
+Use `use*Preferences` when controls such as the current view, applied search, filters, sorting,
+column widths or hidden columns must survive navigation. Define typed defaults in that page,
+restore and normalize the saved value before enabling dependent queries, and save complete
+values through optimistic functional updates.
 
-| Hook | Owns |
-|---|---|
-| `use*Data` | Remote options, loading/error state, and derived option collections needed across children |
-| `use*Preferences` | One-time restoration, canonical defaults, complete atomic saves, draft/applied search, filters, view, sorting, widths, and hidden columns |
-| `use*Selection` | Selected resource/row identity, reconciliation when options change, and synchronization after mutations |
-| `use*Actions` | Page-spanning mutations and reconciliation across table, calendar, dashboard, selection, and related domains |
+Keep saved option identifiers when their reference query fails. Reconcile them only after the
+options load successfully.
 
-Keep a simple value with its real owner instead of adding a pass-through hook. Keep remote
-data, selection and mutations in focused hooks rather than absorbing them into preferences.
-The [page preferences guide](preferences.md) is the single owner of the preference contract,
-normalization, restoration, saving and recovery.
+## Define page filters
 
-Use `hooks/data/use*Data.ts` when a complex page combines page-wide remote data with preferences, selection or actions. The hook may delegate to established query hooks. Preserve the `data → preferences → selection → actions` dependency path.
+Define one named, stable filter object in the route after its data and preferences. Pass that
+object to every table or calendar, even when the page has only one data view. A child may add
+inputs it owns, such as pagination, sorting or the visible calendar range, but it does not
+rebuild page filters from separate props.
 
-A cohesive page workflow may consume its natural query hook directly. Omit `data/` when the route has no page-wide data role.
+Keep a draft search value until `SearchInput` applies it. Put the applied value in the same
+filter object used by every page data view.
 
-## Compose the page
+## Coordinate selection, actions and dialogs
 
-Initialize dependencies in this order when they exist:
+Keep selected identity in the route when it coordinates multiple views or dialogs. Keep an
+action in the route when it reconciles multiple page children or related domains.
 
-1. page constants and pure helpers;
-2. page-local error state;
-3. permissions and application services;
-4. page data, preferences, filters, and current view;
-5. selection;
-6. page-spanning actions and mutation reconciliation;
-7. domain-named modal and confirmation workflows;
-8. table configuration and view composition;
-9. derived errors and child presentation;
-10. the page shell followed by dialogs.
+Keep each dialog target and its handlers together in the route when the dialog starts a page
+workflow. Keep modal form errors inside the modal; report page-owned data and action failures
+through the page error overlay.
 
-Keep these phases in dependency order even when a page does not need every phase. Place
-state beside the phase that owns it: selection state belongs with selection, while a modal
-target and its open/close handlers stay together in that modal's workflow. Do not collect
-all `useState` calls at the top when doing so separates state from its lifecycle.
+## Compose page components
 
-```tsx
-export default function ExamplePage() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+Every authenticated route renders one `main.page-container`. Put `PageHeader` first,
+`PageErrorOverlay` next and `PageBody` last. Render dialogs after the page shell.
 
-  // Permissions and application services.
-  const { permissions } = useAuth();
-
-  // Page data and preferences.
-  const data = useExampleData();
-  const preferences = useExamplePreferences({ options: data.options });
-
-  // Selection and actions.
-  const selection = useExampleSelection({ resources: data.resources });
-  const actions = useExampleActions({
-    onRecordSaved: selection.updateSelectedRecord,
-    onRecordRemoved: selection.removeSelectedRecord,
-  });
-
-  // Example modal.
-  const [modalState, setModalState] = useState<ExampleModalState>(null);
-  const closeModal = () => setModalState(null);
-
-  // View configuration.
-  const table = <ExampleTable
-    queryKey={EXAMPLE_TABLE_QUERY_KEY}
-    filters={preferences.filters.applied}
-    sorting={preferences.table.sorting}
-    selectedId={selection.selectedId}
-    onSelect={selection.selectRecord}
-    actions={actions}
-  />;
-
-  const calendar = <ExampleCalendar
-    resources={data.resources}
-    filters={preferences.filters.applied}
-    selection={selection}
-    actions={actions}
-  />;
-
-  const viewContent = preferences.view === 'table'
-    ? { table }
-    : { calendar };
-
-  return <>
-    <main className="page-container page-container--data">
-      <PageHeader
-        title="Examples"
-        actions={permissions.includes('write:examples')
-          ? <Button onClick={() => setModalState({ mode: 'add' })}>+ Add</Button>
-          : undefined}
-        search={<SearchInput {...preferences.search.inputProps} />}
-        columns={preferences.view === 'table' ? preferences.table.columnMenu : undefined}
-        view={preferences.viewMenu}
-        filters={preferences.filters.card}
-      />
-      {preferences.ready && <PageBody
-        ariaLabel="Example overview and records"
-        dashboard={<ExampleDashboard selected={selection.selectedRecord} />}
-        {...viewContent}
-      />}
-    </main>
-    {modalState && <ExampleModal state={modalState} onClose={closeModal} />}
-  </>;
-}
-```
-
-The example shows ownership and dependency order, not mandatory prop wrappers. Prefer explicit typed props in real components.
+The route supplies page-wide actions and controls to `PageHeader`, then supplies the dashboard
+or summary and one active data view to `PageBody`. Route pages do not recreate those shared
+wrappers. Follow the component-specific guides for the children themselves.
 
 ## Connect the route
 
-- Mount authenticated routes lazily in `frontend/src/app/App.tsx` and wrap them in `ProtectedRoute` with the backend-aligned read permission.
-- Update navigation visibility, active state, desktop/mobile behavior, and tests with the route.
-- Create a route-family layout only when sibling routes share persistent rendered UI, state, or coordination—not merely a URL prefix or permission.
-- Restore saved preferences before rendering dependent queries or misleading defaults.
-
-Follow [Page structure](structure.md) for header, body and page-level error composition.
+Follow [App navigation](../components/navigation/README.md) for route registration,
+permissions, destination visibility and active navigation state. Create a route-family layout
+only when sibling routes share persistent rendered UI, state or coordination—not merely a URL
+prefix or permission.
 
 ## Test page orchestration
 
-Route tests own permission-dependent actions, control wiring, preference restoration, view switching, selection context, dialog entry paths and cross-child coordination. Child components and hooks own their internal behaviour.
+Route tests own permission-dependent actions, restored-control wiring, view switching,
+selection context, dialog entry paths and cross-child coordination. A preference-hook test
+owns defaults, restoration, normalization, saving and recovery. Child component and hook tests
+own their internal behavior.
 
-Use Playwright when correctness depends on real focus, layout, scrolling, observers, portals or pointer geometry.
+Organize route tests in the same lifecycle order as the route component, omitting sections the
+page does not need:
 
-Apply the ownership ladder once per behavior:
+1. Page-local error state.
+2. Permissions and application services.
+3. Page data, covering its loading and populated states.
+4. Saved preferences and the current view, covering delayed restoration and restored controls.
+5. Filter configuration shared by every page data view.
+6. Selection and page-spanning actions.
+7. Modal and confirmation workflows.
+8. Table, calendar, dashboard and body initialization.
+9. Derived errors and presentation state.
+10. Final page-shell and dialog rendering.
 
-- API adapter tests own exact methods, paths, serialization, cancellation, and response normalization.
-- Hooks own restoration, persistence, asynchronous state, retries, cleanup, concurrency, and cache reconciliation.
-- Child components own their rendered domain states, accessible controls, lifecycle wiring, and emitted domain values.
-- Route pages own only orchestration across those owners: permissions, page-body and dashboard inputs, selected context, view and dialog entry, and callbacks crossing child boundaries.
+Use short section comments with these owner names when a suite has several tests. Keep a test
+under the phase that owns its asserted outcome: for example, a delete confirmation belongs to
+modal and confirmation workflows, while clearing the selected dashboard after confirmed
+deletion belongs to selection and page-spanning actions. Order tests within a phase from the
+default or successful path through permission, empty, failure and recovery variants.
 
-A consumer may assert a child value or callback when that proves wiring across its boundary. It must not repeat an imported owner's fallback, styling, focus, close, loading or internal state tests.
+Mock a child at its public prop boundary when its callback starts a route workflow. Use
+Playwright only when correctness depends on real focus, geometry, layout, scrolling, observers,
+portals or pointer behavior. Follow the cross-cutting [testing guide](../../workflows/testing.md)
+for runner selection.
 
-Route pages do not repeat preference-hook restoration and persistence matrices. They prove only that restored domain values reach the correct page controls or body owner.
+## Organize page files
 
-## Continue to the owning guide
+Keep the route entry, its test and optional route styles at the page root. Follow
+[Components](../components/README.md), [State and data](../architecture/state-and-data.md), and
+[Frontend ownership](../architecture/ownership.md) for child directories, hooks and shared
+code. Colocate each test with its owner.
 
-- [Page preferences](preferences.md) owns restored and saved controls.
-- [Page structure](structure.md) owns header, body and overlay composition.
-- [Components](../components/README.md) routes tables, calendars, dashboards and overlays.
-- [State and data](../architecture/state-and-data.md) owns general state, query and mutation flow.
-- [Frontend ownership](../architecture/ownership.md) decides where page-private and shared code lives.
+## Page DOM structure
+
+```text
+application shell
+├── app navigation
+└── route page
+    ├── main.page-container
+    │   ├── PageHeader
+    │   │   ├── actions
+    │   │   ├── search
+    │   │   ├── columns and view controls
+    │   │   └── filters
+    │   ├── PageErrorOverlay
+    │   └── PageBody
+    │       ├── dashboard or summary
+    │       └── table, calendar or timeline
+    └── overlays
+        ├── modal or dialog
+        └── floating menu or tooltip
+```

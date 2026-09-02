@@ -96,13 +96,6 @@ export function useCohortControls(
     setReady(true);
   }, [loadError, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
 
-  // Stable query and filter-card values.
-  const tableFilters = useMemo(() => ready ? {
-    programId: programId || undefined,
-    search: appliedSearch,
-    status: status || undefined,
-  } : null, [appliedSearch, programId, ready, status]);
-  const hasActiveQueryFilters = Boolean(programId || status || appliedSearch);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
       id: 'program', label: 'Program', selectionMode: 'single',
@@ -182,8 +175,8 @@ export function useCohortControls(
   const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
 
   return {
-    search, setSearch, appliedSearch, applySearch, clearSearch, tableFilters, programId, status, sorting, setSorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, programId, status, sorting, setSorting,
     columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    ready, error, filterCategories, applyFilter, clearFilters, hasActiveQueryFilters,
+    ready, error, filterCategories, applyFilter, clearFilters,
   };
 }

@@ -1,5 +1,5 @@
-/* ── Shared data-page layout ────────────────────────────────
-   Used by Youth, Outreach, and Settings pages.
+/* ── Shared authenticated page layout ──────────────────────
+   Used by route pages inside the application shell.
    ──────────────────────────────────────────────────────── */
 
 .page-container {
@@ -28,19 +28,12 @@
 }
 
 @media (min-width: 1001px) {
-  .page-container--data {
+  .page-container {
     height: 100dvh;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  }
-
-  .page-container--data > .data-page {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 }
 

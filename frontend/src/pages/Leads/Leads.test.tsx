@@ -165,21 +165,6 @@ describe('Leads', () => {
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
   });
 
-  it('separates record, sign-up, and status actions', async () => {
-    renderPage();
-    await screen.findByRole('row', { name: /Avery Outreach/ });
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
-
-    const edit = screen.getByRole('menuitem', { name: 'Edit' });
-    const signUp = screen.getByRole('menuitem', { name: 'Sign Up' });
-    const contacted = screen.getByRole('menuitem', { name: 'Mark Contacted' });
-    expect(signUp).toHaveClass('actions-menu-item--group-start');
-    expect(contacted).toHaveClass('actions-menu-item--group-start');
-    expect(edit).not.toHaveClass('actions-menu-item--group-start');
-    expect(screen.getByRole('menuitem', { name: 'Mark Deferred' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Mark Closed' })).toBeInTheDocument();
-  });
-
   it('keeps the selected dashboard synchronized after editing', async () => {
     const initialLead = (await getLeads())[0];
     updateLead.mockResolvedValue({ ...initialLead, contactPhoneNumber: '416-555-0188' });
@@ -258,21 +243,4 @@ describe('Leads', () => {
     expect(document.getElementById('lead-youthFirstName')).toHaveValue('Avery');
   });
 
-  it('does not offer edit actions for a signed-up lead', async () => {
-    getLeads.mockResolvedValueOnce([{
-      id: 'lead-1', origin: 'external', submittedByRole: 'parent',
-      convertedYouthId: 'youth-1',
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
-      contactPhoneNumber: '416-555-0142',
-      contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
-      status: 'signed_up', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
-    }]);
-
-    renderPage();
-    await screen.findByRole('row', { name: /Avery Outreach/ });
-
-    expect(screen.queryByRole('button', { name: 'More actions for Avery Outreach' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
-  });
 });

@@ -1,4 +1,3 @@
-// Owns Account rendered behavior and owner wiring.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Account from './Account';

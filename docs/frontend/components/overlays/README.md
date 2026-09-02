@@ -18,6 +18,8 @@ Use shared overlay primitives when their contracts fit. They centralize portal r
 
 The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
 
-## Test browser-sensitive behaviour
+## Test overlay boundaries
 
-Component tests own content, accessible controls and emitted values. Use Playwright when correctness depends on focus trapping, focus return, Escape handling, outside clicks, portal placement or pointer geometry.
+The trigger owner tests only the target/open-state wiring, domain content, and callback values it supplies. Shared overlay component and hook tests own generic toggle, positioning, dismissal, keyboard behavior, and focus return. Consumers do not repeat those mechanics merely because they render the shared overlay.
+
+Use jsdom for interaction contracts it can observe. Use Playwright when correctness depends on real focus trapping or return, outside-pointer behavior, portal placement, clipping, responsive layout, or pointer geometry.

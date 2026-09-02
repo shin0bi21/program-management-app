@@ -14,7 +14,6 @@ interface YouthTableProps {
   sorting: ListSort<YouthSortKey>;
   columnWidths: Record<string, number>;
   selectedProfileId: string | null;
-  hasActiveQueryFilters: boolean;
   onSelectedProfileResolved: (profile: YouthProfile | null) => void;
   onRowSelect: (profile: YouthProfile) => void;
   onSortingChange: (sorting: ListSort<YouthSortKey>) => void;
@@ -24,11 +23,12 @@ interface YouthTableProps {
 
 export default function YouthTable({
   columns, filters,
-  hiddenColumnKeys, sorting, columnWidths, selectedProfileId, hasActiveQueryFilters,
+  hiddenColumnKeys, sorting, columnWidths, selectedProfileId,
   onSelectedProfileResolved, onRowSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
 }: YouthTableProps) {
   const tableData = useYouthTableData(filters, sorting);
   const selectedProfile = tableData.rows.find(profile => profile.id === selectedProfileId) ?? null;
+  const hasFilters = Boolean(filters?.search || filters?.statuses?.length || filters?.programIds?.length);
   usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function YouthTable({
     loading={tableData.loading}
     refreshing={tableData.refreshing}
     unavailable={tableData.error ? { title: 'Youth profiles unavailable', onRetry: tableData.retry } : undefined}
-    emptyMessage={hasActiveQueryFilters
+    emptyMessage={hasFilters
       ? 'No youth profiles match these filters'
       : 'No youth profiles found'}
     keyExtractor={profile => profile.id}

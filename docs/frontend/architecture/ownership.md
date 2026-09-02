@@ -15,7 +15,7 @@ Choose the narrowest owner that can state the complete behavior. File placement 
 
 Never import a page from common code. Pages and their nested components may import another page's route-owned code directly when that page remains the clearest owner. Promote a contract only when ownership itself becomes shared; a second consumer alone is not enough.
 
-Every frontend feature and component follows the colocated [owner structure](../README.md#organize-an-owner). This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
+Keep each frontend feature and component with its implementation, tests, and focused supporting files. This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
 ## Assign each file one location
 
@@ -32,11 +32,11 @@ where the resulting owner belongs.
 
 Validate and normalize where uncertainty enters:
 
-- API responses;
-- persisted or legacy data;
-- user input;
-- permissions and authentication state;
-- browser APIs and asynchronous failures.
+- Validate API responses.
+- Normalize persisted or legacy data.
+- Validate user input.
+- Treat permissions and authentication state as boundary inputs.
+- Validate browser APIs and asynchronous failures at their boundary.
 
 Inside a typed owner, do not manufacture required values with placeholders, cast arbitrary strings into finite unions, or preserve compatibility branches for impossible states. Correct the boundary instead.
 
@@ -44,4 +44,4 @@ Inside a typed owner, do not manufacture required values with placeholders, cast
 
 Colocate each component, hook, API adapter, and page test with its narrowest public owner. Test behavior where it is owned and add consumer wiring coverage only when correctness crosses owners.
 
-`node scripts/patterns/check-patterns.js --changed` enforces deterministic repository invariants and reports review signals. A narrowly justified `pattern-review-ignore` annotation may suppress a review-only signal, but correcting ownership is preferred.
+`node scripts/patterns/check-patterns.ts --changed` enforces deterministic repository invariants and reports review signals. A narrowly justified `pattern-review-ignore` annotation may suppress a review-only signal, but correcting ownership is preferred.

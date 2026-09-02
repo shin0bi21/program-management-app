@@ -1,4 +1,3 @@
-// Owns Users route permissions, preferences, query wiring, and account action entry points.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

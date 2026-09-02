@@ -2,33 +2,20 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
 import { getSessions } from '../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession } from '../../../../../../common/types/cohort';
-import type { SessionStatusFilter } from '../../../types';
-
-interface SessionCalendarFilters {
-  programIds: string[];
-  cohortId: string;
-  sessionTypeIds: string[];
-  statuses: SessionStatusFilter[];
-  search: string;
-}
+import type { CohortSession, SessionListFilters } from '../../../../../../common/types/cohort';
 
 const noSessions: CohortSession[] = [];
 
 export function useSessionCalendarData(
   queryKey: readonly unknown[],
-  filters: SessionCalendarFilters,
+  filters: SessionListFilters,
   selectedSessionId: string,
 ) {
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
   const requestFilters = range ? {
+    ...filters,
     start: range.start,
     end: range.end,
-    programIds: filters.programIds,
-    cohortId: filters.cohortId || undefined,
-    ...(filters.sessionTypeIds.length && { sessionTypeIds: filters.sessionTypeIds }),
-    statuses: filters.statuses,
-    search: filters.search || undefined,
   } : null;
   const query = useQuery({
     queryKey: [...queryKey, requestFilters],

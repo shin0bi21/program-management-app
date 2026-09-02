@@ -11,12 +11,12 @@ request-ID design are owned by [Error handling](../backend/errors.md).
    `X-Request-ID` response header. For API failures, the JSON body also carries
    the same `requestId`.
 2. Distinguish the client failure before changing code:
-   - no HTTP response usually means a `NetworkError`, browser connectivity, or
-     a stopped service;
-   - an aborted request at the configured timeout is a `RequestTimeoutError`;
-   - an HTTP 4xx or 5xx becomes an `ApiError` with status, message, validation
-     details, and request ID;
-   - a React render failure is handled by the app `ErrorBoundary`, while async
+   - No HTTP response usually means a `NetworkError`, browser connectivity, or
+     a stopped service.
+   - An aborted request at the configured timeout is a `RequestTimeoutError`.
+   - An HTTP 4xx or 5xx becomes an `ApiError` with status, message, validation
+     details, and request ID.
+   - A React render failure is handled by the app `ErrorBoundary`, while async
      and event-handler failures must be handled by their owning workflow.
 3. Search the backend log using the request ID:
 
@@ -77,9 +77,9 @@ redaction, response shape, and request-ID correlation.
 Code that runs outside the request error flow, such as process handlers,
 background cleanup, or fire-and-forget logging, must log once with:
 
-- a stable subsystem or operation prefix;
-- the relevant non-sensitive identifiers needed to locate the operation;
-- the original `Error` or rejection value so its stack remains available.
+- Include a stable subsystem or operation prefix.
+- Include the non-sensitive identifiers needed to locate the operation.
+- Include the original `Error` or rejection value so its stack remains available.
 
 Never log tokens, cookies, passwords, authorization headers, raw secrets, or
 unnecessarily complete request bodies. Do not add temporary success-path

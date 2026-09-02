@@ -1,13 +1,9 @@
-.sessions-page {
-  width: 100%;
-}
-
 .sessions-page .page-header {
   margin-bottom: var(--space-4);
 }
 
 @media (min-width: 769px) and (max-width: 1000px) {
-  .sessions-page--calendar {
+  .sessions-page[data-view='calendar'] {
     height: calc(100vh - 80px);
     min-height: 680px;
     display: flex;

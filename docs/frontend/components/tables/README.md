@@ -2,21 +2,7 @@
 
 A page-owned `*Table` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the page table owns fetching, pagination, table states, and the shared `Table` integration.
 
-Tables follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with the table-specific contracts below.
-
-## Organize table files
-
-```text
-components/
-  ExampleTable/
-    ExampleTable.tsx
-    ExampleTable.test.tsx
-    hooks/
-      useExampleTableData.ts      remote query and row shaping
-      useExampleTableData.test.ts
-      useExampleTable.tsx         columns and table-only preference adapters, when substantial
-      useExampleTable.test.tsx
-```
+## Define table columns
 
 Keep columns in the page-table owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the table component.
 
@@ -120,6 +106,8 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
 - Use controlled table selection only when selection has application meaning.
 
+The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not own generic selection state. Keep cross-view, cross-resource, filter-resistant, or mutation-aware selection in the page or domain hook, then pass that state through the page table. A row disappearing from one paginated or filtered result does not necessarily mean the domain selection should be cleared.
+
 ## Connect page controls
 
 The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
@@ -130,10 +118,36 @@ Persist one complete preference value after each control change. Use the prefere
 
 ## Test the table
 
-- The table-data hook test owns query-key inputs, filter/sort serialization, page size, cursor forwarding, cancellation, and domain row shaping.
-- The page-table test owns columns, selection wiring, loading/error/empty states, pagination, and table-specific actions.
+Use this ownership chain for a controlled cursor-paginated table:
+
+| Layer | Test here |
+|---|---|
+| API adapter | HTTP method/path and exact request serialization. |
+| Domain table-data hook | Query key, filters, sort, page size, `AbortSignal`, cursor forwarding, and row shaping. |
+| Domain table component or column hook | Domain columns/cells, copy, permissions, and values passed to shared `Table`. |
+| Shared `Table` | Generic rendering, loading and refresh presentation, sorting UI, controlled selection, keyboard navigation, and infinite-scroll wiring. |
+| Route | Composition, preferences, permissions, dialogs, cross-view selection, and callback-to-adapter flows. |
+
+- The table-data hook test owns query-key inputs, filter/sort serialization, page size, cursor forwarding, cancellation, and domain row shaping. It does not repeat generic page accumulation or deduplication from `useInfiniteListQuery`.
+- The page-table test owns columns, selection wiring, representative propagation of loading/error/empty and pagination states, and table-specific actions. It does not repeat how the shared `Table` renders or operates those states.
 - The page test owns header controls, preference restoration, view switching, dialogs, and cross-child coordination.
 - Shared `Table` and `useInfiniteListQuery` tests own their generic mechanics.
 - Use browser tests for resizing, horizontal overflow, sticky behavior, real scrolling, load-more observation, focus geometry, and mobile layout.
 
+For example, a domain hook can prove that `pageParam: 'next'` becomes `cursor: 'next'`; it should not assert that the first and second pages accumulated into one list. `useInfiniteListQuery` owns cursor aggregation and deduplication.
+
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table rows](rows.md).
+
+## Organize table files
+
+```text
+components/
+  ExampleTable/
+    ExampleTable.tsx
+    ExampleTable.test.tsx
+    hooks/
+      useExampleTableData.ts      remote query and row shaping
+      useExampleTableData.test.ts
+      useExampleTable.tsx         columns and table-only preference adapters, when substantial
+      useExampleTable.test.tsx
+```

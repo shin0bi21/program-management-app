@@ -49,7 +49,7 @@ describe('useLeadPreferences', () => {
       Object.assign(persisted, update(persisted));
     });
     const { result } = renderHook(() => useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys));
-    await waitFor(() => expect(result.current.filters.query).not.toBeNull());
+    await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
       result.current.table.setHiddenColumns(['school']);
@@ -136,6 +136,6 @@ describe('useLeadPreferences', () => {
     expect(result.current.filters.definitions).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'submitterRole' }),
     ]));
-    expect(result.current.filters.query).toEqual(expect.objectContaining({ submitterRoles: [] }));
+    expect(result.current.filters.submitterRoles).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createLead } from '../../leads.api';
+import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import { useLeadModal } from './useLeadModal';
 
@@ -53,6 +53,25 @@ describe('useLeadModal', () => {
     });
     expect(result.current.submitStatus).toBe('success');
     expect(onSuccess).toHaveBeenCalledWith(lead);
+  });
+
+  it('updates the targeted lead and reconciles the authoritative response', async () => {
+    const saved = { ...lead, school: 'Updated School' } as Lead;
+    vi.mocked(updateLead).mockResolvedValue(saved);
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useLeadModal({
+      isOpen: true,
+      lead,
+      onClose: vi.fn(),
+      onSuccess,
+    }));
+
+    await act(() => result.current.onValid({ ...values, school: ' Updated School ' }));
+
+    expect(updateLead).toHaveBeenCalledWith(lead.id, expect.objectContaining({
+      school: 'Updated School',
+    }));
+    expect(onSuccess).toHaveBeenCalledWith(saved);
   });
 
   it('reports request failures without reconciling the lead', async () => {

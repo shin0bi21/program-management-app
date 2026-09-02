@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -10,7 +10,7 @@ import PageErrorOverlay, { type PageErrorItem } from '../../../common/components
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
-import { COHORT_TABLE_KEYS, type ProgramCohort } from '../../../common/types/cohort';
+import { COHORT_TABLE_KEYS, type CohortListFilters, type ProgramCohort } from '../../../common/types/cohort';
 import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import CohortTable from './components/CohortTable/CohortTable';
@@ -43,10 +43,18 @@ export default function Cohorts() {
     programsError,
   );
   const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, tableFilters, programId: selectedProgramId, status: selectedStatus,
+    search, setSearch, appliedSearch, applySearch, clearSearch, programId: selectedProgramId, status: selectedStatus,
     sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters, ready: controlsReady,
+    ready: controlsReady,
   } = controls;
+
+  // Filter configuration.
+  const cohortFilters = useMemo<CohortListFilters | null>(() => controlsReady ? {
+    programId: selectedProgramId || undefined,
+    search: appliedSearch,
+    status: selectedStatus || undefined,
+  } : null, [appliedSearch, controlsReady, selectedProgramId, selectedStatus]);
+
   // Selection and actions.
   const selection = useCohortSelection();
   const actions = useCohortActions({
@@ -86,83 +94,79 @@ export default function Cohorts() {
 
   return (
     <>
-      <main className="page-container page-container--data">
-        <div className="data-page">
-          <PageHeader
-            title="Cohorts"
-            actions={
-              canWriteCohorts
-                ? <Button disabled={!programs.length || !cycles.length} onClick={openCohortModal}>+ Add Cohort</Button>
-                : undefined
-            }
-            search={
-              <SearchInput
-                label="Search cohorts"
-                value={search}
-                appliedValue={appliedSearch}
-                onChange={(event) => setSearch(event.target.value)}
-                onApply={applySearch}
-                onClear={clearSearch}
-                placeholder="Search cohorts or programs"
-              />
-            }
-            columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
-            filters={controlsReady ? (
-              <FilterCard
-                categories={filterCategories}
-                values={{
-                  program: selectedProgramId ? [selectedProgramId] : [],
-                  status: selectedStatus ? [selectedStatus] : [],
-                }}
-                onApply={controls.applyFilter}
-                onClearAll={controls.clearFilters}
-              />
-            ) : undefined}
-          />
+      <main className="page-container">
+        <PageHeader
+          title="Cohorts"
+          actions={
+            canWriteCohorts
+              ? <Button disabled={!programs.length || !cycles.length} onClick={openCohortModal}>+ Add Cohort</Button>
+              : undefined
+          }
+          search={
+            <SearchInput
+              label="Search cohorts"
+              value={search}
+              appliedValue={appliedSearch}
+              onChange={(event) => setSearch(event.target.value)}
+              onApply={applySearch}
+              onClear={clearSearch}
+              placeholder="Search cohorts or programs"
+            />
+          }
+          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+          filters={controlsReady ? (
+            <FilterCard
+              categories={filterCategories}
+              values={{
+                program: selectedProgramId ? [selectedProgramId] : [],
+                status: selectedStatus ? [selectedStatus] : [],
+              }}
+              onApply={controls.applyFilter}
+              onClearAll={controls.clearFilters}
+            />
+          ) : undefined}
+        />
 
-          <PageErrorOverlay errors={[programsError, cyclesError, preferenceError, viewError]} />
-          {!controlsReady ? <p role="status">Loading saved cohort preferences…</p> : <PageBody
-            ariaLabel="Programming cohorts and overview"
-            table={
-              <CohortTable
-                queryKey={COHORT_TABLE_QUERY_KEY}
-                filters={tableFilters}
-                columns={columns}
-                hiddenColumnKeys={hiddenColumns}
-                selectedKey={selection.selectedCohort?.id ?? null}
-                onRowSelect={selection.setSelectedCohort}
-                sorting={sorting}
-                onSortingChange={controls.setSorting}
-                columnWidths={columnWidths}
-                onColumnWidthsChange={controls.setColumnWidths}
-                hasActiveQueryFilters={hasActiveQueryFilters}
-                onErrorChange={setViewError}
-              />
-            }
-            dashboard={
-              <DashboardCard
-                title="Youth Overview"
-                className="cohort-overview-card"
-                emptyMessage="No cohort selected."
-                action={selection.selectedCohort ? <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
-                  title={selection.selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
-                  onClick={() => setReportTarget(selection.selectedCohort)}
-                >View Report</Button> : undefined}
-              >
-                {selection.selectedCohort ? (
-                  <dl className="cohort-overview">
-                    <div><dt>{selection.selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.rosterMode === 'enrolled' ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
-                    <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
-                  </dl>
-                ) : undefined}
-              </DashboardCard>
-            }
-          />}
-
-        </div>
+        <PageErrorOverlay errors={[programsError, cyclesError, preferenceError, viewError]} />
+        {!controlsReady ? <p role="status">Loading saved cohort preferences…</p> : <PageBody
+          ariaLabel="Programming cohorts and overview"
+          table={
+            <CohortTable
+              queryKey={COHORT_TABLE_QUERY_KEY}
+              filters={cohortFilters}
+              columns={columns}
+              hiddenColumnKeys={hiddenColumns}
+              selectedKey={selection.selectedCohort?.id ?? null}
+              onRowSelect={selection.setSelectedCohort}
+              sorting={sorting}
+              onSortingChange={controls.setSorting}
+              columnWidths={columnWidths}
+              onColumnWidthsChange={controls.setColumnWidths}
+              onErrorChange={setViewError}
+            />
+          }
+          dashboard={
+            <DashboardCard
+              title="Youth Overview"
+              className="cohort-overview-card"
+              emptyMessage="No cohort selected."
+              action={selection.selectedCohort ? <Button
+                size="sm"
+                variant="secondary"
+                disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
+                title={selection.selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
+                onClick={() => setReportTarget(selection.selectedCohort)}
+              >View Report</Button> : undefined}
+            >
+              {selection.selectedCohort ? (
+                <dl className="cohort-overview">
+                  <div><dt>{selection.selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.rosterMode === 'enrolled' ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
+                  <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
+                </dl>
+              ) : undefined}
+            </DashboardCard>
+          }
+        />}
       </main>
 
       <AddCohortModal

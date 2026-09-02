@@ -1,17 +1,14 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "target": "es2018",
     "module": "Node16",
     "lib": ["esnext"],
-    "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node16",
     "outDir": "./dist",
     "sourceMap": true,
-    "types": ["node", "jest"],
-    "isolatedModules": true
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "db/**/*", "scripts/**/*", "tests/**/*"],
   "exclude": ["node_modules"]

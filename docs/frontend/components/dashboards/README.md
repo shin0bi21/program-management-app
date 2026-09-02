@@ -4,23 +4,6 @@ A page-owned `*Dashboard` composes selected-record details and aggregate overvie
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
-Dashboards follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with these optional dashboard-specific owners:
-
-```text
-components/
-  ExampleDashboard/
-    ExampleDashboard.tsx
-    ExampleDashboard.test.tsx
-    hooks/
-      useExampleOverviewData.ts
-      useExampleOverviewData.test.ts
-    ExampleOverviewDashboardCard/
-      ExampleOverviewDashboardCard.tsx
-      ExampleOverviewDashboardCard.test.tsx
-```
-
-The dashboard component and test are required. Add the overview-data hook only for dashboard-owned remote data, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.
-
 ## Load dashboard data
 
 Keep a dashboard query in a focused `use*OverviewData` hook when the dashboard needs server aggregates not already held by the page. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
@@ -55,4 +38,21 @@ Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. 
 
 ## Test the dashboard
 
-Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and query enablement. Hook tests own query keys, server inputs, cancellation, and response shaping. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.
+Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and representative query-state wiring. Hook tests own query keys, enabled conditions, server inputs, cancellation, and domain response shaping; they do not repeat generic TanStack Query fetching, caching, retry, or refresh semantics. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.
+
+## Organize dashboard files
+
+```text
+components/
+  ExampleDashboard/
+    ExampleDashboard.tsx
+    ExampleDashboard.test.tsx
+    hooks/
+      useExampleOverviewData.ts
+      useExampleOverviewData.test.ts
+    ExampleOverviewDashboardCard/
+      ExampleOverviewDashboardCard.tsx
+      ExampleOverviewDashboardCard.test.tsx
+```
+
+The dashboard component and test are required. Add the overview-data hook only for dashboard-owned remote data, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.

@@ -5,6 +5,7 @@ import type { CursorPage, CursorRequest } from '../../../common/types/pagination
 import type {
   HoursCategory,
   HoursEntry,
+  HoursFilters,
   HoursItem,
   HoursEntryType,
   HoursTableRow,
@@ -53,10 +54,6 @@ export interface HoursDashboardData {
 
 export interface HoursCalendarFilters { start?: string; end?: string; cycleId?: string; search?: string }
 
-export interface HoursTableFilters {
-  staffIds: string[]; categories: HoursCategory[]; programIds: string[];
-  types: Array<'task' | 'session' | 'other'>; cycleId?: string; search?: string;
-}
 export function getHoursCalendarData(filters: HoursCalendarFilters = {}, opts?: RequestOptions) {
   const params = new URLSearchParams();
   if (filters.start && filters.end) { params.set('start', filters.start); params.set('end', filters.end); }
@@ -71,7 +68,7 @@ export function getHoursReferenceData(opts?: RequestOptions) {
 }
 
 export function getHoursTableData(
-  filters: HoursTableFilters,
+  filters: HoursFilters,
   opts: RequestOptions | undefined,
   pagination: CursorRequest,
 ) {

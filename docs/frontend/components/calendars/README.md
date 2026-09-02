@@ -2,26 +2,6 @@
 
 A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`. It owns filtered range loading, item construction, capability mapping, and the narrow callbacks connecting calendar interactions to page actions.
 
-Calendars follow the general colocated [component-owner structure](../../README.md#organize-an-owner) with the calendar-specific contracts below.
-
-## Organize calendar files
-
-```text
-components/
-  ExampleCalendar/
-    ExampleCalendar.tsx
-    ExampleCalendar.test.tsx
-    hooks/
-      useExampleCalendarData.ts
-      useExampleCalendarData.test.ts
-    ExampleItem/
-      ExampleItem.tsx
-      ExampleItem.test.tsx
-      ExampleItem.story.tsx          when browser interaction matters
-```
-
-The calendar component and test are required. Add `useExampleCalendarData` only when loaded records need page-owned adaptation, and add `ExampleItem` only when an item has meaningful domain presentation. A browser story is optional even when the item owner exists.
-
 The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 
 ## Range data hook
@@ -90,5 +70,24 @@ Persist durable filters with page preferences. Keep browser-local calendar posit
 - The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
 - The page-calendar test owns capability mapping, selection, item construction, and exact callback-to-action wiring.
 - The page test owns shared controls, view switching, dialog entry, and cross-view selection.
-- Shared calendar tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable cleanup.
-- Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation, unmount cleanup, and mobile geometry.
+- `useDataBuffer` tests own generic range loading, accumulation, stale-result protection, mutation overrides, and buffer cleanup. Page-calendar tests do not repeat those mechanics.
+- Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable interaction cleanup.
+- Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, real-browser cancellation and unmount behavior, and mobile geometry.
+
+## Organize calendar files
+
+```text
+components/
+  ExampleCalendar/
+    ExampleCalendar.tsx
+    ExampleCalendar.test.tsx
+    hooks/
+      useExampleCalendarData.ts
+      useExampleCalendarData.test.ts
+    ExampleItem/
+      ExampleItem.tsx
+      ExampleItem.test.tsx
+      ExampleItem.story.tsx          when browser interaction matters
+```
+
+The calendar component and test are required. Add `useExampleCalendarData` only when loaded records need page-owned adaptation, and add `ExampleItem` only when an item has meaningful domain presentation. A browser story is optional even when the item owner exists.

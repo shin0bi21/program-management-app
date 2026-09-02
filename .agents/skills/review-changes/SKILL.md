@@ -13,12 +13,12 @@ Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely.
 
 1. Read repository instructions and the relevant owner documentation.
 2. Reuse the latest `map-changes` concern map. If no map exists, run the mapping workflow before deep review, even when the result is a single concern.
-3. Inspect branch state and the complete tracked and untracked diff only to verify that the selected concern and map are current.
+3. Regenerate `node scripts/agents/snapshot-changes.ts --json` and compare its fingerprint and changed paths with the mapped snapshot. Inspect raw Git state only when resolving a mismatch or ambiguity. Update the map before deep review when the concern boundaries no longer hold.
 4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
 5. Identify affected features, ownership layers, and execution paths.
 6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development.md` and verify required refresh or migration steps.
 7. Reuse and refine the selected concern's acceptance ledger. Mark every item implemented, intentionally deferred, contradicted, or unverified.
-8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area. If repository skills changed, also run `node scripts/agents/validate-skills.js` once.
+8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area.
 
 Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and missing focused tests are allowed; changing from implementation to review is not itself a reason to rerun tests.
 
@@ -62,8 +62,9 @@ For the selected concern group:
 4. Match every user action to its mutation breadth. Focused commands such as status, placement, reorder, assignment, and resize must not replace unrelated fields from a cached record; verify locked authoritative reads and concurrent-change regression tests.
 5. For authorization changes, independently trace route capability, resource discovery, record reads, locked mutations, returned UI capabilities, and every consumer affordance. Test own, shared-readable, unrelated, and administrator cases rather than treating “permission coverage” as one checkbox.
 6. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
-7. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
-8. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
+7. Review new and changed code for cognitive complexity, verbose methods, and defensive clutter. Prefer concise execution-order methods and clean, thorough structures that make behavior explicit without speculative abstractions, redundant guards, or duplicated sources of truth.
+8. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
+9. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
 
 Treat inconsistent nearby code as historical context, not as a pattern to reproduce. Passing tests, lint, or typecheck do not override a correctness or maintainability finding.
 

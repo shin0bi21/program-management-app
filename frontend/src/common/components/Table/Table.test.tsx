@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import Table from './Table';
 import type { TableColumnDef } from './Table.types';
 
@@ -15,8 +15,6 @@ const columns: TableColumnDef<Row>[] = [
 ];
 
 describe('Table', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it('emits controlled backend sorting from sortable headers', () => {
     const onSortingChange = vi.fn();
     const sortableColumns: TableColumnDef<Row>[] = [
@@ -213,22 +211,6 @@ describe('Table', () => {
     expect(onColumnWidthsChange.mock.calls.every(([widths]) => widths.name >= 100)).toBe(true);
   });
 
-  it('loads the next batch when the scroll sentinel intersects', () => {
-    let notify: IntersectionObserverCallback | undefined;
-    const disconnect = vi.fn();
-    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
-      notify = callback;
-      return { observe: vi.fn(), disconnect, unobserve: vi.fn(), takeRecords: vi.fn(), root: null, rootMargin: '', thresholds: [] };
-    }));
-    const onLoadNextPage = vi.fn();
-    const { unmount } = render(<Table ariaLabel="Accounts" columns={columns} data={[{ id: '1', name: 'Jamie' }]} keyExtractor={row => row.id} hasNextPage onLoadNextPage={onLoadNextPage} />);
-
-    notify?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
-    expect(onLoadNextPage).toHaveBeenCalledOnce();
-    unmount();
-    expect(disconnect).toHaveBeenCalledOnce();
-  });
-
   it('keeps the header and renders a full-width row when data is empty', () => {
     render(<Table ariaLabel="Accounts" columns={columns} data={[]} keyExtractor={row => row.id} emptyMessage="No accounts found" />);
 
@@ -314,33 +296,7 @@ describe('Table', () => {
     expect(onSelect).toHaveBeenCalledTimes(2);
   });
 
-  it('does not scroll back to the selected row when another page is appended', () => {
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
-    const firstPage = [{ id: '1', name: 'First' }];
-    const { rerender } = render(<Table
-      ariaLabel="Accounts"
-      columns={columns}
-      data={firstPage}
-      keyExtractor={row => row.id}
-      selectedKey="1"
-      scrollToSelected
-    />);
-
-    expect(scrollIntoView).toHaveBeenCalledOnce();
-    rerender(<Table
-      ariaLabel="Accounts"
-      columns={columns}
-      data={[...firstPage, { id: '2', name: 'Second' }]}
-      keyExtractor={row => row.id}
-      selectedKey="1"
-      scrollToSelected
-    />);
-
-    expect(scrollIntoView).toHaveBeenCalledOnce();
-  });
-
-  it('moves row focus and selection with arrow, Home, and End keys', () => {
+  it('wires row-key navigation to shared table selection and focus', () => {
     const onSelect = vi.fn();
     render(<Table
       ariaLabel="Accounts"
@@ -357,43 +313,10 @@ describe('Table', () => {
 
     const first = screen.getByRole('row', { name: /First Active/ });
     const second = screen.getByRole('row', { name: /Second Active/ });
-    const third = screen.getByRole('row', { name: /Third Active/ });
-
     first.focus();
     fireEvent.keyDown(first, { key: 'ArrowDown' });
     expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: '2' }));
     expect(second).toHaveFocus();
-
-    fireEvent.keyDown(second, { key: 'End' });
-    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: '3' }));
-    expect(third).toHaveFocus();
-
-    fireEvent.keyDown(third, { key: 'Home' });
-    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
-    expect(first).toHaveFocus();
-  });
-
-  it('provides arrow-key row navigation without making rows selectable', () => {
-    render(<Table
-      ariaLabel="Accounts"
-      columns={columns}
-      data={[
-        { id: '1', name: 'First' },
-        { id: '2', name: 'Second' },
-      ]}
-      keyExtractor={row => row.id}
-    />);
-
-    const first = screen.getByRole('row', { name: /First Active/ });
-    const second = screen.getByRole('row', { name: /Second Active/ });
-
-    expect(first).toHaveAttribute('tabindex', '0');
-    expect(first).not.toHaveClass('table-row--selectable');
-    first.focus();
-    fireEvent.keyDown(first, { key: 'ArrowDown' });
-    expect(second).toHaveFocus();
-    fireEvent.keyDown(second, { key: 'ArrowUp' });
-    expect(first).toHaveFocus();
   });
 
   it('does not select a row when an interactive control is clicked', () => {

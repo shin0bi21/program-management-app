@@ -39,12 +39,11 @@ describe('YouthTable', () => {
 
     render(<YouthTable
       columns={[]}
-      filters={{ search: '', statuses: [], programIds: [] }}
+      filters={{ search: 'maya', statuses: [], programIds: [] }}
       hiddenColumnKeys={['school']}
       sorting={{ key: 'firstName', direction: 'asc' }}
       columnWidths={{ firstName: 180 }}
       selectedProfileId={profile.id}
-      hasActiveQueryFilters
       onSelectedProfileResolved={onSelectedProfileResolved}
       onRowSelect={onRowSelect}
       onSortingChange={onSortingChange}

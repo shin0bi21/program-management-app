@@ -1,21 +1,16 @@
 import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { HoursCategory, HoursTableRow } from '../../types';
+import type { HoursFilters, HoursTableRow } from '../../types';
 import type { ListSort } from '../../../../../common/types/pagination';
-import { HOURS_TABLE_KEYS, type HoursEntryType, type HoursSortKey } from '../../types';
+import { HOURS_TABLE_KEYS, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';
 
 interface HoursTableProps {
   queryKey: readonly unknown[];
   columns: TableColumnDef<HoursTableRow>[];
   hiddenColumnKeys: string[];
-  staffIds: string[];
-  categories: HoursCategory[];
-  programIds: string[];
-  types: HoursEntryType[];
-  cycleId?: string;
-  search: string;
+  filters: HoursFilters;
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   selectedRowId: string | null;
@@ -26,11 +21,11 @@ interface HoursTableProps {
 }
 
 export default function HoursTable({
-  queryKey, columns, hiddenColumnKeys, staffIds, categories, programIds, types, cycleId, search,
+  queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
   onColumnWidthsChange, onErrorChange,
 }: HoursTableProps) {
-  const query = useHoursTableData(queryKey, { staffIds, categories, programIds, types, cycleId, search }, sorting);
+  const query = useHoursTableData(queryKey, filters, sorting);
   usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
 
   return <Table

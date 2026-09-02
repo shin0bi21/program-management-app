@@ -21,7 +21,7 @@ export default function ManageHomepage() {
   // Render.
   return (
     <>
-      <main className="page-container page-container--data homepage-management-page">
+      <main className="page-container homepage-management-page">
         <PageHeader
           title="Manage Homepage"
           actions={<Button size="sm" onClick={modals.image.openNew}>+ Add</Button>}

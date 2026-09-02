@@ -2,6 +2,22 @@
 
 Components own rendered interfaces and user interactions. Start with the page guide when a route coordinates several components. Use this guide when changing a rendered surface or deciding whether to extract one.
 
+## Keep component contracts focused
+
+A component owns its rendering, accessibility and presentation-level interactions. A focused hook owns stateful policy, asynchronous transitions or coordinated callbacks. Keep one-off props and simple local state in the component.
+
+Use a hook when behaviour needs restoration, derived state, effects, subscriptions, observers or asynchronous coordination. Do not create a hook only to rename a `useState` value.
+
+## Test components and hooks
+
+Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
+
+Lifecycle is conditional. A hook that installs an observer tests its options, callback guards, meaningful dependency changes, and cleanup. A badge that only renders a label and modifier tests those outputs; it does not need mount, rerender, and unmount tests.
+
+A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
+
+Use jsdom for semantic focus and keyboard interactions it can observe. Use Playwright when correctness depends on real focus geometry, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/testing.md) explains runner selection.
+
 ## Choose a component owner
 
 Keep a component with the narrowest owner that can describe its full behaviour:
@@ -19,7 +35,8 @@ Extract a component when a rendered region has a clear name and an independent c
 
 | Surface | Guide |
 |---|---|
-| Page header and body regions | [Page structure](../pages/structure.md) |
+| Application sidebar and route navigation | [App navigation](navigation/README.md) |
+| Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables/README.md) |
 | Table rows and mutations | [Table rows](tables/rows.md) |
 | Date ranges, calendar items and timeline views | [Calendars](calendars/README.md) |
@@ -28,13 +45,3 @@ Extract a component when a rendered region has a clear name and an independent c
 | Modal forms and submission workflows | [Modals and forms](overlays/modals-and-forms.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
-
-## Keep component contracts focused
-
-A component owns its rendering, accessibility and presentation-level interactions. A focused hook owns stateful policy, asynchronous transitions or coordinated callbacks. Keep one-off props and simple local state in the component.
-
-Use a hook when behaviour needs restoration, derived state, effects, subscriptions, observers or asynchronous coordination. Do not create a hook only to rename a `useState` value.
-
-Keep each component's test beside it. Test the rendered states, accessible controls and values the component emits. Test stateful policy in its owning hook and cross-component coordination in the route page.
-
-Use Playwright when correctness depends on a real browser, including focus, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/testing.md) explains runner selection.

@@ -35,9 +35,10 @@ describe('useAccountControls', () => {
     };
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
-    await waitFor(() => expect(result.current.queryFilters).toEqual({
-      search: '', roles: ['staff'], statuses: ['active'],
-    }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.appliedSearch).toBe('');
+    expect(result.current.roleFilters).toEqual(['staff']);
+    expect(result.current.statusFilters).toEqual(['active']);
     expect(result.current).toMatchObject({
       sorting: { key: 'email', direction: 'desc' }, columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
@@ -47,8 +48,8 @@ describe('useAccountControls', () => {
   it('limits role filters to administrators', async () => {
     const admin = renderHook(() => useAccountControls(true, tableKeys));
     const staff = renderHook(() => useAccountControls(false, tableKeys));
-    await waitFor(() => expect(admin.result.current.queryFilters).not.toBeNull());
-    await waitFor(() => expect(staff.result.current.queryFilters).not.toBeNull());
+    await waitFor(() => expect(admin.result.current.ready).toBe(true));
+    await waitFor(() => expect(staff.result.current.ready).toBe(true));
 
     expect(admin.result.current.filterCategories.map(category => category.id)).toEqual(['status', 'role']);
     expect(staff.result.current.filterCategories.map(category => category.id)).toEqual(['status']);
@@ -60,7 +61,8 @@ describe('useAccountControls', () => {
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.queryFilters).toEqual({ search: '', roles: [], statuses: [] });
+    expect(result.current.roleFilters).toEqual([]);
+    expect(result.current.statusFilters).toEqual([]);
   });
 
   it('preserves each latest control during immediate updates', async () => {
@@ -72,7 +74,7 @@ describe('useAccountControls', () => {
       Object.assign(persisted, update(persisted));
     });
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
-    await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
+    await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
       result.current.applyFilter('status', ['active']);
@@ -95,9 +97,8 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.queryFilters).toEqual({
-      search: '', roles: [], statuses: ['active'],
-    });
+    expect(result.current.roleFilters).toEqual([]);
+    expect(result.current.statusFilters).toEqual(['active']);
     expect(result.current.sorting).toEqual({ key: 'name', direction: 'asc' });
     expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
       roles: [], sorting: { key: 'name', direction: 'asc' },
@@ -114,7 +115,8 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.queryFilters).toEqual({ search: '', roles: ['staff'], statuses: [] });
+    expect(result.current.roleFilters).toEqual(['staff']);
+    expect(result.current.statusFilters).toEqual([]);
     expect(result.current.columnWidths).toEqual({ email: 260 });
   });
 });

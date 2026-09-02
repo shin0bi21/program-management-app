@@ -26,8 +26,18 @@ shellcheck "${shell_files[@]}"
 echo "Running ESLint..."
 npm run lint
 
+echo "Type-checking repository scripts..."
+npm run typecheck
+
 echo "Running script tests..."
-node --test scripts/agents/*.test.js scripts/ci/*.test.js scripts/patterns/enforce/*.test.js scripts/patterns/review/*.test.js scripts/reports/*.test.js
+node --test \
+  scripts/agents/*.test.ts \
+  scripts/agents/scaffold/frontend/*.test.ts \
+  scripts/ci/*.test.ts \
+  scripts/patterns/enforce/*.test.ts \
+  scripts/patterns/enforce/frontend/*.test.ts \
+  scripts/patterns/review/*.test.ts \
+  scripts/reports/*.test.ts
 
 echo "Checking report commands..."
 loc_total=$(bash scripts/reports/loc-report.sh app | awk '/^TOTAL/{print $2}')
@@ -37,9 +47,6 @@ if [ -z "$loc_total" ] || [ "$loc_total" -eq 0 ]; then
 fi
 
 echo "Checking documentation links..."
-node scripts/tests/check-doc-links.js
-
-echo "Validating repository skills..."
-node scripts/agents/validate-skills.js
+node scripts/tests/check-doc-links.ts
 
 echo "Static checks passed!"
