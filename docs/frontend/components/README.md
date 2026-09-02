@@ -36,7 +36,7 @@ Extract a component when a rendered region has a clear name and an independent c
 | Surface | Guide |
 |---|---|
 | Application sidebar and route navigation | [App navigation](navigation/README.md) |
-| Page header and body regions | [Pages](../pages/README.md#place-page-content-and-errors) |
+| Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables/README.md) |
 | Table rows and mutations | [Table rows](tables/rows.md) |
 | Date ranges, calendar items and timeline views | [Calendars](calendars/README.md) |

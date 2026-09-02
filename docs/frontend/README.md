@@ -38,9 +38,9 @@ Use this table to find the right guide. Each rule is explained in one place so t
 | What are you changing? | Guide |
 |---|---|
 | A page or route workflow | [Pages](pages/README.md) |
-| The header, body, errors, or dialogs on a page | [Pages](pages/README.md#place-page-content-and-errors) |
+| The header, body, errors, or dialogs on a page | [Pages](pages/README.md#compose-page-components) |
 | Sidebar navigation or route visibility | [App navigation](components/navigation/README.md) |
-| Saved page controls | [Page preferences](pages/preferences.md) |
+| Saved page controls | [Pages](pages/README.md#save-page-preferences) |
 | Tables and table rows | [Tables](components/tables/README.md) and [table rows](components/tables/rows.md) |
 | Calendars | [Calendars](components/calendars/README.md) |
 | Dashboards | [Dashboards](components/dashboards/README.md) |

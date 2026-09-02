@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
@@ -10,7 +10,7 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
-import { ACCOUNT_TABLE_KEYS } from '../../../common/types/account';
+import { ACCOUNT_TABLE_KEYS, type AccountFilters } from '../../../common/types/account';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
 import useUserTable from './components/UserTable/hooks/useUserTable';
@@ -34,10 +34,17 @@ export default function Users() {
   // Page data and preferences.
   const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
   const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, queryFilters, statusFilters, roleFilters, sorting,
+    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    hasActiveQueryFilters, ready: controlsReady,
+    ready: controlsReady,
   } = controls;
+
+  // Filter configuration.
+  const accountFilters = useMemo<AccountFilters | null>(() => controlsReady ? {
+    search: appliedSearch,
+    roles: roleFilters,
+    statuses: statusFilters,
+  } : null, [appliedSearch, controlsReady, roleFilters, statusFilters]);
 
   // Page-spanning account actions and cache reconciliation.
   const { revokeInvite, toggleStatus, syncSavedAccount, syncYouthInvitation } = useAccountActions({
@@ -59,7 +66,7 @@ export default function Users() {
   // Render.
   return (
     <>
-      <main className="page-container page-container--data manage-accounts-page">
+      <main className="page-container manage-accounts-page">
         <PageHeader
           title="Users"
           actions={(
@@ -103,10 +110,9 @@ export default function Users() {
           dashboard={null}
           table={<UserTable
             queryKey={ACCOUNTS_TABLE_QUERY_KEY}
-            filters={queryFilters}
+            filters={accountFilters}
             columns={columns}
             hiddenColumnKeys={hiddenColumns}
-            hasActiveQueryFilters={hasActiveQueryFilters}
             sorting={sorting}
             onSortingChange={controls.setSorting}
             columnWidths={columnWidths}

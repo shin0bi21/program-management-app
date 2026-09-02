@@ -153,7 +153,7 @@ test('requires data route pages to compose the shared page shell', () => {
   const missingHeader = violationsFor(
     checkRoutePageShell,
     `${leadsPage}/Leads.tsx`,
-    '<main className="page-container page-container--data"><PageBody /></main>',
+    '<main className="page-container"><PageBody /></main>',
     routePageDirectories,
   );
   assert.match(missingHeader[0], /route-level PageHeader/);
@@ -164,7 +164,7 @@ test('requires data route pages to compose the shared page shell', () => {
     '<main><PageHeader title="Leads" /><PageBody /></main>',
     routePageDirectories,
   );
-  assert.match(missingDataMain[0], /main\.page-container\.page-container--data/);
+  assert.match(missingDataMain[0], /main\.page-container/);
 });
 
 test('accepts the canonical data route page shell', () => {
@@ -172,7 +172,7 @@ test('accepts the canonical data route page shell', () => {
     violationsFor(
       checkRoutePageShell,
       `${leadsPage}/Leads.tsx`,
-      '<main className="page-container page-container--data leads-page"><PageHeader title="Leads" /><PageBody /></main>',
+      '<main className="page-container leads-page"><PageHeader title="Leads" /><PageBody /></main>',
       routePageDirectories,
     ),
     [],

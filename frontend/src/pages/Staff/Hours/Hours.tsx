@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -24,7 +24,7 @@ import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
 import { getTaskDashboardData } from '../Tasks/tasks.api';
-import { HOURS_TABLE_KEYS, type HoursEntryTarget } from './types';
+import { HOURS_TABLE_KEYS, type HoursEntryTarget, type HoursFilters } from './types';
 
 import './Hours.css';
 
@@ -75,6 +75,23 @@ export default function Hours() {
     cyclesError: Boolean(pageData.cyclesError),
     tableKeys: HOURS_TABLE_KEYS,
   });
+
+  // Filter configuration.
+  const hoursFilters = useMemo<HoursFilters>(() => ({
+    staffIds: preferences.filters.staffIds,
+    categories: preferences.filters.categories,
+    programIds: preferences.filters.programIds,
+    types: preferences.filters.types,
+    cycleId: preferences.filters.cycleId ?? undefined,
+    search: preferences.search.appliedValue,
+  }), [
+    preferences.filters.categories,
+    preferences.filters.cycleId,
+    preferences.filters.programIds,
+    preferences.filters.staffIds,
+    preferences.filters.types,
+    preferences.search.appliedValue,
+  ]);
 
   // Selection and actions.
   const selection = useHoursSelection({
@@ -135,12 +152,7 @@ export default function Hours() {
       queryKey={HOURS_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
-      staffIds={preferences.filters.staffIds}
-      categories={preferences.filters.categories}
-      programIds={preferences.filters.programIds}
-      types={preferences.filters.types}
-      cycleId={preferences.filters.cycleId ?? undefined}
-      search={preferences.search.appliedValue}
+      filters={hoursFilters}
       sorting={preferences.table.sorting}
       columnWidths={preferences.table.columnWidths}
       selectedRowId={selection.selectedRowId}
@@ -153,14 +165,9 @@ export default function Hours() {
 
   const hoursCalendar = (
     <HoursCalendar
-      key={preferences.search.appliedValue}
+      key={hoursFilters.search}
       resources={pageData.resources}
-      staffIds={preferences.filters.staffIds}
-      categories={preferences.filters.categories}
-      programIds={preferences.filters.programIds}
-      types={preferences.filters.types}
-      cycleId={preferences.filters.cycleId ?? ''}
-      search={preferences.search.appliedValue}
+      filters={hoursFilters}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
       calendarCacheRef={actions.calendarCacheRef}
@@ -180,7 +187,7 @@ export default function Hours() {
 
   // Render.
   return <>
-    <main className="page-container page-container--data hours-page">
+    <main className="page-container hours-page">
       <PageHeader
         title="Hours"
         actions={canWrite && pageData.writableResources.length ? <ActionsMenu

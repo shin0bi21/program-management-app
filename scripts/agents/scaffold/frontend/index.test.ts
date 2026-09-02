@@ -48,6 +48,8 @@ test('creates only the required page files with honest orchestration placeholder
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/components')), false);
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/hooks')), false);
   assert.match(read(files[0]), /Permissions and application services/);
+  assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
+  assert.match(read(files[0]), /Filter configuration passed to every page data view/);
   assert.match(read(files[1]), /it\.todo\('wires permissions, restored controls/);
   assert.match(read(files[1]), /cross-owner callbacks without repeating child behavior/);
   assertParses(files[0]);

@@ -137,8 +137,8 @@ export function checkRoutePageShell(
     violations.push(`${file}:1 data route pages using PageBody must compose a route-level PageHeader.`);
   }
 
-  const dataMain = /<main\b[^>]*className\s*=\s*["'][^"']*\bpage-container\b[^"']*\bpage-container--data\b[^"']*["']/s;
-  if (!dataMain.test(source)) {
-    violations.push(`${file}:1 data route pages must use main.page-container.page-container--data.`);
+  const pageMain = /<main\b[^>]*className\s*=\s*["'][^"']*\bpage-container\b[^"']*["']/s;
+  if (!pageMain.test(source)) {
+    violations.push(`${file}:1 data route pages must use main.page-container.`);
   }
 }

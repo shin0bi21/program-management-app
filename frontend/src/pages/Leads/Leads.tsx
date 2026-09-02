@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -17,7 +17,7 @@ import useLeadActions from './hooks/actions/useLeadActions';
 import useLeadData from './hooks/data/useLeadData';
 import { useLeadPreferences } from './hooks/preferences/useLeadPreferences';
 import useLeadSelection from './hooks/selection/useLeadSelection';
-import { LEAD_TABLE_KEYS, type Lead, type LeadOrigin } from './types';
+import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadOrigin } from './types';
 import './Leads.css';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
@@ -42,6 +42,15 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     data.programsError,
     LEAD_TABLE_KEYS,
   );
+
+  // Filter configuration.
+  const leadFilters = useMemo<LeadFilters | null>(() => preferences.ready ? {
+    search: preferences.search.appliedValue,
+    statuses: preferences.filters.statuses,
+    programIds: preferences.filters.programIds,
+    origins: [origin],
+    submitterRoles: preferences.filters.submitterRoles,
+  } : null, [origin, preferences.filters.programIds, preferences.filters.statuses, preferences.filters.submitterRoles, preferences.ready, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useLeadSelection();
@@ -75,7 +84,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Render.
   return <>
-    <main className="page-container page-container--data">
+    <main className="page-container">
       <PageHeader
         title={viewTitle}
         actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
@@ -111,7 +120,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           queryKey={tableQueryKey}
           columns={columns}
           hiddenColumnKeys={preferences.table.hiddenColumns}
-          filters={preferences.filters.query}
+          filters={leadFilters}
           sorting={preferences.table.sorting}
           columnWidths={preferences.table.columnWidths}
           selectedLeadId={selection.selectedLeadId}

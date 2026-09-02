@@ -54,15 +54,14 @@ describe('useYouthControls', () => {
       { initialProps: { role: null as string | null } },
     );
 
-    expect(result.current.queryFilters).toBeNull();
+    expect(result.current.ready).toBe(false);
 
     rerender({ role: 'staff' });
 
-    await waitFor(() => expect(result.current.queryFilters).toEqual({
-      search: '',
-      statuses: ['active'],
-      programIds: ['program-1'],
-    }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.appliedSearch).toBe('');
+    expect(result.current.statusFilters).toEqual(['active']);
+    expect(result.current.programFilters).toEqual(['program-1']);
   });
 
   it('uses role defaults when saved preferences cannot be loaded', async () => {
@@ -90,7 +89,8 @@ describe('useYouthControls', () => {
       tableKeys,
     }));
 
-    await waitFor(() => expect(result.current.queryFilters?.programIds).toEqual([]));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.programFilters).toEqual([]);
     expect(preferenceHook.initializePreference).toHaveBeenCalledWith({
       statuses: ['active'],
       programIds: [],
@@ -117,7 +117,7 @@ describe('useYouthControls', () => {
       programsLoading: false,
       tableKeys,
     }));
-    await waitFor(() => expect(result.current.queryFilters).not.toBeNull());
+    await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
       result.current.setHiddenColumns(['school']);

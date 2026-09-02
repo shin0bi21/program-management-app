@@ -23,7 +23,8 @@ vi.mock('../../../../../common/components/Table/Table', () => ({
 const baseProps = {
   queryKey: ['tasks', 'table'] as const,
   today: '2026-08-11',
-  columns: [], hiddenColumnKeys: [], staffIds: [], programIds: [], categories: [], statuses: [], search: '',
+  columns: [], hiddenColumnKeys: [],
+  filters: { staffIds: [], programIds: [], categories: [], statuses: [], search: '' },
   sorting: { key: 'dueDate' as const, direction: 'asc' as const }, columnWidths: {}, selectedTaskId: null,
   onTaskSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
   onErrorChange: vi.fn(),
@@ -37,11 +38,12 @@ describe('TaskTable', () => {
   });
 
   it('wires page controls and query state into the table', () => {
-    render(<TaskTable {...baseProps} staffIds={['staff-1']} statuses={['active']} />);
+    const filters = { ...baseProps.filters, staffIds: ['staff-1'], statuses: ['active' as const] };
+    render(<TaskTable {...baseProps} filters={filters} />);
 
     expect(useTaskTableData).toHaveBeenCalledWith(
       baseProps.queryKey,
-      { staffIds: ['staff-1'], programIds: [], categories: [], statuses: ['active'], search: '' },
+      filters,
       baseProps.sorting,
       baseProps.today,
     );
@@ -70,7 +72,7 @@ describe('TaskTable', () => {
     expect(tableProps.current).toEqual(expect.objectContaining({ emptyMessage: 'No tasks assigned' }));
 
     tableState.error = 'Unable to load tasks.';
-    rerender(<TaskTable {...baseProps} search="missing" />);
+    rerender(<TaskTable {...baseProps} filters={{ ...baseProps.filters, search: 'missing' }} />);
     expect(tableProps.current).toEqual(expect.objectContaining({
       emptyMessage: 'No tasks match these filters',
       unavailable: { title: 'Tasks unavailable', onRetry: tableState.retry },

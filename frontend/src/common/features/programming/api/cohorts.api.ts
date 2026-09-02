@@ -1,6 +1,7 @@
 import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
 import type {
+  CohortListFilters,
   CohortSortKey,
   CohortYouthReport,
   CreateCohortInput,
@@ -26,7 +27,7 @@ export function getCohorts(
 }
 
 export function getCohortPage(
-  filters: { programId?: string; search?: string; status?: string },
+  filters: CohortListFilters,
   pagination: CursorRequest<CohortSortKey>,
   opts?: RequestOptions,
 ) {

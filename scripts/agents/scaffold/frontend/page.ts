@@ -29,7 +29,11 @@ export default function ${name}() {
 
   // TODO: Permissions and application services.
 
-  // TODO: Page data and preferences.
+  // TODO: Page data.
+
+  // TODO: Saved preferences, when this page has durable controls.
+
+  // TODO: Filter configuration passed to every page data view.
 
   // TODO: Selection and page-spanning actions.
 
@@ -43,7 +47,7 @@ export default function ${name}() {
 
   // Render.
   return (
-    <main className="page-container page-container--data">
+    <main className="page-container">
       <PageHeader title="${name}" />
       <PageBody
         ariaLabel="${name} overview"
