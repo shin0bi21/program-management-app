@@ -29,6 +29,12 @@ function assertParses(relativePath: string): void {
   assert.deepEqual(errors.map(diagnostic => ({ code: diagnostic.code, message: diagnostic.messageText })), []);
 }
 
+function assertOrdered(source: string, markers: string[]): void {
+  const positions = markers.map(marker => source.indexOf(marker));
+  assert.equal(positions.every(position => position >= 0), true);
+  assert.deepEqual([...positions].sort((left, right) => left - right), positions);
+}
+
 test('previews root and route-family pages without writing files', () => {
   assert.deepEqual(scaffoldFrontend(['page', 'Leads', '--dry-run']), [
     'frontend/src/pages/Leads/Leads.tsx',
@@ -50,8 +56,18 @@ test('creates only the required page files with honest orchestration placeholder
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
   assert.match(read(files[0]), /Filter configuration passed to every page data view/);
-  assert.match(read(files[1]), /it\.todo\('wires permissions, restored controls/);
-  assert.match(read(files[1]), /cross-owner callbacks without repeating child behavior/);
+  assertOrdered(read(files[1]), [
+    'Page-local error state',
+    'Permissions and application services',
+    'Page data',
+    'Saved preferences and the current view',
+    'Filter configuration',
+    'Selection and page-spanning actions',
+    'Modal and confirmation workflows',
+    'Table, calendar, dashboard, and body initialization',
+    'Derived errors and presentation state',
+    'Render',
+  ]);
   assertParses(files[0]);
   assertParses(files[1]);
 });

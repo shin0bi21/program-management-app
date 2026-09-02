@@ -79,7 +79,8 @@ only the coordination or domain outcome it adds, not repeat a child's mechanics.
 Cover lifecycle and error states only when they are part of that owner's
 contract. Describe observable behavior and avoid arbitrary sleeps, private
 implementation assertions, and mocks that bypass the boundary under test.
-Give a non-trivial test file a short opening comment that states its scope.
+Use owner-specific suite sections when ordering materially clarifies the tested
+lifecycle; do not add a file-level comment that merely restates the filename or suite name.
 
 For surface-specific ownership rules, start at the
 [frontend guide](../frontend/README.md#find-the-right-guide). It routes pages,

@@ -1,4 +1,3 @@
-// Owns Tasks route composition, preferences, permissions, selection, and cross-owner callbacks.
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
