@@ -13,6 +13,8 @@ This document is the single source for page-table row identity, rendering, actio
 
 Columns may render cells directly. Extract a row-owned component only when a region has meaningful interaction, accessibility, or independently testable behavior; do not create a wrapper merely to mirror table markup.
 
+Row or column tests own rendered values, accessible action names, emitted record values and permission-aware controls. They do not repeat shared table keyboard or selection mechanics.
+
 ## Own query keys
 
 Give each remote table a stable list-key prefix that contains only cursor-list variants. Keep overview, dashboard, calendar, options, and direct-record queries on sibling keys rather than beneath a broad prefix that mutation code might invalidate accidentally.
@@ -71,6 +73,8 @@ Use one named synchronization helper per table-row type when status, placement, 
 
 If an endpoint cannot return the complete canonical row, correct the backend projection and response contract instead of falling back to a table refresh.
 
+For every update path, mutation-owner tests assert the exact focused API payload, authoritative replacement in every cached variant containing the row, unchanged variants without it, preserved unaffected references, and no list invalidation or refresh. They also cover the required selection, calendar and dashboard reconciliation.
+
 ## Create and delete rows
 
 - After a confirmed delete, call `removeInfiniteListRow` and reconcile selection and other owners. Do not refetch the table.
@@ -87,6 +91,8 @@ If an endpoint cannot return the complete canonical row, correct the backend pro
 
 Overview and dashboard queries are derived aggregates and may be invalidated by their exact key. Calendar buffers, selected-record state, and other mounted owners use their narrow adapters. A broad invalidation is forbidden when it would also match the table list.
 
+Delete tests assert local removal without another list request or page backfill. Create tests assert the exact list-prefix invalidation and authoritative reloaded result. Commands spanning application areas assert every returned existing row replacement and only the necessary created or aggregate invalidations.
+
 ## Handle concurrency and failure
 
 - Prevent overlapping mutations for the same row when the UI can trigger them.
@@ -94,16 +100,4 @@ Overview and dashboard queries are derived aggregates and may be invalidated by 
 - Use serialization, cancellation, or revisions only when overlapping work can genuinely reach the same row.
 - Focused commands must not submit a full cached record merely to change one field; the backend re-reads authoritative state and returns the final row.
 
-## Test row behaviour
-
-For every update path, assert:
-
-- Assert the exact focused API payload.
-- Confirm that the canonical response replaces the row in every matching cached variant.
-- Confirm that cached variants without the row remain unchanged and do not gain it.
-- Preserve unaffected row references.
-- Verify that active filter and sort differences do not trigger invalidation, another list request, or table refreshing state.
-- Reconcile selection, calendar, dashboard, and related areas only where required.
-- Confirm that failed and duplicate actions do not reconcile stale data.
-
-For delete, assert local removal without a list request or page backfill. For create invalidation, assert the exact list prefix and authoritative reloaded result. For responses spanning application areas, assert every returned existing row is replaced and only the explicitly derived or created owners are invalidated.
+Failure and duplicate-action tests confirm that stale data is not reconciled. Concurrency regressions verify that focused commands preserve unrelated fields changed after the client's original read.

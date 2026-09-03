@@ -6,6 +6,12 @@ Keep one-off props beside the component. A non-trivial workflow hook owns initia
 
 Form modals use this workflow-specific file layout:
 
+```bash
+npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal --dry-run
+```
+
+Remove `--dry-run` to generate the skeleton below. The owner path may be inside a page, page-family `common/`, or `common/features/` component owner.
+
 ```text
 components/
   ExampleModal/
@@ -39,6 +45,8 @@ const closeExampleModal = () => setExampleModalState(null);
 
 Inventory page actions, table rows, calendar cells/items, and dashboard cards that open the modal. Pass known context in and lock fields the entry path already decided.
 
+Route tests own modal entry paths, target context and cross-child reconciliation. They invoke the modal's public callback rather than repeating its internal interaction.
+
 ## Render the modal
 
 ```tsx
@@ -68,6 +76,8 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 
+Component tests own field, validation-message and status wiring. Shared `Modal` tests own generic focus, Escape, delayed success, disabled-close and timer cleanup. Use Playwright when portal or browser focus geometry matters.
+
 ## Manage fields, data and mutations
 
 - Align required, optional, derived, fixed, and dependent fields across persistence, backend validation, API types, form state, labels, disabled states, and submit guards.
@@ -78,8 +88,6 @@ Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their co
 - Prevent same-tick duplicate submission and disable every dismissal/submit path consistently while locked.
 - Surface centralized API error messages and field details without replacing them with parsing failures.
 
-One owner controls each mutation. A page-private modal may call its typed API and return the authoritative saved record through `onSaved`; the page action owner then reconciles its children. A shared contextual modal receives an async callback when its consumer must coordinate several views or caches. Table results follow the [row-operation contract](../tables/rows.md).
+One owner controls each mutation. A page-private modal may call its typed API and return the authoritative saved record through `onSaved`; the page action owner then reconciles its children. A shared contextual modal receives an async callback when its consumer must coordinate several views or caches. Table results follow the [row-operation contract](table-rows.md).
 
-## Test the modal workflow
-
-Workflow-hook tests own defaults, required fields, dependent transitions, contextual locks, add/edit reset, exact command payloads, submit locking, authoritative success ordering, retry, and failure recovery. Component tests own field and status wiring. Route tests own entry paths and cross-child reconciliation. Shared `Modal` tests own generic focus, Escape, delayed success, disabled-close, and timer cleanup. Use Playwright when portal or browser focus geometry matters.
+Workflow-hook tests own defaults, required fields, dependent transitions, contextual locks, add/edit reset, exact command payloads, submit locking, authoritative success ordering, retry and failure recovery.

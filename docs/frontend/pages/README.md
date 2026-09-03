@@ -28,11 +28,15 @@ The generated page scaffold uses the same sections. See the
 [Tasks page](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours page](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
 
+Organize route tests under the same section names and in the same order, omitting phases the page does not need. Constants and pure helpers do not need a route-test section unless they expose page behavior. Within each phase, order tests from the default or successful path through permission, empty, failure and recovery variants.
+
 ## Load page data
 
 Load only the remote options and records needed to coordinate the whole page. A table or
 calendar keeps its own collection query. Preserve the dependency path
 `data → preferences → selection → actions`.
+
+Route tests cover page-owned loading and populated states. Child query-hook tests own their request inputs, cancellation and response shaping.
 
 ## Save page preferences
 
@@ -44,6 +48,8 @@ values through optimistic functional updates.
 Keep saved option identifiers when their reference query fails. Reconcile them only after the
 options load successfully.
 
+Preference-hook tests own defaults, delayed restoration, normalization, complete functional saves and recovery. Route tests cover only restored controls and view wiring.
+
 ## Define page filters
 
 Define one named, stable filter object in the route after its data and preferences. Pass that
@@ -54,14 +60,13 @@ rebuild page filters from separate props.
 Keep a draft search value until `SearchInput` applies it. Put the applied value in the same
 filter object used by every page data view.
 
-## Coordinate selection, actions and dialogs
+Route tests verify that one filter object reaches every active data view. The owning preference-hook test covers persisted search and filter transitions.
 
-Keep selected identity in the route when it coordinates multiple views or dialogs. Keep an
-action in the route when it reconciles multiple page children or related domains.
+## Coordinate page workflows
 
-Keep each dialog target and its handlers together in the route when the dialog starts a page
-workflow. Keep modal form errors inside the modal; report page-owned data and action failures
-through the page error overlay.
+Keep selection, actions and dialog targets in the route only when they coordinate multiple views or page children. Single-owner behavior stays with that child.
+
+Route tests own cross-view reconciliation and dialog entry wiring. Child owners test their internal workflow.
 
 ## Compose page components
 
@@ -72,46 +77,18 @@ The route supplies page-wide actions and controls to `PageHeader`, then supplies
 or summary and one active data view to `PageBody`. Route pages do not recreate those shared
 wrappers. Follow the component-specific guides for the children themselves.
 
-## Connect the route
-
-Follow [App navigation](../components/navigation/README.md) for route registration,
-permissions, destination visibility and active navigation state. Create a route-family layout
-only when sibling routes share persistent rendered UI, state or coordination—not merely a URL
-prefix or permission.
-
-## Test page orchestration
-
-Route tests own permission-dependent actions, restored-control wiring, view switching,
-selection context, dialog entry paths and cross-child coordination. A preference-hook test
-owns defaults, restoration, normalization, saving and recovery. Child component and hook tests
-own their internal behavior.
-
-Organize route tests in the same lifecycle order as the route component, omitting sections the
-page does not need:
-
-1. Page-local error state.
-2. Permissions and application services.
-3. Page data, covering its loading and populated states.
-4. Saved preferences and the current view, covering delayed restoration and restored controls.
-5. Filter configuration shared by every page data view.
-6. Selection and page-spanning actions.
-7. Modal and confirmation workflows.
-8. Table, calendar, dashboard and body initialization.
-9. Derived errors and presentation state.
-10. Final page-shell and dialog rendering.
-
-Use short section comments with these owner names when a suite has several tests. Keep a test
-under the phase that owns its asserted outcome: for example, a delete confirmation belongs to
-modal and confirmation workflows, while clearing the selected dashboard after confirmed
-deletion belongs to selection and page-spanning actions. Order tests within a phase from the
-default or successful path through permission, empty, failure and recovery variants.
-
-Mock a child at its public prop boundary when its callback starts a route workflow. Use
-Playwright only when correctness depends on real focus, geometry, layout, scrolling, observers,
-portals or pointer behavior. Follow the cross-cutting [testing guide](../../workflows/testing.md)
-for runner selection.
+Route tests cover active-view selection, child prop wiring, derived page errors, the final page shell and dialogs. Mock a child at its public prop boundary when its callback starts a route workflow. Child tests own their internal rendering and interaction.
 
 ## Organize page files
+
+Preview a root or route-family page with the page preset:
+
+```bash
+npm run scaffold:frontend -- page Leads --dry-run
+npm run scaffold:frontend -- page Staff/Schedules --dry-run
+```
+
+Remove `--dry-run` to generate the skeleton below.
 
 Keep the route entry, its test and optional route styles at the page root. Follow
 [Components](../components/README.md), [State and data](../architecture/state-and-data.md), and
