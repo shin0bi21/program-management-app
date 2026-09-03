@@ -27,6 +27,8 @@ function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
+Overview-hook tests own query keys, enabled conditions, server inputs, cancellation and domain response shaping. They do not repeat generic TanStack Query fetching, caching, retry or refresh semantics.
+
 ## Assign dashboard ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.
@@ -36,11 +38,17 @@ Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. 
 - Page-wide actions stay in `PageHeader`; record-specific actions may live in the relevant card.
 - A mutation reconciles or invalidates the overview query separately from table row reconciliation.
 
-## Test the dashboard
-
-Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring, and representative query-state wiring. Hook tests own query keys, enabled conditions, server inputs, cancellation, and domain response shaping; they do not repeat generic TanStack Query fetching, caching, retry, or refresh semantics. Card tests own card-specific actions and accessible content. Route tests only prove the selected record reaches the dashboard and cross-owner callbacks are connected.
+Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring and representative query-state wiring. Card tests own card-specific actions and accessible content. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
 
 ## Organize dashboard files
+
+Preview a page-owned dashboard with the dashboard preset:
+
+```bash
+npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboard --dry-run
+```
+
+Remove `--dry-run` to generate the skeleton below.
 
 ```text
 components/

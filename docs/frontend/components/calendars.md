@@ -43,6 +43,8 @@ Every item has one inclusive `{ start, end }` range. A one-period record uses th
 
 Ranged records match overlap and appear once as complete records. Never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months and years.
 
+The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation and reference preservation. `useDataBuffer` tests own generic range loading, accumulation, stale-result protection, mutation overrides and cleanup.
+
 ## Assign calendar and item ownership
 
 The shared `TimelineCalendar` owns row/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional row selection. A row can represent a resource, program, room, or another domain axis. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.
@@ -57,24 +59,27 @@ The shared `TimelineCalendar` owns row/period virtualization, grid semantics, na
 
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 
+The page-calendar test owns capability mapping, selection, item construction and exact callback-to-action wiring. Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.
+
 ## Save and reconcile changes
 
 Send add, move, resize, status, and delete events through narrow APIs. Move and resize requests contain only the changed range and optional destination resource; the backend re-reads authoritative state.
 
-After success, reconcile the visible calendar buffer, selection and affected dashboard. If the same record appears in a table, follow [table row operations](../tables/rows.md). Preserve local calendar mutation overrides until confirmed server data arrives so stale loads cannot resurrect deletes or revert moves.
+After success, reconcile the visible calendar buffer, selection and affected dashboard. If the same record appears in a table, follow [table row operations](table-rows.md). Preserve local calendar mutation overrides until confirmed server data arrives so stale loads cannot resurrect deletes or revert moves.
 
 Persist durable filters with page preferences. Keep browser-local calendar position separate through a page-specific `positionStorageKey`.
 
-## Test the calendar
-
-- The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation, and reference preservation.
-- The page-calendar test owns capability mapping, selection, item construction, and exact callback-to-action wiring.
-- The page test owns shared controls, view switching, dialog entry, and cross-view selection.
-- `useDataBuffer` tests own generic range loading, accumulation, stale-result protection, mutation overrides, and buffer cleanup. Page-calendar tests do not repeat those mechanics.
-- Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts, and unit-testable interaction cleanup.
-- Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, real-browser cancellation and unmount behavior, and mobile geometry.
+The route test owns shared controls, view switching, dialog entry and cross-view selection. Mutation-owner tests verify visible-buffer, selection and dashboard reconciliation without repeating generic buffer mechanics.
 
 ## Organize calendar files
+
+Preview a page-owned calendar with the calendar preset:
+
+```bash
+npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/components ScheduleCalendar --dry-run
+```
+
+Remove `--dry-run` to generate the skeleton below.
 
 ```text
 components/

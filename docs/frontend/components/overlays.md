@@ -12,13 +12,11 @@ An overlay appears above the current interface. Choose the pattern by how the us
 
 “Popover” is the technical name for an anchored floating surface. In human-facing documentation, prefer the more specific term, such as “action menu,” “filter menu” or “date picker.” Use “floating menu” when several anchored patterns share the same rule.
 
-## Use shared overlay behaviour
+## Use and test shared overlay behaviour
 
 Use shared overlay primitives when their contracts fit. They centralize portal rendering, positioning, dismissal, keyboard behaviour and focus return. A portalled surface needs its own root CSS class because it renders outside its caller's document subtree.
 
 The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
-
-## Test overlay boundaries
 
 The trigger owner tests only the target/open-state wiring, domain content, and callback values it supplies. Shared overlay component and hook tests own generic toggle, positioning, dismissal, keyboard behavior, and focus return. Consumers do not repeat those mechanics merely because they render the shared overlay.
 
