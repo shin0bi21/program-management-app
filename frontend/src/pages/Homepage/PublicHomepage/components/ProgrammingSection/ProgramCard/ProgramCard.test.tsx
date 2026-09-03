@@ -13,7 +13,7 @@ const session: HomepageSession = {
   endsAt: new Date(Date.now() + 2 * 86_400_000 + 7_200_000).toISOString(),
   cohortName: 'Summer 2026',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  programName: 'Future Ready',
   programDescription: 'Build confidence and communication skills.',
   rosterMode: 'enrolled',
   minAge: 12,
@@ -24,16 +24,16 @@ const session: HomepageSession = {
 describe('ProgramCard', () => {
   it('keeps program details and renders its next database session', () => {
     const program: Program = {
-      programName: 'Soft Skills',
+      programName: 'Future Ready',
       age: 'Ages 12–15',
       day: 'Every Tuesday',
-      title: 'Soft Skills Program',
+      title: 'Future Ready Program',
       copy: 'Build confidence and communication skills.',
     };
     render(<ProgramCard program={program} sessions={[session]} />);
 
     expect(screen.getByText('Every Tuesday')).toBeInTheDocument();
-    expect(screen.getByText('Soft Skills Program')).toBeInTheDocument();
+    expect(screen.getByText('Future Ready Program')).toBeInTheDocument();
     expect(screen.getByText('Ages 12–15')).toBeInTheDocument();
     expect(screen.getByText('Build confidence and communication skills.')).toBeInTheDocument();
     expect(screen.queryByText('Summer 2026')).not.toBeInTheDocument();

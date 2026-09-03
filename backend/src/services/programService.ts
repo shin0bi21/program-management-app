@@ -54,10 +54,3 @@ export async function updateProgram(id: string, data: UpdateProgramInput) {
   if (!rows.length) throw new NotFoundError('Program not found');
   return rows[0];
 }
-
-/** Returns the editable default assignment for a lead created from public intake. */
-export function suggestProgramNameForAge(age: number) {
-  if (age >= 12 && age <= 15) return 'Soft Skills';
-  if (age >= 16 && age <= 19) return 'Job Readiness';
-  return null;
-}

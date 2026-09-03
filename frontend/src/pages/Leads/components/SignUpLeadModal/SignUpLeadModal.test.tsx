@@ -27,7 +27,7 @@ const lead: Lead = {
   age: 14,
   school: 'Test School',
   recommendedProgramId: 'program-1',
-  recommendedProgramName: 'Soft Skills',
+  recommendedProgramName: 'Future Ready',
   contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian',
   discoverySource: 'online',
@@ -40,7 +40,7 @@ const lead: Lead = {
 const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  programName: 'Future Ready',
   rosterMode: 'enrolled' as const,
   minAge: 12,
   maxAge: 15,
@@ -81,7 +81,7 @@ describe('SignUpLeadModal', () => {
     )).not.toBeInTheDocument();
     expect(screen.queryByText('Choose a cohort')).not.toBeInTheDocument();
     fireEvent.click(cohortSelect);
-    const cohortOption = await screen.findByRole('menuitemradio', { name: /Soft Skills — Summer 2026/ });
+    const cohortOption = await screen.findByRole('menuitemradio', { name: /Future Ready — Summer 2026/ });
     expect(cohortOption).toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Spring 2026/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Drop In/ })).not.toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('SignUpLeadModal', () => {
     );
 
     fireEvent.click(cohortOption);
-    expect(cohortSelect).toHaveTextContent('Soft Skills — Summer 2026');
+    expect(cohortSelect).toHaveTextContent('Future Ready — Summer 2026');
   });
 
   it('quietly excludes cohorts outside the lead age range', async () => {
@@ -113,7 +113,7 @@ describe('SignUpLeadModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cohort enrollment' }));
 
     expect(screen.queryByRole('menuitemradio', {
-      name: /Soft Skills — Summer 2026/,
+      name: /Future Ready — Summer 2026/,
     })).not.toBeInTheDocument();
   });
 

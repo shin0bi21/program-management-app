@@ -13,7 +13,7 @@ const sessions = [
     endsAt: '2026-08-04T23:00:00.000Z',
     cohortName: 'Summer 2026',
     programId: 'program-1',
-    programName: 'Soft Skills',
+    programName: 'Future Ready',
     programDescription: 'Build communication skills.',
     rosterMode: 'enrolled',
     minAge: 12,
@@ -28,13 +28,13 @@ describe('ProgrammingSection', () => {
 
     expect(screen.getByRole('heading', { name: /programming/i })).toBeInTheDocument();
     expect(container.querySelectorAll('.program-card')).toHaveLength(3);
-    expect(screen.getAllByText('Soft Skills Program')).toHaveLength(1);
+    expect(screen.getAllByText('Future Ready Program')).toHaveLength(1);
   });
 
   it('keeps all program cards when no sessions are scheduled', () => {
     render(<ProgrammingSection sessions={[]} />);
     expect(screen.getByText('Drop-in Days')).toBeInTheDocument();
-    expect(screen.getByText('Soft Skills Program')).toBeInTheDocument();
+    expect(screen.getByText('Future Ready Program')).toBeInTheDocument();
     expect(screen.getByText('Job Readiness Program')).toBeInTheDocument();
   });
 
