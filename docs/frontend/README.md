@@ -49,9 +49,9 @@ Rendered-surface guides are flat files under `components/`; add a subdirectory o
 | Frontend architecture | [Architecture](architecture/README.md) |
 | State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
 | Where code should live | [Ownership](architecture/ownership.md) |
-| Creating a new page or component | [Scaffolding](#scaffold-a-page-or-component) |
+| Creating a new page or component | [Scaffolding](#scaffolding) |
 
-## Scaffold a page or component
+## Scaffolding
 
 Use the frontend scaffolder to preview and create the required files for an established owner. Choose the owner guide above, then use the preset documented beside that owner's skeleton.
 

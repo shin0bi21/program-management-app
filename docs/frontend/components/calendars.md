@@ -71,7 +71,7 @@ Persist durable filters with page preferences. Keep browser-local calendar posit
 
 The route test owns shared controls, view switching, dialog entry and cross-view selection. Mutation-owner tests verify visible-buffer, selection and dashboard reconciliation without repeating generic buffer mechanics.
 
-## Organize calendar files
+## Scaffolding
 
 Preview a page-owned calendar with the calendar preset:
 

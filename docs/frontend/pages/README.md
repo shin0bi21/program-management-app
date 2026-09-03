@@ -79,7 +79,7 @@ wrappers. Follow the component-specific guides for the children themselves.
 
 Route tests cover active-view selection, child prop wiring, derived page errors, the final page shell and dialogs. Mock a child at its public prop boundary when its callback starts a route workflow. Child tests own their internal rendering and interaction.
 
-## Organize page files
+## Scaffolding
 
 Preview a root or route-family page with the page preset:
 
@@ -95,7 +95,7 @@ Keep the route entry, its test and optional route styles at the page root. Follo
 [Frontend ownership](../architecture/ownership.md) for child directories, hooks and shared
 code. Colocate each test with its owner.
 
-## Page DOM structure
+The generated route follows this DOM skeleton:
 
 ```text
 application shell
