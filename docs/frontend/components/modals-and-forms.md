@@ -4,6 +4,8 @@ A page-owned modal owns one form draft, validation, submission lifecycle, and fa
 
 Keep one-off props beside the component. A non-trivial workflow hook owns initialization, draft transitions, validation, submit locking, API errors, reset, and the authoritative success callback.
 
+## Scaffolding
+
 Form modals use this workflow-specific file layout:
 
 ```bash

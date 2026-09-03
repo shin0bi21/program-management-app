@@ -40,7 +40,7 @@ Overview-hook tests own query keys, enabled conditions, server inputs, cancellat
 
 Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring and representative query-state wiring. Card tests own card-specific actions and accessible content. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
 
-## Organize dashboard files
+## Scaffolding
 
 Preview a page-owned dashboard with the dashboard preset:
 

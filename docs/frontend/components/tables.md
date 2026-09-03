@@ -128,7 +128,7 @@ For example, a domain hook can prove that `pageParam: 'next'` becomes `cursor: '
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table rows](table-rows.md).
 
-## Organize table files
+## Scaffolding
 
 Preview a page-owned table with the table preset:
 
