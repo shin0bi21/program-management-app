@@ -19,7 +19,7 @@ vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () =>
 
 const programs: Program[] = [{
   id: 'program-1',
-  name: 'Soft Skills',
+  name: 'Future Ready',
   description: null,
   rosterMode: 'enrolled',
   minAge: 12,

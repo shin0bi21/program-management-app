@@ -12,7 +12,7 @@ vi.mock('../../leads.api', () => ({
 }));
 
 vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], setPrograms: vi.fn(), loading: false, error: '' }),
+  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], setPrograms: vi.fn(), loading: false, error: '' }),
 }));
 
 vi.mock('../../../../auth/authContext', () => ({

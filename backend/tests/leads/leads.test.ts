@@ -10,10 +10,11 @@ describe('Leads API', () => {
   let staffToken: string;
   let youthUserId: string;
   let youthToken: string;
-  let softSkillsProgramId: string;
-  let softSkillsCohortId: string;
+  let eligibleProgramId: string;
+  let eligibleProgramName: string;
+  let eligibleProgramCohortId: string;
   let otherProgramCohortId: string;
-  let softSkillsCycleId: string;
+  let eligibleProgramCycleId: string;
   let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
   let convertedYouthWithoutCohortId: string | undefined;
@@ -40,14 +41,22 @@ describe('Leads API', () => {
     const youth = await seedTestUser({ email: `lead-youth-${Date.now()}@test.local`, role: 'youth' });
     youthUserId = youth.userId;
     youthToken = generateToken(youth.userId, 'youth', youth.email);
-    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
-    softSkillsProgramId = program.id;
-    ({ cohortId: softSkillsCohortId, cycleId: softSkillsCycleId } = await seedTestCohort({
-      programId: softSkillsProgramId,
+    const [program] = await sql<{ id: string; name: string }[]>`
+      SELECT id, name
+      FROM programs
+      WHERE roster_mode = 'enrolled'
+        AND ${payload.age} BETWEEN min_age AND max_age
+      ORDER BY min_age DESC, max_age ASC, name ASC
+      LIMIT 1
+    `;
+    eligibleProgramId = program.id;
+    eligibleProgramName = program.name;
+    ({ cohortId: eligibleProgramCohortId, cycleId: eligibleProgramCycleId } = await seedTestCohort({
+      programId: eligibleProgramId,
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE id != ${softSkillsProgramId} AND roster_mode = 'enrolled' ORDER BY name LIMIT 1
+      SELECT id FROM programs WHERE id != ${eligibleProgramId} AND roster_mode = 'enrolled' ORDER BY name LIMIT 1
     `;
     ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
       programId: otherProgram.id,
@@ -70,7 +79,7 @@ describe('Leads API', () => {
       await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId}`;
       await sql`DELETE FROM users WHERE id = ${crossProgramYouthId}`;
     }
-    await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
+    await deleteTestCohort(eligibleProgramCohortId, eligibleProgramCycleId);
     await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
@@ -88,8 +97,8 @@ describe('Leads API', () => {
       youthFirstName: 'Event',
       youthLastName: 'Prospect',
       status: 'new',
-      recommendedProgramId: softSkillsProgramId,
-      recommendedProgramName: 'Soft Skills',
+      recommendedProgramId: eligibleProgramId,
+      recommendedProgramName: eligibleProgramName,
       createdBy: staffUserId,
     }));
   });
@@ -326,14 +335,14 @@ describe('Leads API', () => {
 
   it('filters leads by program UUID', async () => {
     const res = await request(app)
-      .get(`/api/leads?programIds=${softSkillsProgramId}`)
+      .get(`/api/leads?programIds=${eligibleProgramId}`)
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ youthFirstName: 'Event', recommendedProgramId: softSkillsProgramId }),
+      expect.objectContaining({ youthFirstName: 'Event', recommendedProgramId: eligibleProgramId }),
     ]));
-    expect(res.body.every((lead: { recommendedProgramId: string }) => lead.recommendedProgramId === softSkillsProgramId)).toBe(true);
+    expect(res.body.every((lead: { recommendedProgramId: string }) => lead.recommendedProgramId === eligibleProgramId)).toBe(true);
   });
 
   it('filters leads by who submitted the outreach form', async () => {
@@ -416,7 +425,7 @@ describe('Leads API', () => {
     expect(res.body).toEqual(expect.objectContaining({
       id: lead.id,
       school: 'Updated Community School',
-      recommendedProgramId: softSkillsProgramId,
+      recommendedProgramId: eligibleProgramId,
       origin: lead.origin,
       status: lead.status,
       updatedBy: staffUserId,
@@ -430,7 +439,7 @@ describe('Leads API', () => {
     const res = await request(app)
       .post(`/api/leads/${lead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: softSkillsCohortId, noteCategory: 'preference' });
+      .send({ cohortId: eligibleProgramCohortId, noteCategory: 'preference' });
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
@@ -467,7 +476,7 @@ describe('Leads API', () => {
       WHERE youth_id = ${convertedYouthId!}
     `;
     expect(enrollment).toEqual({
-      cohortId: softSkillsCohortId,
+      cohortId: eligibleProgramCohortId,
       youthId: convertedYouthId,
     });
 
@@ -559,7 +568,7 @@ describe('Leads API', () => {
     expect(signedUp.body).toEqual(expect.objectContaining({
       id: externalLead.id,
       convertedYouthId: expect.any(String),
-      recommendedProgramId: softSkillsProgramId,
+      recommendedProgramId: eligibleProgramId,
       status: 'signed_up',
     }));
     convertedExternalYouthId = signedUp.body.convertedYouthId;
