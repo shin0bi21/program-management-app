@@ -30,7 +30,7 @@ const lead: Lead = {
   age: 14,
   school: 'Test School',
   recommendedProgramId: 'program-1',
-  recommendedProgramName: 'Soft Skills',
+  recommendedProgramName: 'Future Ready',
   contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian',
   discoverySource: 'online',
@@ -43,7 +43,7 @@ const lead: Lead = {
 const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  programName: 'Future Ready',
   rosterMode: 'enrolled' as const,
   minAge: 12,
   maxAge: 15,
@@ -121,7 +121,7 @@ describe('useSignUpLeadModal', () => {
     expect(onSuccess).toHaveBeenCalledWith(updatedLead);
     expect(result.current.submitStatus).toBe('success');
     expect(result.current.statusMessage).toBe(
-      'Youth profile successfully created and added to Soft Skills - Summer 2026.',
+      'Youth profile successfully created and added to Future Ready - Summer 2026.',
     );
   });
 

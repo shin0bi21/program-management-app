@@ -12,7 +12,7 @@ vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
 describe('useLeadData', () => {
   it('exposes shared program data through page-owned names', () => {
     vi.mocked(usePrograms).mockReturnValue({
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      programs: [{ id: 'program-1', name: 'Future Ready' }],
       loading: false,
       error: 'offline',
     } as ReturnType<typeof usePrograms>);
@@ -20,7 +20,7 @@ describe('useLeadData', () => {
     const { result } = renderHook(() => useLeadData());
 
     expect(result.current).toEqual({
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      programs: [{ id: 'program-1', name: 'Future Ready' }],
       programsLoading: false,
       programsError: 'offline',
     });

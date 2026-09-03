@@ -6,6 +6,24 @@ import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 
+const recommendedProgramId = sql`(
+  SELECT program.id
+  FROM programs program
+  WHERE program.roster_mode = 'enrolled'
+    AND age BETWEEN program.min_age AND program.max_age
+  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
+  LIMIT 1
+)`;
+
+const recommendedProgramName = sql`(
+  SELECT program.name
+  FROM programs program
+  WHERE program.roster_mode = 'enrolled'
+    AND age BETWEEN program.min_age AND program.max_age
+  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
+  LIMIT 1
+)`;
+
 const leadColumns = sql`
   id,
   origin,
@@ -15,16 +33,8 @@ const leadColumns = sql`
   youth_last_name,
   age,
   school,
-  (SELECT id FROM programs WHERE name = CASE
-    WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills'
-    WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness'
-    ELSE NULL
-  END LIMIT 1) AS recommended_program_id,
-  CASE
-    WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills'
-    WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness'
-    ELSE NULL
-  END AS recommended_program_name,
+  ${recommendedProgramId} AS recommended_program_id,
+  ${recommendedProgramName} AS recommended_program_name,
   contact_phone_number,
   contact_relationship,
   discovery_source,
@@ -44,7 +54,7 @@ export async function getLeads(filters: LeadQuery) {
     firstName: sql`LOWER(youth_first_name)`,
     lastName: sql`LOWER(youth_last_name)`,
     school: sql`LOWER(school)`,
-    program: sql`LOWER(CASE WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE '' END)`,
+    program: sql`LOWER(COALESCE(${recommendedProgramName}, ''))`,
     status: sql`status::text`,
     created: sql`created_at::text`,
   }[filters.sort]!;
@@ -353,7 +363,7 @@ function applyLeadFilters(filters: LeadQuery) {
     ? sql`CONCAT_WS(' ', youth_first_name, youth_last_name, school) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'`
     : sql`TRUE`;
   const programFilter = filters.programIds.length
-    ? sql`(SELECT id FROM programs WHERE name = CASE WHEN age BETWEEN 12 AND 15 THEN 'Soft Skills' WHEN age BETWEEN 16 AND 19 THEN 'Job Readiness' ELSE NULL END LIMIT 1) = ANY(${sql.array(filters.programIds)}::uuid[])`
+    ? sql`${recommendedProgramId} = ANY(${sql.array(filters.programIds)}::uuid[])`
     : sql`TRUE`;
   const originFilter = filters.origins.length
     ? sql`origin = ANY(${sql.array(filters.origins)}::lead_origin[])`

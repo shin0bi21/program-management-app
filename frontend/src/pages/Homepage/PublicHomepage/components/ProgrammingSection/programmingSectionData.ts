@@ -9,9 +9,9 @@ export const programs: Program[] = [
     dropIn: true,
   },
   {
-    programName: 'Soft Skills',
+    programName: 'Future Ready',
     age: 'Ages 12–15',
-    title: 'Soft Skills Program',
+    title: 'Future Ready Program',
     day: 'Every Tuesday',
     copy: 'Youth build soft skills through educational sessions, presentations, hands-on activities, and trips. The focus is on emotion regulation, healthy habits, relationships, and goal-setting that supports consistent school attendance and future pathways.',
   },

@@ -43,7 +43,7 @@ vi.mock('../../auth/authContext', () => ({
 vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
 
 vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' }),
+  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
 }));
 
 vi.mock('../../common/features/programming/api/cohorts.api', () => ({
@@ -69,7 +69,7 @@ describe('Leads', () => {
     signUpLead.mockResolvedValue({
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
       statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -83,7 +83,7 @@ describe('Leads', () => {
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
-      recommendedProgramId: 'program-1', recommendedProgramName: 'Soft Skills',
+      recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
@@ -123,7 +123,7 @@ describe('Leads', () => {
       age: 14,
       school: 'Outreach Test School',
       recommendedProgramId: 'program-1',
-      recommendedProgramName: 'Soft Skills',
+      recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian',
       discoverySource: 'community_outreach',
