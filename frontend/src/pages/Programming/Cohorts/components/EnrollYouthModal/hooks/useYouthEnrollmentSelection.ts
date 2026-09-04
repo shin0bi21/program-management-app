@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
-import type { YouthProfile } from '../../../../../../common/types/youth';
+import type { CohortRosterYouth, ProgramCohort } from '../../../types';
 import { getAge } from '../../../../../../common/utils/time';
 
 function isWithinAgeRange(
-  profile: YouthProfile,
+  profile: CohortRosterYouth,
   ageRange: { min: number; max: number },
 ) {
   const age = getAge(profile.dateOfBirth);
@@ -14,7 +13,7 @@ function isWithinAgeRange(
 
 export function useYouthEnrollmentSelection(
   cohort: ProgramCohort | null,
-  unenrolledYouth: YouthProfile[],
+  unenrolledYouth: CohortRosterYouth[],
 ) {
   const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
   const [ageFilterEnabled, setAgeFilterEnabled] = useState(true);

@@ -1,8 +1,7 @@
-// Owns Cohorts selection and deletion reconciliation.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../types';
 import useCohortSelection from './useCohortSelection';
 
 const cohort = { id: 'cohort-1' } as ProgramCohort;

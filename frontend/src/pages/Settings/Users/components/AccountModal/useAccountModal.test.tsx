@@ -1,8 +1,7 @@
-// Owns account-form initialization, payloads, immediate reconciliation, and failure recovery.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Account } from '../../../../../common/types/account';
+import type { User } from '../../types';
 import { inviteAccount, updateAccount } from '../../accounts.api';
 import { useAccountModal } from './useAccountModal';
 
@@ -11,7 +10,7 @@ vi.mock('../../accounts.api', () => ({
   updateAccount: vi.fn(),
 }));
 
-const account: Account = {
+const account: User = {
   id: 'account-1',
   firstName: 'Sam',
   lastName: 'Staff',
@@ -27,9 +26,9 @@ function AccountFormHarness({
   onClose,
   onSuccess,
 }: {
-  account?: Account;
+  account?: User;
   onClose: () => void;
-  onSuccess: (saved: Account) => void;
+  onSuccess: (saved: User) => void;
 }) {
   const modal = useAccountModal({ isOpen: true, account: target, onClose, onSuccess });
 

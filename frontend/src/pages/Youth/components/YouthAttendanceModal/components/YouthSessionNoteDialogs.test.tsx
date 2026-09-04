@@ -6,7 +6,7 @@ import YouthSessionNoteDialogs from './YouthSessionNoteDialogs';
 
 const sessionNoteModalState = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
 
-vi.mock('../../../../../common/features/notes/components/SessionNoteModal/SessionNoteModal', () => ({
+vi.mock('../../../../Programming/Sessions/components/SessionNoteModal/SessionNoteModal', () => ({
   default: (props: Record<string, unknown>) => {
     sessionNoteModalState.props = props;
     return <div aria-label="Session note editor" />;

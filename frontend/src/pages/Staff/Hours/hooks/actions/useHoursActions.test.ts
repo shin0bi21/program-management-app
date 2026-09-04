@@ -1,4 +1,3 @@
-// Owns save/delete reconciliation across calendar, table, overview, and task caches.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

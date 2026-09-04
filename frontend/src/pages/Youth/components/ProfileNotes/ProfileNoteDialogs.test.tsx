@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { YouthProfileNote } from '../../../../common/types/youth';
+import type { YouthProfileNote } from '../../types';
 import ProfileNoteDialogs from './ProfileNoteDialogs';
 
 const editorProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));

@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
-import { COHORT_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
-import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 import { deleteLead, updateLeadStatus } from '../../leads.api';
 import type { EditableLeadStatus, Lead } from '../../types';
+
+const COHORT_QUERY_KEY = ['cohorts'] as const;
+const YOUTH_QUERY_KEY = ['youth'] as const;
 
 interface UseLeadActionsOptions {
   tableQueryKey: readonly unknown[];

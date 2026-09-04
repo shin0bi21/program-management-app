@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { setProgramCycle } from '../../../../../../common/features/programming/api/cohorts.api';
+import { setProgramCycle } from '../../../../../Programming/Cohorts/cohorts.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
-import type { ProgramCycle } from '../../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../../../Programming/Cohorts/types';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface CycleInput {

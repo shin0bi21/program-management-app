@@ -1,11 +1,10 @@
-// Owns cycle modal submission, refresh ordering, failures, and reopen lifecycle.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setProgramCycle } from '../../../../../../common/features/programming/api/cohorts.api';
+import { setProgramCycle } from '../../../../../Programming/Cohorts/cohorts.api';
 import useCycleModal from './useCycleModal';
 
-vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../../../Programming/Cohorts/cohorts.api', () => ({
   setProgramCycle: vi.fn(),
 }));
 

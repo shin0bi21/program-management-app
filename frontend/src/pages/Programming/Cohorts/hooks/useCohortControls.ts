@@ -2,16 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
-import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import usePreferenceOptionRecovery from '../../../../common/features/Preferences/hooks/usePreferenceOptionRecovery';
+import useUserPreference from '../../../../common/features/Preferences/hooks/useUserPreference';
 import {
   mergePreferenceDefaults,
   resolvePreferenceSorting,
   resolvePreferenceStringArray,
-} from '../../../../common/features/preferences/preferenceValues';
-import type { CohortSortKey } from '../../../../common/types/cohort';
-import type { ListSort } from '../../../../common/types/pagination';
-import { getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
+} from '../../../../common/features/Preferences/preferenceValues';
+import type { CohortSortKey } from '../types';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
 
 export type CohortStatus = 'active' | 'upcoming' | 'completed';
 
@@ -71,11 +70,10 @@ export function useCohortControls(
     const preferenceSource = loadError ? null : preference;
     const resolved = mergePreferenceDefaults(DEFAULT_COHORT_PREFERENCE, preferenceSource);
     const availableProgramIds = new Set(programs.map(program => program.id));
-    const defaultProgram = getSingleAssignedProgram(role, programs)?.id ?? '';
     const restoredProgramId = resolved.programId
       && (programsError || availableProgramIds.has(resolved.programId))
       ? resolved.programId
-      : preferenceSource ? '' : defaultProgram;
+      : '';
     const restoredStatus = resolved.status ?? (role === 'staff' ? 'active' : '');
     const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
     const restoredColumnWidths = resolved.columnWidths ?? {};

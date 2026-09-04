@@ -1,4 +1,3 @@
-// Owns Cohorts page-wide program and cycle loading.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +6,7 @@ import useCohortData from './useCohortData';
 const api = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const programs = vi.hoisted(() => ({ programs: [{ id: 'program-1', name: 'Program' }] }));
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../cohorts.api', () => ({
   getProgramCycles: api.getProgramCycles,
 }));
 vi.mock('../../../../../common/features/programs/hooks/usePrograms', () => ({

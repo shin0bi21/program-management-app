@@ -1,9 +1,8 @@
-// Owns attachment create/edit initialization, payloads, linked youth, success, and failure recovery.
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SessionAttachment } from '../../../../../../../common/types/cohort';
+import type { SessionAttachment } from '../../../../types';
 import { makeCohortSession } from '../../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentModal from './SessionAttachmentModal';
@@ -14,7 +13,7 @@ const api = vi.hoisted(() => ({
   updateSessionAttachment: vi.fn(),
 }));
 
-vi.mock('../../../../../../../common/features/programming/api/sessions.api', () => api);
+vi.mock('../../../../sessions.api', () => api);
 
 const queryKey = ['sessions'] as const;
 const session = makeCohortSession();

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
-import { deleteSessionNote, getSessionNotes } from '../../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession, SessionNote } from '../../../../../../../common/types/cohort';
+import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
+import type { CohortSession, SessionNote } from '../../../../types';
 
 export function useSessionNotes({ queryKey, session, onErrorChange }: {
   queryKey: readonly unknown[];

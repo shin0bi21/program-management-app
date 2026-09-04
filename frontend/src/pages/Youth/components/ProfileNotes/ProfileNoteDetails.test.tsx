@@ -1,8 +1,7 @@
-// Owns profile-note detail metadata and domain category labeling.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { YouthProfileNote } from '../../../../common/types/youth';
+import type { YouthProfileNote } from '../../types';
 import ProfileNoteDetails from './ProfileNoteDetails';
 
 const note: YouthProfileNote = {

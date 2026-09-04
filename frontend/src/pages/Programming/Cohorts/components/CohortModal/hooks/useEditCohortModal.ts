@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
-import { updateCohort } from '../../../../../../common/features/programming/api/cohorts.api';
+import { updateCohort } from '../../../cohorts.api';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseEditCohortModalOptions {

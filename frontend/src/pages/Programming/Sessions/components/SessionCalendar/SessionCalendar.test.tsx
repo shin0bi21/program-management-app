@@ -1,4 +1,3 @@
-// Owns calendar range loading, filters, selection, actions, and responsive view behavior.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,7 +36,7 @@ interface MockFullCalendarHandle {
   };
 }
 
-vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../sessions.api', () => ({
   getSessions: (...args: unknown[]) => getSessions(...args),
 }));
 

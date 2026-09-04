@@ -19,7 +19,7 @@ const programState = vi.hoisted<{ programs: Program[]; upsertProgram: ReturnType
   upsertProgram: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/cohorts.api', () => programmingApi);
+vi.mock('../../Programming/Cohorts/cohorts.api', () => programmingApi);
 vi.mock('../../../common/features/programs/programs.api', () => programsApi);
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
@@ -42,6 +42,7 @@ describe('Programming settings', () => {
     }]);
   });
 
+  // Page data.
   it('lists programs and cycles with edit actions', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -56,6 +57,21 @@ describe('Programming settings', () => {
     expect(screen.getByRole('heading', { name: 'Edit Cycle' })).toBeInTheDocument();
   });
 
+  it('retries cycle loading without forwarding the click event as an abort signal', async () => {
+    const user = userEvent.setup();
+    programmingApi.getProgramCycles
+      .mockRejectedValueOnce(new Error('Cycle service unavailable'))
+      .mockResolvedValueOnce([]);
+    render(<MemoryRouter><Programming /></MemoryRouter>);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cycle service unavailable');
+    await user.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+
+    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalledTimes(2));
+    expect(programmingApi.getProgramCycles).toHaveBeenLastCalledWith(undefined);
+  });
+
+  // Modal and confirmation workflows.
   it('creates programs from the settings page', async () => {
     const user = userEvent.setup();
     const created = {
@@ -91,6 +107,7 @@ describe('Programming settings', () => {
     expect(screen.getByText('Cycle deleted')).toBeInTheDocument();
   });
 
+  // Derived errors and presentation state.
   it('keeps an assigned cycle visible when deletion is rejected', async () => {
     const user = userEvent.setup();
     programmingApi.deleteProgramCycle.mockRejectedValue(new Error('Cycle cannot be deleted because it is still in use'));
@@ -102,19 +119,5 @@ describe('Programming settings', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle cannot be deleted because it is still in use');
     expect(screen.getByText('Fall 2026')).toBeInTheDocument();
-  });
-
-  it('retries cycle loading without forwarding the click event as an abort signal', async () => {
-    const user = userEvent.setup();
-    programmingApi.getProgramCycles
-      .mockRejectedValueOnce(new Error('Cycle service unavailable'))
-      .mockResolvedValueOnce([]);
-    render(<MemoryRouter><Programming /></MemoryRouter>);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cycle service unavailable');
-    await user.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
-
-    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalledTimes(2));
-    expect(programmingApi.getProgramCycles).toHaveBeenLastCalledWith(undefined);
   });
 });

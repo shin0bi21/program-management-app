@@ -1,4 +1,3 @@
-// Owns Hours dashboard state composition and overview-card inputs.
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -5,7 +5,7 @@ import { inviteAccount, updateAccount } from '../../accounts.api';
 import { getErrorMessage } from '../../../../../http/errors';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
-import type { Account } from '../../../../../common/types/account';
+import type { User } from '../../types';
 import { accountSchema, type AccountFormData } from './accountSchema';
 
 const defaultValues: AccountFormData = {
@@ -19,8 +19,8 @@ const defaultValues: AccountFormData = {
 interface AccountModalControllerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (account: Account) => void;
-  account?: Account;
+  onSuccess: (account: User) => void;
+  account?: User;
 }
 
 export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
@@ -60,7 +60,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     setSubmitStatus('submitting');
     setError('');
 
-    let savedAccount: Account;
+    let savedAccount: User;
     try {
       const payload = {
         firstName: data.firstName.trim(),

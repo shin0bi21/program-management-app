@@ -1,8 +1,7 @@
-// Owns signup target reset, cohort eligibility, command payloads, and reconciliation outcomes.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCohorts } from '../../../../common/features/programming/api/cohorts.api';
+import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
 import {
   createQueryClientWrapper,
   createTestQueryClient,
@@ -12,7 +11,7 @@ import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import useSignUpLeadModal from './useSignUpLeadModal';
 
-vi.mock('../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../Programming/Cohorts/cohorts.api', () => ({
   getCohorts: vi.fn(),
 }));
 

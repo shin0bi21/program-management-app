@@ -83,6 +83,8 @@ function isPageModalOwner(parts: string[]): boolean {
 function isFeatureModalOwner(parts: string[]): boolean {
   if (parts.slice(0, 4).join('/') !== 'frontend/src/common/features') return false;
 
+  if (parts.length === 4) return true;
+
   const [feature, components, ...nestedOwners] = parts.slice(4);
   return Boolean(feature) && components === 'components' && isPascalCasePath(nestedOwners);
 }
@@ -138,7 +140,7 @@ function createContext(): ScaffoldContext {
     const owner = resolveOwner(ownerPath, 'Modal owner');
     const parts = toPosix(relative(repoRoot, owner)).split('/');
     if (!isPageModalOwner(parts) && !isFeatureModalOwner(parts)) {
-      throw new Error('Modal owner must be inside a page, page-family common, or common-feature components owner.');
+      throw new Error('Modal owner must be inside a page, page-family common, the common-features root, or a common-feature components owner.');
     }
     return owner;
   };

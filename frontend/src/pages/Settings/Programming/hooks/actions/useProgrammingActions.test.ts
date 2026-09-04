@@ -1,11 +1,10 @@
-// Owns cycle deletion confirmation commands and successful page-state reconciliation.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteProgramCycle } from '../../../../../common/features/programming/api/cohorts.api';
+import { deleteProgramCycle } from '../../../../Programming/Cohorts/cohorts.api';
 import useProgrammingActions from './useProgrammingActions';
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({
   deleteProgramCycle: vi.fn(),
 }));
 

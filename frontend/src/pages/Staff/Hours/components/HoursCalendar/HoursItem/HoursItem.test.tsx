@@ -1,4 +1,3 @@
-// Owns hours-item summaries, domain details, and emitted entry actions.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import HoursItem from './HoursItem';

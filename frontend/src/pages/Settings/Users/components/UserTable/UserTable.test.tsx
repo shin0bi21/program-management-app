@@ -1,4 +1,3 @@
-// Owns user table data and control wiring.
 import { render, screen } from '@testing-library/react';
 import { vi, it, expect } from 'vitest';
 import UserTable from './UserTable';

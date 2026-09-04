@@ -1,4 +1,3 @@
-// Owns navigation capabilities, active-route state, menu coordination, and route cleanup.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';

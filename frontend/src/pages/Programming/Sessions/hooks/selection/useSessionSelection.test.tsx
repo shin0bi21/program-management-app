@@ -1,4 +1,3 @@
-// Owns URL-backed Sessions selection and table/calendar reconciliation.
 import type { PropsWithChildren } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';

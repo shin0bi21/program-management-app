@@ -1,4 +1,3 @@
-// Owns Lead-note edit draft normalization, command payload, and validation.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { updateLeadNote } from '../../../leads.api';

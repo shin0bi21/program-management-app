@@ -1,6 +1,6 @@
-import type { YouthProfileNote } from '../../../../common/types/youth';
-import NoteCategoryBadge from '../../../../common/features/notes/components/NoteCategoryBadge/NoteCategoryBadge';
-import NoteRow from '../../../../common/features/notes/components/NoteRow/NoteRow';
+import type { YouthProfileNote } from '../../types';
+import NoteCategoryBadge from '../../../../common/features/Notes/NoteCategoryBadge/NoteCategoryBadge';
+import NoteRow from '../../../../common/features/Notes/NoteRow/NoteRow';
 
 const categoryLabel = (category: YouthProfileNote['category']) => (
   category.charAt(0).toUpperCase() + category.slice(1)

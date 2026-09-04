@@ -1,4 +1,4 @@
-import type { CohortSession } from '../../common/types/cohort';
+import type { CohortSession } from '../../pages/Programming/Sessions/types';
 
 export function makeCohortSession(overrides: Partial<CohortSession> = {}): CohortSession {
   return {
@@ -9,7 +9,7 @@ export function makeCohortSession(overrides: Partial<CohortSession> = {}): Cohor
     theme: 'Communication',
     cohortName: 'Summer 2026',
     programId: 'program-1',
-    programName: 'Soft Skills',
+    programName: 'Future Ready',
     rosterMode: 'enrolled',
     startsAt: '2026-08-10T17:00:00.000Z',
     endsAt: '2026-08-10T19:00:00.000Z',

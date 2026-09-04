@@ -2,12 +2,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/sessions.api';
-import type { SessionNote } from '../../../../../common/types/cohort';
+import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import type { YouthAttendanceSession } from '../types';
 import useYouthSessionNotes from './useYouthSessionNotes';
 
-vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../../../Programming/Sessions/sessions.api', () => ({
   unlinkSessionNoteYouth: vi.fn(),
 }));
 

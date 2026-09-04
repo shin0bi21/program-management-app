@@ -9,9 +9,8 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import YouthReportModal from '../../../common/features/programming/components/YouthReportModal/YouthReportModal';
-import { COHORT_TABLE_KEYS, type CohortListFilters, type ProgramCohort } from '../../../common/types/cohort';
-import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
+import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
+import { COHORT_TABLE_KEYS, type CohortListFilters, type ProgramCohort } from './types';
 import AddCohortModal from './components/CohortModal/AddCohortModal';
 import CohortTable from './components/CohortTable/CohortTable';
 import useCohortTable from './components/CohortTable/hooks/useCohortTable';
@@ -75,10 +74,6 @@ export default function Cohorts() {
   const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
   const closeReportModal = () => setReportTarget(null);
 
-  // Generate sessions modal.
-  const [generationTarget, setGenerationTarget] = useState<ProgramCohort | null>(null);
-  const closeGenerationModal = () => setGenerationTarget(null);
-
   // Edit cohort modal.
   const [editCohortTarget, setEditCohortTarget] = useState<ProgramCohort | null>(null);
   const closeEditCohortModal = () => setEditCohortTarget(null);
@@ -87,7 +82,6 @@ export default function Cohorts() {
   const columns = useCohortTable({
     canWrite: canWriteCohorts,
     onManageRoster: setRosterTarget,
-    onGenerateSessions: setGenerationTarget,
     onEdit: setEditCohortTarget,
     onDelete: actions.requestDelete,
   });
@@ -191,12 +185,6 @@ export default function Cohorts() {
         cycles={cycles}
         onClose={closeEditCohortModal}
         onUpdated={actions.refreshCohorts}
-      />
-
-      <GenerateSessionsModal
-        cohort={generationTarget}
-        onClose={closeGenerationModal}
-        onSuccess={actions.refreshGeneratedSessions}
       />
 
       <ConfirmModal

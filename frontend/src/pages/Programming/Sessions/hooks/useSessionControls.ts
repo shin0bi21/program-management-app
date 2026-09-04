@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { Program } from '../../../../common/features/programs/types';
-import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import usePreferenceOptionRecovery from '../../../../common/features/Preferences/hooks/usePreferenceOptionRecovery';
+import useUserPreference from '../../../../common/features/Preferences/hooks/useUserPreference';
 import {
   mergePreferenceDefaults,
   resolveAvailablePreferenceIds,
@@ -11,10 +11,10 @@ import {
   resolvePreferenceSorting,
   resolvePreferenceStringArray,
   resolvePreferenceValue,
-} from '../../../../common/features/preferences/preferenceValues';
-import type { ProgramCohort, SessionSortKey, SessionType } from '../../../../common/types/cohort';
-import type { ListSort } from '../../../../common/types/pagination';
-import { getSingleActiveCohort, getSingleAssignedProgram } from '../../common/utils/staffProgrammingDefaults';
+} from '../../../../common/features/Preferences/preferenceValues';
+import type { ProgramCohort } from '../../Cohorts/types';
+import type { SessionSortKey, SessionType } from '../types';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { SessionStatusFilter } from '../types';
 
 type SessionView = 'calendar' | 'table';
@@ -41,7 +41,6 @@ interface UseSessionControlsOptions {
   sessionTypes: SessionType[];
   sessionTypesLoading: boolean;
   sessionTypesError?: string | null;
-  onFiltersChanged: () => void;
   tableKeys: readonly SessionSortKey[];
 }
 
@@ -59,7 +58,7 @@ const DEFAULT_SESSION_PREFERENCE: SessionPreference = {
 
 export function useSessionControls({
   role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
-  sessionTypes, sessionTypesLoading, sessionTypesError, onFiltersChanged, tableKeys,
+  sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
   const [search, setSearch] = useState('');
@@ -103,15 +102,14 @@ export function useSessionControls({
     ) return;
     const preferenceSource = loadError ? null : preference;
     const resolved = mergePreferenceDefaults(DEFAULT_SESSION_PREFERENCE, preferenceSource);
-    const assignedProgram = getSingleAssignedProgram(role, programs);
     const restoredProgramIds = preferenceSource
       ? resolveAvailablePreferenceIds(resolved.programIds, programs, !programsError)
-      : assignedProgram ? [assignedProgram.id] : [];
+      : [];
     const restoredCohortId = preferenceSource
       ? cohortsError || cohorts.some(cohort => cohort.id === resolved.cohortId)
         ? resolved.cohortId ?? ''
         : ''
-      : assignedProgram ? getSingleActiveCohort(cohorts, assignedProgram.id)?.id ?? '' : '';
+      : '';
     const restoredSessionTypeIds = preferenceSource
       ? resolveAvailablePreferenceIds(resolved.sessionTypeIds, sessionTypes, !sessionTypesError)
       : [];
@@ -236,16 +234,14 @@ export function useSessionControls({
     setSessionTypeIds(nextSessionTypeIds);
     setStatuses(nextStatuses);
     void persist({ programIds: nextProgramIds, cohortId: nextCohortId, sessionTypeIds: nextSessionTypeIds, statuses: nextStatuses });
-    onFiltersChanged();
-  }, [cohortId, onFiltersChanged, persist, programIds, sessionTypeIds, statuses]);
+  }, [cohortId, persist, programIds, sessionTypeIds, statuses]);
   const clearFilters = useCallback(() => {
     setProgramIds([]);
     setCohortId('');
     setSessionTypeIds([]);
     setStatuses([]);
     void persist({ programIds: [], cohortId: '', sessionTypeIds: [], statuses: [] });
-    onFiltersChanged();
-  }, [onFiltersChanged, persist]);
+  }, [persist]);
   const setView = useCallback((next: SessionView) => { setViewState(next); void persist({ view: next }); }, [persist]);
   const setSorting = useCallback((next: ListSort<SessionSortKey>) => { setSortingState(next); void persist({ sorting: next }); }, [persist]);
   const setColumnWidths = useCallback((next: Record<string, number>) => { setColumnWidthsState(next); void persist({ columnWidths: next }); }, [persist]);

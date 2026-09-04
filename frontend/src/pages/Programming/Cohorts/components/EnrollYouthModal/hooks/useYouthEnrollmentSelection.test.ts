@@ -1,8 +1,7 @@
-// Owns useYouthEnrollmentSelection state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../../types';
 import { makeYouthProfile } from '../../../../../../tests/factories/youth';
 import { useYouthEnrollmentSelection } from './useYouthEnrollmentSelection';
 

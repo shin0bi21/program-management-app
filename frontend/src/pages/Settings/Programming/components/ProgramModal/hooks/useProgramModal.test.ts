@@ -1,4 +1,3 @@
-// Owns Program draft lifecycle, validation, normalized commands, and failures.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

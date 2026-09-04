@@ -1,4 +1,3 @@
-// Owns selected-lead status-note loading and details lifecycle.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

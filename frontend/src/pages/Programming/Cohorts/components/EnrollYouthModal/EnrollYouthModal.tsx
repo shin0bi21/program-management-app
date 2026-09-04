@@ -5,7 +5,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../types';
 
 import { useCohortRoster } from '../../hooks/useCohortRoster';
 import {

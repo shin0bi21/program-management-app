@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { publicOutreachFormDefaultValues, publicOutreachFormSchema, type PublicOutreachFormValues } from '../../../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
+import { publicOutreachFormDefaultValues, publicOutreachFormSchema, type PublicOutreachFormValues } from '../../../../../common/features/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import { ApiError, getErrorMessage } from '../../../../../http/errors';
 import { submitPublicLead } from '../../publicHomepage.api';

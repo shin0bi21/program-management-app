@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
-import type { AccountRole, AccountSortKey, AccountStatus } from '../../../../common/types/account';
-import type { ListSort } from '../../../../common/types/pagination';
+import useUserPreference from '../../../../common/features/Preferences/hooks/useUserPreference';
+import type { UserRole, UserSortKey, UserStatus } from '../types';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
 import {
   mergePreferenceDefaults,
   resolveAvailablePreferenceValues,
   resolvePreferenceNumberRecord,
   resolvePreferenceSorting,
   resolvePreferenceStringArray,
-} from '../../../../common/features/preferences/preferenceValues';
+} from '../../../../common/features/Preferences/preferenceValues';
 
 export interface AccountPreference {
-  statuses: AccountStatus[];
-  roles: AccountRole[];
-  sorting?: ListSort<AccountSortKey>;
+  statuses: UserStatus[];
+  roles: UserRole[];
+  sorting?: ListSort<UserSortKey>;
   columnWidths?: Record<string, number>;
   hiddenColumns?: string[];
 }
 
-const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
+const DEFAULT_SORTING: ListSort<UserSortKey> = { key: 'name', direction: 'asc' };
 const DEFAULT_ACCOUNT_PREFERENCE: AccountPreference = {
   statuses: [],
   roles: [],
@@ -31,17 +31,17 @@ const DEFAULT_ACCOUNT_PREFERENCE: AccountPreference = {
 
 export function useAccountControls(
   isAdmin: boolean,
-  tableKeys: readonly AccountSortKey[],
+  tableKeys: readonly UserSortKey[],
 ) {
   // Search and filter state.
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<AccountStatus[]>([]);
-  const [roleFilters, setRoleFilters] = useState<AccountRole[]>([]);
+  const [statusFilters, setStatusFilters] = useState<UserStatus[]>([]);
+  const [roleFilters, setRoleFilters] = useState<UserRole[]>([]);
   const [ready, setReady] = useState(false);
 
   // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>(DEFAULT_SORTING);
+  const [sorting, setSortingState] = useState<ListSort<UserSortKey>>(DEFAULT_SORTING);
   const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
 
@@ -114,9 +114,9 @@ export function useAccountControls(
 
   // Save one changed control while preserving the rest of the preference object.
   const persist = useCallback((next: {
-    statuses?: AccountStatus[];
-    roles?: AccountRole[];
-    sorting?: ListSort<AccountSortKey>;
+    statuses?: UserStatus[];
+    roles?: UserRole[];
+    sorting?: ListSort<UserSortKey>;
     columnWidths?: Record<string, number>;
     hiddenColumns?: string[];
   }) => save(current => ({
@@ -130,13 +130,13 @@ export function useAccountControls(
   // Translate FilterCard's generic event into this page's typed controls.
   const applyFilter = useCallback((category: string, selected: string[]) => {
     if (category === 'status') {
-      const nextStatuses = selected as AccountStatus[];
+      const nextStatuses = selected as UserStatus[];
       setStatusFilters(nextStatuses);
       void persist({ statuses: nextStatuses });
       return;
     }
     if (category === 'role') {
-      const nextRoles = selected as AccountRole[];
+      const nextRoles = selected as UserRole[];
       setRoleFilters(nextRoles);
       void persist({ roles: nextRoles });
     }
@@ -149,7 +149,7 @@ export function useAccountControls(
     void persist({ statuses: [], roles: [] });
   }, [persist]);
   const setSorting = useCallback((next: TableSorting) => {
-    const value = next as ListSort<AccountSortKey>;
+    const value = next as ListSort<UserSortKey>;
     setSortingState(value);
     void persist({ sorting: value });
   }, [persist]);

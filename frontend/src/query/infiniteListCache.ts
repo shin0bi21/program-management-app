@@ -1,5 +1,5 @@
 import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query';
-import type { CursorPage } from '../common/types/pagination';
+import type { CursorPage } from './types';
 
 type InfiniteListData<T> = InfiniteData<CursorPage<T>>;
 

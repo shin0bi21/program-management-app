@@ -1,10 +1,9 @@
-// Owns account columns, permission/status action mapping, and exact callbacks.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { Account } from '../../../../../../common/types/account';
+import type { User } from '../../../types';
 import useUserTable from './useUserTable';
 
 const menu = vi.hoisted<{ items: ActionItem[] }>(() => ({ items: [] }));
@@ -16,14 +15,14 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
   },
 }));
 
-const account: Account = {
+const account: User = {
   id: 'account-1', firstName: 'Alice', lastName: 'Admin', email: 'alice@example.com',
   role: 'admin', status: 'active', createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-function renderCell(column: ColumnDef<Account>, value: Account) {
+function renderCell(column: ColumnDef<User>, value: User) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: value } } as CellContext<Account, unknown>);
+  return column.cell({ row: { original: value } } as CellContext<User, unknown>);
 }
 
 describe('useUserTable', () => {

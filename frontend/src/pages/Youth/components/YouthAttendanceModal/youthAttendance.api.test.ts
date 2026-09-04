@@ -1,5 +1,4 @@
 // @vitest-environment node
-// Owns youth-attendance API paths, request options, and mutation payloads.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../../http/client';

@@ -1,7 +1,7 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
-import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
+import type { CursorPage, CursorRequest } from '../../../query/types';
 import type {
   HoursCategory,
   HoursEntry,

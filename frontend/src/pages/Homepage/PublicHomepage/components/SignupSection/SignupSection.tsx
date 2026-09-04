@@ -1,5 +1,5 @@
 import Button from '../../../../../common/components/Button/Button'
-import OutreachFormFields from '../../../../../common/features/outreach/components/OutreachForm/OutreachFormFields'
+import OutreachFormFields from '../../../../../common/features/OutreachForm/OutreachFormFields'
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect'
 import FormField from '../../../../../common/components/FormField/FormField'
 import { Controller } from 'react-hook-form'

@@ -1,4 +1,3 @@
-// Owns LeadTable rendered behavior and owner wiring.
 import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../../tests/queryClientTestUtils';

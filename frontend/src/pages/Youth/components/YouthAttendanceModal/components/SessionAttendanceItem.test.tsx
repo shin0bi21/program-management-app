@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionNote } from '../../../../../common/types/cohort';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import SessionAttendanceItem from './SessionAttendanceItem';
 
-vi.mock('../../../../../common/features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect', () => ({
+vi.mock('../../../../../common/features/AttendanceStatusSelect/AttendanceStatusSelect', () => ({
   default: () => <div aria-label="Attendance status" />,
 }));
 

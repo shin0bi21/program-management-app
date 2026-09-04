@@ -1,4 +1,3 @@
-// Owns buffered task loading, resource filtering, lifecycle actions, range changes, and read-only behavior.
 import type { MutableRefObject } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

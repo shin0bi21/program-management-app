@@ -1,6 +1,6 @@
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import OutreachFormFields from '../../../../common/features/outreach/components/OutreachForm/OutreachFormFields';
+import OutreachFormFields from '../../../../common/features/OutreachForm/OutreachFormFields';
 import type { Lead } from '../../types';
 import { useLeadModal } from './useLeadModal';
 

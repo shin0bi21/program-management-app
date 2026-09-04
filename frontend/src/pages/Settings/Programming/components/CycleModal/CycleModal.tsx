@@ -2,7 +2,7 @@ import { type FormEvent } from 'react';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
 import useCycleModal from './hooks/useCycleModal';
 
 interface CycleModalProps {

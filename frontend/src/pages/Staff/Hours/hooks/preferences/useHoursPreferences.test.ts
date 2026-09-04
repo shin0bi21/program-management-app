@@ -1,4 +1,3 @@
-// Owns dependency-aware restoration, role policy, baselining, and atomic preference patches.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +12,7 @@ const preferenceHook = vi.hoisted<{
   save: ReturnType<typeof vi.fn>;
 }>(() => ({ preference: null, loading: false, error: null, loadError: null, initializePreference: vi.fn(), save: vi.fn() }));
 
-vi.mock('../../../../../common/features/preferences/hooks/useUserPreference', () => ({
+vi.mock('../../../../../common/features/Preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
 

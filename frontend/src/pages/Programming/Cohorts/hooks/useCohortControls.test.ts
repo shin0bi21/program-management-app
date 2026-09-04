@@ -1,4 +1,3 @@
-// Owns useCohortControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
@@ -13,7 +12,7 @@ const preferenceHook = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 
-vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
+vi.mock('../../../../common/features/Preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
 
@@ -61,13 +60,13 @@ describe('useCohortControls', () => {
     expect(persisted.sorting).toEqual({ key: 'program', direction: 'asc' });
   });
 
-  it('uses role defaults when saved preferences cannot be loaded', async () => {
+  it('uses empty filters when saved preferences cannot be loaded', async () => {
     preferenceHook.preference = { programId: 'program-1', status: 'completed' };
     preferenceHook.loadError = 'offline';
     const { result } = renderHook(() => useCohortControls('staff', programs, false, tableKeys, null));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.programId).toBe('program-1');
+    expect(result.current.programId).toBe('');
     expect(result.current.status).toBe('active');
   });
 

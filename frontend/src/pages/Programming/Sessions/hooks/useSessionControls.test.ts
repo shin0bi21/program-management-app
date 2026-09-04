@@ -1,8 +1,8 @@
-// Owns useSessionControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
-import type { ProgramCohort, SessionType } from '../../../../common/types/cohort';
+import type { ProgramCohort } from '../../Cohorts/types';
+import type { SessionType } from '../types';
 import { type SessionPreference, useSessionControls } from './useSessionControls';
 
 const preferenceHook = vi.hoisted<{
@@ -14,7 +14,7 @@ const preferenceHook = vi.hoisted<{
   save: ReturnType<typeof vi.fn>;
 }>(() => ({ preference: null, loading: false, error: null, loadError: null, initializePreference: vi.fn(), save: vi.fn() }));
 
-vi.mock('../../../../common/features/preferences/hooks/useUserPreference', () => ({
+vi.mock('../../../../common/features/Preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
 
@@ -47,7 +47,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
@@ -56,18 +56,18 @@ describe('useSessionControls', () => {
     });
   });
 
-  it('uses role defaults when saved preferences cannot be loaded', async () => {
+  it('uses empty filters when saved preferences cannot be loaded', async () => {
     preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: ['completed'] };
     preferenceHook.loadError = 'offline';
     const { result } = renderHook(() => useSessionControls({
       role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.view).toBe('calendar');
-    expect(result.current.programIds).toEqual(['program-1']);
-    expect(result.current.cohortId).toBe('cohort-1');
+    expect(result.current.programIds).toEqual([]);
+    expect(result.current.cohortId).toBe('');
     expect(result.current.statuses).toEqual([]);
   });
 
@@ -81,7 +81,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -101,7 +101,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -114,17 +114,17 @@ describe('useSessionControls', () => {
     }));
   });
 
-  it('defaults staff with one assigned program to its active cohort', async () => {
+  it('does not infer staff program or cohort filters', async () => {
     const { result } = renderHook(() => useSessionControls({
       role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.programIds).toEqual(['program-1']);
-    expect(result.current.cohortId).toBe('cohort-1');
+    expect(result.current.programIds).toEqual([]);
+    expect(result.current.cohortId).toBe('');
   });
 
-  it('persists filter and view changes and clears the selected session context', async () => {
+  it('persists filter and view changes', async () => {
     const persisted: SessionPreference = {
       view: 'calendar',
       programIds: [],
@@ -138,15 +138,13 @@ describe('useSessionControls', () => {
     preferenceHook.save.mockImplementation((update: (current: SessionPreference) => SessionPreference) => {
       Object.assign(persisted, update(persisted));
     });
-    const onFiltersChanged = vi.fn();
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged, tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
     act(() => result.current.applyFilter('status', ['completed']));
     expect(persisted.statuses).toEqual(['completed']);
-    expect(onFiltersChanged).toHaveBeenCalledTimes(1);
     act(() => result.current.setView('table'));
     expect(persisted).toEqual(expect.objectContaining({ view: 'table', statuses: ['completed'] }));
 
@@ -171,7 +169,7 @@ describe('useSessionControls', () => {
     };
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
-      sessionTypes, sessionTypesLoading: false, onFiltersChanged: vi.fn(), tableKeys,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -196,7 +194,7 @@ describe('useSessionControls', () => {
       role: 'admin', programs: [], programsLoading: false, programsError: 'Could not load programs.',
       cohorts: [], cohortsLoading: false, cohortsError: 'Could not load cohorts.',
       sessionTypes: [], sessionTypesLoading: false, sessionTypesError: 'Could not load session types.',
-      onFiltersChanged: vi.fn(), tableKeys,
+      tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));

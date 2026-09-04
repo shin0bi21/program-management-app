@@ -1,4 +1,3 @@
-// Owns HomepageImageModal fields, footer state, and workflow wiring.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateHomepageImage } from '../../manageHomepage.api';

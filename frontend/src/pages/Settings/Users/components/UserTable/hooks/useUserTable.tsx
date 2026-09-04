@@ -2,15 +2,15 @@ import { useMemo } from 'react';
 
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { Account, AccountStatus } from '../../../../../../common/types/account';
+import type { User, UserStatus } from '../../../types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 
 interface UseUserTableOptions {
   canWrite: boolean;
   isAdmin: boolean;
-  onEdit: (account: Account) => void;
-  onRevoke: (account: Account) => void;
-  onToggleStatus: (account: Account) => void;
+  onEdit: (account: User) => void;
+  onRevoke: (account: User) => void;
+  onToggleStatus: (account: User) => void;
 }
 
 export default function useUserTable({
@@ -20,8 +20,8 @@ export default function useUserTable({
   onRevoke,
   onToggleStatus,
 }: UseUserTableOptions) {
-  const columns = useMemo<TableColumnDef<Account>[]>(() => {
-    const accountColumns: TableColumnDef<Account>[] = [
+  const columns = useMemo<TableColumnDef<User>[]>(() => {
+    const accountColumns: TableColumnDef<User>[] = [
       {
         id: 'name',
         header: 'Name',
@@ -79,6 +79,6 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function statusBadge(status: AccountStatus) {
+function statusBadge(status: UserStatus) {
   return <span className={`status-badge status-${status}`}>{titleCase(status)}</span>;
 }

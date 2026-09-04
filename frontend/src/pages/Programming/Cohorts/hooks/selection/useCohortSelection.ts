@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../types';
 
 export default function useCohortSelection() {
   const [selectedCohort, setSelectedCohort] = useState<ProgramCohort | null>(null);

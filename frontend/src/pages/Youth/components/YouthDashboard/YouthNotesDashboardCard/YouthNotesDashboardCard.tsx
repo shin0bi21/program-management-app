@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
-import type { YouthProfileNote } from '../../../../../common/types/youth';
+import type { YouthProfileNote } from '../../../types';
 import ProfileNoteRow from '../../ProfileNotes/ProfileNoteRow';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 

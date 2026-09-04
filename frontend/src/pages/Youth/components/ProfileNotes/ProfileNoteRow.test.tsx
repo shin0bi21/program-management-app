@@ -1,8 +1,7 @@
-// Owns profile-note row domain values, callbacks, and read-only presentation.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { YouthProfileNote } from '../../../../common/types/youth';
+import type { YouthProfileNote } from '../../types';
 import ProfileNoteRow from './ProfileNoteRow';
 
 const note: YouthProfileNote = {

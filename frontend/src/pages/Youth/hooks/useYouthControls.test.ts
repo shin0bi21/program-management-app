@@ -1,4 +1,3 @@
-// Owns useYouthControls state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
@@ -20,7 +19,7 @@ const preferenceHook = vi.hoisted<{
   save: vi.fn(),
 }));
 
-vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
+vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
 

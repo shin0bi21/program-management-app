@@ -1,4 +1,3 @@
-// Owns Program table columns and edit-action wiring.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { expect, it, vi } from 'vitest';

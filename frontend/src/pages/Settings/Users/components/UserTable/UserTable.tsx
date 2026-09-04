@@ -1,18 +1,18 @@
 import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import { ACCOUNT_TABLE_KEYS, type Account, type AccountFilters, type AccountSortKey } from '../../../../../common/types/account';
-import type { ListSort } from '../../../../../common/types/pagination';
+import { USER_TABLE_KEYS, type User, type UserFilters, type UserSortKey } from '../../types';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import useUserTableData from './hooks/useUserTableData';
 
 interface UserTableProps {
   queryKey: readonly unknown[];
-  filters: AccountFilters | null;
-  columns: TableColumnDef<Account>[];
+  filters: UserFilters | null;
+  columns: TableColumnDef<User>[];
   hiddenColumnKeys: string[];
-  sorting: ListSort<AccountSortKey>;
+  sorting: ListSort<UserSortKey>;
   columnWidths: Record<string, number>;
-  onSortingChange: (sorting: ListSort<AccountSortKey>) => void;
+  onSortingChange: (sorting: ListSort<UserSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onErrorChange?: PageErrorChangeHandler;
 }
@@ -32,8 +32,8 @@ export default function UserTable(props: UserTableProps) {
     emptyMessage={hasFilters ? 'No accounts match these filters' : 'No accounts found'}
     keyExtractor={account => account.id}
     sorting={props.sorting}
-    sortableColumns={ACCOUNT_TABLE_KEYS}
-    onSortingChange={sorting => props.onSortingChange(sorting as ListSort<AccountSortKey>)}
+    sortableColumns={USER_TABLE_KEYS}
+    onSortingChange={sorting => props.onSortingChange(sorting as ListSort<UserSortKey>)}
     columnWidths={props.columnWidths}
     onColumnWidthsChange={props.onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}

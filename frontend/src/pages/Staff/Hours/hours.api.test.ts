@@ -1,5 +1,4 @@
 // @vitest-environment node
-// Owns Hours API endpoint selection, serialization, and focused mutation commands.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';

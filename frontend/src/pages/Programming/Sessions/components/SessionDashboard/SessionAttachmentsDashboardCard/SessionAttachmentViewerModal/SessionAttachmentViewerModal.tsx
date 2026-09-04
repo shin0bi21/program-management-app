@@ -1,10 +1,10 @@
-import ViewFileModal from '../../../../../../../common/components/ViewFileModal/ViewFileModal';
-import useViewFileModal from '../../../../../../../common/components/ViewFileModal/hooks/useViewFileModal';
+import ViewFileModal from '../../../../../../../common/features/ViewFileModal/ViewFileModal';
+import useViewFileModal from '../../../../../../../common/features/ViewFileModal/hooks/useViewFileModal';
 import {
   downloadSessionAttachment,
   getSessionAttachmentFile,
-} from '../../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';
+} from '../../../../sessions.api';
+import type { CohortSession, SessionAttachment } from '../../../../types';
 
 export default function SessionAttachmentViewerModal({
   session,

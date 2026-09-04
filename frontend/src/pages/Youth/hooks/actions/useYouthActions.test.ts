@@ -1,11 +1,13 @@
-// Owns authoritative Youth save reconciliation across cached table variants and related domains.
 import type { InfiniteData } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
-import { YOUTH_QUERY_KEY, YOUTH_TABLE_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
-import type { CursorPage } from '../../../../common/types/pagination';
-import type { YouthProfile } from '../../../../common/types/youth';
+import type { CursorPage } from '../../../../query/types';
+
+const COHORT_QUERY_KEY = ['cohorts'] as const;
+const SESSION_QUERY_KEY = ['sessions'] as const;
+const YOUTH_QUERY_KEY = ['youth'] as const;
+const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
+import type { YouthProfile } from '../../types';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import {
   createQueryClientWrapper,

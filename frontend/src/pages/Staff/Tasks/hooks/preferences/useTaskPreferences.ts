@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
-import useUserPreference from '../../../../../common/features/preferences/hooks/useUserPreference';
+import useUserPreference from '../../../../../common/features/Preferences/hooks/useUserPreference';
 import {
   haveSamePreferenceValues,
   mergePreferenceDefaults,
@@ -12,8 +12,8 @@ import {
   resolvePreferenceString,
   resolvePreferenceStringArray,
   resolvePreferenceValue,
-} from '../../../../../common/features/preferences/preferenceValues';
-import type { ListSort } from '../../../../../common/types/pagination';
+} from '../../../../../common/features/Preferences/preferenceValues';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
 import {
   type TaskCategory,

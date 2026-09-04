@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   deleteYouthProfileNote,
   getYouthProfileNotes,
-} from '../../../../common/features/youth/youth.api';
-import type { YouthProfileNote } from '../../../../common/types/youth';
+} from '../../youth.api';
+import type { YouthProfileNote } from '../../types';
 import { getErrorMessage } from '../../../../http/errors';
 
 const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;

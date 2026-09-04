@@ -1,8 +1,7 @@
-// Owns shared hours options, cycles, writable resources, and current-user derivation.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getProgramCycles } from '../../../../../common/features/programming/api/cohorts.api';
+import { getProgramCycles } from '../../../../Programming/Cohorts/cohorts.api';
 import { getHoursReferenceData } from '../../hours.api';
 import {
   createQueryClientWrapper,
@@ -10,7 +9,7 @@ import {
 } from '../../../../../tests/queryClientTestUtils';
 import useHoursData from './useHoursData';
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({ getProgramCycles: vi.fn() }));
+vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({ getProgramCycles: vi.fn() }));
 vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
 
 describe('useHoursData', () => {

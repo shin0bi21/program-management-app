@@ -1,14 +1,14 @@
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import type { Account, AccountFilters, AccountSortKey } from '../../../../../../common/types/account';
-import type { ListSort } from '../../../../../../common/types/pagination';
+import type { User, UserFilters, UserSortKey } from '../../../types';
+import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import { getAccounts } from '../../../accounts.api';
 
 export default function useUserTableData(
   queryKey: readonly unknown[],
-  filters: AccountFilters | null,
-  sorting: ListSort<AccountSortKey>,
+  filters: UserFilters | null,
+  sorting: ListSort<UserSortKey>,
 ) {
-  return useInfiniteListQuery<Account>({
+  return useInfiniteListQuery<User>({
     queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => {
       if (filters === null) throw new Error('User table filters are not initialized');

@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
-import usePreferenceOptionRecovery from '../../../../common/features/preferences/hooks/usePreferenceOptionRecovery';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
+import usePreferenceOptionRecovery from '../../../../common/features/Preferences/hooks/usePreferenceOptionRecovery';
+import useUserPreference from '../../../../common/features/Preferences/hooks/useUserPreference';
 import {
   mergePreferenceDefaults,
   resolveAvailablePreferenceIds,
   resolvePreferenceSorting,
   resolvePreferenceStringArray,
-} from '../../../../common/features/preferences/preferenceValues';
-import type { ListSort } from '../../../../common/types/pagination';
+} from '../../../../common/features/Preferences/preferenceValues';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
 
 export interface LeadPreference {

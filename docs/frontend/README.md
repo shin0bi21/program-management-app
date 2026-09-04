@@ -49,14 +49,3 @@ Rendered-surface guides are flat files under `components/`; add a subdirectory o
 | Frontend architecture | [Architecture](architecture/README.md) |
 | State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
 | Where code should live | [Ownership](architecture/ownership.md) |
-| Creating a new page or component | [Scaffolding](#scaffolding) |
-
-## Scaffolding
-
-Use the frontend scaffolder to preview and create the required files for an established owner. Choose the owner guide above, then use the preset documented beside that owner's skeleton.
-
-```bash
-npm run scaffold:frontend -- <preset> ... --dry-run
-```
-
-The scaffolder formats TypeScript, validates destinations, and refuses to overwrite files. Remove `--dry-run` to write the previewed files. Replace generated source TODOs and every `it.todo`, then follow [Testing](../workflows/testing.md).

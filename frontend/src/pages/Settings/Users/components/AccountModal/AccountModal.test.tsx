@@ -1,4 +1,3 @@
-// Owns account modal program assignment, role, and route-adapter integration behavior.
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

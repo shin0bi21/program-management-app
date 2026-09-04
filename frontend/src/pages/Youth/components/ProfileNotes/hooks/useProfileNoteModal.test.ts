@@ -1,12 +1,11 @@
-// Owns profile-note create/edit initialization, normalized commands, and validation.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setYouthProfileNote } from '../../../../../common/features/youth/youth.api';
-import type { YouthProfileNote } from '../../../../../common/types/youth';
+import { setYouthProfileNote } from '../../../youth.api';
+import type { YouthProfileNote } from '../../../types';
 import useProfileNoteModal from './useProfileNoteModal';
 
-vi.mock('../../../../../common/features/youth/youth.api', () => ({
+vi.mock('../../../youth.api', () => ({
   setYouthProfileNote: vi.fn(),
 }));
 

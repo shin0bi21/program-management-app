@@ -1,4 +1,3 @@
-// Owns dashboard query wiring, card composition, selected-task hours, and errors.
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

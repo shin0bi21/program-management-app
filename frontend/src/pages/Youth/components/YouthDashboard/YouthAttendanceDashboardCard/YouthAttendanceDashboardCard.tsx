@@ -4,7 +4,7 @@ import { faEye, faPen } from '@fortawesome/free-solid-svg-icons';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
-import type { YouthProfile } from '../../../../../common/types/youth';
+import type { YouthProfile } from '../../../types';
 import YouthDashboardTabs from './YouthDashboardTabs/YouthDashboardTabs';
 import './YouthAttendanceDashboardCard.css';
 

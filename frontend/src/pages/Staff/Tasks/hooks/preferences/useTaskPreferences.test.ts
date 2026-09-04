@@ -1,4 +1,3 @@
-// Owns canonical task preference restoration, persistence, search, filters, and table settings.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,7 +24,7 @@ type PreferenceUpdate = StoredTaskPreferences | (
   (current: StoredTaskPreferences | null) => StoredTaskPreferences
 );
 
-vi.mock('../../../../../common/features/preferences/hooks/useUserPreference', async () => {
+vi.mock('../../../../../common/features/Preferences/hooks/useUserPreference', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
 
   const useMockUserPreference = (key: string) => {

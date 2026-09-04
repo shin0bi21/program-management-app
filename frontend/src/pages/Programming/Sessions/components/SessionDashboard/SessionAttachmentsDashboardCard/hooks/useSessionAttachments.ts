@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
-import { deleteSessionAttachment, getSessionAttachments } from '../../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';
+import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
+import type { CohortSession, SessionAttachment } from '../../../../types';
 
 export function useSessionAttachments({ queryKey, session, onErrorChange }: {
   queryKey: readonly unknown[];

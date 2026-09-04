@@ -1,10 +1,9 @@
-// Owns Cohort table columns, permission-aware actions, and exact callbacks.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../../types';
 import useCohortTable from './useCohortTable';
 
 const menu = vi.hoisted<{ items: ActionItem[] }>(() => ({ items: [] }));
@@ -38,7 +37,6 @@ describe('useCohortTable', () => {
     const { result } = renderHook(() => useCohortTable({
       canWrite: false,
       onManageRoster: vi.fn(),
-      onGenerateSessions: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -50,18 +48,17 @@ describe('useCohortTable', () => {
 
   it('maps enrolled-cohort actions and emits exact row callbacks', () => {
     const callbacks = {
-      onManageRoster: vi.fn(), onGenerateSessions: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),
+      onManageRoster: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),
     };
     const { result } = renderHook(() => useCohortTable({ canWrite: true, ...callbacks }));
     const actionColumn = result.current.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, cohort)}</>);
     expect(menu.items.map(item => [item.id, item.variant])).toEqual([
-      ['manage-roster', undefined], ['add-sessions', undefined], ['edit', undefined], ['delete', 'danger'],
+      ['manage-roster', undefined], ['edit', undefined], ['delete', 'danger'],
     ]);
     menu.items.forEach(item => item.onClick());
     expect(callbacks.onManageRoster).toHaveBeenCalledWith(cohort);
-    expect(callbacks.onGenerateSessions).toHaveBeenCalledWith(cohort);
     expect(callbacks.onEdit).toHaveBeenCalledWith(cohort);
     expect(callbacks.onDelete).toHaveBeenCalledWith(cohort);
   });
@@ -70,7 +67,6 @@ describe('useCohortTable', () => {
     const { result } = renderHook(() => useCohortTable({
       canWrite: true,
       onManageRoster: vi.fn(),
-      onGenerateSessions: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -79,6 +75,6 @@ describe('useCohortTable', () => {
       ...cohort,
       rosterMode: 'open',
     })}</>);
-    expect(menu.items.map(item => item.id)).toEqual(['add-sessions', 'edit', 'delete']);
+    expect(menu.items.map(item => item.id)).toEqual(['edit', 'delete']);
   });
 });
