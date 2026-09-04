@@ -1,4 +1,3 @@
-// Owns table-sentinel observation, load guards, and observer cleanup.
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

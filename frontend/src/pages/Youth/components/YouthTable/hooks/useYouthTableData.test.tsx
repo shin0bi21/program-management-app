@@ -1,13 +1,12 @@
-// Owns Youth table query ownership, pagination inputs, and row shaping.
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getYouth } from '../../../../../common/features/youth/youth.api';
+import { getYouth } from '../../../youth.api';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import useYouthTableData from './useYouthTableData';
 
-vi.mock('../../../../../common/features/youth/youth.api', () => ({ getYouth: vi.fn() }));
+vi.mock('../../../youth.api', () => ({ getYouth: vi.fn() }));
 
 const mockGetYouth = vi.mocked(getYouth);
 

@@ -1,4 +1,4 @@
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../types';
 import type { PageErrorItem } from '../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';

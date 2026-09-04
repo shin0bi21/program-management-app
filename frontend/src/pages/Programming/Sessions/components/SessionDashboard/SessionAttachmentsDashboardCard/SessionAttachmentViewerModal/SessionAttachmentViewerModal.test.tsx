@@ -1,8 +1,7 @@
-// Owns session attachment loading and download wiring into the shared file viewer.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SessionAttachment } from '../../../../../../../common/types/cohort';
+import type { SessionAttachment } from '../../../../types';
 import { makeCohortSession } from '../../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal';
@@ -11,7 +10,7 @@ const api = vi.hoisted(() => ({
   downloadSessionAttachment: vi.fn(),
   getSessionAttachmentFile: vi.fn(),
 }));
-vi.mock('../../../../../../../common/features/programming/api/sessions.api', () => api);
+vi.mock('../../../../sessions.api', () => api);
 vi.mock('@panzoom/panzoom', () => ({
   default: vi.fn(() => ({
     destroy: vi.fn(),

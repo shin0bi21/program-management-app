@@ -9,8 +9,8 @@ import PageErrorOverlay, { type PageErrorItem } from '../../../common/components
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
-import { ACCOUNT_TABLE_KEYS, type AccountFilters } from '../../../common/types/account';
+import YouthModal from '../../Youth/components/YouthModal/YouthModal';
+import { USER_TABLE_KEYS, type UserFilters } from './types';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
 import useUserTable from './components/UserTable/hooks/useUserTable';
@@ -32,7 +32,7 @@ export default function Users() {
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
   // Page data and preferences.
-  const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
+  const controls = useAccountControls(isAdmin, USER_TABLE_KEYS);
   const {
     search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, roleFilters, sorting,
     columnWidths, hiddenColumns, error: preferenceError, filterCategories,
@@ -40,7 +40,7 @@ export default function Users() {
   } = controls;
 
   // Filter configuration.
-  const accountFilters = useMemo<AccountFilters | null>(() => controlsReady ? {
+  const accountFilters = useMemo<UserFilters | null>(() => controlsReady ? {
     search: appliedSearch,
     roles: roleFilters,
     statuses: statusFilters,

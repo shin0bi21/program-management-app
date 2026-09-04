@@ -1,4 +1,3 @@
-// Owns Youth table state, pagination, selection, and preference wiring.
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../../tests/factories/youth';

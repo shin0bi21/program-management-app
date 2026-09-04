@@ -1,7 +1,7 @@
 import Button from '../../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import type { CohortSession } from '../../../../../../common/types/cohort';
+import type { CohortSession } from '../../../types';
 import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentModal';
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';

@@ -2,13 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageErrorItem } from '../../../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
-import { deleteSessionAttachment, getSessionAttachments } from '../../../../../../../common/features/programming/api/sessions.api';
-import type { SessionAttachment } from '../../../../../../../common/types/cohort';
+import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
+import type { SessionAttachment } from '../../../../types';
 import { makeCohortSession } from '../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import { useSessionAttachments } from './useSessionAttachments';
 
-vi.mock('../../../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../../../sessions.api', () => ({
   deleteSessionAttachment: vi.fn(),
   getSessionAttachments: vi.fn(),
 }));

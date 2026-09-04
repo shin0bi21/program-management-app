@@ -1,8 +1,7 @@
-// Owns the composed session dashboard states and cross-card action wiring.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../types';
 import SessionDashboard from './SessionDashboard';
 
 const getSessionNotes = vi.fn();
@@ -27,7 +26,7 @@ vi.mock('@panzoom/panzoom', () => ({
   default: (element: unknown, options?: unknown) => initializePanzoom(element, options),
 }));
 
-vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
   createSessionNote: vi.fn(),

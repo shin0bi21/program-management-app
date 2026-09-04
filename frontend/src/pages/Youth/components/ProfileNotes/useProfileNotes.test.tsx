@@ -1,16 +1,15 @@
-// Owns useProfileNotes state transitions and observable effects.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deleteYouthProfileNote,
   getYouthProfileNotes,
-} from '../../../../common/features/youth/youth.api';
-import type { YouthProfileNote } from '../../../../common/types/youth';
+} from '../../youth.api';
+import type { YouthProfileNote } from '../../types';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import useProfileNotes from './useProfileNotes';
 
-vi.mock('../../../../common/features/youth/youth.api', () => ({
+vi.mock('../../youth.api', () => ({
   deleteYouthProfileNote: vi.fn(),
   getYouthProfileNotes: vi.fn(),
 }));

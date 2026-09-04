@@ -1,4 +1,3 @@
-// Owns Youth dashboard tab labels, active state, and selection events.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

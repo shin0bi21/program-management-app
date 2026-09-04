@@ -1,4 +1,3 @@
-// Owns calendar-range query activation, filter serialization, event mapping, and errors.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { DatesSetInfo } from '@fullcalendar/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +11,7 @@ import { useSessionCalendarData } from './useSessionCalendarData';
 
 const getSessions = vi.hoisted(() => vi.fn());
 
-vi.mock('../../../../../../common/features/programming/api/sessions.api', () => ({ getSessions }));
+vi.mock('../../../sessions.api', () => ({ getSessions }));
 
 const queryKey = ['sessions', 'calendar'] as const;
 const filters = {

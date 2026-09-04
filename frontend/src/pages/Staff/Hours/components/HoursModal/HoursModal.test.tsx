@@ -1,4 +1,3 @@
-// Owns HoursModal rendered behavior and owner wiring.
 import type { ComponentProps } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

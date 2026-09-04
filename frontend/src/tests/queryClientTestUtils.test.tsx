@@ -8,7 +8,6 @@ import {
   renderWithQueryClient,
 } from './queryClientTestUtils';
 
-// Owns the shared Query Client test boundary used by component and hook suites.
 describe('queryClientTestUtils', () => {
   it('creates isolated clients with retries disabled', () => {
     const firstClient = createTestQueryClient();

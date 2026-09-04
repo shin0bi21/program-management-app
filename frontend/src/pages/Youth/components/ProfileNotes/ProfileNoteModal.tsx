@@ -1,8 +1,8 @@
-import NoteModal from '../../../../common/features/notes/components/NoteModal/NoteModal';
+import NoteModal from '../../../../common/features/Notes/NoteModal/NoteModal';
 
 import useProfileNoteModal from './hooks/useProfileNoteModal';
 
-import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../../common/types/youth';
+import type { YouthProfileNote, YouthProfileNoteCategory } from '../../types';
 
 interface ProfileNoteModalProps {
   youthId: string;

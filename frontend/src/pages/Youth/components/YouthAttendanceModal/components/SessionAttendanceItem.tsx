@@ -1,9 +1,10 @@
 import { faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../../common/components/Button/Button';
-import type { AttendanceStatus, SessionNote } from '../../../../../common/types/cohort';
+import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import { formatShortDate } from '../../../../../common/utils/date';
-import AttendanceStatusSelect from '../../../../../common/features/attendance/components/AttendanceStatusSelect/AttendanceStatusSelect';
+import AttendanceStatusSelect from '../../../../../common/features/AttendanceStatusSelect/AttendanceStatusSelect';
 import type { YouthAttendanceSession } from '../types';
 import SessionNoteCard from './SessionNoteCard';
 

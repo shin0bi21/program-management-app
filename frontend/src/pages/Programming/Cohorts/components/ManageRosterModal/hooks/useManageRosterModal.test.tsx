@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { withdrawYouth } from '../../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import { withdrawYouth } from '../../../cohorts.api';
+import type { ProgramCohort } from '../../../types';
 import { makeYouthProfile } from '../../../../../../tests/factories/youth';
 import { useManageRosterModal } from './useManageRosterModal';
 
-vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../cohorts.api', () => ({
   withdrawYouth: vi.fn(),
 }));
 

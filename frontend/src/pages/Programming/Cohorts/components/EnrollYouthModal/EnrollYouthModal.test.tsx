@@ -1,4 +1,3 @@
-// Owns EnrollYouthModal rendered behavior and owner wiring.
 import { act, screen } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
@@ -8,14 +7,12 @@ import EnrollYouthModal from './EnrollYouthModal';
 
 const api = vi.hoisted(() => ({
   enrollYouth: vi.fn(),
-  getYouth: vi.fn(),
+  getCohortRosterYouth: vi.fn(),
 }));
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../cohorts.api', () => ({
   enrollYouth: api.enrollYouth,
-}));
-vi.mock('../../../../../common/features/youth/youth.api', () => ({
-  getYouth: api.getYouth,
+  getCohortRosterYouth: api.getCohortRosterYouth,
 }));
 
 const birthDateForAge = (age: number) => `${new Date().getFullYear() - age}-01-01`;
@@ -45,7 +42,7 @@ describe('EnrollYouthModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getYouth.mockResolvedValue([
+    api.getCohortRosterYouth.mockResolvedValue([
       makeYouthProfile({
         id: 'youth-1',
         firstName: 'Jamie',
@@ -125,7 +122,7 @@ describe('EnrollYouthModal', () => {
 
   it('defaults to the program age range and can be disabled for exceptions', async () => {
     const user = userEvent.setup();
-    api.getYouth.mockResolvedValue([
+    api.getCohortRosterYouth.mockResolvedValue([
       makeYouthProfile({
         id: 'eligible',
         firstName: 'Eligible',

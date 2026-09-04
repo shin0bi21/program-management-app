@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import Table from '../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../common/components/Table/Table.types';
-import type { ListSort } from '../../../../common/types/pagination';
-import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthSortKey } from '../../../../common/types/youth';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
+import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthSortKey } from '../../types';
 import type { YouthProfile } from '../../types';
 import useYouthTableData from './hooks/useYouthTableData';
 

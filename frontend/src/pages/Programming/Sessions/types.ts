@@ -1,1 +1,120 @@
+import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
+
+export interface CohortSession {
+  id: string;
+  cohortId: string;
+  sessionTypeId: string;
+  sessionTypeName: string;
+  theme: string;
+  cohortName: string;
+  programId: string;
+  programName: string;
+  rosterMode: 'enrolled' | 'open';
+  startsAt: string;
+  endsAt: string;
+  cancelledAt: string | null;
+  description: string | null;
+  attendanceMarkedCount: number;
+  attendedCount: number;
+  attendanceRate: number | null;
+  state: 'upcoming' | 'completed' | 'cancelled';
+}
+
+export interface SessionListFilters {
+  programIds?: string[];
+  cohortId?: string;
+  sessionTypeIds?: string[];
+  statuses?: SessionStatusFilter[];
+  search?: string;
+}
+
 export type SessionStatusFilter = 'upcoming' | 'completed';
+
+export const SESSION_TABLE_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
+
+export interface SessionType {
+  id: string;
+  name: string;
+}
+
+export interface AttendanceYouth {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
+
+export interface GenerateSessionsInput {
+  sessionTypeId: string;
+  theme: string;
+  frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
+  dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  dayOfMonth?: number;
+  startsOn: string;
+  endsOn?: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface SessionRosterMember {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+  status: AttendanceStatus | null;
+  notes: string | null;
+}
+
+export interface SessionNoteYouth {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export type SessionNoteCategory =
+  | 'general'
+  | 'attendance'
+  | 'behaviour'
+  | 'achievement';
+
+export interface SessionNote {
+  id: string;
+  sessionId: string;
+  category: SessionNoteCategory;
+  details: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: SessionNoteYouth[];
+}
+
+export interface YouthSessionNote extends SessionNote {
+  sessionTheme: string | null;
+  startsAt: string;
+  cohortId: string;
+  cohortName: string;
+  programId: string;
+  programName: string;
+  rosterMode: 'enrolled' | 'open';
+}
+
+export interface SessionAttachmentYouth {
+  youthId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface SessionAttachment {
+  id: string;
+  sessionId: string;
+  title: string;
+  description: string | null;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: SessionAttachmentYouth[];
+}

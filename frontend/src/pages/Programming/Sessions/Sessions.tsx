@@ -9,23 +9,23 @@ import PageErrorOverlay, { type PageErrorItem } from '../../../common/components
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
-import { SESSION_QUERY_KEY } from '../../../common/features/programming/queryKeys';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
-import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from '../../../common/types/cohort';
-import GenerateSessionsModal from '../common/components/GenerateSessionsModal/GenerateSessionsModal';
-import { useCohorts } from '../common/hooks/useCohorts';
-import { useSessionTypes } from '../common/hooks/useSessionTypes';
-import AttendanceModal from './components/AttendanceModal/AttendanceModal';
+import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from './types';
+import GenerateSessionsModal from './components/GenerateSessionsModal/GenerateSessionsModal';
+import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
 import useSessionActions from './hooks/actions/useSessionActions';
+import { useCohorts } from './hooks/data/useCohorts';
+import { useSessionTypes } from './hooks/data/useSessionTypes';
 import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
 import './Sessions.css';
 
+const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
@@ -38,7 +38,7 @@ export default function Sessions() {
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
 
-  // Page data and preferences.
+  // Page data.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
   const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
   const {
@@ -47,12 +47,10 @@ export default function Sessions() {
     error: sessionTypesError,
   } = useSessionTypes();
 
-  const selection = useSessionSelection();
-
+  // Saved preferences and current view.
   const controls = useSessionControls({
     role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
-    onFiltersChanged: selection.clearSelectedSession,
     tableKeys: SESSION_TABLE_KEYS,
   });
   const {
@@ -71,11 +69,20 @@ export default function Sessions() {
   }), [appliedSearch, cohortId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
 
   // Selection and actions.
+  const selection = useSessionSelection();
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
+  const applyFilter = (category: string, selected: string[]) => {
+    selection.clearSelectedSession();
+    controls.applyFilter(category, selected);
+  };
+  const clearFilters = () => {
+    selection.clearSelectedSession();
+    controls.clearFilters();
+  };
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
-  const closeAttendanceModal = () => setAttendanceTarget(null);
+  const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
   // Generate sessions modal.
   const [addSessionsOpen, setAddSessionsOpen] = useState(false);
@@ -168,8 +175,8 @@ export default function Sessions() {
                 status: statusFilters,
                 type: selectedSessionTypeIds,
               }}
-              onApply={(category, selected) => controls.applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
-              onClearAll={controls.clearFilters}
+              onApply={(category, selected) => applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
+              onClearAll={clearFilters}
             />
           ) : undefined}
 
@@ -204,9 +211,9 @@ export default function Sessions() {
         />}
       </main>
 
-      <AttendanceModal
+      <SessionAttendanceModal
         session={attendanceTarget}
-        onClose={closeAttendanceModal}
+        onClose={closeSessionAttendanceModal}
         onSaved={actions.refreshAttendance}
       />
 

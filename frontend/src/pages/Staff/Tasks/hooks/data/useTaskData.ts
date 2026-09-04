@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { getTaskReferenceData } from '../../tasks.api';
 
 export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
-  const referenceDataQuery = useQuery({
+  const query = useQuery({
     queryKey: referenceDataQueryKey,
     queryFn: ({ signal }) => getTaskReferenceData({ signal }),
   });
 
-  const resources = referenceDataQuery.data?.resources;
+  const resources = query.data?.resources;
 
   const writableResources = useMemo(
     () => resources?.filter(resource => resource.writable) ?? [],
@@ -17,9 +17,9 @@ export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   );
 
   return {
-    referenceData: referenceDataQuery.data,
-    referenceDataLoading: referenceDataQuery.isLoading,
-    referenceDataError: referenceDataQuery.error,
+    referenceData: query.data,
+    referenceDataLoading: query.isLoading,
+    referenceDataError: query.error,
     resources: resources ?? [],
     writableResources,
   };

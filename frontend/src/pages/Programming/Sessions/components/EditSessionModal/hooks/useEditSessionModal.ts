@@ -1,10 +1,10 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { updateSession } from '../../../../../../common/features/programming/api/sessions.api';
+import { updateSession } from '../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
-import type { CohortSession } from '../../../../../../common/types/cohort';
+import type { CohortSession } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { useSessionTypes } from '../../../../common/hooks/useSessionTypes';
+import { useSessionTypes } from '../../../hooks/data/useSessionTypes';
 
 export function useEditSessionModal(session: CohortSession | null, onUpdated: () => void | Promise<void>) {
   const [status, setStatus] = useState<SubmitStatus>('idle');

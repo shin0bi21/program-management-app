@@ -2,10 +2,10 @@ import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createCohort } from '../../../../../../common/features/programming/api/cohorts.api';
+import { createCohort } from '../../../cohorts.api';
 import { useAddCohortModal } from './useAddCohortModal';
 
-vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../cohorts.api', () => ({
   createCohort: vi.fn(),
 }));
 

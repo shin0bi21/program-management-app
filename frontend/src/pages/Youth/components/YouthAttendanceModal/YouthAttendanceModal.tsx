@@ -5,7 +5,7 @@ import Button from '../../../../common/components/Button/Button';
 import LoadingSpinner from '../../../../common/components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
-import type { YouthProfile } from '../../../../common/types/youth';
+import type { YouthProfile } from '../../types';
 import SessionAttendanceItem from './components/SessionAttendanceItem';
 import YouthSessionNoteDialogs from './components/YouthSessionNoteDialogs';
 import useYouthAttendance from './hooks/useYouthAttendance';

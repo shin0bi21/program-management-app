@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import type { ConfirmAction } from '../../../../../../common/components/ConfirmModal/types';
-import { withdrawYouth } from '../../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
-import type { YouthProfile } from '../../../../../../common/types/youth';
+import { withdrawYouth } from '../../../cohorts.api';
+import type { CohortRosterYouth, ProgramCohort } from '../../../types';
 
 interface UseManageRosterModalOptions {
   cohort: ProgramCohort | null;
@@ -23,7 +22,7 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
     setRefreshError('');
   }, [cohortId]);
 
-  const requestWithdrawal = (profile: YouthProfile) => {
+  const requestWithdrawal = (profile: CohortRosterYouth) => {
     if (!cohort) return;
 
     setRefreshError('');

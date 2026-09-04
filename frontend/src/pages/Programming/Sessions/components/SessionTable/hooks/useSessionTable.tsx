@@ -3,7 +3,7 @@ import type { CellContext } from '@tanstack/react-table';
 
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { CohortSession } from '../../../../../../common/types/cohort';
+import type { CohortSession } from '../../../types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
 

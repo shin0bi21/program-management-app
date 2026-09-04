@@ -1,6 +1,6 @@
 import { getTasksTableData } from '../../../tasks.api';
 import type { Task, TasksFilters } from '../../../types';
-import type { ListSort } from '../../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { TaskSortKey } from '../../../types';
 

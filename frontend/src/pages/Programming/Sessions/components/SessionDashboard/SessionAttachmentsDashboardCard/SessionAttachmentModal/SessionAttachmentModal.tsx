@@ -1,7 +1,7 @@
 import FormField from '../../../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
-import type { CohortSession, SessionAttachment } from '../../../../../../../common/types/cohort';
+import type { CohortSession, SessionAttachment } from '../../../../types';
 import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
 import './SessionAttachmentModal.css';
 

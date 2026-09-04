@@ -1,4 +1,3 @@
-// Owns the shared Hours entry-type presentation for every source.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { makeHoursItem } from '../../../../../tests/factories/hours';

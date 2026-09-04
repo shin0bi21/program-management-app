@@ -1,4 +1,3 @@
-// Owns Programming Settings program and cycle modal target transitions.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

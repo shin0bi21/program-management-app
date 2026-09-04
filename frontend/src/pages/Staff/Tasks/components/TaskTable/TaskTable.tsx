@@ -2,7 +2,7 @@ import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { Task, TasksFilters } from '../../types';
-import type { ListSort } from '../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
 import useTaskTableData from './hooks/useTaskTableData';
 

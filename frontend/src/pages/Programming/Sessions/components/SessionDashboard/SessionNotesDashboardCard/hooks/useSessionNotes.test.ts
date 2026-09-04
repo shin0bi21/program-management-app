@@ -2,13 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageErrorItem } from '../../../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
-import { deleteSessionNote, getSessionNotes } from '../../../../../../../common/features/programming/api/sessions.api';
-import type { SessionNote } from '../../../../../../../common/types/cohort';
+import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
+import type { SessionNote } from '../../../../types';
 import { makeCohortSession } from '../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import { useSessionNotes } from './useSessionNotes';
 
-vi.mock('../../../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../../../sessions.api', () => ({
   deleteSessionNote: vi.fn(),
   getSessionNotes: vi.fn(),
 }));

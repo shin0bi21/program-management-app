@@ -1,13 +1,12 @@
-// Owns session-table control serialization and cursor forwarding.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getSessions } from '../../../../../../common/features/programming/api/sessions.api';
+import { getSessions } from '../../../sessions.api';
 import { makeCohortSession } from '../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { useSessionTableData } from './useSessionTableData';
 
-vi.mock('../../../../../../common/features/programming/api/sessions.api', () => ({ getSessions: vi.fn() }));
+vi.mock('../../../sessions.api', () => ({ getSessions: vi.fn() }));
 
 const session = makeCohortSession();
 

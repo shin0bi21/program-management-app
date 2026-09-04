@@ -1,4 +1,3 @@
-// Owns verification, resend, redirect, and authenticated-session workflow behavior.
 import type { PropsWithChildren } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { act, renderHook, waitFor } from '@testing-library/react';

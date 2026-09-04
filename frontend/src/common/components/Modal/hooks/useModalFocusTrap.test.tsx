@@ -1,4 +1,3 @@
-// Owns modal focus placement, keyboard containment, dismissal, and restoration.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

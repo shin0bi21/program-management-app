@@ -1,14 +1,13 @@
-// Owns YouthTable.integration rendered behavior and owner wiring.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getYouth } from '../../../../common/features/youth/youth.api';
+import { getYouth } from '../../youth.api';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import type { YouthProfile } from '../../types';
 import YouthTable from './YouthTable';
 
-vi.mock('../../../../common/features/youth/youth.api', () => ({ getYouth: vi.fn() }));
+vi.mock('../../youth.api', () => ({ getYouth: vi.fn() }));
 
 vi.mock('../../../../common/components/Table/Table', () => ({
   default: () => <div aria-label="Mock youth table" />,

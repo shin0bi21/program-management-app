@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { YOUTH_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
-import { getYouth } from '../../../../common/features/youth/youth.api';
-import type { ProgramCohort } from '../../../../common/types/cohort';
-import type { YouthProfile } from '../../../../common/types/youth';
+import { getCohortRosterYouth } from '../cohorts.api';
+import type { CohortRosterYouth, ProgramCohort } from '../types';
 import { getErrorMessage } from '../../../../http/errors';
 
-const belongsToCohort = (profile: YouthProfile, cohortId: string) =>
+const belongsToCohort = (profile: CohortRosterYouth, cohortId: string) =>
   profile.cohorts.some((enrollment) => enrollment.id === cohortId && enrollment.withdrawnOn === null);
-const noYouth: YouthProfile[] = [];
+const noYouth: CohortRosterYouth[] = [];
 
 export function useCohortRoster(cohort: ProgramCohort | null) {
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const cohortId = cohort?.id;
   const query = useQuery({
-    queryKey: [...YOUTH_QUERY_KEY, 'cohort-roster'],
-    queryFn: ({ signal }) => getYouth(undefined, {}, { signal }),
+    queryKey: ['cohorts', 'roster-youth'],
+    queryFn: ({ signal }) => getCohortRosterYouth({ signal }),
     enabled: cohort !== null,
   });
   const youth = query.data ?? noYouth;
@@ -41,7 +39,7 @@ export function useCohortRoster(cohort: ProgramCohort | null) {
     [cohortId, youth],
   );
   const filterBySearch = useCallback(
-    (profiles: YouthProfile[]) => {
+    (profiles: CohortRosterYouth[]) => {
       const query = appliedSearch.toLowerCase();
       if (!query) return profiles;
       return profiles.filter(

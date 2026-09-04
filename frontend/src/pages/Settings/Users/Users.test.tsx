@@ -18,7 +18,7 @@ vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./components/UserTable/hooks/useUserTableData', () => ({
   default: (...args: unknown[]) => mockUseUserTableData(...args),
 }));
-vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({
+vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({
   default: () => preferenceHook,
 }));
 vi.mock('./accounts.api', () => ({
@@ -80,6 +80,7 @@ describe('Users', () => {
     });
   });
 
+  // Permissions and application services.
   it('shows admin account controls and sends search state to the accounts query', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
@@ -119,6 +120,7 @@ describe('Users', () => {
     expect(screen.getByText('Yara Youth')).toBeInTheDocument();
   });
 
+  // Modal and confirmation workflows.
   it('opens the account status confirmation from the table action', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
     renderPage();

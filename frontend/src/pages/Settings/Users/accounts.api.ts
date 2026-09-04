@@ -1,9 +1,21 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import type { Account, AccountFilters, AccountSortKey, InviteAccountInput, UpdateAccountInput } from '../../../common/types/account';
-import type { CursorPage, CursorRequest } from '../../../common/types/pagination';
+import type { User, UserFilters, UserSortKey } from './types';
+import type { CursorPage, CursorRequest } from '../../../query/types';
 
-export function getAccounts(filters: AccountFilters = {}, pagination?: CursorRequest<AccountSortKey>, opts?: RequestOptions) {
+interface InviteUserInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'staff' | 'admin';
+  programIds?: string[];
+}
+
+interface UpdateUserInput extends InviteUserInput {
+  id: string;
+}
+
+export function getAccounts(filters: UserFilters = {}, pagination?: CursorRequest<UserSortKey>, opts?: RequestOptions) {
   const params = new URLSearchParams();
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.roles?.length) params.set('roles', filters.roles.join(','));
@@ -16,19 +28,19 @@ export function getAccounts(filters: AccountFilters = {}, pagination?: CursorReq
   }
   const query = params.toString();
   const path = `/accounts${query ? `?${query}` : ''}`;
-  return opts ? apiClient.get<CursorPage<Account>>(path, opts) : apiClient.get<CursorPage<Account>>(path);
+  return opts ? apiClient.get<CursorPage<User>>(path, opts) : apiClient.get<CursorPage<User>>(path);
 }
 
-export function inviteAccount(data: InviteAccountInput) {
-  return apiClient.post<Account>('/accounts', data);
+export function inviteAccount(data: InviteUserInput) {
+  return apiClient.post<User>('/accounts', data);
 }
 
-export function updateAccount(data: UpdateAccountInput) {
-  return apiClient.post<Account>('/accounts', data);
+export function updateAccount(data: UpdateUserInput) {
+  return apiClient.post<User>('/accounts', data);
 }
 
 export function toggleAccountStatus(id: string) {
-  return apiClient.patch<Account>(`/accounts/${id}`);
+  return apiClient.patch<User>(`/accounts/${id}`);
 }
 
 export function revokeAccountInvite(id: string) {

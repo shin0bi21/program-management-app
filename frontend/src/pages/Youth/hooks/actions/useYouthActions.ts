@@ -1,9 +1,12 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../../common/features/programming/queryKeys';
-import { YOUTH_QUERY_KEY, YOUTH_TABLE_QUERY_KEY } from '../../../../common/features/youth/queryKeys';
-import type { YouthProfile } from '../../../../common/types/youth';
+import type { YouthProfile } from '../../types';
 import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
+
+const COHORT_QUERY_KEY = ['cohorts'] as const;
+const SESSION_QUERY_KEY = ['sessions'] as const;
+const YOUTH_QUERY_KEY = ['youth'] as const;
+const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
 interface UseYouthActionsOptions {
   onYouthReconciled: (youth: YouthProfile) => void;

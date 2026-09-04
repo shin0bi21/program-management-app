@@ -1,4 +1,3 @@
-// Owns Lead note field wiring and the rendered pending form state.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,4 +1,3 @@
-// Owns the task reference-data query and its derived resource collections.
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,7 +1,6 @@
-import { getYouth } from '../../../../../common/features/youth/youth.api';
-import { YOUTH_TABLE_QUERY_KEY } from '../../../../../common/features/youth/queryKeys';
-import type { ListSort } from '../../../../../common/types/pagination';
-import type { YouthFilters, YouthSortKey } from '../../../../../common/types/youth';
+import { getYouth } from '../../../youth.api';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
+import type { YouthFilters, YouthSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import type { YouthProfile } from '../../../types';
 
@@ -10,7 +9,7 @@ export default function useYouthTableData(
   sorting: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' },
 ) {
   const query = useInfiniteListQuery<YouthProfile>({
-    queryKey: [...YOUTH_TABLE_QUERY_KEY, filters, sorting],
+    queryKey: ['youth', 'table', filters, sorting],
     queryFn: ({ signal, pageParam }) => {
       if (!filters) throw new Error('Youth table filters must be initialized before loading rows');
       return getYouth(

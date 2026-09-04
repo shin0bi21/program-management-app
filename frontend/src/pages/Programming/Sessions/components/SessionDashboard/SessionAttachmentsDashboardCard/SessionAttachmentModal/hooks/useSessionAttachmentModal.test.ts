@@ -1,13 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSessionAttachment, updateSessionAttachment } from '../../../../../../../../common/features/programming/api/sessions.api';
-import type { SessionAttachment } from '../../../../../../../../common/types/cohort';
+import { createSessionAttachment, updateSessionAttachment } from '../../../../../sessions.api';
+import type { SessionAttachment } from '../../../../../types';
 import { makeCohortSession } from '../../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../../tests/queryClientTestUtils';
 import { useSessionAttachmentModal } from './useSessionAttachmentModal';
 
-vi.mock('../../../../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../../../../sessions.api', () => ({
   createSessionAttachment: vi.fn(),
   getSessionRoster: vi.fn().mockResolvedValue([]),
   updateSessionAttachment: vi.fn(),

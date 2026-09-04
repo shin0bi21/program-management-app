@@ -1,5 +1,11 @@
 import type { ColumnDef, ColumnSizingState } from '@tanstack/react-table';
-import type { SortDirection } from '../../types/pagination';
+
+export type SortDirection = 'asc' | 'desc';
+
+export interface ListSort<TKey extends string = string> {
+  key: TKey;
+  direction: SortDirection;
+}
 
 export type TableColumnDef<T, TValue = unknown> = ColumnDef<T, TValue> & {
   columns?: never;

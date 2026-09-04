@@ -1,15 +1,14 @@
-// Owns useCohortRoster state transitions and observable effects.
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getYouth } from '../../../../common/features/youth/youth.api';
-import type { ProgramCohort } from '../../../../common/types/cohort';
+import { getCohortRosterYouth } from '../cohorts.api';
+import type { ProgramCohort } from '../types';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import { useCohortRoster } from './useCohortRoster';
 
-vi.mock('../../../../common/features/youth/youth.api', () => ({ getYouth: vi.fn() }));
+vi.mock('../cohorts.api', () => ({ getCohortRosterYouth: vi.fn() }));
 
 const cohort: ProgramCohort = {
   id: 'cohort-1',
@@ -43,7 +42,7 @@ const createWrapper = () => {
 describe('useCohortRoster', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getYouth).mockResolvedValue([
+    vi.mocked(getCohortRosterYouth).mockResolvedValue([
       makeYouthProfile({
         id: 'enrolled',
         firstName: 'Enrolled',

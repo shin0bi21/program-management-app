@@ -1,12 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { updateSession } from '../../../../../../common/features/programming/api/sessions.api';
+import { updateSession } from '../../../sessions.api';
 import { makeCohortSession } from '../../../../../../tests/factories/session';
 import { useEditSessionModal } from './useEditSessionModal';
 
-vi.mock('../../../../../../common/features/programming/api/sessions.api', () => ({ updateSession: vi.fn() }));
-vi.mock('../../../../common/hooks/useSessionTypes', () => ({
+vi.mock('../../../sessions.api', () => ({ updateSession: vi.fn() }));
+vi.mock('../../../hooks/data/useSessionTypes', () => ({
   useSessionTypes: () => ({ sessionTypes: [] }),
 }));
 

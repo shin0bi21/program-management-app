@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../types';
 
 export default function useSessionSelection() {
   const [searchParams, setSearchParams] = useSearchParams();

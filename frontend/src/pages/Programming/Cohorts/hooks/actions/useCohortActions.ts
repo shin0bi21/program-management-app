@@ -2,11 +2,12 @@ import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
-import { deleteCohort } from '../../../../../common/features/programming/api/cohorts.api';
-import { COHORT_OPTIONS_QUERY_KEY, SESSION_QUERY_KEY } from '../../../../../common/features/programming/queryKeys';
-import { YOUTH_QUERY_KEY } from '../../../../../common/features/youth/queryKeys';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import { deleteCohort } from '../../cohorts.api';
+import type { ProgramCohort } from '../../types';
 import { removeInfiniteListRow } from '../../../../../query/infiniteListCache';
+
+const COHORT_OPTIONS_QUERY_KEY = ['cohorts', 'options'] as const;
+const YOUTH_QUERY_KEY = ['youth'] as const;
 
 export default function useCohortActions({
   tableQueryKey,
@@ -32,13 +33,6 @@ export default function useCohortActions({
     ]);
   }, [queryClient, refreshCohorts]);
 
-  const refreshGeneratedSessions = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
-      refreshCohorts(),
-    ]);
-  }, [queryClient, refreshCohorts]);
-
   const requestDelete = useCallback((cohort: ProgramCohort) => setConfirmAction({
     title: 'Delete Cohort',
     message: `Delete ${cohort.programName} · ${cohort.name}? Its sessions and enrollments will also be deleted. Cohorts with attendance cannot be deleted.`,
@@ -59,7 +53,6 @@ export default function useCohortActions({
     confirmAction,
     refreshCohorts,
     refreshRoster,
-    refreshGeneratedSessions,
     requestDelete,
     closeConfirmation,
   };

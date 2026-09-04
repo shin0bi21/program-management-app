@@ -1,6 +1,6 @@
 import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
-import type { YouthProfileNote } from '../../../../common/types/youth';
+import type { YouthProfileNote } from '../../types';
 import ProfileNoteDetails from './ProfileNoteDetails';
 import ProfileNoteModal from './ProfileNoteModal';
 

@@ -12,7 +12,7 @@ Form modals use this workflow-specific file layout:
 npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal --dry-run
 ```
 
-Remove `--dry-run` to generate the skeleton below. The owner path may be inside a page, page-family `common/`, or `common/features/` component owner.
+Remove `--dry-run` to generate the skeleton below. The owner path may be inside a page or page-family `common/`. For a cross-route business workflow, it may also be the `common/features/` root or a `components/` directory inside a broader shared feature.
 
 ```text
 components/
@@ -23,6 +23,8 @@ components/
       useExampleModal.ts
       useExampleModal.test.ts
 ```
+
+A modal that is itself the shared capability uses the direct form `common/features/ExampleModal/`. A modal belonging to a broader shared domain uses `common/features/ExampleDomain/components/ExampleModal/`. Choose between those forms from actual ownership; the scaffold supports both.
 
 The modal component and test are required. Add the workflow hook and its test when the modal owns non-trivial state or asynchronous coordination; keep a simple focused dialog in its component instead of generating a pass-through hook.
 

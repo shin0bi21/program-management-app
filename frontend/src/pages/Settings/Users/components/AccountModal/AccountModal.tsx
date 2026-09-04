@@ -3,7 +3,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Account } from '../../../../../common/types/account';
+import type { User } from '../../types';
 import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
 import { useAccountModal } from './useAccountModal';
 import './AccountModal.css';
@@ -11,8 +11,8 @@ import './AccountModal.css';
 interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (account: Account) => void;
-  account?: Account;
+  onSuccess: (account: User) => void;
+  account?: User;
 }
 
 export default function AccountModal(props: AccountModalProps) {

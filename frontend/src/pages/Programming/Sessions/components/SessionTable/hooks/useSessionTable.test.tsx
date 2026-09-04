@@ -1,10 +1,9 @@
-// Owns Session table columns, permission-aware actions, and exact callbacks.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { CohortSession } from '../../../../../../common/types/cohort';
+import type { CohortSession } from '../../../types';
 import { makeCohortSession } from '../../../../../../tests/factories/session';
 import useSessionTable from './useSessionTable';
 

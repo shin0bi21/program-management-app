@@ -1,4 +1,4 @@
-import NoteModal from '../../../../../common/features/notes/components/NoteModal/NoteModal';
+import NoteModal from '../../../../../common/features/Notes/NoteModal/NoteModal';
 import type { LeadNote } from '../../../types';
 import useLeadNoteEditModal from './useLeadNoteEditModal';
 

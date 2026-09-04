@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { YOUTH_QUERY_KEY } from '../../../../../common/features/youth/queryKeys';
-import type { Account } from '../../../../../common/types/account';
+import type { User } from '../../types';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 import { revokeAccountInvite, toggleAccountStatus } from '../../accounts.api';
+
+const YOUTH_QUERY_KEY = ['youth'] as const;
 
 interface AccountActionOptions {
   accountTableQueryKey: readonly unknown[];
@@ -14,17 +15,17 @@ export default function useAccountActions({ accountTableQueryKey }: AccountActio
   const queryClient = useQueryClient();
 
   // Account mutations and table-cache reconciliation.
-  const revokeInvite = useCallback(async (account: Account) => {
+  const revokeInvite = useCallback(async (account: User) => {
     await revokeAccountInvite(account.id);
     removeInfiniteListRow(queryClient, accountTableQueryKey, account.id);
   }, [accountTableQueryKey, queryClient]);
 
-  const toggleStatus = useCallback(async (account: Account) => {
+  const toggleStatus = useCallback(async (account: User) => {
     const savedAccount = await toggleAccountStatus(account.id);
     replaceInfiniteListRow(queryClient, accountTableQueryKey, savedAccount);
   }, [accountTableQueryKey, queryClient]);
 
-  const syncSavedAccount = useCallback((savedAccount: Account, isNew: boolean) => {
+  const syncSavedAccount = useCallback((savedAccount: User, isNew: boolean) => {
     if (isNew) {
       void queryClient.invalidateQueries({ queryKey: accountTableQueryKey });
       return;

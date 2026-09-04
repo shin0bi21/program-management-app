@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { Program } from '../../../../common/features/programs/types';
-import type { ProgramCycle } from '../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../Programming/Cohorts/types';
 
 export default function useProgrammingModals() {
   const [programTarget, setProgramTarget] = useState<Program | null | undefined>(undefined);

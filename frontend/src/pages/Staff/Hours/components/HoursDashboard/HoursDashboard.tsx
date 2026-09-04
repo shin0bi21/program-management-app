@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { StaffResource } from '../../types';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
 import { formatShortDateRange } from '../../../../../common/utils/date';
 import HoursDashboardCard from './HoursDashboardCard/HoursDashboardCard';
 import useHoursOverviewData from './hooks/useHoursOverviewData';

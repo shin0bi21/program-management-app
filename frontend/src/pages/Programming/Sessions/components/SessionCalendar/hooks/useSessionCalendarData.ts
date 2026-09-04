@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { DatesSetInfo, EventInput } from '@fullcalendar/react';
-import { getSessions } from '../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession, SessionListFilters } from '../../../../../../common/types/cohort';
+import { getSessions } from '../../../sessions.api';
+import type { CohortSession, SessionListFilters } from '../../../types';
 
 const noSessions: CohortSession[] = [];
 
