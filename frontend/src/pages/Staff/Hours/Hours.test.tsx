@@ -14,23 +14,12 @@ import {
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
+import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
-const preferenceHook = vi.hoisted<{
-  preference: StoredHoursPreferences | null;
-  loading: boolean;
-  error: string | null;
-  initializePreference: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
-}>(() => ({
-  preference: { view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1', sorting: { key: 'date', direction: 'desc' }, columnWidths: {}, hiddenColumns: [] },
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceHook: { preference: StoredHoursPreferences | null } = { preference: null };
 
 vi.mock('../../Programming/Cohorts/cohorts.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
@@ -52,7 +41,7 @@ vi.mock('../Tasks/tasks.api', () => ({
   setTask: vi.fn(),
 }));
 
-vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const auth: AuthContextValue = {
@@ -87,12 +76,8 @@ describe('Hours', () => {
     auth.role = 'staff';
     auth.permissions = ['read:hours', 'write:hours'];
     preferenceHook.preference = { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((update: StoredHoursPreferences | ((current: StoredHoursPreferences | null) => StoredHoursPreferences)) => {
-      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
-    });
+    vi.mocked(getPreference).mockImplementation(async () => preferenceHook.preference);
+    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getUser).mockReturnValue({
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com',
     });
@@ -480,7 +465,7 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(2);
@@ -499,7 +484,7 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteHours).toHaveBeenCalledWith('entry-1'));

@@ -29,12 +29,10 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as CohortPreference | null,
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
+const preferenceApi = vi.hoisted(() => ({
+  value: null as CohortPreference | null,
+  getPreference: vi.fn(),
+  setPreference: vi.fn(),
 }));
 
 vi.mock('./cohorts.api', () => ({
@@ -48,7 +46,10 @@ vi.mock('./cohorts.api', () => ({
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: preferenceApi.getPreference,
+  setPreference: preferenceApi.setPreference,
+}));
 vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
   default: ({ cohort }: { cohort: { name: string } | null }) => cohort
     ? <div role="dialog" aria-label={`${cohort.name} Youth Report`} />
@@ -66,19 +67,11 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: CohortPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: CohortPreference | ((current: CohortPreference | null) => CohortPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
+    preferenceApi.value = null;
+    preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
+    preferenceApi.setPreference.mockImplementation(async (_key: string, value: CohortPreference) => {
+      preferenceApi.value = value;
+      return value;
     });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
@@ -152,7 +145,8 @@ describe('Cohorts', () => {
 
   // Saved preferences and the current view.
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
-    preferenceHook.loading = true;
+    let finishLoading!: (value: CohortPreference | null) => void;
+    preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
     const rendered = render(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading saved cohort preferences…');
@@ -160,7 +154,7 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Cohorts' })).not.toBeInTheDocument();
 
-    preferenceHook.loading = false;
+    finishLoading(preferenceApi.value);
     rendered.rerender(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
@@ -179,7 +173,7 @@ describe('Cohorts', () => {
     expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
     expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();

@@ -55,6 +55,8 @@ test('creates only the required page files with honest orchestration placeholder
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/hooks')), false);
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
+  assert.match(read(files[0]), /grouped search, filters, and table controls, with ready\/error at the top level/);
+  assert.match(read(files[0]), /view\/setView at the top level/);
   assert.match(read(files[0]), /Filter configuration passed to every page data view/);
   assertOrdered(read(files[1]), [
     'Page-local error state',

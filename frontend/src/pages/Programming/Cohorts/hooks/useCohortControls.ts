@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
-import usePreferenceOptionRecovery from '../../../../common/features/Preferences/hooks/usePreferenceOptionRecovery';
-import useUserPreference from '../../../../common/features/Preferences/hooks/useUserPreference';
+import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
-  mergePreferenceDefaults,
-  resolvePreferenceSorting,
-  resolvePreferenceStringArray,
-} from '../../../../common/features/Preferences/preferenceValues';
+  optionalPreferenceOption,
+  optionalPreferenceId,
+  preferenceSorting,
+  preferenceColumnWidths,
+  preferenceHiddenColumns,
+} from '../../../../common/features/Preferences/preferences';
 import type { CohortSortKey } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 
@@ -23,14 +24,6 @@ export interface CohortPreference {
 }
 
 const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
-const DEFAULT_COHORT_PREFERENCE: CohortPreference = {
-  programId: null,
-  status: null,
-  sorting: DEFAULT_SORTING,
-  columnWidths: {},
-  hiddenColumns: [],
-};
-
 export function useCohortControls(
   role: string | null,
   programs: Program[],
@@ -41,58 +34,26 @@ export function useCohortControls(
   // Search and filters.
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [programId, setProgramId] = useState('');
-  const [status, setStatus] = useState<CohortStatus | ''>('');
+  const { preferences, updatePreferences, ready, error } = usePreferences({
+    key: 'cohort-filters',
+    waiting: role === null || programsLoading,
+    fields: {
+      programId: optionalPreferenceId(programsLoading || programsError ? undefined : programs.map(program => program.id)),
+      status: optionalPreferenceOption(['active', 'upcoming', 'completed'] as const, role === 'staff' ? 'active' : null),
+      sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
+      columnWidths: preferenceColumnWidths(tableKeys),
+      hiddenColumns: preferenceHiddenColumns(tableKeys),
+    },
+  });
+  const { sorting, columnWidths, hiddenColumns } = preferences;
+  const programId = preferences.programId ?? '';
+  const status = preferences.status ?? '';
 
-  // Table controls and persisted initialization.
-  const [sorting, setSortingState] = useState<ListSort<CohortSortKey>>(DEFAULT_SORTING);
-  const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
-  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
-  const [ready, setReady] = useState(false);
-  const {
-    preference,
-    loading: preferenceLoading,
-    error,
-    loadError,
-    initializePreference,
-    save,
-  } = useUserPreference<CohortPreference>('cohort-filters', tableKeys);
-
-  const applySearch = useCallback(() => setAppliedSearch(search.trim().toLowerCase()), [search]);
-  const clearSearch = useCallback(() => {
+  const applySearch = () => setAppliedSearch(search.trim().toLowerCase());
+  const clearSearch = () => {
     setSearch('');
     setAppliedSearch('');
-  }, []);
-
-  // Restore preferences once their referenced program options are available.
-  useEffect(() => {
-    if (ready || preferenceLoading || programsLoading || role === null) return;
-    const preferenceSource = loadError ? null : preference;
-    const resolved = mergePreferenceDefaults(DEFAULT_COHORT_PREFERENCE, preferenceSource);
-    const availableProgramIds = new Set(programs.map(program => program.id));
-    const restoredProgramId = resolved.programId
-      && (programsError || availableProgramIds.has(resolved.programId))
-      ? resolved.programId
-      : '';
-    const restoredStatus = resolved.status ?? (role === 'staff' ? 'active' : '');
-    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredColumnWidths = resolved.columnWidths ?? {};
-    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
-    const restored: CohortPreference = {
-      programId: restoredProgramId || null,
-      status: restoredStatus || null,
-      sorting: restoredSorting,
-      columnWidths: restoredColumnWidths,
-      hiddenColumns: restoredHiddenColumns,
-    };
-    setProgramId(restoredProgramId);
-    setStatus(restoredStatus);
-    setSortingState(restoredSorting);
-    setColumnWidthsState(restoredColumnWidths);
-    setHiddenColumnsState(restoredHiddenColumns);
-    initializePreference(restored);
-    setReady(true);
-  }, [loadError, preference, preferenceLoading, programs, programsError, programsLoading, ready, role, initializePreference, tableKeys]);
+  };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
@@ -109,72 +70,43 @@ export function useCohortControls(
     },
   ], [programs]);
 
-  // UI handlers persist complete preference values.
-  const persist = useCallback((next: {
-    programId?: string;
-    status?: CohortStatus | '';
-    sorting?: ListSort<CohortSortKey>;
-    columnWidths?: Record<string, number>;
-    hiddenColumns?: string[];
-  }) => save(current => ({
-    programId: (next.programId ?? current?.programId ?? programId) || null,
-    status: next.status === undefined
-      ? ((current?.status ?? status) || null)
-      : (next.status || null),
-    sorting: next.sorting ?? current?.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
-  })), [columnWidths, hiddenColumns, programId, save, sorting, status]);
-
-  const selectedProgramIds = useMemo(() => programId ? [programId] : [], [programId]);
-  const availableProgramIds = useMemo(() => programs.map(program => program.id), [programs]);
-  const reconcileProgram = useCallback((nextProgramIds: string[]) => {
-    const nextProgramId = nextProgramIds[0] ?? '';
-    setProgramId(nextProgramId);
-    void persist({ programId: nextProgramId });
-  }, [persist]);
-  usePreferenceOptionRecovery({
-    ready,
-    loading: programsLoading,
-    error: Boolean(programsError),
-    selectedIds: selectedProgramIds,
-    availableIds: availableProgramIds,
-    onReconcile: reconcileProgram,
-  });
-
-  const applyFilter = useCallback((category: string, selected: string[]) => {
+  const applyFilter = (category: string, selected: string[]) => {
     if (category === 'program') {
-      const nextProgramId = selected[0] ?? '';
-      setProgramId(nextProgramId);
-      void persist({ programId: nextProgramId });
-      return;
+      updatePreferences({ programId: selected[0] ?? null });
     }
     if (category === 'status') {
-      const nextStatus = (selected[0] as CohortStatus | undefined) ?? '';
-      setStatus(nextStatus);
-      void persist({ status: nextStatus });
+      updatePreferences({ status: (selected[0] as CohortStatus | undefined) ?? null });
     }
-  }, [persist]);
-
-  const clearFilters = useCallback(() => {
-    setProgramId('');
-    setStatus('');
-    void persist({ programId: '', status: '' });
-  }, [persist]);
-  const setSorting = useCallback((next: TableSorting) => {
-    const value = next as ListSort<CohortSortKey>;
-    setSortingState(value);
-    void persist({ sorting: value });
-  }, [persist]);
-  const setColumnWidths = useCallback((next: Record<string, number>) => {
-    setColumnWidthsState(next);
-    void persist({ columnWidths: next });
-  }, [persist]);
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
+  };
+  const clearFilters = () => updatePreferences({ programId: null, status: null });
+  const setSorting = (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<CohortSortKey> });
+  const setColumnWidths = (columnWidths: Record<string, number>) => updatePreferences({ columnWidths });
+  const setHiddenColumns = (hiddenColumns: string[]) => updatePreferences({ hiddenColumns });
 
   return {
-    search, setSearch, appliedSearch, applySearch, clearSearch, programId, status, sorting, setSorting,
-    columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    ready, error, filterCategories, applyFilter, clearFilters,
+    ready,
+    error,
+    search: {
+      value: search,
+      setValue: setSearch,
+      appliedValue: appliedSearch,
+      apply: applySearch,
+      clear: clearSearch,
+    },
+    filters: {
+      programId,
+      status,
+      definitions: filterCategories,
+      apply: applyFilter,
+      clear: clearFilters,
+    },
+    table: {
+      sorting,
+      setSorting,
+      columnWidths,
+      setColumnWidths,
+      hiddenColumns,
+      setHiddenColumns,
+    },
   };
 }

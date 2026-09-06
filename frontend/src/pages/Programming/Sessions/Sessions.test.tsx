@@ -35,18 +35,10 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
-const preferenceHook = vi.hoisted<{
-  preference: SessionPreference | null;
-  loading: boolean;
-  error: string | null;
-  initializePreference: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
-}>(() => ({
-  preference: { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
+const preferenceApi = vi.hoisted(() => ({
+  value: null as SessionPreference | null,
+  getPreference: vi.fn(),
+  setPreference: vi.fn(),
 }));
 
 vi.mock('../Cohorts/cohorts.api', () => ({
@@ -72,7 +64,10 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: preferenceApi.getPreference,
+  setPreference: preferenceApi.setPreference,
+}));
 
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   default: ({
@@ -131,19 +126,11 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
-    preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: SessionPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: SessionPreference | ((current: SessionPreference | null) => SessionPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
+    preferenceApi.value = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
+    preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
+      preferenceApi.value = value;
+      return value;
     });
     auth.role = 'admin';
     auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
@@ -263,7 +250,8 @@ describe('Sessions', () => {
 
   // Saved preferences and the current view.
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
-    preferenceHook.loading = true;
+    let finishLoading!: (value: SessionPreference | null) => void;
+    preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
     const rendered = render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
@@ -276,7 +264,7 @@ describe('Sessions', () => {
     expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
 
-    preferenceHook.loading = false;
+    finishLoading(preferenceApi.value);
     rendered.rerender(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
@@ -360,7 +348,7 @@ describe('Sessions', () => {
 
   // Table, calendar, dashboard, and body initialization.
   it('switches between table and calendar views on the same page', async () => {
-    preferenceHook.preference = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
@@ -377,7 +365,7 @@ describe('Sessions', () => {
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
 
-    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'table' }));
+    await waitFor(() => expect(preferenceApi.value).toEqual(expect.objectContaining({ view: 'table' })));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
@@ -389,7 +377,7 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
   });
 });

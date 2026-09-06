@@ -41,18 +41,15 @@ export default function Cohorts() {
     COHORT_TABLE_KEYS,
     programsError,
   );
-  const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, programId: selectedProgramId, status: selectedStatus,
-    sorting, columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    ready: controlsReady,
-  } = controls;
+  const { search, filters, table, error: preferenceError, ready: controlsReady } = controls;
+  const { programId: selectedProgramId, status: selectedStatus } = filters;
 
   // Filter configuration.
   const cohortFilters = useMemo<CohortListFilters | null>(() => controlsReady ? {
     programId: selectedProgramId || undefined,
-    search: appliedSearch,
+    search: search.appliedValue,
     status: selectedStatus || undefined,
-  } : null, [appliedSearch, controlsReady, selectedProgramId, selectedStatus]);
+  } : null, [search.appliedValue, controlsReady, selectedProgramId, selectedStatus]);
 
   // Selection and actions.
   const selection = useCohortSelection();
@@ -99,24 +96,24 @@ export default function Cohorts() {
           search={
             <SearchInput
               label="Search cohorts"
-              value={search}
-              appliedValue={appliedSearch}
-              onChange={(event) => setSearch(event.target.value)}
-              onApply={applySearch}
-              onClear={clearSearch}
+              value={search.value}
+              appliedValue={search.appliedValue}
+              onChange={(event) => search.setValue(event.target.value)}
+              onApply={search.apply}
+              onClear={search.clear}
               placeholder="Search cohorts or programs"
             />
           }
-          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={table.hiddenColumns} onHiddenColumnKeysChange={table.setHiddenColumns} /> : undefined}
           filters={controlsReady ? (
             <FilterCard
-              categories={filterCategories}
+              categories={filters.definitions}
               values={{
                 program: selectedProgramId ? [selectedProgramId] : [],
                 status: selectedStatus ? [selectedStatus] : [],
               }}
-              onApply={controls.applyFilter}
-              onClearAll={controls.clearFilters}
+              onApply={filters.apply}
+              onClearAll={filters.clear}
             />
           ) : undefined}
         />
@@ -129,13 +126,13 @@ export default function Cohorts() {
               queryKey={COHORT_TABLE_QUERY_KEY}
               filters={cohortFilters}
               columns={columns}
-              hiddenColumnKeys={hiddenColumns}
+              hiddenColumnKeys={table.hiddenColumns}
               selectedKey={selection.selectedCohort?.id ?? null}
               onRowSelect={selection.setSelectedCohort}
-              sorting={sorting}
-              onSortingChange={controls.setSorting}
-              columnWidths={columnWidths}
-              onColumnWidthsChange={controls.setColumnWidths}
+              sorting={table.sorting}
+              onSortingChange={table.setSorting}
+              columnWidths={table.columnWidths}
+              onColumnWidthsChange={table.setColumnWidths}
               onErrorChange={setViewError}
             />
           }

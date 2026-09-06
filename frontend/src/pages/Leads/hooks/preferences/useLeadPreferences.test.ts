@@ -1,20 +1,16 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../common/features/programs/types';
-import { useLeadPreferences, type LeadPreference } from './useLeadPreferences';
+import { useLeadPreferences } from './useLeadPreferences';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as LeadPreference | null,
-  loading: false,
-  error: null as string | null,
-  loadError: null as string | null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
+vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
-vi.mock('../../../../common/features/Preferences/hooks/useUserPreference', () => ({
-  default: () => preferenceHook,
-}));
+const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(callback, {
+  ...options,
+  wrapper: createQueryClientWrapper(createTestQueryClient()),
+});
 
 const programs: Program[] = [{
   id: 'program-1',
@@ -29,103 +25,44 @@ const tableKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'crea
 describe('useLeadPreferences', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    preferenceHook.preference = null;
-    preferenceHook.loadError = null;
+    preferenceApi.getPreference.mockResolvedValue(null);
+    preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
 
-  it('preserves hidden columns when a resize follows immediately', async () => {
-    const persisted: LeadPreference = {
-      search: '',
-      statuses: [],
-      programIds: [],
-      origins: [],
-      submitterRoles: [],
-      sorting: { key: 'created', direction: 'desc' },
-      columnWidths: {},
-      hiddenColumns: [],
-    };
-    preferenceHook.save.mockImplementation((update: (current: LeadPreference) => LeadPreference) => {
-      Object.assign(persisted, update(persisted));
-    });
-    const { result } = renderHook(() => useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys));
+  it('maps search, filter, and table controls to external-lead preferences', async () => {
+    const { result } = renderHook(() => (
+      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
+    ));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
+    expect(result.current.filters.statuses).toEqual([]);
+    expect(result.current.filters.programIds).toEqual([]);
+
+    act(() => result.current.search.setValue(' school '));
+    act(() => result.current.search.apply());
+    act(() => result.current.filters.apply('status', ['contacted']));
+    act(() => result.current.filters.apply('submitterRole', ['youth']));
     act(() => {
       result.current.table.setHiddenColumns(['school']);
       result.current.table.setColumnWidths({ firstName: 240 });
       result.current.table.setSorting({ key: 'school', direction: 'asc' });
     });
 
-    expect(persisted.hiddenColumns).toEqual(['school']);
-    expect(persisted.columnWidths).toEqual({ firstName: 240 });
-    expect(persisted.sorting).toEqual({ key: 'school', direction: 'asc' });
-  });
-
-  it('uses defaults when saved preferences cannot be loaded', async () => {
-    preferenceHook.preference = { search: '', statuses: ['contacted'], programIds: ['program-1'], origins: ['external'], submitterRoles: ['parent'] };
-    preferenceHook.loadError = 'offline';
-    const { result } = renderHook(() => useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.statuses).toEqual([]);
-    expect(result.current.filters.programIds).toEqual([]);
-  });
-
-  it('scrubs removed programs and resets legacy name sorting before establishing the baseline', async () => {
-    preferenceHook.preference = {
-      search: '',
-      statuses: ['new'],
-      programIds: ['removed-program'],
-      origins: [],
-      submitterRoles: ['parent'],
-      sorting: { key: 'name' as never, direction: 'asc' },
-    };
-    const { result } = renderHook(() => (
-      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
-    ));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.filters.programIds).toEqual([]);
-    expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
-      programIds: [],
-      sorting: { key: 'created', direction: 'desc' },
-    }));
-  });
-
-  it('exposes search, filters, and table through the standard preference contract', async () => {
-    const persisted: LeadPreference = {
-      search: '',
-      statuses: [],
-      programIds: [],
-      origins: ['external'],
-      submitterRoles: [],
-      sorting: { key: 'created', direction: 'desc' },
-      columnWidths: {},
-      hiddenColumns: [],
-    };
-    preferenceHook.save.mockImplementation((update: (current: LeadPreference) => LeadPreference) => {
-      Object.assign(persisted, update(persisted));
-    });
-    const { result } = renderHook(() => (
-      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
-    ));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    act(() => result.current.search.setValue(' school '));
-    act(() => result.current.search.apply());
-    act(() => result.current.filters.apply('status', ['contacted']));
-    act(() => result.current.filters.apply('submitterRole', ['youth']));
-
     expect(result.current.search.appliedValue).toBe('school');
     expect(result.current.filters.statuses).toEqual(['contacted']);
     expect(result.current.filters.submitterRoles).toEqual(['youth']);
-    expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
-    expect(persisted).toEqual(expect.objectContaining({ search: 'school', statuses: ['contacted'], submitterRoles: ['youth'] }));
+    expect(result.current.table.sorting).toEqual({ key: 'school', direction: 'asc' });
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'outreach-external-leads-filters', expect.objectContaining({
+        search: 'school', statuses: ['contacted'], submitterRoles: ['youth'],
+        hiddenColumns: ['school'], columnWidths: { firstName: 240 },
+        sorting: { key: 'school', direction: 'asc' },
+      }),
+    ));
   });
 
-  it('omits the submitter filter from internal lead controls and requests', async () => {
+  it('restricts internal leads to their origin and removes saved submitter roles', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ origins: ['external'], submitterRoles: ['parent'] });
     const { result } = renderHook(() => (
       useLeadPreferences('internal', 'outreach-internal-leads-filters', programs, false, null, tableKeys)
     ));
@@ -136,5 +73,52 @@ describe('useLeadPreferences', () => {
       expect.objectContaining({ id: 'submitterRole' }),
     ]));
     expect(result.current.filters.submitterRoles).toEqual([]);
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'outreach-internal-leads-filters', expect.objectContaining({ origins: ['internal'], submitterRoles: [] }),
+    ));
+  });
+
+  it('validates lead statuses, submitter roles, origin, and legacy sorting', async () => {
+    preferenceApi.getPreference.mockResolvedValue({
+      search: ' school ', statuses: ['contacted', 'obsolete'], programIds: ['program-1'],
+      origins: ['internal'], submitterRoles: ['parent', 'obsolete'], hiddenColumns: 'school',
+      sorting: { key: 'name', direction: 'asc' },
+    });
+    const { result } = renderHook(() => (
+      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
+    ));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.search.value).toBe('school');
+    expect(result.current.filters.statuses).toEqual(['contacted']);
+    expect(result.current.filters.programIds).toEqual(['program-1']);
+    expect(result.current.filters.submitterRoles).toEqual(['parent']);
+    expect(result.current.table.hiddenColumns).toEqual([]);
+    expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'outreach-external-leads-filters', expect.objectContaining({ origins: ['external'] }),
+    ));
+  });
+
+  it('uses program availability without applying the local search draft', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ programIds: ['removed-program'] });
+    const { result, rerender } = renderHook(({ error }: { error: string | null }) => (
+      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, error, tableKeys)
+    ), { initialProps: { error: 'offline' as string | null } });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.programIds).toEqual(['removed-program']);
+
+    act(() => result.current.filters.apply('status', ['contacted']));
+    act(() => result.current.search.setValue('unfinished search'));
+    rerender({ error: null });
+
+    await waitFor(() => expect(result.current.filters.programIds).toEqual([]));
+    expect(result.current.filters.statuses).toEqual(['contacted']);
+    expect(result.current.search.value).toBe('unfinished search');
+    expect(result.current.search.appliedValue).toBe('');
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'outreach-external-leads-filters', expect.objectContaining({ programIds: [], statuses: ['contacted'], search: '' }),
+    ));
   });
 });

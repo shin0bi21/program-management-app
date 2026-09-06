@@ -2,25 +2,16 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
-import type { AccountPreference } from './hooks/useAccountControls';
 
 const mockUseAuth = vi.fn();
 const mockUseUserTableData = vi.fn();
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as AccountPreference | null,
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./components/UserTable/hooks/useUserTableData', () => ({
   default: (...args: unknown[]) => mockUseUserTableData(...args),
 }));
-vi.mock('../../../common/features/Preferences/hooks/useUserPreference', () => ({
-  default: () => preferenceHook,
-}));
+vi.mock('../../../common/features/Preferences/preferences.api', () => preferenceApi);
 vi.mock('./accounts.api', () => ({
   revokeAccountInvite: vi.fn(),
   toggleAccountStatus: vi.fn(),
@@ -58,20 +49,8 @@ const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retr
 
 describe('Users', () => {
   beforeEach(() => {
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: AccountPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: AccountPreference | ((current: AccountPreference | null) => AccountPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
-    });
+    preferenceApi.getPreference.mockResolvedValue(null);
+    preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     mockUseUserTableData.mockReset();
     mockUseUserTableData.mockReturnValue({
       rows: accounts,
@@ -84,6 +63,7 @@ describe('Users', () => {
   it('shows admin account controls and sends search state to the accounts query', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
+    await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
@@ -101,7 +81,7 @@ describe('Users', () => {
     );
   });
 
-  it('shows the staff-scoped presentation without staff-management controls', () => {
+  it('shows the staff-scoped presentation without staff-management controls', async () => {
     mockUseAuth.mockReturnValue({ role: 'staff', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     mockUseUserTableData.mockReturnValue({
       rows: [accounts[1]],
@@ -110,6 +90,7 @@ describe('Users', () => {
     });
 
     renderPage();
+    await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add', expanded: false })).not.toBeInTheDocument();
@@ -124,6 +105,7 @@ describe('Users', () => {
   it('opens the account status confirmation from the table action', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
     renderPage();
+    await screen.findByRole('button', { name: 'Filters' });
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Alice Admin' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Deactivate' }));

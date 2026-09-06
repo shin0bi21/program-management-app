@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
-import usePreferenceOptionRecovery from '../../../../../common/features/Preferences/hooks/usePreferenceOptionRecovery';
-import useUserPreference from '../../../../../common/features/Preferences/hooks/useUserPreference';
+import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
-  mergePreferenceDefaults,
-  resolveAvailablePreferenceIds,
-  resolveAvailablePreferenceValues,
-  resolvePreferenceNumberRecord,
-  resolvePreferenceSorting,
-  resolvePreferenceString,
-  resolvePreferenceStringArray,
-  resolvePreferenceValue,
-} from '../../../../../common/features/Preferences/preferenceValues';
+  preferenceOption,
+  preferenceOptions,
+  preferenceIds,
+  optionalPreferenceId,
+  preferenceText,
+  preferenceSorting,
+  preferenceColumnWidths,
+  preferenceHiddenColumns,
+} from '../../../../../common/features/Preferences/preferences';
 import type {
   StaffResource,
   HoursCategory,
@@ -40,55 +39,6 @@ interface HoursPreferences {
 
 export type StoredHoursPreferences = Partial<HoursPreferences>;
 
-const DEFAULT_HOURS_PREFERENCES: HoursPreferences = {
-  view: 'calendar',
-  search: '',
-  staffIds: [],
-  programIds: [],
-  categories: [],
-  types: [],
-  cycleId: null,
-  sorting: { key: 'date', direction: 'desc' },
-  columnWidths: {},
-  hiddenColumns: [],
-};
-const DEFAULT_SORTING = DEFAULT_HOURS_PREFERENCES.sorting;
-
-function resolveHoursPreference(
-  preference: StoredHoursPreferences | null,
-  role: string,
-  resources: readonly StaffResource[],
-  programs: readonly HoursProgram[],
-  cycles: readonly ProgramCycle[],
-  categories: ReadonlyArray<{ value: HoursCategory }>,
-  types: ReadonlyArray<{ value: HoursEntryType }>,
-  preserveSavedOptions: boolean,
-  preserveSavedCycle: boolean,
-  tableKeys: readonly HoursSortKey[],
-): HoursPreferences {
-  const resolved = mergePreferenceDefaults(DEFAULT_HOURS_PREFERENCES, preference);
-  const savedCycleId = resolved.cycleId;
-  const cycleId = preference
-    ? (preserveSavedCycle || cycles.some(cycle => cycle.id === savedCycleId) ? savedCycleId : null)
-    : cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? null;
-  const availablePrograms = [{ id: 'general' }, ...programs];
-
-  return {
-    view: resolvePreferenceValue(resolved.view, ['calendar', 'table'], DEFAULT_HOURS_PREFERENCES.view),
-    search: resolvePreferenceString(resolved.search),
-    staffIds: role === 'admin'
-      ? resolveAvailablePreferenceIds(resolved.staffIds, resources, !preserveSavedOptions)
-      : [],
-    programIds: resolveAvailablePreferenceIds(resolved.programIds, availablePrograms, !preserveSavedOptions),
-    categories: resolveAvailablePreferenceValues(resolved.categories, categories, !preserveSavedOptions),
-    types: resolveAvailablePreferenceValues(resolved.types, types, !preserveSavedOptions),
-    cycleId,
-    sorting: resolvePreferenceSorting(preference?.sorting, tableKeys, DEFAULT_SORTING),
-    columnWidths: resolvePreferenceNumberRecord(resolved.columnWidths),
-    hiddenColumns: resolvePreferenceStringArray(resolved.hiddenColumns),
-  };
-}
-
 export default function useHoursPreferences({
   role,
   resources,
@@ -112,136 +62,50 @@ export default function useHoursPreferences({
   cyclesError: boolean;
   tableKeys: readonly HoursSortKey[];
 }) {
-  const [preferences, setPreferences] = useState<HoursPreferences>(DEFAULT_HOURS_PREFERENCES);
-  const [searchValue, setSearchValue] = useState('');
-  const [ready, setReady] = useState(false);
-  const { preference, loading, error, loadError, initializePreference, save } = useUserPreference<StoredHoursPreferences>(
-    'hours-filters',
-    tableKeys,
-  );
-
-  useEffect(() => {
-    if (ready || loading || loadingDependencies || role === null) return;
-    const restored = resolveHoursPreference(
-      loadError ? null : preference,
-      role,
-      resources,
-      programs,
-      cycles,
-      categories,
-      types,
-      optionsError,
-      cyclesError,
-      tableKeys,
-    );
-    setPreferences(restored);
-    setSearchValue(restored.search);
-    initializePreference(restored);
-    setReady(true);
-  }, [categories, cycles, cyclesError, loadError, loading, loadingDependencies, optionsError, preference, programs, ready, resources, role, initializePreference, tableKeys, types]);
-
-  const applyPreferencePatch = useCallback((patch: Partial<HoursPreferences>) => {
-    setPreferences(current => ({ ...current, ...patch }));
-    save(current => ({
-      ...resolveHoursPreference(
-        current,
-        role ?? '',
-        resources,
-        programs,
-        cycles,
-        categories,
-        types,
-        optionsError,
-        cyclesError,
-        tableKeys,
+  const canVerifyOptions = !loadingDependencies && !optionsError;
+  const canVerifyCycles = !loadingDependencies && !cyclesError;
+  const defaultCycleId = cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? null;
+  const { preferences, updatePreferences, ready, error } = usePreferences({
+    key: 'hours-filters',
+    waiting: loadingDependencies || role === null,
+    fields: {
+      view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
+      search: preferenceText(),
+      staffIds: preferenceIds(role !== 'admin' ? [] : canVerifyOptions
+        ? resources.map(resource => resource.id) : undefined),
+      programIds: preferenceIds(canVerifyOptions ? ['general', ...programs.map(program => program.id)] : undefined),
+      categories: preferenceOptions<HoursCategory>(
+        ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
+        [],
+        canVerifyOptions ? categories.map(category => category.value) : null,
       ),
-      ...patch,
-    }));
-  }, [categories, cycles, cyclesError, optionsError, programs, resources, role, save, tableKeys, types]);
-
-  const availableResourceIds = useMemo(() => resources.map(resource => resource.id), [resources]);
-  const availableProgramIds = useMemo(
-    () => ['general', ...programs.map(program => program.id)],
-    [programs],
-  );
-  const availableCycleIds = useMemo(() => cycles.map(cycle => cycle.id), [cycles]);
-  const availableCategoryValues = useMemo(() => categories.map(category => category.value), [categories]);
-  const availableTypeValues = useMemo(() => types.map(type => type.value), [types]);
-  const selectedCycleIds = useMemo(
-    () => preferences.cycleId ? [preferences.cycleId] : [],
-    [preferences.cycleId],
-  );
-
-  const reconcileStaff = useCallback((staffIds: string[]) => {
-    applyPreferencePatch({ staffIds });
-  }, [applyPreferencePatch]);
-  const reconcilePrograms = useCallback((programIds: string[]) => {
-    applyPreferencePatch({ programIds });
-  }, [applyPreferencePatch]);
-  const reconcileCycle = useCallback((cycleIds: string[]) => {
-    applyPreferencePatch({ cycleId: cycleIds[0] ?? null });
-  }, [applyPreferencePatch]);
-  const reconcileCategories = useCallback((nextCategories: string[]) => {
-    applyPreferencePatch({ categories: nextCategories as HoursCategory[] });
-  }, [applyPreferencePatch]);
-  const reconcileTypes = useCallback((nextTypes: string[]) => {
-    applyPreferencePatch({ types: nextTypes as HoursEntryType[] });
-  }, [applyPreferencePatch]);
-
-  usePreferenceOptionRecovery({
-    ready: ready && role === 'admin',
-    loading: loadingDependencies,
-    error: optionsError,
-    selectedIds: preferences.staffIds,
-    availableIds: availableResourceIds,
-    onReconcile: reconcileStaff,
+      types: preferenceOptions<HoursEntryType>(
+        ['task', 'session', 'other'],
+        [],
+        canVerifyOptions ? types.map(type => type.value) : null,
+      ),
+      cycleId: optionalPreferenceId(canVerifyCycles ? cycles.map(cycle => cycle.id) : undefined, defaultCycleId),
+      sorting: preferenceSorting(tableKeys, { key: 'date', direction: 'desc' }),
+      columnWidths: preferenceColumnWidths(tableKeys),
+      hiddenColumns: preferenceHiddenColumns(tableKeys),
+    },
   });
-  usePreferenceOptionRecovery({
-    ready,
-    loading: loadingDependencies,
-    error: optionsError,
-    selectedIds: preferences.programIds,
-    availableIds: availableProgramIds,
-    onReconcile: reconcilePrograms,
-  });
-  usePreferenceOptionRecovery({
-    ready,
-    loading: loadingDependencies,
-    error: cyclesError,
-    selectedIds: selectedCycleIds,
-    availableIds: availableCycleIds,
-    onReconcile: reconcileCycle,
-  });
-  usePreferenceOptionRecovery({
-    ready,
-    loading: loadingDependencies,
-    error: optionsError,
-    selectedIds: preferences.categories,
-    availableIds: availableCategoryValues,
-    onReconcile: reconcileCategories,
-  });
-  usePreferenceOptionRecovery({
-    ready,
-    loading: loadingDependencies,
-    error: optionsError,
-    selectedIds: preferences.types,
-    availableIds: availableTypeValues,
-    onReconcile: reconcileTypes,
-  });
+  const [searchDraft, setSearchValue] = useState<string | null>(null);
+  const searchValue = searchDraft ?? preferences.search;
 
   // View preference.
-  const setView = useCallback((view: HoursPreferences['view']) => {
-    applyPreferencePatch({ view });
-  }, [applyPreferencePatch]);
+  const setView = (view: HoursPreferences['view']) => {
+    updatePreferences({ view });
+  };
 
   // Search preference.
-  const applySearch = useCallback(() => {
-    applyPreferencePatch({ search: searchValue.trim() });
-  }, [applyPreferencePatch, searchValue]);
-  const clearSearch = useCallback(() => {
+  const applySearch = () => {
+    updatePreferences({ search: searchValue.trim() });
+  };
+  const clearSearch = () => {
     setSearchValue('');
-    applyPreferencePatch({ search: '' });
-  }, [applyPreferencePatch]);
+    updatePreferences({ search: '' });
+  };
 
   // Filter preferences.
   const filterDefinitions = useMemo<FilterCardCategory[]>(() => [
@@ -268,35 +132,35 @@ export default function useHoursPreferences({
     { id: 'entryType', label: 'Category', options: [...categories] },
   ], [categories, cycles, programs, resources, role, types]);
 
-  const applyFilter = useCallback((id: string, selected: string[]) => {
-    if (id === 'staff') applyPreferencePatch({ staffIds: selected });
-    if (id === 'program') applyPreferencePatch({ programIds: selected });
-    if (id === 'entryType') applyPreferencePatch({ categories: selected as HoursCategory[] });
-    if (id === 'type') applyPreferencePatch({ types: selected as HoursEntryType[] });
-    if (id === 'cycle') applyPreferencePatch({ cycleId: selected[0] ?? null });
-  }, [applyPreferencePatch]);
+  const applyFilter = (id: string, selected: string[]) => {
+    if (id === 'staff') updatePreferences({ staffIds: selected });
+    if (id === 'program') updatePreferences({ programIds: selected });
+    if (id === 'entryType') updatePreferences({ categories: selected as HoursCategory[] });
+    if (id === 'type') updatePreferences({ types: selected as HoursEntryType[] });
+    if (id === 'cycle') updatePreferences({ cycleId: selected[0] ?? null });
+  };
 
-  const clearFilters = useCallback(() => applyPreferencePatch({
+  const clearFilters = () => updatePreferences({
     staffIds: [],
     programIds: [],
     categories: [],
     types: [],
     cycleId: null,
-  }), [applyPreferencePatch]);
+  });
 
-  const selectCycle = useCallback((cycleId: string) => {
-    applyPreferencePatch({ cycleId });
-  }, [applyPreferencePatch]);
+  const selectCycle = (cycleId: string) => {
+    updatePreferences({ cycleId });
+  };
 
-  const updateSorting = useCallback((sorting: ListSort<HoursSortKey>) => {
-    applyPreferencePatch({ sorting });
-  }, [applyPreferencePatch]);
-  const updateColumnWidths = useCallback((columnWidths: Record<string, number>) => {
-    applyPreferencePatch({ columnWidths });
-  }, [applyPreferencePatch]);
-  const updateHiddenColumns = useCallback((hiddenColumns: string[]) => {
-    applyPreferencePatch({ hiddenColumns });
-  }, [applyPreferencePatch]);
+  const updateSorting = (sorting: ListSort<HoursSortKey>) => {
+    updatePreferences({ sorting });
+  };
+  const updateColumnWidths = (columnWidths: Record<string, number>) => {
+    updatePreferences({ columnWidths });
+  };
+  const updateHiddenColumns = (hiddenColumns: string[]) => {
+    updatePreferences({ hiddenColumns });
+  };
 
   return {
     ready,
