@@ -24,6 +24,19 @@ describe('session API', () => {
     );
   });
 
+  it('serializes the cycle for both paginated and calendar requests', () => {
+    const options = { signal: new AbortController().signal };
+    getSessions({ cycleId: 'cycle-1', programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      '/cohorts/sessions?programIds=program-1&cycleId=cycle-1&sort=date&direction=asc&limit=25', options,
+    );
+
+    getSessions({ cycleId: 'cycle-1', start: '2026-07-01', end: '2026-08-01' }, options);
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      '/cohorts/sessions?start=2026-07-01&end=2026-08-01&cycleId=cycle-1', options,
+    );
+  });
+
   it('creates multipart session attachments', () => {
     const file = new File(['contents'], 'plan.pdf', { type: 'application/pdf' });
     createSessionAttachment('session-1', {

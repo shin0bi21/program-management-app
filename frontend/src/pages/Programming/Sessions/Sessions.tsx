@@ -19,6 +19,7 @@ import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
 import useSessionActions from './hooks/actions/useSessionActions';
+import { useCycles } from './hooks/data/useCycles';
 import { useCohorts } from './hooks/data/useCohorts';
 import { useSessionTypes } from './hooks/data/useSessionTypes';
 import useSessionSelection from './hooks/selection/useSessionSelection';
@@ -40,7 +41,8 @@ export default function Sessions() {
 
   // Page data.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts();
+  const { cohorts, error: cohortsError, refresh: refreshCohorts } = useCohorts();
+  const { cycles, loading: cyclesLoading, error: cyclesError } = useCycles();
   const {
     sessionTypes,
     loading: sessionTypesLoading,
@@ -49,21 +51,22 @@ export default function Sessions() {
 
   // Saved preferences and current view.
   const controls = useSessionControls({
-    role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
+    role, programs, programsLoading, programsError, cohorts,
+    cycles, cyclesLoading, cyclesError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
   const { search, filters, table: tableControls, view, ready: filtersReady, schedulableCohorts } = controls;
-  const { programIds: selectedProgramIds, cohortId, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
+  const { programIds: selectedProgramIds, cycleId, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
     programIds: selectedProgramIds,
-    cohortId: cohortId || undefined,
+    cycleId: cycleId || undefined,
     sessionTypeIds: selectedSessionTypeIds,
     statuses: statusFilters,
     search: search.appliedValue || undefined,
-  }), [search.appliedValue, cohortId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+  }), [search.appliedValue, cycleId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
 
   // Selection and actions.
   const selection = useSessionSelection();
@@ -168,11 +171,11 @@ export default function Sessions() {
               categories={filters.definitions}
               values={{
                 program: selectedProgramIds,
-                cohort: cohortId ? [cohortId] : [],
+                cycle: cycleId ? [cycleId] : [],
                 status: statusFilters,
                 type: selectedSessionTypeIds,
               }}
-              onApply={(category, selected) => applyFilter(category, category === 'cohort' ? selected.slice(0, 1) : selected)}
+              onApply={(category, selected) => applyFilter(category, category === 'cycle' ? selected.slice(0, 1) : selected)}
               onClearAll={clearFilters}
             />
           ) : undefined}
@@ -196,6 +199,7 @@ export default function Sessions() {
           controls.error,
           programsError,
           cohortsError,
+          cyclesError,
           sessionTypesError,
           viewError,
           ...dashboardErrors,
@@ -224,7 +228,7 @@ export default function Sessions() {
         cohort={null}
         cohorts={schedulableCohorts}
         isOpen={addSessionsOpen}
-        initialCohortId={cohortId || schedulableCohorts[0]?.id}
+        initialCohortId={schedulableCohorts[0]?.id}
         onClose={closeAddSessionsModal}
         onSuccess={async () => {
           await Promise.all([actions.refreshSessionQueries(), refreshCohorts()]);

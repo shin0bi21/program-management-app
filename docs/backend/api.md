@@ -78,6 +78,10 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
 | `/schools` | School lookup and management |
 
+`GET /cohorts/sessions` accepts an optional UUID `cycleId` to filter sessions across
+the cycle's cohorts. It combines with program, cohort, session-type, status, search,
+date-range and pagination filters while preserving program access restrictions.
+
 ### Outreach
 
 | Base path | Purpose |

@@ -5,17 +5,17 @@ import type { ListSort } from '../../../../../../common/components/Table/Table.t
 
 export function useSessionTableData(queryKey: readonly unknown[], {
   programIds = [],
-  cohortId,
+  cycleId,
   sessionTypeIds = [],
   statuses = [],
   search,
 }: SessionListFilters, sorting: ListSort<SessionSortKey>, enabled = true) {
   const filters = {
-        programIds,
-        cohortId,
-        sessionTypeIds,
-        statuses,
-        search,
+    programIds,
+    cycleId,
+    sessionTypeIds,
+    statuses,
+    search,
   };
   const query = useInfiniteListQuery<CohortSession>({
     queryKey: [...queryKey, filters, sorting],

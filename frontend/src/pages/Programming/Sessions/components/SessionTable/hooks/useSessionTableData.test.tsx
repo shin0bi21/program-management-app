@@ -17,7 +17,7 @@ describe('useSessionTableData', () => {
     vi.mocked(getSessions).mockResolvedValue({ rows: [session], nextCursor: null });
     const client = createTestQueryClient();
     const filters = {
-      programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'],
+      programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: ['type-1'],
       statuses: ['upcoming' as const], search: 'communication',
     };
     const sorting = { key: 'date' as const, direction: 'desc' as const };
