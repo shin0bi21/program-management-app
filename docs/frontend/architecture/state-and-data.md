@@ -12,7 +12,7 @@ Give each value one owner. Choose that owner by how long the value lives and who
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
 
-For durable page controls, follow the [page preference contract](../pages/README.md#save-page-preferences). It owns the named field rules, grouped return shape, automatic repair and persistence lifecycle.
+For durable page controls, follow the [page preference contract](../pages/preferences.md). It owns the named field rules, grouped return shape, automatic repair and persistence lifecycle.
 
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
 
