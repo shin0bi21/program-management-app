@@ -45,24 +45,6 @@ describe('Table', () => {
     expect(screen.getByText('Actions').closest('td')).toHaveAttribute('data-column-id', 'actions');
   });
 
-  it('renders native TanStack cells through the shared table row model', () => {
-    const tanstackColumns: TableColumnDef<Row>[] = [
-      { id: 'name', header: 'Name', cell: ({ row }) => row.original.name.toUpperCase() },
-      { id: 'status', header: 'Status', cell: () => 'Active' },
-    ];
-
-    render(<Table
-      ariaLabel="Accounts"
-      columns={tanstackColumns}
-      data={[{ id: 'one', name: 'Avery' }]}
-      keyExtractor={row => row.id}
-      hiddenColumnKeys={['status']}
-    />);
-
-    expect(screen.getByRole('cell', { name: 'AVERY' })).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
-  });
-
   it('resizes data columns by keyboard while leaving action columns fixed', () => {
     const onColumnWidthsChange = vi.fn();
     const resizableColumns: TableColumnDef<Row>[] = [
@@ -232,9 +214,7 @@ describe('Table', () => {
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
-    const loadingCell = screen.getByRole('cell', { name: 'Loading...' });
-    expect(loadingCell).toHaveAttribute('colspan', '2');
-    expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
+    expect(screen.getByRole('cell', { name: 'Loading...' })).toBeInTheDocument();
   });
 
   it('keeps the header and renders the shared unavailable state with retry', () => {

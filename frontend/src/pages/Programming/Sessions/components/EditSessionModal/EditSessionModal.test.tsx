@@ -23,7 +23,7 @@ describe('EditSessionModal', () => {
     ]);
   });
 
-  it('initializes the form and saves normalized session fields', async () => {
+  it('renders session fields and submits edits with success feedback', async () => {
     vi.mocked(updateSession).mockResolvedValue(session);
     const onUpdated = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
@@ -46,7 +46,6 @@ describe('EditSessionModal', () => {
     fireEvent.submit(document.getElementById('edit-session-form')!);
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
-    expect(onUpdated).toHaveBeenCalledOnce();
     expect(screen.getByText('Session updated successfully.')).toBeInTheDocument();
   });
 

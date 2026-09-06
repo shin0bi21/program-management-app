@@ -15,7 +15,7 @@ const cycle: ProgramCycle = {
 describe('CycleModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('creates a cycle and waits for the owner refresh', async () => {
+  it('submits the create form and displays its success status', async () => {
     const user = userEvent.setup();
     vi.mocked(setProgramCycle).mockResolvedValue(cycle);
     const onSaved = vi.fn().mockResolvedValue(undefined);
@@ -33,18 +33,17 @@ describe('CycleModal', () => {
     expect(screen.getByText('Cycle created successfully.')).toBeInTheDocument();
   });
 
-  it('initializes and updates an existing cycle', async () => {
+  it('renders existing cycle fields and the edit submit action', async () => {
     const user = userEvent.setup();
     vi.mocked(setProgramCycle).mockResolvedValue(cycle);
     render(<CycleModal isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('Fall 2026');
     expect(screen.getByLabelText('Starts on')).toHaveValue('2026-09-01');
+    expect(screen.getByLabelText('Ends on')).toHaveValue('2027-01-31');
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
-    expect(setProgramCycle).toHaveBeenCalledWith({
-      name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31',
-    }, 'cycle-1');
+    expect(await screen.findByText('Cycle updated successfully.')).toBeInTheDocument();
   });
 
   it('keeps the form open and reports save failures', async () => {

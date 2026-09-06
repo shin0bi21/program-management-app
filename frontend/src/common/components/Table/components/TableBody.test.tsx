@@ -19,6 +19,8 @@ describe('TableBody', () => {
       columnWidths={{}}
     /></table>);
 
-    expect(screen.getByRole('cell', { name: 'Loading...' })).toHaveAttribute('colspan', '3');
+    const loadingCell = screen.getByRole('cell', { name: 'Loading...' });
+    expect(loadingCell).toHaveAttribute('colspan', '3');
+    expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
   });
 });

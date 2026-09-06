@@ -11,7 +11,7 @@ import {
   preferenceColumnWidths,
   preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
-import type { ProgramCohort } from '../../Cohorts/types';
+import type { ProgramCohort, ProgramCycle } from '../../Cohorts/types';
 import type { SessionSortKey, SessionType } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { SessionStatusFilter } from '../types';
@@ -21,7 +21,7 @@ type SessionView = 'calendar' | 'table';
 export interface SessionPreference {
   view: SessionView;
   programIds: string[];
-  cohortId: string | null;
+  cycleId: string | null;
   sessionTypeIds: string[];
   statuses: SessionStatusFilter[];
   sorting?: ListSort<SessionSortKey>;
@@ -34,9 +34,10 @@ interface UseSessionControlsOptions {
   programs: Program[];
   programsLoading: boolean;
   programsError?: string | null;
+  cycles: ProgramCycle[];
+  cyclesLoading: boolean;
+  cyclesError?: string | null;
   cohorts: ProgramCohort[];
-  cohortsLoading: boolean;
-  cohortsError?: string | null;
   sessionTypes: SessionType[];
   sessionTypesLoading: boolean;
   sessionTypesError?: string | null;
@@ -45,7 +46,7 @@ interface UseSessionControlsOptions {
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 export function useSessionControls({
-  role, programs, programsLoading, programsError, cohorts, cohortsLoading, cohortsError,
+  role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError, cohorts,
   sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
@@ -53,11 +54,11 @@ export function useSessionControls({
   const [appliedSearch, setAppliedSearch] = useState('');
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'session-filters',
-    waiting: role === null || programsLoading || cohortsLoading || sessionTypesLoading,
+    waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,
     fields: {
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
-      cohortId: optionalPreferenceId(cohortsLoading || cohortsError ? undefined : cohorts.map(cohort => cohort.id)),
+      cycleId: optionalPreferenceId(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
       sessionTypeIds: preferenceIds(sessionTypesLoading || sessionTypesError ? undefined : sessionTypes.map(type => type.id)),
       statuses: preferenceOptions(['upcoming', 'completed'] as const),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
@@ -66,7 +67,7 @@ export function useSessionControls({
     },
   });
   const { view, programIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
-  const cohortId = preferences.cohortId ?? '';
+  const cycleId = preferences.cycleId ?? '';
 
   const applySearch = () => setAppliedSearch(search.trim());
   const clearSearch = () => {
@@ -75,24 +76,24 @@ export function useSessionControls({
   };
 
   // Stable option sets shared by the header and Add Sessions modal.
-  const filteredCohorts = useMemo(() => programIds.length
-    ? cohorts.filter(cohort => programIds.includes(cohort.programId))
-    : cohorts, [cohorts, programIds]);
-  const schedulableCohorts = useMemo(() => filteredCohorts.filter(cohort => cohort.state !== 'completed'), [filteredCohorts]);
+  const schedulableCohorts = useMemo(() => cohorts.filter(cohort =>
+    cohort.state !== 'completed'
+    && (!programIds.length || programIds.includes(cohort.programId))
+    && (!cycleId || cohort.cycleId === cycleId)), [cohorts, programIds, cycleId]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'cohort', label: 'Cohort', selectionMode: 'single', options: filteredCohorts.map(cohort => ({ value: cohort.id, label: `${cohort.programName} · ${cohort.name}` })) },
+    { id: 'cycle', label: 'Cycle', selectionMode: 'single', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
     { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
     { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
-  ], [filteredCohorts, programs, sessionTypes]);
+  ], [cycles, programs, sessionTypes]);
 
   const applyFilter = (key: string, values: string[]) => {
     switch (key) {
       case 'program':
-        updatePreferences({ programIds: values, cohortId: null });
+        updatePreferences({ programIds: values });
         break;
-      case 'cohort':
-        updatePreferences({ cohortId: values[0] ?? null });
+      case 'cycle':
+        updatePreferences({ cycleId: values[0] ?? null });
         break;
       case 'type':
         updatePreferences({ sessionTypeIds: values });
@@ -102,7 +103,7 @@ export function useSessionControls({
         break;
     }
   };
-  const clearFilters = () => updatePreferences({ programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] });
+  const clearFilters = () => updatePreferences({ programIds: [], cycleId: null, sessionTypeIds: [], statuses: [] });
   const setView = (view: SessionView) => updatePreferences({ view });
   const setSorting = (sorting: ListSort<SessionSortKey>) => updatePreferences({ sorting });
   const setColumnWidths = (columnWidths: Record<string, number>) => updatePreferences({ columnWidths });
@@ -123,7 +124,7 @@ export function useSessionControls({
     },
     filters: {
       programIds,
-      cohortId,
+      cycleId,
       sessionTypeIds,
       statuses,
       definitions: filterCategories,

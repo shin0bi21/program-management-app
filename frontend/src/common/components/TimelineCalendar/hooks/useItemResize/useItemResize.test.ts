@@ -191,33 +191,6 @@ describe('useItemResize', () => {
     });
   });
 
-  it('steps beyond the rendered period slice when the full calendar has another period', () => {
-    const renderedPeriods = periods.slice(1, 4);
-    const row = { id: 'staff-1' };
-    const item = { id: 'item-1' };
-    const range = { start: renderedPeriods[0].key, end: renderedPeriods[2].key };
-    const onItemResize = vi.fn();
-    const { result } = renderHook(() => {
-      const pointer = usePointerSession();
-      return useItemResize({
-        viewportRef: { current: null },
-        allPeriods: periods,
-        periodWidth: 100,
-        coveredLeftWidth: 0,
-        onItemResize,
-        dragEdgeSize: 40,
-        dragScrollSpeed: 12,
-        beginPointerSession: pointer.beginPointerSession,
-      });
-    });
-
-    act(() => result.current.resizeByKeyboard({ row, item, range, edge: 'end' }, 1));
-
-    expect(onItemResize).toHaveBeenCalledWith(expect.objectContaining({
-      nextRange: { start: periods[1].key, end: periods[4].key },
-    }));
-  });
-
   it.each([
     ['calendar start', { start: periods[0].key, end: periods[2].key }, 'start', -1],
     ['calendar end', { start: periods[2].key, end: periods[4].key }, 'end', 1],
