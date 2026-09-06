@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -448,8 +448,12 @@ describe('Hours', () => {
     expect(screen.getByLabelText('Date')).toHaveValue(workDate);
   });
 
-  it('bridges a table Edit action to the shared entry modal', async () => {
+  it('keeps table Edit available when a background preference repair completes', async () => {
     mockWritableTableEntry();
+    let finishSave!: () => void;
+    vi.mocked(setPreference).mockImplementation((_key, value) => new Promise(resolve => {
+      finishSave = () => resolve(value);
+    }));
     vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
@@ -465,6 +469,8 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
+    await waitFor(() => expect(setPreference).toHaveBeenCalled());
+    await act(async () => finishSave());
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
