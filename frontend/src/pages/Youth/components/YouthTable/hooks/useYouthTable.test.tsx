@@ -1,4 +1,3 @@
-// Owns Youth table columns, row-action permissions, and exact callbacks.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

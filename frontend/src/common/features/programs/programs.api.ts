@@ -7,8 +7,8 @@ export function getPrograms({ assignedOnly = false }: { assignedOnly?: boolean }
   return opts ? apiClient.get<Program[]>(path, opts) : apiClient.get<Program[]>(path);
 }
 
-export function createProgram(data: CreateProgramInput | string) {
-  return apiClient.post<Program>('/programs', typeof data === 'string' ? { name: data } : data);
+export function createProgram(data: CreateProgramInput) {
+  return apiClient.post<Program>('/programs', data);
 }
 
 export function updateProgram(programId: string, data: UpdateProgramInput) {

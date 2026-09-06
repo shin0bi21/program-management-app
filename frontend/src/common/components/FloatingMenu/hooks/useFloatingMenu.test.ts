@@ -1,4 +1,3 @@
-// Owns floating-menu opening, measured positioning, focus, dismissal, and anchor variants.
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

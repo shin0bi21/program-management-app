@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getCohorts } from '../../../../common/features/programming/api/cohorts.api';
+import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
 import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import {
   getSubmitStatusMessage,
   useSubmitStatus,
 } from '../../../../common/hooks/useSubmitStatus';
-import type { ProgramCohort } from '../../../../common/types/cohort';
+import type { ProgramCohort } from '../../../Programming/Cohorts/types';
 import { getErrorMessage } from '../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';

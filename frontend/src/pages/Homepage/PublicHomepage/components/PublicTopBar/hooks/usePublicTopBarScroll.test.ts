@@ -1,4 +1,3 @@
-// Owns PublicTopBar scroll-state lifecycle and listener cleanup.
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

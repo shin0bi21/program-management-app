@@ -14,7 +14,6 @@ const api = vi.hoisted(() => ({
   deleteCohort: vi.fn(),
   getCohorts: vi.fn(),
   getProgramCycles: vi.fn(),
-  getSessionTypes: vi.fn(),
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
@@ -30,19 +29,13 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as CohortPreference | null,
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
+const preferenceApi = vi.hoisted(() => ({
+  value: null as CohortPreference | null,
+  getPreference: vi.fn(),
+  setPreference: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/sessions.api', () => ({
-  getSessionTypes: api.getSessionTypes,
-}));
-
-vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('./cohorts.api', () => ({
   getCohorts: api.getCohorts,
   getCohortPage: api.getCohorts,
   createCohort: api.createCohort,
@@ -53,8 +46,11 @@ vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
-vi.mock('../../../common/features/programming/components/YouthReportModal/YouthReportModal', () => ({
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: preferenceApi.getPreference,
+  setPreference: preferenceApi.setPreference,
+}));
+vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
   default: ({ cohort }: { cohort: { name: string } | null }) => cohort
     ? <div role="dialog" aria-label={`${cohort.name} Youth Report`} />
     : null,
@@ -71,19 +67,11 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 describe('Cohorts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: CohortPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: CohortPreference | ((current: CohortPreference | null) => CohortPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
+    preferenceApi.value = null;
+    preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
+    preferenceApi.setPreference.mockImplementation(async (_key: string, value: CohortPreference) => {
+      preferenceApi.value = value;
+      return value;
     });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
@@ -95,9 +83,6 @@ describe('Cohorts', () => {
       minAge: 12,
       maxAge: 15,
     }];
-    api.getSessionTypes.mockResolvedValue([
-      { id: 'type-regular', name: 'Regular' },
-    ]);
     api.getProgramCycles.mockResolvedValue([{
       id: 'cycle-summer-2026', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
@@ -141,8 +126,27 @@ describe('Cohorts', () => {
     });
   });
 
+  // Permissions and application services.
+  it('opens Add Cohort directly for staff without exposing global programming settings', async () => {
+    auth.role = 'staff';
+    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
+        <Cohorts />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Add Program' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
+    expect(screen.getByRole('heading', { name: 'Add Cohort' })).toBeInTheDocument();
+  });
+
+  // Saved preferences and the current view.
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
-    preferenceHook.loading = true;
+    let finishLoading!: (value: CohortPreference | null) => void;
+    preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
     const rendered = render(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading saved cohort preferences…');
@@ -150,13 +154,14 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Cohorts' })).not.toBeInTheDocument();
 
-    preferenceHook.loading = false;
+    finishLoading(preferenceApi.value);
     rendered.rerender(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
 
     expect(await screen.findByRole('button', { name: 'Columns' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Cohorts' })).toBeInTheDocument();
   });
 
+  // Selection and page-spanning actions.
   it('shows all cohorts by default and can display a selected program', async () => {
     const user = userEvent.setup();
     render(
@@ -168,7 +173,7 @@ describe('Cohorts', () => {
     expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
     expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
@@ -195,22 +200,6 @@ describe('Cohorts', () => {
 
   });
 
-  it('shows success feedback after adding a cohort', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
-        <Cohorts />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
-    await user.click(screen.getByRole('button', { name: 'Add Cohort' }));
-
-    expect(await screen.findByText(
-      'Soft Skills successfully added to Summer 2026.',
-    )).toBeInTheDocument();
-  });
-
   it('removes a deleted cohort without refetching the table', async () => {
     const user = userEvent.setup();
     render(
@@ -231,22 +220,7 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
-  it('opens Add Cohort directly for staff without exposing global programming settings', async () => {
-    auth.role = 'staff';
-    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
-        <Cohorts />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('button', { name: 'Add Program' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
-    expect(screen.getByRole('heading', { name: 'Add Cohort' })).toBeInTheDocument();
-  });
-
+  // Derived errors and presentation state.
   it('shows distinct youth attendance instead of enrollment for an open cohort', async () => {
     const user = userEvent.setup();
     api.getCohorts.mockResolvedValue([{
@@ -290,6 +264,23 @@ describe('Cohorts', () => {
     );
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.queryByRole('menuitem', { name: 'Manage Roster' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Add Sessions' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Add Sessions' })).not.toBeInTheDocument();
+  });
+
+  // Render.
+  it('shows success feedback after adding a cohort', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
+        <Cohorts />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
+    await user.click(screen.getByRole('button', { name: 'Add Cohort' }));
+
+    expect(await screen.findByText(
+      'Soft Skills successfully added to Summer 2026.',
+    )).toBeInTheDocument();
   });
 });

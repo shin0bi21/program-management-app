@@ -6,7 +6,7 @@ import {
   outreachFormDefaultValues,
   outreachFormSchema,
   type OutreachFormValues,
-} from '../../../../common/features/outreach/components/OutreachForm/outreachFormSchema';
+} from '../../../../common/features/OutreachForm/outreachFormSchema';
 import { useSubmitStatus } from '../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../http/errors';

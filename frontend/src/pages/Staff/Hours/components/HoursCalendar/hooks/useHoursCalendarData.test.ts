@@ -1,4 +1,3 @@
-// Owns Hours calendar filtering and stable derived range data.
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { RowPeriodData } from '../../../../../../common/components/TimelineCalendar/types';

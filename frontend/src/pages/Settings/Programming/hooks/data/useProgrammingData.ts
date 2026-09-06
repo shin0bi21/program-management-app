@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getProgramCycles } from '../../../../../common/features/programming/api/cohorts.api';
+import { getProgramCycles } from '../../../../Programming/Cohorts/cohorts.api';
 import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
 import { getErrorMessage } from '../../../../../http/errors';
 
 export default function useProgrammingData() {

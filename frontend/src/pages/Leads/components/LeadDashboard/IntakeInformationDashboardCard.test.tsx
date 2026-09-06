@@ -1,4 +1,3 @@
-// Owns IntakeInformationDashboardCard rendered behavior and owner wiring.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import IntakeInformationDashboardCard from './IntakeInformationDashboardCard';

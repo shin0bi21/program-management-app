@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
-import { deleteProgramCycle } from '../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import { deleteProgramCycle } from '../../../../Programming/Cohorts/cohorts.api';
+import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
 
 interface UseProgrammingActionsOptions {
   onCycleDeleted: (cycleId: string) => void;

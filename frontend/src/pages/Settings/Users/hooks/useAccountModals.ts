@@ -1,18 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
-import type { Account } from '../../../../common/types/account';
+import type { User } from '../types';
 
 interface AccountModalActions {
-  revokeInvite: (account: Account) => Promise<void>;
-  toggleStatus: (account: Account) => Promise<void>;
+  revokeInvite: (account: User) => Promise<void>;
+  toggleStatus: (account: User) => Promise<void>;
 }
 
 export default function useAccountModals({ revokeInvite, toggleStatus }: AccountModalActions) {
   // Account editor workflow.
-  const [accountTarget, setAccountTarget] = useState<Account | 'new' | null>(null);
+  const [accountTarget, setAccountTarget] = useState<User | 'new' | null>(null);
   const openNewAccount = useCallback(() => setAccountTarget('new'), []);
-  const openAccount = useCallback((account: Account) => setAccountTarget(account), []);
+  const openAccount = useCallback((account: User) => setAccountTarget(account), []);
   const closeAccount = useCallback(() => setAccountTarget(null), []);
 
   // Youth invitation workflow.
@@ -22,7 +22,7 @@ export default function useAccountModals({ revokeInvite, toggleStatus }: Account
 
   // Destructive account confirmation workflow.
   const [confirmation, setConfirmation] = useState<ConfirmAction | null>(null);
-  const requestRevoke = useCallback((account: Account) => setConfirmation({
+  const requestRevoke = useCallback((account: User) => setConfirmation({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
     confirmLabel: 'Revoke',
@@ -30,7 +30,7 @@ export default function useAccountModals({ revokeInvite, toggleStatus }: Account
     successMessage: 'Invitation revoked',
     onConfirm: () => revokeInvite(account),
   }), [revokeInvite]);
-  const requestStatusToggle = useCallback((account: Account) => {
+  const requestStatusToggle = useCallback((account: User) => {
     const activating = account.status === 'inactive';
     setConfirmation({
       title: activating ? 'Activate Account' : 'Deactivate Account',

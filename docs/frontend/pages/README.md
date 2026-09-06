@@ -28,21 +28,106 @@ The generated page scaffold uses the same sections. See the
 [Tasks page](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours page](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
 
+Organize route tests under the same section names and in the same order, omitting phases the page does not need. Constants and pure helpers do not need a route-test section unless they expose page behavior. Within each phase, order tests from the default or successful path through permission, empty, failure and recovery variants.
+
 ## Load page data
 
 Load only the remote options and records needed to coordinate the whole page. A table or
 calendar keeps its own collection query. Preserve the dependency path
 `data → preferences → selection → actions`.
 
+Route tests cover page-owned loading and populated states. Child query-hook tests own their request inputs, cancellation and response shaping.
+
 ## Save page preferences
 
-Use `use*Preferences` when controls such as the current view, applied search, filters, sorting,
-column widths or hidden columns must survive navigation. Define typed defaults in that page,
-restore and normalize the saved value before enabling dependent queries, and save complete
-values through optimistic functional updates.
+Use the shared `usePreferences` hook for controls that survive navigation. Declare each
+field with a named rule such as `preferenceOption`, `preferenceOptions`, `preferenceText`,
+or `preferenceIds` from `common/features/Preferences/preferences.ts`; the rule supplies its
+default and repairs invalid values. Keep page-specific fields, allowed values, role rules and
+option sources in the page's preference or control hook.
 
-Keep saved option identifiers when their reference query fails. Reconcile them only after the
-options load successfully.
+Use the preference-specific named exports directly. Keep these names consistent across
+pages instead of introducing generic aliases such as `oneOf`, `values` or `choice`.
+
+| Rule | Use |
+|---|---|
+| `preferenceOption(allowed, fallback)` | One finite option, such as the current view |
+| `optionalPreferenceOption(allowed, fallback?)` | One finite option or an explicit `null` selection |
+| `preferenceOptions(allowed, fallback?, available?)` | Multiple finite options, optionally restricted by loaded options |
+| `preferenceIds(available, fallback?)` | Multiple record IDs; preserve selections when availability is unknown |
+| `optionalPreferenceId(available, fallback?)` | One record ID or `null`; clear a confirmed removed ID |
+| `preferenceText(fallback?)` | Trim text and replace malformed values with the default |
+| `preferenceSorting(tableKeys, fallback)` | Validate the sort key and direction |
+| `preferenceColumnWidths(tableKeys)` | Keep finite positive widths for current columns |
+| `preferenceHiddenColumns(tableKeys)` | Keep only current column IDs |
+| `fixedPreference(value)` | Enforce a page-owned constant, such as the route's lead origin |
+
+Declare the rules together in the page hook's `fields` object:
+
+```ts
+fields: {
+  view: preferenceOption(['calendar', 'table'], 'calendar'),
+  search: preferenceText(),
+  statuses: preferenceOptions(allowedStatuses),
+  programIds: preferenceIds(availableProgramIds),
+  cycleId: optionalPreferenceId(availableCycleIds),
+  sorting: preferenceSorting(tableKeys, defaultSorting),
+  columnWidths: preferenceColumnWidths(tableKeys),
+  hiddenColumns: preferenceHiddenColumns(tableKeys),
+},
+```
+
+Use only the fields the page owns. See the
+[Hours preference hook](../../../frontend/src/pages/Staff/Hours/hooks/preferences/useHoursPreferences.ts)
+for a complete caller, including independently loaded option sources.
+
+Missing or malformed fields use their rule's fallback. Valid empty arrays and explicit
+nullable selections remain empty. For list fields, remove invalid entries while keeping valid
+ones. Do not catch an arbitrary application error and reset preferences: repair a value only
+when its shape or authoritative options establish that it is invalid.
+
+Read the returned `preferences` value and submit partial changes with `updatePreferences`.
+Do not duplicate persisted fields in local state or implement restoration, save merging or
+option-recovery effects in a page. Keep unapplied search drafts and non-persisted controls local.
+
+Expose the same grouped control contract from every page preference or control hook:
+
+| Group | Members |
+|---|---|
+| `search` | `value`, `setValue`, `appliedValue`, `apply`, `clear` |
+| `filters` | Page-specific selected values, `definitions`, `apply`, `clear` |
+| `table` | `sorting`, `setSorting`, `columnWidths`, `setColumnWidths`, `hiddenColumns`, `setHiddenColumns` |
+
+Keep `ready` and `error` at the top level, with `view` and `setView` when the page supports
+multiple views. Domain-specific derived values may remain top-level extras. Do not expose
+flat aliases for grouped controls. A route reads `controls.search.appliedValue` and
+`controls.filters.programIds` when building its data filters, and passes `controls.table`
+values to its table. The groups describe the interface; each page retains its own fields,
+defaults and persistence choices.
+
+The preference pattern check enforces these groups. The page scaffold points new durable
+controls to this contract without inventing preference keys or filters for a new page.
+
+Pass `waiting` while initial dependencies are loading. For option rules, pass `undefined`
+while the option query is loading or failed, and the authoritative IDs after success. An empty
+successful list removes stale selections; unavailable options preserve them. Finite value
+rules can additionally restrict known values to the currently available options, using `null`
+for an unavailable option list. Each option source has its own availability decision.
+
+The shared hook normalizes restoration, edits and changed options, updates one cached value,
+and debounces complete saves in request order. Invalid fields are repaired independently;
+valid sibling values survive. Initial defaults after missing data or a load failure do not
+create a saved record until an edit. Existing invalid records and stale selections are repaired
+through the normal save queue. Preferences remain cached for the session so automatic background
+loads cannot overwrite local choices.
+
+Shared preference tests own normalization, restoration, recovery and asynchronous persistence.
+Page preference tests own field rules, defaults, role restrictions and coordinated updates.
+Use the real shared hook with an isolated QueryClient and mocked preference API to verify those
+rules. Consolidate each page's field-rule examples and callback-to-save assertions rather
+than repeating separate shared debounce, rapid-merge or load-failure tests. Retain page-owned
+role defaults, independent option-source wiring, dependent filter changes and local drafts.
+Route tests cover restored controls and view wiring.
 
 ## Define page filters
 
@@ -54,14 +139,13 @@ rebuild page filters from separate props.
 Keep a draft search value until `SearchInput` applies it. Put the applied value in the same
 filter object used by every page data view.
 
-## Coordinate selection, actions and dialogs
+Route tests verify that one filter object reaches every active data view. The owning preference-hook test covers persisted search and filter transitions.
 
-Keep selected identity in the route when it coordinates multiple views or dialogs. Keep an
-action in the route when it reconciles multiple page children or related domains.
+## Coordinate page workflows
 
-Keep each dialog target and its handlers together in the route when the dialog starts a page
-workflow. Keep modal form errors inside the modal; report page-owned data and action failures
-through the page error overlay.
+Keep selection, actions and dialog targets in the route only when they coordinate multiple views or page children. Single-owner behavior stays with that child.
+
+Route tests own cross-view reconciliation and dialog entry wiring. Child owners test their internal workflow.
 
 ## Compose page components
 
@@ -72,53 +156,25 @@ The route supplies page-wide actions and controls to `PageHeader`, then supplies
 or summary and one active data view to `PageBody`. Route pages do not recreate those shared
 wrappers. Follow the component-specific guides for the children themselves.
 
-## Connect the route
+Route tests cover active-view selection, child prop wiring, derived page errors, the final page shell and dialogs. Mock a child at its public prop boundary when its callback starts a route workflow. Child tests own their internal rendering and interaction.
 
-Follow [App navigation](../components/navigation/README.md) for route registration,
-permissions, destination visibility and active navigation state. Create a route-family layout
-only when sibling routes share persistent rendered UI, state or coordination—not merely a URL
-prefix or permission.
+## Scaffolding
 
-## Test page orchestration
+Preview a root or route-family page with the page preset:
 
-Route tests own permission-dependent actions, restored-control wiring, view switching,
-selection context, dialog entry paths and cross-child coordination. A preference-hook test
-owns defaults, restoration, normalization, saving and recovery. Child component and hook tests
-own their internal behavior.
+```bash
+npm run scaffold:frontend -- page Leads --dry-run
+npm run scaffold:frontend -- page Staff/Schedules --dry-run
+```
 
-Organize route tests in the same lifecycle order as the route component, omitting sections the
-page does not need:
-
-1. Page-local error state.
-2. Permissions and application services.
-3. Page data, covering its loading and populated states.
-4. Saved preferences and the current view, covering delayed restoration and restored controls.
-5. Filter configuration shared by every page data view.
-6. Selection and page-spanning actions.
-7. Modal and confirmation workflows.
-8. Table, calendar, dashboard and body initialization.
-9. Derived errors and presentation state.
-10. Final page-shell and dialog rendering.
-
-Use short section comments with these owner names when a suite has several tests. Keep a test
-under the phase that owns its asserted outcome: for example, a delete confirmation belongs to
-modal and confirmation workflows, while clearing the selected dashboard after confirmed
-deletion belongs to selection and page-spanning actions. Order tests within a phase from the
-default or successful path through permission, empty, failure and recovery variants.
-
-Mock a child at its public prop boundary when its callback starts a route workflow. Use
-Playwright only when correctness depends on real focus, geometry, layout, scrolling, observers,
-portals or pointer behavior. Follow the cross-cutting [testing guide](../../workflows/testing.md)
-for runner selection.
-
-## Organize page files
+Remove `--dry-run` to generate the skeleton below.
 
 Keep the route entry, its test and optional route styles at the page root. Follow
 [Components](../components/README.md), [State and data](../architecture/state-and-data.md), and
 [Frontend ownership](../architecture/ownership.md) for child directories, hooks and shared
 code. Colocate each test with its owner.
 
-## Page DOM structure
+The generated route follows this DOM skeleton:
 
 ```text
 application shell

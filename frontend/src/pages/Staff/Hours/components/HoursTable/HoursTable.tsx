@@ -2,7 +2,7 @@ import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { HoursFilters, HoursTableRow } from '../../types';
-import type { ListSort } from '../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { HOURS_TABLE_KEYS, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';
 

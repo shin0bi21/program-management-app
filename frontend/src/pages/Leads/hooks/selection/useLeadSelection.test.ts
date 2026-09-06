@@ -1,4 +1,3 @@
-// Owns selected-lead synchronization after page actions.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

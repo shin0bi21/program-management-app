@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getProgramCycles } from '../../../../../common/features/programming/api/cohorts.api';
+import { getProgramCycles } from '../../../../Programming/Cohorts/cohorts.api';
 import { getHoursReferenceData } from '../../hours.api';
 
 export default function useHoursData(
@@ -13,7 +13,7 @@ export default function useHoursData(
     queryKey: referenceDataQueryKey,
     queryFn: ({ signal }) => getHoursReferenceData({ signal }),
   });
-  const cyclesData = useQuery({
+  const cyclesQuery = useQuery({
     queryKey: cyclesQueryKey,
     queryFn: ({ signal }) => getProgramCycles({ signal }),
   });
@@ -38,8 +38,8 @@ export default function useHoursData(
     currentUserResource: currentUserId ? resourcesById.get(currentUserId) ?? null : null,
     optionsLoading: referenceDataQuery.isLoading,
     optionsError: referenceDataQuery.error,
-    cycles: cyclesData.data ?? [],
-    cyclesLoading: cyclesData.isLoading,
-    cyclesError: cyclesData.error,
+    cycles: cyclesQuery.data ?? [],
+    cyclesLoading: cyclesQuery.isLoading,
+    cyclesError: cyclesQuery.error,
   };
 }

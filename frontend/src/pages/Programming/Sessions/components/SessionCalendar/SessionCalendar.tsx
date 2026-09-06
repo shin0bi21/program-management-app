@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
-import type { CohortSession, SessionListFilters } from '../../../../../common/types/cohort';
+import type { CohortSession, SessionListFilters } from '../../types';
 import ProgrammingCalendar from './ProgrammingCalendar/ProgrammingCalendar';
 import { useSessionCalendarData } from './hooks/useSessionCalendarData';
 import './SessionCalendar.css';

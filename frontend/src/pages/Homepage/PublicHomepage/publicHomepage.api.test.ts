@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-// Owns public homepage endpoint paths, unauthenticated requests, and response normalization.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../http/client';
 import {

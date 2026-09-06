@@ -1,13 +1,12 @@
-// Owns EditCohortModal rendered behavior and owner wiring.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { updateCohort } from '../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import { updateCohort } from '../../cohorts.api';
+import type { ProgramCohort } from '../../types';
 import EditCohortModal from './EditCohortModal';
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../cohorts.api', () => ({
   updateCohort: vi.fn(),
 }));
 

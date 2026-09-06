@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
-import useUserPreference from '../../../../../common/features/preferences/hooks/useUserPreference';
+import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
-  haveSamePreferenceValues,
-  mergePreferenceDefaults,
-  resolveAvailablePreferenceIds,
-  resolveAvailablePreferenceValues,
-  resolvePreferenceNumberRecord,
-  resolvePreferenceSorting,
-  resolvePreferenceString,
-  resolvePreferenceStringArray,
-  resolvePreferenceValue,
-} from '../../../../../common/features/preferences/preferenceValues';
-import type { ListSort } from '../../../../../common/types/pagination';
+  preferenceOption,
+  preferenceOptions,
+  preferenceIds,
+  preferenceText,
+  preferenceSorting,
+  preferenceColumnWidths,
+  preferenceHiddenColumns,
+} from '../../../../../common/features/Preferences/preferences';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
 import {
   type TaskCategory,
@@ -38,17 +36,6 @@ interface TaskPreferences {
 
 export type StoredTaskPreferences = Partial<TaskPreferences>;
 
-const DEFAULT_TASK_PREFERENCES: TaskPreferences = {
-  view: 'calendar',
-  search: '',
-  staffIds: [],
-  programIds: [],
-  categories: [],
-  statuses: [],
-  sorting: { key: 'startDate', direction: 'asc' },
-  columnWidths: {},
-  hiddenColumns: [],
-};
 interface UseTaskPreferencesOptions {
   referenceData: TaskReferenceData | undefined;
   referenceDataLoading: boolean;
@@ -62,67 +49,47 @@ export default function useTaskPreferences({
   referenceDataError,
   tableKeys,
 }: UseTaskPreferencesOptions) {
-
-  // Preference lifecycle.
-  const [ready, setReady] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
-
-  const {
-    preference: storedPreferences,
-    loading,
-    error,
-    loadError,
-    initializePreference,
-    save,
-  } = useUserPreference<StoredTaskPreferences>('task-preferences', tableKeys);
-
-  const canVerifyOptions = !referenceDataError;
-  const preferenceSource = loadError ? null : storedPreferences;
-  const preferences = useMemo(() => normalizeTaskPreferences(
-    preferenceSource,
-    referenceData,
-    canVerifyOptions,
-    tableKeys,
-  ), [canVerifyOptions, preferenceSource, referenceData, tableKeys]);
-
-  const buildNextPreferences = useCallback((
-    current: StoredTaskPreferences | TaskPreferences | null,
-    patch: Partial<TaskPreferences>,
-  ) => ({
-    ...normalizeTaskPreferences(
-      current,
-      referenceData,
-      canVerifyOptions,
-      tableKeys,
-    ),
-    ...patch,
-  }), [canVerifyOptions, referenceData, tableKeys]);
-
-  useEffect(() => {
-    if (ready || loading || referenceDataLoading) return;
-    setSearchValue(preferences.search);
-    initializePreference(preferences);
-    setReady(true);
-  }, [loading, referenceDataLoading, preferences, ready, initializePreference]);
-
-  const updatePreferences = useCallback((patch: Partial<TaskPreferences>) => {
-    save(current => buildNextPreferences(current, patch));
-  }, [buildNextPreferences, save]);
+  const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
+  const { preferences, updatePreferences, ready, error } = usePreferences({
+    key: 'task-preferences',
+    waiting: referenceDataLoading,
+    fields: {
+      view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
+      search: preferenceText(),
+      staffIds: preferenceIds(options?.resources.map(resource => resource.id)),
+      programIds: preferenceIds(options?.programs.map(program => program.id)),
+      categories: preferenceOptions<TaskCategory>(
+        ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
+        [],
+        options?.categories.map(category => category.value) ?? null,
+      ),
+      statuses: preferenceOptions<TaskStatus>(
+        ['upcoming', 'active', 'overdue', 'completed', 'cancelled'],
+        [],
+        options?.statuses.map(status => status.value) ?? null,
+      ),
+      sorting: preferenceSorting(tableKeys, { key: 'startDate', direction: 'asc' }),
+      columnWidths: preferenceColumnWidths(tableKeys),
+      hiddenColumns: preferenceHiddenColumns(tableKeys),
+    },
+  });
+  const [searchDraft, setSearchValue] = useState<string | null>(null);
+  const searchValue = searchDraft ?? preferences.search;
 
   // View preference.
-  const setView = useCallback((view: TasksView) => {
+  const setView = (view: TasksView) => {
     updatePreferences({ view });
-  }, [updatePreferences]);
+  };
 
   // Search preference.
-  const applySearch = useCallback(() => {
+  const applySearch = () => {
     updatePreferences({ search: searchValue.trim() });
-  }, [searchValue, updatePreferences]);
+  };
 
-  const clearSearch = useCallback(() => {
+  const clearSearch = () => {
     setSearchValue('');
     updatePreferences({ search: '' });
-  }, [updatePreferences]);
+  };
 
   // Filter preferences.
   const filterDefinitions = useMemo<FilterCardCategory[]>(() => [
@@ -140,56 +107,38 @@ export default function useTaskPreferences({
     { id: 'status', label: 'Status', options: referenceData?.statuses ?? [] },
   ], [referenceData]);
 
-  const applyFilter = useCallback((id: string, selected: string[]) => {
+  const applyFilter = (id: string, selected: string[]) => {
     if (id === 'staff') updatePreferences({ staffIds: selected });
     if (id === 'program') updatePreferences({ programIds: selected });
     if (id === 'category') updatePreferences({
-      categories: resolveAvailablePreferenceValues(selected, referenceData?.categories, true),
+      categories: selected as TaskCategory[],
     });
     if (id === 'status') updatePreferences({
-      statuses: resolveAvailablePreferenceValues(selected, referenceData?.statuses, true),
+      statuses: selected as TaskStatus[],
     });
-  }, [referenceData, updatePreferences]);
+  };
 
-  const clearFilters = useCallback(() => updatePreferences({
+  const clearFilters = () => updatePreferences({
     staffIds: [],
     programIds: [],
     categories: [],
     statuses: [],
-  }), [updatePreferences]);
-
-  useEffect(() => {
-    if (!ready || loadError || referenceDataLoading || referenceDataError) return;
-    const normalized = normalizeTaskPreferences(storedPreferences, referenceData, true, tableKeys);
-    if (
-      haveSamePreferenceValues(storedPreferences?.staffIds ?? [], normalized.staffIds)
-      && haveSamePreferenceValues(storedPreferences?.programIds ?? [], normalized.programIds)
-      && haveSamePreferenceValues(storedPreferences?.categories ?? [], normalized.categories)
-      && haveSamePreferenceValues(storedPreferences?.statuses ?? [], normalized.statuses)
-    ) return;
-
-    updatePreferences({
-      staffIds: normalized.staffIds,
-      programIds: normalized.programIds,
-      categories: normalized.categories,
-      statuses: normalized.statuses,
-    });
-  }, [loadError, ready, referenceData, referenceDataError, referenceDataLoading, storedPreferences, tableKeys, updatePreferences]);
+  });
 
   // Table sorting.
-  const setSorting = useCallback((sorting: ListSort<TaskSortKey>) => {
+  const setSorting = (sorting: ListSort<TaskSortKey>) => {
     updatePreferences({ sorting });
-  }, [updatePreferences]);
+  };
 
   // Column widths.
-  const setColumnWidths = useCallback((columnWidths: Record<string, number>) => {
+  const setColumnWidths = (columnWidths: Record<string, number>) => {
     updatePreferences({ columnWidths });
-  }, [updatePreferences]);
+  };
 
   // Hidden columns.
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => {
+  const setHiddenColumns = (hiddenColumns: string[]) => {
     updatePreferences({ hiddenColumns });
-  }, [updatePreferences]);
+  };
 
   return {
     ready,
@@ -224,31 +173,5 @@ export default function useTaskPreferences({
       hiddenColumns: preferences.hiddenColumns,
       setHiddenColumns,
     },
-  };
-}
-
-function normalizeTaskPreferences(
-  preference: StoredTaskPreferences | TaskPreferences | null,
-  referenceData: TaskReferenceData | undefined,
-  canVerifyOptions: boolean,
-  tableKeys: readonly TaskSortKey[],
-): TaskPreferences {
-  const resolved = mergePreferenceDefaults(DEFAULT_TASK_PREFERENCES, preference);
-
-  return {
-    ...resolved,
-    view: resolvePreferenceValue(resolved.view, ['calendar', 'table'], DEFAULT_TASK_PREFERENCES.view),
-    search: resolvePreferenceString(resolved.search),
-    staffIds: resolveAvailablePreferenceIds(resolved.staffIds, referenceData?.resources, canVerifyOptions),
-    programIds: resolveAvailablePreferenceIds(resolved.programIds, referenceData?.programs, canVerifyOptions),
-    categories: resolveAvailablePreferenceValues(resolved.categories, referenceData?.categories, canVerifyOptions),
-    statuses: resolveAvailablePreferenceValues(resolved.statuses, referenceData?.statuses, canVerifyOptions),
-    sorting: resolvePreferenceSorting(
-      resolved.sorting,
-      tableKeys,
-      DEFAULT_TASK_PREFERENCES.sorting,
-    ),
-    columnWidths: resolvePreferenceNumberRecord(resolved.columnWidths),
-    hiddenColumns: resolvePreferenceStringArray(resolved.hiddenColumns),
   };
 }

@@ -1,4 +1,3 @@
-// Owns the notes card preserves its dashboard shape when page-owned loading fails.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

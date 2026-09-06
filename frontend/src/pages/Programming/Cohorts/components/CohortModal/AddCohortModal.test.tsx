@@ -1,12 +1,11 @@
-// Owns AddCohortModal rendered behavior and owner wiring.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createCohort } from '../../../../../common/features/programming/api/cohorts.api';
+import { createCohort } from '../../cohorts.api';
 import AddCohortModal from './AddCohortModal';
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../cohorts.api', () => ({
   createCohort: vi.fn(),
 }));
 

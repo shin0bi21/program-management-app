@@ -1,4 +1,4 @@
-// Scope: verifies program adapter scope serialization and create/update commands.
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
@@ -19,16 +19,26 @@ describe('programs API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/programs?scope=assigned', { signal });
   });
 
-  it('normalizes the shorthand create command and preserves update fields', () => {
-    createProgram('Soft Skills');
+  it('preserves create and update fields', () => {
+    createProgram({
+      name: 'Future Ready',
+      description: 'Career skills',
+      rosterMode: 'enrolled',
+      minAge: 12,
+      maxAge: 15,
+    });
     updateProgram('program-1', { name: 'Job Readiness', description: 'Career skills' });
 
-    expect(apiClient.post).toHaveBeenCalledWith('/programs', { name: 'Soft Skills' });
+    expect(apiClient.post).toHaveBeenCalledWith('/programs', {
+      name: 'Future Ready',
+      description: 'Career skills',
+      rosterMode: 'enrolled',
+      minAge: 12,
+      maxAge: 15,
+    });
     expect(apiClient.put).toHaveBeenCalledWith('/programs/program-1', {
       name: 'Job Readiness',
       description: 'Career skills',
     });
   });
 });
-
-// @vitest-environment node

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getProgramCycles } from '../../../../../common/features/programming/api/cohorts.api';
+import { getProgramCycles } from '../../cohorts.api';
 import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../types';
 
 export default function useCohortData() {
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });

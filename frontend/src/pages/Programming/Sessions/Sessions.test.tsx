@@ -35,25 +35,17 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     maxAge: 15,
   }],
 }));
-const preferenceHook = vi.hoisted<{
-  preference: SessionPreference | null;
-  loading: boolean;
-  error: string | null;
-  initializePreference: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
-}>(() => ({
-  preference: { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] },
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
+const preferenceApi = vi.hoisted(() => ({
+  value: null as SessionPreference | null,
+  getPreference: vi.fn(),
+  setPreference: vi.fn(),
 }));
 
-vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../Cohorts/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
 }));
 
-vi.mock('../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('./sessions.api', () => ({
   getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
@@ -72,7 +64,10 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 vi.mock('../../../auth/authContext', () => ({
   useAuth: () => auth,
 }));
-vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: preferenceApi.getPreference,
+  setPreference: preferenceApi.setPreference,
+}));
 
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   default: ({
@@ -131,19 +126,11 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
-    preferenceHook.preference = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: SessionPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: SessionPreference | ((current: SessionPreference | null) => SessionPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
+    preferenceApi.value = { view: 'table', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
+    preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
+      preferenceApi.value = value;
+      return value;
     });
     auth.role = 'admin';
     auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
@@ -214,6 +201,7 @@ describe('Sessions', () => {
     deleteSession.mockResolvedValue({ id: 'session-1' });
   });
 
+  // Page data.
   it('shows open attendance as a check-in count', async () => {
     getSessions.mockResolvedValue([
       {
@@ -260,6 +248,62 @@ describe('Sessions', () => {
     expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
   });
 
+  // Saved preferences and the current view.
+  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+    let finishLoading!: (value: SessionPreference | null) => void;
+    preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
+    const rendered = render(
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+
+    finishLoading(preferenceApi.value);
+    rendered.rerender(
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+  });
+
+  // Selection and page-spanning actions.
+  it('removes a selected session and clears its dashboard without refetching the table', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
+        <Sessions />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Communication');
+    expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent(
+      'No attendance.',
+    );
+    const initialRequestCount = getSessions.mock.calls.length;
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Session' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
+    await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
+    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
+    expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
+    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
+  });
+
+  // Modal and confirmation workflows.
   it('highlights a linked session and opens attendance from its actions menu', async () => {
     render(
       <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
@@ -288,58 +332,6 @@ describe('Sessions', () => {
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
   });
 
-  it('removes a selected session and clears its dashboard without refetching the table', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
-        <Sessions />
-        <LocationProbe />
-      </MemoryRouter>,
-    );
-    await screen.findByText('Communication');
-    expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent(
-      'No attendance.',
-    );
-    const initialRequestCount = getSessions.mock.calls.length;
-
-    await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete Session' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-
-    await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
-    await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
-    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
-    expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
-    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
-  });
-
-  it('keeps persisted controls and content unavailable until restoration completes', async () => {
-    preferenceHook.loading = true;
-    const rendered = render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
-    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
-
-    preferenceHook.loading = false;
-    rendered.rerender(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
-    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
-  });
-
   it('opens the add sessions flow from the page header', async () => {
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
@@ -354,8 +346,9 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Add Sessions' })).toBeInTheDocument();
   });
 
+  // Table, calendar, dashboard, and body initialization.
   it('switches between table and calendar views on the same page', async () => {
-    preferenceHook.preference = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cohortId: null, sessionTypeIds: [], statuses: [] };
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
@@ -372,7 +365,7 @@ describe('Sessions', () => {
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
 
-    expect(preferenceHook.preference).toEqual(expect.objectContaining({ view: 'table' }));
+    await waitFor(() => expect(preferenceApi.value).toEqual(expect.objectContaining({ view: 'table' })));
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
@@ -384,7 +377,7 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(screen.getByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
   });
 });

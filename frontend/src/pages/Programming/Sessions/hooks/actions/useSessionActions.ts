@@ -2,13 +2,14 @@ import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
-import { deleteSession } from '../../../../../common/features/programming/api/sessions.api';
-import { COHORT_QUERY_KEY, SESSION_QUERY_KEY } from '../../../../../common/features/programming/queryKeys';
-import { YOUTH_QUERY_KEY } from '../../../../../common/features/youth/queryKeys';
-import type { CohortSession } from '../../../../../common/types/cohort';
+import { deleteSession } from '../../sessions.api';
+import type { CohortSession } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import { removeInfiniteListRow } from '../../../../../query/infiniteListCache';
 
+const COHORT_QUERY_KEY = ['cohorts'] as const;
+const YOUTH_QUERY_KEY = ['youth'] as const;
+const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 

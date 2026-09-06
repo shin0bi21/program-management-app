@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-// Owns account adapter query serialization and omission of empty filters.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAccounts } from './accounts.api';

@@ -5,7 +5,7 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import type { CursorPage } from '../../common/types/pagination';
+import type { CursorPage } from '../types';
 import { getErrorMessage } from '../../http/errors';
 
 interface InfiniteListQueryOptions<T> {
@@ -35,7 +35,8 @@ export default function useInfiniteListQuery<T extends { id: string }>({
   const rows = [...new Map(
     (query.data?.pages.flatMap(page => page.rows) ?? []).map(row => [row.id, row]),
   ).values()];
-  const retry = useCallback(() => { void query.refetch(); }, [query.refetch]);
+  const { refetch } = query;
+  const retry = useCallback(() => { void refetch(); }, [refetch]);
 
   return {
     rows,

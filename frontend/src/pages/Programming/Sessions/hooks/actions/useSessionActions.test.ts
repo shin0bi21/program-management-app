@@ -1,4 +1,3 @@
-// Owns Sessions mutations and cross-query reconciliation.
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +7,7 @@ import { makeCohortSession } from '../../../../../tests/factories/session';
 import useSessionActions from './useSessionActions';
 
 const api = vi.hoisted(() => ({ deleteSession: vi.fn() }));
-vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../sessions.api', () => ({
   deleteSession: api.deleteSession,
 }));
 

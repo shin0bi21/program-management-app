@@ -1,10 +1,10 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
-import { createCohort } from '../../../../../../common/features/programming/api/cohorts.api';
+import { createCohort } from '../../../cohorts.api';
 import type { Program } from '../../../../../../common/features/programs/types';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
-import type { ProgramCycle } from '../../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseAddCohortModalOptions {

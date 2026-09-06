@@ -7,10 +7,12 @@ Give each value one owner. Choose that owner by how long the value lives and who
 | Value | Owner | Examples |
 |---|---|---|
 | Backend data | Focused TanStack Query hook | rows, records, options, totals |
-| A restored page control | Page preference hook | view, sorting, column widths |
+| A restored page control | Shared preference state through a page hook | view, sorting, column widths |
 | A temporary choice shared by page children | Route page or focused page hook | selected row, open modal target |
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
+
+For durable page controls, follow the [page preference contract](../pages/README.md#save-page-preferences). It owns the named field rules, grouped return shape, automatic repair and persistence lifecycle.
 
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
 
@@ -38,7 +40,7 @@ Pure utilities and finite policy or capability rules use representative inputs, 
 
 Use the record returned by the backend after a mutation. Do not rebuild it from form values.
 
-The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/tables/rows.md).
+The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
 
 ## Keep application selection with its domain
 
@@ -52,4 +54,4 @@ Do not test whether TanStack Query can fetch or cache. Query-wrapper tests own o
 
 A domain query-hook test owns the exact query key and enabled condition, adapter inputs, page size, cancellation and cursor forwarding, and domain response shaping. A real isolated `QueryClient` is the harness, not the subject. For example, the domain hook can prove that `pageParam: 'next'` becomes `cursor: 'next'`; `useInfiniteListQuery` owns proving that both pages are accumulated and deduplicated.
 
-Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables/README.md#test-the-table).
+Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#test-the-table).

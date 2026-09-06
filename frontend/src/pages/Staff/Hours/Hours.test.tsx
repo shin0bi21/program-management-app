@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,25 +14,14 @@ import {
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
+import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
 
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
-const preferenceHook = vi.hoisted<{
-  preference: StoredHoursPreferences | null;
-  loading: boolean;
-  error: string | null;
-  initializePreference: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
-}>(() => ({
-  preference: { view: 'calendar', staffIds: [], programIds: [], categories: [], types: [], cycleId: 'cycle-1', sorting: { key: 'date', direction: 'desc' }, columnWidths: {}, hiddenColumns: [] },
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceHook: { preference: StoredHoursPreferences | null } = { preference: null };
 
-vi.mock('../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../Programming/Cohorts/cohorts.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
 }));
 
@@ -52,7 +41,7 @@ vi.mock('../Tasks/tasks.api', () => ({
   setTask: vi.fn(),
 }));
 
-vi.mock('../../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const auth: AuthContextValue = {
@@ -87,12 +76,8 @@ describe('Hours', () => {
     auth.role = 'staff';
     auth.permissions = ['read:hours', 'write:hours'];
     preferenceHook.preference = { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((update: StoredHoursPreferences | ((current: StoredHoursPreferences | null) => StoredHoursPreferences)) => {
-      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
-    });
+    vi.mocked(getPreference).mockImplementation(async () => preferenceHook.preference);
+    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getUser).mockReturnValue({
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com',
     });
@@ -164,6 +149,7 @@ describe('Hours', () => {
     }]);
   });
 
+  // Permissions and application services.
   it('does not show staff their redundant Staff filter', async () => {
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
@@ -240,6 +226,7 @@ describe('Hours', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
   });
 
+  // Saved preferences and the current view.
   it('switches between the persisted Hours views', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     render(
@@ -259,6 +246,7 @@ describe('Hours', () => {
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
+  // Filter configuration.
   it('keeps search visible and reloads the calendar when search is applied', async () => {
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
@@ -282,6 +270,7 @@ describe('Hours', () => {
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
   });
 
+  // Selection and page-spanning actions.
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
     vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': {
@@ -327,42 +316,6 @@ describe('Hours', () => {
       'cycle-fall',
       { signal: expect.any(AbortSignal) },
     );
-  });
-
-  it('always shows searchable table overview cards for staff', async () => {
-    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
-        id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
-        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
-      }] },
-    });
-    vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-
-    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    await waitFor(() => expect(
-      screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article'),
-    ).toHaveTextContent('2.00'));
-    fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
-    expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-
-    await screen.findByText('Youth workshop');
-    expect(screen.getByRole('table', { name: 'Hours entries' })).toHaveTextContent('Youth workshop');
-    const entryRow = screen.getByText('Youth workshop').closest('tr');
-    expect(entryRow).toHaveAttribute('tabindex', '0');
-    fireEvent.click(entryRow!);
-    expect(entryRow).toHaveAttribute('aria-selected', 'true');
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(await screen.findByText('No hours found')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
@@ -430,26 +383,27 @@ describe('Hours', () => {
       cycleId: 'cycle-1',
     };
     vi.mocked(getHoursCalendarData).mockResolvedValue({
-        'staff-1': {
-          '2026-08-09': [{
-            id: 'entry-1',
-            programId: null,
-            programName: null,
-            cycleId: 'cycle-1',
-            cycleName: 'Summer 2026',
-            category: 'meeting',
-            categoryLabel: 'Meeting',
-            taskId: null,
-            taskTitle: null,
-            sessionId: null,
-            sessionLabel: null,
-            hours: 2,
-            note: 'Planning meeting',
-          }],
-        },
+      'staff-1': {
+        '2026-08-09': [{
+          id: 'entry-1',
+          programId: null,
+          programName: null,
+          cycleId: 'cycle-1',
+          cycleName: 'Summer 2026',
+          category: 'meeting',
+          categoryLabel: 'Meeting',
+          taskId: null,
+          taskTitle: null,
+          sessionId: null,
+          sessionLabel: null,
+          hours: 2,
+          note: 'Planning meeting',
+        }],
+      },
     });
   }
 
+  // Modal and confirmation workflows.
   it('bridges the page Add action to the shared entry modal', async () => {
     const workDate = dayKey(new Date());
     vi.mocked(setHours).mockResolvedValue({
@@ -494,8 +448,12 @@ describe('Hours', () => {
     expect(screen.getByLabelText('Date')).toHaveValue(workDate);
   });
 
-  it('bridges a table Edit action to the shared entry modal', async () => {
+  it('keeps table Edit available when a background preference repair completes', async () => {
     mockWritableTableEntry();
+    let finishSave!: () => void;
+    vi.mocked(setPreference).mockImplementation((_key, value) => new Promise(resolve => {
+      finishSave = () => resolve(value);
+    }));
     vi.mocked(setHours).mockResolvedValue({
       id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
       cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
@@ -511,7 +469,9 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await waitFor(() => expect(setPreference).toHaveBeenCalled());
+    await act(async () => finishSave());
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
     expect(screen.getByLabelText('Hours')).toHaveValue(2);
@@ -530,9 +490,46 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteHours).toHaveBeenCalledWith('entry-1'));
+  });
+
+  // Table, calendar, dashboard, and body initialization.
+  it('always shows searchable table overview cards for staff', async () => {
+    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
+        id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
+        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
+      }] },
+    });
+    vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
+    render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+
+    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(
+      screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article'),
+    ).toHaveTextContent('2.00'));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
+    expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
+
+    await screen.findByText('Youth workshop');
+    expect(screen.getByRole('table', { name: 'Hours entries' })).toHaveTextContent('Youth workshop');
+    const entryRow = screen.getByText('Youth workshop').closest('tr');
+    expect(entryRow).toHaveAttribute('tabindex', '0');
+    fireEvent.click(entryRow!);
+    expect(entryRow).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search hours' }), { target: { value: 'missing' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(await screen.findByText('No hours found')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 });

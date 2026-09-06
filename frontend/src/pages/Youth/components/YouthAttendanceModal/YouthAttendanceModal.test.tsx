@@ -16,7 +16,7 @@ const sessionNoteApi = vi.hoisted(() => ({
 }));
 
 vi.mock('./youthAttendance.api', () => api);
-vi.mock('../../../../common/features/programming/api/sessions.api', () => sessionNoteApi);
+vi.mock('../../../Programming/Sessions/sessions.api', () => sessionNoteApi);
 
 const cohort = {
   id: 'cohort-1',

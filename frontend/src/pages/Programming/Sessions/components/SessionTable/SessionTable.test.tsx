@@ -1,8 +1,7 @@
-// Owns session table query wiring, table states, selection resolution, and pagination contract.
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../types';
 import { makeCohortSession } from '../../../../../tests/factories/session';
 import SessionTable from './SessionTable';
 

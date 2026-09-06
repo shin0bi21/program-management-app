@@ -1,6 +1,6 @@
 import { getHoursTableData } from '../../../hours.api';
 import type { HoursFilters, HoursTableRow } from '../../../types';
-import type { ListSort } from '../../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { HoursSortKey } from '../../../types';
 

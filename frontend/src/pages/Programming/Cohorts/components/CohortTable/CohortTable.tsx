@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../../../../common/types/cohort';
-import type { ListSort } from '../../../../../common/types/pagination';
+import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../types';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import useCohortTableData from './hooks/useCohortTableData';
 
 interface CohortTableProps {

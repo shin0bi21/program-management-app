@@ -1,4 +1,5 @@
-import type { AttendanceStatus, SessionNote } from '../../../../common/types/cohort';
+import type { AttendanceStatus } from '../../../../common/features/AttendanceStatusSelect/types';
+import type { SessionNote } from '../../../Programming/Sessions/types';
 
 export interface YouthAttendanceSession {
   id: string;

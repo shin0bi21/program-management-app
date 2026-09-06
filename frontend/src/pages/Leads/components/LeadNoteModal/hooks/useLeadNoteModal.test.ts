@@ -1,4 +1,3 @@
-// Owns Lead note draft reset, validation, command payloads, status, and retry behavior.
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

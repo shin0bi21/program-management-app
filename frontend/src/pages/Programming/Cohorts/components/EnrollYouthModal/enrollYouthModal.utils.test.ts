@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-// Owns enrollment status and empty-state copy selection.
 import { describe, expect, it } from 'vitest';
 
 import {

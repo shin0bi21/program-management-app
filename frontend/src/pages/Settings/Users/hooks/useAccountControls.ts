@@ -1,103 +1,42 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
-import useUserPreference from '../../../../common/features/preferences/hooks/useUserPreference';
-import type { AccountRole, AccountSortKey, AccountStatus } from '../../../../common/types/account';
-import type { ListSort } from '../../../../common/types/pagination';
+import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
-  mergePreferenceDefaults,
-  resolveAvailablePreferenceValues,
-  resolvePreferenceNumberRecord,
-  resolvePreferenceSorting,
-  resolvePreferenceStringArray,
-} from '../../../../common/features/preferences/preferenceValues';
+  preferenceOptions,
+  preferenceSorting,
+  preferenceColumnWidths,
+  preferenceHiddenColumns,
+} from '../../../../common/features/Preferences/preferences';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
+import type { UserRole, UserSortKey, UserStatus } from '../types';
 
-export interface AccountPreference {
-  statuses: AccountStatus[];
-  roles: AccountRole[];
-  sorting?: ListSort<AccountSortKey>;
-  columnWidths?: Record<string, number>;
-  hiddenColumns?: string[];
-}
-
-const DEFAULT_SORTING: ListSort<AccountSortKey> = { key: 'name', direction: 'asc' };
-const DEFAULT_ACCOUNT_PREFERENCE: AccountPreference = {
-  statuses: [],
-  roles: [],
-  sorting: DEFAULT_SORTING,
-  columnWidths: {},
-  hiddenColumns: [],
-};
+const DEFAULT_SORTING: ListSort<UserSortKey> = { key: 'name', direction: 'asc' };
 
 export function useAccountControls(
   isAdmin: boolean,
-  tableKeys: readonly AccountSortKey[],
+  tableKeys: readonly UserSortKey[],
 ) {
-  // Search and filter state.
+  const { preferences, updatePreferences, ready, error } = usePreferences({
+    key: 'account-filters',
+    waiting: false,
+    fields: {
+      statuses: preferenceOptions<UserStatus>(['invited', 'active', 'inactive']),
+      roles: preferenceOptions<UserRole>(isAdmin ? ['admin', 'staff', 'youth'] : []),
+      sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
+      columnWidths: preferenceColumnWidths(tableKeys),
+      hiddenColumns: preferenceHiddenColumns(tableKeys),
+    },
+  });
+
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [statusFilters, setStatusFilters] = useState<AccountStatus[]>([]);
-  const [roleFilters, setRoleFilters] = useState<AccountRole[]>([]);
-  const [ready, setReady] = useState(false);
 
-  // Table presentation state.
-  const [sorting, setSortingState] = useState<ListSort<AccountSortKey>>(DEFAULT_SORTING);
-  const [columnWidths, setColumnWidthsState] = useState<Record<string, number>>({});
-  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([]);
-
-  // Persisted preferences.
-  const {
-    preference,
-    loading: preferenceLoading,
-    error,
-    loadError,
-    initializePreference,
-    save,
-  } = useUserPreference<AccountPreference>('account-filters', tableKeys);
-
-  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
-  const clearSearch = useCallback(() => {
+  const applySearch = () => setAppliedSearch(search.trim());
+  const clearSearch = () => {
     setSearch('');
     setAppliedSearch('');
-  }, []);
-
-  // Restore preferences before enabling the account query.
-  useEffect(() => {
-    if (ready || preferenceLoading) return;
-    const resolved = mergePreferenceDefaults(
-      DEFAULT_ACCOUNT_PREFERENCE,
-      loadError ? null : preference,
-    );
-    const restoredSorting = resolvePreferenceSorting(resolved.sorting, tableKeys, DEFAULT_SORTING);
-    const restoredStatuses = resolveAvailablePreferenceValues(
-      resolved.statuses,
-      [{ value: 'invited' }, { value: 'active' }, { value: 'inactive' }],
-      true,
-    );
-    const restoredRoles = isAdmin
-      ? resolveAvailablePreferenceValues(
-        resolved.roles,
-        [{ value: 'admin' }, { value: 'staff' }, { value: 'youth' }],
-        true,
-      )
-      : [];
-    const restoredColumnWidths = resolvePreferenceNumberRecord(resolved.columnWidths);
-    const restoredHiddenColumns = resolvePreferenceStringArray(resolved.hiddenColumns);
-    const restored: AccountPreference = {
-      statuses: restoredStatuses,
-      roles: restoredRoles,
-      sorting: restoredSorting,
-      columnWidths: restoredColumnWidths,
-      hiddenColumns: restoredHiddenColumns,
-    };
-    setStatusFilters(restored.statuses);
-    setRoleFilters(restored.roles);
-    setSortingState(restoredSorting);
-    setColumnWidthsState(restoredColumnWidths);
-    setHiddenColumnsState(restoredHiddenColumns);
-    initializePreference(restored);
-    setReady(true);
-  }, [isAdmin, loadError, preference, preferenceLoading, ready, initializePreference, tableKeys]);
+  };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'status', label: 'Status', options: [
@@ -112,56 +51,35 @@ export function useAccountControls(
     ] }] : []),
   ], [isAdmin]);
 
-  // Save one changed control while preserving the rest of the preference object.
-  const persist = useCallback((next: {
-    statuses?: AccountStatus[];
-    roles?: AccountRole[];
-    sorting?: ListSort<AccountSortKey>;
-    columnWidths?: Record<string, number>;
-    hiddenColumns?: string[];
-  }) => save(current => ({
-    statuses: next.statuses ?? current?.statuses ?? statusFilters,
-    roles: next.roles ?? current?.roles ?? roleFilters,
-    sorting: next.sorting ?? current?.sorting ?? sorting,
-    columnWidths: next.columnWidths ?? current?.columnWidths ?? columnWidths,
-    hiddenColumns: next.hiddenColumns ?? current?.hiddenColumns ?? hiddenColumns,
-  })), [columnWidths, hiddenColumns, roleFilters, save, sorting, statusFilters]);
-
-  // Translate FilterCard's generic event into this page's typed controls.
-  const applyFilter = useCallback((category: string, selected: string[]) => {
-    if (category === 'status') {
-      const nextStatuses = selected as AccountStatus[];
-      setStatusFilters(nextStatuses);
-      void persist({ statuses: nextStatuses });
-      return;
-    }
-    if (category === 'role') {
-      const nextRoles = selected as AccountRole[];
-      setRoleFilters(nextRoles);
-      void persist({ roles: nextRoles });
-    }
-  }, [persist]);
-
-  // Filter reset and persisted table controls.
-  const clearFilters = useCallback(() => {
-    setStatusFilters([]);
-    setRoleFilters([]);
-    void persist({ statuses: [], roles: [] });
-  }, [persist]);
-  const setSorting = useCallback((next: TableSorting) => {
-    const value = next as ListSort<AccountSortKey>;
-    setSortingState(value);
-    void persist({ sorting: value });
-  }, [persist]);
-  const setColumnWidths = useCallback((next: Record<string, number>) => {
-    setColumnWidthsState(next);
-    void persist({ columnWidths: next });
-  }, [persist]);
-  const setHiddenColumns = useCallback((hiddenColumns: string[]) => { setHiddenColumnsState(hiddenColumns); void persist({ hiddenColumns }); }, [persist]);
+  const applyFilter = (category: string, selected: string[]) => {
+    if (category === 'status') updatePreferences({ statuses: selected as UserStatus[] });
+    if (category === 'role' && isAdmin) updatePreferences({ roles: selected as UserRole[] });
+  };
 
   return {
-    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, roleFilters, sorting, setSorting,
-    columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns,
-    ready, error, filterCategories, applyFilter, clearFilters,
+    ready,
+    error,
+    search: {
+      value: search,
+      setValue: setSearch,
+      appliedValue: appliedSearch,
+      apply: applySearch,
+      clear: clearSearch,
+    },
+    filters: {
+      statuses: preferences.statuses,
+      roles: preferences.roles,
+      definitions: filterCategories,
+      apply: applyFilter,
+      clear: () => updatePreferences({ statuses: [], roles: [] }),
+    },
+    table: {
+      sorting: preferences.sorting,
+      setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<UserSortKey> }),
+      columnWidths: preferences.columnWidths,
+      setColumnWidths: (columnWidths: Record<string, number>) => updatePreferences({ columnWidths }),
+      hiddenColumns: preferences.hiddenColumns,
+      setHiddenColumns: (hiddenColumns: string[]) => updatePreferences({ hiddenColumns }),
+    },
   };
 }

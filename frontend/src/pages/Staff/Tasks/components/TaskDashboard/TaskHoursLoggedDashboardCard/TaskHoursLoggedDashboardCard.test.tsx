@@ -1,4 +1,3 @@
-// Owns task-hour breakdown presentation and contextual logging events.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../types';

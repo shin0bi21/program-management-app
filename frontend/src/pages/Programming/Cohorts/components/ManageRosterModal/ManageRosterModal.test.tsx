@@ -1,4 +1,3 @@
-// Owns roster presentation and the nested enroll/withdraw modal lifecycle.
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,9 +6,12 @@ import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import ManageRosterModal from './ManageRosterModal';
 
-const api = vi.hoisted(() => ({ getYouth: vi.fn(), withdrawYouth: vi.fn(), enrollYouth: vi.fn() }));
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({ withdrawYouth: api.withdrawYouth, enrollYouth: api.enrollYouth }));
-vi.mock('../../../../../common/features/youth/youth.api', () => ({ getYouth: api.getYouth }));
+const api = vi.hoisted(() => ({ getCohortRosterYouth: vi.fn(), withdrawYouth: vi.fn(), enrollYouth: vi.fn() }));
+vi.mock('../../cohorts.api', () => ({
+  withdrawYouth: api.withdrawYouth,
+  enrollYouth: api.enrollYouth,
+  getCohortRosterYouth: api.getCohortRosterYouth,
+}));
 
 describe('ManageRosterModal', () => {
   const cohort = {
@@ -22,7 +24,7 @@ describe('ManageRosterModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getYouth.mockResolvedValue([
+    api.getCohortRosterYouth.mockResolvedValue([
       makeYouthProfile({ id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, rosterMode: cohort.rosterMode, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }] }),
       makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2012-01-01' }),
     ]);
@@ -91,7 +93,7 @@ describe('ManageRosterModal', () => {
   });
 
   it('shows roster loading failures as accessible errors', async () => {
-    api.getYouth.mockRejectedValue(new Error('roster unavailable'));
+    api.getCohortRosterYouth.mockRejectedValue(new Error('roster unavailable'));
 
     render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 

@@ -1,8 +1,7 @@
-// Owns attachment-row metadata, action wiring, and read-only presentation.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { SessionAttachment } from '../../../../../../../common/types/cohort';
+import type { SessionAttachment } from '../../../../types';
 import SessionAttachmentRow from './SessionAttachmentRow';
 
 const attachment: SessionAttachment = {

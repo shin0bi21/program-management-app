@@ -1,4 +1,3 @@
-// Owns details-only Lead status-note editing and immutable status presentation.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import LeadNoteEditModal from './LeadNoteEditModal';

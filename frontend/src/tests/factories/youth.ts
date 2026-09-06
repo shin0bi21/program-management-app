@@ -1,4 +1,4 @@
-import type { YouthProfile } from '../../common/types/youth';
+import type { YouthProfile } from '../../pages/Youth/types';
 
 export function makeYouthProfile(overrides: Partial<YouthProfile> = {}): YouthProfile {
   return {

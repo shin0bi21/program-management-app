@@ -22,7 +22,7 @@ test('keeps dashboard naming checks on common components', () => {
 test('routes page preferences to their ownership check', () => {
   const violations = violationsFor(
     'frontend/src/pages/Example/hooks/useExamplePreferences.ts',
-    "const { save } = useUserPreference('example-filters');\nsave({ hiddenColumns });",
+    "usePreferences({ key: 'example-filters', fields: { hiddenColumns: preferenceIds([]) } });",
   );
   assert.match(violations.join('\n'), /owning tableKeys/);
 });

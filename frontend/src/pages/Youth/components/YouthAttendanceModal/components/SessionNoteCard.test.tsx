@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionNote } from '../../../../../common/types/cohort';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import SessionNoteCard from './SessionNoteCard';
 
 const note = {

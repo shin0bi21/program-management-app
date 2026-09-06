@@ -1,4 +1,3 @@
-// Owns session-type presentation modifiers and supported appearances.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

@@ -1,7 +1,6 @@
-// Owns the rendered signup choices and their wiring to the modal workflow.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCohorts } from '../../../../common/features/programming/api/cohorts.api';
+import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import SignUpLeadModal from './SignUpLeadModal';
@@ -9,7 +8,7 @@ import { renderWithQueryClient } from '../../../../tests/queryClientTestUtils';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 
-vi.mock('../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../Programming/Cohorts/cohorts.api', () => ({
   getCohorts: vi.fn(),
 }));
 

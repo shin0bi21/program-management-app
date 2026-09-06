@@ -1,13 +1,12 @@
-// Owns cohort-table query activation, control serialization, and cursor forwarding.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCohortPage } from '../../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import { getCohortPage } from '../../../cohorts.api';
+import type { ProgramCohort } from '../../../types';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import useCohortTableData from './useCohortTableData';
 
-vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({ getCohortPage: vi.fn() }));
+vi.mock('../../../cohorts.api', () => ({ getCohortPage: vi.fn() }));
 
 const cohort: ProgramCohort = {
   id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',

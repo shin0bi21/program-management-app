@@ -1,4 +1,3 @@
-// Owns task columns and permission-aware row actions.
 import { render, renderHook, screen } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

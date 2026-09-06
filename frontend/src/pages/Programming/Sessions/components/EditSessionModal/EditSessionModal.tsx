@@ -2,7 +2,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { CohortSession } from '../../../../../common/types/cohort';
+import type { CohortSession } from '../../types';
 import { useEditSessionModal } from './hooks/useEditSessionModal';
 
 const localDateTime = (value: string) => {

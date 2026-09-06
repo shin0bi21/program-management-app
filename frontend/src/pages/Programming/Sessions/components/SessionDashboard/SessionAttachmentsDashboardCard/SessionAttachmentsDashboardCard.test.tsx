@@ -1,8 +1,7 @@
-// Owns attachment card states, editor/viewer targeting, deletion, and list refresh behavior.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SessionAttachment } from '../../../../../../common/types/cohort';
+import type { SessionAttachment } from '../../../types';
 import { makeCohortSession } from '../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard';
@@ -17,7 +16,7 @@ const childProps = vi.hoisted(() => ({
   viewer: null as Record<string, unknown> | null,
 }));
 
-vi.mock('../../../../../../common/features/programming/api/sessions.api', () => api);
+vi.mock('../../../sessions.api', () => api);
 vi.mock('./SessionAttachmentModal/SessionAttachmentModal', () => ({
   default: (props: Record<string, unknown>) => {
     childProps.editor = props;

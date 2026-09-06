@@ -1,4 +1,3 @@
-// Owns Youth profile selection and selection-dependent workflow synchronization.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { makeYouthProfile } from '../../../../tests/factories/youth';

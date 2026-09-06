@@ -35,16 +35,18 @@ Preserve the dependency direction `pages → common/features → common/componen
 
 Use this table to find the right guide. Each rule is explained in one place so the documentation does not repeat itself.
 
+Rendered-surface guides are flat files under `components/`; add a subdirectory only when a documentation area grows into a substantial multi-file set. Each owner guide documents its own skeleton and the scaffold preset that generates it.
+
 | What are you changing? | Guide |
 |---|---|
 | A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
-| Sidebar navigation or route visibility | [App navigation](components/navigation/README.md) |
-| Tables and table rows | [Tables](components/tables/README.md) and [table rows](components/tables/rows.md) |
-| Calendars | [Calendars](components/calendars/README.md) |
-| Dashboards | [Dashboards](components/dashboards/README.md) |
-| Modals and other overlays | [Overlays](components/overlays/README.md) |
+| Sidebar navigation or route visibility | [App navigation](components/navigation.md) |
+| Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
+| Calendars | [Calendars](components/calendars.md) |
+| Dashboards | [Dashboards](components/dashboards.md) |
+| Modals and other overlays | [Overlays](components/overlays.md) |
 | Shared components | [Components](components/README.md) |
 | Frontend architecture | [Architecture](architecture/README.md) |
+| Saved preferences, field rules, or grouped page controls | [Page preferences](pages/README.md#save-page-preferences) |
 | State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
 | Where code should live | [Ownership](architecture/ownership.md) |
-| Creating a new page or component | [Scaffolding](scaffolding.md) |

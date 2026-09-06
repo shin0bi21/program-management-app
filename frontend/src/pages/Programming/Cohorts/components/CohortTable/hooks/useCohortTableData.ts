@@ -1,7 +1,7 @@
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { getCohortPage } from '../../../../../../common/features/programming/api/cohorts.api';
-import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../../../../../common/types/cohort';
-import type { ListSort } from '../../../../../../common/types/pagination';
+import { getCohortPage } from '../../../cohorts.api';
+import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../../types';
+import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
 export default function useCohortTableData(
   queryKey: readonly unknown[],

@@ -1,4 +1,3 @@
-// Owns Youth dashboard selection and primary-contact action composition.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

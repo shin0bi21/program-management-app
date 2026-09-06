@@ -2,7 +2,7 @@
 
 import { QueryClient, type InfiniteData } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import type { CursorPage } from '../common/types/pagination';
+import type { CursorPage } from './types';
 import { removeInfiniteListRow, replaceInfiniteListRow } from './infiniteListCache';
 
 interface Row { id: string; name: string }

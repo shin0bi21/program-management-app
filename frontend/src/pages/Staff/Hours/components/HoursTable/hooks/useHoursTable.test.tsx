@@ -1,4 +1,3 @@
-// Owns hours columns and writable row actions.
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import type { CellContext } from '@tanstack/react-table';
 import { describe, expect, it, vi } from 'vitest';

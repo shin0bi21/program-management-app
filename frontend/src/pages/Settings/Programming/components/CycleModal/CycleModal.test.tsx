@@ -1,13 +1,12 @@
-// Owns cycle create/edit initialization, payloads, callback ordering, errors, and reopen resets.
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setProgramCycle } from '../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCycle } from '../../../../../common/types/cohort';
+import { setProgramCycle } from '../../../../Programming/Cohorts/cohorts.api';
+import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
 import CycleModal from './CycleModal';
 
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({ setProgramCycle: vi.fn() }));
+vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({ setProgramCycle: vi.fn() }));
 
 const cycle: ProgramCycle = {
   id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',

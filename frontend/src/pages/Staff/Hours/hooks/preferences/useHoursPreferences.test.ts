@@ -1,21 +1,23 @@
-// Owns dependency-aware restoration, role policy, baselining, and atomic preference patches.
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook as renderBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useHoursPreferences, { type StoredHoursPreferences } from './useHoursPreferences';
 
-const preferenceHook = vi.hoisted<{
-  preference: StoredHoursPreferences | null;
-  loading: boolean;
-  error: string | null;
-  loadError: string | null;
-  initializePreference: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
-}>(() => ({ preference: null, loading: false, error: null, loadError: null, initializePreference: vi.fn(), save: vi.fn() }));
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
+import { getPreference, setPreference } from '../../../../../common/features/Preferences/preferences.api';
 
-vi.mock('../../../../../common/features/preferences/hooks/useUserPreference', () => ({
-  default: () => preferenceHook,
+vi.mock('../../../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: vi.fn(),
+  setPreference: vi.fn(),
 }));
+
+const renderHook: typeof renderBase = (callback, options) => renderBase(callback, {
+  wrapper: createQueryClientWrapper(createTestQueryClient()),
+  ...options,
+});
+const savedPreference: { preference: StoredHoursPreferences | null } = {
+  preference: null,
+};
 
 const cycles = [
   { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const },
@@ -32,17 +34,15 @@ const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'categor
 describe('useHoursPreferences', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.loadError = null;
-    preferenceHook.save.mockImplementation((update: StoredHoursPreferences | ((current: StoredHoursPreferences | null) => StoredHoursPreferences)) => {
-      preferenceHook.preference = typeof update === 'function' ? update(preferenceHook.preference) : update;
+    savedPreference.preference = null;
+    vi.mocked(getPreference).mockImplementation(async () => {
+      return savedPreference.preference;
     });
+    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
   });
 
   it('waits for dependencies and restores one complete admin preference', async () => {
-    preferenceHook.preference = {
+    savedPreference.preference = {
       view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
@@ -67,50 +67,10 @@ describe('useHoursPreferences', () => {
       hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     }));
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
-      view: 'table', search: '', staffIds: ['staff-1'], cycleId: 'cycle-2',
-    }));
-  });
-
-  it('uses defaults when saved preferences cannot be loaded', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: ['staff-1'], cycleId: 'cycle-2' };
-    preferenceHook.loadError = 'offline';
-    const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.view).toBe('calendar');
-    expect(result.current.filters).toEqual(expect.objectContaining({ staffIds: [], cycleId: 'cycle-1' }));
-  });
-
-  it('merges immediate owned patches without losing sibling controls', async () => {
-    const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    act(() => {
-      result.current.table.setHiddenColumns(['note']);
-      result.current.table.setColumnWidths({ note: 280 });
-      result.current.table.setSorting({ key: 'hours', direction: 'asc' });
-      result.current.filters.apply('staff', ['staff-1']);
-    });
-
-    expect(result.current.table).toEqual(expect.objectContaining({
-      hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
-    }));
-    expect(result.current.filters.staffIds).toEqual(['staff-1']);
-    expect(preferenceHook.preference).toEqual(expect.objectContaining({
-      hiddenColumns: ['note'], columnWidths: { note: 280 },
-      sorting: { key: 'hours', direction: 'asc' }, staffIds: ['staff-1'],
-    }));
   });
 
   it('removes an admin-only saved staff filter for a staff user', async () => {
-    preferenceHook.preference = {
+    savedPreference.preference = {
       view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleId: 'cycle-1',
     };
     const { result } = renderHook(() => useHoursPreferences({
@@ -122,23 +82,9 @@ describe('useHoursPreferences', () => {
     expect(result.current.filters.staffIds).toEqual([]);
   });
 
-  it('replaces a removed list view preference with the calendar default', async () => {
-    preferenceHook.preference = {
-      view: 'list',
-    } as unknown as StoredHoursPreferences;
-    const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.view).toBe('calendar');
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({ view: 'calendar' }));
-  });
-
-  it('scrubs removed option IDs and obsolete sorting before establishing the baseline', async () => {
-    preferenceHook.preference = {
-      view: 'table',
+  it('repairs removed options and sorting without losing valid selections', async () => {
+    savedPreference.preference = {
+      view: 'list' as never,
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['general', 'program-1', 'removed-program'],
       categories: ['meeting', 'removed-category' as never],
@@ -157,64 +103,48 @@ describe('useHoursPreferences', () => {
       staffIds: ['staff-1'], programIds: ['general', 'program-1'],
       categories: ['meeting'], types: ['task'],
     }));
+    expect(result.current.view).toBe('calendar');
     expect(result.current.table.sorting).toEqual({ key: 'date', direction: 'desc' });
-    expect(preferenceHook.initializePreference).toHaveBeenCalledWith(expect.objectContaining({
-      staffIds: ['staff-1'], programIds: ['general', 'program-1'],
-      categories: ['meeting'], types: ['task'],
-    }));
   });
 
-  it('preserves saved dependency IDs when hours options fail to load', async () => {
-    preferenceHook.preference = {
-      view: 'table',
-      staffIds: ['saved-staff'],
-      programIds: ['saved-program'],
-      categories: ['saved-category' as never],
-      types: ['saved-type' as never],
-      cycleId: 'saved-cycle',
-    };
-    const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources: [], programs: [], cycles: [], categories, types, loadingDependencies: false,
-      optionsError: true, cyclesError: true, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.filters).toEqual(expect.objectContaining({
-      staffIds: ['saved-staff'],
-      programIds: ['saved-program'],
-      categories: ['saved-category'],
-      types: ['saved-type'],
-      cycleId: 'saved-cycle',
-    }));
-  });
-
-  it('scrubs preserved category and type filters after options recover', async () => {
-    preferenceHook.preference = {
-      categories: ['removed-category' as never],
-      types: ['removed-type' as never],
+  it('repairs options and cycles independently while retaining edits made during the outage', async () => {
+    savedPreference.preference = {
+      staffIds: ['removed-staff'],
+      programIds: ['removed-program'],
+      categories: ['planning_prep'],
+      types: ['session'],
+      cycleId: 'removed-cycle',
     };
     const { result, rerender } = renderHook(
-      ({ optionValues, optionsError }) => useHoursPreferences({
-        role: 'admin', resources, programs, cycles,
-        categories: optionValues ? categories : [],
-        types: optionValues ? types : [],
-        loadingDependencies: false, optionsError, cyclesError: false, tableKeys,
+      ({ optionsError, cyclesError }) => useHoursPreferences({
+        role: 'admin',
+        resources: optionsError ? [] : resources,
+        programs: optionsError ? [] : programs,
+        categories: optionsError ? [] : categories,
+        types: optionsError ? [] : types,
+        cycles: cyclesError ? [] : cycles,
+        loadingDependencies: false, optionsError, cyclesError, tableKeys,
       }),
-      { initialProps: { optionValues: false, optionsError: true } },
+      { initialProps: { optionsError: true, cyclesError: true } },
     );
-
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters).toEqual(expect.objectContaining({
-      categories: ['removed-category'],
-      types: ['removed-type'],
+    expect(result.current.filters).toMatchObject({
+      staffIds: ['removed-staff'], programIds: ['removed-program'],
+      categories: ['planning_prep'], types: ['session'], cycleId: 'removed-cycle',
+    });
+    act(() => result.current.setView('table'));
+
+    rerender({ optionsError: false, cyclesError: true });
+    await waitFor(() => expect(result.current.filters).toMatchObject({
+      staffIds: [], programIds: [], categories: [], types: [],
     }));
+    expect(result.current.filters.cycleId).toBe('removed-cycle');
 
-    rerender({ optionValues: true, optionsError: false });
-
-    await waitFor(() => expect(result.current.filters).toEqual(expect.objectContaining({
-      categories: [],
-      types: [],
+    rerender({ optionsError: false, cyclesError: false });
+    await waitFor(() => expect(result.current.filters.cycleId).toBeNull());
+    expect(result.current.view).toBe('table');
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
+      view: 'table', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
     })));
   });
 
@@ -225,6 +155,8 @@ describe('useHoursPreferences', () => {
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
+    expect(result.current.view).toBe('calendar');
+    expect(result.current.filters).toMatchObject({ staffIds: [], cycleId: 'cycle-1' });
     expect(result.current.filters.definitions.map(category => category.id)).toEqual([
       'staff', 'program', 'cycle', 'type', 'entryType',
     ]);
@@ -236,17 +168,29 @@ describe('useHoursPreferences', () => {
     expect(result.current.search.appliedValue).toBe('workshop');
 
     act(() => {
+      result.current.table.setHiddenColumns(['note']);
+      result.current.table.setColumnWidths({ note: 280 });
+      result.current.table.setSorting({ key: 'hours', direction: 'asc' });
+      result.current.filters.apply('staff', ['staff-1']);
       result.current.filters.apply('entryType', ['meeting']);
       result.current.filters.apply('type', ['task']);
       result.current.filters.selectCycle('cycle-2');
     });
     expect(result.current.filters).toEqual(expect.objectContaining({
-      categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
+      staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
     }));
 
+    expect(result.current.table).toMatchObject({
+      hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
+    });
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
+      search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
+      hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
+    })));
+
     act(() => result.current.filters.clear());
-    expect(result.current.filters).toEqual(expect.objectContaining({
+    await waitFor(() => expect(result.current.filters).toEqual(expect.objectContaining({
       staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
-    }));
+    })));
   });
 });

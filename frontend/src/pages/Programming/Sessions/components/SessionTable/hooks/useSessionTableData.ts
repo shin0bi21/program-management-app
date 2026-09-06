@@ -1,7 +1,7 @@
-import { getSessions } from '../../../../../../common/features/programming/api/sessions.api';
-import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../../../../common/types/cohort';
+import { getSessions } from '../../../sessions.api';
+import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import type { ListSort } from '../../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
 export function useSessionTableData(queryKey: readonly unknown[], {
   programIds = [],

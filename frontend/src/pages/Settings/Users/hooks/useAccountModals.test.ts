@@ -1,11 +1,10 @@
-// Owns account editor, youth invitation, and destructive confirmation state.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Account } from '../../../../common/types/account';
+import type { User } from '../types';
 import useAccountModals from './useAccountModals';
 
-const account: Account = {
+const account: User = {
   id: 'account-1', firstName: 'Alice', lastName: 'Admin', email: 'alice@example.com',
   role: 'admin', status: 'active', createdAt: '2026-01-01T00:00:00Z',
 };

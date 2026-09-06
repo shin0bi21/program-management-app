@@ -1,4 +1,3 @@
-// Owns contact draft initialization, editing, validation, reset, and payload shaping.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

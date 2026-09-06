@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { enrollYouth } from '../../../../../../common/features/programming/api/cohorts.api';
+import { enrollYouth } from '../../../cohorts.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';

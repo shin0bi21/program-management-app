@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
-import type { YouthPreference } from './hooks/useYouthControls';
 
 const mockUseYouthTableData = vi.fn();
 const youthApi = vi.hoisted(() => ({
@@ -11,13 +10,7 @@ const youthApi = vi.hoisted(() => ({
   setYouthProfileNote: vi.fn(),
   deleteYouthProfileNote: vi.fn(),
 }));
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as YouthPreference | null,
-  loading: false,
-  error: null as string | null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 const authState = vi.hoisted(() => ({
   permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'],
 }));
@@ -25,8 +18,8 @@ const authState = vi.hoisted(() => ({
 vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
   default: (filters: unknown) => mockUseYouthTableData(filters),
 }));
-vi.mock('../../common/features/youth/youth.api', () => youthApi);
-vi.mock('../../common/features/preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('./youth.api', () => youthApi);
+vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: (...args: unknown[]) => {
@@ -39,7 +32,7 @@ vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
 }));
 
-vi.mock('../../common/features/youth/components/YouthModal/YouthModal', () => ({
+vi.mock('./components/YouthModal/YouthModal', () => ({
   default: ({ isOpen, mode, youthData, onSuccess }: {
     isOpen: boolean;
     mode?: string;
@@ -61,7 +54,7 @@ vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
     ? <div data-testid="youth-attendance-modal">{cohort.name}</div>
     : null,
 }));
-vi.mock('../../common/features/programming/components/YouthReportModal/YouthReportModal', () => ({
+vi.mock('../../common/features/YouthReportModal/YouthReportModal', () => ({
   default: ({ cohort, youthId }: { cohort: { name: string }; youthId?: string }) => (
     <div data-testid="youth-report-modal">{cohort.name} · {youthId}</div>
   ),
@@ -83,20 +76,8 @@ describe('Youth', () => {
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     youthApi.setYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: YouthPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: YouthPreference | ((current: YouthPreference | null) => YouthPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
-    });
+    preferenceApi.getPreference.mockResolvedValue(null);
+    preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     mockUseYouthTableData.mockReturnValue({
       rows: [makeYouthProfile({ account: null })],
       loading: false,
@@ -108,26 +89,10 @@ describe('Youth', () => {
     });
   });
 
-  it('shows success feedback after saving a new profile note without opening its details', async () => {
-    youthApi.setYouthProfileNote.mockResolvedValue({
-      id: 'profile-note-new', youthId: 'youth-1', category: 'general',
-      details: 'New profile note', createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
-      createdByName: 'Bilal Khan',
-    });
+  // Permissions and application services.
+  it('keeps account invitation controls out of the Youth page', async () => {
     render(<Youth />);
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
-    fireEvent.change(screen.getByLabelText('Note *'), { target: { value: 'New profile note' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-
-    await screen.findByText('Profile note added.');
-    expect(screen.getByRole('dialog', { name: 'Add Profile Note' })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
-  });
-
-  it('keeps account invitation controls out of the Youth page', () => {
-    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More actions for Jamie Test' })).toBeInTheDocument();
@@ -137,16 +102,18 @@ describe('Youth', () => {
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
   });
 
-  it('omits the actions column when the user cannot write youth profiles', () => {
+  it('omits the actions column when the user cannot write youth profiles', async () => {
     authState.permissions = ['read:youth_profiles'];
 
     render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions for Jamie Test' })).not.toBeInTheDocument();
     expect(document.querySelector('[data-column-id="actions"]')).not.toBeInTheDocument();
   });
 
+  // Selection and page-spanning actions.
   it('shows the selected profile contact and profile notes', async () => {
     youthApi.getYouthProfileNotes.mockResolvedValue([{
       id: 'profile-note-1', youthId: 'youth-1', category: 'general',
@@ -175,6 +142,7 @@ describe('Youth', () => {
       loading: false, error: null,
     });
     render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     expect(screen.getByText('416-555-0101')).toBeInTheDocument();
@@ -187,7 +155,7 @@ describe('Youth', () => {
     expect(screen.getByRole('heading', { name: 'Profile Notes (1)' })).toBeInTheDocument();
   });
 
-  it('opens youth-centric attendance management from a cohort summary', () => {
+  it('opens the cohort attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
       cohorts: [{
         id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
@@ -200,25 +168,7 @@ describe('Youth', () => {
       rows: [profile], loading: false, error: null,
     });
     render(<Youth />);
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
-    expect(screen.getByTestId('youth-attendance-modal')).toHaveTextContent('Summer 2026');
-  });
-
-  it('opens the cohort attendance report filtered to the selected youth', () => {
-    const profile = makeYouthProfile({
-      cohorts: [{
-        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
-        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2999-12-31',
-        enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
-        absentCount: 0, lastAttendedOn: '2026-07-21',
-      }],
-    });
-    mockUseYouthTableData.mockReturnValue({
-      rows: [profile], loading: false, error: null,
-    });
-    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
@@ -226,8 +176,60 @@ describe('Youth', () => {
     expect(screen.getByTestId('youth-report-modal')).toHaveTextContent(`Summer 2026 · ${profile.id}`);
   });
 
-  it('opens only the contact section from the primary contact card', () => {
+  it('reconciles an authoritative contact save into the selected dashboard', async () => {
     render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
+
+    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
+  });
+
+  // Modal and confirmation workflows.
+  it('shows success feedback after saving a new profile note without opening its details', async () => {
+    youthApi.setYouthProfileNote.mockResolvedValue({
+      id: 'profile-note-new', youthId: 'youth-1', category: 'general',
+      details: 'New profile note', createdAt: '2026-08-10T12:00:00.000Z', updatedAt: '2026-08-10T12:00:00.000Z',
+      createdByName: 'Bilal Khan',
+    });
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    fireEvent.change(screen.getByLabelText('Note *'), { target: { value: 'New profile note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText('Profile note added.');
+    expect(screen.getByRole('dialog', { name: 'Add Profile Note' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
+  });
+
+  it('opens youth-centric attendance management from a cohort summary', async () => {
+    const profile = makeYouthProfile({
+      cohorts: [{
+        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        rosterMode: 'enrolled', startsOn: '2026-06-30', endsOn: '2999-12-31',
+        enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
+        absentCount: 0, lastAttendedOn: '2026-07-21',
+      }],
+    });
+    mockUseYouthTableData.mockReturnValue({
+      rows: [profile], loading: false, error: null,
+    });
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
+    expect(screen.getByTestId('youth-attendance-modal')).toHaveTextContent('Summer 2026');
+  });
+
+  it('opens only the contact section from the primary contact card', async () => {
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.getByRole('button', { name: 'Manage primary contact' })).toBeDisabled();
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
@@ -236,15 +238,5 @@ describe('Youth', () => {
     fireEvent.click(addContact);
 
     expect(screen.getByTestId('youth-modal')).toHaveTextContent('contact');
-  });
-
-  it('reconciles an authoritative contact save into the selected dashboard', () => {
-    render(<Youth />);
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
-
-    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
   });
 });

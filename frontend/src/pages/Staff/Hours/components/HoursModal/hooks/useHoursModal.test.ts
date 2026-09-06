@@ -1,4 +1,3 @@
-// Owns useHoursModal state transitions and observable effects.
 import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

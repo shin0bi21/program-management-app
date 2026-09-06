@@ -1,14 +1,13 @@
-// Owns Cohorts mutations and cross-query reconciliation.
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../types';
 import useCohortActions from './useCohortActions';
 
 const api = vi.hoisted(() => ({ deleteCohort: vi.fn() }));
-vi.mock('../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../cohorts.api', () => ({
   deleteCohort: api.deleteCohort,
 }));
 

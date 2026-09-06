@@ -1,7 +1,7 @@
 import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import { getLeads } from '../../../leads.api';
 import type { Lead, LeadFilters, LeadSortKey } from '../../../types';
-import type { ListSort } from '../../../../../common/types/pagination';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
 export function useLeadTableData(
   queryKey: readonly unknown[],

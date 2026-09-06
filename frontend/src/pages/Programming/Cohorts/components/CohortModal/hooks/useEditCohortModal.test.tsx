@@ -2,11 +2,11 @@ import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { updateCohort } from '../../../../../../common/features/programming/api/cohorts.api';
-import type { ProgramCohort } from '../../../../../../common/types/cohort';
+import { updateCohort } from '../../../cohorts.api';
+import type { ProgramCohort } from '../../../types';
 import { useEditCohortModal } from './useEditCohortModal';
 
-vi.mock('../../../../../../common/features/programming/api/cohorts.api', () => ({
+vi.mock('../../../cohorts.api', () => ({
   updateCohort: vi.fn(),
 }));
 

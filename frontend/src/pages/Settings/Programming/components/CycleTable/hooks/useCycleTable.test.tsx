@@ -1,10 +1,9 @@
-// Owns Cycle table columns and row-action wiring.
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { ProgramCycle } from '../../../../../../common/types/cohort';
+import type { ProgramCycle } from '../../../../../Programming/Cohorts/types';
 import useCycleTable from './useCycleTable';
 
 const menu = vi.hoisted<{ items: ActionItem[] }>(() => ({ items: [] }));

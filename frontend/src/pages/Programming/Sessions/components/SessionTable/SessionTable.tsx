@@ -2,8 +2,13 @@ import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters, type SessionSortKey } from '../../../../../common/types/cohort';
-import type { ListSort } from '../../../../../common/types/pagination';
+import {
+  SESSION_TABLE_KEYS,
+  type CohortSession,
+  type SessionListFilters,
+  type SessionSortKey,
+} from '../../types';
+import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { useSessionTableData } from './hooks/useSessionTableData';
 
 interface SessionTableProps {

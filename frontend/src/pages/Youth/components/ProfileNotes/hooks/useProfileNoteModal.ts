@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { setYouthProfileNote } from '../../../../../common/features/youth/youth.api';
+import { setYouthProfileNote } from '../../../youth.api';
 import {
   getSubmitStatusMessage,
   useSubmitStatus,
 } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
-import type {
-  YouthProfileNote,
-  YouthProfileNoteCategory,
-} from '../../../../../common/types/youth';
+import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../types';
 import { getErrorMessage } from '../../../../../http/errors';
 
 interface ProfileNoteDraft {

@@ -1,6 +1,6 @@
-import type { SessionNote } from '../../../../../common/types/cohort';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import { faLinkSlash } from '@fortawesome/free-solid-svg-icons';
-import SessionNoteRow from '../../../../../common/features/notes/components/SessionNoteRow/SessionNoteRow';
+import SessionNoteRow from '../../../../Programming/Sessions/components/SessionNoteRow/SessionNoteRow';
 
 export default function SessionNoteCard({
   note,

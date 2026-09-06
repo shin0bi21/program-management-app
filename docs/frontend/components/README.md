@@ -2,13 +2,11 @@
 
 Components own rendered interfaces and user interactions. Start with the page guide when a route coordinates several components. Use this guide when changing a rendered surface or deciding whether to extract one.
 
-## Keep component contracts focused
+## Keep component and test contracts focused
 
 A component owns its rendering, accessibility and presentation-level interactions. A focused hook owns stateful policy, asynchronous transitions or coordinated callbacks. Keep one-off props and simple local state in the component.
 
 Use a hook when behaviour needs restoration, derived state, effects, subscriptions, observers or asynchronous coordination. Do not create a hook only to rename a `useState` value.
-
-## Test components and hooks
 
 Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
 
@@ -35,13 +33,13 @@ Extract a component when a rendered region has a clear name and an independent c
 
 | Surface | Guide |
 |---|---|
-| Application sidebar and route navigation | [App navigation](navigation/README.md) |
+| Application sidebar and route navigation | [App navigation](navigation.md) |
 | Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
-| Remote tables and pagination | [Tables](tables/README.md) |
-| Table rows and mutations | [Table rows](tables/rows.md) |
-| Date ranges, calendar items and timeline views | [Calendars](calendars/README.md) |
-| Summary cards and overview data | [Dashboards](dashboards/README.md) |
-| Dialogs, floating menus and tooltips | [Overlays](overlays/README.md) |
-| Modal forms and submission workflows | [Modals and forms](overlays/modals-and-forms.md) |
+| Remote tables and pagination | [Tables](tables.md) |
+| Table rows and mutations | [Table rows](table-rows.md) |
+| Date ranges, calendar items and timeline views | [Calendars](calendars.md) |
+| Summary cards and overview data | [Dashboards](dashboards.md) |
+| Dialogs, floating menus and tooltips | [Overlays](overlays.md) |
+| Modal forms and submission workflows | [Modals and forms](modals-and-forms.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.

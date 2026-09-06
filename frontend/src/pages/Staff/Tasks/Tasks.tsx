@@ -52,6 +52,7 @@ export default function Tasks() {
 
   // Page data and preferences.
   const pageData = useTaskData(TASK_REFERENCE_DATA_QUERY_KEY);
+
   const preferences = useTaskPreferences({
     referenceData: pageData.referenceData,
     referenceDataLoading: pageData.referenceDataLoading,

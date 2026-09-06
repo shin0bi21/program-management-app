@@ -1,4 +1,3 @@
-// Owns table/calendar/dashboard selection synchronization and cycle context changes.
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

@@ -1,6 +1,7 @@
 import Button from '../../../../common/components/Button/Button';
 import PrimaryContactDashboardCard from '../../../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
-import type { YouthProfile, YouthProfileNote } from '../../../../common/types/youth';
+import type { YouthProfile } from '../../types';
+import type { YouthProfileNote } from '../../types';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
 import YouthNotesDashboardCard from './YouthNotesDashboardCard/YouthNotesDashboardCard';
 

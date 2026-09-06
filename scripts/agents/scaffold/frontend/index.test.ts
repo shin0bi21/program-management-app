@@ -55,6 +55,8 @@ test('creates only the required page files with honest orchestration placeholder
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/hooks')), false);
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
+  assert.match(read(files[0]), /grouped search, filters, and table controls, with ready\/error at the top level/);
+  assert.match(read(files[0]), /view\/setView at the top level/);
   assert.match(read(files[0]), /Filter configuration passed to every page data view/);
   assertOrdered(read(files[1]), [
     'Page-local error state',
@@ -72,11 +74,12 @@ test('creates only the required page files with honest orchestration placeholder
   assertParses(files[1]);
 });
 
-test('creates a non-trivial modal workflow in page, nested, family-common, and feature owners', () => {
+test('creates a non-trivial modal workflow in page, family-common, and both feature owner forms', () => {
   const owners = [
     'frontend/src/pages/Leads/components',
     'frontend/src/pages/Staff/ExampleSchedule/components/ExamplePanel',
     'frontend/src/pages/Programming/common/components',
+    'frontend/src/common/features',
     'frontend/src/common/features/notes/components',
   ];
 
@@ -127,11 +130,11 @@ test('rejects unsupported page depths, invalid owners, names, and overwrites', (
   );
   assert.throws(
     () => scaffoldFrontend(['modal', 'frontend/src/common/components', 'ExampleModal']),
-    /page, page-family common, or common-feature/,
+    /page, page-family common, the common-features root, or a common-feature/,
   );
   assert.throws(
     () => scaffoldFrontend(['modal', 'frontend/src/pages/Leads/components/hooks', 'ExampleModal']),
-    /page, page-family common, or common-feature/,
+    /page, page-family common, the common-features root, or a common-feature/,
   );
   assert.throws(
     () => scaffoldFrontend(['modal', 'frontend/src/pages/Leads/components', 'ExampleDialog']),

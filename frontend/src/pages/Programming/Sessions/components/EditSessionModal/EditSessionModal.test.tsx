@@ -1,14 +1,13 @@
-// Owns edit-session initialization, normalized updates, success ordering, and failure recovery.
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getSessionTypes, updateSession } from '../../../../../common/features/programming/api/sessions.api';
+import { getSessionTypes, updateSession } from '../../sessions.api';
 import { makeCohortSession } from '../../../../../tests/factories/session';
 import EditSessionModal from './EditSessionModal';
 
-vi.mock('../../../../../common/features/programming/api/sessions.api', () => ({
+vi.mock('../../sessions.api', () => ({
   getSessionTypes: vi.fn(),
   updateSession: vi.fn(),
 }));

@@ -1,6 +1,6 @@
 import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import type { CohortSession } from '../../../../../../common/types/cohort';
+import type { CohortSession } from '../../../types';
 
 const getAttendanceSummary = (session: CohortSession | null) => {
   if (!session || session.attendanceRate === null) return null;

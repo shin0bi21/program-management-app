@@ -1,4 +1,3 @@
-// Owns task-item details, selection, status, and available action events.
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskItem from './TaskItem';

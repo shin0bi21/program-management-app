@@ -1,7 +1,7 @@
 import Table from '../../../../common/components/Table/Table';
 import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import type { TableColumnDef } from '../../../../common/components/Table/Table.types';
-import type { ListSort } from '../../../../common/types/pagination';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
 import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadSortKey } from '../../types';
 import { useLeadTableData } from './hooks/useLeadTableData';
 

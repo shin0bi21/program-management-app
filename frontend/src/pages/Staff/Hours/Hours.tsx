@@ -93,6 +93,15 @@ export default function Hours() {
     preferences.search.appliedValue,
   ]);
 
+  const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
+
+  // Keep table action cells mounted when preferences or page data refresh.
+  const closeRemovedEntry = useCallback((entryId: string) => {
+    setHoursModalState(current => (
+      current?.mode === 'edit' && current.target.item.id === entryId ? null : current
+    ));
+  }, []);
+
   // Selection and actions.
   const selection = useHoursSelection({
     resources: pageData.resources,
@@ -105,16 +114,10 @@ export default function Hours() {
     hoursQueryKey: HOURS_QUERY_KEY,
     hoursTableQueryKey: HOURS_TABLE_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
-    onEntryRemoved: entryId => {
-      setHoursModalState(current => (
-        current?.mode === 'edit' && current.target.item.id === entryId ? null : current
-      ));
-    },
+    onEntryRemoved: closeRemovedEntry,
   });
 
   // Hours modal.
-  const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
-
   const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
     setHoursModalState({ mode: 'add', initialValues });
   }, []);

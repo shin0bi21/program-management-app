@@ -9,8 +9,8 @@ import PageErrorOverlay, { type PageErrorItem } from '../../../common/components
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import YouthModal from '../../../common/features/youth/components/YouthModal/YouthModal';
-import { ACCOUNT_TABLE_KEYS, type AccountFilters } from '../../../common/types/account';
+import YouthModal from '../../Youth/components/YouthModal/YouthModal';
+import { USER_TABLE_KEYS, type UserFilters } from './types';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
 import useUserTable from './components/UserTable/hooks/useUserTable';
@@ -32,19 +32,15 @@ export default function Users() {
   const canInviteYouth = permissions.includes('write:youth_profiles');
 
   // Page data and preferences.
-  const controls = useAccountControls(isAdmin, ACCOUNT_TABLE_KEYS);
-  const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, roleFilters, sorting,
-    columnWidths, hiddenColumns, error: preferenceError, filterCategories,
-    ready: controlsReady,
-  } = controls;
+  const controls = useAccountControls(isAdmin, USER_TABLE_KEYS);
+  const { search, filters, table, ready: controlsReady, error: preferencesError } = controls;
 
   // Filter configuration.
-  const accountFilters = useMemo<AccountFilters | null>(() => controlsReady ? {
-    search: appliedSearch,
-    roles: roleFilters,
-    statuses: statusFilters,
-  } : null, [appliedSearch, controlsReady, roleFilters, statusFilters]);
+  const accountFilters = useMemo<UserFilters | null>(() => controlsReady ? {
+    search: search.appliedValue,
+    roles: filters.roles,
+    statuses: filters.statuses,
+  } : null, [search.appliedValue, controlsReady, filters.roles, filters.statuses]);
 
   // Page-spanning account actions and cache reconciliation.
   const { revokeInvite, toggleStatus, syncSavedAccount, syncYouthInvitation } = useAccountActions({
@@ -88,22 +84,22 @@ export default function Users() {
           )}
           search={<SearchInput
             label="Search accounts"
-            value={search}
-            appliedValue={appliedSearch}
-            onChange={event => setSearch(event.target.value)}
-            onApply={applySearch}
-            onClear={clearSearch}
+            value={search.value}
+            appliedValue={search.appliedValue}
+            onChange={event => search.setValue(event.target.value)}
+            onApply={search.apply}
+            onClear={search.clear}
             placeholder="Search by name or email"
           />}
-          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} /> : undefined}
+          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={table.hiddenColumns} onHiddenColumnKeysChange={table.setHiddenColumns} /> : undefined}
           filters={controlsReady ? <FilterCard
-            categories={filterCategories}
-            values={{ status: statusFilters, role: roleFilters }}
-            onApply={controls.applyFilter}
-            onClearAll={controls.clearFilters}
+            categories={filters.definitions}
+            values={{ status: filters.statuses, role: filters.roles }}
+            onApply={filters.apply}
+            onClearAll={filters.clear}
           /> : undefined}
         />
-        <PageErrorOverlay errors={[preferenceError, viewError]} />
+        <PageErrorOverlay errors={[preferencesError, viewError]} />
 
         {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <PageBody
           ariaLabel="Account records"
@@ -112,11 +108,11 @@ export default function Users() {
             queryKey={ACCOUNTS_TABLE_QUERY_KEY}
             filters={accountFilters}
             columns={columns}
-            hiddenColumnKeys={hiddenColumns}
-            sorting={sorting}
-            onSortingChange={controls.setSorting}
-            columnWidths={columnWidths}
-            onColumnWidthsChange={controls.setColumnWidths}
+            hiddenColumnKeys={table.hiddenColumns}
+            sorting={table.sorting}
+            onSortingChange={table.setSorting}
+            columnWidths={table.columnWidths}
+            onColumnWidthsChange={table.setColumnWidths}
             onErrorChange={setViewError}
           />}
         />}

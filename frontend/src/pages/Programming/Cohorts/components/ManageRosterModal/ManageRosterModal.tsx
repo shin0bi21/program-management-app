@@ -5,7 +5,7 @@ import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmM
 import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 
-import type { ProgramCohort } from '../../../../../common/types/cohort';
+import type { ProgramCohort } from '../../types';
 
 import { useCohortRoster } from '../../hooks/useCohortRoster';
 import EnrollYouthModal from '../EnrollYouthModal/EnrollYouthModal';

@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { unlinkSessionNoteYouth } from '../../../../../common/features/programming/api/sessions.api';
-import type { SessionNote } from '../../../../../common/types/cohort';
+import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
+import type { SessionNote } from '../../../../Programming/Sessions/types';
 import { getErrorMessage } from '../../../../../http/errors';
-import type {
-  SessionNoteTarget,
-  SessionNoteUnlinkTarget,
-  YouthAttendanceSession,
-} from '../types';
+import type { SessionNoteTarget, SessionNoteUnlinkTarget, YouthAttendanceSession } from '../types';
 
 export default function useYouthSessionNotes({
   youthId,

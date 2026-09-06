@@ -332,81 +332,77 @@ test('checks an owner when its test is deleted', () => {
   );
 });
 
-test('accepts the normalized functional preference lifecycle', () => {
+test('accepts shared preference fields with owning table rules', () => {
   const source = `
-    const { initializePreference, save } = useUserPreference('lead-filters', tableKeys);
-    initializePreference(restored);
-    save(current => ({ ...current, hiddenColumns }));
+    const { preferences, updatePreferences } = usePreferences({
+      key: 'lead-filters',
+      fields: {
+        columnWidths: preferenceColumnWidths(tableKeys),
+        hiddenColumns: preferenceHiddenColumns(tableKeys),
+      },
+    });
+    updatePreferences({ hiddenColumns });
   `;
 
   assert.deepEqual(
-    violationsFor(
-      checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadPreferences.ts`,
-      source,
-    ),
+    violationsFor(checkPreferenceControlOwnership, `${leadsPage}/hooks/useLeadPreferences.ts`, source),
     [],
   );
 });
 
-test('accepts a route-selected preference key with owning table keys', () => {
+test('accepts a route-selected key and formatted field rules', () => {
   const source = `
-    const { initializePreference, save } = useUserPreference(preferenceKey, tableKeys);
-    initializePreference(restored);
-    save(current => ({ ...current, hiddenColumns }));
+    usePreferences({
+      key: preferenceKey,
+      fields: {
+        columnWidths: preferenceColumnWidths(
+          tableKeys,
+        ),
+        hiddenColumns: preferenceHiddenColumns(tableKeys),
+      },
+    });
   `;
 
   assert.deepEqual(
-    violationsFor(
-      checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadPreferences.ts`,
-      source,
-    ),
-    [],
-  );
-});
-
-test('accepts formatted owning table keys with a trailing argument comma', () => {
-  const source = `
-    const { initializePreference, save } = useUserPreference<LeadPreference>(
-      'lead-filters',
-      tableKeys,
-    );
-    initializePreference(restored);
-    save(current => ({ ...current, hiddenColumns }));
-  `;
-
-  assert.deepEqual(
-    violationsFor(
-      checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadPreferences.ts`,
-      source,
-    ),
+    violationsFor(checkPreferenceControlOwnership, `${leadsPage}/hooks/useLeadPreferences.ts`, source),
     [],
   );
 });
 
 test('allows filter-only preferences without table column keys', () => {
   const source = `
-    const { initializePreference, save } = useUserPreference('lead-filters');
-    initializePreference(restored);
-    save(current => ({ ...current, statuses }));
+    const { preferences, updatePreferences } = usePreferences({
+      key: 'lead-filters',
+      fields: { search: preferenceText() },
+    });
+    updatePreferences({ search });
   `;
 
   assert.deepEqual(
-    violationsFor(
-      checkPreferenceControlOwnership,
-      `${leadsPage}/hooks/useLeadPreferences.ts`,
-      source,
-    ),
+    violationsFor(checkPreferenceControlOwnership, `${leadsPage}/hooks/useLeadPreferences.ts`, source),
     [],
   );
 });
 
-test('requires owning table keys and functional preference saves', () => {
+test('requires field rules on shared preference calls', () => {
+  const violations = violationsFor(
+    checkPreferenceControlOwnership,
+    `${leadsPage}/hooks/useLeadPreferences.ts`,
+    "usePreferences({ key: 'lead-filters' });",
+  );
+
+  assert.match(violations.join('\n'), /field normalization rules in fields/);
+});
+
+test('requires both table preferences to use owning table keys', () => {
   const source = `
-    const { save } = useUserPreference('lead-filters');
-    save({ hiddenColumns });
+    usePreferences({
+      key: 'lead-filters',
+      fields: {
+        columnWidths: preferenceColumnWidths(otherKeys),
+        hiddenColumns: preferenceIds(tableKeys),
+      },
+    });
   `;
   const violations = violationsFor(
     checkPreferenceControlOwnership,
@@ -414,9 +410,134 @@ test('requires owning table keys and functional preference saves', () => {
     source,
   );
 
-  assert.match(violations.join('\n'), /owning tableKeys/);
-  assert.match(violations.join('\n'), /normalized restored state/);
-  assert.match(violations.join('\n'), /functional saves/);
+  assert.equal(violations.length, 2);
+  assert.match(violations[0], /preferenceColumnWidths\(tableKeys\)/);
+  assert.match(violations[1], /preferenceHiddenColumns\(tableKeys\)/);
+});
+
+test('rejects page-owned preference restoration and option recovery hooks', () => {
+  for (const hook of ['useUserPreference', 'usePreferenceOptionRecovery']) {
+    const violations = violationsFor(
+      checkPreferenceControlOwnership,
+      `${leadsPage}/hooks/useLeadPreferences.ts`,
+      `${hook}({});`,
+    );
+
+    assert.match(violations.join('\n'), /must use usePreferences/);
+  }
+});
+
+test('leaves preference test fixtures outside page ownership enforcement', () => {
+  assert.deepEqual(
+    violationsFor(
+      checkPreferenceControlOwnership,
+      `${leadsPage}/hooks/useLeadPreferences.test.ts`,
+      "useUserPreference('lead-filters');",
+    ),
+    [],
+  );
+});
+
+const groupedPreferenceSource = `
+  function useLeadPreferences() {
+    const { preferences, updatePreferences, ready, error } = usePreferences({
+      key: 'lead-filters',
+      fields: {
+        search: preferenceText(),
+        statuses: preferenceOptions(['active']),
+        columnWidths: preferenceColumnWidths(tableKeys),
+        hiddenColumns: preferenceHiddenColumns(tableKeys),
+      },
+    });
+    return {
+      ready,
+      error,
+      view,
+      setView,
+      search: { value, setValue, appliedValue, apply, clear },
+      filters: { statuses, definitions, apply, clear },
+      table: { sorting, setSorting, columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns },
+      schedulableCohorts,
+    };
+  }
+`;
+
+function preferenceViolations(source: string): string[] {
+  return violationsFor(checkPreferenceControlOwnership, `${leadsPage}/hooks/useLeadPreferences.ts`, source);
+}
+
+test('accepts grouped preference controls with optional view controls and domain extras', () => {
+  assert.deepEqual(preferenceViolations(groupedPreferenceSource), []);
+  assert.deepEqual(preferenceViolations(groupedPreferenceSource.replace('      view,\n      setView,\n', '')), []);
+});
+
+test('requires ready and error on the returned contract, not merely the shared hook result', () => {
+  const source = groupedPreferenceSource.replace('      ready,\n      error,\n', '');
+  const violations = preferenceViolations(source);
+
+  assert.match(violations.join('\n'), /return ready at the top level/);
+  assert.match(violations.join('\n'), /return error at the top level/);
+});
+
+test('does not mistake field definitions or nested callback returns for the grouped contract', () => {
+  const source = `
+    function useLeadPreferences() {
+      usePreferences({
+        key: 'lead-filters',
+        fields: { search: {}, filters: {}, table: {} },
+      });
+      const unrelated = () => {
+        return { ready, error, search: {}, filters: {}, table: {} };
+      };
+      return { ready, error, searchValue, appliedSearch, filterDefinitions };
+    }
+  `;
+  const violations = preferenceViolations(source);
+
+  for (const group of ['search', 'filters', 'table']) {
+    assert.match(violations.join('\n'), new RegExp(`explicit ${group} control group`));
+  }
+  assert.match(violations.join('\n'), /searchValue must be exposed inside/);
+});
+
+test('requires complete grouped controls and domain filter values', () => {
+  const source = groupedPreferenceSource
+    .replace('value, setValue, appliedValue, apply, clear', 'value, setValue')
+    .replace('statuses, definitions, apply, clear', 'definitions, apply, clear')
+    .replace('sorting, setSorting, columnWidths, setColumnWidths, hiddenColumns, setHiddenColumns', 'sorting');
+  const violations = preferenceViolations(source);
+
+  assert.match(violations.join('\n'), /search preference group must include appliedValue, apply, clear/);
+  assert.match(violations.join('\n'), /filters preference group must expose its domain filter values/);
+  assert.match(violations.join('\n'), /table preference group must include setSorting/);
+});
+
+test('rejects flat controls even alongside otherwise complete groups', () => {
+  const source = groupedPreferenceSource.replace('      schedulableCohorts,', '      sorting,\n      applySearch,');
+  const violations = preferenceViolations(source);
+
+  assert.match(violations.join('\n'), /sorting must be exposed inside/);
+  assert.match(violations.join('\n'), /applySearch must be exposed inside/);
+});
+
+test('rejects historical aliases and domain fields duplicated outside filters', () => {
+  const aliases = ['filterCategories', 'setSearch', 'statusFilters', 'roleFilters', 'programFilters', 'statuses'];
+  const source = groupedPreferenceSource.replace('      schedulableCohorts,', aliases.join(',') + ',');
+  const violations = preferenceViolations(source);
+
+  for (const alias of aliases) {
+    assert.match(violations.join('\n'), new RegExp(`${alias} must be exposed inside`));
+  }
+});
+
+test('requires explicit group literals and paired view controls', () => {
+  const source = groupedPreferenceSource
+    .replace('search: { value, setValue, appliedValue, apply, clear }', 'search')
+    .replace('      setView,\n', '');
+  const violations = preferenceViolations(source);
+
+  assert.match(violations.join('\n'), /explicit search control group/);
+  assert.match(violations.join('\n'), /view and setView must be exposed together/);
 });
 
 test('rejects a historical list-view owner', () => {

@@ -1,9 +1,8 @@
-// Owns account mutation commands and cache reconciliation across account and youth queries.
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Account } from '../../../../../common/types/account';
+import type { User } from '../../types';
 import { createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
 import { revokeAccountInvite, toggleAccountStatus } from '../../accounts.api';
 import useAccountActions from './useAccountActions';
@@ -13,7 +12,7 @@ vi.mock('../../accounts.api', () => ({
   toggleAccountStatus: vi.fn(),
 }));
 
-const account: Account = {
+const account: User = {
   id: 'admin-1',
   firstName: 'Alice',
   lastName: 'Admin',
@@ -44,12 +43,12 @@ describe('useAccountActions', () => {
     await act(() => result.current.revokeInvite(account));
 
     expect(revokeAccountInvite).toHaveBeenCalledWith(account.id);
-    expect(queryClient.getQueryData<{ pages: { rows: Account[] }[] }>(queryKey)?.pages[0].rows).toEqual([]);
+    expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(queryKey)?.pages[0].rows).toEqual([]);
   });
 
   it('replaces a status change in every cached table variant without refetching', async () => {
     const savedAccount = { ...account, status: 'inactive' as const };
-    const unaffectedAccount: Account = {
+    const unaffectedAccount: User = {
       ...account,
       id: 'staff-2',
       firstName: 'Sam',
@@ -69,18 +68,18 @@ describe('useAccountActions', () => {
       pages: [{ rows: [account], nextCursor: null }],
       pageParams: [undefined],
     });
-    const cachedUnaffectedAccount = queryClient.getQueryData<{ pages: { rows: Account[] }[] }>(activeKey)?.pages[0].rows[1];
+    const cachedUnaffectedAccount = queryClient.getQueryData<{ pages: { rows: User[] }[] }>(activeKey)?.pages[0].rows[1];
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
 
     await act(() => result.current.toggleStatus(account));
 
     expect(toggleAccountStatus).toHaveBeenCalledWith(account.id);
-    expect(queryClient.getQueryData<{ pages: { rows: Account[] }[] }>(activeKey)?.pages[0].rows).toEqual([
+    expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(activeKey)?.pages[0].rows).toEqual([
       savedAccount,
       unaffectedAccount,
     ]);
-    expect(queryClient.getQueryData<{ pages: { rows: Account[] }[] }>(searchKey)?.pages[0].rows).toEqual([savedAccount]);
-    expect(queryClient.getQueryData<{ pages: { rows: Account[] }[] }>(activeKey)?.pages[0].rows[1]).toBe(cachedUnaffectedAccount);
+    expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(searchKey)?.pages[0].rows).toEqual([savedAccount]);
+    expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(activeKey)?.pages[0].rows[1]).toBe(cachedUnaffectedAccount);
     expect(invalidate).not.toHaveBeenCalled();
   });
 
