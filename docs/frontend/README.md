@@ -47,5 +47,6 @@ Rendered-surface guides are flat files under `components/`; add a subdirectory o
 | Modals and other overlays | [Overlays](components/overlays.md) |
 | Shared components | [Components](components/README.md) |
 | Frontend architecture | [Architecture](architecture/README.md) |
+| Saved preferences, field rules, or grouped page controls | [Page preferences](pages/README.md#save-page-preferences) |
 | State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
 | Where code should live | [Ownership](architecture/ownership.md) |

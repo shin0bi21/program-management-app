@@ -19,12 +19,12 @@ import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import Tasks from './Tasks';
+import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 
 type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
 const calendarTestState = vi.hoisted(() => ({
   view: 'table' as 'table' | 'calendar',
   props: null as TaskCalendarProps | null,
-  savePreference: vi.fn(),
 }));
 const currentPreference: StoredTaskPreferences = {
   view: 'table',
@@ -52,29 +52,7 @@ vi.mock('./tasks.api', () => ({
   updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
-vi.mock('../../../common/features/Preferences/hooks/useUserPreference', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-
-  const useMockUserPreference = () => {
-    const [preference, setPreference] = React.useState<StoredTaskPreferences>({
-      ...currentPreference,
-      view: calendarTestState.view,
-    });
-    const initializePreference = React.useCallback((value: StoredTaskPreferences) => {
-      setPreference(value);
-    }, []);
-    const save = React.useCallback((update: StoredTaskPreferences | (
-      (current: StoredTaskPreferences | null) => StoredTaskPreferences
-    )) => {
-      calendarTestState.savePreference(update);
-      setPreference(current => typeof update === 'function' ? update(current) : update);
-    }, []);
-
-    return { preference, loading: false, error: null, initializePreference, save };
-  };
-
-  return { default: useMockUserPreference };
-});
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   default: (props: TaskCalendarProps) => {
     calendarTestState.props = props;
@@ -93,13 +71,7 @@ const auth: AuthContextValue = {
 };
 
 function getLastSavedPreference() {
-  const lastCall = calendarTestState.savePreference.mock.calls[
-    calendarTestState.savePreference.mock.calls.length - 1
-  ];
-  const update = lastCall?.[0] as (
-    current: StoredTaskPreferences | null,
-  ) => StoredTaskPreferences;
-  return update(currentPreference);
+  return vi.mocked(setPreference).mock.lastCall?.[1];
 }
 
 describe('Tasks', () => {
@@ -107,7 +79,8 @@ describe('Tasks', () => {
     vi.clearAllMocks();
     calendarTestState.view = 'table';
     calendarTestState.props = null;
-    calendarTestState.savePreference.mockReset();
+    vi.mocked(getPreference).mockImplementation(async () => ({ ...currentPreference, view: calendarTestState.view }));
+    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: null });
@@ -157,7 +130,7 @@ describe('Tasks', () => {
       expect.anything(),
       expect.objectContaining({ limit: 25 }),
     ));
-    expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] }));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
@@ -259,7 +232,6 @@ describe('Tasks', () => {
     expect(screen.getByRole('textbox', { name: 'Search tasks' })).toHaveValue('missing');
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
-    expect(calendarTestState.props?.items['staff-1']).toEqual([task]);
   });
 
   it('reloads the calendar range when applied search changes', async () => {

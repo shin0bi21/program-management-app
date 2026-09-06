@@ -53,11 +53,8 @@ export default function Sessions() {
     sessionTypes, sessionTypesLoading, sessionTypesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
-  const {
-    search, appliedSearch, view, programIds: selectedProgramIds, cohortId,
-    sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters, ready: filtersReady,
-    sorting, columnWidths, filterCategories, schedulableCohorts,
-  } = controls;
+  const { search, filters, table: tableControls, view, ready: filtersReady, schedulableCohorts } = controls;
+  const { programIds: selectedProgramIds, cohortId, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
@@ -65,19 +62,19 @@ export default function Sessions() {
     cohortId: cohortId || undefined,
     sessionTypeIds: selectedSessionTypeIds,
     statuses: statusFilters,
-    search: appliedSearch || undefined,
-  }), [appliedSearch, cohortId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+    search: search.appliedValue || undefined,
+  }), [search.appliedValue, cohortId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
 
   // Selection and actions.
   const selection = useSessionSelection();
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
   const applyFilter = (category: string, selected: string[]) => {
     selection.clearSelectedSession();
-    controls.applyFilter(category, selected);
+    filters.apply(category, selected);
   };
   const clearFilters = () => {
     selection.clearSelectedSession();
-    controls.clearFilters();
+    filters.clear();
   };
 
   // Attendance modal.
@@ -117,15 +114,15 @@ export default function Sessions() {
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
     columns={columns}
-    hiddenColumnKeys={controls.hiddenColumns}
+    hiddenColumnKeys={tableControls.hiddenColumns}
     filters={sessionFilters}
-    sorting={sorting}
-    columnWidths={columnWidths}
+    sorting={tableControls.sorting}
+    columnWidths={tableControls.columnWidths}
     selectedSessionId={selection.selectedSessionId}
     onSelectedSessionResolved={selection.setSelectedTableSession}
     onSessionSelect={selection.selectSession}
-    onSortingChange={controls.setSorting}
-    onColumnWidthsChange={controls.setColumnWidths}
+    onSortingChange={tableControls.setSorting}
+    onColumnWidthsChange={tableControls.setColumnWidths}
     onErrorChange={setViewError}
   />;
 
@@ -157,18 +154,18 @@ export default function Sessions() {
           search={
             <SearchInput
               label="Search sessions"
-              value={search}
-              appliedValue={appliedSearch}
-              onChange={(event) => controls.setSearch(event.target.value)}
-              onApply={controls.applySearch}
-              onClear={controls.clearSearch}
+              value={search.value}
+              appliedValue={search.appliedValue}
+              onChange={(event) => search.setValue(event.target.value)}
+              onApply={search.apply}
+              onClear={search.clear}
               placeholder="Search titles, themes, descriptions, or cohorts"
             />
           }
 
           filters={filtersReady ? (
             <FilterCard
-              categories={filterCategories}
+              categories={filters.definitions}
               values={{
                 program: selectedProgramIds,
                 cohort: cohortId ? [cohortId] : [],
@@ -192,7 +189,7 @@ export default function Sessions() {
           ) : undefined}
 
           columns={filtersReady && view === 'table'
-            ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={controls.hiddenColumns} onHiddenColumnKeysChange={controls.setHiddenColumns} />
+            ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={tableControls.hiddenColumns} onHiddenColumnKeysChange={tableControls.setHiddenColumns} />
             : undefined}
         />
         <PageErrorOverlay errors={[

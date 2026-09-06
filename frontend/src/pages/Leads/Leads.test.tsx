@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
-import type { LeadPreference } from './hooks/preferences/useLeadPreferences';
 
 const renderPage = (
   origin: 'external' | 'internal' = 'external',
@@ -19,13 +18,7 @@ const updateLeadStatus = vi.fn();
 const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
-const preferenceHook = vi.hoisted(() => ({
-  preference: null as LeadPreference | null,
-  loading: false,
-  error: null,
-  initializePreference: vi.fn(),
-  save: vi.fn(),
-}));
+const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 
 vi.mock('./leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
@@ -40,7 +33,7 @@ vi.mock('./leads.api', () => ({
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
-vi.mock('../../common/features/Preferences/hooks/useUserPreference', () => ({ default: () => preferenceHook }));
+vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
@@ -52,20 +45,8 @@ vi.mock('../Programming/Cohorts/cohorts.api', () => ({
 
 describe('Leads', () => {
   beforeEach(() => {
-    preferenceHook.preference = null;
-    preferenceHook.loading = false;
-    preferenceHook.error = null;
-    preferenceHook.initializePreference.mockImplementation((value: LeadPreference) => {
-      preferenceHook.preference = value;
-    });
-    preferenceHook.save.mockReset();
-    preferenceHook.save.mockImplementation((
-      update: LeadPreference | ((current: LeadPreference | null) => LeadPreference),
-    ) => {
-      preferenceHook.preference = typeof update === 'function'
-        ? update(preferenceHook.preference)
-        : update;
-    });
+    preferenceApi.getPreference.mockResolvedValue(null);
+    preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     signUpLead.mockResolvedValue({
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: 'youth-1',
       youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',

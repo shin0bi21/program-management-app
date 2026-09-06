@@ -32,6 +32,9 @@ export default function ${name}() {
   // TODO: Page data.
 
   // TODO: Saved preferences, when this page has durable controls.
+  // Use a page hook backed by usePreferences; follow docs/frontend/pages/README.md.
+  // Return grouped search, filters, and table controls, with ready/error at the top level.
+  // Keep view/setView at the top level when multiple views are supported.
 
   // TODO: Filter configuration passed to every page data view.
 

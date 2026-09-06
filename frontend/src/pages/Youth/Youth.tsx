@@ -46,18 +46,14 @@ export default function Youth() {
     programsError,
     tableKeys: YOUTH_TABLE_KEYS,
   });
-  const {
-    search, setSearch, appliedSearch, applySearch, clearSearch, statusFilters, programFilters, sorting,
-    columnWidths, hiddenColumns, error: preferencesError, filterCategories,
-    ready: controlsReady,
-  } = controls;
+  const { search, filters, table, ready: controlsReady, error: preferencesError } = controls;
 
   // Filter configuration.
   const youthFilters = useMemo<YouthFilters | null>(() => controlsReady ? {
-    search: appliedSearch,
-    statuses: statusFilters,
-    programIds: programFilters,
-  } : null, [appliedSearch, controlsReady, programFilters, statusFilters]);
+    search: search.appliedValue,
+    statuses: filters.statuses,
+    programIds: filters.programIds,
+  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.statuses]);
 
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
@@ -110,23 +106,23 @@ export default function Youth() {
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
           search={<SearchInput
             label="Search youth"
-            value={search}
-            appliedValue={appliedSearch}
-            onChange={event => setSearch(event.target.value)}
-            onApply={applySearch}
-            onClear={clearSearch}
+            value={search.value}
+            appliedValue={search.appliedValue}
+            onChange={event => search.setValue(event.target.value)}
+            onApply={search.apply}
+            onClear={search.clear}
             placeholder="Search youth, school, or program"
           />}
           columns={controlsReady ? <ColumnVisibilityMenu
             columns={youthColumns}
-            hiddenColumnKeys={hiddenColumns}
-            onHiddenColumnKeysChange={controls.setHiddenColumns}
+            hiddenColumnKeys={table.hiddenColumns}
+            onHiddenColumnKeysChange={table.setHiddenColumns}
           /> : undefined}
           filters={controlsReady ? <FilterCard
-            categories={filterCategories}
-            values={{ status: statusFilters, program: programFilters }}
-            onApply={controls.applyFilter}
-            onClearAll={controls.clearFilters}
+            categories={filters.definitions}
+            values={{ status: filters.statuses, program: filters.programIds }}
+            onApply={filters.apply}
+            onClearAll={filters.clear}
           /> : undefined}
         />
         <PageErrorOverlay errors={[
@@ -144,14 +140,14 @@ export default function Youth() {
           table={<YouthTable
             columns={youthColumns}
             filters={youthFilters}
-            hiddenColumnKeys={hiddenColumns}
+            hiddenColumnKeys={table.hiddenColumns}
             selectedProfileId={selectedProfileId}
             onSelectedProfileResolved={selectProfile}
             onRowSelect={selectProfile}
-            sorting={sorting}
-            onSortingChange={controls.setSorting}
-            columnWidths={columnWidths}
-            onColumnWidthsChange={controls.setColumnWidths}
+            sorting={table.sorting}
+            onSortingChange={table.setSorting}
+            columnWidths={table.columnWidths}
+            onColumnWidthsChange={table.setColumnWidths}
             onErrorChange={setViewError}
           />}
           dashboard={<YouthDashboard

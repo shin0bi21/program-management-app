@@ -13,10 +13,10 @@ export type PreferenceKey =
   | 'outreach-internal-leads-filters'
   | 'expression-interest-filters';
 
-export function getPreference<T extends object>(key: PreferenceKey, opts?: RequestOptions) {
+export function getPreference(key: PreferenceKey, opts?: RequestOptions) {
   return opts
-    ? apiClient.get<T | null>(`/preferences/${key}`, opts)
-    : apiClient.get<T | null>(`/preferences/${key}`);
+    ? apiClient.get<unknown>(`/preferences/${key}`, opts)
+    : apiClient.get<unknown>(`/preferences/${key}`);
 }
 
 export function setPreference<T extends object>(key: PreferenceKey, value: T) {

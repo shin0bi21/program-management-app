@@ -11,7 +11,7 @@ vi.mock('../../../http/client', () => ({
 describe('preferences API', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('loads a typed preference and forwards request options', () => {
+  it('loads persisted JSON and forwards request options', () => {
     const controller = new AbortController();
     getPreference('session-filters', { signal: controller.signal });
 
