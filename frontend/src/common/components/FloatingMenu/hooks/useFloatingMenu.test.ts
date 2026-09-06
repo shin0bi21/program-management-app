@@ -37,9 +37,12 @@ describe('useFloatingMenu', () => {
     const focusTrigger = vi.spyOn(trigger, 'focus');
     const outside = document.createElement('div');
     const menu = document.createElement('div');
+    const disabledItem = document.createElement('button');
+    disabledItem.setAttribute('role', 'menuitem');
+    disabledItem.disabled = true;
     const firstItem = document.createElement('button');
     firstItem.setAttribute('role', 'menuitem');
-    menu.append(firstItem);
+    menu.append(disabledItem, firstItem);
     document.body.append(trigger, outside, menu);
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(rect({
       top: 600,

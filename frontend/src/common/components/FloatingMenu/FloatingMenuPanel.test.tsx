@@ -16,9 +16,12 @@ function renderPanel(onClose = vi.fn()) {
         className="actions-menu"
         width={220}
       >
+        <button type="button" role="menuitem" disabled>Unavailable first action</button>
         <button type="button" role="menuitem">First</button>
+        <button type="button" role="menuitem" disabled>Unavailable middle action</button>
         <button type="button" role="menuitem">Second</button>
         <button type="button" role="menuitem">Third</button>
+        <button type="button" role="menuitem" disabled>Unavailable last action</button>
       </FloatingMenuPanel>
     </div>,
   );
@@ -39,9 +42,9 @@ describe('FloatingMenuPanel', () => {
     expect(onPointerDown).not.toHaveBeenCalled();
   });
 
-  it('cycles menu-item focus with arrow, Home, and End keys', () => {
+  it('cycles enabled menu-item focus with arrow, Home, and End keys', () => {
     renderPanel();
-    const items = screen.getAllByRole('menuitem');
+    const items = ['First', 'Second', 'Third'].map(name => screen.getByRole('menuitem', { name }));
 
     items[0].focus();
     fireEvent.keyDown(document, { key: 'ArrowDown' });
