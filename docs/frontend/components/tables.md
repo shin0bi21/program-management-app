@@ -120,7 +120,7 @@ The page owns live search, applied filters, sorting preferences, hidden columns,
 
 Keep a draft search value until `SearchInput` commits it through its Search button or Enter key. Save the trimmed search with the other preferences. Pass it through the same filter object used by the query key, API adapter and filtered-empty message. Clear resets the draft and saves an empty search. Do not debounce or defer search.
 
-Use the [grouped page-control contract](../pages/README.md#save-page-preferences) for search, filters and table preferences. Submit partial changes through `updatePreferences`; the shared preference hook composes rapid edits against its current value and persists the complete snapshot.
+Use the [grouped page-control contract](../pages/preferences.md) for search, filters and table preferences. Submit partial changes through `updatePreferences`; the shared preference hook composes rapid edits against its current value and persists the complete snapshot.
 
 The route test owns header-control composition, preference restoration, view switching, dialogs, cross-view selection and callback-to-adapter flows. Preference-hook tests own coordinated control patches and durable control state.
 

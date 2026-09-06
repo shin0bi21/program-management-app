@@ -33,20 +33,21 @@ Preserve the dependency direction `pages → common/features → common/componen
 
 ## Find the right guide
 
-Use this table to find the right guide. Each rule is explained in one place so the documentation does not repeat itself.
+The guides follow the application structure: architecture and data foundations, navigation
+and pages, then shared components and specific UI surfaces. Each rule is explained in one
+place so the documentation does not repeat itself.
 
 Rendered-surface guides are flat files under `components/`; add a subdirectory only when a documentation area grows into a substantial multi-file set. Each owner guide documents its own skeleton and the scaffold preset that generates it.
 
 | What are you changing? | Guide |
 |---|---|
-| A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
+| Where code should live | [Ownership](architecture/ownership.md) |
+| State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
 | Sidebar navigation or route visibility | [App navigation](components/navigation.md) |
+| A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
+| Saved preferences, field rules, or grouped page controls | [Page preferences](pages/preferences.md) |
+| Shared components | [Components](components/README.md) |
 | Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
 | Calendars | [Calendars](components/calendars.md) |
 | Dashboards | [Dashboards](components/dashboards.md) |
 | Modals and other overlays | [Overlays](components/overlays.md) |
-| Shared components | [Components](components/README.md) |
-| Frontend architecture | [Architecture](architecture/README.md) |
-| Saved preferences, field rules, or grouped page controls | [Page preferences](pages/README.md#save-page-preferences) |
-| State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
-| Where code should live | [Ownership](architecture/ownership.md) |
