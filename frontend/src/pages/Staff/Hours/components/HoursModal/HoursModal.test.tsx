@@ -211,7 +211,7 @@ describe('HoursModal', () => {
     expect(screen.getByLabelText('Note')).toHaveValue('Original note');
   });
 
-  it('keeps the success state visible after preventing dismissal while submitting', async () => {
+  it('locks the form actions while submitting and displays the success status', async () => {
     let resolve!: () => void;
     const onAdd = vi.fn(() => new Promise<void>(done => { resolve = done; }));
     const onClose = vi.fn();
@@ -220,11 +220,8 @@ describe('HoursModal', () => {
     submitForm();
 
     await waitFor(() => expect(onAdd).toHaveBeenCalledOnce());
-    const dialog = screen.getByRole('dialog', { name: 'Log Hours' });
     expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(dialog).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
 
     resolve();

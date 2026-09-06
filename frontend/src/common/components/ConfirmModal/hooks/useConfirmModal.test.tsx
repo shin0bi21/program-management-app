@@ -1,5 +1,4 @@
-// Scope: verifies confirmation submission, duplicate prevention, and error recovery.
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ConfirmAction } from '../types';
@@ -7,12 +6,10 @@ import { useConfirmModal } from './useConfirmModal';
 
 function deferred() {
   let resolve!: () => void;
-  let reject!: (cause: unknown) => void;
-  const promise = new Promise<void>((done, fail) => {
+  const promise = new Promise<void>((done) => {
     resolve = done;
-    reject = fail;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
 function ConfirmHarness({
@@ -42,10 +39,15 @@ describe('useConfirmModal', () => {
     />);
 
     const confirm = screen.getByRole('button', { name: 'Confirm' });
-    fireEvent.click(confirm);
-    fireEvent.click(confirm);
+    // Keep both clicks before React commits the disabled button state.
+    act(() => {
+      fireEvent.click(confirm);
+      expect(confirm).toBeEnabled();
+      fireEvent.click(confirm);
+    });
 
     expect(onConfirm).toHaveBeenCalledOnce();
+    expect(confirm).toBeDisabled();
     pending.resolve();
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('idle'));
   });

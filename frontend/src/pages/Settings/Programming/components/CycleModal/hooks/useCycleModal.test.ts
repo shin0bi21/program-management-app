@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setProgramCycle } from '../../../../../Programming/Cohorts/cohorts.api';
@@ -16,10 +16,23 @@ describe('useCycleModal', () => {
 
   it('creates a cycle and waits for page data reconciliation', async () => {
     vi.mocked(setProgramCycle).mockResolvedValue(cycle);
-    const onSaved = vi.fn().mockResolvedValue(undefined);
+    let resolveRefresh!: () => void;
+    const onSaved = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useCycleModal({ isOpen: true, cycle: null, onSaved }));
 
+    let submission!: Promise<void>;
+    act(() => { submission = result.current.submit(input); });
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    expect(result.current.submitStatus).toBe('submitting');
+    expect(result.current.submissionComplete).toBe(true);
     await act(async () => result.current.submit(input));
+    expect(setProgramCycle).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      resolveRefresh();
+      await submission;
+    });
 
     expect(setProgramCycle).toHaveBeenCalledWith(input);
     expect(onSaved).toHaveBeenCalledOnce();
