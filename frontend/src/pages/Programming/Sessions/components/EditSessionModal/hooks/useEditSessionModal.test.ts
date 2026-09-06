@@ -32,11 +32,24 @@ describe('useEditSessionModal', () => {
   it('normalizes the update command and awaits owner reconciliation', async () => {
     const session = makeCohortSession();
     vi.mocked(updateSession).mockResolvedValue(session);
-    const onUpdated = vi.fn().mockResolvedValue(undefined);
+    let resolveRefresh!: () => void;
+    const onUpdated = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
     act(() => result.current.setSessionTypeId('type-2'));
 
+    let submission!: Promise<void>;
+    act(() => { submission = result.current.submit(makeSubmitEvent()); });
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
+    expect(result.current.status).toBe('submitting');
+    expect(result.current.submissionComplete).toBe(true);
     await act(() => result.current.submit(makeSubmitEvent()));
+    expect(updateSession).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      resolveRefresh();
+      await submission;
+    });
 
     expect(updateSession).toHaveBeenCalledWith(session.id, {
       sessionTypeId: 'type-2',

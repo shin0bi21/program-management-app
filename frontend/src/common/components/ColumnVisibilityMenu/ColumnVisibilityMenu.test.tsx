@@ -19,7 +19,7 @@ describe('ColumnVisibilityMenu', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Status' }));
 
     expect(onHiddenColumnKeysChange).toHaveBeenCalledWith(['status']);
-    expect(screen.queryByRole('menuitemcheckbox', { name: 'Actions' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('menuitemcheckbox').map(option => option.textContent)).toEqual(['Name', 'Status']);
   });
 
   it('treats hiding and resizing as independent column capabilities', () => {

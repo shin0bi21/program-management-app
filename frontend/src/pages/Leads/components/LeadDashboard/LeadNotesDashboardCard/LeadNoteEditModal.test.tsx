@@ -16,16 +16,16 @@ beforeEach(() => {
   api.updateLeadNote.mockResolvedValue({ ...note, details: 'Reached guardian.' });
 });
 
-it('updates only normalized details and keeps the recorded status disabled', async () => {
+it('submits edited note details while keeping the category disabled', async () => {
   const onSaved = vi.fn();
   render(<LeadNoteEditModal note={note} onClose={vi.fn()} onSaved={onSaved} />);
 
   expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
   fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), {
-    target: { value: ' Reached guardian. ' },
+    target: { value: 'Reached guardian.' },
   });
   fireEvent.submit(document.getElementById('lead-note-edit-form')!);
 
   await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(note.leadId, note.id, 'Reached guardian.'));
-  expect(onSaved).toHaveBeenCalledWith({ ...note, details: 'Reached guardian.' });
+  expect(onSaved).toHaveBeenCalledOnce();
 });

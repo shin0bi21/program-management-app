@@ -67,9 +67,10 @@ describe('Item', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
 
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('dismisses hover details immediately on pointer down', async () => {
