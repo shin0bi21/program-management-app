@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import type { Program } from '../../../../common/features/programs/types';
-import type { ProgramCohort } from '../../Cohorts/types';
+import type { ProgramCohort, ProgramCycle } from '../../Cohorts/types';
 import type { SessionType } from '../types';
 import { useSessionControls } from './useSessionControls';
 
@@ -19,6 +19,10 @@ const cohorts: ProgramCohort[] = [{
   nextSessionAt: null, nextSessionId: null, uniqueAttendeeCount: 0, averageAttendance: null,
   attendanceAttendedCount: 0, attendanceRecordedCount: 0,
 }];
+const cycles: ProgramCycle[] = [
+  { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
+  { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
+];
 const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
 const tableKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
 
@@ -32,32 +36,98 @@ describe('useSessionControls', () => {
 
   it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      view: 'table', programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      view: 'table', programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
       sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     });
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      role: 'admin', programs, programsLoading: false, cohorts, cycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
     }), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
       view: 'table',
-      filters: { programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: ['type-1'], statuses: ['completed'] },
+      filters: { programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: ['type-1'], statuses: ['completed'] },
       table: { sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'] },
     });
+  });
+
+  it('ignores a legacy cohort preference while retaining valid sibling fields', async () => {
+    preferenceApi.getPreference.mockResolvedValue({
+      cohortId: 'cohort-1', view: 'table', programIds: ['program-1'], statuses: ['completed'],
+    });
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts,
+      cycles, cyclesLoading: false, sessionTypes, sessionTypesLoading: false, tableKeys,
+    }), { wrapper: wrapper() });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toMatchObject({
+      view: 'table', filters: { cycleId: '', programIds: ['program-1'], statuses: ['completed'] },
+    });
+    expect(result.current.filters).not.toHaveProperty('cohortId');
+  });
+
+  it('offers every cycle independently and narrows scheduling by program and cycle', async () => {
+    const otherProgram = { ...programs[0], id: 'program-2', name: 'Career Ready' };
+    const availableCohorts = [
+      cohorts[0],
+      { ...cohorts[0], id: 'cohort-2', cycleId: 'cycle-2', state: 'upcoming' as const },
+      { ...cohorts[0], id: 'cohort-3', programId: 'program-2', cycleId: 'cycle-2' },
+      { ...cohorts[0], id: 'cohort-4', cycleId: 'cycle-2', state: 'completed' as const },
+    ];
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs: [...programs, otherProgram], programsLoading: false,
+      cohorts: availableCohorts, cycles, cyclesLoading: false,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
+    }), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => result.current.filters.apply('cycle', ['cycle-2']));
+    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-2', 'cohort-3']);
+
+    act(() => result.current.filters.apply('program', ['program-1']));
+    expect(result.current.filters.cycleId).toBe('cycle-2');
+    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-2']);
+    expect(result.current.filters.definitions.find(filter => filter.id === 'cycle')).toEqual({
+      id: 'cycle', label: 'Cycle', selectionMode: 'single',
+      options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
+    });
+
+    act(() => result.current.filters.apply('cycle', ['cycle-1']));
+    expect(result.current.filters.programIds).toEqual(['program-1']);
+    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-1']);
+
+    act(() => result.current.filters.clear());
+    expect(result.current.filters).toMatchObject({ programIds: [], cycleId: '' });
+    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-1', 'cohort-2', 'cohort-3']);
+  });
+
+  it('waits for authoritative cycles before restoring a saved cycle', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ cycleId: 'cycle-2' });
+    const { result, rerender } = renderHook(({ loading }) => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cohorts: [],
+      cycles: loading ? [] : cycles, cyclesLoading: loading,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
+    }), { wrapper: wrapper(), initialProps: { loading: true } });
+
+    expect(result.current.ready).toBe(false);
+    rerender({ loading: false });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.cycleId).toBe('cycle-2');
   });
 
   it('uses empty filters when saved preferences cannot be loaded', async () => {
     preferenceApi.getPreference.mockRejectedValue(new Error('offline'));
     const { result } = renderHook(() => useSessionControls({
-      role: 'staff', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      role: 'staff', programs, programsLoading: false, cohorts, cycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.view).toBe('calendar');
     expect(result.current.filters.programIds).toEqual([]);
-    expect(result.current.filters.cohortId).toBe('');
+    expect(result.current.filters.cycleId).toBe('');
     expect(result.current.filters.statuses).toEqual([]);
   });
 
@@ -65,14 +135,14 @@ describe('useSessionControls', () => {
     preferenceApi.getPreference.mockResolvedValue({
       view: 'list',
       programIds: ['program-1'],
-      cohortId: 'cohort-1',
+      cycleId: 'cycle-1',
       sessionTypeIds: ['removed-type'],
       statuses: 'completed',
       sorting: { key: 'removedColumn', direction: 'asc' },
       columnWidths: { theme: 240, status: 'wide' },
     });
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      role: 'admin', programs, programsLoading: false, cohorts, cycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
     }), { wrapper: wrapper() });
 
@@ -80,15 +150,15 @@ describe('useSessionControls', () => {
 
     expect(result.current).toMatchObject({
       view: 'calendar',
-      filters: { programIds: ['program-1'], cohortId: 'cohort-1', sessionTypeIds: [], statuses: [] },
+      filters: { programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: [], statuses: [] },
       table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: { theme: 240 } },
     });
   });
 
-  it('clears the cohort when the program changes and persists subsequent control edits together', async () => {
-    preferenceApi.getPreference.mockResolvedValue({ cohortId: 'cohort-1' });
+  it('preserves the independent cycle when the program changes and persists control edits together', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ cycleId: 'cycle-1' });
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cohorts, cohortsLoading: false,
+      role: 'admin', programs, programsLoading: false, cohorts, cycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
     }), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -101,36 +171,37 @@ describe('useSessionControls', () => {
       result.current.table.setColumnWidths({ theme: 240 });
     });
 
-    expect(result.current.filters.cohortId).toBe('');
+    expect(result.current.filters.cycleId).toBe('cycle-1');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
-      programIds: ['program-1'], cohortId: null, statuses: ['completed'], view: 'table',
+      programIds: ['program-1'], cycleId: 'cycle-1', statuses: ['completed'], view: 'table',
       hiddenColumns: ['status'], columnWidths: { theme: 240 },
     })));
   });
 
   it('repairs each recovered option field without discarding a recent view edit', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      programIds: ['saved-program'], cohortId: 'saved-cohort', sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleId: 'saved-cycle', sessionTypeIds: ['saved-type'],
     });
     const { result, rerender } = renderHook(({ unavailable }) => useSessionControls({
       role: 'admin', programs: [], programsLoading: false, programsError: unavailable ? 'offline' : null,
-      cohorts: [], cohortsLoading: false, cohortsError: unavailable ? 'offline' : null,
+      cohorts: [],
+      cycles: [], cyclesLoading: false, cyclesError: unavailable ? 'offline' : null,
       sessionTypes: [], sessionTypesLoading: false, sessionTypesError: unavailable ? 'offline' : null,
       tableKeys,
     }), { wrapper: wrapper(), initialProps: { unavailable: true } });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters).toMatchObject({
-      programIds: ['saved-program'], cohortId: 'saved-cohort', sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleId: 'saved-cycle', sessionTypeIds: ['saved-type'],
     });
 
     act(() => result.current.setView('table'));
     rerender({ unavailable: false });
 
     await waitFor(() => expect(result.current).toMatchObject({
-      view: 'table', filters: { programIds: [], cohortId: '', sessionTypeIds: [] },
+      view: 'table', filters: { programIds: [], cycleId: '', sessionTypeIds: [] },
     }));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
-      view: 'table', programIds: [], cohortId: null, sessionTypeIds: [],
+      view: 'table', programIds: [], cycleId: null, sessionTypeIds: [],
     })));
   });
 });

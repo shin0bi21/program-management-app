@@ -128,6 +128,7 @@ export const sessionListQuerySchema = z.object({
     start: z.string().datetime({ offset: true }).optional(),
     end: z.string().datetime({ offset: true }).optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
+    cycleId: z.string().uuid('Invalid cycle ID').optional(),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
     sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),

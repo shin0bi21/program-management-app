@@ -35,7 +35,7 @@ export default function SessionTable({
   usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)
-    || Boolean(filters.cohortId)
+    || Boolean(filters.cycleId)
     || Boolean(filters.programIds?.length)
     || Boolean(filters.sessionTypeIds?.length)
     || Boolean(filters.statuses?.length);

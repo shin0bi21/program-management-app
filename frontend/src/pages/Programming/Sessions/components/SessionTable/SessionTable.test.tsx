@@ -42,10 +42,10 @@ describe('SessionTable', () => {
   });
 
   it('wires filters and remote state into the table', () => {
-    render(<SessionTable {...baseProps} filters={{ statuses: ['completed'] }} />);
+    render(<SessionTable {...baseProps} filters={{ cycleId: 'cycle-1' }} />);
 
     expect(useSessionTableData).toHaveBeenCalledWith(
-      baseProps.queryKey, { statuses: ['completed'] }, baseProps.sorting, true,
+      baseProps.queryKey, { cycleId: 'cycle-1' }, baseProps.sorting, true,
     );
     expect(tableProps.current).toEqual(expect.objectContaining({
       ariaLabel: 'Sessions', emptyMessage: 'No sessions match your search and filters',
