@@ -28,12 +28,24 @@ export const hoursParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid time entry ID') }),
 });
 
+const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value => (
+  typeof value === 'string' && value ? value.split(',') : []
+), z.array(schema));
+
+const hoursFilterFields = {
+  staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
+  categories: commaSeparated(hoursCategorySchema),
+  programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
+  types: commaSeparated(z.enum(['task', 'session', 'other'])),
+  cycleId: z.string().uuid('Invalid cycle ID').optional(),
+  search: z.string().trim().max(120).optional().default(''),
+};
+
 export const hoursCalendarQuerySchema = z.object({
   query: z.object({
+    ...hoursFilterFields,
     start: dateSchema.optional(),
     end: dateSchema.optional(),
-    cycleId: z.string().uuid('Invalid cycle ID').optional(),
-    search: z.string().trim().max(120).optional().default(''),
   }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
     message: 'Start and end dates must be provided together',
     path: ['end'],
@@ -48,18 +60,9 @@ export const hoursCalendarQuerySchema = z.object({
   }),
 });
 
-const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value => (
-  typeof value === 'string' && value ? value.split(',') : []
-), z.array(schema));
-
 export const hoursTableQuerySchema = z.object({
   query: z.object({
-    staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
-    categories: commaSeparated(hoursCategorySchema),
-    programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
-    types: commaSeparated(z.enum(['task', 'session', 'other'])),
-    cycleId: z.string().uuid('Invalid cycle ID').optional(),
-    search: z.string().trim().max(120).optional().default(''),
+    ...hoursFilterFields,
     ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'], 'date', 'desc'),
   }),
 });

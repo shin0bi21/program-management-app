@@ -115,7 +115,7 @@ describe('Hours', () => {
       ...hoursReferenceChoices,
     });
     vi.mocked(getHoursTableData).mockImplementation(async (filters, opts, pagination) => {
-      const response = await getHoursCalendarData({}, opts);
+      const response = await getHoursCalendarData(filters, { start: '2026-01-01', end: '2026-12-31' }, opts);
       const resources = new Map([
         ['staff-1', { firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }],
         ['staff-2', { firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan' }],
@@ -237,9 +237,10 @@ describe('Hours', () => {
 
     expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
-      {},
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
+      { staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-fall', search: '' },
       { signal: expect.any(AbortSignal) },
+      expect.objectContaining({ key: 'date', direction: 'desc', limit: 25 }),
     ));
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
@@ -262,12 +263,35 @@ describe('Hours', () => {
     fireEvent.keyDown(search, { key: 'Enter' });
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith({
+      staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: 'workshop',
+    }, {
       start: expect.any(String),
       end: expect.any(String),
-      search: 'workshop',
     }));
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
+  });
+
+  it('reloads the calendar with the complete filters when the program selection changes', async () => {
+    render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
+      { staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: '' },
+      { start: expect.any(String), end: expect.any(String) },
+    ));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Program/ }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
+      { staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleId: 'cycle-1', search: '' },
+      { start: expect.any(String), end: expect.any(String) },
+    ));
   });
 
   // Selection and page-spanning actions.

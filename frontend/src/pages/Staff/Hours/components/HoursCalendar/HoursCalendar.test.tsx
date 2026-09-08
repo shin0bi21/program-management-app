@@ -13,7 +13,7 @@ import type {
 import {
   getHoursCalendarData,
 } from '../../hours.api';
-import type { StaffResource, HoursItem } from '../../types';
+import type { StaffResource, HoursItem, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarCache } from '../../types';
 
@@ -72,6 +72,7 @@ function renderCalendar({
   resources = [resource],
   staffIds = [],
   search = '',
+  filters = {},
   canWrite = true,
   onAdd = vi.fn(),
   onEdit = vi.fn(),
@@ -84,6 +85,7 @@ function renderCalendar({
   resources?: StaffResource[];
   staffIds?: string[];
   search?: string;
+  filters?: Partial<HoursFilters>;
   canWrite?: boolean;
   onAdd?: ReturnType<typeof vi.fn>;
   onEdit?: ReturnType<typeof vi.fn>;
@@ -99,7 +101,7 @@ function renderCalendar({
   const result = render(
       <HoursCalendar
         resources={resources}
-        filters={{ staffIds, categories: [], programIds: [], types: [], cycleId: 'cycle-1', search }}
+        filters={{ staffIds, categories: [], programIds: [], types: [], cycleId: 'cycle-1', search, ...filters }}
         canWrite={canWrite}
         isEntryPending={() => false}
         selectedStaffId="staff-1"
@@ -173,20 +175,23 @@ describe('HoursCalendar', () => {
     });
   });
 
-  it('loads the initialized calendar range with search and exposes it through the calendar data prop', async () => {
+  it('loads the initialized range with all page filters and adapts the returned records for display', async () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     const item = buildItem();
     renderCalendar({
       data: { 'staff-1': { [periods[1].key]: [item] } },
       search: 'workshop',
+      filters: { staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'], types: ['other'] },
     });
 
     await initializeCalendar(periods);
 
     expect(getHoursCalendarData).toHaveBeenCalledWith({
+      staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'],
+      types: ['other'], cycleId: 'cycle-1', search: 'workshop',
+    }, {
       start: expect.any(String),
       end: expect.any(String),
-      search: 'workshop',
     });
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([
       { date: periods[1].key, item },
