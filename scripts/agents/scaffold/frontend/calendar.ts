@@ -8,6 +8,9 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
   const title = name.replace(/Calendar$/, '');
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 export default function ${name}() {
+  // Receive the page filter object and load server-filtered ranges through useDataBuffer.
+  // Share filter serialization with the table API; keep only display shaping here.
+  // The page keys this calendar by its complete applied filters to reset the buffer.
   return (
     <section aria-label="${title} calendar">
       TODO: Connect ${title} range data to TimelineCalendar.
@@ -21,6 +24,7 @@ import { describe, it } from 'vitest';
 
 describe('${name}', () => {
   it.todo('wires domain range loading, rows, items, capabilities, selection, and unavailable state');
+  it.todo('forwards the complete page filters and requested range to the API adapter');
   it.todo('maps supported cell, item, move, and resize callbacks to page actions');
 });
 `);

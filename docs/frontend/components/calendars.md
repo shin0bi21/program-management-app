@@ -4,25 +4,32 @@ A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`.
 
 The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 
-## Range data hook
+## Load filtered ranges
 
-Add a typed range API and connect it to `useDataBuffer`. Send page-owned filters through that API. Keep React-aware shaping and reference preservation in a focused page-calendar hook only when the returned data still needs client-side adaptation.
+Follow the [Tasks calendar](../../../frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx).
+Send the complete page filter object with the range query. The backend applies the filters;
+the calendar buffers the returned records with `useDataBuffer`. Share filter serialization
+with the table API, adding a date range for the calendar and pagination for the table.
+
+Key the calendar by its applied filters, as Tasks does with `key={JSON.stringify(taskFilters)}`,
+so changing filters starts a fresh buffer. Keep scroll position in `positionStorageKey`.
+Use a separate calendar hook only for substantial presentation shaping, never to duplicate
+backend filtering.
 
 ```tsx
 function ExampleCalendar({ rows, filters, selection, actions }: Props) {
+  const loadRange = useCallback(({ start, end }: PeriodRange) => (
+    getExamplesCalendarData(filters, { start: start.key, end: end.key })
+  ), [filters]);
   const calendar = useDataBuffer({
-    load: getExamplesForRange,
+    load: loadRange,
     getItemId: example => example.id,
     getItemRange: example => ({ start: example.startsOn, end: example.endsOn }),
-  });
-  const visible = useExampleCalendarData({
-    items: calendar.items,
-    filters,
   });
 
   return <TimelineCalendar
     rows={rows}
-    items={visible}
+    items={calendar.items}
     getRowId={row => row.id}
     getItemRange={example => ({ start: example.startsOn, end: example.endsOn })}
     buildItem={({ data }) => <ExampleItem example={data} actions={actions} />}
@@ -43,7 +50,11 @@ Every item has one inclusive `{ start, end }` range. A one-period record uses th
 
 Ranged records match overlap and appear once as complete records. Never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months and years.
 
-The page-calendar data-hook test owns range shaping, filters, semantic cache invalidation and reference preservation. `useDataBuffer` tests own generic range loading, accumulation, stale-result protection, mutation overrides and cleanup.
+The calendar test owns forwarding the complete filters and range, response shaping and
+mutation-adapter wiring. The route test owns replacing the buffer when applied filters change.
+When a shaping hook exists, its test owns that shaping and reference preservation.
+`useDataBuffer` tests own generic range loading, accumulation, stale-result protection,
+mutation overrides and cleanup.
 
 ## Assign calendar and item ownership
 

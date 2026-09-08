@@ -18,7 +18,6 @@ import {
   hoursMutationColumns,
   hoursRecordColumns,
   hoursRecordFrom,
-  hoursSearchValue,
   type HoursRow,
 } from './hoursRecordQuery';
 import {
@@ -26,17 +25,16 @@ import {
   HOURS_CATEGORY_OPTIONS,
   HOURS_ENTRY_TYPE_OPTIONS,
 } from './hoursReferenceData';
+import { hoursFilterPredicate } from './hoursListService';
 
 export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
-  const search = query.search ? `%${query.search}%` : null;
   const rows = await sql<HoursRow[]>`
     SELECT ${hoursRecordColumns}
     ${hoursRecordFrom}
     WHERE ${query.start && query.end
       ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
       : sql`TRUE`}
-      AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
-      AND ${search ? sql`${hoursSearchValue} ILIKE ${search}` : sql`TRUE`}
+      ${hoursFilterPredicate(query)}
       AND ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
     ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
