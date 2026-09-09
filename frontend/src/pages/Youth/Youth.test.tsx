@@ -1,6 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
+import { getProgramCycles } from '../Programming/Cohorts/cohorts.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
@@ -27,6 +28,8 @@ vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
     return { programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
   },
 }));
+
+vi.mock('../Programming/Cohorts/cohorts.api', () => ({ getProgramCycles: vi.fn() }));
 
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
@@ -73,6 +76,9 @@ describe('Youth', () => {
     localStorage.clear();
     authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
+    vi.mocked(getProgramCycles).mockResolvedValue([{
+      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+    }]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     youthApi.setYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
@@ -111,6 +117,36 @@ describe('Youth', () => {
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions for Jamie Test' })).not.toBeInTheDocument();
     expect(document.querySelector('[data-column-id="actions"]')).not.toBeInTheDocument();
+  });
+
+  // Page data, preferences, and filters.
+  it('passes restored search and cycle filters to the youth table and clears the cycle from the header', async () => {
+    preferenceApi.getPreference.mockResolvedValue({
+      search: 'Jamie',
+      programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['active'],
+    });
+    render(<Youth />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    expect(screen.getByLabelText('Search youth')).toHaveValue('Jamie');
+    expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toHaveAttribute('aria-checked', 'true');
+    expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
+      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'],
+    });
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
+      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: [],
+    }));
+
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
+      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'],
+    }));
   });
 
   // Selection and page-spanning actions.

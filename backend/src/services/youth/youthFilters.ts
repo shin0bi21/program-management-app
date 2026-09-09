@@ -3,7 +3,7 @@ import type { YouthQuery } from '../../validation/youthSchemas';
 
 /** Builds the parameterized filters for the youth profile list query. */
 export function applyYouthFilters(filters: YouthQuery) {
-  const activeEnrollmentForPrograms = (programIds: string[] = []) => sql`EXISTS (
+  const activeEnrollmentExists = (programIds: string[] = [], cycleIds: string[] = []) => sql`EXISTS (
     SELECT 1
     FROM cohort_enrollments current_enrollment
     INNER JOIN program_cohorts current_cohort
@@ -20,23 +20,38 @@ export function applyYouthFilters(filters: YouthQuery) {
       ${programIds.length
         ? sql`AND current_cohort.program_id = ANY(${sql.array(programIds)}::uuid[])`
         : sql``}
+      ${cycleIds.length
+        ? sql`AND current_cohort.cycle_id = ANY(${sql.array(cycleIds)}::uuid[])`
+        : sql``}
   )`;
-  const activeEnrollment = activeEnrollmentForPrograms();
+
+  const activeEnrollment = activeEnrollmentExists();
+  const activeOnly = filters.statuses.length === 1 && filters.statuses[0] === 'active';
   const statusFilter = filters.statuses.length !== 1
     ? sql`TRUE`
-    : filters.statuses[0] === 'active'
+    : activeOnly
       ? activeEnrollment
       : sql`NOT (${activeEnrollment})`;
-  const programFilter = filters.programIds.length && filters.statuses.length === 1 && filters.statuses[0] === 'active'
-    ? activeEnrollmentForPrograms(filters.programIds)
-    : filters.programIds.length
-    ? sql`(
+
+  const hasParticipationFilter = filters.programIds.length > 0 || filters.cycleIds.length > 0;
+
+  // Program and cycle selections must describe the same participation.
+  let participationFilter = sql`TRUE`;
+  if (hasParticipationFilter && activeOnly) {
+    participationFilter = activeEnrollmentExists(filters.programIds, filters.cycleIds);
+  } else if (hasParticipationFilter) {
+    participationFilter = sql`(
         EXISTS (
           SELECT 1
           FROM cohort_enrollments cef
           INNER JOIN program_cohorts pcf ON pcf.id = cef.cohort_id
           WHERE cef.youth_id = yp.user_id
-            AND pcf.program_id = ANY(${sql.array(filters.programIds)}::uuid[])
+            ${filters.programIds.length
+              ? sql`AND pcf.program_id = ANY(${sql.array(filters.programIds)}::uuid[])`
+              : sql``}
+            ${filters.cycleIds.length
+              ? sql`AND pcf.cycle_id = ANY(${sql.array(filters.cycleIds)}::uuid[])`
+              : sql``}
             AND cef.withdrawn_on IS NULL
         )
         OR EXISTS (
@@ -47,31 +62,16 @@ export function applyYouthFilters(filters: YouthQuery) {
           INNER JOIN programs attendance_program ON attendance_program.id = program_cohort.program_id
           WHERE program_attendance.youth_id = yp.user_id
             AND attendance_program.roster_mode = 'open'
-            AND attendance_program.id = ANY(${sql.array(filters.programIds)}::uuid[])
+            ${filters.programIds.length
+              ? sql`AND attendance_program.id = ANY(${sql.array(filters.programIds)}::uuid[])`
+              : sql``}
+            ${filters.cycleIds.length
+              ? sql`AND program_cohort.cycle_id = ANY(${sql.array(filters.cycleIds)}::uuid[])`
+              : sql``}
         )
-      )`
-    : sql`TRUE`;
-  const cohortFilter = filters.cohortIds.length
-    ? sql`(
-        EXISTS (
-          SELECT 1
-          FROM cohort_enrollments cohort_filter_enrollment
-          WHERE cohort_filter_enrollment.youth_id = yp.user_id
-            AND cohort_filter_enrollment.cohort_id = ANY(${sql.array(filters.cohortIds)}::uuid[])
-            AND cohort_filter_enrollment.withdrawn_on IS NULL
-        )
-        OR EXISTS (
-          SELECT 1
-          FROM attendance_records cohort_attendance
-          INNER JOIN cohort_sessions cohort_session ON cohort_session.id = cohort_attendance.session_id
-          INNER JOIN program_cohorts attendance_cohort ON attendance_cohort.id = cohort_session.cohort_id
-          INNER JOIN programs attendance_program ON attendance_program.id = attendance_cohort.program_id
-          WHERE cohort_attendance.youth_id = yp.user_id
-            AND attendance_program.roster_mode = 'open'
-            AND attendance_cohort.id = ANY(${sql.array(filters.cohortIds)}::uuid[])
-        )
-      )`
-    : sql`TRUE`;
+      )`;
+  }
+
   const searchFilter = filters.search
     ? sql`(
         CONCAT_WS(' ', u.first_name, u.last_name, s.name) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'
@@ -99,7 +99,7 @@ export function applyYouthFilters(filters: YouthQuery) {
       )`
     : sql`TRUE`;
 
-  return sql`${statusFilter} AND ${programFilter} AND ${cohortFilter} AND ${searchFilter}`;
+  return sql`${statusFilter} AND ${participationFilter} AND ${searchFilter}`;
 }
 
 function escapeLikePattern(value: string) {

@@ -8,7 +8,6 @@ import PageErrorOverlay, { type PageErrorItem } from '../../common/components/Pa
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
-import { usePrograms } from '../../common/features/programs/hooks/usePrograms';
 import YouthModal from './components/YouthModal/YouthModal';
 import { YOUTH_TABLE_KEYS, type YouthFilters } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
@@ -19,7 +18,8 @@ import YouthTable from './components/YouthTable/YouthTable';
 import useYouthTable from './components/YouthTable/hooks/useYouthTable';
 import { useYouthActions } from './hooks/actions/useYouthActions';
 import { useYouthSelection } from './hooks/selection/useYouthSelection';
-import { useYouthControls } from './hooks/useYouthControls';
+import { useYouthControls } from './hooks/controls/useYouthControls';
+import useYouthData from './hooks/data/useYouthData';
 import type { YouthProfile } from './types';
 import './Youth.css';
 
@@ -38,12 +38,15 @@ export default function Youth() {
     && permissions.includes('read:sessions');
 
   // Page data and preferences.
-  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: role === 'staff' });
+  const { programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
   const controls = useYouthControls({
     role,
     programs,
     programsLoading,
     programsError,
+    cycles,
+    cyclesLoading,
+    cyclesError,
     tableKeys: YOUTH_TABLE_KEYS,
   });
   const { search, filters, table, ready: controlsReady, error: preferencesError } = controls;
@@ -53,7 +56,8 @@ export default function Youth() {
     search: search.appliedValue,
     statuses: filters.statuses,
     programIds: filters.programIds,
-  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.statuses]);
+    cycleIds: filters.cycleIds,
+  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds, filters.statuses]);
 
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
@@ -120,7 +124,7 @@ export default function Youth() {
           /> : undefined}
           filters={controlsReady ? <FilterCard
             categories={filters.definitions}
-            values={{ status: filters.statuses, program: filters.programIds }}
+            values={{ status: filters.statuses, program: filters.programIds, cycle: filters.cycleIds }}
             onApply={filters.apply}
             onClearAll={filters.clear}
           /> : undefined}
@@ -128,6 +132,7 @@ export default function Youth() {
         <PageErrorOverlay errors={[
           preferencesError,
           programsError,
+          cyclesError,
           viewError,
           profileNotes.error ? {
             message: profileNotes.error,

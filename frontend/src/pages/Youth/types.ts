@@ -56,7 +56,7 @@ export interface YouthFilters {
   search?: string;
   statuses?: Array<'active' | 'inactive'>;
   programIds?: string[];
-  cohortIds?: string[];
+  cycleIds?: string[];
 }
 
 export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
