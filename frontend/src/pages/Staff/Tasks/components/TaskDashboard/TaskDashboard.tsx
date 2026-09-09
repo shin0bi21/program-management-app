@@ -1,10 +1,7 @@
-import { useMemo } from 'react';
 import type { Task } from '../../types';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
 import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard/TaskOverviewDashboardCard';
-import useTaskOverviewData from './hooks/useTaskOverviewData';
-import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 interface TaskDashboardProps {
   queryKey: readonly unknown[];
@@ -25,16 +22,14 @@ export default function TaskDashboard({
   onLogHours,
   onErrorChange,
 }: TaskDashboardProps) {
-  const overviewData = useTaskOverviewData(queryKey, resourceId);
-  const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
-  usePageErrorReporter(onErrorChange, overviewData.error, retryAction);
-
   return <>
-    {overviewData.loading
-      ? <article className="dashboard-card"><p role="status">Loading task overview…</p></article>
-      : overviewData.error
-        ? <article className="dashboard-card"><UnavailableState compact title="Task overview unavailable" onRetry={overviewData.retry} /></article>
-      : <TaskOverviewDashboardCard tasks={overviewData.tasks} resourceName={resourceName} today={today} />}
+    <TaskOverviewDashboardCard
+      queryKey={queryKey}
+      resourceId={resourceId}
+      resourceName={resourceName}
+      today={today}
+      onErrorChange={onErrorChange}
+    />
     <TaskHoursLoggedDashboardCard task={selectedTask} onLogHours={onLogHours} />
   </>;
 }
