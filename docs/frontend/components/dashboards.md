@@ -1,26 +1,20 @@
 # Dashboards
 
-A page-owned `*Dashboard` composes selected-record details and aggregate overview cards inside `PageBody`'s dashboard region. It owns dashboard-specific loading, error, and empty presentation; the route page owns what resource or record selects it.
+A page-owned `*Dashboard` composes selected-record details and aggregate overview cards inside `PageBody`'s dashboard region. The route page owns what resource or record selects it. Each card owns its loading, error, and empty presentation.
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
 ## Load dashboard data
 
-Keep a dashboard query in a focused `use*OverviewData` hook when the dashboard needs server aggregates not already held by the page. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
+Place each data hook beside its smallest consumer. A query used by one card belongs in that card’s `hooks/` directory and is called by that card. Keep a query at dashboard level only when multiple cards consume its results. Cards that render data already supplied by the page do not need a separate data hook. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
 ```tsx
 function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
-  const overview = useExampleOverviewData(selected?.id ?? null);
-
   if (!selected) return null;
 
   return <>
     <ExampleDetailsDashboardCard example={selected} onAction={onAction} />
-    <ExampleOverviewDashboardCard
-      overview={overview.data}
-      loading={overview.loading}
-      error={overview.error}
-    />
+    <ExampleOverviewDashboardCard resourceId={selected.id} />
   </>;
 }
 ```
@@ -34,11 +28,11 @@ Overview-hook tests own query keys, enabled conditions, server inputs, cancellat
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.
 - Keep table and calendar selection semantics equivalent when both views select the same domain record.
 - Do not default to the first response row when permissions distinguish writable and read-only resources.
-- The dashboard owns card composition and dashboard-only queries; cards own their rendering and focused actions.
+- The dashboard owns card composition and data genuinely shared by sibling cards; each card owns its private queries, rendering, and focused actions.
 - Page-wide actions stay in `PageHeader`; record-specific actions may live in the relevant card.
 - A mutation reconciles or invalidates the overview query separately from table row reconciliation.
 
-Dashboard tests own selection-driven composition, loading/error/empty presentation, card wiring and representative query-state wiring. Card tests own card-specific actions and accessible content. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
+Dashboard tests own selection-driven composition and card wiring. Card tests own loading/error/empty presentation, query-state wiring, focused actions and accessible content. Colocate query-hook tests with the hook. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
 
 ## Scaffolding
 
@@ -55,12 +49,12 @@ components/
   ExampleDashboard/
     ExampleDashboard.tsx
     ExampleDashboard.test.tsx
-    hooks/
-      useExampleOverviewData.ts
-      useExampleOverviewData.test.ts
     ExampleOverviewDashboardCard/
       ExampleOverviewDashboardCard.tsx
       ExampleOverviewDashboardCard.test.tsx
+      hooks/
+        useExampleOverviewData.ts
+        useExampleOverviewData.test.ts
 ```
 
-The dashboard component and test are required. Add the overview-data hook only for dashboard-owned remote data, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.
+The dashboard component and test are required. Add a data hook at its smallest consumer only when remote data is needed, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.
