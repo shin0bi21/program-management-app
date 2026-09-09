@@ -38,7 +38,7 @@ describe('YouthTable', () => {
 
     render(<YouthTable
       columns={[]}
-      filters={{ search: 'maya', statuses: [], programIds: [] }}
+      filters={{ search: '', statuses: [], programIds: [], cycleIds: ['cycle-1'] }}
       hiddenColumnKeys={['school']}
       sorting={{ key: 'firstName', direction: 'asc' }}
       columnWidths={{ firstName: 180 }}

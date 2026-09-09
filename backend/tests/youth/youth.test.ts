@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestCohort, seedTestCohort, seedTestUser, deleteTestUser, sql } from '../shared/db';
@@ -88,6 +89,183 @@ describe('Youth API', () => {
       expect(res.status).toBe(401);
       expect(res.body.error).toMatch(/expired/i);
     });
+
+    describe('cycle filters', () => {
+      let openProgramId: string;
+      let current: { cohortId: string; cycleId: string };
+      let past: { cohortId: string; cycleId: string };
+      let open: { cohortId: string; cycleId: string };
+      let otherCohortId: string;
+      let sessionId: string;
+      const youthIds: string[] = [];
+      const youth: Record<string, string> = {};
+
+      beforeAll(async () => {
+        const [otherProgram] = await sql<{ id: string }[]>`
+          SELECT id FROM programs WHERE roster_mode = 'enrolled' AND id != ${softSkillsProgramId} LIMIT 1
+        `;
+        const [openProgram] = await sql<{ id: string }[]>`
+          SELECT id FROM programs WHERE roster_mode = 'open' LIMIT 1
+        `;
+        openProgramId = openProgram.id;
+        const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
+          SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
+            ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+        `;
+        current = await seedTestCohort({ programId: softSkillsProgramId, name: `Current ${randomUUID()}`, ...dates });
+        past = await seedTestCohort({
+          programId: softSkillsProgramId, name: `Past ${randomUUID()}`, startsOn: '2020-01-01', endsOn: '2020-12-31',
+        });
+        open = await seedTestCohort({ programId: openProgramId, name: `Open ${randomUUID()}`, ...dates });
+        const [otherCohort] = await sql<{ id: string }[]>`
+          INSERT INTO program_cohorts (program_id, cycle_id)
+          VALUES (${otherProgram.id}, ${past.cycleId}) RETURNING id
+        `;
+        otherCohortId = otherCohort.id;
+
+        for (const name of ['Current', 'Past', 'Both', 'Cross', 'Withdrawn', 'Open', 'Unlinked']) {
+          const response = await request(app).post('/api/youth')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ firstName: name, lastName: 'CycleFilter' });
+          expect(response.status).toBe(201);
+          youth[name] = response.body.id;
+          youthIds.push(response.body.id);
+        }
+        await sql`
+          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+          VALUES
+            (${current.cohortId}, ${youth.Current}, '2020-01-01'),
+            (${past.cohortId}, ${youth.Past}, '2020-01-01'),
+            (${current.cohortId}, ${youth.Both}, '2020-01-01'),
+            (${past.cohortId}, ${youth.Both}, '2020-01-01'),
+            (${current.cohortId}, ${youth.Cross}, '2020-01-01'),
+            (${otherCohortId}, ${youth.Cross}, '2020-01-01')
+        `;
+        await sql`
+          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on, withdrawn_on)
+          VALUES (${current.cohortId}, ${youth.Withdrawn}, '2020-01-01', '2020-02-01')
+        `;
+        const [session] = await sql<{ id: string }[]>`
+          INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
+          VALUES (${open.cohortId}, 'Cycle filter attendance', CURRENT_DATE - 1 + TIME '17:00',
+            CURRENT_DATE - 1 + TIME '18:00') RETURNING id
+        `;
+        sessionId = session.id;
+        await sql`
+          INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+          VALUES (${sessionId}, ${youth.Open}, 'present', ${adminUserId})
+        `;
+      });
+
+      afterAll(async () => {
+        await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
+        await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
+        for (const id of youthIds) await deleteTestYouth(id);
+        await sql`DELETE FROM program_cohorts WHERE id = ${otherCohortId}`;
+        for (const cohort of [current, past, open]) await deleteTestCohort(cohort.cohortId, cohort.cycleId);
+      });
+
+      const list = (query: Record<string, string | number> = {}) => request(app)
+        .get('/api/youth').query(query).set('Authorization', `Bearer ${adminToken}`);
+      const ids = (rows: Array<{ id: string }>) => rows.map(row => row.id).sort();
+
+      it('filters one cycle and excludes withdrawn and unrelated youth', async () => {
+        const response = await list({ cycleIds: current.cycleId });
+        expect(response.status).toBe(200);
+        expect(ids(response.body)).toEqual([youth.Current, youth.Both, youth.Cross].sort());
+      });
+
+      it('matches any selected cycle without returning duplicate youth', async () => {
+        const response = await list({ cycleIds: `${current.cycleId},${past.cycleId}` });
+        expect(response.status).toBe(200);
+        expect(ids(response.body)).toEqual([youth.Current, youth.Past, youth.Both, youth.Cross].sort());
+      });
+
+      it('requires program and cycle to match the same cohort participation', async () => {
+        const response = await list({ programIds: softSkillsProgramId, cycleIds: past.cycleId });
+        expect(response.status).toBe(200);
+        expect(ids(response.body)).toEqual([youth.Past, youth.Both].sort());
+      });
+
+      it('requires active enrollment in the selected cycle for active-only status', async () => {
+        const pastResponse = await list({ cycleIds: past.cycleId, statuses: 'active' });
+        expect(pastResponse.status).toBe(200);
+        expect(pastResponse.body).toEqual([]);
+
+        const currentResponse = await list({ cycleIds: current.cycleId, statuses: 'active', programIds: softSkillsProgramId });
+        expect(currentResponse.status).toBe(200);
+        expect(ids(currentResponse.body)).toEqual([youth.Current, youth.Both, youth.Cross].sort());
+
+        const inactiveResponse = await list({ cycleIds: past.cycleId, statuses: 'inactive' });
+        expect(inactiveResponse.status).toBe(200);
+        expect(ids(inactiveResponse.body)).toEqual([youth.Past]);
+      });
+
+      it('includes open-roster attendance and composes its program and cycle filters', async () => {
+        const response = await list({ cycleIds: open.cycleId, programIds: openProgramId });
+        expect(response.status).toBe(200);
+        expect(ids(response.body)).toEqual([youth.Open]);
+
+        const mismatch = await list({ cycleIds: open.cycleId, programIds: softSkillsProgramId });
+        expect(mismatch.status).toBe(200);
+        expect(mismatch.body).toEqual([]);
+      });
+
+      it('combines cycle filtering with search and paginates matching youth', async () => {
+        const query = { cycleIds: current.cycleId, search: 'CycleFilter', limit: 1, sort: 'firstName' };
+        const first = await list(query);
+        expect(first.status).toBe(200);
+        expect(ids(first.body.rows)).toEqual([youth.Both]);
+        expect(first.body.nextCursor).toEqual(expect.any(String));
+
+        const second = await list({ ...query, cursor: first.body.nextCursor });
+        expect(second.status).toBe(200);
+        expect(ids(second.body.rows)).toEqual([youth.Cross]);
+
+        const third = await list({ ...query, cursor: second.body.nextCursor });
+        expect(third.status).toBe(200);
+        expect(ids(third.body.rows)).toEqual([youth.Current]);
+        expect(third.body.nextCursor).toBeNull();
+      });
+
+      it('returns an empty list for an unmatched cycle and leaves omitted cycles unrestricted', async () => {
+        const missing = await list({ cycleIds: randomUUID() });
+        expect(missing.status).toBe(200);
+        expect(missing.body).toEqual([]);
+
+        const unrestricted = await list({ search: 'CycleFilter' });
+        expect(unrestricted.status).toBe(200);
+        expect(ids(unrestricted.body)).toEqual([...youthIds].sort());
+      });
+
+      it('rejects malformed cycle identifiers and more than 20 selections', async () => {
+        for (const cycleIds of ['invalid', Array.from({ length: 21 }, () => randomUUID()).join(',')]) {
+          const response = await list({ cycleIds });
+          expect(response.status).toBe(400);
+        }
+      });
+
+      it('preserves planned participation outside active-only filters', async () => {
+        const created = await request(app).post('/api/youth')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ firstName: 'Planned', lastName: 'CycleFilter' });
+        expect(created.status).toBe(201);
+        youthIds.push(created.body.id);
+        await sql`
+          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+          VALUES (${current.cohortId}, ${created.body.id}, (NOW() AT TIME ZONE 'America/Toronto')::date + 1)
+        `;
+
+        const query = { cycleIds: current.cycleId, programIds: softSkillsProgramId, search: 'Planned CycleFilter' };
+        const inactive = await list({ ...query, statuses: 'inactive' });
+        expect(inactive.status).toBe(200);
+        expect(ids(inactive.body)).toEqual([created.body.id]);
+
+        const active = await list({ ...query, statuses: 'active' });
+        expect(active.status).toBe(200);
+        expect(active.body).toEqual([]);
+      });
+    });
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -161,9 +339,9 @@ describe('Youth API', () => {
       )).toBe(true);
     });
 
-    it('should filter youth by cohort UUID', async () => {
+    it('should filter youth by cycle UUID', async () => {
       const res = await request(app)
-        .get(`/api/youth?cohortIds=${softSkillsCohortId}`)
+        .get(`/api/youth?cycleIds=${softSkillsCycleId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
