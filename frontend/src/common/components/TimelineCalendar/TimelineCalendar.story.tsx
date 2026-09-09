@@ -75,13 +75,14 @@ function moveItem(
   };
 }
 
-export function Interactive() {
+export function Interactive({ withItemShell = false }: { withItemShell?: boolean } = {}) {
   const [items, setItems] = useState(initialItems);
   const [dropRecord, setDropRecord] = useState('');
   const [activationRecord, setActivationRecord] = useState('');
   const [cellClicks, setCellClicks] = useState(0);
   const [resizeRecord, setResizeRecord] = useState('');
   const [rangeMoveRecord, setRangeMoveRecord] = useState('');
+  const [itemAction, setItemAction] = useState('');
 
   const onMove = (context: ItemMoveContext<StoryRow, StoryItem>) => {
     if (context.item.id === 'ranged-task') {
@@ -113,7 +114,17 @@ export function Interactive() {
         getRowId={row => row.id}
         getItemId={item => item.id}
         renderRow={({ row }) => <span>{row.name}</span>}
-        buildItem={({ data: item }) => item.id === 'ranged-task'
+        buildItem={({ data: item }) => withItemShell
+          ? <Item
+            id={item.id}
+            ariaLabel={item.label}
+            summary={item.label}
+            detailTitle={item.label}
+            details={[{ label: 'Details', value: 'Calendar item details' }]}
+            onEdit={() => setItemAction(`edit:${item.id}`)}
+            onDelete={() => setItemAction(`delete:${item.id}`)}
+          />
+          : item.id === 'ranged-task'
           ? <button type="button">{item.label}</button>
           : <StoryItemContent item={item} />}
         getItemCapabilities={({ data: item }) => ({
@@ -134,9 +145,14 @@ export function Interactive() {
         <input data-testid="cell-clicks" readOnly value={String(cellClicks)} />
         <input data-testid="resize-record" readOnly value={resizeRecord} />
         <input data-testid="range-move-record" readOnly value={rangeMoveRecord} />
+        <input data-testid="item-action" readOnly value={itemAction} />
       </form>
     </div>
   );
+}
+
+export function InteractiveItems() {
+  return <Interactive withItemShell />;
 }
 
 export function RangeLaneSizing() {

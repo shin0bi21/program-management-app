@@ -2,6 +2,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const storyId = 'TimelineCalendar/Interactive';
+const interactiveItemsStoryId = 'TimelineCalendar/InteractiveItems';
 const rangeLaneSizingStoryId = 'TimelineCalendar/RangeLaneSizing';
 const itemDensityStoryId = 'TimelineCalendar/ItemDensity';
 const persistedPositionStoryId = 'TimelineCalendar/PersistedPosition';
@@ -30,6 +31,78 @@ async function expectPreviewClippedToCalendar(component: Locator, page: Page) {
   expect(hostBox.y).toBeCloseTo(viewportBox.y, 0);
   expect(hostBox.width).toBeCloseTo(viewportBox.width, 0);
   expect(hostBox.height).toBeCloseTo(viewportBox.height, 0);
+}
+
+async function itemAnchor(item: Locator, fraction: number) {
+  const box = await item.boundingBox();
+  if (!box) throw new Error('Calendar item geometry is unavailable');
+
+  const pointerX = box.x + box.width * fraction;
+  const row = item.locator('xpath=ancestor::div[contains(@class, "row")]');
+  const periodLeft = await row.locator('.cell').evaluateAll((cells, x) => {
+    const cell = cells.find(element => {
+      const bounds = element.getBoundingClientRect();
+      return x >= bounds.left && x < bounds.right;
+    });
+    if (!cell) throw new Error('Calendar item anchor period is unavailable');
+    return cell.getBoundingClientRect().left;
+  }, pointerX);
+
+  return { box, pointerX, pointerY: box.y + box.height / 2, left: Math.max(periodLeft, box.x) };
+}
+
+for (const { mode, label, id } of [
+  { mode: 'point', label: 'Movable entry', id: 'movable-entry' },
+  { mode: 'ranged', label: 'Ranged task', id: 'ranged-task' },
+]) {
+  test(`anchors the ${mode} item menu to the clicked period without starting a drag`, async ({ page, mount }) => {
+    const component = await mount(interactiveItemsStoryId);
+    const item = component.getByRole('button', { name: `${label}. Open actions` });
+    const anchor = await itemAnchor(item, .65);
+
+    await page.mouse.click(anchor.pointerX, anchor.pointerY);
+
+    const menu = page.locator('.calendar-item-menu');
+    await expect(menu).toBeVisible();
+    await expect(item).toHaveCSS('border-top-width', '2px');
+    await expect.poll(async () => (await menu.boundingBox())?.x).toBeCloseTo(anchor.left, 0);
+    await expect(component.getByTestId('activation-record')).toHaveValue(id);
+    await expect(component.getByTestId('item-action')).toHaveValue('');
+    await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
+
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+    await expect(component.getByTestId('item-action')).toHaveValue(`edit:${id}`);
+  });
+
+  test(`anchors ${mode} item details and suppresses them throughout dragging`, async ({ page, mount }) => {
+    const component = await mount(interactiveItemsStoryId);
+    const item = component.getByRole('button', { name: `${label}. Open actions` });
+    const anchor = await itemAnchor(item, .4);
+
+    await page.mouse.move(anchor.pointerX, anchor.pointerY);
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toBeVisible();
+    await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(anchor.left, 0);
+    await expect.poll(async () => (await tooltip.boundingBox())?.y)
+      .toBeCloseTo(anchor.box.y + anchor.box.height + 8, 0);
+    await expect.poll(async () => {
+      const bounds = await tooltip.boundingBox();
+      return bounds ? bounds.y + bounds.height <= await page.evaluate(() => window.innerHeight) : false;
+    }).toBe(true);
+
+    await page.mouse.move(anchor.box.x + anchor.box.width * .8, anchor.pointerY);
+    await expect.poll(async () => (await tooltip.boundingBox())?.x).toBeCloseTo(anchor.left, 0);
+
+    await page.mouse.down();
+    await expect(tooltip).toBeHidden();
+    await page.mouse.move(anchor.box.x + anchor.box.width * .8 + periodWidth, anchor.pointerY, { steps: 8 });
+    await expect(page.locator('.timeline-calendar-portal .item-move-preview')).toBeVisible();
+    await expect(tooltip).toBeHidden();
+    await page.mouse.up();
+
+    await expect(component.getByTestId(mode === 'point' ? 'drop-record' : 'range-move-record')).not.toHaveValue('');
+    await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
+  });
 }
 
 async function fullyVisiblePeriodKeys(component: Locator) {
@@ -294,10 +367,17 @@ test('cancels point drag without committing its last valid target', async ({ pag
   await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
 });
 
-test('resizes a ranged item with real pointer geometry', async ({ page, mount }) => {
-  const component = await mount(storyId);
-  const item = component.getByRole('button', { name: 'Ranged task' });
+test('resizes a ranged item with a clipped geometry-only preview', async ({ page, mount }) => {
+  const component = await mount(interactiveItemsStoryId);
+  const viewport = component.getByLabel('Browser-tested row calendar');
+  const item = component.getByRole('button', { name: 'Ranged task. Open actions' });
   const handle = component.getByRole('button', { name: 'Resize end of ranged-task' });
+  await expect(item).toHaveCSS('cursor', 'grab');
+  await expect(handle).toHaveCSS('cursor', 'ew-resize');
+  await item.hover();
+  const hoverBorder = await item.evaluate(element => getComputedStyle(element).borderColor);
+  await handle.hover();
+  await expect(item).toHaveCSS('border-color', hoverBorder);
   const before = await item.locator('xpath=ancestor::div[contains(@class, "positioned-item")]').boundingBox();
   const handleBox = await handle.boundingBox();
   if (!before || !handleBox) throw new Error('Range resize geometry is unavailable');
@@ -305,12 +385,18 @@ test('resizes a ranged item with real pointer geometry', async ({ page, mount })
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(handleBox.x + handleBox.width / 2 + periodWidth - 1, handleBox.y + handleBox.height / 2, { steps: 6 });
+  const preview = page.locator('.timeline-calendar-portal .item-resize-preview');
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText('Ranged task')).toBeHidden();
+  await expect(viewport).toHaveCSS('cursor', 'ew-resize');
+  await expectPreviewClippedToCalendar(component, page);
   await page.mouse.up();
 
   await expect(component.getByTestId('resize-record')).toHaveValue('end:2026-08-08:2026-08-12->2026-08-08:2026-08-13');
   await expect(component.getByTestId('activation-record')).toHaveValue('');
   const after = await item.locator('xpath=ancestor::div[contains(@class, "positioned-item")]').boundingBox();
   expect((after?.width ?? 0) - before.width).toBeCloseTo(periodWidth, 0);
+  await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
 });
 
 test('keeps the opposite ghost edge fixed while resizing from the start', async ({ page, mount }) => {

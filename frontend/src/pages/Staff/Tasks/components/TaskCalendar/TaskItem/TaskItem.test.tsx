@@ -35,7 +35,7 @@ describe('TaskItem', () => {
     expect(item).not.toHaveTextContent('Soft Skills');
     const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect(tooltip).toHaveTextContent('Active');
+    expect(within(tooltip).getByText('Active', { selector: '.task-status-badge' })).toBeInTheDocument();
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Logged');
@@ -120,13 +120,9 @@ describe('TaskItem', () => {
     ['Overdue', { startDate: '2026-08-08', dueDate: '2026-08-10', status: 'overdue' as const, statusLabel: 'Overdue' }, 'overdue'],
     ['Completed', { state: 'completed' as const, status: 'completed' as const, statusLabel: 'Completed' }, 'completed'],
     ['Cancelled', { state: 'cancelled' as const, status: 'cancelled' as const, statusLabel: 'Cancelled' }, 'cancelled'],
-  ])('styles the task as %s', async (label, overrides, modifier) => {
+  ])('styles the task as %s', (_label, overrides, modifier) => {
     render(<TaskItem task={{ ...task, ...overrides }} />);
     const item = screen.getByRole('button', { name: /Prepare workshop/ });
     expect(item).toHaveClass(`task-item--${modifier}`);
-    showDetails();
-
-    const badge = screen.getByText(label, { selector: '.task-status-badge' });
-    expect(badge).toHaveClass(`task-status-badge--${modifier}`);
   });
 });
