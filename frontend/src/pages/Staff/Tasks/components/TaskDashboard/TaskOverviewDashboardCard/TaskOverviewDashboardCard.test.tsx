@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../types';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard';
+import useTaskOverviewData from './hooks/useTaskOverviewData';
+
+vi.mock('./hooks/useTaskOverviewData', () => ({ default: vi.fn() }));
+const overviewData = { tasks: [] as Task[], loading: false, error: null as string | null, retry: vi.fn() };
+const cardProps = { queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11' };
+
 
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
@@ -14,6 +20,11 @@ const baseTask: Task = {
 afterEach(() => vi.useRealTimers());
 
 describe('TaskOverviewDashboardCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData });
+  });
+
   it('shows a resource overview and opens its report', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-11T12:00:00'));
@@ -25,7 +36,9 @@ describe('TaskOverviewDashboardCard', () => {
       ...baseTask, id: 'task-3', title: 'Future workshop', startDate: '2026-08-13', dueDate: '2026-08-14',
       status: 'upcoming' as const, statusLabel: 'Upcoming',
     };
-    render(<TaskOverviewDashboardCard tasks={[baseTask, overdueTask, upcomingTask]} resourceName="Zoe Wilson" today="2026-08-11" />);
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks: [baseTask, overdueTask, upcomingTask] });
+    render(<TaskOverviewDashboardCard {...cardProps} />);
+    expect(useTaskOverviewData).toHaveBeenCalledWith(cardProps.queryKey, cardProps.resourceId);
 
     expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
@@ -72,7 +85,8 @@ describe('TaskOverviewDashboardCard', () => {
         statusLabel: 'Completed',
       },
     ];
-    render(<TaskOverviewDashboardCard tasks={tasks} resourceName="Zoe Wilson" today="2026-08-11" />);
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks });
+    render(<TaskOverviewDashboardCard {...cardProps} />);
 
     expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
@@ -90,5 +104,35 @@ describe('TaskOverviewDashboardCard', () => {
       'SoonAug 12', 'LaterAug 20',
     ]);
     expect(within(overdueSection).getAllByRole('listitem').map(item => item.textContent)).toEqual(['OverdueAug 9']);
+  });
+  it('reports its query error and wires retry into the unavailable card', () => {
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, error: 'Unable to load task overview.' });
+    const onErrorChange = vi.fn();
+    render(<TaskOverviewDashboardCard {...cardProps} onErrorChange={onErrorChange} />);
+
+    expect(onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Unable to load task overview.',
+      action: { label: 'Retry', onClick: overviewData.retry },
+    });
+    expect(screen.getByText('Task overview unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(overviewData.retry).toHaveBeenCalledOnce();
+  });
+
+  it('replaces the report with loading while the resource changes', () => {
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks: [baseTask] });
+    const { rerender } = render(<TaskOverviewDashboardCard {...cardProps} />);
+    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, loading: true });
+    rerender(<TaskOverviewDashboardCard {...cardProps} resourceId="staff-2" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading task overview…');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData });
+    rerender(<TaskOverviewDashboardCard {...cardProps} resourceId="staff-2" />);
+    expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

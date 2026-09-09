@@ -1,12 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTaskDashboardData } from '../../../tasks.api';
-import { makeTask } from '../../../../../../tests/factories/task';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
+import { getTaskDashboardData } from '../../../../tasks.api';
+import { makeTask } from '../../../../../../../tests/factories/task';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import useTaskOverviewData from './useTaskOverviewData';
 
-vi.mock('../../../tasks.api', () => ({
+vi.mock('../../../../tasks.api', () => ({
   getTaskDashboardData: vi.fn(),
 }));
 
