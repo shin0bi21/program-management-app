@@ -36,6 +36,13 @@ Load only the remote options and records needed to coordinate the whole page. A 
 calendar keeps its own collection query. Preserve the dependency path
 `data → preferences → selection → actions`.
 
+Group page-wide reference loading in `hooks/data/use<Page>Data.ts`, with its test beside it.
+This hook composes the page's queries and existing domain hooks while preserving each
+source's query key, cancellation, loading and error state. Keep preference state in the
+page's controls hook. Do not create a separate page-private hook for each lookup merely
+because it calls a different endpoint. Split a data hook when it has an independent
+consumer or lifecycle that needs its own owner.
+
 Route tests cover page-owned loading and populated states. Child query-hook tests own their request inputs, cancellation and response shaping.
 
 ## Save page preferences
@@ -86,6 +93,11 @@ npm run scaffold:frontend -- page Staff/Schedules --dry-run
 ```
 
 Remove `--dry-run` to generate the skeleton below.
+
+The page preset generates the route and its test plus `hooks/data/use<Page>Data.ts` and
+its test, and calls the data hook during the page-data phase. Replace the data placeholders
+with real reference queries; omit the hook and its test when the page needs no page-wide
+remote data.
 
 Keep the route entry, its test and optional route styles at the page root. Follow
 [Components](../components/README.md), [State and data](../architecture/state-and-data.md), and
