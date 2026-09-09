@@ -1,5 +1,6 @@
 // This suite owns TimelineCalendar's real-browser layout, focus, pointer, scrolling, and portal lifecycles.
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import type {} from '../gallery/window';
 
 const storyId = 'TimelineCalendar/Interactive';
 const interactiveItemsStoryId = 'TimelineCalendar/InteractiveItems';
