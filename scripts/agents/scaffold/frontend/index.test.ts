@@ -39,20 +39,27 @@ test('previews root and route-family pages without writing files', () => {
   assert.deepEqual(scaffoldFrontend(['page', 'Leads', '--dry-run']), [
     'frontend/src/pages/Leads/Leads.tsx',
     'frontend/src/pages/Leads/Leads.test.tsx',
+    'frontend/src/pages/Leads/hooks/data/useLeadsData.ts',
+    'frontend/src/pages/Leads/hooks/data/useLeadsData.test.ts',
   ]);
   assert.deepEqual(scaffoldFrontend(['page', 'Staff/ExampleSchedule', '--dry-run']), [
     'frontend/src/pages/Staff/ExampleSchedule/ExampleSchedule.tsx',
     'frontend/src/pages/Staff/ExampleSchedule/ExampleSchedule.test.tsx',
+    'frontend/src/pages/Staff/ExampleSchedule/hooks/data/useExampleScheduleData.ts',
+    'frontend/src/pages/Staff/ExampleSchedule/hooks/data/useExampleScheduleData.test.ts',
   ]);
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Leads')), false);
 });
 
-test('creates only the required page files with honest orchestration placeholders', () => {
+test('creates a page with a colocated data owner and orchestration placeholders', () => {
   const files = scaffoldFrontend(['page', 'Temporary/ScaffoldPage']);
 
-  assert.equal(files.length, 2);
+  assert.equal(files.length, 4);
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/components')), false);
-  assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/hooks')), false);
+  assert.match(read(files[0]), /import useScaffoldPageData from '\.\/hooks\/data\/useScaffoldPageData'/);
+  assertOrdered(read(files[0]), ['Permissions and application services', 'useScaffoldPageData();', 'Saved preferences']);
+  assert.match(read(files[2]), /export default function useScaffoldPageData/);
+  assert.match(read(files[3]), /describe\('useScaffoldPageData'/);
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
   assert.match(read(files[0]), /grouped search, filters, and table controls, with ready\/error at the top level/);
@@ -70,8 +77,7 @@ test('creates only the required page files with honest orchestration placeholder
     'Derived errors and presentation state',
     'Render',
   ]);
-  assertParses(files[0]);
-  assertParses(files[1]);
+  files.forEach(assertParses);
 });
 
 test('creates a non-trivial modal workflow in page, family-common, and both feature owner forms', () => {
