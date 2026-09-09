@@ -1,4 +1,5 @@
 import React from 'react';
+import type {} from './window';
 import { createRoot, type Root } from 'react-dom/client';
 import '../../src/index.css';
 import '../../src/common/styles/brand.css';
@@ -8,7 +9,6 @@ import '../../src/common/components/Button/Button.css';
 
 type StoryComponent = React.ComponentType<Record<string, unknown>>;
 type StoryModule = Record<string, StoryComponent>;
-type MountParams = { story: string; props?: Record<string, unknown> };
 
 const modules = import.meta.glob<StoryModule>('../../src/**/*.story.tsx', { eager: true });
 const stories = new Map<string, StoryComponent>();
@@ -23,13 +23,6 @@ Object.entries(modules).forEach(([path, exports]) => {
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Component gallery root is missing');
 let root: Root | null = null;
-
-declare global {
-  interface Window {
-    mount: (params: MountParams) => Promise<void>;
-    unmount: () => Promise<void>;
-  }
-}
 
 window.mount = async ({ story: storyId, props = {} }) => {
   const matches = [...stories.entries()].filter(([id]) => id === storyId || id.endsWith(`/${storyId}`));
