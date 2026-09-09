@@ -2,6 +2,7 @@ import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
 import type { CursorPage, CursorRequest } from '../../../query/types';
+import type { Task } from '../Tasks/types';
 import type {
   HoursCategory,
   HoursEntry,
@@ -19,6 +20,7 @@ export type SetHoursInput = SharedHoursInput & ({
 } | { source: 'task'; workDate: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: string });
 export interface UpdateHoursPlacementInput { workDate: string }
+export type SetHoursResult = HoursEntry & { updatedTask?: Task };
 
 export type HoursCalendarData = RowPeriodData<HoursItem>;
 
@@ -99,8 +101,8 @@ export function getHoursSessions(staffId: string, workDate: string, signal?: Abo
 }
 export function setHours(input: SetHoursInput, id?: string) {
   return id
-    ? apiClient.put<HoursEntry>(`/hours/${id}`, input)
-    : apiClient.post<HoursEntry>('/hours', input);
+    ? apiClient.put<SetHoursResult>(`/hours/${id}`, input)
+    : apiClient.post<SetHoursResult>('/hours', input);
 }
 export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
   return apiClient.patch<HoursEntry>(`/hours/${id}/placement`, input);

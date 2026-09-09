@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
@@ -19,9 +20,17 @@ import { getDateKeyInTimeZone } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import Tasks from './Tasks';
+import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 
 type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
+const hoursModal = vi.hoisted(() => ({ props: null as ComponentProps<typeof HoursModal> | null }));
+vi.mock('../Hours/components/HoursModal/HoursModal', () => ({
+  default: (props: ComponentProps<typeof HoursModal>) => {
+    hoursModal.props = props;
+    return <div role="dialog" aria-label="Log Hours" />;
+  },
+}));
 const calendarTestState = vi.hoisted(() => ({
   view: 'table' as 'table' | 'calendar',
   props: null as TaskCalendarProps | null,
@@ -267,10 +276,7 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    const hoursForm = document.getElementById('hours-form')!;
-    expect(within(hoursForm).getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(within(hoursForm).getByRole('button', { name: 'Task' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
+    expect(hoursModal.props).toMatchObject({ initialTask: task, initialResourceId: task.assignee.id });
   });
 
   it('reopens a completed task through the route action workflow', async () => {
@@ -353,6 +359,30 @@ describe('Tasks', () => {
   });
 
   // Modal and confirmation workflows.
+  it('keeps the hours target until close after completing its task and does not reopen on selection', async () => {
+    const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
+    const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
+    vi.mocked(setHours).mockResolvedValue({ updatedTask: completedTask } as Awaited<ReturnType<typeof setHours>>);
+    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task, nextTask], nextCursor: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    fireEvent.click(await screen.findByText('Prepare workshop'));
+    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
+    const input = { source: 'task' as const, staffId: task.assignee.id, taskId: task.id, workDate: today, hours: 1, note: 'Done', completeTask: true };
+    await act(async () => hoursModal.props!.onAdd(input));
+
+    expect(setHours).toHaveBeenCalledWith(input);
+    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
+    expect(hoursModal.props!.initialTask).toEqual(task);
+
+    act(() => hoursModal.props!.onClose());
+    fireEvent.click(screen.getByText('Next task'));
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
+  });
+
   it('opens a new task form with today as its initial range', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);

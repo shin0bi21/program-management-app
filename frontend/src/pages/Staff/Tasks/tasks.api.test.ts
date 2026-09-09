@@ -6,6 +6,7 @@ import { apiClient } from '../../../http/client';
 
 import {
   deleteTask,
+  getTask,
   getTaskDashboardData,
   getTaskReferenceData,
   getTasksCalendarData,
@@ -38,6 +39,13 @@ const input: SetTaskInput = {
 
 describe('tasks API', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('loads an authoritative task by id with cancellation', () => {
+    const controller = new AbortController();
+    getTask('task-1', { signal: controller.signal });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/tasks/task-1', { signal: controller.signal });
+  });
 
   it('loads open dashboard tasks for one staff member', () => {
     const controller = new AbortController();

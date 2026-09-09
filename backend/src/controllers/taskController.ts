@@ -2,8 +2,12 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { getTaskList } from '../services/staff/tasks/taskListService';
 import { getTasksCalendarData } from '../services/staff/tasks/taskCalendarService';
-import { deleteTask, getOpenTasks, getTaskReferenceData, setTask, updateTaskPlacement, updateTaskState } from '../services/staff/tasks/taskService';
+import { deleteTask, getTask, getOpenTasks, getTaskReferenceData, setTask, updateTaskPlacement, updateTaskState } from '../services/staff/tasks/taskService';
 import type { OpenTaskQuery, TaskCalendarQuery, TaskListQuery } from '../validation/taskSchemas';
+
+export async function handleGetTask(req: Request, res: Response) {
+  res.json(await getTask(req.params.id, (req as AuthRequest).user!));
+}
 
 export async function handleGetOpenTasks(req: Request, res: Response) {
   const query = req.query as unknown as OpenTaskQuery;

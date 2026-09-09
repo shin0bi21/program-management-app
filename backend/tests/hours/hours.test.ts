@@ -706,6 +706,7 @@ describe('Hours API', () => {
     expect(tasks.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
     ]));
+    expect(entry.body.updatedTask).toEqual(tasks.body.find((row: { id: string }) => row.id === task.body.id));
 
     await request(app).delete(`/api/hours/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
@@ -745,6 +746,17 @@ describe('Hours API', () => {
     `;
     expect(savedTask.status).toBe('open');
     expect(savedEntries).toHaveLength(0);
+
+    const savedHours = await request(app)
+      .post('/api/hours')
+      .set('Authorization', `Bearer ${hoursOnlyToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: task.body.id,
+        workDate, hours: 1, note: 'Hours without task read permission',
+      });
+    expect(savedHours.status).toBe(201);
+    expect(savedHours.body).not.toHaveProperty('updatedTask');
+    await request(app).delete(`/api/hours/${savedHours.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
 
     await request(app)
       .delete(`/api/tasks/${task.body.id}`)
