@@ -15,6 +15,18 @@ import {
 import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
 
 
+export async function getTask(id: string, actor: AccessTokenPayload, db: typeof sql = sql) {
+  const rows = await db<TaskRow[]>`
+    SELECT ${taskRecordColumns}
+    ${taskRecordFrom}
+    WHERE task.id = ${id}
+      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+  `;
+  if (!rows.length) throw new NotFoundError('Task not found');
+
+  return attachTaskDetails(rows, await loadTaskLoggedHours([id], db), actor)[0];
+}
+
 export async function getOpenTasks(actor: AccessTokenPayload, query: OpenTaskQuery) {
   const rows = await sql<TaskRow[]>`
     SELECT ${taskRecordColumns}

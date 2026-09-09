@@ -8,7 +8,7 @@ import {
   updateTaskState,
 } from '../../tasks.api';
 import type { Task } from '../../types';
-import { removeInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { TaskCalendarCache } from '../../types';
 
@@ -58,15 +58,21 @@ export default function useTaskActions({
   );
 
   // Cache synchronization.
-  const refreshTasks = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: taskQueryKey });
+  const refreshTaskOverview = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
   }, [queryClient, taskQueryKey]);
 
-  const syncTask = useCallback((task: Task) => {
+  const syncTask = useCallback((task: Task, created = false) => {
+    if (created) {
+      void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+    } else {
+      replaceInfiniteListRow(queryClient, taskTableQueryKey, task);
+    }
+
     calendarCacheRef.current.upsert(task);
     onTaskSynced?.(task);
-    refreshTasks();
-  }, [onTaskSynced, refreshTasks]);
+    refreshTaskOverview();
+  }, [onTaskSynced, queryClient, refreshTaskOverview, taskTableQueryKey]);
 
   // User-triggered task actions.
   const deleteTaskAction = useCallback(async (task: Task) => {
@@ -77,11 +83,11 @@ export default function useTaskActions({
       removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
-      refreshTasks();
+      refreshTaskOverview();
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTasks, startTaskAction, taskTableQueryKey]);
+  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, startTaskAction, taskTableQueryKey]);
 
   const setTaskRange = useCallback(async (
     task: Task,
@@ -125,12 +131,22 @@ export default function useTaskActions({
   }, [finishTaskAction, startTaskAction, syncTask]);
 
   const logHours = useCallback(async (input: SetHoursInput) => {
-    await setHours(input);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: taskQueryKey }),
-      queryClient.invalidateQueries({ queryKey: hoursQueryKey }),
-    ]);
-  }, [queryClient, taskQueryKey, hoursQueryKey]);
+    const saved = await setHours(input);
+    setActionError('');
+
+    if (input.source === 'task') {
+      if (saved.updatedTask) {
+        syncTask(saved.updatedTask);
+      } else {
+        // A committed save must not invite duplicate submission if its task projection is unavailable.
+        setActionError('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
+      }
+    } else {
+      refreshTaskOverview();
+    }
+
+    await queryClient.invalidateQueries({ queryKey: hoursQueryKey });
+  }, [queryClient, hoursQueryKey, refreshTaskOverview, syncTask]);
 
   return {
     actionError,

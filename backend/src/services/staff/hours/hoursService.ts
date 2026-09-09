@@ -13,6 +13,7 @@ import type {
 } from '../../../validation/hoursSchemas';
 import { assertCanSetHours, hoursReadScopePredicate, hoursResourceReadScopePredicate, hoursWriteScopePredicate } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
+import { getTask } from '../tasks/taskService';
 import { getBiweeklyPayPeriod } from './payPeriods';
 import {
   hoursMutationColumns,
@@ -74,6 +75,7 @@ export async function setHours(
   await assertActiveStaffResource(input.staffId);
   const transactionId = crypto.randomUUID();
   let saved!: HoursRow;
+  let updatedTask: Awaited<ReturnType<typeof getTask>> | undefined;
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const scope = await resolveHoursScope(input, trx);
@@ -95,11 +97,16 @@ export async function setHours(
       existing ? { ...existing } : null,
       { ...saved },
     );
+
+    if (scope.taskId && actor.permissions.includes('read:tasks')) {
+      updatedTask = await getTask(scope.taskId, actor, trx);
+    }
   });
   return {
     ...saved,
     categoryLabel: getHoursCategoryLabel(saved.category),
     hours: Number(saved.hours),
+    ...(updatedTask ? { updatedTask } : {}),
   };
 }
 
