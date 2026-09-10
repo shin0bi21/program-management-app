@@ -22,7 +22,7 @@ export interface CohortSession {
 
 export interface SessionListFilters {
   programIds?: string[];
-  cycleId?: string;
+  cycleIds?: string[];
   sessionTypeIds?: string[];
   statuses?: SessionStatusFilter[];
   search?: string;

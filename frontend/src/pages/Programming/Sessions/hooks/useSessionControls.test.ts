@@ -36,7 +36,7 @@ describe('useSessionControls', () => {
 
   it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      view: 'table', programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: ['type-1'], statuses: ['completed'],
+      view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'],
       sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     });
     const { result } = renderHook(() => useSessionControls({
@@ -46,7 +46,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
       view: 'table',
-      filters: { programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: ['type-1'], statuses: ['completed'] },
+      filters: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'] },
       table: { sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'] },
     });
   });
@@ -62,7 +62,7 @@ describe('useSessionControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
-      view: 'table', filters: { cycleId: '', programIds: ['program-1'], statuses: ['completed'] },
+      view: 'table', filters: { cycleIds: [], programIds: ['program-1'], statuses: ['completed'] },
     });
     expect(result.current.filters).not.toHaveProperty('cohortId');
   });
@@ -86,24 +86,28 @@ describe('useSessionControls', () => {
     expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-2', 'cohort-3']);
 
     act(() => result.current.filters.apply('program', ['program-1']));
-    expect(result.current.filters.cycleId).toBe('cycle-2');
+    expect(result.current.filters.cycleIds).toEqual(['cycle-2']);
     expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-2']);
     expect(result.current.filters.definitions.find(filter => filter.id === 'cycle')).toEqual({
-      id: 'cycle', label: 'Cycle', selectionMode: 'single',
+      id: 'cycle', label: 'Cycle',
       options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
     });
 
-    act(() => result.current.filters.apply('cycle', ['cycle-1']));
+    act(() => result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']));
     expect(result.current.filters.programIds).toEqual(['program-1']);
-    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-1']);
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']);
+    expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-1', 'cohort-2']);
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'session-filters', expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
+    ));
 
     act(() => result.current.filters.clear());
-    expect(result.current.filters).toMatchObject({ programIds: [], cycleId: '' });
+    expect(result.current.filters).toMatchObject({ programIds: [], cycleIds: [] });
     expect(result.current.schedulableCohorts.map(cohort => cohort.id)).toEqual(['cohort-1', 'cohort-2', 'cohort-3']);
   });
 
   it('waits for authoritative cycles before restoring a saved cycle', async () => {
-    preferenceApi.getPreference.mockResolvedValue({ cycleId: 'cycle-2' });
+    preferenceApi.getPreference.mockResolvedValue({ cycleIds: ['cycle-2'] });
     const { result, rerender } = renderHook(({ loading }) => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts: [],
       cycles: loading ? [] : cycles, cyclesLoading: loading,
@@ -114,7 +118,7 @@ describe('useSessionControls', () => {
     rerender({ loading: false });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleId).toBe('cycle-2');
+    expect(result.current.filters.cycleIds).toEqual(['cycle-2']);
   });
 
   it('uses empty filters when saved preferences cannot be loaded', async () => {
@@ -127,7 +131,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.view).toBe('calendar');
     expect(result.current.filters.programIds).toEqual([]);
-    expect(result.current.filters.cycleId).toBe('');
+    expect(result.current.filters.cycleIds).toEqual([]);
     expect(result.current.filters.statuses).toEqual([]);
   });
 
@@ -135,7 +139,7 @@ describe('useSessionControls', () => {
     preferenceApi.getPreference.mockResolvedValue({
       view: 'list',
       programIds: ['program-1'],
-      cycleId: 'cycle-1',
+      cycleIds: ['cycle-1'],
       sessionTypeIds: ['removed-type'],
       statuses: 'completed',
       sorting: { key: 'removedColumn', direction: 'asc' },
@@ -150,13 +154,13 @@ describe('useSessionControls', () => {
 
     expect(result.current).toMatchObject({
       view: 'calendar',
-      filters: { programIds: ['program-1'], cycleId: 'cycle-1', sessionTypeIds: [], statuses: [] },
+      filters: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: [], statuses: [] },
       table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: { theme: 240 } },
     });
   });
 
   it('preserves the independent cycle when the program changes and persists control edits together', async () => {
-    preferenceApi.getPreference.mockResolvedValue({ cycleId: 'cycle-1' });
+    preferenceApi.getPreference.mockResolvedValue({ cycleIds: ['cycle-1'] });
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cohorts, cycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
@@ -171,16 +175,16 @@ describe('useSessionControls', () => {
       result.current.table.setColumnWidths({ theme: 240 });
     });
 
-    expect(result.current.filters.cycleId).toBe('cycle-1');
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
-      programIds: ['program-1'], cycleId: 'cycle-1', statuses: ['completed'], view: 'table',
+      programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['completed'], view: 'table',
       hiddenColumns: ['status'], columnWidths: { theme: 240 },
     })));
   });
 
   it('repairs each recovered option field without discarding a recent view edit', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      programIds: ['saved-program'], cycleId: 'saved-cycle', sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypeIds: ['saved-type'],
     });
     const { result, rerender } = renderHook(({ unavailable }) => useSessionControls({
       role: 'admin', programs: [], programsLoading: false, programsError: unavailable ? 'offline' : null,
@@ -191,17 +195,17 @@ describe('useSessionControls', () => {
     }), { wrapper: wrapper(), initialProps: { unavailable: true } });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters).toMatchObject({
-      programIds: ['saved-program'], cycleId: 'saved-cycle', sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypeIds: ['saved-type'],
     });
 
     act(() => result.current.setView('table'));
     rerender({ unavailable: false });
 
     await waitFor(() => expect(result.current).toMatchObject({
-      view: 'table', filters: { programIds: [], cycleId: '', sessionTypeIds: [] },
+      view: 'table', filters: { programIds: [], cycleIds: [], sessionTypeIds: [] },
     }));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
-      view: 'table', programIds: [], cycleId: null, sessionTypeIds: [],
+      view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [],
     })));
   });
 });

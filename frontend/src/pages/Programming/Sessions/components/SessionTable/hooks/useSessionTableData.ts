@@ -5,14 +5,14 @@ import type { ListSort } from '../../../../../../common/components/Table/Table.t
 
 export function useSessionTableData(queryKey: readonly unknown[], {
   programIds = [],
-  cycleId,
+  cycleIds,
   sessionTypeIds = [],
   statuses = [],
   search,
 }: SessionListFilters, sorting: ListSort<SessionSortKey>, enabled = true) {
   const filters = {
     programIds,
-    cycleId,
+    cycleIds,
     sessionTypeIds,
     statuses,
     search,
