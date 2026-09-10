@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react';
-import type { FilterCardCategory } from '../../../common/components/FilterCard/FilterCard';
-import type { TableSorting } from '../../../common/components/Table/Table.types';
-import type { Program } from '../../../common/features/programs/types';
-import usePreferences from '../../../common/features/Preferences/usePreferences';
+import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
+import type { TableSorting } from '../../../../common/components/Table/Table.types';
+import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramCycle } from '../../../Programming/Cohorts/types';
+import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
   preferenceOptions,
   preferenceIds,
+  preferenceText,
   preferenceSorting,
   preferenceColumnWidths,
   preferenceHiddenColumns,
-} from '../../../common/features/Preferences/preferences';
-import type { ListSort } from '../../../common/components/Table/Table.types';
-import type { YouthSortKey } from '../types';
+} from '../../../../common/features/Preferences/preferences';
+import type { ListSort } from '../../../../common/components/Table/Table.types';
+import type { YouthSortKey } from '../../types';
 
 export type YouthStatusFilter = 'active' | 'inactive';
 
@@ -20,6 +22,9 @@ interface UseYouthControlsOptions {
   programs: Program[];
   programsLoading: boolean;
   programsError?: string | null;
+  cycles: ProgramCycle[];
+  cyclesLoading: boolean;
+  cyclesError?: string | null;
   tableKeys: readonly YouthSortKey[];
 }
 
@@ -30,16 +35,23 @@ export function useYouthControls({
   programs,
   programsLoading,
   programsError,
+  cycles,
+  cyclesLoading,
+  cyclesError,
   tableKeys,
 }: UseYouthControlsOptions) {
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'youth-profile-filters',
-    waiting: programsLoading || role === null,
+    waiting: programsLoading || cyclesLoading || role === null,
     fields: {
+      search: preferenceText(),
       statuses: preferenceOptions<YouthStatusFilter>(['active', 'inactive'], ['active']),
       programIds: preferenceIds(
         programsLoading || programsError ? undefined : programs.map(program => program.id),
         role === 'staff' ? programs.map(program => program.id) : [],
+      ),
+      cycleIds: preferenceIds(
+        cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id),
       ),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
       columnWidths: preferenceColumnWidths(tableKeys),
@@ -47,13 +59,13 @@ export function useYouthControls({
     },
   });
 
-  const [search, setSearch] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [searchDraft, setSearchValue] = useState<string | null>(null);
+  const searchValue = searchDraft ?? preferences.search;
 
-  const applySearch = () => setAppliedSearch(search.trim());
+  const applySearch = () => updatePreferences({ search: searchValue.trim() });
   const clearSearch = () => {
-    setSearch('');
-    setAppliedSearch('');
+    setSearchValue('');
+    updatePreferences({ search: '' });
   };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
@@ -63,6 +75,11 @@ export function useYouthControls({
       options: programs.map(program => ({ value: program.id, label: program.name })),
     },
     {
+      id: 'cycle',
+      label: 'Cycle',
+      options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
+    },
+    {
       id: 'status',
       label: 'Status',
       options: [
@@ -70,29 +87,31 @@ export function useYouthControls({
         { value: 'inactive', label: 'Inactive' },
       ],
     },
-  ], [programs]);
+  ], [programs, cycles]);
 
   const applyFilter = (category: string, selected: string[]) => {
     if (category === 'status') updatePreferences({ statuses: selected as YouthStatusFilter[] });
     if (category === 'program') updatePreferences({ programIds: selected });
+    if (category === 'cycle') updatePreferences({ cycleIds: selected });
   };
 
   return {
     ready,
     error,
     search: {
-      value: search,
-      setValue: setSearch,
-      appliedValue: appliedSearch,
+      value: searchValue,
+      setValue: setSearchValue,
+      appliedValue: preferences.search,
       apply: applySearch,
       clear: clearSearch,
     },
     filters: {
       statuses: preferences.statuses,
       programIds: preferences.programIds,
+      cycleIds: preferences.cycleIds,
       definitions: filterCategories,
       apply: applyFilter,
-      clear: () => updatePreferences({ statuses: [], programIds: [] }),
+      clear: () => updatePreferences({ statuses: [], programIds: [], cycleIds: [] }),
     },
     table: {
       sorting: preferences.sorting,

@@ -286,6 +286,37 @@ describe('Hours API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('applies identical table and calendar filters without widening staff scope', async () => {
+    const general = await request(app)
+      .post('/api/hours')
+      .set('Authorization', `Bearer ${firstStaffToken}`)
+      .send({ source: 'regular', staffId: firstStaffId, category: 'other', workDate, hours: 1, note: 'General filtered entry' });
+    expect(general.status).toBe(201);
+
+    const filterSets = [
+      `categories=other`, `programIds=general`, `types=other`, `staffIds=${firstStaffId}`, `cycleId=${activeCycleId}`,
+    ];
+    for (const filter of filterSets) {
+      const table = await request(app).get(`/api/hours/table?${filter}`).set('Authorization', `Bearer ${adminToken}`);
+      const calendar = await request(app).get(`/api/hours/calendar?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
+      expect(table.status).toBe(200);
+      expect(calendar.status).toBe(200);
+      const tableIds = table.body.rows.map((row: { id: string }) => row.id).sort();
+      const calendarIds = Object.values(calendar.body).flatMap((dates: unknown) => Object.values(dates as Record<string, Array<{ id: string }>>).flat()).map(entry => entry.id).sort();
+      expect(calendarIds).toEqual(tableIds);
+    }
+    const generalTable = await request(app)
+      .get('/api/hours/table?programIds=general&types=other')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(generalTable.body.rows.map((row: { id: string }) => row.id)).toContain(general.body.id);
+
+    const widened = await request(app)
+      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&staffIds=${secondStaffId}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(widened.status).toBe(200);
+    expect(widened.body).toEqual({});
+  });
+
   it('enforces a linked source for Program Delivery at the database boundary', async () => {
     await expect(sql`
       INSERT INTO time_entries (
@@ -675,6 +706,7 @@ describe('Hours API', () => {
     expect(tasks.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
     ]));
+    expect(entry.body.updatedTask).toEqual(tasks.body.find((row: { id: string }) => row.id === task.body.id));
 
     await request(app).delete(`/api/hours/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
@@ -714,6 +746,17 @@ describe('Hours API', () => {
     `;
     expect(savedTask.status).toBe('open');
     expect(savedEntries).toHaveLength(0);
+
+    const savedHours = await request(app)
+      .post('/api/hours')
+      .set('Authorization', `Bearer ${hoursOnlyToken}`)
+      .send({
+        source: 'task', staffId: firstStaffId, taskId: task.body.id,
+        workDate, hours: 1, note: 'Hours without task read permission',
+      });
+    expect(savedHours.status).toBe(201);
+    expect(savedHours.body).not.toHaveProperty('updatedTask');
+    await request(app).delete(`/api/hours/${savedHours.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
 
     await request(app)
       .delete(`/api/tasks/${task.body.id}`)

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getTaskDashboardData } from '../../../tasks.api';
+import { getTaskDashboardData } from '../../../../tasks.api';
 
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],

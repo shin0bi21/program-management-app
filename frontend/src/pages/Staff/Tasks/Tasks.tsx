@@ -88,9 +88,9 @@ export default function Tasks() {
   const deleteTaskAction = actions.deleteTask;
 
   // Hours modal.
-  const [hoursModalState, setHoursModalState] = useState(false);
-  const openHoursModal = () => setHoursModalState(true);
-  const closeHoursModal = () => setHoursModalState(false);
+  const [hoursModalTask, setHoursModalTask] = useState<Task | null>(null);
+  const openHoursModal = (task: Task) => setHoursModalTask(task);
+  const closeHoursModal = () => setHoursModalTask(null);
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
@@ -240,7 +240,7 @@ export default function Tasks() {
           resourceName={selection.selectedResource.name}
           today={today}
           selectedTask={selection.selectedTask}
-          onLogHours={loggableTask ? openHoursModal : undefined}
+          onLogHours={loggableTask ? () => openHoursModal(loggableTask) : undefined}
           onErrorChange={setDashboardError}
         /> : null}
         {...viewContent}
@@ -252,15 +252,15 @@ export default function Tasks() {
       resources={pageData.writableResources}
       programs={pageData.referenceData?.programs ?? []}
       categories={pageData.referenceData?.categories ?? []}
-      onSaved={actions.syncTask}
+      onSaved={task => actions.syncTask(task, taskModalState.mode === 'add')}
       onClose={closeTaskModal}
     />}
 
-    {hoursModalState && loggableTask && <HoursModal
+    {hoursModalTask && <HoursModal
       isOpen
       initialSource="task"
-      initialTask={loggableTask}
-      initialResourceId={loggableTask.assignee.id}
+      initialTask={hoursModalTask}
+      initialResourceId={hoursModalTask.assignee.id}
       canCompleteTask={canWrite}
       resources={pageData.resources}
       programs={pageData.referenceData?.programs ?? []}

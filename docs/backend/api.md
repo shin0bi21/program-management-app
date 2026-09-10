@@ -39,6 +39,10 @@ Paths are relative to `/api`. Protected endpoints require the permissions declar
 
 Staff writes are self-scoped while reads include policy-visible coworker resources; administrators can manage entries for active staff and administrators.
 
+Task-linked create/update responses include `updatedTask` when the actor has `read:tasks`.
+This canonical task projection is read inside the hours transaction, including the new
+hours totals and any completion, so consumers can reconcile the task without a second request.
+
 Time-entry validation, policies, services, and `backend/tests/hours/` are authoritative for entry, cycle, task-integration, and resource-scope behavior.
 
 ### Assigned tasks — `/tasks`
@@ -49,6 +53,7 @@ Time-entry validation, policies, services, and `backend/tests/hours/` are author
 | `GET` | `/calendar` | List filtered tasks intersecting a calendar date range |
 | `GET` | `/list` | List cursor-paginated, policy-scoped tasks |
 | `GET` | `/reference-data` | List readable staff resources, programs, categories, and statuses |
+| `GET` | `/:id` | Read a policy-scoped task in any lifecycle state, including logged-hour totals and daily breakdown; requires `read:tasks` and conceals missing or out-of-scope records with `404` |
 | `POST` | `/` | Create a task with one required policy-scoped `staffId` owner |
 | `PUT` | `/:id` | Update policy-scoped task details, dates, and owner |
 | `PATCH` | `/:id/placement` | Move or resize a task without replacing unrelated task fields |
@@ -70,6 +75,13 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `GET/POST` | `/:id/notes` | List or create youth profile notes |
 | `PUT/DELETE` | `/:id/notes/:noteId` | Update or delete a youth profile note |
 
+`GET /youth` accepts comma-separated UUID `cycleIds` alongside program, status,
+search, and cursor filters. Program and cycle selections must match the same
+enrollment or open-roster attendance. Active-only queries require a current
+enrollment in the selected participation. Other status selections retain
+nonwithdrawn past or planned enrollments and open-roster attendance, subject to
+the youth's overall active/inactive status.
+
 ### Programming
 
 | Base path | Purpose |
@@ -78,9 +90,9 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
 | `/schools` | School lookup and management |
 
-`GET /cohorts/sessions` accepts an optional UUID `cycleId` to filter sessions across
-the cycle's cohorts. It combines with program, cohort, session-type, status, search,
-date-range and pagination filters while preserving program access restrictions.
+`GET /cohorts/sessions` accepts comma-separated UUID `cycleIds` to filter sessions across
+the selected cycles' cohorts. It combines with program, cohort, session-type, status,
+search, date-range and pagination filters while preserving program access restrictions.
 
 ### Outreach
 

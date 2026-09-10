@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deleteTask, updateTaskPlacement, updateTaskState } from '../../tasks.api';
@@ -68,7 +68,7 @@ describe('useTaskActions', () => {
     expect(updateTaskState).toHaveBeenCalledWith('task-1', 'cancelled');
     expect(rendered.onTaskSynced).toHaveBeenCalledTimes(2);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledTimes(2);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
     expect(returnedTask).toEqual(moved);
   });
 
@@ -151,18 +151,100 @@ describe('useTaskActions', () => {
     expect(rendered.onTaskRemoved).not.toHaveBeenCalled();
   });
 
-  it('invalidates both task and hours domains after logging hours', async () => {
-    vi.mocked(setHours).mockResolvedValue({} as never);
-    const rendered = renderActions();
+  it.each([false, true])('synchronizes authoritative hours and task state after logging (complete=%s)', async completeTask => {
+    const savedHours = deferred<Awaited<ReturnType<typeof setHours>>>();
+    vi.mocked(setHours).mockReturnValue(savedHours.promise);
+    const updatedTask = makeTask({
+      hoursLogged: 3.5,
+      loggedHoursByDate: [{ date: '2026-08-18', hours: 3.5 }],
+      state: completeTask ? 'completed' : 'open',
+      status: completeTask ? 'completed' : 'active',
+      statusLabel: completeTask ? 'Completed' : 'Active',
+      completedAt: completeTask ? '2026-08-18T12:00:00Z' : null,
+    });
+    const client = createTestQueryClient();
+    const other = makeTask({ id: 'task-2' });
+    const containingKeys = [['tasks', 'table', 'open'], ['tasks', 'table', 'by-hours']];
+    for (const key of containingKeys) {
+      client.setQueryData(key, { pages: [{ rows: [task, other], nextCursor: 'next' }], pageParams: [null] });
+    }
+    const absentKey = ['tasks', 'table', 'other'];
+    client.setQueryData(absentKey, { pages: [{ rows: [other], nextCursor: null }], pageParams: [null] });
+    const absentData = client.getQueryData(absentKey);
+    const rendered = renderActions(client);
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const input = {
-      source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', workDate: '2026-08-18', hours: 1, note: 'Prepared',
+      source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', workDate: '2026-08-18', hours: 1, note: 'Prepared', completeTask,
     };
 
-    await act(async () => rendered.result.current.logHours(input));
+    let saving!: Promise<void>;
+    act(() => { saving = rendered.result.current.logHours(input); });
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
+
+    await act(async () => {
+      savedHours.resolve({ updatedTask } as Awaited<ReturnType<typeof setHours>>);
+      await saving;
+    });
 
     expect(setHours).toHaveBeenCalledWith(input);
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] }));
+    expect(rendered.onTaskSynced).toHaveBeenCalledExactlyOnceWith(updatedTask);
+    expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
+    for (const key of containingKeys) {
+      const data = client.getQueryData<{ pages: Array<{ rows: Task[]; nextCursor: string }> }>(key)!;
+      expect(data.pages[0].rows[0]).toEqual(updatedTask);
+      expect(data.pages[0].rows[1]).toBe(other);
+      expect(data.pages[0].nextCursor).toBe('next');
+    }
+    expect(client.getQueryData(absentKey)).toBe(absentData);
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
+  });
+
+  it('does not synchronize a task when saving hours fails', async () => {
+    vi.mocked(setHours).mockRejectedValue(new Error('Save failed'));
+    const rendered = renderActions();
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
+
+    await act(async () => {
+      await expect(rendered.result.current.logHours({
+        source: 'task', staffId: 'staff-1', taskId: 'task-1', workDate: '2026-08-18', hours: 1, note: 'Prepared',
+      })).rejects.toThrow('Save failed');
+    });
+
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
+    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('invalidates list membership only when a task is newly created', () => {
+    const rendered = renderActions();
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
+
+    act(() => rendered.result.current.syncTask(task, true));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
+    expect(rendered.onTaskSynced).toHaveBeenCalledWith(task);
+  });
+
+  it('reports an unavailable task projection without rejecting the saved hours', async () => {
+    vi.mocked(setHours).mockResolvedValue({} as Awaited<ReturnType<typeof setHours>>);
+    const rendered = renderActions();
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
+
+    await act(async () => {
+      await expect(rendered.result.current.logHours({
+        source: 'task', staffId: 'staff-1', taskId: 'task-1', workDate: '2026-08-18', hours: 1, note: 'Prepared',
+      })).resolves.toBeUndefined();
+    });
+
+    expect(setHours).toHaveBeenCalledOnce();
+    expect(rendered.result.current.actionError).toBe('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
+    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
   });
 });

@@ -41,10 +41,7 @@ export function getYouth(
 ) {
   const params = new URLSearchParams();
   if (id) params.set('id', id);
-  if (filters.search?.trim()) params.set('search', filters.search.trim());
-  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
-  if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
-  if (filters.cohortIds?.length) params.set('cohortIds', filters.cohortIds.join(','));
+  applyYouthFilters(params, filters);
   if (pagination) {
     params.set('sort', pagination.key);
     params.set('direction', pagination.direction);
@@ -66,6 +63,13 @@ export function getYouth(
   return opts
     ? apiClient.get<YouthProfile[]>(path, opts)
     : apiClient.get<YouthProfile[]>(path);
+}
+
+function applyYouthFilters(params: URLSearchParams, filters: YouthFilters) {
+  if (filters.search?.trim()) params.set('search', filters.search.trim());
+  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
+  if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
+  if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
 }
 
 export function setYouth(data: SetYouthInput) {

@@ -894,7 +894,7 @@ describe('Cohorts and attendance API', () => {
     ]));
   });
 
-  it('filters sessions across a cycle while preserving program scope and pagination', async () => {
+  it('filters sessions across selected cycles while preserving program scope and pagination', async () => {
     const [otherCycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
       VALUES (${`Other session cycle ${Date.now()}`}, ${today}, ${addDays(today, 60)})
@@ -918,7 +918,7 @@ describe('Cohorts and attendance API', () => {
 
       const response = await request(app)
         .get('/api/cohorts/sessions')
-        .query({ cycleId: mainCycleId })
+        .query({ cycleIds: mainCycleId })
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(response.status).toBe(200);
@@ -929,9 +929,39 @@ describe('Cohorts and attendance API', () => {
       expect(new Set(response.body.map((session: { cohortId: string }) => session.cohortId)))
         .toEqual(new Set([cohortId, openCohortId]));
 
+      const selectedCycles = `${mainCycleId},${otherCycle.id}`;
+      const multipleCycles = await request(app)
+        .get('/api/cohorts/sessions')
+        .query({ cycleIds: selectedCycles })
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(multipleCycles.status).toBe(200);
+      const multipleIds = multipleCycles.body.map((session: { id: string }) => session.id);
+      expect(multipleIds).toEqual(expect.arrayContaining([sessionId, openSessionId, otherSession.id]));
+      expect(multipleIds).not.toContain(unrelatedSession.id);
+      expect(new Set(multipleIds).size).toBe(multipleIds.length);
+
+      const dateRange = await request(app)
+        .get('/api/cohorts/sessions')
+        .query({
+          cycleIds: selectedCycles,
+          programIds: programId,
+          search: 'Other cycle session',
+          start: `${today}T00:00:00Z`,
+          end: `${addDays(today, 3)}T00:00:00Z`,
+          limit: 1,
+        })
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(dateRange.status).toBe(200);
+      expect(dateRange.body).toEqual({
+        rows: [expect.objectContaining({ id: otherSession.id, programId })],
+        nextCursor: null,
+      });
+
       const programPage = await request(app)
         .get('/api/cohorts/sessions')
-        .query({ cycleId: mainCycleId, programIds: openProgramId, limit: 1 })
+        .query({ cycleIds: selectedCycles, programIds: openProgramId, limit: 1 })
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(programPage.status).toBe(200);
@@ -942,7 +972,7 @@ describe('Cohorts and attendance API', () => {
 
       const adminResponse = await request(app)
         .get('/api/cohorts/sessions')
-        .query({ cycleId: mainCycleId, cohortId: unassignedCohortId })
+        .query({ cycleIds: mainCycleId, cohortId: unassignedCohortId })
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(adminResponse.status).toBe(200);
@@ -957,10 +987,16 @@ describe('Cohorts and attendance API', () => {
   it('rejects malformed cycle filters on the session list', async () => {
     const response = await request(app)
       .get('/api/cohorts/sessions')
-      .query({ cycleId: 'not-a-uuid' })
+      .query({ cycleIds: 'not-a-uuid' })
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(400);
+
+    const tooMany = await request(app)
+      .get('/api/cohorts/sessions')
+      .query({ cycleIds: Array(21).fill(mainCycleId).join(',') })
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(tooMany.status).toBe(400);
   });
 
   it('defaults omitted management session filters', async () => {

@@ -21,23 +21,16 @@ export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQ
     hours: sql`TO_CHAR(entry.hours, 'FM0000000000.0000')`,
     note: sql`LOWER(entry.note)`, type: entryType,
   }[query.sort]!;
-  const search = query.search ? `%${query.search}%` : null;
   const rows = await sql<Array<HoursRow & { staffFirstName: string; staffLastName: string; staffName: string; cursorValue: string }>>`
     SELECT * FROM (SELECT ${hoursRecordColumns},
       staff.first_name AS staff_first_name, staff.last_name AS staff_last_name,
       CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
-      ${sortValue} AS cursor_value,
-      ${hoursSearchValue} AS search_value
+      ${sortValue} AS cursor_value
     ${hoursRecordFrom}
     WHERE ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
-      AND ${query.staffIds.length ? sql`entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql`TRUE`}
-      AND ${query.categories.length ? sql`entry.category::text = ANY(${sql.array(query.categories)}::text[])` : sql`TRUE`}
-      AND ${query.programIds.length ? sql`(${query.programIds.includes('general') ? sql`entry.program_id IS NULL OR` : sql``}
-        entry.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql`TRUE`}
-      AND ${query.types.length ? sql`${entryType} = ANY(${sql.array(query.types)}::text[])` : sql`TRUE`}
-      AND ${query.cycleId ? sql`entry.cycle_id = ${query.cycleId}` : sql`TRUE`}
+      ${hoursFilterPredicate(query)}
     ) listed
-    WHERE ${search ? sql`listed.search_value ILIKE ${search}` : sql`TRUE`}
+    WHERE TRUE
       AND ${cursor ? (direction === 'asc'
       ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
       : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
@@ -57,4 +50,18 @@ export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQ
     cursorValue: row.cursorValue,
   }])).values()];
   return cursorPage(mapped, query.limit ?? 25);
+}
+
+export function hoursFilterPredicate(query: Pick<HoursTableQuery, 'staffIds' | 'categories' | 'programIds' | 'types' | 'cycleId' | 'search'>) {
+  const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
+  const search = query.search ? `%${query.search}%` : null;
+  return sql`
+    ${query.staffIds.length ? sql`AND entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql``}
+    ${query.categories.length ? sql`AND entry.category::text = ANY(${sql.array(query.categories)}::text[])` : sql``}
+    ${query.programIds.length ? sql`AND (${query.programIds.includes('general') ? sql`entry.program_id IS NULL OR` : sql``}
+      entry.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql``}
+    ${query.types.length ? sql`AND ${entryType} = ANY(${sql.array(query.types)}::text[])` : sql``}
+    ${query.cycleId ? sql`AND entry.cycle_id = ${query.cycleId}` : sql``}
+    ${search ? sql`AND ${hoursSearchValue} ILIKE ${search}` : sql``}
+  `;
 }

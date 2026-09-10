@@ -2,6 +2,12 @@
 
 Give each value one owner. Choose that owner by how long the value lives and who changes it.
 
+Place state and data hooks with their smallest consumer. Lift them to a parent only when
+that parent coordinates their lifecycle or multiple children actually consume them. A page
+or dashboard that composes children does not automatically own their queries. For example,
+an overview card owns its private query hook and query-state presentation; a card rendering
+an already-selected record needs no extra data hook.
+
 ## Choose the state owner
 
 | Value | Owner | Examples |
@@ -15,6 +21,30 @@ Give each value one owner. Choose that owner by how long the value lives and who
 For durable page controls, follow the [page preference contract](../pages/preferences.md). It owns the named field rules, grouped return shape, automatic repair and persistence lifecycle.
 
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
+
+## Separate page controls from view data
+
+Page data hooks load reference data needed across the page, such as filter options and
+resources used by selection or dialogs. Page controls own the user's choices, not the
+table or calendar collections. The route builds one applied filter object from those
+controls and passes it to each data view.
+
+A page preference hook may contain view-specific settings when the page owns their
+restoration and persistence across view changes. For example, its `table` group stores
+sorting, column widths and hidden columns, while the table owns applying them and
+emitting edits. This does not make those settings calendar inputs or move table fetching
+and pagination into the page hook.
+
+Keep view-local interaction state with the view. Calendar navigation, visible periods,
+scroll position and pointer sessions belong to the calendar and its shared primitives.
+A page-specific position storage key identifies the saved position; it does not make
+the page responsible for scrolling or restoration. Add calendar controls to a page hook
+only when the page actually coordinates or persists those choices, not to mirror the
+table group.
+
+Follow [Page preferences](../pages/preferences.md) for the control contract,
+[Tables](../components/tables.md) for collection ownership, and
+[Calendars](../components/calendars.md) for range loading and calendar interaction state.
 
 ## Fetch remote data
 

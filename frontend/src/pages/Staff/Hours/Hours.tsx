@@ -168,7 +168,7 @@ export default function Hours() {
 
   const hoursCalendar = (
     <HoursCalendar
-      key={hoursFilters.search}
+      key={JSON.stringify(hoursFilters)}
       resources={pageData.resources}
       filters={hoursFilters}
       canWrite={canWrite}

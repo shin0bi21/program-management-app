@@ -17,7 +17,6 @@ import type {
   HoursEntryMove,
   HoursEntryTarget,
 } from '../../types';
-import { useHoursCalendarData } from './hooks/useHoursCalendarData';
 import HoursItem from './HoursItem/HoursItem';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
@@ -50,8 +49,8 @@ export default function HoursCalendar({
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onErrorChange,
 }: HoursCalendarProps) {
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    getHoursCalendarData({ start: start.key, end: end.key, search: filters.search })
-  ), [filters.search]);
+    getHoursCalendarData(filters, { start: start.key, end: end.key })
+  ), [filters]);
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getHoursEntryId,
@@ -66,19 +65,12 @@ export default function HoursCalendar({
   const visibleResources = useMemo(() => filters.staffIds.length
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
     : resources, [filters.staffIds, resources]);
-  const visibleData = useHoursCalendarData(
-    calendar.data,
-    filters.categories,
-    filters.programIds,
-    filters.types,
-    filters.cycleId,
-  );
   const visibleItems = useMemo<RowItemData<HoursCalendarItem>>(() => Object.fromEntries(
-    Object.entries(visibleData).map(([resourceId, periods]) => [
+    Object.entries(calendar.data).map(([resourceId, periods]) => [
       resourceId,
       Object.entries(periods).flatMap(([date, items]) => items.map(item => ({ date, item }))),
     ]),
-  ), [visibleData]);
+  ), [calendar.data]);
 
   const moveHours = ({ item, row, destinationRow, originalRange, nextRange }: ItemMoveContext<StaffResource, HoursCalendarItem>) => onMove({
     item: item.item,

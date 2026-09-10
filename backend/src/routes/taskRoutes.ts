@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleDeleteTask, handleGetOpenTasks, handleGetTaskList, handleGetTaskReferenceData, handleGetTasksCalendarData, handleSetTask, handleUpdateTaskPlacement, handleUpdateTaskState } from '../controllers/taskController';
+import { handleDeleteTask, handleGetTask, handleGetOpenTasks, handleGetTaskList, handleGetTaskReferenceData, handleGetTasksCalendarData, handleSetTask, handleUpdateTaskPlacement, handleUpdateTaskState } from '../controllers/taskController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
@@ -11,6 +11,7 @@ router.get('/', authenticateToken, requirePermission('read:tasks'), generalLimit
 router.get('/calendar', authenticateToken, requirePermission('read:tasks'), generalLimiter, validateRequest(taskCalendarQuerySchema), asyncHandler(handleGetTasksCalendarData));
 router.get('/list', authenticateToken, requirePermission('read:tasks'), generalLimiter, validateRequest(taskListQuerySchema), asyncHandler(handleGetTaskList));
 router.get('/reference-data', authenticateToken, requirePermission('read:tasks'), generalLimiter, asyncHandler(handleGetTaskReferenceData));
+router.get('/:id', authenticateToken, requirePermission('read:tasks'), generalLimiter, validateRequest(taskParamsSchema), asyncHandler(handleGetTask));
 router.post('/', authenticateToken, requirePermission('write:tasks'), generalLimiter, validateRequest(setTaskSchema), asyncHandler(handleSetTask));
 router.put('/:id', authenticateToken, requirePermission('write:tasks'), generalLimiter, validateRequest(taskParamsSchema), validateRequest(setTaskSchema), asyncHandler(handleSetTask));
 router.patch('/:id/placement', authenticateToken, requirePermission('write:tasks'), generalLimiter, validateRequest(taskParamsSchema), validateRequest(updateTaskPlacementSchema), asyncHandler(handleUpdateTaskPlacement));

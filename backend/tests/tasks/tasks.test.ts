@@ -227,6 +227,107 @@ describe('Tasks API', () => {
     ]));
   });
 
+  describe('direct task reads', () => {
+    it('requires authentication and read capability, validates IDs, and conceals missing records', async () => {
+      const missingId = '00000000-0000-4000-8000-000000000000';
+      const writeOnlyToken = generateToken(adminId, 'admin', 'tasks-write-only@test.local', ['write:tasks']);
+
+      const unauthenticated = await request(app).get(`/api/tasks/${missingId}`);
+      expect(unauthenticated.status).toBe(401);
+
+      const denied = await request(app)
+        .get(`/api/tasks/${missingId}`)
+        .set('Authorization', `Bearer ${writeOnlyToken}`);
+      expect(denied.status).toBe(403);
+
+      const invalid = await request(app)
+        .get('/api/tasks/not-a-uuid')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(invalid.status).toBe(400);
+
+      const missing = await request(app)
+        .get(`/api/tasks/${missingId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(missing.status).toBe(404);
+      expect(missing.body.error).toBe('Task not found');
+    });
+
+    it('reads own and shared-resource tasks regardless of task program metadata and conceals unrelated tasks', async () => {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({
+          title: 'Directly readable general task', category: 'outreach',
+          startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+        }));
+      expect(created.status).toBe(201);
+
+      for (const [token, writable] of [[firstStaffToken, true], [secondStaffToken, false], [adminToken, true]] as const) {
+        const result = await request(app)
+          .get(`/api/tasks/${created.body.id}`)
+          .set('Authorization', `Bearer ${token}`);
+        expect(result.status).toBe(200);
+        expect(result.body).toEqual({ ...created.body, writable });
+      }
+
+      const unrelated = await request(app)
+        .get(`/api/tasks/${created.body.id}`)
+        .set('Authorization', `Bearer ${unrelatedStaffToken}`);
+      expect(unrelated.status).toBe(404);
+      expect(unrelated.body.error).toBe('Task not found');
+    });
+
+    it('returns current hours and completed state after logging hours, and includes cancelled tasks', async () => {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({
+          title: 'Task refreshed after hours save', category: 'outreach',
+          startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
+        }));
+      expect(created.status).toBe(201);
+
+      const hours = await request(app)
+        .post('/api/hours')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({
+          source: 'task', staffId: firstStaffId, taskId: created.body.id, completeTask: true,
+          workDate: taskDate, hours: 2, note: 'Finished task',
+        });
+      expect(hours.status).toBe(201);
+
+      const completed = await request(app)
+        .get(`/api/tasks/${created.body.id}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(completed.status).toBe(200);
+      expect(hours.body.updatedTask).toEqual(completed.body);
+      expect(completed.body).toEqual({
+        ...created.body,
+        state: 'completed', status: 'completed', statusLabel: 'Completed',
+        completedAt: expect.any(String), hoursLogged: 2,
+        loggedHoursByDate: [{ date: taskDate, hours: 2 }],
+      });
+
+      const reopened = await request(app)
+        .patch(`/api/tasks/${created.body.id}/state`)
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ state: 'open' });
+      expect(reopened.status).toBe(200);
+
+      const cancelled = await request(app)
+        .patch(`/api/tasks/${created.body.id}/state`)
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ state: 'cancelled' });
+      expect(cancelled.status).toBe(200);
+
+      const result = await request(app)
+        .get(`/api/tasks/${created.body.id}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual(cancelled.body);
+    });
+  });
+
   it('reads every task in a visible resource row while keeping staff writes self-scoped', async () => {
     const ownTask = rememberTask(await request(app)
       .post('/api/tasks')

@@ -16,7 +16,7 @@ vi.mock('../../../sessions.api', () => ({ getSessions }));
 const queryKey = ['sessions', 'calendar'] as const;
 const filters = {
   programIds: ['program-1'],
-  cycleId: 'cycle-1',
+  cycleIds: ['cycle-1', 'cycle-2'],
   sessionTypeIds: ['type-1'],
   statuses: ['upcoming' as const],
   search: 'communication',
@@ -60,7 +60,7 @@ describe('useSessionCalendarData', () => {
       start: '2026-08-01T00:00:00.000Z',
       end: '2026-09-01T00:00:00.000Z',
       programIds: ['program-1'],
-      cycleId: 'cycle-1',
+      cycleIds: ['cycle-1', 'cycle-2'],
       sessionTypeIds: ['type-1'],
       statuses: ['upcoming'],
       search: 'communication',

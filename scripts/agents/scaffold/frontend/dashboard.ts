@@ -8,6 +8,8 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
   const title = name.replace(/Dashboard$/, '');
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 export default function ${name}() {
+  // Cards own private queries; receive shared page data through props.
+  // Add a dashboard data hook only for queries shared by sibling cards.
   return (
     <section aria-label="${title} dashboard">
       TODO: Compose the ${title} dashboard cards.
@@ -16,12 +18,12 @@ export default function ${name}() {
 }
 `);
   const test = context.sourceFile(join(directory, `${name}.test.tsx`), `
-// Card owners retain card rendering and focused action tests; the route retains selected-context wiring.
+// Cards own private queries, query states, rendering and actions; the dashboard owns composition.
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  it.todo('composes selection-driven loading, unavailable, empty, and ready states');
-  it.todo('wires dashboard-owned queries, cards, and cross-owner callbacks once');
+  it.todo('composes cards for the selected context');
+  it.todo('passes shared data and cross-owner callbacks to the cards');
 });
 `);
 

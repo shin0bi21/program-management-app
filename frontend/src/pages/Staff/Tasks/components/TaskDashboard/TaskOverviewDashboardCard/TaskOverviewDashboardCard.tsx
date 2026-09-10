@@ -3,6 +3,9 @@ import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
 import type { Task } from '../../../types';
+import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
+import useTaskOverviewData from './hooks/useTaskOverviewData';
 import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewDashboardCard.css';
 
@@ -70,7 +73,28 @@ function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeek
   </section>;
 }
 
-export default function TaskOverviewDashboardCard({ tasks, resourceName, today }: {
+export default function TaskOverviewDashboardCard({ queryKey, resourceId, resourceName, today, onErrorChange }: {
+  queryKey: readonly unknown[];
+  resourceId: string;
+  resourceName: string;
+  today: string;
+  onErrorChange?: PageErrorChangeHandler;
+}) {
+  const overviewData = useTaskOverviewData(queryKey, resourceId);
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
+  usePageErrorReporter(onErrorChange, overviewData.error, retryAction);
+
+  if (overviewData.loading) {
+    return <article className="dashboard-card"><p role="status">Loading task overview…</p></article>;
+  }
+  if (overviewData.error) {
+    return <article className="dashboard-card"><UnavailableState compact title="Task overview unavailable" onRetry={overviewData.retry} /></article>;
+  }
+
+  return <TaskOverviewContent tasks={overviewData.tasks} resourceName={resourceName} today={today} />;
+}
+
+function TaskOverviewContent({ tasks, resourceName, today }: {
   tasks: readonly Task[];
   resourceName: string;
   today: string;

@@ -6,7 +6,6 @@ import {
   preferenceOption,
   preferenceOptions,
   preferenceIds,
-  optionalPreferenceId,
   preferenceSorting,
   preferenceColumnWidths,
   preferenceHiddenColumns,
@@ -21,7 +20,7 @@ type SessionView = 'calendar' | 'table';
 export interface SessionPreference {
   view: SessionView;
   programIds: string[];
-  cycleId: string | null;
+  cycleIds: string[];
   sessionTypeIds: string[];
   statuses: SessionStatusFilter[];
   sorting?: ListSort<SessionSortKey>;
@@ -58,7 +57,7 @@ export function useSessionControls({
     fields: {
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
-      cycleId: optionalPreferenceId(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
+      cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
       sessionTypeIds: preferenceIds(sessionTypesLoading || sessionTypesError ? undefined : sessionTypes.map(type => type.id)),
       statuses: preferenceOptions(['upcoming', 'completed'] as const),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
@@ -66,8 +65,7 @@ export function useSessionControls({
       hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
-  const { view, programIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
-  const cycleId = preferences.cycleId ?? '';
+  const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
 
   const applySearch = () => setAppliedSearch(search.trim());
   const clearSearch = () => {
@@ -79,10 +77,10 @@ export function useSessionControls({
   const schedulableCohorts = useMemo(() => cohorts.filter(cohort =>
     cohort.state !== 'completed'
     && (!programIds.length || programIds.includes(cohort.programId))
-    && (!cycleId || cohort.cycleId === cycleId)), [cohorts, programIds, cycleId]);
+    && (!cycleIds.length || cycleIds.includes(cohort.cycleId))), [cohorts, programIds, cycleIds]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'cycle', label: 'Cycle', selectionMode: 'single', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
+    { id: 'cycle', label: 'Cycle', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
     { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
     { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
   ], [cycles, programs, sessionTypes]);
@@ -93,7 +91,7 @@ export function useSessionControls({
         updatePreferences({ programIds: values });
         break;
       case 'cycle':
-        updatePreferences({ cycleId: values[0] ?? null });
+        updatePreferences({ cycleIds: values });
         break;
       case 'type':
         updatePreferences({ sessionTypeIds: values });
@@ -103,7 +101,7 @@ export function useSessionControls({
         break;
     }
   };
-  const clearFilters = () => updatePreferences({ programIds: [], cycleId: null, sessionTypeIds: [], statuses: [] });
+  const clearFilters = () => updatePreferences({ programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] });
   const setView = (view: SessionView) => updatePreferences({ view });
   const setSorting = (sorting: ListSort<SessionSortKey>) => updatePreferences({ sorting });
   const setColumnWidths = (columnWidths: Record<string, number>) => updatePreferences({ columnWidths });
@@ -124,7 +122,7 @@ export function useSessionControls({
     },
     filters: {
       programIds,
-      cycleId,
+      cycleIds,
       sessionTypeIds,
       statuses,
       definitions: filterCategories,

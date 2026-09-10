@@ -56,6 +56,10 @@ export function getTaskReferenceData(opts?: RequestOptions) {
   return apiClient.get<TaskReferenceData>('/tasks/reference-data', opts);
 }
 
+export function getTask(id: string, opts?: RequestOptions) {
+  return apiClient.get<Task>(`/tasks/${id}`, opts);
+}
+
 export function setTask(input: SetTaskInput, id?: string) {
   return id ? apiClient.put<Task>(`/tasks/${id}`, input) : apiClient.post<Task>('/tasks', input);
 }

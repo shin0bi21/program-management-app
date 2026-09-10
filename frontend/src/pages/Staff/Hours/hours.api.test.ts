@@ -22,14 +22,18 @@ describe('hours API', () => {
     const controller = new AbortController();
 
     getHoursCalendarData(
-      { start: '2026-08-01', end: '2026-08-31', cycleId: 'cycle-1', search: 'follow up' },
+      {
+        staffIds: ['staff-1'], categories: ['meeting'], programIds: ['general', 'program-1'],
+        types: ['task', 'other'], cycleId: 'cycle-1', search: 'follow up',
+      },
+      { start: '2026-08-01', end: '2026-08-31' },
       { signal: controller.signal },
     );
     getHoursDashboardData('staff-1', 'cycle-1', { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(
       1,
-      '/hours/calendar?start=2026-08-01&end=2026-08-31&cycleId=cycle-1&search=follow+up',
+      '/hours/calendar?start=2026-08-01&end=2026-08-31&staffIds=staff-1&categories=meeting&programIds=general%2Cprogram-1&types=task%2Cother&cycleId=cycle-1&search=follow+up',
       { signal: controller.signal },
     );
     expect(apiClient.get).toHaveBeenNthCalledWith(

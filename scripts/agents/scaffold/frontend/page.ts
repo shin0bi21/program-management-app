@@ -11,6 +11,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
 
   const name = parts[parts.length - 1];
   const directory = join(context.frontendRoot, 'pages', ...parts);
+  const hookName = `use${name}Data`;
 
   const pageHeaderImport = context.relativeImport(
     directory,
@@ -23,13 +24,16 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 import PageBody from '${pageBodyImport}';
 import PageHeader from '${pageHeaderImport}';
+import ${hookName} from './hooks/data/${hookName}';
 
 export default function ${name}() {
   // TODO: Page-local error state.
 
   // TODO: Permissions and application services.
 
-  // TODO: Page data.
+  // Page data.
+  ${hookName}();
+  // TODO: Pass loaded options to preferences and page children.
 
   // TODO: Saved preferences, when this page has durable controls.
   // Use a page hook backed by usePreferences; follow docs/frontend/pages/README.md.
@@ -101,10 +105,30 @@ describe('${name}', () => {
 });
 `);
 
+  const hook = context.sourceFile(join(directory, `hooks/data/${hookName}.ts`), `
+export default function ${hookName}() {
+  // TODO: Group page-wide reference queries and existing domain hooks here.
+  // Preserve each query's key, cancellation, loading, and error state.
+  // Table and calendar collection queries stay with their view owners.
+  return {};
+}
+`);
+  const hookTest = context.sourceFile(join(directory, `hooks/data/${hookName}.test.ts`), `
+import { describe, it } from 'vitest';
+
+describe('${hookName}', () => {
+  it.todo('builds page reference query keys and honors enabled conditions');
+  it.todo('forwards request inputs and AbortSignal to the API adapters');
+  it.todo('exposes each reference source and its loading and error state');
+});
+`);
+
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],
       [join(directory, `${name}.test.tsx`), test],
+      [join(directory, `hooks/data/${hookName}.ts`), hook],
+      [join(directory, `hooks/data/${hookName}.test.ts`), hookTest],
     ]),
   };
 }

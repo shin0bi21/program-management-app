@@ -57,16 +57,16 @@ export default function Sessions() {
     tableKeys: SESSION_TABLE_KEYS,
   });
   const { search, filters, table: tableControls, view, ready: filtersReady, schedulableCohorts } = controls;
-  const { programIds: selectedProgramIds, cycleId, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
+  const { programIds: selectedProgramIds, cycleIds, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
     programIds: selectedProgramIds,
-    cycleId: cycleId || undefined,
+    cycleIds,
     sessionTypeIds: selectedSessionTypeIds,
     statuses: statusFilters,
     search: search.appliedValue || undefined,
-  }), [search.appliedValue, cycleId, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+  }), [search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
 
   // Selection and actions.
   const selection = useSessionSelection();
@@ -171,11 +171,11 @@ export default function Sessions() {
               categories={filters.definitions}
               values={{
                 program: selectedProgramIds,
-                cycle: cycleId ? [cycleId] : [],
+                cycle: cycleIds,
                 status: statusFilters,
                 type: selectedSessionTypeIds,
               }}
-              onApply={(category, selected) => applyFilter(category, category === 'cycle' ? selected.slice(0, 1) : selected)}
+              onApply={applyFilter}
               onClearAll={clearFilters}
             />
           ) : undefined}
