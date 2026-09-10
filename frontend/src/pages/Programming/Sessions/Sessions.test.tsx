@@ -98,7 +98,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
       state: 'upcoming';
     }) => void;
   }) => (
-    <div data-testid="sessions-calendar-view" data-cycle-id={filters.cycleId}>
+    <div data-testid="sessions-calendar-view" data-cycle-ids={filters.cycleIds?.join(',')}>
       <button
         type="button"
         onClick={() =>
@@ -131,7 +131,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
-    preferenceApi.value = { view: 'table', programIds: [], cycleId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
     preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
       preferenceApi.value = value;
@@ -153,6 +153,8 @@ describe('Sessions', () => {
     ]);
     getProgramCycles.mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+    }, {
+      id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
     }]);
     getCohorts.mockResolvedValue([
       {
@@ -285,7 +287,7 @@ describe('Sessions', () => {
   });
 
   // Selection and page-spanning actions.
-  it('replaces Cohort with Cycle and sends the selected cycle to both views', async () => {
+  it('sends multiple selected cycles to the table and calendar', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
 
@@ -293,18 +295,19 @@ describe('Sessions', () => {
     expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fall 2026' }));
     await user.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ cycleId: 'cycle-1' }),
+      expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
       expect.any(Object), expect.any(Object),
     ));
     expect(getSessions.mock.lastCall?.[0]).not.toHaveProperty('cohortId');
-    await waitFor(() => expect(preferenceApi.value?.cycleId).toBe('cycle-1'));
+    await waitFor(() => expect(preferenceApi.value?.cycleIds).toEqual(['cycle-1', 'cycle-2']));
 
     await user.click(screen.getByRole('button', { name: 'View: Table' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-id', 'cycle-1');
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-1,cycle-2');
   });
 
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
@@ -379,7 +382,7 @@ describe('Sessions', () => {
 
   // Table, calendar, dashboard, and body initialization.
   it('switches between table and calendar views on the same page', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleId: null, sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />

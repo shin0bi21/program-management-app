@@ -78,7 +78,7 @@ export function getSessions(
   if ('start' in filters) query.set('start', filters.start);
   if ('end' in filters) query.set('end', filters.end);
   if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
-  if (filters.cycleId) query.set('cycleId', filters.cycleId);
+  if (filters.cycleIds?.length) query.set('cycleIds', filters.cycleIds.join(','));
   if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
   if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);

@@ -24,16 +24,16 @@ describe('session API', () => {
     );
   });
 
-  it('serializes the cycle for both paginated and calendar requests', () => {
+  it('serializes selected cycles for both paginated and calendar requests', () => {
     const options = { signal: new AbortController().signal };
-    getSessions({ cycleId: 'cycle-1', programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
+    getSessions({ cycleIds: ['cycle-1', 'cycle-2'], programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/cohorts/sessions?programIds=program-1&cycleId=cycle-1&sort=date&direction=asc&limit=25', options,
+      '/cohorts/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=25', options,
     );
 
-    getSessions({ cycleId: 'cycle-1', start: '2026-07-01', end: '2026-08-01' }, options);
+    getSessions({ cycleIds: ['cycle-1', 'cycle-2'], start: '2026-07-01', end: '2026-08-01' }, options);
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/cohorts/sessions?start=2026-07-01&end=2026-08-01&cycleId=cycle-1', options,
+      '/cohorts/sessions?start=2026-07-01&end=2026-08-01&cycleIds=cycle-1%2Ccycle-2', options,
     );
   });
 

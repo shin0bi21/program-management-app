@@ -37,7 +37,7 @@ export function listSessions(actor: AccessTokenPayload, filters: SessionListQuer
       ? sql`cs.starts_at < ${filters.end}::timestamptz AND cs.ends_at > ${filters.start}::timestamptz`
       : sql`TRUE`}
       AND ${filters.programIds.length ? sql`pc.program_id = ANY(${sql.array(filters.programIds)}::uuid[])` : sql`TRUE`}
-      AND ${filters.cycleId ? sql`pc.cycle_id = ${filters.cycleId}` : sql`TRUE`}
+      AND ${filters.cycleIds.length ? sql`pc.cycle_id = ANY(${sql.array(filters.cycleIds)}::uuid[])` : sql`TRUE`}
       AND ${filters.cohortId ? sql`pc.id = ${filters.cohortId}` : sql`TRUE`}
       AND ${filters.sessionTypeIds.length ? sql`cs.session_type_id = ANY(${sql.array(filters.sessionTypeIds)}::uuid[])` : sql`TRUE`}
       AND ${programAccessPredicate(actor, sql`pc.program_id`)}
