@@ -14,7 +14,7 @@ details. This document owns both CI architecture and its operating workflow.
 |---|---|---|---|
 | `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static/backend/frontend verification, and conditional production validation | Required merge gate |
 | `pattern-review.yml` | Pull requests and pushes to `develop`; manual dispatch | Changed-scope repository invariant review, with retained reports | Independent required review on feature PRs |
-| `playwright.yml` | Daily schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
+| `playwright.yml` | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
 | `deploy.yml` | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
 
 The supported branch flow is:
