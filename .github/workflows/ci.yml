@@ -89,6 +89,11 @@ jobs:
       - name: Run static checks
         run: bash scripts/tests/test-static.sh
 
+      - name: Check changed repository patterns
+        env:
+          CHECK_PATTERNS_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/patterns/check-patterns.ts --changed
+
       - name: Test deployment planning
         if: needs.changes.outputs.deploy == 'true'
         run: bash scripts/tests/test-deploy.sh
