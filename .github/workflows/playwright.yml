@@ -2,7 +2,7 @@ name: Scheduled Playwright
 
 on:
   schedule:
-    - cron: '30 4 * * *'
+    - cron: '30 4 * * 1'
       timezone: America/Toronto
   workflow_dispatch:
 

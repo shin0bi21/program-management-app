@@ -12,18 +12,16 @@ details. This document owns both CI architecture and its operating workflow.
 
 | Workflow | Trigger | Responsibility | Merge role |
 |---|---|---|---|
-| `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static/backend/frontend verification, and conditional production validation | Required merge gate |
-| `pattern-review.yml` | Pull requests and pushes to `develop`; manual dispatch | Changed-scope repository invariant review, with retained reports | Independent required review on feature PRs |
-| `playwright.yml` | Daily schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
+| `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
+| `playwright.yml` | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
 | `deploy.yml` | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
 
 The supported branch flow is:
 
 ```text
 feature branch -> pull request -> develop -> release pull request -> main -> deploy
-                       |             |
-                       |             +-> changed pattern review
-                       +-> CI + changed pattern review
+                       |
+                       +-> CI, including changed pattern checks
 ```
 
 Direct feature pull requests to `main` are rejected. Shipping authorization ends at
@@ -35,7 +33,7 @@ The main CI workflow classifies the diff once, then runs independent selected wo
 
 ```text
 change classification
-  ├── static checks
+  ├── static and changed pattern checks
   ├── focused or full backend verification
   ├── related or full frontend tests + build
   └── conditional production image and Compose validation
@@ -59,7 +57,7 @@ feature pull requests. Release pull requests to `main` run all production checks
 The shared selector applies these rules locally and in CI:
 
 - Documentation-only changes skip paid application jobs.
-- Repository automation changes run static checks.
+- Repository automation changes run static and changed pattern checks.
 - Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
 - Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
 - Shared backend infrastructure, migrations, dependencies, and unmapped backend paths run the full backend suite.
@@ -146,7 +144,7 @@ CI also owns framework and production steps such as backend migrations and gener
 
 Open the pull request's **Checks** section or the repository's **Actions** tab, select the workflow run, then open the failed job and step. Use **Re-run failed jobs** for an infrastructure or transient failure after confirming the commit has not changed. Push a code fix when the failure is reproducible or caused by the diff.
 
-Pattern Review publishes its report in the job summary and retains the text artifact. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
+Changed-pattern failures and non-blocking review findings appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
 
 ## Change checklist
 

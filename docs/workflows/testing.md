@@ -100,7 +100,7 @@ bash scripts/tests/frontend/test-browser.sh
 
 Playwright starts an isolated component gallery on port 4174 and does not need
 the backend or database. Stories are colocated as `*.story.tsx`; specs live in
-`frontend/playwright/tests/`. GitHub runs the suite daily at 4:30 AM
+`frontend/playwright/tests/`. GitHub runs the suite weekly on Monday at 4:30 AM
 `America/Toronto` and on manual dispatch. It is not part of normal pull-request
 CI; failed scheduled runs retain traces for 14 days.
 
@@ -125,7 +125,7 @@ CI; failed scheduled runs retain traces for 14 days.
 Pattern checks enforce repository structure and ownership independently of the
 application suites. Use `--all` only for an intentional repository-wide scrub;
 see the [frontend guide](../frontend/README.md#find-the-right-guide) for rule
-ownership and [Continuous integration](ci.md) for Pattern Review behavior.
+ownership and [Continuous integration](ci.md) for pull-request behavior.
 
 See [Local development](local-development.md) for dependencies, container
 lifecycle, logs, migrations, and database resets.

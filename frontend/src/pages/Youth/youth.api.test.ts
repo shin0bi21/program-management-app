@@ -40,19 +40,20 @@ describe('youth API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/youth?id=youth-1');
   });
 
-  it('creates and updates profiles through the Youth-owned endpoints', () => {
+  it('creates and updates profiles through the youth upsert endpoint', () => {
     setYouth({ firstName: 'Maya', lastName: 'Thompson' });
     setYouth({ id: 'youth-1', firstName: 'Maya', lastName: 'Lee' });
 
-    expect(apiClient.post).toHaveBeenCalledWith('/youth', {
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, '/youth', {
       firstName: 'Maya',
       lastName: 'Thompson',
     });
-    expect(apiClient.put).toHaveBeenCalledWith('/youth/youth-1', {
+    expect(apiClient.post).toHaveBeenNthCalledWith(2, '/youth', {
       id: 'youth-1',
       firstName: 'Maya',
       lastName: 'Lee',
     });
+    expect(apiClient.put).not.toHaveBeenCalled();
   });
 });
 
