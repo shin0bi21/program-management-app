@@ -73,9 +73,7 @@ function applyYouthFilters(params: URLSearchParams, filters: YouthFilters) {
 }
 
 export function setYouth(data: SetYouthInput) {
-  return data.id
-    ? apiClient.put<YouthProfile>(`/youth/${data.id}`, data)
-    : apiClient.post<YouthProfile>('/youth', data);
+  return apiClient.post<YouthProfile>('/youth', data);
 }
 
 export function getYouthSessionNotes(id: string, opts?: RequestOptions) {
