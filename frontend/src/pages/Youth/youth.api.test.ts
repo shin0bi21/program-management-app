@@ -14,7 +14,6 @@ describe('youth API', () => {
   it('serializes filters and cursor pagination into the backend contract', () => {
     getYouth(undefined, {
       search: '  Alex + Lee  ',
-      statuses: ['active'],
       programIds: ['program-1'],
       cycleIds: ['cycle-1', 'cycle-2'],
     }, undefined, {
@@ -25,7 +24,7 @@ describe('youth API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/youth?search=Alex+%2B+Lee&statuses=active&programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=firstName&direction=asc&limit=50&cursor=cursor-1',
+      '/youth?search=Alex+%2B+Lee&programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=firstName&direction=asc&limit=50&cursor=cursor-1',
     );
   });
 

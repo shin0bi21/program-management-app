@@ -54,7 +54,6 @@ export interface YouthProfileNote {
 
 export interface YouthFilters {
   search?: string;
-  statuses?: Array<'active' | 'inactive'>;
   programIds?: string[];
   cycleIds?: string[];
 }

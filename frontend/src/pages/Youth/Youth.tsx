@@ -54,10 +54,9 @@ export default function Youth() {
   // Filter configuration.
   const youthFilters = useMemo<YouthFilters | null>(() => controlsReady ? {
     search: search.appliedValue,
-    statuses: filters.statuses,
     programIds: filters.programIds,
     cycleIds: filters.cycleIds,
-  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds, filters.statuses]);
+  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
@@ -124,7 +123,7 @@ export default function Youth() {
           /> : undefined}
           filters={controlsReady ? <FilterCard
             categories={filters.definitions}
-            values={{ status: filters.statuses, program: filters.programIds, cycle: filters.cycleIds }}
+            values={{ program: filters.programIds, cycle: filters.cycleIds }}
             onApply={filters.apply}
             onClearAll={filters.clear}
           /> : undefined}

@@ -5,7 +5,6 @@ import type { Program } from '../../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../Programming/Cohorts/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
-  preferenceOptions,
   preferenceIds,
   preferenceText,
   preferenceSorting,
@@ -14,8 +13,6 @@ import {
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { YouthSortKey } from '../../types';
-
-export type YouthStatusFilter = 'active' | 'inactive';
 
 interface UseYouthControlsOptions {
   role: string | null;
@@ -45,7 +42,6 @@ export function useYouthControls({
     waiting: programsLoading || cyclesLoading || role === null,
     fields: {
       search: preferenceText(),
-      statuses: preferenceOptions<YouthStatusFilter>(['active', 'inactive'], ['active']),
       programIds: preferenceIds(
         programsLoading || programsError ? undefined : programs.map(program => program.id),
         role === 'staff' ? programs.map(program => program.id) : [],
@@ -79,18 +75,9 @@ export function useYouthControls({
       label: 'Cycle',
       options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
     },
-    {
-      id: 'status',
-      label: 'Status',
-      options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
-      ],
-    },
   ], [programs, cycles]);
 
   const applyFilter = (category: string, selected: string[]) => {
-    if (category === 'status') updatePreferences({ statuses: selected as YouthStatusFilter[] });
     if (category === 'program') updatePreferences({ programIds: selected });
     if (category === 'cycle') updatePreferences({ cycleIds: selected });
   };
@@ -106,12 +93,11 @@ export function useYouthControls({
       clear: clearSearch,
     },
     filters: {
-      statuses: preferences.statuses,
       programIds: preferences.programIds,
       cycleIds: preferences.cycleIds,
       definitions: filterCategories,
       apply: applyFilter,
-      clear: () => updatePreferences({ statuses: [], programIds: [], cycleIds: [] }),
+      clear: () => updatePreferences({ programIds: [], cycleIds: [] }),
     },
     table: {
       sorting: preferences.sorting,
