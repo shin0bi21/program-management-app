@@ -83,7 +83,7 @@ describe('Homepage management API', () => {
       .post('/api/homepage/images')
       .set('Authorization', `Bearer ${staffToken}`)
       .field('caption', 'Youth workshop.')
-      .attach('image', pngFixture, {
+      .attach('file', pngFixture, {
         filename: 'workshop.png',
         contentType: 'image/png',
       });

@@ -52,6 +52,9 @@ describe('manageHomepage API', () => {
     deleteHomepageImage('image-1');
 
     expect(apiClient.post).toHaveBeenCalledWith('/homepage/images', expect.any(FormData));
+    const createBody = vi.mocked(apiClient.post).mock.calls[0][1] as FormData;
+    expect(createBody.get('file')).toBe(image);
+    expect(createBody.get('caption')).toBe('Community event.');
     expect(apiClient.put).toHaveBeenNthCalledWith(1, '/homepage/images/image-1', { caption: 'Updated.' });
     expect(apiClient.put).toHaveBeenNthCalledWith(2, '/homepage/images/order', { imageIds: ['image-2', 'image-1'] });
     expect(apiClient.delete).toHaveBeenCalledWith('/homepage/images/image-1');
