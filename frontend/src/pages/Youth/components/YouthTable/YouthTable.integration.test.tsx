@@ -27,7 +27,7 @@ describe('YouthTable selection reconciliation', () => {
         <span>{selectedProfile?.firstName ?? 'No selection'}</span>
         <YouthTable
           columns={[]}
-          filters={{ search: '', statuses: [], programIds: [] }}
+          filters={{ search: '', programIds: [] }}
           hiddenColumnKeys={[]}
           sorting={{ key: 'firstName', direction: 'asc' }}
           columnWidths={{}}

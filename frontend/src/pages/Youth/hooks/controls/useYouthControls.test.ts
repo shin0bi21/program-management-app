@@ -50,7 +50,6 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.search.appliedValue).toBe('');
-    expect(result.current.filters.statuses).toEqual(['active']);
     expect(result.current.filters.cycleIds).toEqual([]);
     expect(result.current.filters.programIds).toEqual(['program-1']);
   });
@@ -79,7 +78,6 @@ describe('useYouthControls', () => {
 
   it('applies youth defaults and maps table controls to saved preferences', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      statuses: 'active' as never,
       programIds: [],
       columnWidths: { firstName: 220, status: 'wide' } as never,
       sorting: { key: 'removedColumn', direction: 'desc' },
@@ -90,7 +88,6 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.statuses).toEqual(['active']);
     expect(result.current.table.columnWidths).toEqual({ firstName: 220 });
     expect(result.current.table.sorting).toEqual({ key: 'firstName', direction: 'asc' });
 
@@ -102,10 +99,14 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        statuses: ['active'], hiddenColumns: ['school'], columnWidths: { firstName: 240 },
+        hiddenColumns: ['school'], columnWidths: { firstName: 240 },
         sorting: { key: 'school', direction: 'desc' },
       }),
     ));
+    const lastSavedPreference = preferenceApi.setPreference.mock.calls[
+      preferenceApi.setPreference.mock.calls.length - 1
+    ]?.[1];
+    expect(lastSavedPreference).not.toHaveProperty('statuses');
   });
 
   it('restores search and saves only applied or cleared search with the other filters', async () => {
@@ -127,7 +128,7 @@ describe('useYouthControls', () => {
     expect(result.current.search.appliedValue).toBe('Alex Lee');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        search: 'Alex Lee', programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['active'],
+        search: 'Alex Lee', programIds: ['program-1'], cycleIds: ['cycle-1'],
       }),
     ));
 
@@ -156,7 +157,7 @@ describe('useYouthControls', () => {
     act(() => result.current.filters.apply('cycle', []));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        cycleIds: [], programIds: ['program-1'], statuses: ['inactive'],
+        cycleIds: [], programIds: ['program-1'],
       }),
     ));
 
@@ -167,7 +168,7 @@ describe('useYouthControls', () => {
 
     act(() => result.current.filters.clear());
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ cycleIds: [], programIds: [], statuses: [] }),
+      'youth-profile-filters', expect.objectContaining({ cycleIds: [], programIds: [] }),
     ));
   });
 

@@ -25,22 +25,57 @@ describe('ManageRosterModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getCohortRosterYouth.mockResolvedValue([
-      makeYouthProfile({ id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, rosterMode: cohort.rosterMode, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }] }),
-      makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2012-01-01' }),
+      makeYouthProfile({
+        id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', dateOfBirth: '2012-01-01',
+        cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, rosterMode: cohort.rosterMode, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }],
+      }),
+      makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2009-01-01', schoolName: 'Central School' }),
     ]);
+    api.enrollYouth.mockResolvedValue({});
     api.withdrawYouth.mockResolvedValue({});
   });
 
-  it('shows the current roster and withdraws while preserving attendance history', async () => {
+  it('shows all youth in one checklist and enrolls an unchecked youth', async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn().mockResolvedValue(undefined);
     render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={onSuccess} />);
 
     expect(screen.getByRole('heading', { name: 'Soft Skills - Summer 2026 Roster' })).toBeInTheDocument();
-    expect(await screen.findByText('Already Enrolled')).toBeInTheDocument();
-    expect(screen.queryByText('Not Enrolled')).not.toBeInTheDocument();
+    const enrolled = await screen.findByRole('checkbox', { name: /Already Enrolled/ });
+    const available = screen.getByRole('checkbox', { name: /Not Enrolled/ });
+    expect(enrolled).toBeChecked();
+    expect(available).not.toBeChecked();
+    expect(screen.getByText(/Central School/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Withdraw' }));
+    await user.click(available);
+
+    await waitFor(() => expect(api.enrollYouth).toHaveBeenCalledWith('cohort-1', { youthIds: ['youth-2'] }));
+    expect(onSuccess).toHaveBeenCalledOnce();
+  });
+
+  it('searches and filters the combined youth list by staff-entered age bounds', async () => {
+    const user = userEvent.setup();
+    render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
+
+    await screen.findByRole('checkbox', { name: /Already Enrolled/ });
+    await user.type(screen.getByRole('textbox', { name: 'Search youth' }), 'central');
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('checkbox', { name: /Already Enrolled/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Not Enrolled/ })).toBeInTheDocument();
+
+    await user.clear(screen.getByRole('textbox', { name: 'Search youth' }));
+    await user.keyboard('{Enter}');
+    await user.type(screen.getByRole('spinbutton', { name: 'Minimum' }), '16');
+    expect(screen.queryByRole('checkbox', { name: /Already Enrolled/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Not Enrolled/ })).toBeInTheDocument();
+  });
+
+  it('confirms withdrawal from the same checklist and preserves attendance history', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn().mockResolvedValue(undefined);
+    render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={onSuccess} />);
+
+    await user.click(await screen.findByRole('checkbox', { name: /Already Enrolled/ }));
     const confirmation = screen.getByRole('heading', { name: 'Withdraw Youth' }).closest('.modal-container');
     expect(confirmation).toHaveTextContent('Their existing attendance history will be kept.');
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
@@ -48,48 +83,6 @@ describe('ManageRosterModal', () => {
     await user.click(within(confirmation as HTMLElement).getByRole('button', { name: 'Withdraw' }));
     await waitFor(() => expect(api.withdrawYouth).toHaveBeenCalledWith('cohort-1', 'youth-1'));
     expect(onSuccess).toHaveBeenCalledOnce();
-  });
-
-  it('opens the existing enrollment flow from Add Youth', async () => {
-    const user = userEvent.setup();
-    render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Add Youth' }));
-    expect(screen.getByRole('heading', { name: 'Soft Skills - Summer 2026 Enrollment' })).toBeInTheDocument();
-  });
-
-  it('resets the nested flow when the roster target changes', async () => {
-    const user = userEvent.setup();
-    const view = render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Add Youth' }));
-
-    view.rerender(
-      <ManageRosterModal
-        cohort={{ ...cohort, id: 'cohort-2', name: 'Fall 2026' }}
-        onClose={vi.fn()}
-        onSuccess={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByRole('heading', { name: 'Soft Skills - Fall 2026 Roster' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Enrollment/ })).not.toBeInTheDocument();
-  });
-
-  it('does not make a completed withdrawal retryable when roster refresh fails', async () => {
-    const user = userEvent.setup();
-    render(
-      <ManageRosterModal
-        cohort={cohort}
-        onClose={vi.fn()}
-        onSuccess={vi.fn().mockRejectedValue(new Error('Refresh failed'))}
-      />,
-    );
-
-    await user.click(await screen.findByRole('button', { name: 'Withdraw' }));
-    await user.click(screen.getByRole('button', { name: 'Withdraw' }));
-
-    expect(await screen.findByText('Already Enrolled successfully withdrawn.')).toBeInTheDocument();
-    expect(api.withdrawYouth).toHaveBeenCalledOnce();
-    expect(screen.queryByText('Action failed')).not.toBeInTheDocument();
   });
 
   it('shows roster loading failures as accessible errors', async () => {

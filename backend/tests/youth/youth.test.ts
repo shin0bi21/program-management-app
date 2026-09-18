@@ -187,20 +187,6 @@ describe('Youth API', () => {
         expect(ids(response.body)).toEqual([youth.Past, youth.Both].sort());
       });
 
-      it('requires active enrollment in the selected cycle for active-only status', async () => {
-        const pastResponse = await list({ cycleIds: past.cycleId, statuses: 'active' });
-        expect(pastResponse.status).toBe(200);
-        expect(pastResponse.body).toEqual([]);
-
-        const currentResponse = await list({ cycleIds: current.cycleId, statuses: 'active', programIds: softSkillsProgramId });
-        expect(currentResponse.status).toBe(200);
-        expect(ids(currentResponse.body)).toEqual([youth.Current, youth.Both, youth.Cross].sort());
-
-        const inactiveResponse = await list({ cycleIds: past.cycleId, statuses: 'inactive' });
-        expect(inactiveResponse.status).toBe(200);
-        expect(ids(inactiveResponse.body)).toEqual([youth.Past]);
-      });
-
       it('includes open-roster attendance and composes its program and cycle filters', async () => {
         const response = await list({ cycleIds: open.cycleId, programIds: openProgramId });
         expect(response.status).toBe(200);
@@ -245,7 +231,7 @@ describe('Youth API', () => {
         }
       });
 
-      it('preserves planned participation outside active-only filters', async () => {
+      it('preserves planned participation in program and cycle filters', async () => {
         const created = await request(app).post('/api/youth')
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ firstName: 'Planned', lastName: 'CycleFilter' });
@@ -257,13 +243,9 @@ describe('Youth API', () => {
         `;
 
         const query = { cycleIds: current.cycleId, programIds: softSkillsProgramId, search: 'Planned CycleFilter' };
-        const inactive = await list({ ...query, statuses: 'inactive' });
-        expect(inactive.status).toBe(200);
-        expect(ids(inactive.body)).toEqual([created.body.id]);
-
-        const active = await list({ ...query, statuses: 'active' });
-        expect(active.status).toBe(200);
-        expect(active.body).toEqual([]);
+        const response = await list(query);
+        expect(response.status).toBe(200);
+        expect(ids(response.body)).toEqual([created.body.id]);
       });
     });
   });
@@ -358,16 +340,15 @@ describe('Youth API', () => {
       )).toBe(true);
     });
 
-    it('should derive and filter active status from current cohort enrollment', async () => {
+    it('should derive active status from current cohort enrollment', async () => {
       const res = await request(app)
-        .get('/api/youth?statuses=active')
+        .get('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({ firstName: 'Jordan', status: 'active' }),
       ]));
-      expect(res.body.every((profile: { status: string }) => profile.status === 'active')).toBe(true);
     });
 
     it('should create and invite a youth account when email is provided', async () => {

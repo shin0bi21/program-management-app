@@ -11,7 +11,6 @@ export const youthQuerySchema = z.object({
   query: z.object({
     id: z.string().uuid('Invalid youth ID').optional(),
     search: z.string().trim().max(120).optional().default(''),
-    statuses: commaSeparated(z.enum(['active', 'inactive'])),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
     ...cursorListFields(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'], 'firstName', 'asc'),

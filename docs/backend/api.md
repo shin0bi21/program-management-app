@@ -75,12 +75,9 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 | `GET/POST` | `/:id/notes` | List or create youth profile notes |
 | `PUT/DELETE` | `/:id/notes/:noteId` | Update or delete a youth profile note |
 
-`GET /youth` accepts comma-separated UUID `cycleIds` alongside program, status,
-search, and cursor filters. Program and cycle selections must match the same
-enrollment or open-roster attendance. Active-only queries require a current
-enrollment in the selected participation. Other status selections retain
-nonwithdrawn past or planned enrollments and open-roster attendance, subject to
-the youth's overall active/inactive status.
+`GET /youth` accepts comma-separated program and cycle UUIDs alongside search
+and cursor filters. Program and cycle selections must match the same
+nonwithdrawn enrollment or open-roster attendance.
 
 ### Programming
 

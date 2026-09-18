@@ -67,7 +67,6 @@ export function getYouth(
 
 function applyYouthFilters(params: URLSearchParams, filters: YouthFilters) {
   if (filters.search?.trim()) params.set('search', filters.search.trim());
-  if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','));
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
   if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
 }

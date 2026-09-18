@@ -26,7 +26,7 @@ describe('useYouthTableData', () => {
 
     const { result } = renderHook(
       () => useYouthTableData(
-        { statuses: ['active'], cycleIds: ['cycle-1'] },
+        { cycleIds: ['cycle-1'] },
         { key: 'lastName', direction: 'desc' },
       ),
       { wrapper: createWrapper() },
@@ -37,7 +37,7 @@ describe('useYouthTableData', () => {
     expect(result.current.rows).toEqual([profile]);
     expect(mockGetYouth).toHaveBeenCalledWith(
       undefined,
-      { statuses: ['active'], cycleIds: ['cycle-1'] },
+      { cycleIds: ['cycle-1'] },
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ key: 'lastName', direction: 'desc', limit: 25 }),
     );

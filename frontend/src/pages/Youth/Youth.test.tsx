@@ -130,22 +130,23 @@ describe('Youth', () => {
     expect(screen.getByLabelText('Search youth')).toHaveValue('Jamie');
     expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /^Status/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toHaveAttribute('aria-checked', 'true');
     expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'],
+      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'],
     });
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
     await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: [],
+      search: 'Jamie', programIds: ['program-1'], cycleIds: [],
     }));
 
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
     await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'],
+      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'],
     }));
   });
 
