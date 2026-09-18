@@ -7,7 +7,7 @@ import {
   handleUpdateHomepageImage,
 } from '../controllers/homepageController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
-import { uploadHomepageImage } from '../middleware/homepageUpload';
+import { uploadFile } from '../middleware/fileUpload';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
@@ -25,7 +25,7 @@ router.get('/', asyncHandler(handleGetManagedHomepage));
 router.post(
   '/images',
   requirePermission('write:homepage'),
-  uploadHomepageImage,
+  uploadFile,
   validateRequest(createHomepageImageSchema),
   asyncHandler(handleCreateHomepageImage),
 );

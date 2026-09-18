@@ -58,7 +58,7 @@ import {
   unlinkSessionNoteYouthSchema,
   withdrawYouthSchema,
 } from '../validation/cohortSchemas';
-import { uploadSessionAttachment } from '../middleware/sessionAttachmentUpload';
+import { uploadFile } from '../middleware/fileUpload';
 
 const router = Router();
 
@@ -85,7 +85,7 @@ router.put('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermi
 router.delete('/sessions/:sessionId/notes/:noteId/youth/:youthId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(unlinkSessionNoteYouthSchema), asyncHandler(handleUnlinkSessionNoteYouth));
 router.delete('/sessions/:sessionId/notes/:noteId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(deleteSessionNoteSchema), asyncHandler(handleDeleteSessionNote));
 router.get('/sessions/:sessionId/attachments', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionAttachmentsSchema), asyncHandler(handleGetSessionAttachments));
-router.post('/sessions/:sessionId/attachments', authenticateToken, requirePermission('write:sessions'), generalLimiter, uploadSessionAttachment, validateRequest(createSessionAttachmentSchema), asyncHandler(handleCreateSessionAttachment));
+router.post('/sessions/:sessionId/attachments', authenticateToken, requirePermission('write:sessions'), generalLimiter, uploadFile, validateRequest(createSessionAttachmentSchema), asyncHandler(handleCreateSessionAttachment));
 router.get('/sessions/:sessionId/attachments/:attachmentId/file', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionAttachmentParamsSchema), asyncHandler(handleGetSessionAttachmentFile));
 router.put('/sessions/:sessionId/attachments/:attachmentId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(updateSessionAttachmentSchema), asyncHandler(handleUpdateSessionAttachment));
 router.delete('/sessions/:sessionId/attachments/:attachmentId', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(sessionAttachmentParamsSchema), asyncHandler(handleDeleteSessionAttachment));

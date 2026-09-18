@@ -12,7 +12,7 @@ Middleware owns reusable HTTP request-chain behavior. It may authenticate a requ
 | `backend/src/middleware/rateLimiter.ts` | Apply general or operation-specific request limits and forward typed failures |
 | `backend/src/middleware/routeMiddleware.ts` | Wrap Express 4 async handlers, assign request IDs, and validate request input |
 | `backend/src/middleware/errorMiddleware.ts` | Classify thrown values, log them, and serialize the canonical error response |
-| `backend/src/middleware/*Upload.ts` | Parse one bounded in-memory upload and translate parser failures into typed errors |
+| `backend/src/middleware/fileUpload.ts` | Parse the standard bounded in-memory `file` upload and translate parser failures into typed errors |
 | `backend/src/validation/` | Own Zod schemas consumed by `validateRequest` |
 | `backend/src/services/` and `backend/src/policies/` | Own business decisions, authoritative reads, and record-level access |
 
@@ -36,7 +36,7 @@ A normal protected JSON route uses this order:
 4. parameter, query, and body `validateRequest(...)` calls
 5. `asyncHandler(controller)`
 
-Public routes omit authentication and authorization intentionally but still apply an appropriate limiter, validation, and `asyncHandler`. Upload parsing runs before validation that depends on the parsed file or multipart fields. Preserve the order unless the endpoint contract gives a concrete reason to differ.
+Public routes omit authentication and authorization intentionally but still apply an appropriate limiter, validation, and `asyncHandler`. Single-file endpoints use `uploadFile`, accept the multipart field `file`, and share the 15 MB transport limit and parser errors. Upload parsing runs before validation that depends on the parsed file or multipart fields. Endpoint services remain responsible for allowed file types and other domain rules. Preserve the order unless the endpoint contract gives a concrete reason to differ.
 
 ## Route example
 
@@ -51,6 +51,20 @@ router.patch(
   validateRequest(taskParamsSchema),
   validateRequest(updateTaskStatusSchema),
   asyncHandler(handleUpdateTaskStatus),
+);
+```
+
+For a single-file endpoint, insert `uploadFile` after the limiter and before multipart-dependent validation:
+
+```ts
+router.post(
+  '/images',
+  authenticateToken,
+  requirePermission('write:homepage'),
+  generalLimiter,
+  uploadFile,
+  validateRequest(createHomepageImageSchema),
+  asyncHandler(handleCreateHomepageImage),
 );
 ```
 

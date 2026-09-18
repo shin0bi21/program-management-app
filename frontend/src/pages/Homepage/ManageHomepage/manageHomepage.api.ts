@@ -22,7 +22,7 @@ export async function getManagedHomepage(opts?: RequestOptions) {
 
 export function createHomepageImage(data: { image: File; caption: string }) {
   const body = new FormData();
-  body.set('image', data.image);
+  body.set('file', data.image);
   body.set('caption', data.caption);
   return apiClient.post<{ id: string }>('/homepage/images', body);
 }
