@@ -3,43 +3,11 @@ import type { YouthQuery } from '../../validation/youthSchemas';
 
 /** Builds the parameterized filters for the youth profile list query. */
 export function applyYouthFilters(filters: YouthQuery) {
-  const activeEnrollmentExists = (programIds: string[] = [], cycleIds: string[] = []) => sql`EXISTS (
-    SELECT 1
-    FROM cohort_enrollments current_enrollment
-    INNER JOIN program_cohorts current_cohort
-      ON current_cohort.id = current_enrollment.cohort_id
-    INNER JOIN program_cycles current_cycle ON current_cycle.id = current_cohort.cycle_id
-    WHERE current_enrollment.youth_id = yp.user_id
-      AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
-      AND (
-        current_enrollment.withdrawn_on IS NULL
-        OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date
-      )
-      AND (NOW() AT TIME ZONE 'America/Toronto')::date
-        BETWEEN current_cycle.starts_on AND current_cycle.ends_on
-      ${programIds.length
-        ? sql`AND current_cohort.program_id = ANY(${sql.array(programIds)}::uuid[])`
-        : sql``}
-      ${cycleIds.length
-        ? sql`AND current_cohort.cycle_id = ANY(${sql.array(cycleIds)}::uuid[])`
-        : sql``}
-  )`;
-
-  const activeEnrollment = activeEnrollmentExists();
-  const activeOnly = filters.statuses.length === 1 && filters.statuses[0] === 'active';
-  const statusFilter = filters.statuses.length !== 1
-    ? sql`TRUE`
-    : activeOnly
-      ? activeEnrollment
-      : sql`NOT (${activeEnrollment})`;
-
   const hasParticipationFilter = filters.programIds.length > 0 || filters.cycleIds.length > 0;
 
   // Program and cycle selections must describe the same participation.
   let participationFilter = sql`TRUE`;
-  if (hasParticipationFilter && activeOnly) {
-    participationFilter = activeEnrollmentExists(filters.programIds, filters.cycleIds);
-  } else if (hasParticipationFilter) {
+  if (hasParticipationFilter) {
     participationFilter = sql`(
         EXISTS (
           SELECT 1
@@ -99,7 +67,7 @@ export function applyYouthFilters(filters: YouthQuery) {
       )`
     : sql`TRUE`;
 
-  return sql`${statusFilter} AND ${participationFilter} AND ${searchFilter}`;
+  return sql`${participationFilter} AND ${searchFilter}`;
 }
 
 function escapeLikePattern(value: string) {

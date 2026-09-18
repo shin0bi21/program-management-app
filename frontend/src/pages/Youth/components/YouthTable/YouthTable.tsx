@@ -29,7 +29,7 @@ export default function YouthTable({
   const tableData = useYouthTableData(filters, sorting);
   const selectedProfile = tableData.rows.find(profile => profile.id === selectedProfileId) ?? null;
   const hasFilters = Boolean(
-    filters?.search || filters?.statuses?.length || filters?.programIds?.length || filters?.cycleIds?.length,
+    filters?.search || filters?.programIds?.length || filters?.cycleIds?.length,
   );
   usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
 

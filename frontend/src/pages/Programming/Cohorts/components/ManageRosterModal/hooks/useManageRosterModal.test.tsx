@@ -1,12 +1,13 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { withdrawYouth } from '../../../cohorts.api';
+import { enrollYouth, withdrawYouth } from '../../../cohorts.api';
 import type { ProgramCohort } from '../../../types';
 import { makeYouthProfile } from '../../../../../../tests/factories/youth';
 import { useManageRosterModal } from './useManageRosterModal';
 
 vi.mock('../../../cohorts.api', () => ({
+  enrollYouth: vi.fn(),
   withdrawYouth: vi.fn(),
 }));
 
@@ -22,24 +23,46 @@ const youth = makeYouthProfile({ id: 'youth-1', firstName: 'Avery', lastName: 'Y
 describe('useManageRosterModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(enrollYouth).mockResolvedValue([]);
     vi.mocked(withdrawYouth).mockResolvedValue({} as never);
   });
 
-  it('owns nested enrollment transitions and resets them for a new cohort', () => {
-    const options = { cohort, refresh: vi.fn(), onSuccess: vi.fn() };
-    const { result, rerender } = renderHook(
-      ({ target }) => useManageRosterModal({ ...options, cohort: target }),
-      { initialProps: { target: cohort } },
-    );
+  it('enrolls an unchecked youth and reconciles both roster owners', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    const onSuccess = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }));
 
-    act(() => result.current.openEnrollment());
-    expect(result.current.addingYouth).toBe(true);
+    await act(() => result.current.addYouth(youth));
 
-    rerender({ target: { ...cohort, id: 'cohort-2' } });
-    expect(result.current.addingYouth).toBe(false);
+    expect(enrollYouth).toHaveBeenCalledWith('cohort-1', { youthIds: ['youth-1'] });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 
-  it('withdraws youth and reconciles both roster owners', async () => {
+  it('locks enrollment while a youth update is pending', async () => {
+    let finishEnrollment: () => void = () => {};
+    vi.mocked(enrollYouth).mockReturnValue(new Promise(resolve => {
+      finishEnrollment = () => resolve([]);
+    }));
+    const { result } = renderHook(() => useManageRosterModal({
+      cohort,
+      refresh: vi.fn(),
+      onSuccess: vi.fn(),
+    }));
+
+    act(() => {
+      void result.current.addYouth(youth);
+      void result.current.addYouth(makeYouthProfile({ id: 'youth-2' }));
+    });
+
+    expect(result.current.pendingYouthId).toBe('youth-1');
+    expect(enrollYouth).toHaveBeenCalledOnce();
+
+    await act(async () => finishEnrollment());
+    expect(result.current.pendingYouthId).toBeNull();
+  });
+
+  it('withdraws youth after confirmation and preserves attendance history', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }));
@@ -54,16 +77,34 @@ describe('useManageRosterModal', () => {
     expect(onSuccess).toHaveBeenCalledOnce();
   });
 
-  it('reports reconciliation failures without failing the completed withdrawal', async () => {
+  it('reports enrollment and reconciliation failures', async () => {
+    vi.mocked(enrollYouth).mockRejectedValueOnce(new Error('Enrollment failed'));
     const { result } = renderHook(() => useManageRosterModal({
       cohort,
       refresh: vi.fn().mockRejectedValue(new Error('Refresh failed')),
       onSuccess: vi.fn(),
     }));
 
-    act(() => result.current.requestWithdrawal(youth));
-    await act(async () => result.current.confirmAction?.onConfirm());
+    await act(() => result.current.addYouth(youth));
+    expect(result.current.actionError).toBe('Enrollment failed');
 
-    expect(result.current.refreshError).toContain('Youth was withdrawn');
+    vi.mocked(enrollYouth).mockResolvedValueOnce([]);
+    await act(() => result.current.addYouth(youth));
+    expect(result.current.actionError).toContain('was enrolled, but the roster could not refresh');
+  });
+
+  it('resets workflow state for a different cohort', async () => {
+    vi.mocked(enrollYouth).mockRejectedValue(new Error('Enrollment failed'));
+    const options = { refresh: vi.fn(), onSuccess: vi.fn() };
+    const { result, rerender } = renderHook(
+      ({ target }) => useManageRosterModal({ ...options, cohort: target }),
+      { initialProps: { target: cohort } },
+    );
+
+    await act(() => result.current.addYouth(youth));
+    expect(result.current.actionError).toBe('Enrollment failed');
+
+    rerender({ target: { ...cohort, id: 'cohort-2' } });
+    await waitFor(() => expect(result.current.actionError).toBe(''));
   });
 });
