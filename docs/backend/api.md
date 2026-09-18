@@ -2,6 +2,8 @@
 
 Paths are relative to `/api`. Protected endpoints require the permissions declared by the route and summarized in the [RBAC model](auth.md#3-rbac-model). Route files under [`backend/src/routes/`](../../backend/src/routes/) are authoritative for exact paths, validation middleware, and required permissions.
 
+Single-file uploads use `multipart/form-data`, put the binary file in the `file` field, and accept files up to 15 MB. Each endpoint's service validates its supported file types and any accompanying multipart fields.
+
 ### Authentication — `/auth`
 
 | Method | Path | Purpose |
