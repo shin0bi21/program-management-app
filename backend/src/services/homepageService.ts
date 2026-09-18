@@ -27,12 +27,24 @@ const supportedImageTypes = new Map([
 
 type HomepageImageVariant = 'original' | 'thumbnail' | 'mobile' | 'display';
 
+interface HomepageProgramRow {
+  programId: string;
+  programName: string;
+  programDescription: string | null;
+  rosterMode: 'enrolled' | 'open';
+  minAge: number | null;
+  maxAge: number | null;
+  sessionId: string | null;
+  sessionTheme: string | null;
+  sessionStartsAt: string | null;
+}
+
 export async function getPublicHomepageImages() {
   return { images: await homepageImages() };
 }
 
-export async function getPublicHomepageSessions() {
-  return { sessions: await homepageSessions() };
+export async function getPublicHomepagePrograms() {
+  return { programs: await homepagePrograms() };
 }
 
 export async function getManagedHomepage() {
@@ -233,46 +245,80 @@ function homepageImages() {
   `;
 }
 
-function homepageSessions() {
-  return sql`
+async function homepagePrograms() {
+  const rows = await sql<HomepageProgramRow[]>`
     WITH ranked_sessions AS (
       SELECT
-        cs.id,
-        cs.cohort_id,
-        cs.theme,
-        cs.description,
-        cs.starts_at,
-        cs.ends_at,
-        cs.created_at AS added_at,
-        cycle.name AS cohort_name,
-        p.id AS program_id,
-        p.name AS program_name,
-        p.description AS program_description,
-        p.roster_mode,
-        p.min_age,
-        p.max_age,
+        pc.program_id,
+        cs.id AS session_id,
+        cs.theme AS session_theme,
+        cs.starts_at AS session_starts_at,
         ROW_NUMBER() OVER (
-          PARTITION BY p.id
-          ORDER BY cs.starts_at
+          PARTITION BY pc.program_id
+          ORDER BY cs.starts_at, cs.id
         ) AS program_session_order
       FROM cohort_sessions cs
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
-      INNER JOIN programs p ON p.id = pc.program_id
       WHERE cs.ends_at >= NOW()
         AND cs.cancelled_at IS NULL
-        AND p.name IN ('Drop In', 'Soft Skills', 'Job Readiness')
     )
-    SELECT *
-    FROM ranked_sessions
-    WHERE program_session_order <= 3
+    SELECT
+      p.id AS program_id,
+      p.name AS program_name,
+      p.description AS program_description,
+      p.roster_mode,
+      p.min_age,
+      p.max_age,
+      ranked.session_id,
+      ranked.session_theme,
+      ranked.session_starts_at
+    FROM programs p
+    LEFT JOIN ranked_sessions ranked
+      ON ranked.program_id = p.id
+      AND ranked.program_session_order <= 3
     ORDER BY
-      CASE program_name
-        WHEN 'Drop In' THEN 1
-        WHEN 'Soft Skills' THEN 2
-        WHEN 'Job Readiness' THEN 3
-        ELSE 4
-      END,
-      starts_at
+      p.min_age ASC NULLS FIRST,
+      p.name,
+      ranked.session_starts_at,
+      ranked.session_id
   `;
+
+  const programs = new Map<string, {
+    id: string;
+    name: string;
+    description: string | null;
+    rosterMode: 'enrolled' | 'open';
+    minAge: number | null;
+    maxAge: number | null;
+    sessions: Array<{ id: string; theme: string; startsAt: string }>;
+  }>();
+
+  for (const row of rows) {
+    let program = programs.get(row.programId);
+    if (!program) {
+      program = {
+        id: row.programId,
+        name: row.programName,
+        description: row.programDescription,
+        rosterMode: row.rosterMode,
+        minAge: row.minAge,
+        maxAge: row.maxAge,
+        sessions: [],
+      };
+      programs.set(row.programId, program);
+    }
+
+    if (row.sessionId === null) continue;
+    if (row.sessionTheme === null || row.sessionStartsAt === null) {
+      throw new Error(`Homepage session ${row.sessionId} is missing required data`);
+    }
+
+    program.sessions.push({
+      id: row.sessionId,
+      theme: row.sessionTheme,
+      startsAt: row.sessionStartsAt,
+    });
+  }
+
+  return [...programs.values()];
 }

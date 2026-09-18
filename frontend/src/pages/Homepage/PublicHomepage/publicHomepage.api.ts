@@ -2,7 +2,7 @@ import type { PublicOutreachFormValues } from '../../../common/features/Outreach
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import { apiUrl } from '../../../http/transport';
-import type { HomepageSession } from './types';
+import type { HomepageProgram } from './types';
 
 export interface HomepageImage {
   id: string;
@@ -40,8 +40,8 @@ export async function getPublicHomepageImages(opts: RequestOptions = {}) {
   return { images: content.images.map(resolveImageUrl) };
 }
 
-export function getPublicHomepageSessions(opts: RequestOptions = {}) {
-  return apiClient.get<{ sessions: HomepageSession[] }>('/public/homepage/sessions', {
+export function getPublicHomepagePrograms(opts: RequestOptions = {}) {
+  return apiClient.get<{ programs: HomepageProgram[] }>('/public/homepage/programs', {
     ...opts,
     auth: false,
   });

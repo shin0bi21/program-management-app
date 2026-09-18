@@ -1,56 +1,51 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { HomepageSession } from '../../types';
+import type { HomepageProgram } from '../../types';
 import ProgrammingSection from './ProgrammingSection';
 
-const sessions = [
+const programs = [
   {
-    id: 'session-1',
-    cohortId: 'cohort-1',
-    theme: 'Communication',
-    description: null,
-    startsAt: '2026-08-04T21:00:00.000Z',
-    endsAt: '2026-08-04T23:00:00.000Z',
-    cohortName: 'Summer 2026',
-    programId: 'program-1',
-    programName: 'Future Ready',
-    programDescription: 'Build communication skills.',
+    id: 'program-1',
+    name: 'Future Ready',
+    description: 'Build communication skills.',
     rosterMode: 'enrolled',
     minAge: 12,
     maxAge: 15,
-    addedAt: '2026-07-27T12:00:00.000Z',
+    sessions: [{
+      id: 'session-1',
+      theme: 'Communication',
+      startsAt: '2026-08-04T21:00:00.000Z',
+    }],
   },
-] satisfies HomepageSession[];
+] satisfies HomepageProgram[];
 
 describe('ProgrammingSection', () => {
-  it('renders one card per homepage program without duplicating programs by session', () => {
-    const { container } = render(<ProgrammingSection sessions={sessions} />);
+  it('renders the grouped programs returned by the public API', () => {
+    const { container } = render(<ProgrammingSection programs={programs} />);
 
     expect(screen.getByRole('heading', { name: /programming/i })).toBeInTheDocument();
-    expect(container.querySelectorAll('.program-card')).toHaveLength(3);
-    expect(screen.getAllByText('Future Ready Program')).toHaveLength(1);
+    expect(container.querySelectorAll('.program-card')).toHaveLength(1);
+    expect(screen.getByText('Future Ready')).toBeInTheDocument();
+    expect(screen.getByText('Communication')).toBeInTheDocument();
   });
 
-  it('keeps all program cards when no sessions are scheduled', () => {
-    render(<ProgrammingSection sessions={[]} />);
-    expect(screen.getByText('Drop-in Days')).toBeInTheDocument();
-    expect(screen.getByText('Future Ready Program')).toBeInTheDocument();
-    expect(screen.getByText('Job Readiness Program')).toBeInTheDocument();
+  it('shows the empty state when the API has no programs', () => {
+    render(<ProgrammingSection programs={[]} />);
+    expect(screen.getByText('No programs available.')).toBeInTheDocument();
   });
 
-  it('keeps program cards present while schedules load', () => {
-    render(<ProgrammingSection sessions={[]} loading />);
+  it('shows one loading state while programs load', () => {
+    render(<ProgrammingSection programs={[]} loading />);
 
-    expect(screen.getAllByText('Loading schedule…')).toHaveLength(3);
+    expect(screen.getByText('Loading programs…')).toBeInTheDocument();
     expect(document.querySelector('.program-grid')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('shows one retry action when schedules fail', () => {
     const onRetry = vi.fn();
-    render(<ProgrammingSection sessions={[]} error="Network error" onRetry={onRetry} />);
+    render(<ProgrammingSection programs={[]} error="Network error" onRetry={onRetry} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Upcoming schedules couldn’t load.');
-    expect(screen.getAllByText('Schedule unavailable.')).toHaveLength(3);
+    expect(screen.getByRole('alert')).toHaveTextContent('Programming couldn’t load.');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });

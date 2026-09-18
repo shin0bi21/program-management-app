@@ -6,8 +6,8 @@ import PublicHomepage from './PublicHomepage';
 const homepageState = vi.hoisted(() => ({
   imagesLoading: false,
   imagesError: null as string | null,
-  sessionsLoading: false,
-  sessionsError: null as string | null,
+  programsLoading: false,
+  programsError: null as string | null,
 }));
 const mockUseSectionRouting = vi.hoisted(() => vi.fn());
 
@@ -41,11 +41,11 @@ vi.mock('./hooks/useHomepageImages', () => ({
   }),
 }));
 
-vi.mock('./hooks/useHomepageSessions', () => ({
-  useHomepageSessions: () => ({
-    sessions: [],
-    loading: homepageState.sessionsLoading,
-    error: homepageState.sessionsError,
+vi.mock('./hooks/useHomepagePrograms', () => ({
+  useHomepagePrograms: () => ({
+    programs: [],
+    loading: homepageState.programsLoading,
+    error: homepageState.programsError,
     refresh: vi.fn(),
   }),
 }));
@@ -58,8 +58,8 @@ describe('PublicHomepage', () => {
   beforeEach(() => {
     homepageState.imagesLoading = false;
     homepageState.imagesError = null;
-    homepageState.sessionsLoading = false;
-    homepageState.sessionsError = null;
+    homepageState.programsLoading = false;
+    homepageState.programsError = null;
     mockUseSectionRouting.mockClear();
   });
 
@@ -98,8 +98,8 @@ describe('PublicHomepage', () => {
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
   });
 
-  it('renders hero images independently while programming sessions load', () => {
-    homepageState.sessionsLoading = true;
+  it('renders hero images independently while programming loads', () => {
+    homepageState.programsLoading = true;
     render(
       <MemoryRouter>
         <PublicHomepage />
@@ -107,6 +107,6 @@ describe('PublicHomepage', () => {
     );
 
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
-    expect(screen.getAllByText('Loading schedule…')).toHaveLength(3);
+    expect(screen.getByText('Loading programs…')).toBeInTheDocument();
   });
 });
