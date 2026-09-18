@@ -65,6 +65,38 @@ describe('SessionNotesDashboardCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
     expect(screen.getByRole('heading', { name: 'Session Note' })).toBeInTheDocument();
     expect(screen.getByText(note.details)).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Session note navigation' })).not.toBeInTheDocument();
+  });
+
+  it('navigates between multiple note details and disables arrows at the ends', async () => {
+    const notes = [
+      { ...note, id: 'note-1', details: 'First note.' },
+      { ...note, id: 'note-2', details: 'Second note.' },
+      { ...note, id: 'note-3', details: 'Third note.' },
+    ];
+    api.getSessionNotes.mockResolvedValue(notes);
+    renderWithQueryClient(<SessionNotesDashboardCard queryKey={queryKey} session={session} canWrite />);
+
+    const viewButtons = await screen.findAllByRole('button', { name: 'View session note' });
+    fireEvent.click(viewButtons[1]);
+
+    const previous = screen.getByRole('button', { name: 'Previous session note' });
+    const next = screen.getByRole('button', { name: 'Next session note' });
+    expect(screen.getByText('Second note.')).toBeInTheDocument();
+    expect(screen.getByText('2 of 3')).toBeInTheDocument();
+    expect(previous).toBeEnabled();
+    expect(next).toBeEnabled();
+
+    fireEvent.click(next);
+    expect(screen.getByText('Third note.')).toBeInTheDocument();
+    expect(screen.getByText('3 of 3')).toBeInTheDocument();
+    expect(next).toBeDisabled();
+
+    fireEvent.click(previous);
+    fireEvent.click(previous);
+    expect(screen.getByText('First note.')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3')).toBeInTheDocument();
+    expect(previous).toBeDisabled();
   });
 
   it('opens editing and deletes through the card-owned confirmation flow', async () => {
