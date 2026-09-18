@@ -151,9 +151,14 @@ describe('Homepage management API', () => {
     expect((await request(app).get(`/api/public/homepage/images/${created.body.id}/display`)).status).toBe(404);
   });
 
-  it('automatically returns the next three sessions for each homepage program', async () => {
-    const publicContent = await request(app).get('/api/public/homepage/sessions');
+  it('returns every program with its next three sessions in age order', async () => {
+    const publicContent = await request(app).get('/api/public/homepage/programs');
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const orderedPrograms = await sql<{ id: string }[]>`
+      SELECT id
+      FROM programs
+      ORDER BY min_age ASC NULLS FIRST, name
+    `;
     const expected = await sql<{ id: string }[]>`
       SELECT cs.id
       FROM cohort_sessions cs
@@ -164,15 +169,27 @@ describe('Homepage management API', () => {
       ORDER BY cs.starts_at
       LIMIT 3
     `;
-    const softSkillsSessions = publicContent.body.sessions.filter(
-      (session: { programId: string }) => session.programId === program.id,
+    expect(publicContent.status).toBe(200);
+    expect(publicContent.body.programs.map((item: { id: string }) => item.id))
+      .toEqual(orderedPrograms.map(item => item.id));
+    const softSkills = publicContent.body.programs.find(
+      (item: { id: string }) => item.id === program.id,
     );
-    expect(softSkillsSessions.map((session: { id: string }) => session.id))
+    expect(softSkills).toEqual(expect.objectContaining({
+      name: 'Soft Skills',
+      rosterMode: 'enrolled',
+      minAge: 12,
+      maxAge: 15,
+    }));
+    expect(softSkills.sessions.map((session: { id: string }) => session.id))
       .toEqual(expected.map(session => session.id));
+    expect(publicContent.body.programs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Job Readiness', sessions: expect.any(Array) }),
+    ]));
 
     const managed = await request(app).get('/api/homepage').set('Authorization', `Bearer ${staffToken}`);
     expect(managed.status).toBe(200);
-    expect(managed.body.sessions).toBeUndefined();
+    expect(managed.body.programs).toBeUndefined();
   });
 
   it('does not allow youth accounts to manage homepage content', async () => {

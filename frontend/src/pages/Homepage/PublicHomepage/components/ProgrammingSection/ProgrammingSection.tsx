@@ -1,23 +1,20 @@
 import Button from '../../../../../common/components/Button/Button';
 import ProgramCard from './ProgramCard/ProgramCard';
-import type { HomepageSession } from '../../types';
-import { programs } from './programmingSectionData';
+import type { HomepageProgram } from '../../types';
 
 type ProgrammingSectionProps = {
-  sessions: HomepageSession[];
+  programs: HomepageProgram[];
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
 };
 
 export default function ProgrammingSection({
-  sessions,
+  programs,
   loading = false,
   error = null,
   onRetry,
 }: ProgrammingSectionProps) {
-  const sessionsState = loading ? 'loading' : error ? 'error' : 'ready';
-
   return (
     <section id="programming" className="offerings-section" aria-labelledby="offerings-title">
       <div className="section-inner">
@@ -28,7 +25,7 @@ export default function ProgrammingSection({
         </div>
         {error && (
           <div className="programming-request-error" role="alert">
-            <span>Upcoming schedules couldn’t load.</span>
+            <span>Programming couldn’t load.</span>
             {onRetry && (
               <Button size="sm" variant="secondary" onClick={onRetry}>
                 Retry
@@ -37,14 +34,16 @@ export default function ProgrammingSection({
           </div>
         )}
         <div className="program-grid" aria-busy={loading}>
-          {programs.map((program) => (
+          {loading ? (
+            <p className="program-empty" role="status">Loading programs…</p>
+          ) : programs.length ? programs.map((program) => (
             <ProgramCard
-              key={program.programName}
+              key={program.id}
               program={program}
-              sessions={sessions.filter((session) => session.programName === program.programName)}
-              sessionsState={sessionsState}
             />
-          ))}
+          )) : !error ? (
+            <p className="program-empty">No programs available.</p>
+          ) : null}
         </div>
       </div>
     </section>

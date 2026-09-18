@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { getErrorMessage } from '../../../../http/errors';
-import { getPublicHomepageSessions } from '../publicHomepage.api';
+import { getPublicHomepagePrograms } from '../publicHomepage.api';
 
-export function useHomepageSessions() {
+export function useHomepagePrograms() {
   const query = useQuery({
-    queryKey: ['homepage', 'public', 'sessions'],
-    queryFn: ({ signal }) => getPublicHomepageSessions({ signal }),
+    queryKey: ['homepage', 'public', 'programs'],
+    queryFn: ({ signal }) => getPublicHomepagePrograms({ signal }),
   });
 
   return {
-    sessions: query.data?.sessions ?? [],
+    programs: query.data?.programs ?? [],
     loading: query.isLoading || (query.isFetching && !query.data),
     error: query.error && !query.data ? getErrorMessage(query.error) : null,
     refresh: async () => { await query.refetch(); },
