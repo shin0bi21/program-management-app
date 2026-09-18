@@ -6,7 +6,7 @@ import {
   getHomepageImageFile,
   getManagedHomepage,
   getPublicHomepageImages,
-  getPublicHomepageSessions,
+  getPublicHomepagePrograms,
   reorderHomepageImages,
   updateHomepageImage,
 } from '../services/homepageService';
@@ -22,8 +22,8 @@ export const handleGetPublicHomepageImages = async (_req: Request, res: Response
   res.json(await getPublicHomepageImages());
 };
 
-export const handleGetPublicHomepageSessions = async (_req: Request, res: Response) => {
-  res.json(await getPublicHomepageSessions());
+export const handleGetPublicHomepagePrograms = async (_req: Request, res: Response) => {
+  res.json(await getPublicHomepagePrograms());
 };
 
 export const handleGetManagedHomepage = async (_req: Request, res: Response) => {

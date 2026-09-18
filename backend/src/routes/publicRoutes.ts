@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   handleGetHomepageImageFile,
   handleGetPublicHomepageImages,
-  handleGetPublicHomepageSessions,
+  handleGetPublicHomepagePrograms,
 } from '../controllers/homepageController';
 import { handlePublicLead } from '../controllers/publicController';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
@@ -13,7 +13,7 @@ import { homepageImageFileParamsSchema, homepageImageParamsSchema } from '../val
 const router = Router();
 
 router.get('/homepage/images', generalLimiter, asyncHandler(handleGetPublicHomepageImages));
-router.get('/homepage/sessions', generalLimiter, asyncHandler(handleGetPublicHomepageSessions));
+router.get('/homepage/programs', generalLimiter, asyncHandler(handleGetPublicHomepagePrograms));
 router.get(
   '/homepage/images/:imageId/file',
   generalLimiter,

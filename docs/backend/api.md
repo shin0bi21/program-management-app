@@ -99,6 +99,11 @@ search, date-range and pagination filters while preserving program access restri
 | `/expressions-of-interest` | Internal review, status updates, and lead conversion |
 | `/leads` | Lead intake, status management, follow-up notes, and youth signup |
 
+`GET /public/homepage/programs` returns every program ordered by minimum age,
+with null age ranges first, and nests its next three non-cancelled sessions.
+Programs remain present when they have no upcoming sessions; names, descriptions,
+age ranges, and attendance mode come directly from the program record.
+
 Lead workflow endpoints:
 
 | Method | Path | Purpose |

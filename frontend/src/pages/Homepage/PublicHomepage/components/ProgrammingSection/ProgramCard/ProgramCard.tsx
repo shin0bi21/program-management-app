@@ -1,5 +1,4 @@
-import type { HomepageSession } from '../../../types';
-import type { Program } from './programCardSchema';
+import type { HomepageProgram, HomepageSession } from '../../../types';
 
 const monthFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short' });
 const millisecondsPerDay = 86_400_000;
@@ -12,20 +11,13 @@ function daysUntil(startsAt: string) {
   return Math.round((sessionDate.getTime() - today.getTime()) / millisecondsPerDay);
 }
 
-type SessionsState = 'ready' | 'loading' | 'error';
-
 function UpcomingSessions({
   sessions,
   dropIn,
-  state,
 }: {
   sessions: HomepageSession[];
   dropIn?: boolean;
-  state: SessionsState;
 }) {
-  if (state === 'loading') return <p className="program-empty">Loading schedule…</p>;
-  if (state === 'error') return <p className="program-empty">Schedule unavailable.</p>;
-
   const [next] = sessions;
 
   if (!next) {
@@ -64,25 +56,30 @@ function UpcomingSessions({
 }
 
 interface ProgramCardProps {
-  program: Program;
-  sessions: HomepageSession[];
-  sessionsState?: SessionsState;
+  program: HomepageProgram;
 }
 
-export default function ProgramCard({ program, sessions, sessionsState = 'ready' }: ProgramCardProps) {
+function formatAgeRange(minAge: number | null, maxAge: number | null) {
+  if (minAge === null || maxAge === null) return 'All Ages';
+  if (minAge === maxAge) return `Age ${minAge}`;
+  return `Ages ${minAge}–${maxAge}`;
+}
+
+export default function ProgramCard({ program }: ProgramCardProps) {
+  const dropIn = program.rosterMode === 'open';
+
   return (
     <article className="program-card">
       <header className="program-card-head">
-        <span className="program-schedule">{program.day}</span>
-        <p className="program-age">{program.age}</p>
+        <h3 className="program-title">{program.name}</h3>
+        <p className="program-age">{formatAgeRange(program.minAge, program.maxAge)}</p>
       </header>
       <div className="program-copy-block">
-        <span className="program-copy-label">{program.dropIn ? 'Drop-in Days' : program.title}</span>
-        <p className="program-copy">{program.copy}</p>
+        {program.description && <p className="program-copy">{program.description}</p>}
       </div>
       <div className="program-sessions">
         <p className="program-sessions-label">Upcoming</p>
-        <UpcomingSessions sessions={sessions} dropIn={program.dropIn} state={sessionsState} />
+        <UpcomingSessions sessions={program.sessions} dropIn={dropIn} />
       </div>
     </article>
   );

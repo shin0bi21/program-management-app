@@ -8,7 +8,7 @@ import SiteFooter from './components/SiteFooter/SiteFooter';
 import TeamSection from './components/TeamSection/TeamSection';
 
 import { useHomepageImages } from './hooks/useHomepageImages';
-import { useHomepageSessions } from './hooks/useHomepageSessions';
+import { useHomepagePrograms } from './hooks/useHomepagePrograms';
 import { useSectionRouting } from './hooks/useSectionRouting';
 
 import './PublicHomepage.css';
@@ -16,8 +16,8 @@ import '../../../common/styles/forms.css';
 
 export default function PublicHomepage() {
   const imageQuery = useHomepageImages();
-  const sessionQuery = useHomepageSessions();
-  useSectionRouting({ disabled: imageQuery.loading || sessionQuery.loading });
+  const programQuery = useHomepagePrograms();
+  useSectionRouting({ disabled: imageQuery.loading || programQuery.loading });
 
   const managedPhotos = imageQuery.images.map((image) => ({
     src: image.imageUrl,
@@ -37,10 +37,10 @@ export default function PublicHomepage() {
           onRetry={() => void imageQuery.refresh()}
         />
         <ProgrammingSection
-          sessions={sessionQuery.sessions}
-          loading={sessionQuery.loading}
-          error={sessionQuery.error}
-          onRetry={() => void sessionQuery.refresh()}
+          programs={programQuery.programs}
+          loading={programQuery.loading}
+          error={programQuery.error}
+          onRetry={() => void programQuery.refresh()}
         />
         <SignupSection />
         <HistorySection />

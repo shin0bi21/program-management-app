@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../http/client';
 import {
   getPublicHomepageImages,
-  getPublicHomepageSessions,
+  getPublicHomepagePrograms,
   submitPublicLead,
 } from './publicHomepage.api';
 
@@ -43,8 +43,8 @@ describe('publicHomepage API', () => {
     expect(result.images[0].imageUrl).toBe('https://api.example.test/public/image.webp');
   });
 
-  it('loads public sessions and submits expressions of interest without authentication', () => {
-    getPublicHomepageSessions();
+  it('loads public programs and submits expressions of interest without authentication', () => {
+    getPublicHomepagePrograms();
     const payload = {
       youthFirstName: 'Jamie',
       youthLastName: 'Test',
@@ -57,7 +57,7 @@ describe('publicHomepage API', () => {
     };
     submitPublicLead(payload);
 
-    expect(get).toHaveBeenCalledWith('/public/homepage/sessions', { auth: false });
+    expect(get).toHaveBeenCalledWith('/public/homepage/programs', { auth: false });
     expect(post).toHaveBeenCalledWith('/public/leads', payload, { auth: false });
   });
 });
