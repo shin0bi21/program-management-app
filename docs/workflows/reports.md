@@ -17,6 +17,27 @@ The default report examines the five most recent pull requests merged to `develo
 
 The command requires authenticated GitHub CLI access. Run `gh auth status` if it cannot retrieve repository or Actions data. See [Continuous integration](ci.md) for workflow behavior and failure reproduction.
 
+## Deployment history report
+
+Render the deployment-path timing table from the committed per-run JSON:
+
+```bash
+npm run report:deployments
+npm run report:deployments -- --type frontend
+npm run report:deployments -- --type frontend --exclusive
+npm run report:deployments -- --type frontend --type backend
+npm run report:deployments -- --since 2026-09-01 --until 2026-09-30
+```
+
+The command calculates every displayed aggregate from
+`data/reports/deployment-history.json`. The JSON remains the sole source of
+deployment timing data; the report does not query GitHub or maintain a second
+copy of the measurements. A type filter normally includes every deployment in
+which that component participated; add `--exclusive` to require exactly the
+selected component combination. Repeat `--type` to select combinations such as
+frontend plus backend. Date bounds are inclusive and use each deployment job's
+UTC start date.
+
 ## LOC report
 
 Use the LOC report for a repository-size breakdown. It excludes `.git`, `node_modules`, and `dist` output, and separates TypeScript and React source from their tests:
