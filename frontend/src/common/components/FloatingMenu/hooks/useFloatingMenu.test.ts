@@ -112,4 +112,24 @@ describe('useFloatingMenu', () => {
     act(() => result.current.close());
     expect(result.current.position).toBeNull();
   });
+
+  it('stays open for menu content scrolling and closes for viewport scrolling', () => {
+    const trigger = document.createElement('button');
+    const menu = document.createElement('div');
+    const scrollableContent = document.createElement('div');
+    menu.append(scrollableContent);
+    document.body.append(trigger, menu);
+    const { result } = renderHook(() => useFloatingMenu(
+      { current: trigger },
+      { side: 'bottom', align: 'start' },
+    ));
+    (result.current.menuRef as { current: HTMLDivElement | null }).current = menu;
+
+    act(() => result.current.open());
+    fireEvent.scroll(scrollableContent);
+    expect(result.current.isOpen).toBe(true);
+
+    fireEvent.scroll(window);
+    expect(result.current.isOpen).toBe(false);
+  });
 });

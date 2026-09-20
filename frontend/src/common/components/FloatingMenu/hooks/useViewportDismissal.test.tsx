@@ -25,4 +25,25 @@ describe('useViewportDismissal', () => {
     expect(removeEventListener.mock.calls.filter(([event]) => event === 'scroll')).toHaveLength(1);
     expect(removeEventListener.mock.calls.filter(([event]) => event === 'resize')).toHaveLength(1);
   });
+
+  it('keeps floating UI open when its own scrollable content scrolls', () => {
+    const onDismiss = vi.fn();
+    const floatingUi = document.createElement('div');
+    const scrollableContent = document.createElement('div');
+    floatingUi.append(scrollableContent);
+    const ignoreScrollWithinRef = { current: floatingUi };
+    const hook = renderHook(() => useViewportDismissal(
+      true,
+      onDismiss,
+      ignoreScrollWithinRef,
+    ));
+
+    act(() => scrollableContent.dispatchEvent(new Event('scroll')));
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    act(() => window.dispatchEvent(new Event('scroll')));
+    expect(onDismiss).toHaveBeenCalledOnce();
+
+    hook.unmount();
+  });
 });
