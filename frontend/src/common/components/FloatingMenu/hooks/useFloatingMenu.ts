@@ -60,7 +60,11 @@ export function useFloatingMenu(
     anchorPointRef.current = null;
     setPosition(null);
   }, []);
-  useViewportDismissal(isOpen && options.dismissOnViewportChange !== false, close);
+  useViewportDismissal(
+    isOpen && options.dismissOnViewportChange !== false,
+    close,
+    menuRef,
+  );
 
   const open = useCallback(() => {
     if (!triggerRef.current) return;
