@@ -21,6 +21,8 @@ git diff --check
 
 Use `bash scripts/tests/test-app.sh --plan-changed` when test ownership is uncertain. Required GitHub checks, rather than repeated full local suites, are the merge gate.
 
+Treat lint, typecheck, formatting, coverage, build, and test output as evidence. A change made to clear a diagnostic must still preserve behavior, type precision, ownership, and readability. Review suppressions, casts, fallback values, extra state, and memoization for an independent technical reason; a clean tool report does not resolve a code defect. Report remaining diagnostics when the sound fix is outside scope.
+
 Agents use the repository `map-changes` and `review-changes` skills for these phases. Humans follow the same concern and evidence boundaries.
 
 ## 3. Hand off

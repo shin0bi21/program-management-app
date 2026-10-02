@@ -70,6 +70,8 @@ Pure utilities and finite policy or capability rules use representative inputs, 
 
 Use the record returned by the backend after a mutation. Do not rebuild it from form values.
 
+When loads or mutations can overlap, define how stale responses are ignored or reconciled. Check out-of-order completion, repeated edits to one item, rollback order, reset during loading, and deletion followed by a late response. Use cancellation, serialization, or revisions as the owner requires, and test that stale work cannot replace newer state.
+
 The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
 
 ## Keep application selection with its domain
