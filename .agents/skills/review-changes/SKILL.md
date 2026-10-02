@@ -36,19 +36,15 @@ Keep the primary reviewer on the strongest available model and reasoning tier. U
 - Do not parallelize a small or tightly coupled concern, and do not have reviewers modify files.
 - Treat delegated findings as evidence to verify, not conclusions to forward unexamined.
 
-## 2. Load conditional review guidance
+## 2. Load owning documentation
 
-Read only the references required by the current diff, and read each selected file completely:
+Use the repository docs as the review contract. Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) and [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) as directed above, then the focused owner guides for the changed surfaces:
 
-- Always read [`references/tooling-quality.md`](references/tooling-quality.md) when changes respond to lint, typecheck, formatting, coverage, test, or build diagnostics.
-- Read [`references/structure-and-ownership.md`](references/structure-and-ownership.md) for non-trivial implementation changes, shared extractions, or directory/ownership changes.
-- Read [`references/react-rendering-and-state.md`](references/react-rendering-and-state.md) for React UI, grids, calendars, drag/drop, optimistic state, realtime state, or render-sensitive work.
-- Read [`references/testing.md`](references/testing.md) whenever behavior, tests, runners, APIs, persistence, or asynchronous flows change.
-- For frontend changes, read [`docs/frontend/README.md`](../../../docs/frontend/README.md), then read only the focused guides under `docs/frontend/` for the surfaces changed. Review must enforce the same owning contract implementation was supposed to follow without routing through unrelated component guides.
-- For backend changes, read [`docs/backend/README.md`](../../../docs/backend/README.md), then read every applicable focused middleware, service, policy, database, testing, error, auth, API, or integration guide under `docs/backend/`.
-- For permissions, ownership, assignments, resource visibility, or writable capabilities, also read [`authorization.md`](../../../docs/backend/authorization.md).
+- For frontend changes, start at [`docs/frontend/README.md`](../../../docs/frontend/README.md). Follow its links for ownership, components, state, rendering, and affected page or component surfaces.
+- For backend changes, start at [`docs/backend/README.md`](../../../docs/backend/README.md). Read the applicable middleware, service, policy, database, testing, error, auth, API, or integration guides.
+- For permissions, ownership, assignments, resource visibility, or writable capabilities, read [`authorization.md`](../../../docs/backend/authorization.md).
 
-For a cross-stack or repository-wide review, read all applicable references. Do not skip a reference merely because the diff is large.
+For a cross-stack or repository-wide review, read all applicable owner guides. Do not skip a guide merely because the diff is large.
 
 When an established business capability changes, verify its types, validation, policies, persistence, APIs, consumers, and authoritative tests remain aligned. Treat executable contracts as the source of truth rather than maintaining parallel feature prose.
 
@@ -64,7 +60,7 @@ For the selected concern group:
 6. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
 7. Review new and changed code for cognitive complexity, verbose methods, and defensive clutter. Prefer concise execution-order methods and clean, thorough structures that make behavior explicit without speculative abstractions, redundant guards, or duplicated sources of truth.
 8. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
-9. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized skill maintenance, correct the narrowest reusable reference before the final review.
+9. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized documentation maintenance, correct the narrowest owning guide before the final review.
 
 Treat inconsistent nearby code as historical context, not as a pattern to reproduce. Passing tests, lint, or typecheck do not override a correctness or maintainability finding.
 
