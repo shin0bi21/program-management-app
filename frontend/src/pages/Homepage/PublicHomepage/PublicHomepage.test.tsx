@@ -8,6 +8,9 @@ const homepageState = vi.hoisted(() => ({
   imagesError: null as string | null,
   programsLoading: false,
   programsError: null as string | null,
+  signupEnabled: true,
+  signupLoading: false,
+  signupError: null as string | null,
 }));
 const mockUseSectionRouting = vi.hoisted(() => vi.fn());
 
@@ -41,6 +44,15 @@ vi.mock('./hooks/useHomepageImages', () => ({
   }),
 }));
 
+vi.mock('./hooks/useHomepageSignup', () => ({
+  useHomepageSignup: () => ({
+    signupEnabled: homepageState.signupEnabled,
+    loading: homepageState.signupLoading,
+    error: homepageState.signupError,
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('./hooks/useHomepagePrograms', () => ({
   useHomepagePrograms: () => ({
     programs: [],
@@ -60,7 +72,22 @@ describe('PublicHomepage', () => {
     homepageState.imagesError = null;
     homepageState.programsLoading = false;
     homepageState.programsError = null;
+    homepageState.signupEnabled = true;
+    homepageState.signupLoading = false;
+    homepageState.signupError = null;
     mockUseSectionRouting.mockClear();
+  });
+
+  it('hides signup navigation and content when signup is disabled', () => {
+    homepageState.signupEnabled = false;
+    render(
+      <MemoryRouter>
+        <PublicHomepage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Sign Up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Interested?' })).not.toBeInTheDocument();
   });
 
   it('composes public navigation with loaded homepage content', () => {
@@ -109,4 +136,21 @@ describe('PublicHomepage', () => {
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
     expect(screen.getByText('Loading programs…')).toBeInTheDocument();
   });
+  it('keeps signup available when photos fail', () => {
+    homepageState.imagesError = 'Photos unavailable';
+    render(<MemoryRouter><PublicHomepage /></MemoryRouter>);
+
+    expect(screen.getByRole('link', { name: 'Sign Up' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Interested?' })).toBeInTheDocument();
+  });
+
+  it('keeps photos visible when signup availability fails', () => {
+    homepageState.signupEnabled = false;
+    homepageState.signupError = 'Signup availability unavailable';
+    render(<MemoryRouter><PublicHomepage /></MemoryRouter>);
+
+    expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
+    expect(screen.getByRole('alert', { name: 'Signup availability' })).toHaveTextContent(homepageState.signupError);
+  });
+
 });

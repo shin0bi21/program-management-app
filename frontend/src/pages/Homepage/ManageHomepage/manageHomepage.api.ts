@@ -3,6 +3,10 @@ import type { RequestOptions } from '../../../http/client';
 import { apiUrl } from '../../../http/transport';
 import type { ManagedHomepageImage } from './types';
 
+interface ManagedHomepageResponse {
+  images: ManagedHomepageImage[];
+}
+
 function resolveImageUrl(image: ManagedHomepageImage): ManagedHomepageImage {
   const resolve = (url: string) => url.startsWith('/public/') ? apiUrl(url) : url;
   return {
@@ -15,9 +19,17 @@ function resolveImageUrl(image: ManagedHomepageImage): ManagedHomepageImage {
 
 export async function getManagedHomepage(opts?: RequestOptions) {
   const content = opts
-    ? await apiClient.get<{ images: ManagedHomepageImage[] }>('/homepage', opts)
-    : await apiClient.get<{ images: ManagedHomepageImage[] }>('/homepage');
+    ? await apiClient.get<ManagedHomepageResponse>('/homepage', opts)
+    : await apiClient.get<ManagedHomepageResponse>('/homepage');
   return { images: content.images.map(resolveImageUrl) };
+}
+
+export function getManagedHomepageSignup(opts: RequestOptions = {}) {
+  return apiClient.get<{ signupEnabled: boolean }>('/homepage/signup', opts);
+}
+
+export function updateHomepageSignup(enabled: boolean) {
+  return apiClient.patch<{ signupEnabled: boolean }>('/homepage/signup', { enabled });
 }
 
 export function createHomepageImage(data: { image: File; caption: string }) {

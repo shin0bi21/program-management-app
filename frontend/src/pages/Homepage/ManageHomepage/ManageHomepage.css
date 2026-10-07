@@ -14,6 +14,35 @@
   min-height: 0;
 }
 
+.homepage-signup-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-card-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.homepage-signup-setting h2 {
+  font-size: 1.15rem;
+}
+
+.homepage-signup-setting p {
+  margin-top: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.homepage-signup-setting__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 @media (max-width: 768px) {
   .homepage-management-page {
     height: auto;
@@ -22,5 +51,14 @@
 
   .homepage-management-page .page-table {
     flex: initial;
+  }
+
+  .homepage-signup-setting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .homepage-signup-setting__controls {
+    justify-content: space-between;
   }
 }

@@ -105,8 +105,12 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
   return rows[0];
 }
 
-export async function createExternalLead(data: CreateLeadInput, submittedByRole: 'youth' | 'parent' | 'guardian') {
-  const rows = await sql`
+export async function createExternalLead(
+  data: CreateLeadInput,
+  submittedByRole: 'youth' | 'parent' | 'guardian',
+  trx: typeof sql,
+) {
+  const rows = await trx`
     INSERT INTO leads (
       origin,
       submitted_by_role,

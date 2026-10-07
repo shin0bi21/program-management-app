@@ -4,6 +4,7 @@ import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 
+import HomepageSignupSetting from './components/HomepageSignupSetting/HomepageSignupSetting';
 import HomepageImageList from './components/HomepageImageList/HomepageImageList';
 import HomepageImageModal from './components/HomepageImageModal/HomepageImageModal';
 import { useHomepageModals } from './hooks/useHomepageModals';
@@ -32,7 +33,7 @@ export default function ManageHomepage() {
         } : null]} />
         <PageBody
           ariaLabel="Homepage image management"
-          dashboard={null}
+          dashboard={<HomepageSignupSetting />}
           table={<HomepageImageList
             images={homepage.images}
             loading={homepage.loading}

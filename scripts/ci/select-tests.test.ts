@@ -38,7 +38,6 @@ test('domain backend changes select only their authoritative suite', () => {
     ['backend/src/services/accounts/accountService.ts', ['tests/accounts']],
     ['backend/src/services/auth/authService.ts', ['tests/auth']],
     ['backend/src/services/programming/cohorts/cohortService.ts', ['tests/cohorts']],
-    ['backend/src/services/homepageService.ts', ['tests/homepage']],
     ['backend/src/services/outreach/leads/leadService.ts', ['tests/public', 'tests/expressionOfInterest', 'tests/leads']],
     ['backend/src/services/preferenceService.ts', ['tests/preferences']],
     ['backend/src/services/programService.ts', ['tests/programs']],
@@ -56,6 +55,17 @@ test('shared backend files select every domain that consumes them', () => {
     backendMode: 'focused',
     backendTestPaths: ['tests/tasks', 'tests/hours'],
   });
+
+  for (const file of [
+    'backend/src/controllers/homepageController.ts',
+    'backend/src/routes/homepageRoutes.ts',
+    'backend/src/services/homepageService.ts',
+  ]) {
+    assertPlan([file], {
+      backendMode: 'focused',
+      backendTestPaths: ['tests/homepage', 'tests/public', 'tests/expressionOfInterest', 'tests/leads'],
+    });
+  }
 });
 
 test('domain-like source filenames do not receive focused coverage', () => {

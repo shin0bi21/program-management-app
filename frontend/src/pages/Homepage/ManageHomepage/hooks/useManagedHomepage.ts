@@ -9,7 +9,7 @@ import {
   reorderHomepageImages,
 } from '../manageHomepage.api';
 
-const queryKey = ['homepage', 'managed'] as const;
+const queryKey = ['homepage', 'managed', 'images'] as const;
 
 export function useManagedHomepage() {
   const queryClient = useQueryClient();
