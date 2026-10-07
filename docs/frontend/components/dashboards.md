@@ -42,17 +42,17 @@ Preview a page-owned dashboard with the dashboard preset:
 npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboard --dry-run
 ```
 
-Remove `--dry-run` to generate the skeleton below.
+Remove `--dry-run` to generate `ExampleDashboard.tsx` and its test. Add the card and hook shown below only when they have their own behavior or query.
 
 ```text
 components/
   ExampleDashboard/
     ExampleDashboard.tsx
     ExampleDashboard.test.tsx
-    ExampleOverviewDashboardCard/
+    ExampleOverviewDashboardCard/          optional
       ExampleOverviewDashboardCard.tsx
       ExampleOverviewDashboardCard.test.tsx
-      hooks/
+      hooks/                               optional
         useExampleOverviewData.ts
         useExampleOverviewData.test.ts
 ```

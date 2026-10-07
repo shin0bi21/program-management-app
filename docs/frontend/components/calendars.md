@@ -90,17 +90,17 @@ Preview a page-owned calendar with the calendar preset:
 npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/components ScheduleCalendar --dry-run
 ```
 
-Remove `--dry-run` to generate the skeleton below.
+Remove `--dry-run` to generate `ExampleCalendar.tsx` and its test. Add the hook, item, and browser story below only when their owners are needed.
 
 ```text
 components/
   ExampleCalendar/
     ExampleCalendar.tsx
     ExampleCalendar.test.tsx
-    hooks/
+    hooks/                           optional
       useExampleCalendarData.ts
       useExampleCalendarData.test.ts
-    ExampleItem/
+    ExampleItem/                     optional
       ExampleItem.tsx
       ExampleItem.test.tsx
       ExampleItem.story.tsx          when browser interaction matters

@@ -21,8 +21,13 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     directory,
     join(context.frontendRoot, 'common/components/PageBody/PageBody'),
   );
+  const pageErrorOverlayImport = context.relativeImport(
+    directory,
+    join(context.frontendRoot, 'common/components/PageErrorOverlay/PageErrorOverlay'),
+  );
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 import PageBody from '${pageBodyImport}';
+import PageErrorOverlay from '${pageErrorOverlayImport}';
 import PageHeader from '${pageHeaderImport}';
 import ${hookName} from './hooks/data/${hookName}';
 
@@ -51,11 +56,13 @@ export default function ${name}() {
   const primaryView = <p>${name} content</p>;
 
   // TODO: Derived errors and presentation state.
+  const pageErrors = [];
 
   // Render.
   return (
     <main className="page-container">
       <PageHeader title="${name}" />
+      <PageErrorOverlay errors={pageErrors} />
       <PageBody
         ariaLabel="${name} overview"
         dashboard={dashboard}
