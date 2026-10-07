@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { asTransactionSql } from '../../src/db/client';
 import { createApp } from '../shared/app';
 import { sql } from '../shared/db';
 
@@ -65,7 +66,8 @@ describe('Public lead API', () => {
     let markLeadLockReady = () => {};
     const leadLockReleased = new Promise<void>(resolve => { releaseLeadLock = resolve; });
     const leadLockReady = new Promise<void>(resolve => { markLeadLockReady = resolve; });
-    const blocker = sql.begin(async trx => {
+    const blocker = sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
       await trx`LOCK TABLE leads IN ACCESS EXCLUSIVE MODE`;
       markLeadLockReady();
       await leadLockReleased;
