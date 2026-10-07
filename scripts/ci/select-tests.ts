@@ -55,9 +55,6 @@ const BACKEND_DOMAINS = {
   homepage: {
     testPaths: ['tests/homepage'],
     sourceFiles: [
-      'controllers/homepageController.ts',
-      'routes/homepageRoutes.ts',
-      'services/homepageService.ts',
       'validation/homepageSchemas.ts',
     ],
   },
@@ -66,9 +63,7 @@ const BACKEND_DOMAINS = {
     sourceDirectories: ['services/outreach/'],
     sourceFiles: [
       'controllers/leadController.ts',
-      'controllers/publicController.ts',
       'routes/leadRoutes.ts',
-      'routes/publicRoutes.ts',
       'validation/leadNoteSchemas.ts',
       'validation/leadSchemas.ts',
       'validation/publicSchemas.ts',
@@ -137,6 +132,9 @@ const RELATED_BACKEND_SUITES: Partial<Record<BackendSuite, readonly BackendSuite
 
 const SHARED_BACKEND_FILES: Readonly<Record<string, readonly BackendSuite[]>> = {
   'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours'],
+  'backend/src/controllers/homepageController.ts': ['homepage', 'outreach'],
+  'backend/src/routes/homepageRoutes.ts': ['homepage', 'outreach'],
+  'backend/src/services/homepageService.ts': ['homepage', 'outreach'],
 };
 
 // Match a backend source or test file to the smallest safe domain suite. Files

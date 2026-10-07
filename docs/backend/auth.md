@@ -127,8 +127,8 @@ Staff program scope is assignment-based for every program. A program's `roster_m
 | `write:attendance` | Record and update attendance through session- or youth-centric workflows |
 | `read:outreach` | Read expressions of interest and leads |
 | `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` |
-| `read:homepage` | Read staff-managed homepage content |
-| `write:homepage` | Manage homepage images and programming content |
+| `read:homepage` | Read managed homepage images and signup availability |
+| `write:homepage` | Manage homepage images and public signup availability |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |
 | `write:settings` | `POST /api/settings/*` *(reserved)* |
 | `read:hours` | Read hours resources in policy scope: staff see themselves plus coworkers sharing any program assignment, including each visible coworker’s complete hours row; administrators see all |

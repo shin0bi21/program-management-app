@@ -5,6 +5,7 @@ import { apiClient } from '../../../http/client';
 import {
   getPublicHomepageImages,
   getPublicHomepagePrograms,
+  getPublicHomepageSignup,
   submitPublicLead,
 } from './publicHomepage.api';
 
@@ -60,4 +61,12 @@ describe('publicHomepage API', () => {
     expect(get).toHaveBeenCalledWith('/public/homepage/programs', { auth: false });
     expect(post).toHaveBeenCalledWith('/public/leads', payload, { auth: false });
   });
+  it('loads signup availability independently without authentication', async () => {
+    const signal = new AbortController().signal;
+    get.mockResolvedValue({ signupEnabled: false });
+
+    expect(await getPublicHomepageSignup({ signal })).toEqual({ signupEnabled: false });
+    expect(get).toHaveBeenCalledWith('/public/homepage/signup', { signal, auth: false });
+  });
+
 });

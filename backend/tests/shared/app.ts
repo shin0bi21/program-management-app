@@ -5,14 +5,13 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRoutes from '../../src/routes/authRoutes';
-import publicRoutes from '../../src/routes/publicRoutes';
 import accountRoutes from '../../src/routes/accountRoutes';
 import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
 import leadRoutes from '../../src/routes/leadRoutes';
 import programRoutes from '../../src/routes/programRoutes';
 import cohortRoutes from '../../src/routes/cohortRoutes';
-import homepageRoutes from '../../src/routes/homepageRoutes';
+import homepageRoutes, { publicHomepageRoutes } from '../../src/routes/homepageRoutes';
 import preferenceRoutes from '../../src/routes/preferenceRoutes';
 import hoursRoutes from '../../src/routes/hoursRoutes';
 import taskRoutes from '../../src/routes/taskRoutes';
@@ -25,7 +24,7 @@ export function createApp() {
   app.use(express.json({ limit: '20kb', type: 'application/json' }));
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
-  app.use('/api/public', publicRoutes);
+  app.use('/api/public', publicHomepageRoutes);
   app.use('/api/accounts', accountRoutes);
   app.use('/api/youth', youthRoutes);
   app.use('/api/schools', schoolRoutes);

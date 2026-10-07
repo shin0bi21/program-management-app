@@ -28,6 +28,10 @@ vi.mock('./hooks/useManagedHomepage', () => ({
   useManagedHomepage: () => homepage,
 }));
 
+vi.mock('./components/HomepageSignupSetting/HomepageSignupSetting', () => ({
+  default: () => <section aria-label="Homepage signup setting" />,
+}));
+
 const renderPage = () => render(
   <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <ManageHomepage />
@@ -45,6 +49,7 @@ describe('ManageHomepage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Manage Homepage' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Homepage signup setting' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Homepage image management' })).toBeInTheDocument();
     expect(screen.getByText('Adventure Bay trip.')).toBeInTheDocument();
     expect(document.querySelector('.homepage-image-row__thumbnail')).toHaveAttribute(
@@ -65,7 +70,7 @@ describe('ManageHomepage', () => {
     expect(homepage.refresh).toHaveBeenCalledOnce();
   });
 
-  it('opens the page-owned image editor from the image list', async () => {
+  it('opens the page-owned image editor from the page header', async () => {
     const user = userEvent.setup();
     renderPage();
 

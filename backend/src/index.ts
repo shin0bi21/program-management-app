@@ -8,10 +8,9 @@ import accountRoutes from './routes/accountRoutes';
 import youthRoutes from './routes/youthRoutes';
 import schoolRoutes from './routes/schoolRoutes';
 import programRoutes from './routes/programRoutes';
-import publicRoutes from './routes/publicRoutes';
 import leadRoutes from './routes/leadRoutes';
 import cohortRoutes from './routes/cohortRoutes';
-import homepageRoutes from './routes/homepageRoutes';
+import homepageRoutes, { publicHomepageRoutes } from './routes/homepageRoutes';
 import preferenceRoutes from './routes/preferenceRoutes';
 import hoursRoutes from './routes/hoursRoutes';
 import taskRoutes from './routes/taskRoutes';
@@ -62,7 +61,7 @@ app.get('/health', async (req, res) => {
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/public', publicRoutes);
+app.use('/api/public', publicHomepageRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/youth', youthRoutes);

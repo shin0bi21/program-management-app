@@ -10,6 +10,7 @@ describe('Homepage management API', () => {
   let pngFixture: Buffer;
   let staffId: string;
   let staffToken: string;
+  let homepageReadToken: string;
   let youthId: string;
   let youthToken: string;
   let cohortId: string;
@@ -23,6 +24,7 @@ describe('Homepage management API', () => {
     const staff = await seedTestUser({ role: 'staff' });
     staffId = staff.userId;
     staffToken = generateToken(staff.userId, 'staff', staff.email);
+    homepageReadToken = generateToken(staff.userId, 'staff', staff.email, ['read:homepage']);
     const youth = await seedTestUser({ role: 'youth' });
     youthId = youth.userId;
     youthToken = generateToken(youth.userId, 'youth', youth.email);
@@ -52,6 +54,7 @@ describe('Homepage management API', () => {
   });
 
   afterAll(async () => {
+    await sql`UPDATE homepage_settings SET signup_enabled = TRUE WHERE id = 1`;
     if (uploadedImageId) {
       await request(app).delete(`/api/homepage/images/${uploadedImageId}`).set('Authorization', `Bearer ${staffToken}`);
     }
@@ -73,6 +76,28 @@ describe('Homepage management API', () => {
         }),
       ]),
     );
+  });
+
+  it('lets staff close and reopen homepage signup', async () => {
+    const disabled = await request(app)
+      .patch('/api/homepage/signup')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ enabled: false });
+
+    expect(disabled.status).toBe(200);
+    expect(disabled.body).toEqual({ signupEnabled: false });
+    const managed = await request(app)
+      .get('/api/homepage/signup')
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(managed.body.signupEnabled).toBe(false);
+    expect((await request(app).get('/api/public/homepage/signup')).body.signupEnabled).toBe(false);
+
+    const enabled = await request(app)
+      .patch('/api/homepage/signup')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ enabled: true });
+    expect(enabled.status).toBe(200);
+    expect(enabled.body).toEqual({ signupEnabled: true });
   });
 
   it('allows staff to upload, edit, serve, and delete a homepage image', async () => {
@@ -195,5 +220,28 @@ describe('Homepage management API', () => {
   it('does not allow youth accounts to manage homepage content', async () => {
     const response = await request(app).get('/api/homepage').set('Authorization', `Bearer ${youthToken}`);
     expect(response.status).toBe(403);
+  });
+
+  it('lets read-only staff view signup status separately from photos', async () => {
+    const signup = await request(app)
+      .get('/api/homepage/signup')
+      .set('Authorization', `Bearer ${homepageReadToken}`);
+    const photos = await request(app)
+      .get('/api/homepage')
+      .set('Authorization', `Bearer ${homepageReadToken}`);
+
+    expect(signup.status).toBe(200);
+    expect(signup.body).toEqual({ signupEnabled: true });
+    expect(photos.status).toBe(200);
+    expect(photos.body.signupEnabled).toBeUndefined();
+    expect((await request(app).get('/api/public/homepage/images')).body.signupEnabled).toBeUndefined();
+  });
+
+  it('requires homepage write permission to change signup availability', async () => {
+    const update = await request(app)
+      .patch('/api/homepage/signup')
+      .set('Authorization', `Bearer ${homepageReadToken}`)
+      .send({ enabled: false });
+    expect(update.status).toBe(403);
   });
 });
