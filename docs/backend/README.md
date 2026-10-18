@@ -4,6 +4,7 @@ The backend is an Express 4 and TypeScript HTTP API. Zod validates request input
 
 ```text
 HTTP request → route + middleware → controller → service → PostgreSQL
+                                          ↘ report renderer → PDF
 ```
 
 Dependencies flow from routes through middleware and controllers to services and the database. Controllers do not contain business logic or SQL; services do not depend on controllers or routes. Every Express 4 async route handler uses `asyncHandler`.
@@ -56,6 +57,7 @@ See the [backend API reference](api.md) for endpoint-level details.
 | `backend/src/policies/` | Record-scope predicates and assertions applied by services |
 | `backend/src/controllers/` | Thin HTTP adapters that extract input, call services, and send successful responses |
 | `backend/src/services/` | Business rules, transactions, SQL, audit writes, and external-operation coordination |
+| `backend/src/reports/` | File renderers that turn authorized service results into downloadable reports |
 | `backend/src/validation/` | Zod schemas for request parameters, queries, and bodies |
 | `backend/src/db/` | Shared PostgreSQL client and transaction helpers |
 | `backend/src/types/` | Runtime-independent contracts and generated database types |
@@ -89,6 +91,7 @@ Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`
 | Product access and record scope | [Authorization](authorization.md) |
 | Policy placement and enforcement | [Policies](policies.md) |
 | Services, commands, and transactions | [Services](services.md) |
+| Report data and file rendering | [Reports](reports.md) |
 | Persistence, migrations, and audits | [Database](database.md) |
 | Typed errors and request failures | [Errors](errors.md) |
 | Backend test ownership | [Testing](testing.md) |
