@@ -140,6 +140,8 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
   };
 }
 
+export type CohortYouthReport = Awaited<ReturnType<typeof getCohortYouthReport>>;
+
 function completeBreakdown(name: string, counts: ReturnType<typeof emptyCounts>): AttendanceBreakdown {
   const attendedCount = counts.present + counts.late;
   const countedCount = attendedCount + counts.absent + counts.unmarked;

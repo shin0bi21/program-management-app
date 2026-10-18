@@ -1,9 +1,7 @@
 import PDFDocument from 'pdfkit';
-import type { AccessTokenPayload } from '../../../types/auth';
-import { getCohortYouthReport } from './cohortReportService';
+import type { CohortYouthReport } from '../../../services/programming/cohorts/cohortReportService';
 
-type YouthReport = Awaited<ReturnType<typeof getCohortYouthReport>>;
-type ReportYouth = YouthReport['youth'][number];
+type ReportYouth = CohortYouthReport['youth'][number];
 type Breakdown = ReportYouth['attendanceBreakdown']['total'];
 
 const pageWidth = 612;
@@ -29,8 +27,7 @@ const noteStyles = {
   achievement: { label: 'Achievement', marker: 'AC', color: '#15803d' },
 } as const;
 
-export async function generateCohortYouthReportPdf(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
-  const report = await getCohortYouthReport(cohortId, actor, youthId);
+export async function renderCohortYouthPdf(report: CohortYouthReport) {
   const title = `${report.cohort.programName} - ${report.cohort.name} Youth Report`;
   const doc = new PDFDocument({ size: 'LETTER', margin, autoFirstPage: true, info: { Title: title } });
   const chunks: Buffer[] = [];
