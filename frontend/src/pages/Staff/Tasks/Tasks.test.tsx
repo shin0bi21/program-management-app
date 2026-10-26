@@ -232,7 +232,7 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(`${task.startDate}T12:00:00`), 3)));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
@@ -249,7 +249,7 @@ describe('Tasks', () => {
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods(new Date(`${task.startDate}T12:00:00`), 3);
     const initialRangeLoader = calendarTestState.props!.onInitialPeriods;
     act(() => initialRangeLoader?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalled());
