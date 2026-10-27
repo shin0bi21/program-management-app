@@ -3,13 +3,13 @@ import starlight from '@astrojs/starlight';
 import { unified } from '@astrojs/markdown-remark';
 import { prepareContent } from './scripts/prepare-content.mjs';
 import remarkRepositoryLinks from './scripts/remark-repository-links.mjs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
+import process from 'node:process';
 
 const gitRef = process.env.DOCS_GIT_REF || 'main';
 const manifest = await prepareContent({ gitRef });
 
 export default defineConfig({
-  site: 'https://docs.be-original.ca',
   output: 'static',
   markdown: {
     processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),
@@ -43,7 +43,6 @@ export default defineConfig({
       title: 'Be Original · Developer Docs',
       description: 'Architecture, development guides, and operational runbooks for Be Original.',
       customCss: ['./src/styles/custom.css'],
-      head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' } }],
       sidebar: [
         { label: 'Overview', slug: '' },
         { label: 'Docs website', slug: 'website' },

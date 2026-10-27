@@ -1,6 +1,7 @@
 import { readdir, readFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import process from 'node:process';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const documentationDirectories = ['docs/backend', 'docs/frontend', 'docs/workflows'];
