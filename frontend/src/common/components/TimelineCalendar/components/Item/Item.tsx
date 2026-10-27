@@ -37,6 +37,33 @@ interface ItemProps {
   className?: string;
 }
 
+function getVisibleItemAnchor(trigger: HTMLButtonElement | null, clientX?: number) {
+  if (!trigger) return null;
+
+  const periodCells = trigger.closest('.row')
+    ?.querySelectorAll<HTMLElement>('.cell');
+  // Ranged items can extend offscreen, so anchor details to the hovered visible period.
+  const hoveredPeriod = clientX === undefined || clientX <= 0
+    ? undefined
+    : [...(periodCells ?? [])].find(cell => {
+      const bounds = cell.getBoundingClientRect();
+
+      return clientX >= bounds.left && clientX < bounds.right;
+    });
+
+  const itemBounds = trigger.getBoundingClientRect();
+  const periodBounds = hoveredPeriod?.getBoundingClientRect();
+  const anchorLeft = periodBounds ? Math.max(periodBounds.left, itemBounds.left) : itemBounds.left;
+  const anchorRight = periodBounds ? Math.min(periodBounds.right, itemBounds.right) : itemBounds.right;
+
+  return new DOMRect(
+    anchorLeft,
+    itemBounds.top,
+    anchorRight - anchorLeft,
+    itemBounds.height,
+  );
+}
+
 export default function Item({
   id,
   ariaLabel,
@@ -57,6 +84,7 @@ export default function Item({
   const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
   const detailOpenTimerRef = useRef<number | null>(null);
 
+  const [pendingMenuAnchorX, setPendingMenuAnchorX] = useState<number | null>(null);
   const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
   const { isOpen, openAtRect, close, position, menuRef } = useFloatingMenu(
     triggerRef,
@@ -88,37 +116,19 @@ export default function Item({
     setDetailPosition(null);
   };
 
-  const getVisibleItemAnchor = (clientX?: number) => {
-    const trigger = triggerRef.current;
 
-    if (!trigger) return null;
+  useLayoutEffect(() => {
+    if (pendingMenuAnchorX === null) return;
 
-    const periodCells = trigger.closest('.row')
-      ?.querySelectorAll<HTMLElement>('.cell');
-    // Ranged items can extend offscreen, so anchor details to the hovered visible period.
-    const hoveredPeriod = clientX === undefined || clientX <= 0
-      ? undefined
-      : [...(periodCells ?? [])].find(cell => {
-        const bounds = cell.getBoundingClientRect();
+    // Selecting an item can replace the overview above the calendar and move the trigger.
+    const anchor = getVisibleItemAnchor(triggerRef.current, pendingMenuAnchorX);
+    setPendingMenuAnchorX(null);
 
-        return clientX >= bounds.left && clientX < bounds.right;
-      });
-
-    const itemBounds = trigger.getBoundingClientRect();
-    const periodBounds = hoveredPeriod?.getBoundingClientRect();
-    const anchorLeft = periodBounds ? Math.max(periodBounds.left, itemBounds.left) : itemBounds.left;
-    const anchorRight = periodBounds ? Math.min(periodBounds.right, itemBounds.right) : itemBounds.right;
-
-    return new DOMRect(
-      anchorLeft,
-      itemBounds.top,
-      anchorRight - anchorLeft,
-      itemBounds.height,
-    );
-  };
+    if (anchor) openAtRect(anchor);
+  }, [pendingMenuAnchorX, openAtRect]);
 
   const showDetails = (clientX?: number) => {
-    const anchorBounds = getVisibleItemAnchor(clientX);
+    const anchorBounds = getVisibleItemAnchor(triggerRef.current, clientX);
 
     if (!anchorBounds) return;
 
@@ -215,11 +225,7 @@ export default function Item({
           if (!hasActions) return;
 
           if (isOpen) close();
-          else {
-            const anchor = getVisibleItemAnchor(event.clientX);
-
-            if (anchor) openAtRect(anchor);
-          }
+          else setPendingMenuAnchorX(event.clientX);
         }}
       >
         {leading !== undefined && leading !== null && <strong>{leading}</strong>}
