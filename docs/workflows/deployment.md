@@ -224,6 +224,9 @@ Deployment logs are written to `logs/deploy.log` by default.
 5. Confirm the server can fetch `origin/main`.
 6. Review `logs/deploy.log` on Lightsail.
 
+If SSH succeeds but fetching GitHub fails with `Invalid username or token`, follow
+[Renew the production server's GitHub access](github-credentials.md).
+
 The executable entry point is
 [`scripts/deploy/main.sh`](../../scripts/deploy/main.sh). Its supporting steps
 are the numbered files in the same directory, including change classification,
