@@ -7,25 +7,30 @@ dependency on AWS.
 
 ## Local use
 
-Use Node 24, matching the application's existing runtime major. From the repository root:
+The docs service is part of the local Docker environment and needs no Cloudflare
+account or deployed website. From the repository root:
 
 ```bash
-npm --prefix docs ci
-npm --prefix docs run dev
+docker compose up -d docs
+docker compose logs -f docs
 ```
 
-The local site is available at `http://localhost:4321`. To verify the searchable
-production build, run:
+Open `http://localhost:4321`. Markdown edits reload automatically. The first start
+installs dependencies into a dedicated named volume; subsequent starts reuse them
+and can run offline. After changing the docs lockfile, run
+`docker compose exec docs npm ci` and restart the docs service.
+
+To verify the searchable production build locally, run a temporary preview container:
 
 ```bash
-npm --prefix docs test
-npm --prefix docs run build
-npm --prefix docs run preview
+docker compose exec docs npm test
+docker compose run --rm --no-deps -p 127.0.0.1:4322:4321 docs sh -c 'npm run build && npm run preview -- --host 0.0.0.0 --port 4321'
 ```
 
 Starlight's Pagefind search is generated during the production build; test search
-using the preview server. Local development and preview do not provide authentication.
-Keep them bound to localhost.
+at `http://localhost:4322`. Local development and preview do not provide authentication;
+Docker publishes these ports on localhost only. Alternatively, Node 24 users can
+run `npm ci` and the `dev`, `test`, `build`, and `preview` scripts directly in `docs/`.
 
 ## Content ownership
 
@@ -33,7 +38,7 @@ Edit the existing files in `backend/`, `frontend/`, and `workflows/`. The reposi
 root README provides the site's overview; this file describes the website itself.
 Build tooling derives Starlight content in ignored `src/content/docs/`, adding
 titles and translating repository links into website routes. Never edit or commit
-those generated copies. Re-run the dev command after editing canonical Markdown.
+those generated copies.
 
 The website preserves code blocks and tables. Mermaid diagrams are currently
 shown as source code. Source-file links open the private GitHub repository and

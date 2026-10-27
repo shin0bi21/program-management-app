@@ -33,7 +33,10 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
     routes[sourcePath] = routeForSource(sourcePath);
   }
 
-  await rm(output, { recursive: true, force: true });
+  await mkdir(output, { recursive: true });
+  for (const entry of await readdir(output)) {
+    await rm(path.join(output, entry), { recursive: true, force: true });
+  }
   for (const file of generated) {
     await mkdir(path.dirname(file.destination), { recursive: true });
     await writeFile(file.destination, file.document, 'utf8');

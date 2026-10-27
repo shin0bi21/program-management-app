@@ -7,12 +7,10 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 
 export function remarkRepositoryLinks({ manifest, repoRoot = repositoryRoot, gitRef = 'main', repositorySlug = DEFAULT_REPOSITORY_SLUG }) {
   const root = path.resolve(repoRoot);
-  const sourceByOutputPath = new Map(Object.entries(manifest.sources).map(([outputPath, sourcePath]) => [path.resolve(outputPath), sourcePath]));
-  const routes = manifest.routes;
 
   return async (tree, file) => {
     const generatedPath = path.resolve(String(file.path));
-    const sourcePath = sourceByOutputPath.get(generatedPath);
+    const sourcePath = manifest.sources[generatedPath];
     if (!sourcePath) throw new Error(`No repository source is registered for generated document ${file.path}`);
 
     const resolvedRoot = await realpath(root);
@@ -20,7 +18,7 @@ export function remarkRepositoryLinks({ manifest, repoRoot = repositoryRoot, git
     visit(tree, node => {
       if ((node.type === 'link' || node.type === 'image' || node.type === 'definition') && typeof node.url === 'string') nodes.push(node);
     });
-    for (const node of nodes) node.url = await rewriteUrl(node.url, sourcePath, routes, root, resolvedRoot, repositorySlug, gitRef);
+    for (const node of nodes) node.url = await rewriteUrl(node.url, sourcePath, manifest.routes, root, resolvedRoot, repositorySlug, gitRef);
   };
 }
 
