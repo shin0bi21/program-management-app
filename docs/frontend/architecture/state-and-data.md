@@ -60,6 +60,14 @@ The API adapter is the single frontend owner of endpoint paths, HTTP methods, re
 response contracts, serialization and boundary normalization. All requests use the
 centralized client. Focused status and placement mutations use `PATCH`, not `PUT`.
 
+Keep failed requests distinct from successful empty results. The owning workflow
+uses typed HTTP status and validation details to present contextual messages and
+recovery actions, following the [error-handling policy](../../backend/errors.md#error-semantics-and-user-messages).
+For a missing previously selected record, the message pattern is `This <record
+name> is no longer available.` An existing record with no children instead shows
+its normal empty state. Do not replace a rejected request with empty data or
+render internal diagnostics as user-facing copy.
+
 ## Test adapters and pure policy
 
 API-adapter tests own the exact method, path, query or body serialization, cancellation forwarding, typed response shaping, and boundary normalization. Mock the centralized HTTP client rather than exercising these contracts through browser UI or a query hook.
