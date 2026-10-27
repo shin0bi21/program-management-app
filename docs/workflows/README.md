@@ -17,3 +17,4 @@ Use focused local checks while implementing, required GitHub checks as the merge
 | Shipping to `develop` | [Shipping](shipping.md) |
 | Reports | [Reports](reports.md) |
 | Production deployment | [Deployment](deployment.md) |
+| Documentation website | [Starlight site](../README.md) |

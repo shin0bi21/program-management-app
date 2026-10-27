@@ -14,6 +14,7 @@ details. This document owns both CI architecture and its operating workflow.
 |---|---|---|---|
 | `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
 | `playwright.yml` | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
+| `docs.yml` | Pull requests to `develop` or `main` changing `docs/`, the root README, or the docs workflow | Standalone Starlight tooling tests, static build, and search index | Separate docs validation; no publishing or application deployment |
 | `deploy.yml` | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
 
 The supported branch flow is:
@@ -57,6 +58,8 @@ feature pull requests. Release pull requests to `main` run all production checks
 The shared selector applies these rules locally and in CI:
 
 - Documentation-only changes skip paid application jobs.
+- Documentation and Starlight changes run the separate docs workflow. Its Node 24
+  install and build use `docs/package-lock.json`, independently of app dependencies.
 - Repository automation changes run static and changed pattern checks.
 - Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
 - Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
