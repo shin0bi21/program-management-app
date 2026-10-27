@@ -36,6 +36,13 @@ export const reorderHomepageImagesSchema = z.object({
   }),
 });
 
+export const updateHomepageSignupSchema = z.object({
+  body: z.object({
+    enabled: z.boolean(),
+  }).strict(),
+});
+
 export type CreateHomepageImageInput = z.infer<typeof createHomepageImageSchema.shape.body>;
 export type UpdateHomepageImageInput = z.infer<typeof updateHomepageImageSchema.shape.body>;
 export type ReorderHomepageImagesInput = z.infer<typeof reorderHomepageImagesSchema.shape.body>;
+export type UpdateHomepageSignupInput = z.infer<typeof updateHomepageSignupSchema.shape.body>;

@@ -1,6 +1,6 @@
 import { usePrograms } from '../../../../common/features/programs/hooks/usePrograms';
 import useListQuery from '../../../../query/hooks/useListQuery';
-import { getProgramCycles } from '../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycles } from '../../../../common/features/programming/cycles/cycles.api';
 
 export default function useYouthData(assignedOnly: boolean) {
   const programs = usePrograms({ assignedOnly });

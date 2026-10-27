@@ -1,6 +1,6 @@
 import Table from '../../../../../common/components/Table/Table';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 
 interface CycleTableProps {
   columns: TableColumnDef<ProgramCycle>[];

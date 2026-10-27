@@ -50,6 +50,60 @@ migration, dependency, and staleness diagnostics. For a large captured log,
 use `bash scripts/dev/condense-logs.sh <path>` or pipe pasted output into the
 same script.
 
+## Production login fails while sending a verification email
+
+On October 12, 2026, production login returned `500 Failed to send email`.
+The underlying Gmail SMTP error was `EAUTH`, response `535 5.7.8 Username and
+Password not accepted`, from `send2FACode`. This identifies a failure of the
+server's email-sending credentials; it does not identify an incorrect app-user
+password.
+
+The application uses Nodemailer with `service: 'gmail'`, `EMAIL_USER`, and
+`EMAIL_PASS`. Production had a 16-character credential consistent with a Google
+App Password. A reported Google account password change was the likely trigger:
+[Google revokes App Passwords after an account password change](https://support.google.com/accounts/answer/185833).
+The logs confirm credential rejection, but cannot establish how the credential
+was originally created or revoked.
+
+To restore sending:
+
+1. Sign into the sending Google account and generate a new
+   [App Password](https://myaccount.google.com/apppasswords).
+2. On the production server, edit `/home/ubuntu/my-webapp/.env` and replace
+   `EMAIL_PASS` with the generated password without grouping spaces. Keep the
+   credential out of chat, logs, shell command arguments, and Git.
+3. Recreate only the backend using the explicit production Compose file:
+
+   ```bash
+   cd /home/ubuntu/my-webapp
+   docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend
+   ```
+
+4. Confirm the backend is ready, then validate and reload nginx so it resolves
+   the replacement backend container:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml logs --tail=50 backend
+   docker compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:5001/health
+   docker compose -f docker-compose.prod.yml exec -T nginx nginx -t
+   docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+   curl -fsS https://be-original.ca/health
+   ```
+
+5. Retry login and confirm the verification email arrives. A healthy endpoint
+   confirms backend/database connectivity, not successful email delivery.
+
+Always specify `-f docker-compose.prod.yml` for manual production commands.
+During this incident, a bare `docker compose up` selected the development
+configuration, started `npm run dev`, and published API/debug ports. Restoring
+the production configuration and reloading nginx restored HTTPS health. A plain
+container restart also does not load updated Compose `env_file` values; recreate
+the backend after changing `.env`.
+
+This runtime email credential is separate from GitHub deployment secrets. For
+missing or invalid deployment-secret configuration, see
+[Monitoring and rerunning a deployment](deployment.md#monitoring-and-rerunning-a-deployment).
+
 ## Attach the backend debugger
 
 The development backend starts Node Inspector on container port `9229`, which

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "report:ci": "node scripts/reports/ci-report.ts",
+    "report:deployments": "node scripts/reports/deployment-history.ts",
     "report:loc": "bash scripts/reports/loc-report.sh",
     "scaffold:frontend": "node scripts/agents/scaffold/frontend/index.ts",
     "snapshot:changes": "node scripts/agents/snapshot-changes.ts",

@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteProgramCycle } from '../../../../Programming/Cohorts/cohorts.api';
+import { deleteProgramCycle } from '../../../../../common/features/programming/cycles/cycles.api';
 import useProgrammingActions from './useProgrammingActions';
 
-vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({
   deleteProgramCycle: vi.fn(),
 }));
 

@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
-const subscribers = new Set<() => void>();
+const subscribers = new Set<(event: Event) => void>();
 
-const dismissOpenFloatingUi = () => {
-  for (const dismiss of subscribers) dismiss();
+const dismissOpenFloatingUi = (event: Event) => {
+  for (const dismiss of subscribers) dismiss(event);
 };
 
 const attachViewportListeners = () => {
@@ -16,13 +16,27 @@ const detachViewportListeners = () => {
   window.removeEventListener('resize', dismissOpenFloatingUi);
 };
 
-export default function useViewportDismissal(active: boolean, onDismiss: () => void) {
+const isScrollWithin = (event: Event, element: HTMLElement | null | undefined) => (
+  event.type === 'scroll'
+  && event.target instanceof Node
+  && element?.contains(event.target) === true
+);
+
+export default function useViewportDismissal(
+  active: boolean,
+  onDismiss: () => void,
+  ignoreScrollWithinRef?: RefObject<HTMLElement | null>,
+) {
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
 
   useEffect(() => {
     if (!active) return undefined;
-    const dismiss = () => onDismissRef.current();
+    const dismiss = (event: Event) => {
+      if (isScrollWithin(event, ignoreScrollWithinRef?.current)) return;
+
+      onDismissRef.current();
+    };
     if (!subscribers.size) attachViewportListeners();
     subscribers.add(dismiss);
 
@@ -30,5 +44,5 @@ export default function useViewportDismissal(active: boolean, onDismiss: () => v
       subscribers.delete(dismiss);
       if (!subscribers.size) detachViewportListeners();
     };
-  }, [active]);
+  }, [active, ignoreScrollWithinRef]);
 }

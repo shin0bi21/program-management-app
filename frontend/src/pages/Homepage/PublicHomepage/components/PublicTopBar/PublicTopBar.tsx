@@ -11,10 +11,17 @@ import { getHomepageSectionByPath, HOMEPAGE_NAV_SECTIONS } from '../../utils/hom
 import usePublicTopBarScroll from './hooks/usePublicTopBarScroll';
 import './PublicTopBar.css';
 
-export default function PublicTopBar() {
+interface PublicTopBarProps {
+  signupEnabled: boolean;
+}
+
+export default function PublicTopBar({ signupEnabled }: PublicTopBarProps) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const activeSectionId = getHomepageSectionByPath(location.pathname)?.id;
+  const visibleSections = HOMEPAGE_NAV_SECTIONS.filter(
+    ({ id }) => signupEnabled || id !== 'signup',
+  );
   const scrolled = usePublicTopBarScroll();
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -58,7 +65,7 @@ export default function PublicTopBar() {
       </Link>
 
       <nav className="topbar-nav" aria-label="Page sections">
-        {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
+        {visibleSections.map(({ id, path, label }) => (
           <Link
             key={id}
             to={path}
@@ -92,7 +99,7 @@ export default function PublicTopBar() {
             onClose={close}
             className="topbar-mobile-menu"
           >
-            {HOMEPAGE_NAV_SECTIONS.map(({ id, path, label }) => (
+            {visibleSections.map(({ id, path, label }) => (
               <Link
                 key={id}
                 to={path}

@@ -136,7 +136,7 @@ Preview a page-owned table with the table preset:
 npm run scaffold:frontend -- table frontend/src/pages/Staff/Schedules/components ScheduleTable --dry-run
 ```
 
-Remove `--dry-run` to generate the skeleton below.
+Remove `--dry-run` to generate the table component, its data hook, and their tests. Add the table presentation hook below only when column or preference adaptation is substantial.
 
 ```text
 components/
@@ -146,6 +146,6 @@ components/
     hooks/
       useExampleTableData.ts      remote query and row shaping
       useExampleTableData.test.ts
-      useExampleTable.tsx         columns and table-only preference adapters, when substantial
-      useExampleTable.test.tsx
+      useExampleTable.tsx         optional: columns and table-only preference adapters
+      useExampleTable.test.tsx    optional with the presentation hook
 ```

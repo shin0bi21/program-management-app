@@ -2,11 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setProgramCycle } from '../../../../Programming/Cohorts/cohorts.api';
-import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
+import { setProgramCycle } from '../../../../../common/features/programming/cycles/cycles.api';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import CycleModal from './CycleModal';
 
-vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({ setProgramCycle: vi.fn() }));
+vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({ setProgramCycle: vi.fn() }));
 
 const cycle: ProgramCycle = {
   id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',

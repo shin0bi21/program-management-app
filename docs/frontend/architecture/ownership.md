@@ -17,6 +17,12 @@ Never import a page from common code. Pages and their nested components may impo
 
 Keep each frontend feature and component with its implementation, tests, and focused supporting files. This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
+Program cycles are a shared programming capability used by Programming, Settings,
+Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract live in
+[`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).
+Cycle management forms remain with Settings; cohort forms and enrollment behavior
+remain with Cohorts.
+
 ## Assign each file one location
 
 - An API adapter owns endpoint paths and request/response typing through the centralized HTTP client.

@@ -3,11 +3,9 @@ import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   createCohort,
   deleteCohort,
-  deleteProgramCycle,
-  getProgramCycles,
-  setProgramCycle,
   updateCohort,
 } from '../services/programming/cohorts/cohortService';
+import { deleteProgramCycle, getProgramCycles, setProgramCycle } from '../services/programming/cycles/programCycleService';
 import { listCohorts } from '../services/programming/cohorts/cohortListService';
 import { enrollYouth, withdrawYouth } from '../services/programming/cohorts/enrollmentService';
 import {
@@ -50,7 +48,7 @@ import type {
 } from '../validation/cohortSchemas';
 import type { CohortQuery, CohortYouthReportQuery, SessionListQuery } from '../validation/cohortSchemas';
 import { getCohortYouthReport } from '../services/programming/cohorts/cohortReportService';
-import { generateCohortYouthReportPdf } from '../services/programming/cohorts/cohortReportPdfService';
+import { renderCohortYouthPdf } from '../reports/programming/cohorts/cohortYouthPdf';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
@@ -94,8 +92,10 @@ export const handleGetCohortYouthReport = async (req: Request, res: Response) =>
 
 export const handleGetCohortYouthReportPdf = async (req: Request, res: Response) => {
   const { youthId } = req.query as unknown as CohortYouthReportQuery;
-  const pdf = await generateCohortYouthReportPdf(req.params.cohortId, actor(req), youthId);
+  const report = await getCohortYouthReport(req.params.cohortId, actor(req), youthId);
+  const pdf = await renderCohortYouthPdf(report);
   const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Youth Report.pdf';
+
   res.type('application/pdf');
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('Content-Disposition', `inline; filename="${fallbackFilename}"; filename*=UTF-8''${encodeURIComponent(pdf.filename)}`);

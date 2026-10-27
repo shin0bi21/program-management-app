@@ -119,6 +119,61 @@ selects the smallest safe flow:
 Missing revision markers cause a full deployment. This is expected on the first
 run after revision tracking is introduced.
 
+### Deployment selection and Docker caching
+
+Production deployment avoids unnecessary work at two independent levels:
+
+1. The deployment script compares the target commit with the last successfully
+   deployed frontend, backend, and infrastructure revisions. This selects the
+   smallest safe deployment flow and avoids invoking unrelated image builds.
+2. When a selected flow invokes `docker compose build`, Docker evaluates each
+   Dockerfile layer against its local build cache. A matching layer is reused;
+   a changed layer and the layers after it are rebuilt.
+
+The second level is Docker behavior, not another Git change classifier. A
+conservative full deployment deliberately invokes both image builds, database
+safeguards, and both service replacements. The image builds can still complete
+quickly when Docker reuses their layers.
+
+For example, `nginx.conf` is classified as production infrastructure, so it
+selects the full flow. The file is mounted into the nginx container rather than
+copied into either application image. If application inputs are unchanged, the
+backend and frontend image layers normally remain reusable even though both
+build commands run. The deployment still performs the full database-safety and
+service-replacement sequence.
+
+Both production Dockerfiles copy package manifests before application source:
+
+```text
+copy package.json and package-lock.json
+run npm ci
+copy application source
+run the TypeScript or frontend build
+```
+
+This ordering gives dependencies and application compilation separate cache
+boundaries:
+
+- A source-only change reuses the `npm ci` layer and reruns compilation.
+- A package manifest or lockfile change reruns `npm ci` and all later layers in
+  that build stage.
+- A relevant Dockerfile instruction, base-image state, or missing/pruned local
+  build cache can require more of the image to be rebuilt.
+- An unrelated component is not built at all when the first-level deployment
+  classification can safely exclude it.
+
+`npm ci` runs while Docker builds an image, not whenever a production container
+starts. The backend Dockerfile has separate dependency-install layers for its
+builder and production stages; the frontend Dockerfile has one in its builder
+stage. A cache hit skips the corresponding command entirely. Runtime containers
+start from the completed images.
+
+Consequently, two deployments classified as full can have materially different
+durations. A warm-cache full deployment may reuse nearly every image layer,
+whereas a cold or invalidated build must reinstall dependencies and compile both
+applications. `Full` describes the safety flow that was selected; it does not
+mean `--no-cache` or guarantee that every Dockerfile command executes.
+
 ## Monitoring and rerunning a deployment
 
 In GitHub, open **Actions → Deploy Production**, then select the workflow run

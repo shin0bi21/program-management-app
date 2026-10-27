@@ -87,7 +87,20 @@ nonwithdrawn enrollment or open-roster attendance.
 |---|---|
 | `/programs` | Program lookup and creation |
 | `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
+| `/cohorts/cycles` | Shared program-cycle lookup and management |
 | `/schools` | School lookup and management |
+
+| Method | Path | Purpose | Required permission |
+|---|---|---|---|
+| `GET` | `/cohorts/cycles` | List program cycles | `read:programs` |
+| `POST` | `/cohorts/cycles` | Create a program cycle | `write:programs` |
+| `PUT` | `/cohorts/cycles/:cycleId` | Update a program cycle | `write:programs` |
+| `DELETE` | `/cohorts/cycles/:cycleId` | Delete an unused program cycle | `write:programs` |
+
+Cycles are shared across cohorts and staff hours. Their service owner is
+[`programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts);
+HTTP routing and validation remain in `cohortRoutes.ts` and `cohortSchemas.ts`.
+Deleting a cycle referenced by a cohort or time entry returns `409`.
 
 `GET /cohorts/sessions` accepts comma-separated UUID `cycleIds` to filter sessions across
 the selected cycles' cohorts. It combines with program, cohort, session-type, status,
@@ -97,7 +110,7 @@ search, date-range and pagination filters while preserving program access restri
 
 | Base path | Purpose |
 |---|---|
-| `/public` | Unauthenticated homepage content and expression-of-interest intake |
+| `/public` | Unauthenticated homepage content and public lead intake |
 | `/expressions-of-interest` | Internal review, status updates, and lead conversion |
 | `/leads` | Lead intake, status management, follow-up notes, and youth signup |
 
@@ -105,6 +118,15 @@ search, date-range and pagination filters while preserving program access restri
 with null age ranges first, and nests its next three non-cancelled sessions.
 Programs remain present when they have no upcoming sessions; names, descriptions,
 age ranges, and attendance mode come directly from the program record.
+
+`GET /public/homepage/images` returns the managed images. Signup availability is
+loaded independently through `GET /public/homepage/signup`, which returns the
+`signupEnabled` flag. `GET /homepage/signup` exposes that setting to users with
+`read:homepage` permission. `POST /public/leads` returns `409` while
+homepage signup is disabled.
+
+`PATCH /homepage/signup` enables or disables public homepage signup for users
+with `write:homepage` permission.
 
 Lead workflow endpoints:
 

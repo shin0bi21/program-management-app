@@ -13,6 +13,12 @@ Keep list-only totals and direct-record-only relationships with the endpoint tha
 
 Keep product behavior with its capability even when several pages use it. Use `services/shared/` only for technical mechanisms such as audit writing, cursor encoding, or file uploads.
 
+Program-cycle reads and mutations belong to
+[`programming/cycles/programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts).
+Cohort creation, updates, and deletion remain in the cohort service. Cycle routes,
+controller handlers, and validation still use the cohort HTTP owners; the
+[`/cohorts/cycles` endpoints](api.md#programming) retain their existing paths and permissions.
+
 ## Write the public operations first
 
 Order a main service so it is easy to scan:

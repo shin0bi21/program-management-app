@@ -3,7 +3,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { Program } from '../../../../../common/features/programs/types';
-import type { ProgramCycle } from '../../types';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 
 import { useAddCohortModal } from './hooks/useAddCohortModal';
 

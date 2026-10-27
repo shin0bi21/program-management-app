@@ -2,7 +2,8 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramCohort, ProgramCycle } from '../../types';
+import type { ProgramCohort } from '../../types';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 
 import { useEditCohortModal } from './hooks/useEditCohortModal';
 
