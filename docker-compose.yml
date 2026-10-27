@@ -67,6 +67,7 @@ services:
     environment:
       - NODE_ENV=development
       - DISABLE_2FA=true
+      - DISABLE_OUTBOUND=true
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - UPLOAD_ROOT=/uploads
     depends_on:
