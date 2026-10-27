@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getProgramCycles } from '../../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
 import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
 import useProgrammingData from './useProgrammingData';
 
-vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({
   getProgramCycles: vi.fn(),
 }));
 vi.mock('../../../../../common/features/programs/hooks/usePrograms', () => ({

@@ -45,6 +45,8 @@ const preferenceApi = vi.hoisted(() => ({
 
 vi.mock('../Cohorts/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
+}));
+vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
   getProgramCycles: (...args: unknown[]) => getProgramCycles(...args),
 }));
 

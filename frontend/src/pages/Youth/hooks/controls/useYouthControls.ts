@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../common/features/programs/types';
-import type { ProgramCycle } from '../../../Programming/Cohorts/types';
+import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
   preferenceIds,

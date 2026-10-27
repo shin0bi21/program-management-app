@@ -6,7 +6,7 @@ import useCohortData from './useCohortData';
 const api = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const programs = vi.hoisted(() => ({ programs: [{ id: 'program-1', name: 'Program' }] }));
 
-vi.mock('../../cohorts.api', () => ({
+vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({
   getProgramCycles: api.getProgramCycles,
 }));
 vi.mock('../../../../../common/features/programs/hooks/usePrograms', () => ({

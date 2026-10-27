@@ -40,6 +40,8 @@ vi.mock('./cohorts.api', () => ({
   getCohortPage: api.getCohorts,
   createCohort: api.createCohort,
   deleteCohort: api.deleteCohort,
+}));
+vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
   getProgramCycles: api.getProgramCycles,
 }));
 

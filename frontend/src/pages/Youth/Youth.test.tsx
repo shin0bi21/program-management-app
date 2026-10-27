@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
-import { getProgramCycles } from '../Programming/Cohorts/cohorts.api';
+import { getProgramCycles } from '../../common/features/programming/cycles/cycles.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
@@ -29,7 +29,7 @@ vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
   },
 }));
 
-vi.mock('../Programming/Cohorts/cohorts.api', () => ({ getProgramCycles: vi.fn() }));
+vi.mock('../../common/features/programming/cycles/cycles.api', () => ({ getProgramCycles: vi.fn() }));
 
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),

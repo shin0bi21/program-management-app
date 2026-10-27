@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import type { Program } from '../../../../common/features/programs/types';
-import type { ProgramCohort, ProgramCycle } from '../../Cohorts/types';
+import type { ProgramCohort } from '../../Cohorts/types';
+import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionType } from '../types';
 import { useSessionControls } from './useSessionControls';
 

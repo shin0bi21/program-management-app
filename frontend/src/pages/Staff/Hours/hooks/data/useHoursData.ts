@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getProgramCycles } from '../../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
 import { getHoursReferenceData } from '../../hours.api';
 
 export default function useHoursData(

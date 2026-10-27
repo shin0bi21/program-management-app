@@ -19,7 +19,7 @@ import type {
   HoursProgram,
   HoursSortKey,
 } from '../../types';
-import type { ProgramCycle } from '../../../../Programming/Cohorts/types';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
 type HoursView = 'calendar' | 'table';

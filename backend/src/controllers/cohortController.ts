@@ -3,11 +3,9 @@ import type { AuthRequest } from '../middleware/authMiddleware';
 import {
   createCohort,
   deleteCohort,
-  deleteProgramCycle,
-  getProgramCycles,
-  setProgramCycle,
   updateCohort,
 } from '../services/programming/cohorts/cohortService';
+import { deleteProgramCycle, getProgramCycles, setProgramCycle } from '../services/programming/cycles/programCycleService';
 import { listCohorts } from '../services/programming/cohorts/cohortListService';
 import { enrollYouth, withdrawYouth } from '../services/programming/cohorts/enrollmentService';
 import {
