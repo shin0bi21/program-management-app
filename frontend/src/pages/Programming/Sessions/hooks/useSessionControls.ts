@@ -10,7 +10,8 @@ import {
   preferenceColumnWidths,
   preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
-import type { ProgramCohort, ProgramCycle } from '../../Cohorts/types';
+import type { ProgramCohort } from '../../Cohorts/types';
+import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionSortKey, SessionType } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { SessionStatusFilter } from '../types';

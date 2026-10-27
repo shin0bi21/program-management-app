@@ -32,14 +32,6 @@ export interface CohortRosterYouth {
   }>;
 }
 
-export interface ProgramCycle {
-  id: string;
-  name: string;
-  startsOn: string;
-  endsOn: string;
-  state: 'upcoming' | 'active' | 'completed';
-}
-
 export interface CohortListFilters {
   programId?: string;
   search?: string;

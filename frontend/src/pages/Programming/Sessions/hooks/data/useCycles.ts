@@ -1,5 +1,5 @@
-import { getProgramCycles } from '../../../Cohorts/cohorts.api';
-import type { ProgramCycle } from '../../../Cohorts/types';
+import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import useListQuery from '../../../../../query/hooks/useListQuery';
 
 export function useCycles() {

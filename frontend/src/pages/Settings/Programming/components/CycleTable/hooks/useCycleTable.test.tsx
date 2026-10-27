@@ -3,7 +3,7 @@ import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { ProgramCycle } from '../../../../../Programming/Cohorts/types';
+import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import useCycleTable from './useCycleTable';
 
 const menu = vi.hoisted<{ items: ActionItem[] }>(() => ({ items: [] }));

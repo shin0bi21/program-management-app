@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import { getProgramCycles } from '../../../Cohorts/cohorts.api';
+import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { useCycles } from './useCycles';
 
-vi.mock('../../../Cohorts/cohorts.api', () => ({ getProgramCycles: vi.fn() }));
+vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({ getProgramCycles: vi.fn() }));
 
 it('loads cycle options with cancellation support', async () => {
   const cycles = [{

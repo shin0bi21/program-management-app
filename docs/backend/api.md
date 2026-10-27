@@ -87,7 +87,20 @@ nonwithdrawn enrollment or open-roster attendance.
 |---|---|
 | `/programs` | Program lookup and creation |
 | `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
+| `/cohorts/cycles` | Shared program-cycle lookup and management |
 | `/schools` | School lookup and management |
+
+| Method | Path | Purpose | Required permission |
+|---|---|---|---|
+| `GET` | `/cohorts/cycles` | List program cycles | `read:programs` |
+| `POST` | `/cohorts/cycles` | Create a program cycle | `write:programs` |
+| `PUT` | `/cohorts/cycles/:cycleId` | Update a program cycle | `write:programs` |
+| `DELETE` | `/cohorts/cycles/:cycleId` | Delete an unused program cycle | `write:programs` |
+
+Cycles are shared across cohorts and staff hours. Their service owner is
+[`programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts);
+HTTP routing and validation remain in `cohortRoutes.ts` and `cohortSchemas.ts`.
+Deleting a cycle referenced by a cohort or time entry returns `409`.
 
 `GET /cohorts/sessions` accepts comma-separated UUID `cycleIds` to filter sessions across
 the selected cycles' cohorts. It combines with program, cohort, session-type, status,

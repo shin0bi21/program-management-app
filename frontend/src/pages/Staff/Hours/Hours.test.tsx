@@ -21,7 +21,7 @@ import { getUser } from '../../../auth/storage';
 const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook: { preference: StoredHoursPreferences | null } = { preference: null };
 
-vi.mock('../../Programming/Cohorts/cohorts.api', () => ({
+vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
   getProgramCycles: programmingApi.getProgramCycles,
 }));
 

@@ -1,6 +1,6 @@
 import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProgramCycle } from '../../../Programming/Cohorts/types';
+import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { Program } from '../../../../common/features/programs/types';
 import { useYouthControls } from './useYouthControls';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
