@@ -75,7 +75,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Leads' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
   });
 
   it('opens homepage management from Settings for staff with homepage access', () => {
@@ -95,7 +95,7 @@ describe('AppNavigation', () => {
       'My Account',
       'Manage Homepage',
     ]);
-    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
@@ -317,7 +317,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
-  it('orders admin Settings destinations by account, programming, then homepage management', () => {
+  it('orders admin Settings destinations by user, programming, then homepage management', () => {
     authState.permissions = ['read:accounts', 'write:programs', 'read:homepage'];
     authState.role = 'admin';
     render(
@@ -328,7 +328,7 @@ describe('AppNavigation', () => {
 
     expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
       'My Account',
-      'Manage Accounts',
+      'Manage Users',
       'Manage Programming',
       'Manage Homepage',
     ]);

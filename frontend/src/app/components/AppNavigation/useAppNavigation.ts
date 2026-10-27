@@ -85,7 +85,7 @@ export function useAppNavigation() {
       canViewCohorts,
       canViewSessions,
       canViewProgramming: canViewCohorts || canViewSessions,
-      canManageAccounts: grantedPermissions.includes('read:accounts'),
+      canManageUsers: grantedPermissions.includes('read:accounts'),
       canManageProgramming: grantedPermissions.includes('write:programs'),
       canViewTasks,
       canViewHours,
