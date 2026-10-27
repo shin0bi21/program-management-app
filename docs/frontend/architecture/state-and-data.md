@@ -86,4 +86,4 @@ Do not test whether TanStack Query can fetch or cache. Query-wrapper tests own o
 
 A domain query-hook test owns the exact query key and enabled condition, adapter inputs, page size, cancellation and cursor forwarding, and domain response shaping. A real isolated `QueryClient` is the harness, not the subject. For example, the domain hook can prove that `pageParam: 'next'` becomes `cursor: 'next'`; `useInfiniteListQuery` owns proving that both pages are accumulated and deduplicated.
 
-Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#test-the-table).
+Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).

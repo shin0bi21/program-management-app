@@ -19,6 +19,11 @@ The application is available at:
 - Backend: <http://localhost:5001>
 - Development PostgreSQL: `localhost:5432`
 - Test PostgreSQL: `localhost:5433`
+- Developer documentation: <http://localhost:4321> (standalone `docs` container)
+
+Start only documentation with `docker compose up -d docs`; it does not need the
+application backend or database. See [Documentation website](../README.md) for
+local search preview and dependency refresh commands.
 
 Stop the stack without deleting data:
 

@@ -2,6 +2,21 @@
 # Production deployments use docker-compose.prod.yml explicitly.
 
 services:
+  docs:
+    image: node:24-alpine
+    container_name: myapp_docs
+    working_dir: /workspace/docs
+    volumes:
+      - ./:/workspace:ro
+      - ./docs:/workspace/docs
+      - docs_node_modules:/workspace/docs/node_modules
+    tmpfs:
+      - /workspace/docs/.astro
+      - /workspace/docs/src/content/docs
+    ports:
+      - "127.0.0.1:4321:4321"
+    command: sh -c "if [ ! -x node_modules/.bin/astro ]; then npm ci; fi; npm run dev -- --host 0.0.0.0"
+
   frontend:
     image: node:24-alpine
     container_name: myapp_frontend
@@ -90,4 +105,5 @@ volumes:
   db_data:  # PostgreSQL database files
   backend_node_modules:  # Node.js dependencies
   frontend_node_modules:  # Frontend dependencies
+  docs_node_modules:  # Docs dependencies; independent of the web app
   homepage_uploads:  # Shared app uploads; legacy volume name retained to preserve existing files
