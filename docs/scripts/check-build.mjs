@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { resolve, relative, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
+import console from 'node:console';
 
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
 const pages = [];
