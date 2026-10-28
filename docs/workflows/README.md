@@ -10,6 +10,7 @@ Use focused local checks while implementing, required GitHub checks as the merge
 |---|---|
 | Local setup | [Setup](setup.md) |
 | Local Docker, migrations, and dependencies | [Local development](local-development.md) |
+| Refresh local data from production | [Data snapshots](data-snapshots.md) |
 | Test ownership and commands | [Testing](testing.md) |
 | Continuous integration | [CI](ci.md) |
 | Debugging | [Debugging](debugging.md) |

@@ -126,6 +126,14 @@ stack frames. It organizes evidence without assigning a speculative root cause.
 Use logs to identify the failing service before restarting or rebuilding
 unrelated services.
 
+## Production data snapshots
+
+Use the [data refresh workflow](data-snapshots.md) for the single SSH-to-local
+refresh command and its step-by-step process. It validates a temporary import
+before switching databases, retains the previous local database for rollback,
+and removes temporary downloads. Use `--validate-only` to check the import
+without replacing local data. Uploaded files are not copied.
+
 ## Destructive reset
 
 When local database or dependency volumes are intentionally disposable, reset

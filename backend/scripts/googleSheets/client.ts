@@ -12,6 +12,9 @@ let sheetsClient: sheets_v4.Sheets | null = null;
  * Used by backend/scripts/googleSheets tooling; not part of the live API server.
  */
 export function getSheetsClient(): sheets_v4.Sheets {
+  if (process.env.NODE_ENV !== 'production' && process.env.DISABLE_OUTBOUND === 'true') {
+    throw new Error('Outbound integrations are disabled for this local environment');
+  }
   if (sheetsClient) return sheetsClient;
 
   const encoded = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
