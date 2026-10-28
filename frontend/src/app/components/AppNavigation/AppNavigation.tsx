@@ -15,7 +15,7 @@ export default function AppNavigation() {
   } = navigation;
   const {
     canManageHomepage, canViewYouth, canViewLeads, canViewCohorts,
-    canViewSessions, canViewProgramming, canManageAccounts, canManageProgramming,
+    canViewSessions, canViewProgramming, canManageUsers, canManageProgramming,
     canViewTasks, canViewHours, canViewStaff,
   } = permissions;
 
@@ -238,13 +238,13 @@ export default function AppNavigation() {
           >
             My Account
           </button>
-          {canManageAccounts && (
+          {canManageUsers && (
             <button
               role="menuitem"
               onClick={() => go('/settings/users')}
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
-              Manage Accounts
+              Manage Users
             </button>
           )}
           {canManageProgramming && (
