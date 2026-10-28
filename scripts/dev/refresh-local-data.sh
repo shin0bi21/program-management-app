@@ -22,7 +22,9 @@ refresh_mode=''
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --host|--identity)
-      [ "$#" -ge 2 ] && [ -n "$2" ] || fail "Missing value for $1"
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        fail "Missing value for $1"
+      fi
       case "$1" in
         --host) refresh_host="$2" ;;
         --identity) refresh_identity="$2" ;;
@@ -157,7 +159,9 @@ refresh_download_args=(--host "$refresh_host" --destination "$refresh_work")
 if [ -n "$refresh_identity" ]; then refresh_download_args+=(--identity "$refresh_identity"); fi
 bash "$refresh_repo/scripts/dev/download-data-snapshot.sh" "${refresh_download_args[@]}"
 refresh_archives=("$refresh_work"/*.dump)
-[ "${#refresh_archives[@]}" -eq 1 ] && [ -f "${refresh_archives[0]}" ] || fail 'Expected exactly one downloaded archive'
+if [ "${#refresh_archives[@]}" -ne 1 ] || [ ! -f "${refresh_archives[0]}" ]; then
+  fail 'Expected exactly one downloaded archive'
+fi
 refresh_archive="${refresh_archives[0]}"
 if command -v shasum >/dev/null 2>&1; then
   (cd "$refresh_work" && shasum -a 256 -c "${refresh_archive##*/}.sha256")
@@ -190,7 +194,9 @@ if [ "$refresh_mode" = --validate-only ]; then
   exit 0
 fi
 
-[ -f "$refresh_repo/.env" ] && [ ! -L "$refresh_repo/.env" ] || fail 'A regular repository-local .env file is required'
+if [ ! -f "$refresh_repo/.env" ] || [ -L "$refresh_repo/.env" ]; then
+  fail 'A regular repository-local .env file is required'
+fi
 printf 'Switching the local backend to the prepared database...\n'
 "${compose[@]}" stop backend
 refresh_backend_stopped=true

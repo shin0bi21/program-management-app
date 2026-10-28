@@ -21,7 +21,9 @@ snapshot_container='myapp_db'
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --host|--destination|--identity|--container)
-      [ "$#" -ge 2 ] && [ -n "$2" ] || fail "Missing value for $1"
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        fail "Missing value for $1"
+      fi
       case "$1" in
         --host) snapshot_host="$2" ;;
         --destination) snapshot_destination="$2" ;;

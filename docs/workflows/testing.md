@@ -106,6 +106,7 @@ CI; failed scheduled runs retain traces for 14 days.
 
 ## Test ownership
 
+- Repository-tool tests live beside their scripts. Register new script folders in the root lint command and `scripts/tests/test-static.sh`; the snapshot download/refresh tests in `scripts/dev/` use mocked SSH and Docker commands and never require live data.
 - Backend suites live in `backend/tests/<domain>/` and share helpers from
   `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they
