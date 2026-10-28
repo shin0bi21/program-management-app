@@ -6,6 +6,7 @@ interface CellProps<TRow, TItemData> {
   className?: string;
   context: CalendarCellContext<TRow, TItemData>;
   rowId: string;
+
   onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
 }

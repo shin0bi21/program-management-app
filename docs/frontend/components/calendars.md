@@ -32,7 +32,7 @@ function ExampleCalendar({ rows, filters, selection, actions }: Props) {
     items={calendar.items}
     getRowId={row => row.id}
     getItemRange={example => ({ start: example.startsOn, end: example.endsOn })}
-    buildItem={({ data }) => <ExampleItem example={data} actions={actions} />}
+    buildItem={({ data, calendar }) => <ExampleItem calendar={calendar} example={data} actions={actions} />}
     getItemCapabilities={({ data }) => ({
       draggable: actions.canMove(data),
       resizable: actions.canResize(data),
@@ -76,8 +76,8 @@ The shared `TimelineCalendar` owns row/period virtualization, grid semantics, na
 - Use `onCellActivate`, `onItemActivate`, and `onRowSelect` for their distinct targets.
 - All items use `onItemMove`; enable optional `onItemResize` per item with `getItemCapabilities`. For example, Hours items use `resizable: false`.
 - Use `getCellActions` when one cell opens multiple domain workflows.
-- Build editable content with the shared `Item` shell; it owns sizing, details, menus, pointer-down dismissal, and focus return.
-- Position all items in the shared row item layer. Dense overlaps may hide visual summaries, but every item keeps its accessible label and hover or focus details; do not replace the items with an overflow menu.
+- Build calendar items with the shared `Item` shell. Forward `BuildItemContext.calendar` through the domain adapter into `Item`'s `calendar` prop; it is a data/callback contract, not a calendar instance. Item owns its positioned wrapper, resize handles, move/resize workflows, click handling, details, menus, and focus return. Omitting the prop supports standalone content previews without timeline placement.
+- Row calculates overlap lanes, clipping, geometry, and effective capabilities, then renders the domain adapters in its shared item layer. Item applies that layout to its own wrapper. Dense overlaps may hide visual summaries, but every item keeps its accessible label and hover or focus details; do not replace the items with an overflow menu.
 - Give every item a complete accessible label and never communicate type or status by color alone.
 - Keep one calendar scroll viewport and fixed-height virtualized rows.
 
@@ -85,16 +85,26 @@ Apply the [lowest-owner hook rule](../architecture/ownership.md) within the cale
 
 | Owner | Hook responsibility |
 |---|---|
-| `TimelineCalendar/hooks/` | Viewport-wide virtualization, pointer coordination, and move/resize workflows that cross rows or must survive row unmount |
+| `TimelineCalendar/hooks/` | Viewport-wide virtualization and the single shared pointer-session coordinator |
 | `components/Row/hooks/` | Stateful behavior contained within one row, when needed; simple selection and event forwarding stay in Row |
-| `components/Item/hooks/` | That item's hover/focus details and action-menu workflow |
+| `components/Item/hooks/` | That item's complete move/resize workflows, hover/focus details, and action-menu workflow |
 | `components/Cell/hooks/` | That cell's activation and action-menu workflow |
 
-The move and resize hooks own their DOM entry handlers as well as pointer guards, keyboard resizing, previews, scrolling, completion, and cancellation. Rows render the interaction affordances and forward events with item context; keep multi-step interaction handlers out of row render loops. Keep these hooks at calendar level because active interactions must continue when virtualized source rows unmount. Item and cell hooks remain local because their state and cleanup belong to those rendered instances.
+Item's separate `useItemMove` and `useItemResize` hooks own pointer and keyboard guards, snapping, previews, autoscroll, permission checks against supplied props, completion, and cancellation. They construct their own result payloads and report them through callbacks. Row binds the original record and layout, then relays interaction requests/results to Calendar. A row-header click uses Row's same selection handler directly; an item click reaches it through Item's `onSelect` callback. Item handles selection before activation and consumes suppressed clicks before either action.
+
+Calendar passes configuration, a read-only view of current interaction data, and callbacks down through Grid and Row. Item reports changes up through Row; it does not import parent components or invoke a calendar instance API. Calendar publishes updated interaction data after commit so sessions surviving a source item's unmount still read the current rows, periods, and domain callbacks.
+
+Group long calendar prop and interface declarations by responsibility with short section
+comments and blank lines: layout/periods, rows and selection, item rendering, item
+interactions, and cell actions. Keep the same order in destructuring and forwarded props
+so readers can follow each responsibility through Calendar, Grid, Row, and Item. Small
+contracts can use spacing alone; grouping does not require nested prop objects.
+
+The shared pointer service owns native listener registration, pointer capture, threshold detection, exclusivity, and the active animation loop. It retains Item-provided session callbacks until completion or cancellation, allowing virtualized source items to unmount without moving their workflows back into Calendar. Inactive item move/resize hooks add refs and event handlers, not global listeners or animation loops. Source-item unmount cleans up local details/menu resources; active-session completion or calendar unmount releases previews, capture, and session references.
 
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 
-The page-calendar test owns capability mapping, selection, item construction and exact callback-to-action wiring. Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.
+The page-calendar test owns capability mapping, selection, item construction, forwarding the calendar prop, and exact callback-to-action wiring. Row tests own record/layout binding; Item tests own its positioned wrapper, selection/activation ordering, and click suppression; its move/resize hook tests own event routing and visible handle selection. Shared `TimelineCalendar` tests own composition, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.
 
 For example, Programming uses programs as rows and session names as item summaries.
 The program label belongs in the row header; session type, scheduled time and description

@@ -6,10 +6,16 @@ export const CELL_MENU_WIDTH = 180;
 
 interface UseCellActionsOptions<TRow, TItemData> {
   context: CalendarCellContext<TRow, TItemData>;
+
   onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
 }
 
+/**
+ * Owns cell activation and its optional action-menu lifecycle.
+ * Requires: context describes the cell's row and period.
+ * Example: Enter invokes its primary callback or opens its available actions.
+ */
 export default function useCellActions<TRow, TItemData>({
   context, onCellClick, getCellActions,
 }: UseCellActionsOptions<TRow, TItemData>) {
@@ -24,7 +30,8 @@ export default function useCellActions<TRow, TItemData>({
     { widthEstimate: CELL_MENU_WIDTH, heightEstimate: 90 },
   );
 
-  const activateCell = (point?: { x: number; y: number }) => {
+  /** Invokes the primary action or opens the available cell-action menu. */
+  function activateCell(point?: { x: number; y: number }): void {
     if (!hasCellActions) {
       onCellClick?.(context);
       return;
@@ -32,25 +39,28 @@ export default function useCellActions<TRow, TItemData>({
 
     if (point) cellMenu.openAtPoint(point.x, point.y);
     else cellMenu.toggle();
-  };
+  }
 
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+  /** Activates the cell at the clicked pointer position. */
+  function handleClick(event: MouseEvent<HTMLDivElement>): void {
     activateCell({ x: event.clientX, y: event.clientY });
-  };
+  }
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  /** Activates the cell for Enter/Space while ignoring events from nested controls. */
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.target !== event.currentTarget) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
 
     event.preventDefault();
     activateCell();
-  };
+  }
 
-  const selectAction = (event: MouseEvent<HTMLButtonElement>, action: CalendarCellAction) => {
+  /** Closes the menu before reporting the selected action without bubbling the click. */
+  function selectAction(event: MouseEvent<HTMLButtonElement>, action: CalendarCellAction): void {
     event.stopPropagation();
     cellMenu.close();
     action.onSelect();
-  };
+  }
 
   return { cellActions, hasCellActions, interactive, cellRef, cellMenu, handleClick, handleKeyDown, selectAction };
 }

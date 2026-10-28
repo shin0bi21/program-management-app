@@ -15,7 +15,7 @@ export function InteractiveSessionItem() {
       getItemRange={() => ({ start: '2026-08-09', end: '2026-08-09' })}
       getItemCapabilities={() => ({ draggable: true, resizable: false })}
       renderRow={({ row }) => row.name}
-      buildItem={() => <SessionItem session={session} selected
+      buildItem={({ calendar }) => <SessionItem calendar={calendar} session={session} selected
         onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />} />
     <input hidden readOnly data-testid="session-action" value={action} />
   </div>;

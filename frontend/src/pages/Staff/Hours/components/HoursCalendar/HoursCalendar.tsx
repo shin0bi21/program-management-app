@@ -77,16 +77,16 @@ export default function HoursCalendar({
     source: { resourceId: row.id, date: originalRange.start },
     destination: { resourceId: destinationRow.id, date: nextRange.start },
   });
-  const renderHoursItem = useCallback((resource: StaffResource, date: string, item: HoursEntry) => (
+  const buildItem = useCallback(({ row, range, data, calendar: itemCalendar }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
     <HoursItem
-      item={item}
-      onEdit={canWrite && resource.writable && !isEntryPending(item.id) ? () => onEdit({ resourceId: resource.id, date, item }) : undefined}
-      onDelete={canWrite && resource.writable && !isEntryPending(item.id) ? () => onDelete({ resourceId: resource.id, date, item }) : undefined}
+      calendar={itemCalendar}
+      item={data.item}
+      onEdit={canWrite && row.writable && !isEntryPending(data.item.id)
+        ? () => onEdit({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
+      onDelete={canWrite && row.writable && !isEntryPending(data.item.id)
+        ? () => onDelete({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
     />
   ), [canWrite, isEntryPending, onDelete, onEdit]);
-  const buildItem = useCallback(({ row, range, data }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
-    renderHoursItem(row, range.start, data.item)
-  ), [renderHoursItem]);
   const openCellEntry = useCallback((
     { row, period }: CalendarCellContext<StaffResource, HoursCalendarItem>,
     source: 'regular' | 'task' | 'session',

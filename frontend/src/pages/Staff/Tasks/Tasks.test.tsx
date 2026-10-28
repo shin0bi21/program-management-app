@@ -1,3 +1,4 @@
+import { makeItemCalendarProps } from '../../../tests/factories/calendarItem';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -348,6 +349,7 @@ describe('Tasks', () => {
       row,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
+      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
       visibleStart: { key: task.startDate, start, end: start },
       visibleEnd: { key: task.dueDate, start: end, end },
     }) as { props: { selected?: boolean } };
@@ -363,6 +365,7 @@ describe('Tasks', () => {
       row,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
+      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
       visibleStart: { key: task.startDate, start, end: start },
       visibleEnd: { key: task.dueDate, start: end, end },
     }) as { props: { selected?: boolean } };

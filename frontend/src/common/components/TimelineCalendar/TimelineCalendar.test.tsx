@@ -3,6 +3,7 @@ import { addDays, dayKey } from './utils/periods';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TimelineCalendar from './TimelineCalendar';
+import Item from './components/Item/Item';
 import type { TimelineCalendarProps } from './types';
 
 interface TestRow { id: string; name: string }
@@ -24,7 +25,7 @@ function renderCalendar(overrides: Partial<CalendarProps> = {}) {
     getItemId: item => item.id,
     getItemRange: item => ({ start: item.start, end: item.end }),
     renderRow: ({ row }) => row.name,
-    buildItem: ({ data }) => <button type="button">{data.id}</button>,
+    buildItem: ({ data, calendar }) => <Item calendar={calendar} id={data.id} ariaLabel={data.id} summary={data.id} detailTitle={data.id} details={[]} />,
     ...overrides,
   };
   return render(<TimelineCalendar {...props} />);
@@ -88,7 +89,7 @@ describe('TimelineCalendar', () => {
       items: { 'staff-1': [pointItem('entry-1', '2026-08-09')] },
       selectedRowId: 'staff-2',
       onRowSelect,
-      buildItem: ({ data }) => <button type="button" onClick={onItemClick}>{data.id}</button>,
+      onItemActivate: onItemClick,
     });
 
     expect(screen.getByRole('button', { name: 'Alex Morgan' })).toHaveAttribute('aria-pressed', 'true');
@@ -101,7 +102,9 @@ describe('TimelineCalendar', () => {
   });
 
   it('positions one-period and multi-period items through one item layer and build contract', () => {
-    const buildItem = vi.fn(({ data }: { data: TestItem }) => <span>{data.id}</span>);
+    const buildItem = vi.fn<CalendarProps['buildItem']>(({ data, calendar }) => (
+      <Item calendar={calendar} id={data.id} ariaLabel={data.id} summary={data.id} detailTitle={data.id} details={[]} />
+    ));
     const { container } = renderCalendar({
       items: {
         'staff-1': [

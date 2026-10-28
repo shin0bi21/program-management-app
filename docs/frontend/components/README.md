@@ -12,6 +12,31 @@ Keep a multi-step interaction workflow together in its owning hook, including ev
 
 Follow the [ownership guide](../architecture/ownership.md) for where each hook lives.
 
+Follow the [Waterloo design recipe](https://student.cs.uwaterloo.ca/~cs135/assign/style_guide/cs135_style.pdf)
+for extracted helpers: state their purpose, define their contract and requirements, work
+through examples, implement the function, and verify it with tests. In TypeScript, the
+signature supplies the type contract. Place a concise purpose comment immediately above
+the helper, including requirements or effects the types cannot express and a representative
+input/output example. Executable examples and relevant boundary cases belong in colocated
+tests; component-private helpers can be verified through the owning component's behavior.
+Place helpers below the component, in the order their callers use them.
+
+For an interaction hook, document the full workflow's purpose, requirements, and example
+at the hook boundary. Keep internal lifecycle-method comments to a short purpose statement;
+add requirements or effects only where needed. Its colocated tests cover the lifecycle's
+examples and boundary cases.
+
+```ts
+/**
+ * Produces the arithmetic mean of values.
+ * Requires: values is nonempty and contains only finite numbers.
+ * Example: mean([2, 4, 6]) => 4.
+ */
+function mean(values: readonly number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+```
+
 Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
 
 Lifecycle is conditional. A hook that installs an observer tests its options, callback guards, meaningful dependency changes, and cleanup. A badge that only renders a label and modifier tests those outputs; it does not need mount, rerender, and unmount tests.

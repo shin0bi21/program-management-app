@@ -26,9 +26,25 @@ describe('usePointerSession', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     document.body.replaceChildren();
+  });
+
+  it('shares transient click suppression and clears its timer on unmount', () => {
+    vi.useFakeTimers();
+    const { result, unmount } = renderHook(() => usePointerSession());
+
+    expect(result.current.isClickSuppressed()).toBe(false);
+    act(() => result.current.suppressNextClick());
+    expect(result.current.isClickSuppressed()).toBe(true);
+    act(() => vi.runOnlyPendingTimers());
+    expect(result.current.isClickSuppressed()).toBe(false);
+
+    act(() => result.current.suppressNextClick());
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('activates one captured session after threshold movement and releases it on completion', () => {
@@ -42,7 +58,7 @@ describe('usePointerSession', () => {
     const onCancel = vi.fn();
     const { result } = renderHook(() => usePointerSession());
 
-    act(() => expect(result.current.beginPointerSession({
+    act(() => expect(result.current.startPointerSession({
       type: 'item-move',
       pointerId: 7,
       startX: 100,
@@ -54,7 +70,7 @@ describe('usePointerSession', () => {
       onCancel,
     })).toBe(true));
     expect(result.current.activeType).toBe('item-move');
-    act(() => expect(result.current.beginPointerSession({
+    act(() => expect(result.current.startPointerSession({
       type: 'item-resize',
       pointerId: 8,
       startX: 100,
@@ -91,7 +107,7 @@ describe('usePointerSession', () => {
     const onMove = vi.fn();
     const { result } = renderHook(() => usePointerSession());
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-move',
       pointerId: 7,
       startX: 100,
@@ -158,7 +174,7 @@ describe('usePointerSession', () => {
     const onCancel = vi.fn();
     const { result } = renderHook(() => usePointerSession());
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-move',
       pointerId: 7,
       startX: 100,
@@ -215,7 +231,7 @@ describe('usePointerSession', () => {
     const onCancel = vi.fn();
     const { result } = renderHook(() => usePointerSession());
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-move',
       pointerId: 7,
       startX: 100,
@@ -259,7 +275,7 @@ describe('usePointerSession', () => {
     const onCancel = vi.fn();
     const { result } = renderHook(() => usePointerSession());
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-resize',
       pointerId: 9,
       startX: 100,
@@ -281,7 +297,7 @@ describe('usePointerSession', () => {
     const { result } = renderHook(() => usePointerSession());
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-move',
       pointerId: 10,
       startX: 100,
@@ -307,7 +323,7 @@ describe('usePointerSession', () => {
     const onCancel = vi.fn();
     const { result, unmount } = renderHook(() => usePointerSession());
 
-    act(() => result.current.beginPointerSession({
+    act(() => result.current.startPointerSession({
       type: 'item-resize',
       pointerId: 11,
       startX: 100,
