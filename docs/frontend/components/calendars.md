@@ -83,6 +83,34 @@ Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior wi
 
 The page-calendar test owns capability mapping, selection, item construction and exact callback-to-action wiring. Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.
 
+For example, Programming uses programs as rows and session names as item summaries.
+The program label belongs in the row header; session type, scheduled time and description
+belong in the item's hover or keyboard-focus details. Session timestamps are interpreted
+in each program's timezone. Convert the timeline's inclusive date range to local midnights
+with an exclusive next-day end for the session API, using calendar arithmetic across DST.
+When rows use different timezones, query the earliest start and latest end across those zones.
+A session ending exactly at midnight occupies the preceding day, not the following one.
+
+The program-level overview shows only the cohort covering today's date in the program's
+timezone, within the active cycle filters. It shows an empty state when there is no current
+cohort rather than rendering historical or upcoming cohort cards. If assignments overlap,
+the most recently started current cohort is shown.
+
+Program settings own the default weekday, start/end times, and timezone across cohorts.
+The Add Session dialog uses the next default weekday (today only before the default start time).
+Calendar creation supplies its selected date unchanged and uses the program's default times.
+The dialog allows date/time edits and creates one session; there is no bulk creation control.
+Session writers can drag sessions that have not started to another future date within the
+same program row. Moves preserve the program-local start/end times across DST and resolve
+the assigned cycle from the new dates. Cancelled and started sessions cannot be dragged;
+resizing and transfers between program rows remain disabled. A move into a different cycle
+is rejected if the session has attendance, notes, attachments, or linked hours. Apply the
+returned session to the calendar buffer and table cache without replacing the calendar
+buffer; surface a rejected move as a page error while keeping the original placement.
+The server resolves the assigned cycle from the program and date; the form has no cohort selector.
+Dates with no matching assignment or overlapping assigned cycles produce a clear error.
+Saved timestamps are UTC instants; edits split the date and times in the program's timezone.
+
 ## Save and reconcile changes
 
 Send add, move, resize, status, and delete events through narrow APIs. Move and resize requests contain only the changed range and optional destination resource; the backend re-reads authoritative state.

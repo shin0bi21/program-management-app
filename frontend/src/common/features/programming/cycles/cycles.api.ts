@@ -6,6 +6,7 @@ interface SetProgramCycleInput {
   name: string;
   startsOn: string;
   endsOn: string;
+  programIds: string[];
 }
 
 export function getProgramCycles(opts?: RequestOptions) {

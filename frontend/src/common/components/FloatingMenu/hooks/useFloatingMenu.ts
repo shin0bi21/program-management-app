@@ -112,11 +112,14 @@ export function useFloatingMenu(
       measuredPosition = calculateFloatingPosition(trigger, placementRef.current, measuredOptions);
     }
 
-    setPosition(current => current
-      && current.top === measuredPosition.top
-      && current.left === measuredPosition.left
-      ? current
-      : measuredPosition);
+    setPosition(current => {
+      // A queued resize observation must not reopen a menu after dismissal.
+      if (!current) return current;
+
+      return current.top === measuredPosition.top && current.left === measuredPosition.left
+        ? current
+        : measuredPosition;
+    });
   }, [triggerRef]);
 
   // Dismiss pointer interactions outside. Viewport dismissal is shared by floating UI consumers.

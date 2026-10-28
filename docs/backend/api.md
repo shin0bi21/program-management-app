@@ -106,6 +106,45 @@ Deleting a cycle referenced by a cohort or time entry returns `409`.
 the selected cycles' cohorts. It combines with program, cohort, session-type, status,
 search, date-range and pagination filters while preserving program access restrictions.
 
+Program create/update and lookup records include `defaultDayOfWeek` (lowercase weekday),
+`defaultStartTime` and `defaultEndTime` (`HH:mm`), and `timezone` (`America/Toronto`, the only supported program timezone).
+Existing programs begin with Tuesday, 17:00–19:30, America/Toronto. Defaults only
+apply when creating future sessions; changing them does not rewrite saved timestamps.
+
+`POST /cohorts/sessions` requires `write:sessions` and access to the supplied `programId`.
+It accepts `programId`, `sessionTypeId`, and `theme`, plus optional `date`, `startTime`,
+`endTime`, and `description`. Missing scheduling fields use the program defaults described
+below. The effective local date resolves exactly one assigned cycle/cohort for the program.
+No matching cycle returns `409` with a settings action; overlapping assigned cycles return
+`409` instead of silently choosing a cohort. Program, cycle, and cohort reads and insertion
+share the assignment-locking transaction. The UI does not supply a cohort ID.
+
+`POST /cohorts/:cohortId/sessions` requires `write:sessions` and access to the cohort.
+The body requires `sessionTypeId` and `theme`, with optional `date` (`YYYY-MM-DD`),
+`startTime`, `endTime`, and nullable `description`. Missing times use program defaults.
+A missing date uses the next default weekday in the program timezone, including today
+only before the default start time. A supplied date is preserved. The date must fall
+within the cohort's cycle, and end time must follow start time. Local program times
+are converted to timezone-aware timestamps; API timestamps serialize in UTC. Skipped
+or repeated wall-clock times at daylight-saving transitions return `409`, requiring
+an unambiguous local time.
+
+#### Move a future session date
+
+`PUT /api/cohorts/sessions/:sessionId/date` requires `write:sessions` and access
+to the session's program. The strict request body is `{ "date": "YYYY-MM-DD" }`.
+Only future, non-cancelled sessions may move, and the destination start must be
+future. The command preserves the program and local start/end wall-clock times,
+including an overnight local day span, then stores the resulting UTC instants.
+Skipped or repeated DST times are rejected. Exactly one assigned cycle must
+contain the complete moved session. A move to another cycle is rejected when
+attendance, notes, attachments, or session-linked hours exist. Other session
+fields remain unchanged.
+
+The response contains `id`, `cohortId`, `cohortName`, `cycleId`, `startsAt`, and
+`endsAt`. Invalid dates return 400; lifecycle, destination, or recorded-data
+conflicts return 409.
+
 ### Outreach
 
 | Base path | Purpose |
@@ -142,3 +181,13 @@ Lead workflow endpoints:
 Every Lead note has the `follow_up` category. Note details are editable and notes may be deleted independently of Lead status. Lead status is managed separately; staff may assign `new`, `contacted`, `eligible`, `ineligible`, `deferred`, or `closed`, while `signed_up` remains system-controlled.
 
 For lifecycle, ownership, and implementation, see the [Backend guide](README.md) and the focused documents beside this file. Local commands, testing, and deployment are routed through the root application README.
+
+Program-cycle assignment commands retain the existing cohort identity. `PUT
+/programs/:programId/cycles` requires `write:programs`, accepts `{ cycleIds:
+string[] }`, and returns `{ programId, cycleIds }` with cycle IDs sorted. It
+replaces the complete checked set atomically and preserves retained cohort IDs.
+Both `POST /cohorts/cycles` and `PUT /cohorts/cycles/:cycleId` accept cycle details
+plus required unique `programIds: string[]`; an empty array intentionally selects
+no programs. They save details and assignments in one transaction. Any removal
+with sessions, enrollment history, or logged hours returns 409 without saving any
+part of the request. Direct cohort deletion follows the same rule.

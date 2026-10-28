@@ -4,7 +4,7 @@ import ActionsMenu from '../../../../../../common/components/ActionsMenu/Actions
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { Program } from '../../../../../../common/features/programs/types';
 
-export default function useProgramTable(onEdit: (program: Program) => void) {
+export default function useProgramTable(onEdit: (program: Program) => void, onManageCycles: (program: Program) => void) {
   const columns = useMemo<TableColumnDef<Program>[]>(() => [
     { id: 'name', header: 'Program', accessorFn: program => program.name },
     {
@@ -26,10 +26,13 @@ export default function useProgramTable(onEdit: (program: Program) => void) {
       enableHiding: false,
       cell: ({ row: { original: program } }) => <ActionsMenu
         ariaLabel={`Actions for ${program.name}`}
-        items={[{ id: 'edit', label: 'Edit Program', onClick: () => onEdit(program) }]}
+        items={[
+          { id: 'edit', label: 'Edit Program', onClick: () => onEdit(program) },
+          { id: 'cycles', label: 'Assigned Cycles', onClick: () => onManageCycles(program) },
+        ]}
       />,
     },
-  ], [onEdit]);
+  ], [onEdit, onManageCycles]);
 
   return { columns };
 }

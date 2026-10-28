@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Outlet, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ReAuthProvider } from '../auth/reauth/ReAuthProvider';
 import ProtectedRoute from '../common/components/ProtectedRoute/ProtectedRoute';
@@ -14,14 +14,19 @@ const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
 const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
 const Leads = lazy(() => import('../pages/Leads/Leads'));
-const Cohorts = lazy(() => import('../pages/Programming/Cohorts/Cohorts'));
-const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
+const Programming = lazy(() => import('../pages/Programming/Sessions/Sessions'));
 const Hours = lazy(() => import('../pages/Staff/Hours/Hours'));
 const Tasks = lazy(() => import('../pages/Staff/Tasks/Tasks'));
 const Login = lazy(() => import('../pages/Auth/Login/Login'));
 const VerifyPassword = lazy(() => import('../pages/Auth/VerifyPassword/VerifyPassword'));
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword/ResetPassword'));
+
+function ProgrammingRedirect() {
+  const location = useLocation();
+
+  return <Navigate to={{ pathname: '/programming/calendar', search: location.search }} replace />;
+}
 
 function AuthenticatedLayout() {
   return (
@@ -77,10 +82,18 @@ function App() {
                 }
               />
               <Route
+                path="/programming/calendar"
+                element={
+                  <ProtectedRoute requiredPermission="read:sessions">
+                    <Programming />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/programming/cohorts"
                 element={
-                  <ProtectedRoute requiredPermission="read:cohorts">
-                    <Cohorts />
+                  <ProtectedRoute requiredPermission="read:programs">
+                    <ProgrammingRedirect />
                   </ProtectedRoute>
                 }
               />
@@ -88,7 +101,7 @@ function App() {
                 path="/programming/sessions"
                 element={
                   <ProtectedRoute requiredPermission="read:sessions">
-                    <Sessions />
+                    <ProgrammingRedirect />
                   </ProtectedRoute>
                 }
               />

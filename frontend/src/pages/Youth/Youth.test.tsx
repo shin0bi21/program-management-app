@@ -13,7 +13,7 @@ const youthApi = vi.hoisted(() => ({
 }));
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 const authState = vi.hoisted(() => ({
-  permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'],
+  permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'],
 }));
 
 vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
@@ -74,7 +74,7 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
-    authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:cohorts', 'write:cohorts', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
+    authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
     vi.mocked(getProgramCycles).mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',

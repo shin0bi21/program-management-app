@@ -117,16 +117,15 @@ Staff program scope is assignment-based for every program. A program's `roster_m
 | `write:youth_profiles` | `POST /api/youth`, `PATCH /api/youth/:id` |
 | `read:schools` | `GET /api/schools` |
 | `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
-| `read:programs` | `GET /api/programs` |
-| `write:programs` | `POST /api/programs` (admin only) |
-| `read:cohorts` | Read programming cohorts and enrollments |
-| `write:cohorts` | Create and manage cohorts and enrollments |
+| `read:programs` | Program, cycle, assignment, and enrollment lookups |
+| `write:programs` | Manage programs, cycles, and program-cycle assignments (admin grant) |
+| `write:enrollments` | Enroll and withdraw youth; required alongside outreach and youth-profile writes for Lead signup |
 | `read:sessions` | Read sessions, session types, notes, and attachments |
 | `write:sessions` | Generate and manage sessions, notes, and attachments |
 | `read:attendance` | Read session rosters and youth-centric cohort attendance records |
 | `write:attendance` | Record and update attendance through session- or youth-centric workflows |
 | `read:outreach` | Read expressions of interest and leads |
-| `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` |
+| `write:outreach` | Review/convert expressions of interest and create/update leads; Lead signup also requires `write:youth_profiles` and `write:enrollments` |
 | `read:homepage` | Read managed homepage images and signup availability |
 | `write:homepage` | Manage homepage images and public signup availability |
 | `read:settings` | `GET /api/settings/*` *(reserved)* |

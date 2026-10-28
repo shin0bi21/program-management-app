@@ -29,6 +29,10 @@ describe('AccountModal program assignments', () => {
         rosterMode: 'enrolled',
         minAge: 12,
         maxAge: 15,
+        defaultDayOfWeek: 'tuesday',
+        defaultStartTime: '17:00',
+        defaultEndTime: '19:30',
+        timezone: 'America/Toronto',
       },
       {
         id: jobReadinessId,
@@ -37,6 +41,10 @@ describe('AccountModal program assignments', () => {
         rosterMode: 'enrolled',
         minAge: 16,
         maxAge: 19,
+        defaultDayOfWeek: 'tuesday',
+        defaultStartTime: '17:00',
+        defaultEndTime: '19:30',
+        timezone: 'America/Toronto',
       },
       {
         id: dropInId,
@@ -45,6 +53,10 @@ describe('AccountModal program assignments', () => {
         rosterMode: 'open',
         minAge: null,
         maxAge: null,
+        defaultDayOfWeek: 'tuesday',
+        defaultStartTime: '17:00',
+        defaultEndTime: '19:30',
+        timezone: 'America/Toronto',
       },
     ]);
     vi.mocked(inviteAccount).mockResolvedValue({

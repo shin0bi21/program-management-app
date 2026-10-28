@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
-  permissions: ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'],
+  permissions: ['read:programs', 'write:programs', 'write:enrollments', 'read:attendance', 'read:sessions'],
 }));
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
@@ -27,6 +27,10 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
     rosterMode: 'enrolled' as const,
     minAge: 12,
     maxAge: 15,
+    defaultDayOfWeek: 'tuesday',
+    defaultStartTime: '17:00',
+    defaultEndTime: '19:30',
+    timezone: 'America/Toronto',
   }],
 }));
 const preferenceApi = vi.hoisted(() => ({
@@ -76,7 +80,7 @@ describe('Cohorts', () => {
       return value;
     });
     auth.role = 'admin';
-    auth.permissions = ['read:programs', 'write:programs', 'read:cohorts', 'write:cohorts', 'read:attendance', 'read:sessions'];
+    auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:attendance', 'read:sessions'];
     programState.programs = [{
       id: 'program-1',
       name: 'Soft Skills',
@@ -84,6 +88,10 @@ describe('Cohorts', () => {
       rosterMode: 'enrolled',
       minAge: 12,
       maxAge: 15,
+      defaultDayOfWeek: 'tuesday',
+      defaultStartTime: '17:00',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     }];
     api.getProgramCycles.mockResolvedValue([{
       id: 'cycle-summer-2026', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
@@ -129,20 +137,16 @@ describe('Cohorts', () => {
   });
 
   // Permissions and application services.
-  it('opens Add Cohort directly for staff without exposing global programming settings', async () => {
+  it('keeps assignment creation out of staff access', () => {
     auth.role = 'staff';
-    auth.permissions = ['read:programs', 'read:cohorts', 'write:cohorts'];
-    const user = userEvent.setup();
+    auth.permissions = ['read:programs', 'write:enrollments'];
     render(
       <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
         <Cohorts />
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('button', { name: 'Add Program' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '+ Add Cohort' }));
-    expect(screen.getByRole('heading', { name: 'Add Cohort' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add Cohort' })).not.toBeInTheDocument();
   });
 
   // Saved preferences and the current view.
@@ -195,9 +199,10 @@ describe('Cohorts', () => {
     expect(cohortRow).toHaveAttribute('aria-selected', 'true');
     expect(overview).toHaveTextContent('Enrollment:5');
     expect(overview).toHaveTextContent('80%');
-    expect(screen.getByRole('button', { name: 'View Report' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeEnabled();
     expect(screen.getAllByText('5')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'View Report' }));
+    await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
     expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
 
   });
@@ -259,8 +264,8 @@ describe('Cohorts', () => {
     expect(overview).toHaveTextContent('Average attendance:100%');
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');
-    expect(screen.getByRole('button', { name: 'View Report' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'View Report' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toHaveAttribute(
       'title',
       'Drop In reporting is coming soon.',
     );

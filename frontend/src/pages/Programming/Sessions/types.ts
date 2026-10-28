@@ -46,18 +46,6 @@ export interface AttendanceYouth {
 
 export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
 
-export interface GenerateSessionsInput {
-  sessionTypeId: string;
-  theme: string;
-  frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
-  dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
-  dayOfMonth?: number;
-  startsOn: string;
-  endsOn?: string;
-  startTime: string;
-  endTime: string;
-}
-
 export interface SessionRosterMember {
   youthId: string;
   firstName: string;

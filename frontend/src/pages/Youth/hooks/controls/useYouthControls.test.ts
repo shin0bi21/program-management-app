@@ -20,6 +20,10 @@ const programs: Program[] = [{
   rosterMode: 'enrolled',
   minAge: 12,
   maxAge: 15,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 }];
 const cycles: ProgramCycle[] = [{
   id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
