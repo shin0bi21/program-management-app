@@ -11,31 +11,6 @@
   }
 }
 
-.session-state {
-  display: inline-flex;
-  padding: 4px 9px;
-  border-radius: var(--radius-full);
-  font-size: 0.68rem;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.session-state--upcoming {
-  background: var(--color-info-bg);
-  color: var(--color-info);
-}
-
-.session-state--completed {
-  background: var(--color-status-active-bg);
-  color: var(--color-status-active);
-}
-
-.session-state--cancelled {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-dark);
-}
-
 .attendance-modal__context {
   margin-bottom: 18px;
   color: var(--color-muted);

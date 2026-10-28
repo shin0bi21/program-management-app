@@ -439,7 +439,7 @@ describe('Sessions', () => {
     expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');
     expect(screen.getByLabelText('Program')).toBeEnabled();
-    expect(screen.getByLabelText('Session date')).not.toHaveAttribute('max');
+    expect(screen.getByLabelText('Session Date')).not.toHaveAttribute('max');
   });
 
   it('enables calendar moves only for session writers', async () => {
@@ -455,9 +455,9 @@ describe('Sessions', () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar date' }));
-    expect(screen.getByLabelText('Session date')).toHaveValue('2026-07-29');
-    expect(screen.getByLabelText('Start time')).toHaveValue('17:00');
-    expect(screen.getByLabelText('End time')).toHaveValue('19:30');
+    expect(screen.getByLabelText('Session Date')).toHaveValue('2026-07-29');
+    expect(screen.getByLabelText('Start Time')).toHaveValue('17:00');
+    expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
   });
 
   it('switches the dashboard between a program row and a session without losing cohort access', async () => {

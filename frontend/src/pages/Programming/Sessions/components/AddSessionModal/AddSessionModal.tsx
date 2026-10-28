@@ -35,16 +35,16 @@ export default function AddSessionModal({ onClose, ...options }: AddSessionModal
         <input id="session-theme" required maxLength={160} value={workflow.draft.theme}
           disabled={workflow.locked} onChange={event => workflow.updateDraft('theme', event.target.value)} />
       </FormField>
-      <FormField id="session-date" label="Session date">
+      <FormField id="session-date" label="Session Date">
         <input id="session-date" type="date" required value={workflow.draft.date}
           disabled={workflow.locked} onChange={event => workflow.updateDraft('date', event.target.value)} />
       </FormField>
       <div className="form-row">
-        <FormField id="session-start-time" label="Start time">
+        <FormField id="session-start-time" label="Start Time">
           <input id="session-start-time" type="time" required value={workflow.draft.startTime}
             disabled={workflow.locked} onChange={event => workflow.updateDraft('startTime', event.target.value)} />
         </FormField>
-        <FormField id="session-end-time" label="End time">
+        <FormField id="session-end-time" label="End Time">
           <input id="session-end-time" type="time" required value={workflow.draft.endTime}
             disabled={workflow.locked} onChange={event => workflow.updateDraft('endTime', event.target.value)} />
         </FormField>

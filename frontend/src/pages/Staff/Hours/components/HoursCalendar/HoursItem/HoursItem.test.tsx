@@ -38,11 +38,11 @@ describe('HoursItem', () => {
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Program Delivery');
     expect(tooltip).toHaveTextContent('Soft Skills');
-    expect(tooltip).toHaveTextContent('Summer 2026');
+    expect(tooltip).not.toHaveTextContent('Summer 2026');
     expect(tooltip).toHaveTextContent('Workshop delivery');
 
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
+      'Program', 'Category', 'Hours', 'Notes',
     ]);
     expect(screen.getByText('Hours').closest('div')).toHaveClass('section-start');
   });
@@ -57,12 +57,12 @@ describe('HoursItem', () => {
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
+      'Program', 'Category', 'Hours', 'Notes',
     ]);
-    expect(tooltip.querySelectorAll('dd')[1]).toHaveTextContent('—');
+    expect(tooltip.querySelectorAll('dd')[0]).toHaveTextContent('—');
   });
 
-  it('keeps cycle, program, and category details for session time', async () => {
+  it('keeps program and category details for session time', async () => {
     render(<HoursItem item={{
       ...item,
       sessionId: 'session-1',
@@ -73,7 +73,7 @@ describe('HoursItem', () => {
     const tooltip = await screen.findByRole('tooltip');
     expect(within(tooltip).getAllByText('Healthy Relationships')).toHaveLength(1);
     expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Cycle', 'Program', 'Category', 'Hours', 'Notes',
+      'Program', 'Category', 'Hours', 'Notes',
     ]);
     expect(tooltip).toHaveTextContent('Program Delivery');
   });

@@ -116,6 +116,24 @@ with an exclusive next-day end for the session API, using calendar arithmetic ac
 When rows use different timezones, query the earliest start and latest end across those zones.
 A session ending exactly at midnight occupies the preceding day, not the following one.
 
+## Present item details
+
+Use the shared [badge primitives](badges.md) for type and lifecycle labels. In Session
+details, show the title first, then the type badge followed by the status badge. Keep
+their base sizing consistent with Tasks and Hours. Completed Sessions use the same
+success colors as completed Tasks; cancelled Sessions use a muted appearance.
+
+Show a Session's schedule in one `Date` detail using a compact range in the program's
+timezone, such as `Dec 21, 5–7:30 p.m.`. Keep both dates when the session crosses local
+midnight. The item's accessible label retains the full start/end dates and times.
+Label Session form fields `Session Date`, `Start Time`, and `End Time`. In the Sessions
+table, label the cohort-derived season name `Cycle`; retain the existing column ID and
+API sort contract.
+
+Hours calendar details omit the redundant Cycle row because the calendar already
+provides that context. Other Hours surfaces keep their cycle information. Compact row
+badge overrides stay inside the row; they do not reduce badge sizes in hover/focus details.
+
 The program-level overview shows only the cohort covering today's date in the program's
 timezone, within the active cycle filters. It shows an empty state when there is no current
 cohort rather than rendering historical or upcoming cohort cards. If assignments overlap,

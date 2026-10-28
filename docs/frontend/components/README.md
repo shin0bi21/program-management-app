@@ -66,6 +66,7 @@ Extract a component when a rendered region has a clear name and an independent c
 
 | Surface | Guide |
 |---|---|
+| Type and status labels | [Badges](badges.md) |
 | Application sidebar and route navigation | [App navigation](navigation.md) |
 | Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables.md) |

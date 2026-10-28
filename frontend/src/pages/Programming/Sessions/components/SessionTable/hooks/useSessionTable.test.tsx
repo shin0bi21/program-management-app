@@ -38,6 +38,7 @@ describe('useSessionTable', () => {
     expect(result.current.map(column => column.id)).toEqual([
       'program', 'cohort', 'theme', 'date', 'time', 'type', 'status',
     ]);
+    expect(result.current.find(column => column.id === 'cohort')?.header).toBe('Cycle');
   });
 
   it('formats dates and hours in the program timezone', () => {

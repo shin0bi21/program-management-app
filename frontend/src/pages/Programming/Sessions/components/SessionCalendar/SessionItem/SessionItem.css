@@ -1,4 +1,22 @@
+.calendar-item.session-item--completed {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
 .calendar-item.session-item--cancelled {
   border-color: var(--color-border);
   background: var(--ink-06);
+}
+
+.session-item__detail-title {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.session-item__detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }

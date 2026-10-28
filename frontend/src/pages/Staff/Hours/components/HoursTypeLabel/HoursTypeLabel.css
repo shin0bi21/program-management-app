@@ -1,9 +1,5 @@
 .hours-item__type {
   flex: 0 0 auto;
-  padding: 2px 5px;
-  border-radius: 5px;
-  font-size: .65rem;
-  font-weight: 700;
 }
 
 .timeline-calendar .positioned-item.compact .hours-item__type,

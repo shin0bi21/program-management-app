@@ -50,16 +50,16 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
           <FormField id="edit-session-theme" label="Title / Theme">
             <input id="edit-session-theme" name="theme" required defaultValue={session.theme} maxLength={160} disabled={submissionComplete} />
           </FormField>
-          <FormField id="edit-session-date" label="Session date">
+          <FormField id="edit-session-date" label="Session Date">
             <input id="edit-session-date" name="date" type="date" required
               defaultValue={sessionDateTime(session.startsAt, timezone).date} disabled={submissionComplete} />
           </FormField>
           <div className="form-row edit-session-time-row">
-            <FormField id="edit-session-start" label="Start time">
+            <FormField id="edit-session-start" label="Start Time">
               <input id="edit-session-start" name="startTime" type="time" required
                 defaultValue={sessionDateTime(session.startsAt, timezone).time} disabled={submissionComplete} />
             </FormField>
-            <FormField id="edit-session-end" label="End time">
+            <FormField id="edit-session-end" label="End Time">
               <input id="edit-session-end" name="endTime" type="time" required
                 defaultValue={sessionDateTime(session.endsAt, timezone).time} disabled={submissionComplete} />
             </FormField>
