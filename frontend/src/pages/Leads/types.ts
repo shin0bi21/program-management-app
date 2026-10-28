@@ -12,7 +12,8 @@ export interface Lead {
   convertedYouthId: string | null;
   youthFirstName: string;
   youthLastName: string;
-  age: number;
+  dateOfBirth: string | null;
+  age: number | null;
   school: string;
   recommendedProgramId: string | null;
   recommendedProgramName: string | null;

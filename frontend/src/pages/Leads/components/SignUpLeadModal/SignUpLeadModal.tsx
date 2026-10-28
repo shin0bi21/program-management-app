@@ -1,3 +1,5 @@
+import FormField from '../../../../common/components/FormField/FormField';
+import { getDateKeyInTimeZone } from '../../../../common/utils/date';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
@@ -83,8 +85,12 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
             </h3>
             <dl className="sign-up-lead-details">
               <div>
+                <dt>Date of Birth</dt>
+                <dd>{workflow.age !== null ? formatDate(workflow.dateOfBirth) : '—'}</dd>
+              </div>
+              <div>
                 <dt>Age</dt>
-                <dd>{lead.age}</dd>
+                <dd>{workflow.age ?? '—'}</dd>
               </div>
               <div>
                 <dt>School</dt>
@@ -96,6 +102,10 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
               </div>
             </dl>
           </section>
+
+          <FormField id="sign-up-dateOfBirth" label="Date of Birth *">
+            <input id="sign-up-dateOfBirth" type="date" required max={getDateKeyInTimeZone()} value={workflow.dateOfBirth} onChange={event => workflow.changeDateOfBirth(event.target.value)} disabled={workflow.submissionComplete} />
+          </FormField>
 
           <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">
             <h3 id="sign-up-lead-enrollment-title">Cohort enrollment</h3>

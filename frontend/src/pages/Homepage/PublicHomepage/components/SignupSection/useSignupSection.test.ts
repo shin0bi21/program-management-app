@@ -15,7 +15,7 @@ describe('useSignupSection', () => {
     await act(async () => result.current.onValid({
       youthFirstName: ' Jamie ',
       youthLastName: ' Test ',
-      age: 14,
+      dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
       school: ' Westview ',
       submittedByRole: 'guardian',
       contactPhoneNumber: ' 519-555-0100 ',
@@ -28,7 +28,7 @@ describe('useSignupSection', () => {
     expect(submitPublicLead).toHaveBeenCalledWith({
       youthFirstName: 'Jamie',
       youthLastName: 'Test',
-      age: 14,
+      dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
       school: 'Westview',
       submittedByRole: 'guardian',
       contactPhoneNumber: '519-555-0100',

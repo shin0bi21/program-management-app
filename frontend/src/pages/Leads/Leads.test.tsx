@@ -49,7 +49,7 @@ describe('Leads', () => {
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     signUpLead.mockResolvedValue({
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: 'youth-1',
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
       recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
@@ -63,7 +63,7 @@ describe('Leads', () => {
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
       recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
@@ -205,7 +205,7 @@ describe('Leads', () => {
       convertedYouthId: null,
       youthFirstName: 'Avery',
       youthLastName: 'Outreach',
-      age: 14,
+      age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
       school: 'Outreach Test School',
       recommendedProgramId: 'program-1',
       recommendedProgramName: 'Future Ready',

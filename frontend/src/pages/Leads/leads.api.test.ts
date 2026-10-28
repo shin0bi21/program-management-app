@@ -37,7 +37,7 @@ describe('leads API', () => {
   });
 
   it('uses focused signup, status, and note endpoints', () => {
-    signUpLead('lead-1', 'cohort-1', 'health');
+    signUpLead('lead-1', 'cohort-1', 'health', '2012-07-24');
     updateLeadStatus('lead-1', 'contacted');
     createLeadNote('lead-1', 'Called guardian.');
     deleteLeadNote('lead-1', 'note-1');
@@ -45,6 +45,7 @@ describe('leads API', () => {
     expect(apiClient.post).toHaveBeenNthCalledWith(1, '/leads/lead-1/sign-up', {
       cohortId: 'cohort-1',
       noteCategory: 'health',
+      dateOfBirth: '2012-07-24',
     });
     expect(apiClient.patch).toHaveBeenCalledWith('/leads/lead-1/status', { status: 'contacted' });
     expect(apiClient.post).toHaveBeenNthCalledWith(2, '/leads/lead-1/notes', { details: 'Called guardian.' });
@@ -55,7 +56,7 @@ describe('leads API', () => {
     const input = {
       youthFirstName: 'Maya',
       youthLastName: 'Thompson',
-      age: 15,
+      dateOfBirth: `${new Date().getFullYear() - 15}-01-01`,
       school: 'Central High',
       contactPhoneNumber: '416-555-0100',
       contactRelationship: 'parent' as const,

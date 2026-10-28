@@ -6,11 +6,13 @@ import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
 import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 
+const leadAge = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
+
 const recommendedProgramId = sql`(
   SELECT program.id
   FROM programs program
   WHERE program.enrollment_required = TRUE
-    AND age BETWEEN program.min_age AND program.max_age
+    AND ${leadAge} BETWEEN program.min_age AND program.max_age
   ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
   LIMIT 1
 )`;
@@ -19,7 +21,7 @@ const recommendedProgramName = sql`(
   SELECT program.name
   FROM programs program
   WHERE program.enrollment_required = TRUE
-    AND age BETWEEN program.min_age AND program.max_age
+    AND ${leadAge} BETWEEN program.min_age AND program.max_age
   ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
   LIMIT 1
 )`;
@@ -31,7 +33,8 @@ const leadColumns = sql`
   converted_youth_id,
   youth_first_name,
   youth_last_name,
-  age,
+  date_of_birth::text AS date_of_birth,
+  ${leadAge} AS age,
   school,
   ${recommendedProgramId} AS recommended_program_id,
   ${recommendedProgramName} AS recommended_program_name,
@@ -78,7 +81,7 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       submitted_by_role,
       youth_first_name,
       youth_last_name,
-      age,
+      date_of_birth,
       school,
       contact_phone_number,
       contact_relationship,
@@ -91,7 +94,7 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       'staff',
       ${data.youthFirstName},
       ${data.youthLastName},
-      ${data.age},
+      ${data.dateOfBirth},
       ${data.school},
       ${data.contactPhoneNumber},
       ${data.contactRelationship},
@@ -116,7 +119,7 @@ export async function createExternalLead(
       submitted_by_role,
       youth_first_name,
       youth_last_name,
-      age,
+      date_of_birth,
       school,
       contact_phone_number,
       contact_relationship,
@@ -127,7 +130,7 @@ export async function createExternalLead(
       ${submittedByRole},
       ${data.youthFirstName},
       ${data.youthLastName},
-      ${data.age},
+      ${data.dateOfBirth},
       ${data.school},
       ${data.contactPhoneNumber},
       ${data.contactRelationship},
@@ -144,7 +147,7 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
     UPDATE leads
     SET youth_first_name = ${data.youthFirstName},
         youth_last_name = ${data.youthLastName},
-        age = ${data.age},
+        date_of_birth = ${data.dateOfBirth},
         school = ${data.school},
         contact_phone_number = ${data.contactPhoneNumber},
         contact_relationship = ${data.contactRelationship},
@@ -239,6 +242,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       convertedYouthId: string | null;
       youthFirstName: string;
       youthLastName: string;
+      dateOfBirth: string | null;
       school: string;
       contactPhoneNumber: string;
       contactRelationship: string;
@@ -246,7 +250,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       status: string;
     }[]>`
       SELECT id, converted_youth_id,
-             youth_first_name, youth_last_name, school,
+             youth_first_name, youth_last_name, date_of_birth::text AS date_of_birth, school,
              contact_phone_number,
              contact_relationship, notes, status
       FROM leads
@@ -259,23 +263,45 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
       throw new ConflictError('Lead has already been signed up');
     }
+    const dateOfBirth = data.dateOfBirth ?? lead.dateOfBirth;
+    if (!dateOfBirth) {
+      throw new ConflictError('Date of birth is required before signing up this lead');
+    }
+
     if (data.cohortId) {
-      const cohorts = await trx<{
+      const [assignment] = await trx<{ programId: string }[]>`
+        SELECT program_id FROM program_cohorts WHERE id = ${data.cohortId}
+      `;
+      if (!assignment) throw new ConflictError('Selected cohort is unavailable');
+
+      // Match assignment mutations: lock the program before its cohort and recheck current rules.
+      await trx`SELECT id FROM programs WHERE id = ${assignment.programId} FOR UPDATE`;
+
+      const [cohort] = await trx<{
         id: string;
-        programId: string;
         enrollmentRequired: boolean;
+        minAge: number | null;
+        maxAge: number | null;
+        age: number;
       }[]>`
-        SELECT pc.id, pc.program_id, p.enrollment_required
+        SELECT pc.id, p.enrollment_required, p.min_age, p.max_age,
+          EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, ${dateOfBirth}::date))::int AS age
         FROM program_cohorts pc
         INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
         WHERE pc.id = ${data.cohortId}
-          AND CURRENT_DATE <= cycle.ends_on
+          AND pc.program_id = ${assignment.programId}
+          AND (NOW() AT TIME ZONE 'America/Toronto')::date <= cycle.ends_on
         FOR UPDATE OF pc
       `;
-      if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');
-      if (!cohorts[0].enrollmentRequired) {
+      if (!cohort) throw new ConflictError('Selected cohort is unavailable');
+      if (!cohort.enrollmentRequired) {
         throw new ConflictError('Open attendance cohorts do not use enrollment');
+      }
+      const outsideAgeRange = (cohort.minAge !== null && cohort.age < cohort.minAge)
+        || (cohort.maxAge !== null && cohort.age > cohort.maxAge);
+      if (outsideAgeRange) {
+        throw new ConflictError('Lead does not meet this cohort age range');
       }
     }
 
@@ -303,11 +329,12 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     const schoolId = schools[0]?.id ?? null;
 
     await trx`
-      INSERT INTO youth_profiles (user_id, school_id, created_by, updated_by)
-      VALUES (${youthId}, ${schoolId}, ${actorId}, ${actorId})
+      INSERT INTO youth_profiles (user_id, date_of_birth, school_id, created_by, updated_by)
+      VALUES (${youthId}, ${dateOfBirth}, ${schoolId}, ${actorId}, ${actorId})
     `;
     await audit(trx, actorId, transactionId, 'youth_profiles', youthId, 'INSERT', null, {
       userId: youthId,
+      dateOfBirth,
       schoolId,
     });
     if (lead.notes?.trim()) {
@@ -341,6 +368,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
     await trx`
       UPDATE leads
       SET status = 'signed_up',
+          date_of_birth = ${dateOfBirth},
           converted_youth_id = ${youthId},
           status_updated_at = NOW(),
           updated_at = NOW(),
@@ -348,8 +376,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       WHERE id = ${id}
     `;
     await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE',
-      { status: lead.status, convertedYouthId: null },
-      { status: 'signed_up', convertedYouthId: youthId });
+      { status: lead.status, convertedYouthId: null, dateOfBirth: lead.dateOfBirth },
+      { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
     return youthId;
   });

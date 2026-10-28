@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
+import { calculateOutreachAge } from '../../../../common/features/OutreachForm/dateOfBirth';
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
 
@@ -29,11 +30,14 @@ export default function useSignUpLeadModal({
   onSuccess,
 }: UseSignUpLeadModalOptions) {
   const [cohortId, setCohortId] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState(lead?.dateOfBirth ?? '');
+  const age = calculateOutreachAge(dateOfBirth);
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory>('general');
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);
   const submitLock = useSubmitLock();
   const leadId = lead?.id;
+  const storedDateOfBirth = lead?.dateOfBirth;
 
   const {
     submitStatus,
@@ -59,28 +63,37 @@ export default function useSignUpLeadModal({
   // A different lead starts with a clean enrollment and note draft.
   useEffect(() => {
     setCohortId('');
+    setDateOfBirth(storedDateOfBirth ?? '');
     setNoteCategory('general');
     setSuccessMessage('');
     setShowAllPrograms(false);
     resetStatus();
-  }, [leadId, resetStatus]);
+  }, [leadId, storedDateOfBirth, resetStatus]);
 
   const visibleCohorts = useMemo(() => {
     if (!lead) return cohorts;
     const ageEligible = cohorts.filter(cohort => (
-      cohort.minAge == null
-      || cohort.maxAge == null
-      || (lead.age >= cohort.minAge && lead.age <= cohort.maxAge)
+      typeof age === 'number'
+      && age >= 0
+      && (cohort.minAge == null || age >= cohort.minAge)
+      && (cohort.maxAge == null || age <= cohort.maxAge)
     ));
-    return showAllPrograms || !lead.recommendedProgramId
+    return showAllPrograms || !lead.recommendedProgramId || dateOfBirth !== lead.dateOfBirth
       ? ageEligible
       : ageEligible.filter(cohort => cohort.programId === lead.recommendedProgramId);
-  }, [cohorts, lead, showAllPrograms]);
+  }, [cohorts, lead, showAllPrograms, age, dateOfBirth]);
 
   const submit = async () => {
     if (!lead || !submitLock.tryLock()) return;
 
-    const selectedCohort = cohorts.find(cohort => cohort.id === cohortId);
+    if (age === null || age < 0) {
+      setError(dateOfBirth ? 'Enter a valid date of birth that is not in the future' : 'Date of birth is required');
+      setSubmitStatus('error');
+      submitLock.unlock();
+      return;
+    }
+
+    const selectedCohort = visibleCohorts.find(cohort => cohort.id === cohortId);
     const youthName = `${lead.youthFirstName} ${lead.youthLastName}`;
     setSubmitStatus('submitting');
     setError('');
@@ -89,8 +102,8 @@ export default function useSignUpLeadModal({
     let updatedLead: Lead;
     try {
       updatedLead = lead.notes?.trim()
-        ? await signUpLead(lead.id, cohortId || null, noteCategory)
-        : await signUpLead(lead.id, cohortId || null);
+        ? await signUpLead(lead.id, selectedCohort?.id || null, noteCategory, dateOfBirth)
+        : await signUpLead(lead.id, selectedCohort?.id || null, undefined, dateOfBirth);
     } catch (cause) {
       setError(getErrorMessage(cause, 'Unable to create youth profile'));
       setSubmitStatus('error');
@@ -127,6 +140,12 @@ export default function useSignUpLeadModal({
   });
 
   return {
+    dateOfBirth,
+    age,
+    changeDateOfBirth: (value: string) => {
+      setDateOfBirth(value);
+      setCohortId('');
+    },
     cohortId,
     selectCohort: setCohortId,
     noteCategory,

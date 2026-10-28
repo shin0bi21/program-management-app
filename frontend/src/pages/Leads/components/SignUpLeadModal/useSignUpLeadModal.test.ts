@@ -27,6 +27,7 @@ const lead: Lead = {
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
   age: 14,
+  dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: 'program-1',
   recommendedProgramName: 'Future Ready',
@@ -101,6 +102,9 @@ describe('useSignUpLeadModal', () => {
       'cohort-too-old',
     ]);
     expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-1']);
+
+    act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
+    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
   });
 
   it('submits the selected cohort and note category before reporting success', async () => {
@@ -116,12 +120,41 @@ describe('useSignUpLeadModal', () => {
     });
     await act(() => result.current.submit());
 
-    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health');
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health', lead.dateOfBirth);
     expect(onSuccess).toHaveBeenCalledWith(updatedLead);
     expect(result.current.submitStatus).toBe('success');
     expect(result.current.statusMessage).toBe(
       'Youth profile successfully created and added to Future Ready - Summer 2026.',
     );
+  });
+
+  it('requires a real DOB for legacy leads and sends the entered date to signup', async () => {
+    const { result } = renderWorkflow({ ...lead, dateOfBirth: null, age: null });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dateOfBirth).toBe('');
+    expect(result.current.age).toBeNull();
+    expect(result.current.visibleCohorts).toEqual([]);
+
+    await act(() => result.current.submit());
+    expect(signUpLead).not.toHaveBeenCalled();
+    expect(result.current.statusMessage).toBe('Date of birth is required');
+
+    act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
+    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
+    act(() => result.current.selectCohort('cohort-too-old'));
+    await act(() => result.current.submit());
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-too-old', 'general', `${new Date().getFullYear() - 16}-01-01`);
+  });
+
+  it('clears enrollment when the DOB changes and allows an older lead to create a profile', async () => {
+    const { result } = renderWorkflow(lead);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    act(() => result.current.selectCohort('cohort-1'));
+    act(() => result.current.changeDateOfBirth('2000-01-01'));
+    expect(result.current.cohortId).toBe('');
+    expect(result.current.visibleCohorts).toEqual([]);
+    await act(() => result.current.submit());
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'general', '2000-01-01');
   });
 
   it('starts a different lead with a clean draft', async () => {
