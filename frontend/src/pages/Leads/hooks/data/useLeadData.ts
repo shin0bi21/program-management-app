@@ -1,15 +1,11 @@
-import { usePrograms } from '../../../../common/features/programs/hooks/usePrograms';
+import { useProgramReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
 
 export default function useLeadData() {
-  const {
-    programs,
-    loading: programsLoading,
-    error: programsError,
-  } = usePrograms();
+  const programs = useProgramReferences();
 
   return {
-    programs,
-    programsLoading,
-    programsError,
+    programs: programs.rows,
+    programsLoading: programs.loading,
+    programsError: programs.error,
   };
 }

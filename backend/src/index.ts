@@ -17,6 +17,7 @@ import homepageRoutes, { publicHomepageRoutes } from './routes/homepageRoutes';
 import preferenceRoutes from './routes/preferenceRoutes';
 import hoursRoutes from './routes/hoursRoutes';
 import taskRoutes from './routes/taskRoutes';
+import referenceDataRoutes from './routes/referenceDataRoutes';
 import { requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
 import { NotFoundError } from './errors';
@@ -78,6 +79,7 @@ app.use('/api/homepage', homepageRoutes);
 app.use('/api/preferences', preferenceRoutes);
 app.use('/api/hours', hoursRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/reference-data', referenceDataRoutes);
 
 // 404 handler — catches all unmatched routes; forwards to errorHandler
 app.use((_req, _res, next) => {

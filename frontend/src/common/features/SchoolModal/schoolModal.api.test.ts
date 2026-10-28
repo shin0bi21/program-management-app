@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
-import { createSchool, deleteSchool, getSchools, setSchool } from './schoolModal.api';
+import { createSchool, deleteSchool, setSchool } from './schoolModal.api';
 
 vi.mock('../../../http/client', () => ({
   apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn() },
@@ -10,14 +10,6 @@ vi.mock('../../../http/client', () => ({
 
 describe('schools API', () => {
   beforeEach(() => vi.clearAllMocks());
-
-  it('loads schools with request cancellation', () => {
-    const signal = new AbortController().signal;
-
-    getSchools({ signal });
-
-    expect(apiClient.get).toHaveBeenCalledWith('/schools', { signal });
-  });
 
   it('keeps create, save, and delete commands on their narrow endpoints', () => {
     createSchool('Central High');

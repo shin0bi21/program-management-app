@@ -1,8 +1,8 @@
+import type { ProgramReference } from '../referenceData/referenceData.api';
+
 export type ProgramWeekday = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
 
-export interface Program {
-  id: string;
-  name: string;
+export interface Program extends ProgramReference {
   description?: string | null;
   enrollmentRequired: boolean;
   minAge: number | null;

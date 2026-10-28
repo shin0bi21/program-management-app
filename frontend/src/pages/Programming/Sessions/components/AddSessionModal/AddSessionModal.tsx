@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -29,7 +30,7 @@ export default function AddSessionModal({ onClose, ...options }: AddSessionModal
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionTypeId}
           onChange={value => workflow.updateDraft('sessionTypeId', value)} disabled={workflow.locked}
-          options={workflow.sessionTypes.map(type => ({ value: type.id, label: type.name }))} />
+          options={toFilterOptions(workflow.sessionTypes)} />
       </FormField>
       <FormField id="session-theme" label="Title / Theme">
         <input id="session-theme" required maxLength={160} value={workflow.draft.theme}

@@ -1,7 +1,8 @@
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
   optionalPreferenceOption,
@@ -26,7 +27,7 @@ export interface CohortPreference {
 const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
 export function useCohortControls(
   role: string | null,
-  programs: Program[],
+  programs: ProgramReference[],
   programsLoading: boolean,
   tableKeys: readonly CohortSortKey[],
   programsError?: string | null,
@@ -58,7 +59,7 @@ export function useCohortControls(
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     {
       id: 'program', label: 'Program', selectionMode: 'single',
-      options: programs.map(program => ({ value: program.id, label: program.name })),
+      options: toFilterOptions(programs),
     },
     {
       id: 'status', label: 'Status', selectionMode: 'single',

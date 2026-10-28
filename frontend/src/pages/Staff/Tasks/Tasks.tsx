@@ -59,6 +59,12 @@ export default function Tasks() {
     referenceData: pageData.referenceData,
     referenceDataLoading: pageData.referenceDataLoading,
     referenceDataError: Boolean(pageData.referenceDataError),
+    resources: pageData.resources,
+    programs: pageData.programs,
+    resourcesLoading: pageData.resourcesLoading,
+    resourcesError: Boolean(pageData.resourcesError),
+    programsLoading: pageData.programsLoading,
+    programsError: Boolean(pageData.programsError),
     tableKeys: TASK_TABLE_KEYS,
   });
 
@@ -234,6 +240,8 @@ export default function Tasks() {
           message: 'Unable to load task options.',
           details: 'Staff, programs, and task categories could not be loaded.',
         } : null,
+        pageData.resourcesError ? { message: 'Unable to load task staff.' } : null,
+        pageData.programsError ? { message: 'Unable to load task programs.' } : null,
         viewError,
         dashboardError,
       ]} />
@@ -255,7 +263,7 @@ export default function Tasks() {
     {canWrite && taskModalState && <TaskModal
       target={taskModalState}
       resources={pageData.writableResources}
-      programs={pageData.referenceData?.programs ?? []}
+      programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
       onSaved={task => actions.syncTask(task, taskModalState.mode === 'add')}
       onClose={closeTaskModal}
@@ -268,7 +276,7 @@ export default function Tasks() {
       initialResourceId={hoursModalTask.assignee.id}
       canCompleteTask={canWrite}
       resources={pageData.resources}
-      programs={pageData.referenceData?.programs ?? []}
+      programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
       loadTasks={getTaskDashboardData}
       onAdd={actions.logHours}

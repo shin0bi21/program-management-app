@@ -1,7 +1,9 @@
 import { act, renderHook as renderBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { TaskReferenceData } from '../../types';
+import type { TaskReferenceData } from '../../tasks.api';
+import type { TaskResource, TaskProgram } from '../../types';
+type TestTaskOptions = TaskReferenceData & { resources: TaskResource[]; programs: TaskProgram[] };
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -21,7 +23,7 @@ const savedPreference: { preference: StoredTaskPreferences | null; error: string
   error: null,
 };
 
-const options: TaskReferenceData = {
+const options: TestTaskOptions = {
   resources: [{
     id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
   }],
@@ -40,7 +42,7 @@ const tableKeys = [
 ] as const;
 
 interface UsePreferencesOptions {
-  currentOptions?: TaskReferenceData;
+  currentOptions?: TestTaskOptions;
   optionsLoading?: boolean;
   optionsError?: boolean;
 }
@@ -51,6 +53,12 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
     : options;
 
   return useTaskPreferences({
+    resources: currentOptions?.resources ?? [],
+    programs: currentOptions?.programs ?? [],
+    resourcesLoading: settings.optionsLoading ?? false,
+    resourcesError: settings.optionsError ?? false,
+    programsLoading: settings.optionsLoading ?? false,
+    programsError: settings.optionsError ?? false,
     referenceData: currentOptions,
     referenceDataLoading: settings.optionsLoading ?? false,
     referenceDataError: settings.optionsError ?? false,
@@ -230,7 +238,7 @@ describe('useTaskPreferences', () => {
       ({ currentOptions, optionsError }) => usePreferences({ currentOptions, optionsError }),
       {
         initialProps: {
-          currentOptions: undefined as TaskReferenceData | undefined,
+          currentOptions: undefined as TestTaskOptions | undefined,
           optionsError: true,
         },
       },

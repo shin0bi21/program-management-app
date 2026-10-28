@@ -60,3 +60,15 @@ export const requirePermission = (...required: Permission[]) =>
 
     next();
   });
+
+// Reference lookups may serve several independently authorized page capabilities.
+export const requireAnyPermission = (...required: Permission[]) =>
+  asyncHandler(async (req, _res, next) => {
+    const actor = (req as AuthRequest).user;
+    if (!actor) throw new UnauthorizedError('Not authenticated');
+    if (!required.some(permission => actor.permissions.includes(permission))) {
+      throw new ForbiddenError('Insufficient permissions');
+    }
+
+    next();
+  });

@@ -14,7 +14,7 @@ vi.mock('./components/ProgramCyclesModal/ProgramCyclesModal', () => ({
 vi.mock('../../Programming/Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
 
 const programmingApi = vi.hoisted(() => ({
-  getProgramCycles: vi.fn(),
+  getCycleReferences: vi.fn(),
   setProgramCycle: vi.fn(),
   deleteProgramCycle: vi.fn(),
 }));
@@ -28,6 +28,7 @@ const programState = vi.hoisted<{ programs: Program[]; upsertProgram: ReturnType
 }));
 
 vi.mock('../../../common/features/programming/cycles/cycles.api', () => programmingApi);
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: programmingApi.getCycleReferences }));
 vi.mock('../../../common/features/programs/programs.api', () => programsApi);
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
@@ -46,7 +47,7 @@ describe('Programming settings', () => {
     programState.programs = [{
       id: 'program-1', name: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }];
-    programmingApi.getProgramCycles.mockResolvedValue([{
+    programmingApi.getCycleReferences.mockResolvedValue([{
       id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
     }]);
   });
@@ -68,7 +69,7 @@ describe('Programming settings', () => {
 
   it('retries cycle loading without forwarding the click event as an abort signal', async () => {
     const user = userEvent.setup();
-    programmingApi.getProgramCycles
+    programmingApi.getCycleReferences
       .mockRejectedValueOnce(new Error('Cycle service unavailable'))
       .mockResolvedValueOnce([]);
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -76,8 +77,8 @@ describe('Programming settings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle service unavailable');
     await user.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
 
-    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalledTimes(2));
-    expect(programmingApi.getProgramCycles).toHaveBeenLastCalledWith(undefined);
+    await waitFor(() => expect(programmingApi.getCycleReferences).toHaveBeenCalledTimes(2));
+    expect(programmingApi.getCycleReferences).toHaveBeenLastCalledWith({ signal: expect.any(AbortSignal) });
   });
 
   // Modal and confirmation workflows.

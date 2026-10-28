@@ -1,3 +1,4 @@
+import type { Program } from '../../../common/features/programs/types';
 import { getSessionRequestRange } from './utils/sessionDateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
@@ -240,4 +241,13 @@ export function moveSessionDate(sessionId: string, date: string) {
 
 export function deleteSession(sessionId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}`);
+}
+
+export interface SessionReferenceData {
+  programs: Program[];
+  sessionTypes: SessionType[];
+}
+
+export function getSessionReferenceData(opts?: RequestOptions) {
+  return apiClient.get<SessionReferenceData>('/cohorts/sessions/reference-data', opts);
 }

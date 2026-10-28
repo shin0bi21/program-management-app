@@ -4,7 +4,7 @@ import { audit } from '../../shared/auditService';
 import { ConflictError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
-import { assertCanAssignTaskTo, taskReadScopePredicate, taskResourceReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
+import { assertCanAssignTaskTo, taskReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import {
   attachTaskDetails,
   loadTaskLoggedHours,
@@ -201,29 +201,8 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
   });
 }
 
-export async function getTaskReferenceData(actor: AccessTokenPayload) {
-  const resources = await sql<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }[]>`
-    SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
-      (${taskWriteScopePredicate(actor, sql`u.id`)}) AS writable
-    FROM users u
-    INNER JOIN user_roles role ON role.id = u.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
-    WHERE role.name IN ('admin', 'staff')
-      AND credentials.status = 'active'
-      AND ${taskResourceReadScopePredicate(actor, sql`u.id`)}
-    ORDER BY u.first_name, u.last_name, u.id
-  `;
-  const programs = await sql<{ id: string; name: string }[]>`
-    SELECT program.id, program.name
-    FROM programs program
-    ORDER BY program.name, program.id
-  `;
-  return {
-    resources,
-    programs,
-    categories: TASK_CATEGORY_OPTIONS,
-    statuses: TASK_STATUS_OPTIONS,
-  };
+export function getTaskReferenceData() {
+  return { categories: TASK_CATEGORY_OPTIONS, statuses: TASK_STATUS_OPTIONS };
 }
 
 async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTokenPayload) {

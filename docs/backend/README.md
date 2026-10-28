@@ -97,3 +97,5 @@ Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`
 | Backend test ownership | [Testing](testing.md) |
 | Client-to-database request sequence | [HTTP flow](http.mmd) |
 | Google Sheets | [Integration](integrations/google-sheets.md) |
+
+Shared filter and selector contracts: [Reference data](reference-data.md).

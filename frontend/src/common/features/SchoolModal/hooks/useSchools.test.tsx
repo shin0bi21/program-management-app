@@ -3,15 +3,15 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
-import { getSchools } from '../schoolModal.api';
+import { getSchoolReferences } from '../../referenceData/referenceData.api';
 import { useSchools } from './useSchools';
 
-vi.mock('../schoolModal.api', () => ({ getSchools: vi.fn() }));
+vi.mock('../../referenceData/referenceData.api', () => ({ getSchoolReferences: vi.fn() }));
 
 describe('useSchools', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getSchools).mockResolvedValue([{ id: 'school-1', name: 'Central High' }]);
+    vi.mocked(getSchoolReferences).mockResolvedValue([{ id: 'school-1', name: 'Central High' }]);
   });
 
   it('loads schools and owns list-cache updates', async () => {
@@ -23,7 +23,7 @@ describe('useSchools', () => {
     await waitFor(() => expect(result.current.schools).toEqual([
       { id: 'school-1', name: 'Central High' },
     ]));
-    expect(getSchools).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
+    expect(getSchoolReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
 
     act(() => result.current.upsertSchool({ id: 'school-2', name: 'West High' }));
     await waitFor(() => expect(result.current.schools).toHaveLength(2));

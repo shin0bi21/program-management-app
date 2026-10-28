@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import { sessionDateTime } from '../../utils/sessionSchedule';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -43,7 +44,7 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
               id="edit-session-type"
               value={sessionTypeId}
               onChange={setSessionTypeId}
-              options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
+              options={toFilterOptions(sessionTypes)}
               disabled={submissionComplete}
             />
           </FormField>

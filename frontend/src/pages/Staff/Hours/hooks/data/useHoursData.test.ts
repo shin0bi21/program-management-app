@@ -1,7 +1,7 @@
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../../../common/features/referenceData/referenceData.api';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
 import { getHoursReferenceData } from '../../hours.api';
 import {
   createQueryClientWrapper,
@@ -9,22 +9,21 @@ import {
 } from '../../../../../tests/queryClientTestUtils';
 import useHoursData from './useHoursData';
 
-vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({ getProgramCycles: vi.fn() }));
 vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
 
 describe('useHoursData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getHoursReferenceData).mockResolvedValue({
-      resources: [
+    vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      ]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       categories: [{ value: 'meeting', label: 'Meeting' }],
       types: [{ value: 'other', label: 'Regular' }],
     });
-    vi.mocked(getProgramCycles).mockResolvedValue([{
+    vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
   });
@@ -32,7 +31,7 @@ describe('useHoursData', () => {
   it('loads each page-wide option once and exposes derived resource owners', async () => {
     const client = createTestQueryClient();
     const { result } = renderHook(
-      () => useHoursData(['hours-options'], ['program-cycles'], 'staff-1'),
+      () => useHoursData(['hours-options'], 'staff-1'),
       { wrapper: createQueryClientWrapper(client) },
     );
 
@@ -41,6 +40,10 @@ describe('useHoursData', () => {
     expect(result.current.resourcesById.get('staff-2')?.name).toBe('Alex Morgan');
     expect(result.current.currentUserResource?.name).toBe('Zoe Wilson');
     expect(getHoursReferenceData).toHaveBeenCalledOnce();
-    expect(getProgramCycles).toHaveBeenCalledOnce();
+    expect(getStaffReferences).toHaveBeenCalledWith('hours', { signal: expect.any(AbortSignal) });
+    expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });
+    expect(getCycleReferences).toHaveBeenCalledOnce();
   });
 });
+
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

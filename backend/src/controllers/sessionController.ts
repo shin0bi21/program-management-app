@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 
 import { createProgramSession, createSession, moveSessionDate, deleteSession, generateSessions, getSessionTypes, updateSession } from '../services/programming/sessions/sessionService';
+import { getSessionReferenceData } from '../services/programming/sessions/sessionReferenceDataService';
 import { listSessions } from '../services/programming/sessions/sessionListService';
 import { getSessionRoster, setSessionAttendance } from '../services/programming/sessions/sessionAttendanceService';
 import { createSessionNote, deleteSessionNote, getSessionNotes, unlinkYouthFromSessionNote, updateSessionNote } from '../services/programming/sessions/sessionNoteService';
@@ -13,6 +14,10 @@ const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
   res.json(await listSessions(actor(req), req.query as unknown as SessionListQuery));
+};
+
+export const handleGetSessionReferenceData = async (req: Request, res: Response) => {
+  res.json(await getSessionReferenceData(actor(req)));
 };
 
 export const handleGetSessionTypes = async (_req: Request, res: Response) => {

@@ -1,56 +1,30 @@
-import { useCallback, useEffect, useState } from 'react';
-
-import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Program } from '../../../../../common/features/programs/types';
+import { referenceDataKeys, useCycleReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
-import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
-import { getErrorMessage } from '../../../../../http/errors';
 
 export default function useProgrammingData() {
+  const queryClient = useQueryClient();
   const programs = usePrograms();
-  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
-  const [cyclesLoading, setCyclesLoading] = useState(true);
-  const [cyclesError, setCyclesError] = useState<string | null>(null);
+  const cycles = useCycleReferences();
 
-  const loadCycles = useCallback(async (signal?: AbortSignal) => {
-    setCyclesLoading(true);
-
-    try {
-      setCycles(await getProgramCycles(signal ? { signal } : undefined));
-      setCyclesError(null);
-    } catch (cause) {
-      if (!signal?.aborted) {
-        setCyclesError(getErrorMessage(cause, 'Could not load cycles'));
-      }
-    } finally {
-      if (!signal?.aborted) setCyclesLoading(false);
-    }
-  }, []);
-
-  const refreshCycles = useCallback(async () => {
-    await loadCycles();
-  }, [loadCycles]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadCycles(controller.signal);
-
-    return () => controller.abort();
-  }, [loadCycles]);
-
-  const removeCycle = useCallback((cycleId: string) => {
-    setCycles(current => current.filter(cycle => cycle.id !== cycleId));
-  }, []);
+  const upsertProgram = (program: Program) => {
+    programs.upsertProgram(program);
+    void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(false) });
+    void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(true) });
+    void queryClient.invalidateQueries({ queryKey: referenceDataKeys.sessionScheduling });
+  };
 
   return {
     programs: programs.programs,
-    upsertProgram: programs.upsertProgram,
+    upsertProgram,
     programsLoading: programs.loading,
     programsError: programs.error,
     retryPrograms: programs.retry,
-    cycles,
-    cyclesLoading,
-    cyclesError,
-    refreshCycles,
-    removeCycle,
+    cycles: cycles.rows,
+    cyclesLoading: cycles.loading,
+    cyclesError: cycles.error,
+    refreshCycles: cycles.refetch,
+    removeCycle: cycles.remove,
   };
 }

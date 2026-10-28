@@ -18,7 +18,7 @@ function LocationProbe() {
 const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
 const getCohorts = vi.fn();
-const getProgramCycles = vi.fn();
+const getCycleReferences = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionAttachments = vi.fn();
 const getSessionTypes = vi.fn();
@@ -49,11 +49,12 @@ const preferenceApi = vi.hoisted(() => ({
 vi.mock('../Cohorts/cohorts.api', () => ({
   getCohorts: (...args: unknown[]) => getCohorts(...args),
 }));
-vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
-  getProgramCycles: (...args: unknown[]) => getProgramCycles(...args),
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
+  getCycleReferences: (...args: unknown[]) => getCycleReferences(...args),
 }));
 
 vi.mock('./sessions.api', () => ({
+  getSessionReferenceData: async () => ({ programs: programState.programs, sessionTypes: await getSessionTypes() }),
   getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
   getSessions: (...args: unknown[]) => getSessions(...args),
   getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
@@ -63,10 +64,6 @@ vi.mock('./sessions.api', () => ({
   createSession: vi.fn(),
   setSessionAttendance: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
-}));
-
-vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: programState.programs, loading: false }),
 }));
 
 vi.mock('../../../auth/authContext', () => ({
@@ -173,7 +170,7 @@ describe('Sessions', () => {
       { id: 'type-regular', name: 'Regular' },
       { id: 'type-field-trip', name: 'Field Trip' },
     ]);
-    getProgramCycles.mockResolvedValue([{
+    getCycleReferences.mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
       id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
@@ -330,6 +327,17 @@ describe('Sessions', () => {
   });
 
   // Selection and page-spanning actions.
+  it('keeps session filters and the calendar available with session read permission alone', async () => {
+    auth.permissions = ['read:sessions'];
+    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+  });
+
   it('sends multiple selected cycles to the table and calendar', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);

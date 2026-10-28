@@ -2,7 +2,7 @@ import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { CursorPage, CursorRequest } from '../../../query/types';
-import type { Task, TaskCategory, TaskReferenceData, TasksFilters } from './types';
+import type { Task, TaskCategory, TaskStatus, TasksFilters } from './types';
 
 export interface SetTaskInput {
   title: string;
@@ -58,6 +58,11 @@ function applyTaskFilters(params: URLSearchParams, filters: TasksFilters) {
   if (filters.categories.length) params.set('categories', filters.categories.join(','));
   if (filters.statuses.length) params.set('statuses', filters.statuses.join(','));
   if (filters.search) params.set('search', filters.search);
+}
+
+export interface TaskReferenceData {
+  categories: Array<{ value: TaskCategory; label: string }>;
+  statuses: Array<{ value: TaskStatus; label: string }>;
 }
 
 export function getTaskReferenceData(opts?: RequestOptions) {

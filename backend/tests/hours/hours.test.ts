@@ -127,11 +127,11 @@ describe('Hours API', () => {
       .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     const referenceData = await request(app)
-      .get('/api/hours/reference-data')
+      .get('/api/reference-data/staff?feature=hours')
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(listed.status).toBe(200);
     expect(referenceData.status).toBe(200);
-    expect(referenceData.body.resources).toEqual(expect.arrayContaining([
+    expect(referenceData.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', writable: true,
       }),
@@ -139,11 +139,8 @@ describe('Hours API', () => {
         id: secondStaffId, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', writable: false,
       }),
     ]));
-    expect(referenceData.body.resources).not.toEqual(expect.arrayContaining([
+    expect(referenceData.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: unrelatedStaffId }),
-    ]));
-    expect(referenceData.body.programs).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: programId, name: programName }),
     ]));
     expect(listed.body[firstStaffId][workDate]).toEqual([
       expect.objectContaining({
@@ -197,11 +194,10 @@ describe('Hours API', () => {
     }
 
     const options = await request(app)
-      .get('/api/hours/reference-data')
+      .get('/api/reference-data/staff?feature=hours')
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(options.status).toBe(200);
-    expect(options.body.resources).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstStaffId })]));
-    expect(options.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
+    expect(options.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstStaffId })]));
 
     const first = await request(app)
       .get(`/api/hours/table?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
@@ -527,11 +523,11 @@ describe('Hours API', () => {
       ['read:hours'],
     );
     const referenceData = await request(app)
-      .get('/api/hours/reference-data')
+      .get('/api/reference-data/staff?feature=hours')
       .set('Authorization', `Bearer ${readOnlyToken}`);
 
     expect(referenceData.status).toBe(200);
-    expect(referenceData.body.resources).not.toEqual(expect.arrayContaining([
+    expect(referenceData.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ writable: true }),
     ]));
   });
@@ -594,11 +590,11 @@ describe('Hours API', () => {
       .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${adminToken}`);
     const referenceData = await request(app)
-      .get('/api/hours/reference-data')
+      .get('/api/reference-data/staff?feature=hours')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(listed.status).toBe(200);
     expect(referenceData.status).toBe(200);
-    expect(referenceData.body.resources).toEqual(expect.arrayContaining([
+    expect(referenceData.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: firstStaffId, writable: true }),
       expect.objectContaining({ id: secondStaffId, writable: true }),
     ]));
@@ -615,11 +611,11 @@ describe('Hours API', () => {
       .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
       .set('Authorization', `Bearer ${unrelatedStaffToken}`);
     const unrelatedReferenceData = await request(app)
-      .get('/api/hours/reference-data')
+      .get('/api/reference-data/staff?feature=hours')
       .set('Authorization', `Bearer ${unrelatedStaffToken}`);
     expect(unrelatedRead.status).toBe(200);
     expect(unrelatedReferenceData.status).toBe(200);
-    expect(unrelatedReferenceData.body.resources).toEqual([
+    expect(unrelatedReferenceData.body).toEqual([
       expect.objectContaining({ id: unrelatedStaffId, writable: true }),
     ]);
     expect(unrelatedRead.body[secondStaffId]).toBeUndefined();
