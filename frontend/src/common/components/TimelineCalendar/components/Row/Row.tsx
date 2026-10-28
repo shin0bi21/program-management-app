@@ -1,15 +1,13 @@
 import {
   memo,
-  type KeyboardEvent,
   type MutableRefObject,
-  type PointerEvent,
   type ReactNode,
 } from 'react';
 import Cell from '../Cell/Cell';
-import type { ItemMoveStart } from '../../hooks/useItemMove/useItemMove';
+import type { ItemMovePointerHandler } from '../../hooks/useItemMove/useItemMove';
 import type {
-  ItemResize,
-  ItemResizeTarget,
+  ItemResizePointerHandler,
+  ItemResizeKeyHandler,
 } from '../../hooks/useItemResize/useItemResize';
 import type {
   BuildItemContext,
@@ -24,15 +22,11 @@ import type {
 import { getItemDensity, positionItems, type ItemDensity } from '../../utils/itemPosition';
 
 const HIDE_ITEM_SUMMARIES_AT = 7;
-
-function getItemGeometry(density: ItemDensity, lane: number, laneCount: number, rowHeight: number) {
-  const padding = density === 'dense' ? 4 : density === 'compact' ? 7 : 8;
-  const gap = density === 'dense' ? 2 : density === 'compact' ? 3 : 8;
-  const height = density === 'normal'
-    ? 26
-    : (rowHeight - (padding * 2) - (gap * (laneCount - 1))) / laneCount;
-  return { top: padding + (lane * (height + gap)), height };
-}
+const ITEM_SPACING = {
+  normal: { padding: 8, gap: 8 },
+  compact: { padding: 7, gap: 3 },
+  dense: { padding: 4, gap: 2 },
+};
 
 interface RowProps<TRow, TItemData> {
   row: TRow;
@@ -52,11 +46,11 @@ interface RowProps<TRow, TItemData> {
   getItemCapabilities?: (context: ItemCapabilityContext<TRow, TItemData>) => ItemCapabilities;
   onItemActivate?: (context: ItemActivateContext<TRow, TItemData>) => void;
   itemResizeEnabled: boolean;
-  beginItemResize: (resize: ItemResize<TRow, TItemData>) => void;
-  resizeByKeyboard: (resize: ItemResizeTarget<TRow, TItemData>, direction: -1 | 1) => void;
+  onItemResizePointerDown: ItemResizePointerHandler<TRow, TItemData>;
+  onItemResizeKeyDown: ItemResizeKeyHandler<TRow, TItemData>;
   suppressResizeClickRef: MutableRefObject<boolean>;
   itemMoveEnabled: boolean;
-  beginItemMove: (move: ItemMoveStart<TRow, TItemData>) => void;
+  onItemMovePointerDown: ItemMovePointerHandler<TRow, TItemData>;
   suppressMoveClickRef: MutableRefObject<boolean>;
   onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
@@ -80,11 +74,11 @@ function Row<TRow, TItemData>({
   getItemCapabilities,
   onItemActivate,
   itemResizeEnabled,
-  beginItemResize,
-  resizeByKeyboard,
+  onItemResizePointerDown,
+  onItemResizeKeyDown,
   suppressResizeClickRef,
   itemMoveEnabled,
-  beginItemMove,
+  onItemMovePointerDown,
   suppressMoveClickRef,
   onCellClick,
   getCellActions,
@@ -163,48 +157,6 @@ function Row<TRow, TItemData>({
               visibleEnd: periods[endIndex],
             };
 
-            const beginResize = (event: PointerEvent<HTMLButtonElement>, edge: 'start' | 'end') => {
-              event.stopPropagation();
-
-              if (event.pointerType === 'touch' || event.button !== 0) return;
-
-              beginItemResize({
-                pointerId: event.pointerId,
-                startX: event.clientX,
-                sourceElement: event.currentTarget,
-                itemElement: event.currentTarget.parentElement!,
-                row,
-                item,
-                range,
-                edge,
-              });
-            };
-
-            const resizeWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, edge: 'start' | 'end') => {
-              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-
-              event.preventDefault();
-
-              resizeByKeyboard(
-                { row, item, range, edge },
-                event.key === 'ArrowLeft' ? -1 : 1,
-              );
-            };
-
-            const beginMove = (event: PointerEvent<HTMLDivElement>) => {
-              if (event.pointerType === 'touch' || event.button !== 0) return;
-
-              beginItemMove({
-                pointerId: event.pointerId,
-                startX: event.clientX,
-                startY: event.clientY,
-                sourceElement: event.currentTarget,
-                row,
-                item,
-                range,
-              });
-            };
-
             return (
               <div
                 key={itemId}
@@ -219,7 +171,7 @@ function Row<TRow, TItemData>({
                   top: geometry.top,
                   height: geometry.height,
                 }}
-                onPointerDown={movable ? beginMove : undefined}
+                onPointerDown={movable ? event => onItemMovePointerDown(event, { row, item, range }) : undefined}
                 onClickCapture={event => {
                   if (suppressResizeClickRef.current || suppressMoveClickRef.current) {
                     event.preventDefault();
@@ -237,8 +189,8 @@ function Row<TRow, TItemData>({
                     className="resize-handle start"
                     aria-label={`Resize start of ${itemId}`}
                     onClick={event => event.stopPropagation()}
-                    onKeyDown={event => resizeWithKeyboard(event, 'start')}
-                    onPointerDown={event => beginResize(event, 'start')}
+                    onKeyDown={event => onItemResizeKeyDown(event, { row, item, range, edge: 'start' })}
+                    onPointerDown={event => onItemResizePointerDown(event, { row, item, range, edge: 'start' })}
                   />
                 )}
                 {buildItem(context)}
@@ -248,8 +200,8 @@ function Row<TRow, TItemData>({
                     className="resize-handle end"
                     aria-label={`Resize end of ${itemId}`}
                     onClick={event => event.stopPropagation()}
-                    onKeyDown={event => resizeWithKeyboard(event, 'end')}
-                    onPointerDown={event => beginResize(event, 'end')}
+                    onKeyDown={event => onItemResizeKeyDown(event, { row, item, range, edge: 'end' })}
+                    onPointerDown={event => onItemResizePointerDown(event, { row, item, range, edge: 'end' })}
                   />
                 )}
               </div>
@@ -262,3 +214,18 @@ function Row<TRow, TItemData>({
 }
 
 export default memo(Row) as typeof Row;
+
+function getItemGeometry(density: ItemDensity, lane: number, laneCount: number, rowHeight: number) {
+  const { padding, gap } = ITEM_SPACING[density];
+  let height = 26;
+
+  if (density !== 'normal') {
+    const totalPadding = padding * 2;
+    const totalGaps = gap * (laneCount - 1);
+    const availableHeight = rowHeight - totalPadding - totalGaps;
+    height = availableHeight / laneCount;
+  }
+
+  const top = padding + lane * (height + gap);
+  return { top, height };
+}

@@ -1,4 +1,4 @@
-import { useCallback, useRef, type RefObject } from 'react';
+import { useCallback, useRef, type RefObject, type PointerEvent as ReactPointerEvent } from 'react';
 import type { CalendarPeriod, ItemMoveContext, ItemRange } from '../../types';
 import { getEdgeScrollDelta, getPeriodZoneBounds } from '../../utils/edgeAutoScroll';
 import { createItemPreview } from '../../utils/itemPreview';
@@ -13,6 +13,11 @@ export interface ItemMoveStart<TRow, TItemData> {
   item: TItemData;
   range: ItemRange;
 }
+
+export type ItemMovePointerHandler<TRow, TItemData> = (
+  event: ReactPointerEvent<HTMLDivElement>,
+  target: Pick<ItemMoveStart<TRow, TItemData>, 'row' | 'item' | 'range'>,
+) => void;
 
 interface ActiveItemMove<TRow, TItemData> extends ItemMoveStart<TRow, TItemData> {
   startIndex: number;
@@ -258,5 +263,17 @@ export function useItemMove<TRow, TItemData>({
     activeRef.current = session;
   }, [activate, beginPointerSession, cancel, end, frame, move, viewportRef]);
 
-  return { beginItemMove, suppressClickRef };
+  const onItemMovePointerDown: ItemMovePointerHandler<TRow, TItemData> = useCallback((event, target) => {
+    if (event.pointerType === 'touch' || event.button !== 0) return;
+
+    beginItemMove({
+      ...target,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      sourceElement: event.currentTarget,
+    });
+  }, [beginItemMove]);
+
+  return { beginItemMove, onItemMovePointerDown, suppressClickRef };
 }

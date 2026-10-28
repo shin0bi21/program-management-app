@@ -17,6 +17,10 @@ Never import a page from common code. Pages and their nested components may impo
 
 Keep each frontend feature and component with its implementation, tests, and focused supporting files. This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
+Place a component-private hook under that component's `hooks/` directory. Choose the lowest owner that contains the complete responsibility and can preserve its lifecycle; do not collect descendant hooks at a parent merely because the parent renders those descendants.
+
+Lift a hook to the nearest common owner when it coordinates multiple children, shared resources, or a lifecycle that must survive a child's unmount. Import shared contracts from their owner without introducing runtime dependencies back to parent components or circular module dependencies. A child receives parent-coordinated behavior through props rather than importing the parent's implementation.
+
 Program cycles are a shared programming capability used by Programming, Settings,
 Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract live in
 [`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).

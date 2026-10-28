@@ -41,11 +41,11 @@ describe('Row', () => {
         />}
         onItemActivate={onItemActivate}
         itemResizeEnabled={false}
-        beginItemResize={vi.fn()}
-        resizeByKeyboard={vi.fn()}
+        onItemResizePointerDown={vi.fn()}
+        onItemResizeKeyDown={vi.fn()}
         suppressResizeClickRef={{ current: false }}
         itemMoveEnabled={false}
-        beginItemMove={vi.fn()}
+        onItemMovePointerDown={vi.fn()}
         suppressMoveClickRef={{ current: false }}
       />,
     );
@@ -61,7 +61,7 @@ describe('Row', () => {
   });
 
   it('starts one-period item movement with the canonical range', () => {
-    const beginItemMove = vi.fn();
+    const onItemMovePointerDown = vi.fn();
     render(
       <Row
         row={{ id: 'staff-1' }}
@@ -79,11 +79,11 @@ describe('Row', () => {
         buildItem={() => <button type="button">Task item</button>}
         getItemCapabilities={() => ({ draggable: true })}
         itemResizeEnabled={false}
-        beginItemResize={vi.fn()}
-        resizeByKeyboard={vi.fn()}
+        onItemResizePointerDown={vi.fn()}
+        onItemResizeKeyDown={vi.fn()}
         suppressResizeClickRef={{ current: false }}
         itemMoveEnabled
-        beginItemMove={beginItemMove}
+        onItemMovePointerDown={onItemMovePointerDown}
         suppressMoveClickRef={{ current: false }}
       />,
     );
@@ -94,11 +94,12 @@ describe('Row', () => {
       clientY: 70,
     });
 
-    expect(beginItemMove).toHaveBeenCalledWith(expect.objectContaining({
+    expect(onItemMovePointerDown).toHaveBeenCalledWith(expect.objectContaining({
       pointerId: 10,
+    }), {
       row: { id: 'staff-1' },
       item: { id: 'task-1', date: period.key },
       range: { start: period.key, end: period.key },
-    }));
+    });
   });
 });

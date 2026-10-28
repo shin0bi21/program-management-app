@@ -45,11 +45,11 @@ describe('Grid', () => {
       selectedRowId="staff-2"
       buildItem={() => null}
       itemResizeEnabled={false}
-      beginItemResize={vi.fn()}
-      resizeByKeyboard={vi.fn()}
+      onItemResizePointerDown={vi.fn()}
+      onItemResizeKeyDown={vi.fn()}
       suppressResizeClickRef={{ current: false }}
       itemMoveEnabled={false}
-      beginItemMove={vi.fn()}
+      onItemMovePointerDown={vi.fn()}
       suppressMoveClickRef={{ current: false }}
       formatPeriodLabel={period => period.key}
       today={periods[0].start}

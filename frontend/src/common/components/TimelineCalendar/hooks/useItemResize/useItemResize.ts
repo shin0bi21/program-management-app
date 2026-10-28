@@ -1,4 +1,4 @@
-import { useCallback, useRef, type RefObject } from 'react';
+import { useCallback, useRef, type RefObject, type PointerEvent as ReactPointerEvent, type KeyboardEvent } from 'react';
 import type { CalendarPeriod, ItemRange, ItemResizeContext } from '../../types';
 import { getEdgeScrollDelta, getPeriodZoneBounds } from '../../utils/edgeAutoScroll';
 import { createItemPreview } from '../../utils/itemPreview';
@@ -10,6 +10,14 @@ export interface ItemResizeTarget<TRow, TItemData> {
   range: ItemRange;
   edge: 'start' | 'end';
 }
+
+export type ItemResizePointerHandler<TRow, TItemData> = (
+  event: ReactPointerEvent<HTMLButtonElement>, target: ItemResizeTarget<TRow, TItemData>,
+) => void;
+
+export type ItemResizeKeyHandler<TRow, TItemData> = (
+  event: KeyboardEvent<HTMLButtonElement>, target: ItemResizeTarget<TRow, TItemData>,
+) => void;
 
 export interface ItemResize<TRow, TItemData> extends ItemResizeTarget<TRow, TItemData> {
   pointerId: number;
@@ -251,5 +259,26 @@ export function useItemResize<TRow, TItemData>({
     });
   }, [allPeriods, onItemResize]);
 
-  return { beginItemResize, resizeByKeyboard, suppressClickRef };
+  const onItemResizePointerDown: ItemResizePointerHandler<TRow, TItemData> = useCallback((event, target) => {
+    event.stopPropagation();
+
+    if (event.pointerType === 'touch' || event.button !== 0) return;
+
+    beginItemResize({
+      ...target,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      sourceElement: event.currentTarget,
+      itemElement: event.currentTarget.parentElement!,
+    });
+  }, [beginItemResize]);
+
+  const onItemResizeKeyDown: ItemResizeKeyHandler<TRow, TItemData> = useCallback((event, target) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+    event.preventDefault();
+    resizeByKeyboard(target, event.key === 'ArrowLeft' ? -1 : 1);
+  }, [resizeByKeyboard]);
+
+  return { beginItemResize, resizeByKeyboard, onItemResizePointerDown, onItemResizeKeyDown, suppressClickRef };
 }

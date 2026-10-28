@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 // This suite owns pointer and keyboard resize boundaries, commits, and session exclusivity.
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,28 @@ function dispatchPointer(type: string, values: Record<string, number>) {
 }
 
 describe('useItemResize', () => {
+  it.each([['touch', 0, false], ['mouse', 2, false], ['mouse', 0, true]] as const)(
+    'owns resize propagation and pointer guards for %s button %s', (pointerType, button, allowed) => {
+      const beginPointerSession = vi.fn(() => false);
+      const source = document.createElement('button');
+      document.createElement('div').appendChild(source);
+      const stopPropagation = vi.fn();
+      const { result } = renderHook(() => useItemResize({
+        viewportRef: { current: null }, allPeriods: periods, periodWidth: 100,
+        coveredLeftWidth: 0, dragEdgeSize: 40, dragScrollSpeed: 12, beginPointerSession,
+      }));
+
+      act(() => result.current.onItemResizePointerDown({
+        pointerType, button, pointerId: 7, clientX: 100, currentTarget: source, stopPropagation,
+      } as unknown as ReactPointerEvent<HTMLButtonElement>, {
+        row: { id: 'staff-1' }, item: { id: 'item-1' },
+        range: { start: periods[0].key, end: periods[1].key }, edge: 'start',
+      }));
+      expect(stopPropagation).toHaveBeenCalledOnce();
+      expect(beginPointerSession).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    },
+  );
+
   beforeEach(() => {
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -180,7 +203,11 @@ describe('useItemResize', () => {
       });
     });
 
-    act(() => result.current.resizeByKeyboard({ row, item, range, edge }, direction));
+    const preventDefault = vi.fn();
+    act(() => result.current.onItemResizeKeyDown({
+      key: direction === -1 ? 'ArrowLeft' : 'ArrowRight', preventDefault,
+    } as unknown as ReactKeyboardEvent<HTMLButtonElement>, { row, item, range, edge }));
+    expect(preventDefault).toHaveBeenCalledOnce();
 
     expect(onItemResize).toHaveBeenCalledWith({
       row,
