@@ -54,7 +54,19 @@ test('keeps session actions inside a narrow viewport and flips above a bottom-ed
 test('keeps actions below the session when selecting it changes the overview height', async ({ page, mount }) => {
   const component = await mount(`${sessionStory}/SelectingSessionItem`);
   const item = component.getByRole('button', { name: /Communication.*Open actions/ });
+  const summaryBefore = await item.evaluate(element => {
+    const item = element.getBoundingClientRect();
+    const summary = element.querySelector('.summary')!.getBoundingClientRect();
+    return { left: summary.left - item.left, top: summary.top - item.top, width: item.width, height: item.height };
+  });
   await item.click();
+
+  expect(await item.evaluate(element => {
+    const item = element.getBoundingClientRect();
+    const summary = element.querySelector('.summary')!.getBoundingClientRect();
+    return { left: summary.left - item.left, top: summary.top - item.top, width: item.width, height: item.height };
+  })).toEqual(summaryBefore);
+  await expect(item).toHaveCSS('border-top-width', '1px');
 
   const menu = page.locator('.calendar-item-menu');
   await expect(menu).toBeVisible();

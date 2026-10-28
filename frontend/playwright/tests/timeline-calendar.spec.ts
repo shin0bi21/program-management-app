@@ -65,7 +65,8 @@ for (const { mode, label, id } of [
 
     const menu = page.locator('.calendar-item-menu');
     await expect(menu).toBeVisible();
-    await expect(item).toHaveCSS('border-top-width', '2px');
+    await expect(item).toHaveCSS('border-top-width', '1px');
+    await expect(item).not.toHaveCSS('box-shadow', 'none');
     await expect.poll(async () => (await menu.boundingBox())?.x).toBeCloseTo(anchor.left, 0);
     await expect(component.getByTestId('activation-record')).toHaveValue(id);
     await expect(component.getByTestId('item-action')).toHaveValue('');

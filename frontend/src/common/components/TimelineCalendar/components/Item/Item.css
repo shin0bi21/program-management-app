@@ -14,10 +14,11 @@
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .calendar-item.selected,
-.calendar-item.menu-open { border-width: 2px; box-shadow: none; }
+.calendar-item.menu-open { box-shadow: 0 0 0 1px var(--brand-accent); }
 .calendar-item:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
 .calendar-item .summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-item .trailing { flex: 0 0 auto; margin-left: auto; }
@@ -57,7 +58,7 @@
   min-width: 0;
   margin-inline: 8px;
   align-self: start;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: auto;
 }
 
