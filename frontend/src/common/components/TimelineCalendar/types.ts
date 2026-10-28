@@ -1,3 +1,4 @@
+import type { DateRange } from '../../utils/dateRange';
 import type { ReactNode } from 'react';
 
 export type PeriodKey = string;
@@ -90,6 +91,7 @@ export interface TimelineCalendarProps<TRow, TItemData> {
   initialDate?: Date;
   positionStorageKey?: string;
   periodCount?: number;
+  dateRange?: DateRange;
   overscanPeriods?: number;
   rowHeight?: number;
   overscanRows?: number;

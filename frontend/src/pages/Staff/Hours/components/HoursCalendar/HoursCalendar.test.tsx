@@ -181,14 +181,17 @@ describe('HoursCalendar', () => {
     renderCalendar({
       data: { 'staff-1': { [periods[1].key]: [item] } },
       search: 'workshop',
-      filters: { staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'], types: ['other'] },
+      filters: { staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'], types: ['other'],
+        dateRange: { start: '2026-08-01', end: '2026-08-31' } },
     });
 
     await initializeCalendar(periods);
 
+    expect(calendarState.props?.dateRange).toEqual({ start: '2026-08-01', end: '2026-08-31' });
     expect(getHoursCalendarData).toHaveBeenCalledWith({
       staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'],
       types: ['other'], cycleId: 'cycle-1', search: 'workshop',
+      dateRange: { start: '2026-08-01', end: '2026-08-31' },
     }, {
       start: expect.any(String),
       end: expect.any(String),

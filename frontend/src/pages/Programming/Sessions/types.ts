@@ -1,3 +1,4 @@
+import type { DateRange } from '../../../common/utils/dateRange';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 
 export interface CohortSession {
@@ -21,6 +22,7 @@ export interface CohortSession {
 }
 
 export interface SessionListFilters {
+  dateRange?: DateRange;
   programIds?: string[];
   cycleIds?: string[];
   sessionTypeIds?: string[];

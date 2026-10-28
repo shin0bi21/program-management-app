@@ -1,3 +1,4 @@
+import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
@@ -59,7 +60,10 @@ export function getHoursCalendarData(
   range: { start: string; end: string },
   opts?: RequestOptions,
 ) {
-  const params = new URLSearchParams(range);
+  const requestedRange = intersectDateRanges(range, filters.dateRange);
+  if (!requestedRange) return Promise.resolve<HoursCalendarData>({});
+
+  const params = new URLSearchParams({ ...requestedRange });
   applyHoursFilters(params, filters);
   return apiClient.get<HoursCalendarData>(`/hours/calendar?${params}`, opts);
 }
@@ -78,6 +82,10 @@ export function getHoursTableData(
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyHoursFilters(params, filters);
+  if (filters.dateRange) {
+    params.set('start', filters.dateRange.start);
+    params.set('end', filters.dateRange.end);
+  }
   return apiClient.get<CursorPage<HoursTableRow>>(`/hours/table?${params}`, opts);
 }
 

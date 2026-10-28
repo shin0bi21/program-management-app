@@ -68,3 +68,21 @@ describe('FloatingMenuPanel', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 });
+
+describe('floating form keyboard interaction', () => {
+  it('preserves native input keys and Tab between fields while retaining Escape dismissal', () => {
+    const onClose = vi.fn();
+    render(<FloatingMenuPanel menuRef={createRef<HTMLDivElement>()} position={{ top: 0, left: 0 }}
+      onClose={onClose} keyboardMode="form" ariaLabel="Dates">
+      <input aria-label="From" type="date" /><input aria-label="To" type="date" />
+      <button type="button">Apply</button>
+    </FloatingMenuPanel>);
+    const input = screen.getByLabelText('From');
+    input.focus();
+    expect(fireEvent.keyDown(input, { key: 'ArrowDown' })).toBe(true);
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});

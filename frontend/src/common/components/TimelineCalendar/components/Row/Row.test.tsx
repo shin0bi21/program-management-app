@@ -13,6 +13,26 @@ const period: CalendarPeriod = {
 };
 
 describe('Row', () => {
+  it.each([
+    ['2026-08-18', '2026-08-19', true, false],
+    ['2026-08-19', '2026-08-20', false, true],
+    ['2026-08-18', '2026-08-20', true, true],
+    ['2026-08-19', '2026-08-19', false, false],
+  ] as const)('marks clipped edges for %s through %s', (start, end, before, after) => {
+    render(<Row<{ id: string }, { id: string; start: string; end: string }> row={{ id: 'staff-1' }} rowId="staff-1" rowIndex={0}
+      items={[{ id: 'task-1', start, end }]} getItemRange={item => item}
+      periods={[period]} leadingPeriodWidth={0} gridColumns="100px 0 145px" rowHeight={80}
+      getItemId={item => item.id} renderRow={() => 'Staff member'} selected={false}
+      buildItem={() => <button type="button">Task item</button>}
+      itemResizeEnabled={false} onItemResizePointerDown={vi.fn()} onItemResizeKeyDown={vi.fn()}
+      suppressResizeClickRef={{ current: false }} itemMoveEnabled={false}
+      onItemMovePointerDown={vi.fn()} suppressMoveClickRef={{ current: false }} />);
+
+    const positioned = screen.getByRole('button', { name: 'Task item' }).parentElement!;
+    expect(positioned.classList.contains('continues-before')).toBe(before);
+    expect(positioned.classList.contains('continues-after')).toBe(after);
+  });
+
   it('owns activation when the nested shared item control is clicked', () => {
     const onItemActivate = vi.fn();
     const onRowSelect = vi.fn();

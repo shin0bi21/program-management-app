@@ -1,3 +1,4 @@
+import { getDefaultDateRange, isDateRange, type DateRange } from '../../utils/dateRange';
 import type { ListSort } from '../../components/Table/Table.types';
 
 export type PreferenceFields<T extends object> = { [K in keyof T]: (value: unknown) => T[K] };
@@ -102,4 +103,9 @@ export function normalizePreferences<T extends object>(fields: PreferenceFields<
   ) as T;
 
   return equalPreferenceValues(stored, normalized) ? stored as T : normalized;
+}
+
+export function preferenceDateRange(fallback: DateRange = getDefaultDateRange()) {
+  return (value: unknown): DateRange => isDateRange(value)
+    ? { start: value.start, end: value.end } : fallback;
 }

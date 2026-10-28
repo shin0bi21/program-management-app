@@ -114,6 +114,20 @@ describe('Tasks', () => {
   });
 
   // Permissions and application services.
+  it('shares the restored page date range between the table query and calendar timeline', async () => {
+    const dateRange = { start: '2026-04-01', end: '2026-06-30' };
+    vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, dateRange });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await screen.findByRole('table', { name: 'Tasks' });
+    expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
+      expect.anything(), expect.anything());
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+    await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
+  });
+
   it('puts Staff first and sends the applied staff filter to the table request', async () => {
     const coworker = {
       id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,

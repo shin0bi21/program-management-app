@@ -222,6 +222,70 @@ describe('Hours API', () => {
     });
   });
 
+  it('applies inclusive work-date bounds before table pagination', async () => {
+    const marker = `Date-range hours ${firstStaffId}`;
+    const ids: string[] = [];
+    for (const date of [workDate, linkedWorkDate, placementWorkDate]) {
+      const created = await request(app)
+        .post('/api/hours')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate: date, hours: 1, note: marker });
+      expect(created.status).toBe(201);
+      ids.push(created.body.id);
+    }
+
+    const query = `start=${linkedWorkDate}&end=${placementWorkDate}&search=${encodeURIComponent(marker)}&sort=date&direction=asc&limit=1`;
+    const first = await request(app)
+      .get(`/api/hours/table?${query}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(first.status).toBe(200);
+    expect(first.body.rows.map((row: { id: string }) => row.id)).toEqual([ids[1]]);
+    expect(first.body.nextCursor).toEqual(expect.any(String));
+
+    const second = await request(app)
+      .get(`/api/hours/table?${query}&cursor=${encodeURIComponent(first.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(second.status).toBe(200);
+    expect(second.body.rows.map((row: { id: string }) => row.id)).toEqual([ids[2]]);
+    expect(second.body.nextCursor).toBeNull();
+
+    const calendar = await request(app)
+      .get(`/api/hours/calendar?start=${linkedWorkDate}&end=${placementWorkDate}&search=${encodeURIComponent(marker)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(calendar.status).toBe(200);
+    expect(Object.values(calendar.body[firstStaffId]).flat().map(entry => (entry as { id: string }).id).sort()).toEqual(ids.slice(1).sort());
+  });
+
+  it.each([
+    'start=2026-06-12',
+    'end=2026-06-15',
+    'start=2026-06-15&end=2026-06-12',
+    'start=2026-02-30&end=2026-03-01',
+    'start=0000-01-01&end=0000-01-02',
+  ])('rejects an invalid hours table range: %s', async query => {
+    const response = await request(app)
+      .get(`/api/hours/table?${query}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('accepts a 366-day leap-year table range', async () => {
+    const response = await request(app)
+      .get('/api/hours/table?start=2024-01-01&end=2024-12-31')
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(200);
+  });
+
+  it('rejects a table range longer than 366 inclusive days', async () => {
+    const response = await request(app)
+      .get('/api/hours/table?start=2024-01-01&end=2025-01-01')
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(response.status).toBe(400);
+  });
+
   it('lists assigned open-program sessions and derives session time metadata', async () => {
     const sessions = await request(app)
       .get(`/api/hours/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
@@ -297,7 +361,7 @@ describe('Hours API', () => {
       `categories=other`, `programIds=general`, `types=other`, `staffIds=${firstStaffId}`, `cycleId=${activeCycleId}`,
     ];
     for (const filter of filterSets) {
-      const table = await request(app).get(`/api/hours/table?${filter}`).set('Authorization', `Bearer ${adminToken}`);
+      const table = await request(app).get(`/api/hours/table?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
       const calendar = await request(app).get(`/api/hours/calendar?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
       expect(table.status).toBe(200);
       expect(calendar.status).toBe(200);

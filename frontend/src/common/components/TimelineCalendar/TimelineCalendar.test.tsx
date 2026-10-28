@@ -1,3 +1,4 @@
+import { addDays, dayKey } from './utils/periods';
 // This suite owns TimelineCalendar composition, grid semantics, selection, and item construction.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -122,4 +123,14 @@ describe('TimelineCalendar', () => {
       range: { start: '2026-08-09', end: '2026-08-09' },
     }));
   });
+  it.each([
+    [0, 7, false], [-7, 0, false], [-7, -1, true], [1, 7, true],
+  ])('disables Today only outside the inclusive range (%s, %s)', (startOffset, endOffset, disabled) => {
+    const today = new Date();
+    renderCalendar({ dateRange: { start: dayKey(addDays(today, startOffset)), end: dayKey(addDays(today, endOffset)) } });
+    const button = screen.getByRole('button', { name: 'Today' });
+    if (disabled) expect(button).toBeDisabled();
+    else expect(button).toBeEnabled();
+  });
+
 });

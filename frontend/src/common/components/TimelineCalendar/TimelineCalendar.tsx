@@ -1,3 +1,4 @@
+import { localDateFromKey } from '../../utils/dateRange';
 import { useState } from 'react';
 import { usePeriodVirtualization } from './hooks/usePeriodVirtualization/usePeriodVirtualization';
 import { useItemMove } from './hooks/useItemMove/useItemMove';
@@ -38,6 +39,7 @@ export default function TimelineCalendar<TRow, TItemData>({
   initialDate = new Date(),
   positionStorageKey,
   periodCount = 2500,
+  dateRange,
   overscanPeriods,
   rowHeight = 92,
   overscanRows = 3,
@@ -60,6 +62,7 @@ export default function TimelineCalendar<TRow, TItemData>({
     initialOffset: initialPosition.offset,
     positionStorageKey,
     periodCount,
+    dateRange,
     overscan: effectiveOverscan,
     periodWidth: PERIOD_WIDTH,
     coveredLeftWidth: ROW_WIDTH,
@@ -78,6 +81,7 @@ export default function TimelineCalendar<TRow, TItemData>({
 
   const gridColumns = `${ROW_WIDTH}px ${leadingPeriodWidth}px repeat(${periods.length}, ${PERIOD_WIDTH}px) ${trailingPeriodWidth}px`;
   const [today] = useState(() => new Date());
+  const todayIsInRange = today >= allPeriods[0].start && today < allPeriods[allPeriods.length - 1].end;
 
   const { activeType: activeInteraction, beginPointerSession } = usePointerSession();
   const { onItemMovePointerDown, suppressClickRef: suppressMoveClickRef } = useItemMove({
@@ -92,18 +96,25 @@ export default function TimelineCalendar<TRow, TItemData>({
     beginPointerSession,
   });
 
+  const boundDate = (date: Date) => {
+    if (!dateRange) return date;
+    const first = localDateFromKey(dateRange.start);
+    const last = localDateFromKey(dateRange.end);
+    return new Date(Math.max(first.getTime(), Math.min(date.getTime(), last.getTime())));
+  };
+
   const navigationHandler = navigateDate ?? periodDefinition.navigate;
   const navigate = (direction: 'previous' | 'next') => {
     if (!navigationHandler) return;
 
-    const nextAnchor = navigationHandler(navigationAnchor, direction);
+    const nextAnchor = boundDate(navigationHandler(boundDate(navigationAnchor), direction));
 
     setNavigationAnchor(nextAnchor);
     goToDate(nextAnchor);
   };
 
   const goToToday = () => {
-    const today = new Date();
+    if (!todayIsInRange) return;
 
     setNavigationAnchor(today);
     goToDate(today);
@@ -115,6 +126,7 @@ export default function TimelineCalendar<TRow, TItemData>({
         <Toolbar
           year={visibleYear}
           onToday={showTodayButton ? goToToday : undefined}
+          todayDisabled={!todayIsInRange}
           onPrevious={navigationHandler ? () => navigate('previous') : undefined}
           onNext={navigationHandler ? () => navigate('next') : undefined}
         />

@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { makeCohortSession } from '../../../../../tests/factories/session';
-import { getSessionRange, getSessionRequestRange } from './sessionCalendarDates';
+import { getSessionRange } from './sessionCalendarDates';
+import { getSessionRequestRange } from '../../utils/sessionDateRange';
 
 describe('session calendar date boundaries', () => {
   it.each([

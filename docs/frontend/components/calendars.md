@@ -56,6 +56,19 @@ When a shaping hook exists, its test owns that shaping and reference preservatio
 `useDataBuffer` tests own generic range loading, accumulation, stale-result protection,
 mutation overrides and cleanup.
 
+## Bound the timeline by page dates
+
+Pass `dateRange={{ start, end }}` to `TimelineCalendar` for an inclusive daily timeline of at most 366 days. Build that bounded set of period descriptors once; virtualization continues to render only visible columns.
+The page owns the range control and persistence, shared with its table view. A range
+change replaces that page calendar's buffer through its applied-filter key. Clamp stored
+positions and navigation targets to the selected bounds; Today is disabled when today lies outside the range. Consumers without explicit bounds retain the existing
+period-count contract.
+
+Data buffers preload beyond visible periods. Intersect every buffered request with the
+applied range before issuing HTTP requests, and return empty data for disjoint requests.
+Convert Programming dates into local-midnight timestamps with an exclusive next-day end;
+Tasks and Hours use inclusive date-only bounds. Preserve virtualization and lazy loading.
+
 ## Assign calendar and item ownership
 
 The shared `TimelineCalendar` owns row/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional row selection. A row can represent a resource, program, room, or another domain axis. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.

@@ -100,6 +100,7 @@ export default function HoursCalendar({
       items={visibleItems}
       getItemRange={data => ({ start: data.date, end: data.date })}
       initialDate={initialDate}
+      dateRange={filters.dateRange}
       positionStorageKey={HOURS_CALENDAR_POSITION_KEY}
       ariaLabel="Staff hours calendar"
       rowHeader="Name"

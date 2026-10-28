@@ -16,6 +16,8 @@ An overlay appears above the current interface. Choose the pattern by how the us
 
 Use shared overlay primitives when their contracts fit. They centralize portal rendering, positioning, dismissal, keyboard behaviour and focus return. A portalled surface needs its own root CSS class because it renders outside its caller's document subtree.
 
+Anchored forms use `FloatingMenuPanel` with `keyboardMode="form"` and an accessible label. This exposes a dialog, preserves native input editing and Tab between controls, and keeps Escape dismissal. Option-only menus retain menu keyboard navigation.
+
 The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
 
 The trigger owner tests only the target/open-state wiring, domain content, and callback values it supplies. Shared overlay component and hook tests own generic toggle, positioning, dismissal, keyboard behavior, and focus return. Consumers do not repeat those mechanics merely because they render the shared overlay.

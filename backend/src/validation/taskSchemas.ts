@@ -1,15 +1,9 @@
 import { z } from 'zod';
 import { hoursCategorySchema } from './hoursSchemas';
 import { cursorListFields } from './listQuerySchemas';
+import { calendarDateSchema, DATE_RANGE_LIMIT_MESSAGE, exceedsDateRangeLimit } from './dateRangeValidation';
 
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
-const calendarDate = (label: string) => z.string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} must use YYYY-MM-DD`)
-  .refine(value => {
-    const [year, month, day] = value.split('-').map(Number);
-    const parsed = new Date(Date.UTC(year, month - 1, day));
-    return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
-  }, `${label} must be a valid calendar date`);
 
 export const taskStateSchema = z.enum(['open', 'completed', 'cancelled']);
 export const taskStatusSchema = z.enum(['upcoming', 'active', 'overdue', 'completed', 'cancelled']);
@@ -39,17 +33,31 @@ const taskFilterFields = {
 export const taskListQuerySchema = z.object({
   query: z.object({
     ...taskFilterFields,
+    start: calendarDateSchema('Start date').optional(),
+    end: calendarDateSchema('End date').optional(),
     ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
+  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+    message: 'Start and end dates must be provided together',
+    path: ['end'],
+  }).refine(({ start, end }) => !start || !end || start <= end, {
+    message: 'End date must be on or after start date',
+    path: ['end'],
+  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
+    message: DATE_RANGE_LIMIT_MESSAGE,
+    path: ['end'],
   }),
 });
 
 export const taskCalendarQuerySchema = z.object({
   query: z.object({
     ...taskFilterFields,
-    start: calendarDate('Start date'),
-    end: calendarDate('End date'),
+    start: calendarDateSchema('Start date'),
+    end: calendarDateSchema('End date'),
   }).refine(query => query.start <= query.end, {
     message: 'End date must be on or after start date',
+    path: ['end'],
+  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
+    message: DATE_RANGE_LIMIT_MESSAGE,
     path: ['end'],
   }),
 });
@@ -60,8 +68,8 @@ export const setTaskSchema = z.object({
     details: z.string().trim().max(2000, 'Details cannot exceed 2000 characters').nullable().optional().transform(value => value || null),
     category: hoursCategorySchema,
     programId: nullableUuid('Invalid program ID'),
-    startDate: calendarDate('Start date'),
-    dueDate: calendarDate('Due date'),
+    startDate: calendarDateSchema('Start date'),
+    dueDate: calendarDateSchema('Due date'),
     staffId: z.string().uuid('Invalid staff ID'),
   }).refine(input => input.startDate <= input.dueDate, {
     path: ['dueDate'],
@@ -75,8 +83,8 @@ export const updateTaskStateSchema = z.object({
 
 export const updateTaskPlacementSchema = z.object({
   body: z.object({
-    startDate: calendarDate('Start date'),
-    dueDate: calendarDate('Due date'),
+    startDate: calendarDateSchema('Start date'),
+    dueDate: calendarDateSchema('Due date'),
     staffId: z.string().uuid('Invalid staff ID').optional(),
   }).refine(input => input.startDate <= input.dueDate, {
     path: ['dueDate'],
