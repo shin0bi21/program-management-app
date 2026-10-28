@@ -68,6 +68,17 @@ The shared `TimelineCalendar` owns row/period virtualization, grid semantics, na
 - Give every item a complete accessible label and never communicate type or status by color alone.
 - Keep one calendar scroll viewport and fixed-height virtualized rows.
 
+Apply the [lowest-owner hook rule](../architecture/ownership.md) within the calendar:
+
+| Owner | Hook responsibility |
+|---|---|
+| `TimelineCalendar/hooks/` | Viewport-wide virtualization, pointer coordination, and move/resize workflows that cross rows or must survive row unmount |
+| `components/Row/hooks/` | Stateful behavior contained within one row, when needed; simple selection and event forwarding stay in Row |
+| `components/Item/hooks/` | That item's hover/focus details and action-menu workflow |
+| `components/Cell/hooks/` | That cell's activation and action-menu workflow |
+
+The move and resize hooks own their DOM entry handlers as well as pointer guards, keyboard resizing, previews, scrolling, completion, and cancellation. Rows render the interaction affordances and forward events with item context; keep multi-step interaction handlers out of row render loops. Keep these hooks at calendar level because active interactions must continue when virtualized source rows unmount. Item and cell hooks remain local because their state and cleanup belong to those rendered instances.
+
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 
 The page-calendar test owns capability mapping, selection, item construction and exact callback-to-action wiring. Shared `TimelineCalendar` tests own generic rendering, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.

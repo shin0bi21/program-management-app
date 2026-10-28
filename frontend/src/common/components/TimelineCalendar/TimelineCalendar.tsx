@@ -10,7 +10,6 @@ import { dayPeriodDefinition } from './utils/periods';
 import type { TimelineCalendarProps } from './types';
 import { loadCalendarPosition } from './utils/calendarPosition';
 import './TimelineCalendar.css';
-import './components/Item/Item.css';
 
 const PERIOD_WIDTH = 145;
 const ROW_WIDTH = 125;
@@ -81,13 +80,13 @@ export default function TimelineCalendar<TRow, TItemData>({
   const [today] = useState(() => new Date());
 
   const { activeType: activeInteraction, beginPointerSession } = usePointerSession();
-  const { beginItemMove, suppressClickRef: suppressMoveClickRef } = useItemMove({
+  const { onItemMovePointerDown, suppressClickRef: suppressMoveClickRef } = useItemMove({
     viewportRef, periods: allPeriods, periodWidth: PERIOD_WIDTH, rows, getRowId, canItemMove, onItemMove,
     dragEdgeSize, dragScrollSpeed, coveredLeftWidth: ROW_WIDTH,
     beginPointerSession,
   });
 
-  const { beginItemResize, resizeByKeyboard, suppressClickRef: suppressResizeClickRef } = useItemResize({
+  const { onItemResizePointerDown, onItemResizeKeyDown, suppressClickRef: suppressResizeClickRef } = useItemResize({
     viewportRef, allPeriods, periodWidth: PERIOD_WIDTH, coveredLeftWidth: ROW_WIDTH, onItemResize,
     dragEdgeSize, dragScrollSpeed,
     beginPointerSession,
@@ -147,11 +146,11 @@ export default function TimelineCalendar<TRow, TItemData>({
           getItemCapabilities={getItemCapabilities}
           onItemActivate={onItemActivate}
           itemResizeEnabled={!!onItemResize}
-          beginItemResize={beginItemResize}
-          resizeByKeyboard={resizeByKeyboard}
+          onItemResizePointerDown={onItemResizePointerDown}
+          onItemResizeKeyDown={onItemResizeKeyDown}
           suppressResizeClickRef={suppressResizeClickRef}
           itemMoveEnabled={!!onItemMove}
-          beginItemMove={beginItemMove}
+          onItemMovePointerDown={onItemMovePointerDown}
           suppressMoveClickRef={suppressMoveClickRef}
           onCellClick={onCellActivate}
           getCellActions={getCellActions}

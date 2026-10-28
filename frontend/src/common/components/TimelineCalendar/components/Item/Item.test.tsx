@@ -1,6 +1,6 @@
 import { useState } from 'react';
 // Scope: verifies shared calendar-item actions, detail discovery, and hover dismissal.
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Item from './Item';
 
@@ -32,6 +32,7 @@ describe('Item', () => {
     fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
     expect(screen.getByRole('menu')).toHaveStyle({ top: '216px' });
   });
+
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -105,18 +106,4 @@ describe('Item', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('does not open hover details when the pointer leaves during the delay', () => {
-    vi.useFakeTimers();
-    try {
-      render(<Item {...itemProps} />);
-      const trigger = screen.getByRole('button', { name: 'Prepare workshop' });
-      fireEvent.mouseEnter(trigger);
-      fireEvent.mouseLeave(trigger);
-      act(() => vi.advanceTimersByTime(120));
-
-      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 });

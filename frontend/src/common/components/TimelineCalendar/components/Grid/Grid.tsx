@@ -1,9 +1,9 @@
 import { memo, type MutableRefObject, type ReactNode } from 'react';
 import Row from '../Row/Row';
-import type { ItemMoveStart } from '../../hooks/useItemMove/useItemMove';
+import type { ItemMovePointerHandler } from '../../hooks/useItemMove/useItemMove';
 import type {
-  ItemResize,
-  ItemResizeTarget,
+  ItemResizePointerHandler,
+  ItemResizeKeyHandler,
 } from '../../hooks/useItemResize/useItemResize';
 import type {
   BuildItemContext,
@@ -38,11 +38,11 @@ interface GridProps<TRow, TItemData> {
   getItemCapabilities?: (context: ItemCapabilityContext<TRow, TItemData>) => ItemCapabilities;
   onItemActivate?: (context: ItemActivateContext<TRow, TItemData>) => void;
   itemResizeEnabled: boolean;
-  beginItemResize: (resize: ItemResize<TRow, TItemData>) => void;
-  resizeByKeyboard: (resize: ItemResizeTarget<TRow, TItemData>, direction: -1 | 1) => void;
+  onItemResizePointerDown: ItemResizePointerHandler<TRow, TItemData>;
+  onItemResizeKeyDown: ItemResizeKeyHandler<TRow, TItemData>;
   suppressResizeClickRef: MutableRefObject<boolean>;
   itemMoveEnabled: boolean;
-  beginItemMove: (move: ItemMoveStart<TRow, TItemData>) => void;
+  onItemMovePointerDown: ItemMovePointerHandler<TRow, TItemData>;
   suppressMoveClickRef: MutableRefObject<boolean>;
   onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
@@ -73,11 +73,11 @@ function Grid<TRow, TItemData>({
   getItemCapabilities,
   onItemActivate,
   itemResizeEnabled,
-  beginItemResize,
-  resizeByKeyboard,
+  onItemResizePointerDown,
+  onItemResizeKeyDown,
   suppressResizeClickRef,
   itemMoveEnabled,
-  beginItemMove,
+  onItemMovePointerDown,
   suppressMoveClickRef,
   onCellClick,
   getCellActions,
@@ -126,11 +126,11 @@ function Grid<TRow, TItemData>({
             getItemCapabilities={getItemCapabilities}
             onItemActivate={onItemActivate}
             itemResizeEnabled={itemResizeEnabled}
-            beginItemResize={beginItemResize}
-            resizeByKeyboard={resizeByKeyboard}
+            onItemResizePointerDown={onItemResizePointerDown}
+            onItemResizeKeyDown={onItemResizeKeyDown}
             suppressResizeClickRef={suppressResizeClickRef}
             itemMoveEnabled={itemMoveEnabled}
-            beginItemMove={beginItemMove}
+            onItemMovePointerDown={onItemMovePointerDown}
             suppressMoveClickRef={suppressMoveClickRef}
             onCellClick={onCellClick}
             getCellActions={getCellActions}
