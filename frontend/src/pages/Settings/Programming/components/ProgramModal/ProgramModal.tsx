@@ -131,18 +131,18 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
             onChange={value => workflow.updateDraft('timezone', value as Program['timezone'])}
           />
         </FormField>
-        <FormField id="program-roster-mode" label="Attendance">
+        <FormField id="program-enrollment-required" label="Enrollment Required">
           <FloatingSelect
-            id="program-roster-mode"
-            value={workflow.draft.rosterMode}
+            id="program-enrollment-required"
+            value={workflow.draft.enrollmentRequired ? 'yes' : 'no'}
             disabled={workflow.submissionComplete}
             onChange={value => workflow.updateDraft(
-              'rosterMode',
-              value as 'enrolled' | 'open',
+              'enrollmentRequired',
+              value === 'yes',
             )}
             options={[
-              { value: 'enrolled', label: 'Enrollment required' },
-              { value: 'open', label: 'Open attendance' },
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' },
             ]}
           />
         </FormField>

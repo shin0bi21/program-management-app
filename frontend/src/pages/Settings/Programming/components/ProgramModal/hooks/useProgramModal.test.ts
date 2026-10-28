@@ -17,7 +17,7 @@ const program: Program = {
   id: 'program-1',
   name: 'Soft Skills',
   description: 'Life skills',
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   defaultDayOfWeek: 'tuesday',
@@ -54,7 +54,7 @@ describe('useProgramModal', () => {
     expect(createProgram).toHaveBeenCalledWith({
       name: 'Job Readiness',
       description: null,
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 16,
       maxAge: 19,
       defaultDayOfWeek: 'tuesday',
@@ -76,7 +76,7 @@ describe('useProgramModal', () => {
     expect(result.current.draft).toEqual({
       name: 'Soft Skills',
       description: 'Life skills',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: '12',
       maxAge: '15',
       defaultDayOfWeek: 'tuesday',
@@ -84,14 +84,14 @@ describe('useProgramModal', () => {
       defaultEndTime: '19:30',
       timezone: 'America/Toronto',
     });
-    act(() => result.current.updateDraft('rosterMode', 'open'));
+    act(() => result.current.updateDraft('enrollmentRequired', false));
 
     await act(async () => result.current.submit());
 
     expect(updateProgram).toHaveBeenCalledWith(program.id, {
       name: 'Soft Skills',
       description: 'Life skills',
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: 12,
       maxAge: 15,
       defaultDayOfWeek: 'tuesday',

@@ -52,7 +52,7 @@ export default function useSignUpLeadModal({
     queryFn: ({ signal }) => getCohorts(undefined, {}, { signal }),
     enabled: Boolean(lead),
     select: rows => rows.filter(cohort => (
-      cohort.state !== 'completed' && cohort.rosterMode === 'enrolled'
+      cohort.state !== 'completed' && cohort.enrollmentRequired
     )),
   });
 

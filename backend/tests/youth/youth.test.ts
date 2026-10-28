@@ -102,10 +102,10 @@ describe('Youth API', () => {
 
       beforeAll(async () => {
         const [otherProgram] = await sql<{ id: string }[]>`
-          SELECT id FROM programs WHERE roster_mode = 'enrolled' AND id != ${softSkillsProgramId} LIMIT 1
+          SELECT id FROM programs WHERE enrollment_required = TRUE AND id != ${softSkillsProgramId} LIMIT 1
         `;
         const [openProgram] = await sql<{ id: string }[]>`
-          SELECT id FROM programs WHERE roster_mode = 'open' LIMIT 1
+          SELECT id FROM programs WHERE enrollment_required = FALSE LIMIT 1
         `;
         openProgramId = openProgram.id;
         const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
@@ -890,7 +890,7 @@ describe('Youth API', () => {
       `;
 
       const [openProgram] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
+        SELECT id FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
       `;
       const openCohort = await seedTestCohort({
         programId: openProgram.id,
@@ -956,7 +956,7 @@ describe('Youth API', () => {
       expect(response.body.cohort).toEqual(expect.objectContaining({
         id: softSkillsCohortId,
         programName: 'Soft Skills',
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
       }));
       expect(response.body.sessions).toHaveLength(2);
       expect(response.body.sessions).toEqual(expect.arrayContaining([

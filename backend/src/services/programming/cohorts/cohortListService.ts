@@ -17,7 +17,7 @@ export function listCohorts(actor: AccessTokenPayload, query: CohortQuery) {
       pc.id,
       pc.program_id,
       p.name AS program_name,
-      p.roster_mode,
+      p.enrollment_required,
       p.min_age,
       p.max_age,
       cycle.id AS cycle_id,

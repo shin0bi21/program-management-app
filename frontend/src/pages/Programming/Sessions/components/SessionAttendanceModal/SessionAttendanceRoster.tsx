@@ -54,7 +54,7 @@ export default function SessionAttendanceRoster({
             <AttendanceStatusSelect
               id={`attendance-${member.youthId}`}
               ariaLabel={`Attendance for ${member.firstName} ${member.lastName}`}
-              rosterMode="enrolled"
+              enrollmentRequired={true}
               value={selections[member.youthId] ?? ''}
               onChange={value => onStatusChange(member.youthId, value)}
               disabled={disabled}

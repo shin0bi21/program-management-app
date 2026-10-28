@@ -15,7 +15,7 @@ export interface YouthProfile {
     name: string;
     programId: string;
     programName: string;
-    rosterMode: 'enrolled' | 'open';
+    enrollmentRequired: boolean;
     startsOn: string;
     endsOn: string;
     enrolledOn: string | null;

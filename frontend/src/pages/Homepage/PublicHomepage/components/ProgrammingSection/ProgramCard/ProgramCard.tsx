@@ -66,7 +66,7 @@ function formatAgeRange(minAge: number | null, maxAge: number | null) {
 }
 
 export default function ProgramCard({ program }: ProgramCardProps) {
-  const dropIn = program.rosterMode === 'open';
+  const dropIn = !program.enrollmentRequired;
 
   return (
     <article className="program-card">

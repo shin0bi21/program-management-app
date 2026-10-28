@@ -10,8 +10,8 @@ vi.mock('../../cohorts.api', () => ({
 }));
 
 const programs = [
-  { id: 'program-1', name: 'Soft Skills', description: null, rosterMode: 'enrolled' as const, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' as const },
-  { id: 'program-2', name: 'Job Readiness', description: null, rosterMode: 'enrolled' as const, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' as const },
+  { id: 'program-1', name: 'Soft Skills', description: null, enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' as const },
+  { id: 'program-2', name: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' as const },
 ];
 const cycles = [
   { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-08-31', state: 'active' as const },
@@ -23,7 +23,7 @@ describe('AddCohortModal', () => {
 
   it('creates the selected program and cycle then waits for the owner refresh', async () => {
     vi.mocked(createCohort).mockResolvedValue({
-      id: 'cohort-1', programId: 'program-2', programName: 'Job Readiness', rosterMode: 'enrolled',
+      id: 'cohort-1', programId: 'program-2', programName: 'Job Readiness', enrollmentRequired: true,
       cycleId: 'cycle-2', cycleName: 'Fall 2026', name: 'Fall 2026', startsOn: '2026-09-01',
       endsOn: '2026-11-30', state: 'upcoming', minAge: 16, maxAge: 19, enrolledCount: 0,
       nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,

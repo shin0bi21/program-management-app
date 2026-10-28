@@ -42,7 +42,7 @@ describe('useSessionTable', () => {
 
   it('formats dates and hours in the program timezone', () => {
     const { result } = renderHook(() => useSessionTable({
-      programs: [{ id: 'program-1', name: 'Art', rosterMode: 'open', minAge: null, maxAge: null,
+      programs: [{ id: 'program-1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
         defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' }],
       canWriteAttendance: false, canWriteSessions: false,
       onTakeAttendance: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),

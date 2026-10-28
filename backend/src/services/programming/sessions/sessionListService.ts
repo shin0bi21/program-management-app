@@ -17,7 +17,7 @@ export function listSessions(actor: AccessTokenPayload, filters: SessionListQuer
   return sql<Array<{ id: string; cursorValue: string }>>`
     SELECT
       cs.id, cs.cohort_id, cs.session_type_id, st.name AS session_type_name, cs.theme,
-      cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.roster_mode,
+      cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.enrollment_required,
       cs.starts_at, cs.ends_at, cs.cancelled_at, cs.description,
       COUNT(ar.id)::int AS attendance_marked_count,
       COUNT(ar.id) FILTER (WHERE ar.status IN ('present', 'late'))::int AS attended_count,

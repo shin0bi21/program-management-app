@@ -13,10 +13,10 @@ const programBodySchema = z.object({
     defaultStartTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('17:00'),
     defaultEndTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('19:30'),
     timezone: z.enum(['America/Toronto']).default('America/Toronto'),
-    rosterMode: z.enum(['enrolled', 'open']).default('enrolled'),
+    enrollmentRequired: z.boolean().default(true),
     minAge: z.number().int().min(0).max(30).nullable().optional(),
     maxAge: z.number().int().min(0).max(30).nullable().optional(),
-  }).superRefine((data, context) => {
+  }).strict().superRefine((data, context) => {
     if (data.defaultEndTime <= data.defaultStartTime) {
       context.addIssue({ code: 'custom', message: 'End time must be after start time', path: ['defaultEndTime'] });
     }

@@ -4,7 +4,7 @@ import type { CohortSession } from '../../../types';
 
 const getAttendanceSummary = (session: CohortSession | null) => {
   if (!session || session.attendanceRate === null) return null;
-  if (session.rosterMode === 'open') return session.attendanceMarkedCount ? `${session.attendanceMarkedCount} check-ins` : null;
+  if (!session.enrollmentRequired) return session.attendanceMarkedCount ? `${session.attendanceMarkedCount} check-ins` : null;
   return `${session.attendedCount}/${session.attendanceMarkedCount}`;
 };
 

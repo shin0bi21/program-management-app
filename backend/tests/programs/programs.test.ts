@@ -50,7 +50,7 @@ describe('Programs API', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: ` ${createdName} `,
-        rosterMode: 'open',
+        enrollmentRequired: false,
         minAge: 14,
         maxAge: 18,
         defaultDayOfWeek: 'wednesday',
@@ -63,7 +63,7 @@ describe('Programs API', () => {
     expect(res.body).toEqual(expect.objectContaining({
       id: expect.any(String),
       name: createdName,
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: 14,
       maxAge: 18,
       defaultDayOfWeek: 'wednesday',
@@ -81,7 +81,7 @@ describe('Programs API', () => {
       .send({
         name: createdName,
         description: 'Updated program description',
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
         minAge: 15,
         maxAge: 19,
       });
@@ -90,7 +90,7 @@ describe('Programs API', () => {
     expect(res.body).toEqual(expect.objectContaining({
       id: createdProgramId,
       description: 'Updated program description',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 15,
       maxAge: 19,
     }));
@@ -105,11 +105,48 @@ describe('Programs API', () => {
     expect(res.status).toBe(403);
   });
 
+  it('defaults new programs to requiring enrollment', async () => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: `Default enrollment ${Date.now()}` });
+
+    expect(response.status).toBe(201);
+
+    try {
+      expect(response.body.enrollmentRequired).toBe(true);
+      expect(response.body).not.toHaveProperty('rosterMode');
+
+      const [stored] = await sql`SELECT enrollment_required FROM programs WHERE id = ${response.body.id}`;
+      expect(stored.enrollmentRequired).toBe(true);
+    } finally {
+      await sql`DELETE FROM programs WHERE id = ${response.body.id}`;
+    }
+  });
+
+  it.each(['yes', 'enrolled', 1, null])('rejects non-boolean enrollment requirement %p', async (enrollmentRequired) => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Invalid enrollment requirement', enrollmentRequired });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects the removed roster mode request field', async () => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Obsolete enrollment request', rosterMode: 'open' });
+
+    expect(response.status).toBe(400);
+  });
+
   it('rejects program edits by staff', async () => {
     const res = await request(app)
       .put(`/api/programs/${softSkillsProgramId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: 'Staff Program', rosterMode: 'enrolled' });
+      .send({ name: 'Staff Program', enrollmentRequired: true });
 
     expect(res.status).toBe(403);
   });
@@ -166,7 +203,7 @@ describe('Programs API', () => {
     ]));
     expect(res.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Job Readiness', minAge: 16, maxAge: 19 }),
-      expect.objectContaining({ name: 'Drop In', rosterMode: 'open' }),
+      expect.objectContaining({ name: 'Drop In', enrollmentRequired: false }),
     ]));
   });
 

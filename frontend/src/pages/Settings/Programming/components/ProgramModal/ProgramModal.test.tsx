@@ -15,7 +15,7 @@ const program: Program = {
   id: 'program-1',
   name: 'Soft Skills',
   description: 'Life skills',
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   defaultDayOfWeek: 'tuesday',
@@ -27,7 +27,7 @@ const program: Program = {
 describe('ProgramModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('renders the editable program fields and attendance selector', () => {
+  it('renders the editable program fields and enrollment requirement selector', () => {
     render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(screen.getByRole('textbox', { name: 'Program Name' })).toHaveValue('Soft Skills');
@@ -38,9 +38,22 @@ describe('ProgramModal', () => {
     expect(screen.getByRole('button', { name: 'Session Timezone' })).toHaveTextContent('Toronto (Eastern Time)');
     expect(screen.getByRole('spinbutton', { name: 'Minimum Age' })).toHaveValue(12);
     expect(screen.getByRole('spinbutton', { name: 'Maximum Age' })).toHaveValue(15);
-    expect(screen.getByRole('button', { name: 'Attendance' })).toHaveTextContent(
-      'Enrollment required',
-    );
+    expect(screen.getByRole('button', { name: 'Enrollment Required' })).toHaveTextContent('Yes');
+  });
+
+  it('saves No as enrollmentRequired false', async () => {
+    vi.mocked(updateProgram).mockResolvedValue({ ...program, enrollmentRequired: false });
+    const user = userEvent.setup();
+    render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Enrollment Required' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'No' }));
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(updateProgram).toHaveBeenCalledWith(
+      program.id,
+      expect.objectContaining({ enrollmentRequired: false }),
+    ));
   });
 
   it('disables the complete form while saving', async () => {
@@ -58,7 +71,7 @@ describe('ProgramModal', () => {
     expect(screen.getByLabelText('Default End Time')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Session Timezone' })).toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: 'Minimum Age' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enrollment Required' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });

@@ -9,7 +9,7 @@ describe('AttendanceStatusSelect', () => {
       <AttendanceStatusSelect
         id="attendance-status"
         ariaLabel="Attendance status"
-        rosterMode="enrolled"
+        enrollmentRequired={true}
         value=""
         onChange={onChange}
       />,
@@ -35,7 +35,7 @@ describe('AttendanceStatusSelect', () => {
       <AttendanceStatusSelect
         id="open-attendance-status"
         ariaLabel="Open attendance status"
-        rosterMode="open"
+        enrollmentRequired={false}
         value="present"
         onChange={vi.fn()}
       />,

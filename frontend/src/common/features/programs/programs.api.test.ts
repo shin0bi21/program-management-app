@@ -31,22 +31,23 @@ describe('programs API', () => {
     createProgram({
       name: 'Future Ready',
       description: 'Career skills',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     });
-    updateProgram('program-1', { name: 'Job Readiness', description: 'Career skills' });
+    updateProgram('program-1', { name: 'Job Readiness', description: 'Career skills', enrollmentRequired: false });
 
     expect(apiClient.post).toHaveBeenCalledWith('/programs', {
       name: 'Future Ready',
       description: 'Career skills',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     });
     expect(apiClient.put).toHaveBeenCalledWith('/programs/program-1', {
       name: 'Job Readiness',
       description: 'Career skills',
+      enrollmentRequired: false,
     });
   });
 });

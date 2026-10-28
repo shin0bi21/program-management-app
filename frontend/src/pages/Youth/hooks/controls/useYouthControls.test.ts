@@ -17,7 +17,7 @@ const programs: Program[] = [{
   id: 'program-1',
   name: 'Soft Skills',
   description: null,
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   defaultDayOfWeek: 'tuesday',

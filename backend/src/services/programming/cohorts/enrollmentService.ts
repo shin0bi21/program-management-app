@@ -8,14 +8,14 @@ export async function enrollYouth(cohortId: string, data: EnrollYouthInput, acto
   await assertCanAccessCohort(actor, cohortId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const cohorts = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-      SELECT pc.id, p.roster_mode
+    const cohorts = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT pc.id, p.enrollment_required
       FROM program_cohorts pc
       INNER JOIN programs p ON p.id = pc.program_id
       WHERE pc.id = ${cohortId}
     `;
     if (!cohorts.length) throw new NotFoundError('Cohort not found');
-    if (cohorts[0].rosterMode === 'open') {
+    if (!cohorts[0].enrollmentRequired) {
       throw new ConflictError('Open attendance cohorts do not use enrollment');
     }
 

@@ -9,7 +9,7 @@ import useCohortTableData from './useCohortTableData';
 vi.mock('../../../cohorts.api', () => ({ getCohortPage: vi.fn() }));
 
 const cohort: ProgramCohort = {
-  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
+  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycleName: 'Summer 2026', name: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-09-01', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,

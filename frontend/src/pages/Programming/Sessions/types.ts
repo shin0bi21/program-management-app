@@ -10,7 +10,7 @@ export interface CohortSession {
   cohortName: string;
   programId: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;
@@ -86,7 +86,7 @@ export interface YouthSessionNote extends SessionNote {
   cohortName: string;
   programId: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
 }
 
 export interface SessionAttachmentYouth {

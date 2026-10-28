@@ -43,7 +43,7 @@ const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Future Ready',
-  rosterMode: 'enrolled' as const,
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
@@ -81,7 +81,7 @@ describe('useSignUpLeadModal', () => {
       cohort,
       { ...cohort, id: 'cohort-too-old', minAge: 16, maxAge: 18 },
       { ...cohort, id: 'cohort-completed', state: 'completed' },
-      { ...cohort, id: 'cohort-open', rosterMode: 'open' },
+      { ...cohort, id: 'cohort-open', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue({ ...lead, status: 'signed_up' });
   });

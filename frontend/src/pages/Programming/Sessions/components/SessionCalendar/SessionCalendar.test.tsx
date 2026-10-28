@@ -23,8 +23,8 @@ vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', ()
 vi.mock('../../sessions.api', () => ({ getSessions: api.getSessions }));
 
 const programs: Program[] = [
-  { id: 'program-1', name: 'Future Ready', rosterMode: 'enrolled', minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
-  { id: 'program-2', name: 'Job Readiness', rosterMode: 'open', minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
+  { id: 'program-1', name: 'Future Ready', enrollmentRequired: true, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
+  { id: 'program-2', name: 'Job Readiness', enrollmentRequired: false, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
 ];
 const session = makeCohortSession();
 const period = buildDayPeriod(new Date(2026, 7, 10));

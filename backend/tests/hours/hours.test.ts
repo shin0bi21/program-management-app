@@ -60,7 +60,7 @@ describe('Hours API', () => {
     unrelatedStaffId = unrelatedStaff.userId;
     unrelatedStaffToken = generateToken(unrelatedStaff.userId, 'staff', unrelatedStaff.email);
     const programs = await sql<Array<{ id: string; name: string }>>`
-      SELECT id, name FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
+      SELECT id, name FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
     `;
     programId = programs[0].id;
     programName = programs[0].name;

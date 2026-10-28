@@ -9,7 +9,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 interface ProgramDraft {
   name: string;
   description: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: string;
   maxAge: string;
   defaultDayOfWeek: ProgramWeekday;
@@ -32,7 +32,7 @@ function buildDraft(program: Program | null): ProgramDraft {
     timezone: program?.timezone ?? 'America/Toronto',
     name: program?.name ?? '',
     description: program?.description ?? '',
-    rosterMode: program?.rosterMode ?? 'enrolled',
+    enrollmentRequired: program?.enrollmentRequired ?? true,
     minAge: program?.minAge === null || program?.minAge === undefined
       ? ''
       : String(program.minAge),
@@ -123,7 +123,7 @@ export default function useProgramModal({ isOpen, program, onSaved }: UseProgram
     const input: CreateProgramInput = {
       name,
       description: draft.description.trim() || null,
-      rosterMode: draft.rosterMode,
+      enrollmentRequired: draft.enrollmentRequired,
       minAge: ages.minAge,
       maxAge: ages.maxAge,
       defaultDayOfWeek: draft.defaultDayOfWeek,

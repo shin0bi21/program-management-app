@@ -44,7 +44,7 @@ export default function SessionNoteModal({
       onClose={onClose}
     >
       {session && !hideYouthSelection && <SessionYouthChecklist
-        rosterMode={session.rosterMode}
+        enrollmentRequired={session.enrollmentRequired}
         roster={workflow.roster}
         selectedYouthIds={workflow.draft.selectedYouthIds}
         loading={workflow.rosterLoading}

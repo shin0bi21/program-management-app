@@ -8,7 +8,7 @@ export interface HomepageProgram {
   id: string;
   name: string;
   description: string | null;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
   sessions: HomepageSession[];

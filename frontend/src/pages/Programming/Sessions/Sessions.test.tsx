@@ -35,7 +35,7 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
 
     defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
 
-    rosterMode: 'enrolled',
+    enrollmentRequired: true,
     minAge: 12,
     maxAge: 15,
   }],
@@ -102,7 +102,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
       cohortName: string;
       programId: string;
       programName: string;
-      rosterMode: 'enrolled';
+      enrollmentRequired: true;
       startsAt: string;
       endsAt: string;
       cancelledAt: null;
@@ -129,7 +129,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
             programId: 'program-1',
             programName: 'Soft Skills',
 
-            rosterMode: 'enrolled',
+            enrollmentRequired: true,
             startsAt: '2026-07-28T21:00:00.000Z',
             endsAt: '2026-07-28T23:30:00.000Z',
             cancelledAt: null,
@@ -165,7 +165,7 @@ describe('Sessions', () => {
 
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
 
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     }];
@@ -186,7 +186,7 @@ describe('Sessions', () => {
         programId: 'program-1',
         programName: 'Soft Skills',
 
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
         name: 'Summer 2026',
         startsOn: '2020-01-01',
         endsOn: '2100-12-31',
@@ -211,7 +211,7 @@ describe('Sessions', () => {
         programId: 'program-1',
         programName: 'Soft Skills',
 
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
         startsAt: '2026-07-28T21:00:00.000Z',
         endsAt: '2026-07-28T23:30:00.000Z',
         cancelledAt: null,
@@ -249,7 +249,7 @@ describe('Sessions', () => {
         cohortName: 'Summer 2026',
         programId: 'drop-in',
         programName: 'Drop In',
-        rosterMode: 'open',
+        enrollmentRequired: false,
         startsAt: '2026-07-31T21:00:00.000Z',
         endsAt: '2026-07-31T23:00:00.000Z',
         cancelledAt: null,
@@ -428,7 +428,7 @@ describe('Sessions', () => {
     getCohorts.mockResolvedValue([{
       id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', name: 'Summer 2026',
       cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
-      state: 'completed', rosterMode: 'enrolled', enrolledCount: 0, averageAttendance: null,
+      state: 'completed', enrollmentRequired: true, enrolledCount: 0, averageAttendance: null,
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));

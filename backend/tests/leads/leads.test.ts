@@ -44,7 +44,7 @@ describe('Leads API', () => {
     const [program] = await sql<{ id: string; name: string }[]>`
       SELECT id, name
       FROM programs
-      WHERE roster_mode = 'enrolled'
+      WHERE enrollment_required = TRUE
         AND ${payload.age} BETWEEN min_age AND max_age
       ORDER BY min_age DESC, max_age ASC, name ASC
       LIMIT 1
@@ -56,7 +56,7 @@ describe('Leads API', () => {
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE id != ${eligibleProgramId} AND roster_mode = 'enrolled' ORDER BY name LIMIT 1
+      SELECT id FROM programs WHERE id != ${eligibleProgramId} AND enrollment_required = TRUE ORDER BY name LIMIT 1
     `;
     ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
       programId: otherProgram.id,
