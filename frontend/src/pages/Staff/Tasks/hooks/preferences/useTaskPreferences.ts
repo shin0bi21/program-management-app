@@ -1,4 +1,7 @@
 import type { DateRange } from '../../../../../common/utils/dateRange';
+import type { StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
+import type { TaskReferenceData } from '../../tasks.api';
 import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
@@ -18,7 +21,6 @@ import type { ListSort } from '../../../../../common/components/Table/Table.type
 import {
   type TaskCategory,
   type TaskStatus,
-  type TaskReferenceData,
   type TaskSortKey,
 } from '../../types';
 
@@ -43,6 +45,12 @@ interface UseTaskPreferencesOptions {
   referenceData: TaskReferenceData | undefined;
   referenceDataLoading: boolean;
   referenceDataError: boolean;
+  resources: StaffReference[];
+  programs: ProgramReference[];
+  resourcesLoading: boolean;
+  resourcesError: boolean;
+  programsLoading: boolean;
+  programsError: boolean;
   tableKeys: readonly TaskSortKey[];
 }
 
@@ -50,18 +58,24 @@ export default function useTaskPreferences({
   referenceData,
   referenceDataLoading,
   referenceDataError,
+  resources,
+  programs,
+  resourcesLoading,
+  resourcesError,
+  programsLoading,
+  programsError,
   tableKeys,
 }: UseTaskPreferencesOptions) {
   const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
-    waiting: referenceDataLoading,
+    waiting: referenceDataLoading || resourcesLoading || programsLoading,
     fields: {
       dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(options?.resources.map(resource => resource.id)),
-      programIds: preferenceIds(options?.programs.map(program => program.id)),
+      staffIds: preferenceIds(resourcesLoading || resourcesError ? undefined : resources.map(resource => resource.id)),
+      programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       categories: preferenceOptions<TaskCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
         [],
@@ -100,16 +114,16 @@ export default function useTaskPreferences({
     {
       id: 'staff',
       label: 'Staff',
-      options: (referenceData?.resources ?? []).map(item => ({ value: item.id, label: item.name })),
+      options: toFilterOptions(resources),
     },
     {
       id: 'program',
       label: 'Program',
-      options: (referenceData?.programs ?? []).map(item => ({ value: item.id, label: item.name })),
+      options: toFilterOptions(programs),
     },
     { id: 'category', label: 'Category', options: referenceData?.categories ?? [] },
     { id: 'status', label: 'Status', options: referenceData?.statuses ?? [] },
-  ], [referenceData]);
+  ], [referenceData, resources, programs]);
 
   const applyFilter = (id: string, selected: string[]) => {
     if (id === 'staff') updatePreferences({ staffIds: selected });

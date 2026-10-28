@@ -38,26 +38,7 @@ export interface Task {
 }
 
 // Shared task data contracts.
-export interface TaskResource {
-  id: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  role: string;
-  writable: boolean;
-}
-
-export interface TaskProgram {
-  id: string;
-  name: string;
-}
-
-export interface TaskReferenceData {
-  resources: TaskResource[];
-  programs: TaskProgram[];
-  categories: Array<{ value: TaskCategory; label: string }>;
-  statuses: Array<{ value: TaskStatus; label: string }>;
-}
+export type { StaffReference as TaskResource, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
 
 // Shared table and calendar filters.
 export interface TasksFilters {

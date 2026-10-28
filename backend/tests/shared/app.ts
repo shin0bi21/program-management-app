@@ -18,6 +18,7 @@ import homepageRoutes, { publicHomepageRoutes } from '../../src/routes/homepageR
 import preferenceRoutes from '../../src/routes/preferenceRoutes';
 import hoursRoutes from '../../src/routes/hoursRoutes';
 import taskRoutes from '../../src/routes/taskRoutes';
+import referenceDataRoutes from '../../src/routes/referenceDataRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/preferences', preferenceRoutes);
   app.use('/api/hours', hoursRoutes);
   app.use('/api/tasks', taskRoutes);
+  app.use('/api/reference-data', referenceDataRoutes);
   app.use(handleError);
   return app;
 }

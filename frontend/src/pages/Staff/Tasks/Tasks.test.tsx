@@ -1,3 +1,5 @@
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+
 import { makeItemCalendarProps } from '../../../tests/factories/calendarItem';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -87,6 +89,9 @@ function getLastSavedPreference() {
 describe('Tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCycleReferences).mockResolvedValue([{
+      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+    }]);
     calendarTestState.view = 'table';
     calendarTestState.props = null;
     vi.mocked(getPreference).mockImplementation(async () => ({ ...currentPreference, view: calendarTestState.view }));
@@ -94,9 +99,9 @@ describe('Tasks', () => {
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: null });
+    vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
       ...taskReferenceChoices,
     });
     vi.mocked(setHours).mockResolvedValue({
@@ -129,13 +134,25 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
+  it('loads shared references for task-only readers without program permissions', async () => {
+    calendarTestState.view = 'calendar';
+    const restrictedAuth: AuthContextValue = { ...auth, permissions: ['read:tasks'] };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={restrictedAuth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
+    expect(getCycleReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
+    expect(getStaffReferences).toHaveBeenCalledWith('tasks', { signal: expect.any(AbortSignal) });
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+  });
+
   it('puts Staff first and sends the applied staff filter to the table request', async () => {
     const coworker = {
       id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
     };
+    vi.mocked(getStaffReferences).mockResolvedValue([coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
       ...taskReferenceChoices,
     });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -173,12 +190,12 @@ describe('Tasks', () => {
     };
     vi.mocked(getTaskDashboardData).mockResolvedValue([task, coworkerTask]);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
-    vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [
+    vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      ],
-      programs: [],
+      ]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
+    vi.mocked(getTaskReferenceData).mockResolvedValue({
       ...taskReferenceChoices,
     });
 
@@ -225,8 +242,6 @@ describe('Tasks', () => {
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
 
     await act(async () => resolveReferenceData({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
       ...taskReferenceChoices,
     }));
 
@@ -427,3 +442,5 @@ describe('Tasks', () => {
   });
 
 });
+
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

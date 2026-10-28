@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FormField from '../../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -40,7 +41,7 @@ export default function EditCohortModal({ cohort, cycles, onClose, onUpdated }: 
             <FloatingSelect
               id="edit-cohort-cycle"
               value={form.cycleId}
-              options={cycles.map((cycle) => ({ value: cycle.id, label: cycle.name }))}
+              options={toFilterOptions(cycles)}
               onChange={form.setCycleId}
               placeholder="Choose a cycle"
               disabled={form.submissionComplete}

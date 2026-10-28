@@ -11,8 +11,6 @@ import type {
   HoursItem,
   HoursEntryType,
   HoursTableRow,
-  StaffResource,
-  HoursProgram,
 } from './types';
 
 interface SharedHoursInput { staffId: string; hours: number; note: string }
@@ -35,8 +33,6 @@ export interface HoursSession {
 }
 
 export interface HoursReferenceData {
-  resources: StaffResource[];
-  programs: HoursProgram[];
   categories: Array<{ value: HoursCategory; label: string }>;
   types: Array<{ value: HoursEntryType; label: string }>;
 }

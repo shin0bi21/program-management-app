@@ -1,7 +1,3 @@
-export interface ProgramCycle {
-  id: string;
-  name: string;
-  startsOn: string;
-  endsOn: string;
-  state: 'upcoming' | 'active' | 'completed';
-}
+import type { CycleReference } from '../../referenceData/referenceData.api';
+
+export type ProgramCycle = CycleReference;

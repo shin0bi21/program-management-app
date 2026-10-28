@@ -45,7 +45,6 @@ const TASK_QUERY_KEY = ['tasks'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
-const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 export default function Hours() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
@@ -61,7 +60,6 @@ export default function Hours() {
   // Page data and preferences.
   const pageData = useHoursData(
     HOURS_REFERENCE_DATA_QUERY_KEY,
-    PROGRAM_CYCLES_QUERY_KEY,
     currentUserId,
   );
 
@@ -73,7 +71,9 @@ export default function Hours() {
     categories: pageData.categories,
     types: pageData.types,
     loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
-    optionsError: Boolean(pageData.optionsError),
+    optionsError: Boolean(pageData.localOptionsError),
+    resourcesError: Boolean(pageData.resourcesError),
+    programsError: Boolean(pageData.programsError),
     cyclesError: Boolean(pageData.cyclesError),
     tableKeys: HOURS_TABLE_KEYS,
   });

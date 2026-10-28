@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
-import { getProgramCycles } from '../../common/features/programming/cycles/cycles.api';
+import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
@@ -22,14 +22,15 @@ vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
 vi.mock('./youth.api', () => youthApi);
 vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
-vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: (...args: unknown[]) => {
+vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
+  ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
+  useProgramReferences: (...args: unknown[]) => {
     expect(args).toEqual([{ assignedOnly: true }]);
-    return { programs: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
+    return { rows: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
   },
 }));
 
-vi.mock('../../common/features/programming/cycles/cycles.api', () => ({ getProgramCycles: vi.fn() }));
+vi.mock('../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn() }));
 
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
@@ -76,7 +77,7 @@ describe('Youth', () => {
     localStorage.clear();
     authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
-    vi.mocked(getProgramCycles).mockResolvedValue([{
+    vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
@@ -96,6 +97,18 @@ describe('Youth', () => {
   });
 
   // Permissions and application services.
+  it('loads program and cycle filter metadata with youth read permission alone', async () => {
+    authState.permissions = ['read:youth_profiles'];
+    render(<Youth />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Program/ }));
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+  });
+
   it('keeps account invitation controls out of the Youth page', async () => {
     render(<Youth />);
     await screen.findByRole('button', { name: 'Filters' });

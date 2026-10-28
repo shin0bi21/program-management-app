@@ -25,13 +25,21 @@ Single-file uploads use `multipart/form-data`, put the binary file in the `file`
 | `PATCH` | `/:id` | Change account status |
 | `DELETE` | `/:id` | Revoke a pending invitation |
 
+### Shared reference data — `/reference-data`
+
+Shared cycle, program, staff, and school projections serve filters and selectors
+under their consuming page's permissions. Staff references require a `feature`
+scope; assigned program references preserve assignment policies. See
+[Reference data](reference-data.md) for endpoint shapes, authorization, and cache
+reconciliation. These lookups do not grant access to management endpoints.
+
 ### Hours — `/hours`
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/calendar` | Get policy-scoped, searchable logged hours shaped for a calendar date range |
 | `GET` | `/table` | Get cursor-paginated, policy-scoped logged hours shaped for the table |
-| `GET` | `/reference-data` | List task staff, programs, categories, and status choices |
+| `GET` | `/reference-data` | List Hours categories and types |
 | `GET` | `/dashboard` | Get cycle-based pay-period and biweekly data shaped for one staff dashboard |
 | `GET` | `/sessions` | List assigned sessions available for time entry |
 | `POST` | `/` | Create a time entry |
@@ -56,7 +64,7 @@ Time-entry validation, policies, services, and `backend/tests/hours/` are author
 | `GET` | `/` | List open assigned tasks, optionally scoped to one staff member |
 | `GET` | `/calendar` | List filtered tasks intersecting a calendar date range |
 | `GET` | `/list` | List cursor-paginated, policy-scoped tasks |
-| `GET` | `/reference-data` | List readable staff resources, programs, categories, and statuses |
+| `GET` | `/reference-data` | List Task categories and statuses |
 | `GET` | `/:id` | Read a policy-scoped task in any lifecycle state, including logged-hour totals and daily breakdown; requires `read:tasks` and conceals missing or out-of-scope records with `404` |
 | `POST` | `/` | Create a task with one required policy-scoped `staffId` owner |
 | `PUT` | `/:id` | Update policy-scoped task details, dates, and owner |
@@ -89,13 +97,14 @@ nonwithdrawn enrollment or open-roster attendance.
 
 | Base path | Purpose |
 |---|---|
-| `/programs` | Program lookup and creation |
+| `/programs` | Full program records and management |
 | `/cohorts` | Cohorts, enrollments, sessions, attendance, reports, notes, and attachments |
-| `/cohorts/cycles` | Shared program-cycle lookup and management |
-| `/schools` | School lookup and management |
+| `/cohorts/cycles` | Program-cycle management |
+| `/schools` | School management |
 
 | Method | Path | Purpose | Required permission |
 |---|---|---|---|
+| `GET` | `/cohorts/sessions/reference-data` | Assigned scheduling programs and session types | `read:sessions` |
 | `GET` | `/cohorts/cycles` | List program cycles | `read:programs` |
 | `POST` | `/cohorts/cycles` | Create a program cycle | `write:programs` |
 | `PUT` | `/cohorts/cycles/:cycleId` | Update a program cycle | `write:programs` |

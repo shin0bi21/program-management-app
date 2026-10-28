@@ -4,7 +4,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { User } from '../../types';
-import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
+import { useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { useAccountModal } from './useAccountModal';
 import './AccountModal.css';
 
@@ -17,7 +17,7 @@ interface AccountModalProps {
 
 export default function AccountModal(props: AccountModalProps) {
   const { account } = props;
-  const { programs, loading: programsLoading } = usePrograms();
+  const { rows: programs, loading: programsLoading } = useProgramReferences();
   const { register, control, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
   const isEdit = account !== undefined;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';

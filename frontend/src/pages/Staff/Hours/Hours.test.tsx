@@ -1,3 +1,4 @@
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -19,12 +20,7 @@ import { getPreference, setPreference } from '../../../common/features/Preferenc
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
 
-const programmingApi = vi.hoisted(() => ({ getProgramCycles: vi.fn() }));
 const preferenceHook: { preference: StoredHoursPreferences | null } = { preference: null };
-
-vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
-  getProgramCycles: programmingApi.getProgramCycles,
-}));
 
 vi.mock('./hours.api', () => ({
   getHoursCalendarData: vi.fn(),
@@ -110,9 +106,9 @@ describe('Hours', () => {
       },
     });
     vi.mocked(getHoursCalendarData).mockResolvedValue({});
+    vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
       ...hoursReferenceChoices,
     });
     vi.mocked(getHoursTableData).mockImplementation(async (filters, opts, pagination) => {
@@ -141,7 +137,7 @@ describe('Hours', () => {
       },
       biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
     });
-    programmingApi.getProgramCycles.mockResolvedValue([{
+    vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
       id: 'cycle-fall', name: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming',
@@ -198,12 +194,12 @@ describe('Hours', () => {
           categoryLabel: 'Administration', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 4, note: 'Coworker administration',
         }] },
     });
-    vi.mocked(getHoursReferenceData).mockResolvedValue({
-      resources: [
+    vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      ]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
     vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
@@ -279,6 +275,18 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
     expect(screen.getByLabelText('From')).toHaveValue(dateRange.start);
     expect(screen.getByLabelText('To')).toHaveValue(dateRange.end);
+  });
+
+  it('loads cycle and staff references for hours-only readers', async () => {
+    const reader: AuthContextValue = { ...auth, permissions: ['read:hours'] };
+    render(<QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+      <AuthContext.Provider value={reader}><Hours /></AuthContext.Provider>
+    </MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByRole('grid', { name: 'Staff hours calendar' })).toBeInTheDocument();
+    expect(getCycleReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
+    expect(getStaffReferences).toHaveBeenCalledWith('hours', { signal: expect.any(AbortSignal) });
+    expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument();
   });
 
   it('keeps search visible and reloads the calendar when search is applied', async () => {
@@ -393,12 +401,12 @@ describe('Hours', () => {
     vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
       staffId === 'staff-2' ? dashboardOverview(7) : dashboardOverview(2, 'Program Delivery')
     ));
-    vi.mocked(getHoursReferenceData).mockResolvedValue({
-      resources: [
+    vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      ],
-      programs: [{ id: 'program-1', name: 'Soft Skills' }],
+      ]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
     render(
@@ -590,3 +598,5 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 });
+
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

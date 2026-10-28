@@ -3,7 +3,7 @@ import { renderWithQueryClient as render } from '../../../tests/queryClientTestU
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../common/features/programs/types';
+import type { ProgramReference } from '../../../common/features/referenceData/referenceData.api';
 import Cohorts from './Cohorts';
 
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
@@ -13,25 +13,14 @@ const api = vi.hoisted(() => ({
   createCohort: vi.fn(),
   deleteCohort: vi.fn(),
   getCohorts: vi.fn(),
-  getProgramCycles: vi.fn(),
+  getCycleReferences: vi.fn(),
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
   permissions: ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'],
 }));
-const programState = vi.hoisted<{ programs: Program[] }>(() => ({
-  programs: [{
-    id: 'program-1',
-    name: 'Soft Skills',
-    description: 'Communication and practical life skills.',
-    enrollmentRequired: true,
-    minAge: 12,
-    maxAge: 15,
-    defaultDayOfWeek: 'tuesday',
-    defaultStartTime: '17:00',
-    defaultEndTime: '19:30',
-    timezone: 'America/Toronto',
-  }],
+const programState = vi.hoisted<{ programs: ProgramReference[] }>(() => ({
+  programs: [{ id: 'program-1', name: 'Soft Skills' }],
 }));
 const preferenceApi = vi.hoisted(() => ({
   value: null as CohortPreference | null,
@@ -45,8 +34,8 @@ vi.mock('./cohorts.api', () => ({
   createCohort: api.createCohort,
   deleteCohort: api.deleteCohort,
 }));
-vi.mock('../../../common/features/programming/cycles/cycles.api', () => ({
-  getProgramCycles: api.getProgramCycles,
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
+  getCycleReferences: api.getCycleReferences,
 }));
 
 vi.mock('../../../auth/authContext', () => ({
@@ -62,9 +51,10 @@ vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
     : null,
 }));
 
-vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({
-    programs: programState.programs,
+vi.mock('../../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../common/features/referenceData/hooks/useReferenceData')>(),
+  useProgramReferences: () => ({
+    rows: programState.programs,
     loading: false,
     error: null,
   }),
@@ -81,19 +71,8 @@ describe('Cohorts', () => {
     });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
-    programState.programs = [{
-      id: 'program-1',
-      name: 'Soft Skills',
-      description: 'Communication and practical life skills.',
-      enrollmentRequired: true,
-      minAge: 12,
-      maxAge: 15,
-      defaultDayOfWeek: 'tuesday',
-      defaultStartTime: '17:00',
-      defaultEndTime: '19:30',
-      timezone: 'America/Toronto',
-    }];
-    api.getProgramCycles.mockResolvedValue([{
+    programState.programs = [{ id: 'program-1', name: 'Soft Skills' }];
+    api.getCycleReferences.mockResolvedValue([{
       id: 'cycle-summer-2026', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
     api.getCohorts.mockResolvedValue([{

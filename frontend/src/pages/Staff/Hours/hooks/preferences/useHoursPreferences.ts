@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import { useMemo, useState } from 'react';
 
 import type { DateRange } from '../../../../../common/utils/dateRange';
@@ -51,6 +52,8 @@ export default function useHoursPreferences({
   types,
   loadingDependencies,
   optionsError,
+  resourcesError = optionsError,
+  programsError = optionsError,
   cyclesError,
   tableKeys,
 }: {
@@ -62,6 +65,8 @@ export default function useHoursPreferences({
   types: ReadonlyArray<{ value: HoursEntryType; label: string }>;
   loadingDependencies: boolean;
   optionsError: boolean;
+  resourcesError?: boolean;
+  programsError?: boolean;
   cyclesError: boolean;
   tableKeys: readonly HoursSortKey[];
 }) {
@@ -75,9 +80,9 @@ export default function useHoursPreferences({
       dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(role !== 'admin' ? [] : canVerifyOptions
+      staffIds: preferenceIds(role !== 'admin' ? [] : !loadingDependencies && !resourcesError
         ? resources.map(resource => resource.id) : undefined),
-      programIds: preferenceIds(canVerifyOptions ? ['general', ...programs.map(program => program.id)] : undefined),
+      programIds: preferenceIds(!loadingDependencies && !programsError ? ['general', ...programs.map(program => program.id)] : undefined),
       categories: preferenceOptions<HoursCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
         [],
@@ -116,21 +121,21 @@ export default function useHoursPreferences({
     ...(role === 'admin' ? [{
       id: 'staff',
       label: 'Staff',
-      options: resources.map(resource => ({ value: resource.id, label: resource.name })),
+      options: toFilterOptions(resources),
     }] : []),
     {
       id: 'program',
       label: 'Program',
       options: [
         { value: 'general', label: 'General' },
-        ...programs.map(program => ({ value: program.id, label: program.name })),
+        ...toFilterOptions(programs),
       ],
     },
     {
       id: 'cycle',
       label: 'Cycle',
       selectionMode: 'single',
-      options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
+      options: toFilterOptions(cycles),
     },
     { id: 'type', label: 'Type', options: [...types] },
     { id: 'entryType', label: 'Category', options: [...categories] },

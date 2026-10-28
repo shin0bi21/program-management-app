@@ -15,7 +15,6 @@ import ProgramOverviewDashboardCard from './components/ProgramOverviewDashboardC
 import ManageRosterModal from '../Cohorts/components/ManageRosterModal/ManageRosterModal';
 import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
 import type { ProgramCohort } from '../Cohorts/types';
-import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from './types';
 import AddSessionModal from './components/AddSessionModal/AddSessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
@@ -25,9 +24,8 @@ import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
 import useSessionActions from './hooks/actions/useSessionActions';
-import { useCycles } from './hooks/data/useCycles';
+import useSessionData from './hooks/data/useSessionData';
 import { useCohorts } from './hooks/data/useCohorts';
-import { useSessionTypes } from './hooks/data/useSessionTypes';
 import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
 import './Sessions.css';
@@ -50,20 +48,17 @@ export default function Programming() {
   const canViewYouthReport = canReadCohorts && permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data.
-  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts(undefined, canReadCohorts);
-  const { cycles, loading: cyclesLoading, error: cyclesError } = useCycles();
   const {
-    sessionTypes,
-    loading: sessionTypesLoading,
-    error: sessionTypesError,
-  } = useSessionTypes();
+    programs, sessionTypes, referencesLoading, referencesError,
+    cycles, cyclesLoading, cyclesError,
+  } = useSessionData();
+  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts(undefined, canReadCohorts);
 
   // Saved preferences and current view.
   const controls = useSessionControls({
-    role, programs, programsLoading, programsError,
+    role, programs, programsLoading: referencesLoading, programsError: referencesError,
     cycles, cyclesLoading, cyclesError,
-    sessionTypes, sessionTypesLoading, sessionTypesError,
+    sessionTypes, sessionTypesLoading: referencesLoading, sessionTypesError: referencesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
   const { search, filters, table: tableControls, view, ready: filtersReady } = controls;
@@ -83,9 +78,9 @@ export default function Programming() {
   const selection = useSessionSelection();
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   useEffect(() => {
-    if (!programsLoading && !programsError && selectedProgramId
+    if (!referencesLoading && !referencesError && selectedProgramId
       && !programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(null);
-  }, [programs, programsError, programsLoading, selectedProgramId, setSelectedProgramId]);
+  }, [programs, referencesError, referencesLoading, selectedProgramId, setSelectedProgramId]);
   const selectProgram = (program: Program) => {
     selection.clearSelectedSession();
     setSelectedProgramId(program.id);
@@ -136,7 +131,7 @@ export default function Programming() {
   const selectedSession = selection.getSelectedSession(view);
 
   const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
-  const canAddSession = !programsLoading && programs.length > 0;
+  const canAddSession = !referencesLoading && programs.length > 0;
   const programCohorts = cohorts.filter(cohort => cohort.programId === selectedProgram?.id
     && (!cycleIds.length || cycleIds.includes(cohort.cycleId)));
   const programDashboard = <ProgramOverviewDashboardCard
@@ -254,10 +249,9 @@ export default function Programming() {
         <PageErrorOverlay errors={[
           controls.error,
           actions.moveError,
-          programsError,
+          referencesError,
           cohortsError,
           cyclesError,
-          sessionTypesError,
           viewError,
           ...dashboardErrors,
         ]} />

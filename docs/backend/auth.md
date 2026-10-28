@@ -120,7 +120,7 @@ Staff program scope is assignment-based for every program. A program's `enrollme
 | `read:programs` | Program, cycle, assignment, and enrollment lookups |
 | `write:programs` | Manage programs, cycles, and program-cycle assignments (admin grant) |
 | `write:enrollments` | Enroll and withdraw youth; required alongside outreach and youth-profile writes for Lead signup |
-| `read:sessions` | Read sessions, session types, notes, and attachments |
+| `read:sessions` | Read sessions, session types, notes, attachments, and assigned scheduling reference data |
 | `write:sessions` | Generate and manage sessions, notes, and attachments |
 | `read:attendance` | Read session rosters and youth-centric cohort attendance records |
 | `write:attendance` | Record and update attendance through session- or youth-centric workflows |
@@ -366,3 +366,11 @@ Staff/admin accounts are invited through `src/services/accounts/accountService.t
 - Invite links expire after **7 days** (`INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000`).
 - The same `/reset-password` endpoint handles both password resets and first-time invite activation — `resetUserPassword()` promotes `invited` accounts automatically.
 - Account policy checks keep staff limited to youth accounts while administrators can manage staff/admin accounts.
+
+## Shared reference lookups
+
+Minimal shared lookups use the consuming workflow's capability rather than
+requiring program or school management access. See [Reference data](reference-data.md)
+for alternative lookup permissions, authenticated assigned-program labels, and
+feature-specific staff scope. `requireAnyPermission(...)` accepts any listed
+capability; `requirePermission(...)` continues to require all listed capabilities.

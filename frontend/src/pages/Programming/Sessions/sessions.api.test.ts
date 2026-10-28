@@ -8,6 +8,7 @@ import {
   createSessionAttachment,
   getSessionAttachmentDownloadName,
   getSessions,
+  getSessionReferenceData,
   searchAttendanceYouth,
 } from './sessions.api';
 
@@ -17,6 +18,12 @@ vi.mock('../../../http/client', () => ({
 
 describe('session API', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('loads page-owned session options with cancellation', () => {
+    const options = { signal: new AbortController().signal };
+    getSessionReferenceData(options);
+    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/sessions/reference-data', options);
+  });
 
   it('moves a session with a date-only command', () => {
     moveSessionDate('session-1', '2027-01-12');

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
   preferenceOptions,
@@ -22,7 +23,7 @@ const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'created', direction: 'des
 export function useLeadPreferences(
   origin: LeadOrigin,
   preferenceKey: 'outreach-external-leads-filters' | 'outreach-internal-leads-filters',
-  programs: Program[],
+  programs: ProgramReference[],
   programsLoading: boolean,
   programsError: string | null,
   tableKeys: readonly LeadSortKey[],
@@ -46,7 +47,7 @@ export function useLeadPreferences(
   const searchValue = searchDraft ?? preferences.search;
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
+    { id: 'program', label: 'Program', options: toFilterOptions(programs) },
     { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
     ...(origin === 'external' ? [{
       id: 'submitterRole',

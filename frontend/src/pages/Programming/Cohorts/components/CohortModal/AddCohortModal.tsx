@@ -1,15 +1,16 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 
 import { useAddCohortModal } from './hooks/useAddCohortModal';
 
 interface AddCohortModalProps {
   isOpen: boolean;
-  programs: Program[];
+  programs: ProgramReference[];
   cycles: ProgramCycle[];
   initialProgramId: string;
   onClose: () => void;
@@ -48,7 +49,7 @@ export default function AddCohortModal({
           <FloatingSelect
             id="cohort-program"
             value={form.programId}
-            options={programs.map((program) => ({ value: program.id, label: program.name }))}
+            options={toFilterOptions(programs)}
             onChange={form.setProgramId}
             placeholder="Choose a program"
             disabled={form.submissionComplete}
@@ -58,7 +59,7 @@ export default function AddCohortModal({
           <FloatingSelect
             id="cohort-cycle"
             value={form.cycleId}
-            options={cycles.map((cycle) => ({ value: cycle.id, label: cycle.name }))}
+            options={toFilterOptions(cycles)}
             onChange={form.setCycleId}
             placeholder="Choose a cycle"
             disabled={form.submissionComplete}

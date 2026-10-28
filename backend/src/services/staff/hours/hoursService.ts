@@ -11,10 +11,11 @@ import type {
   HoursSessionQuery,
   UpdateHoursPlacementInput,
 } from '../../../validation/hoursSchemas';
-import { assertCanSetHours, hoursReadScopePredicate, hoursResourceReadScopePredicate, hoursWriteScopePredicate } from '../../../policies/hoursPolicy';
+import { assertCanSetHours, hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import { getBiweeklyPayPeriod } from './payPeriods';
+import { getStaffReferenceData } from '../../referenceData/staffReferenceData';
 import {
   hoursMutationColumns,
   hoursRecordColumns,
@@ -150,17 +151,8 @@ export async function deleteHours(id: string, actor: AccessTokenPayload) {
   });
 }
 
-export async function getHoursReferenceData(actor: AccessTokenPayload) {
-  const [resources, programs] = await Promise.all([
-    getHoursResources(actor),
-    sql<Array<{ id: string; name: string }>>`SELECT id, name FROM programs ORDER BY name, id`,
-  ]);
-  return {
-    resources,
-    programs,
-    categories: HOURS_CATEGORY_OPTIONS,
-    types: HOURS_ENTRY_TYPE_OPTIONS,
-  };
+export function getHoursReferenceData() {
+  return { categories: HOURS_CATEGORY_OPTIONS, types: HOURS_ENTRY_TYPE_OPTIONS };
 }
 
 export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
@@ -191,7 +183,7 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 }
 
 export async function getHoursDashboardData(actor: AccessTokenPayload, query: HoursDashboardQuery) {
-  const readableStaff = await getHoursResources(actor);
+  const readableStaff = await getStaffReferenceData(actor, 'hours');
   if (!readableStaff.some(resource => resource.id === query.staffId)) {
     throw new NotFoundError('Hours overview not found');
   }
@@ -426,21 +418,6 @@ async function assertProgramExists(programId: string | null, db: typeof sql = sq
   if (!programId) return;
   const rows = await db<{ id: string }[]>`SELECT id FROM programs WHERE id = ${programId} LIMIT 1`;
   if (!rows.length) throw new NotFoundError('Program not found');
-}
-
-// Resource queries
-function getHoursResources(actor: AccessTokenPayload) {
-  return sql<Array<{ id: string; firstName: string; lastName: string; name: string; role: string; writable: boolean }>>`
-    SELECT u.id, u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) AS name, role.name AS role,
-      (${hoursWriteScopePredicate(actor, sql`u.id`)}) AS writable
-    FROM users u
-    INNER JOIN user_roles role ON role.id = u.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
-    WHERE role.name IN ('admin', 'staff')
-      AND credentials.status = 'active'
-      AND ${hoursResourceReadScopePredicate(actor, sql`u.id`)}
-    ORDER BY u.first_name, u.last_name, u.id
-  `;
 }
 
 async function resolveCycleForWorkDate(workDate: string, programId: string | null, db: typeof sql = sql) {

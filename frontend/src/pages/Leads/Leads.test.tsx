@@ -35,8 +35,9 @@ vi.mock('../../auth/authContext', () => ({
 }));
 vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
-vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
+vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
+  ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
+  useProgramReferences: () => ({ rows: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
 }));
 
 vi.mock('../Programming/Cohorts/cohorts.api', () => ({

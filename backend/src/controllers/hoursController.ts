@@ -24,8 +24,8 @@ export async function handleGetHoursTableData(req: Request, res: Response) {
   res.json(await getHoursList(actor, query));
 }
 
-export async function handleGetHoursReferenceData(req: Request, res: Response) {
-  res.json(await getHoursReferenceData((req as AuthRequest).user!));
+export async function handleGetHoursReferenceData(_req: Request, res: Response) {
+  res.json(getHoursReferenceData());
 }
 
 export async function handleGetHoursDashboardData(req: Request, res: Response) {

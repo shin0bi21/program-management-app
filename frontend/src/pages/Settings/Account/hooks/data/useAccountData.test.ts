@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
+import { useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import useAccountData from './useAccountData';
 
 vi.mock('../../../../../auth/storage', () => ({
@@ -10,26 +10,26 @@ vi.mock('../../../../../auth/storage', () => ({
 vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff' }),
 }));
-vi.mock('../../../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: vi.fn(),
+vi.mock('../../../../../common/features/referenceData/hooks/useReferenceData', () => ({
+  useProgramReferences: vi.fn(),
 }));
 
 describe('useAccountData', () => {
   it('exposes identity and assigned programs through the page data contract', () => {
     const retryPrograms = vi.fn();
-    vi.mocked(usePrograms).mockReturnValue({
-      programs: [{
-        id: 'program-1', name: 'Soft Skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+    vi.mocked(useProgramReferences).mockReturnValue({
+      rows: [{
+        id: 'program-1', name: 'Soft Skills',
       }],
-      upsertProgram: vi.fn(),
+      upsert: vi.fn(), remove: vi.fn(),
       loading: false,
       error: '',
-      retry: retryPrograms,
+      refetch: retryPrograms,
     });
 
     const { result } = renderHook(() => useAccountData());
 
-    expect(usePrograms).toHaveBeenCalledWith({ assignedOnly: true });
+    expect(useProgramReferences).toHaveBeenCalledWith({ assignedOnly: true });
     expect(result.current).toEqual({
       name: 'Sofia Soft Skills',
       email: 'staff@example.test',

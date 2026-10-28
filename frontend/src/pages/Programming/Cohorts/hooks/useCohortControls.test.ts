@@ -1,24 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { useCohortControls } from './useCohortControls';
 
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
-const programs: Program[] = [{
-  id: 'program-1',
-  name: 'Soft Skills',
-  description: null,
-  enrollmentRequired: true,
-  minAge: 12,
-  maxAge: 15,
-  defaultDayOfWeek: 'tuesday',
-  defaultStartTime: '17:00',
-  defaultEndTime: '19:30',
-  timezone: 'America/Toronto',
-}];
+const programs: ProgramReference[] = [{ id: 'program-1', name: 'Soft Skills' }];
 const tableKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
 
 describe('useCohortControls', () => {

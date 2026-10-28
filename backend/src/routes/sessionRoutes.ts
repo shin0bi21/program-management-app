@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleMoveSessionDate, handleCreateProgramSession, handleGetSessionList, handleGetSessionTypes, handleCreateSession, handleGenerateSessions, handleGetSessionRoster, handleSetSessionAttendance, handleGetSessionNotes, handleCreateSessionNote, handleUpdateSessionNote, handleUnlinkSessionNoteYouth, handleDeleteSessionNote, handleGetSessionAttachments, handleCreateSessionAttachment, handleGetSessionAttachmentFile, handleUpdateSessionAttachment, handleDeleteSessionAttachment, handleUpdateSession, handleDeleteSession } from '../controllers/sessionController';
+import { handleMoveSessionDate, handleCreateProgramSession, handleGetSessionList, handleGetSessionReferenceData, handleGetSessionTypes, handleCreateSession, handleGenerateSessions, handleGetSessionRoster, handleSetSessionAttendance, handleGetSessionNotes, handleCreateSessionNote, handleUpdateSessionNote, handleUnlinkSessionNoteYouth, handleDeleteSessionNote, handleGetSessionAttachments, handleCreateSessionAttachment, handleGetSessionAttachmentFile, handleUpdateSessionAttachment, handleDeleteSessionAttachment, handleUpdateSession, handleDeleteSession } from '../controllers/sessionController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
@@ -9,6 +9,7 @@ import { uploadFile } from '../middleware/fileUpload';
 const router = Router();
 
 router.get('/sessions', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionListQuerySchema), asyncHandler(handleGetSessionList));
+router.get('/sessions/reference-data', authenticateToken, requirePermission('read:sessions'), generalLimiter, asyncHandler(handleGetSessionReferenceData));
 router.get('/session-types', authenticateToken, requirePermission('read:sessions'), generalLimiter, asyncHandler(handleGetSessionTypes));
 router.post('/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createProgramSessionSchema), asyncHandler(handleCreateProgramSession));
 router.post('/:cohortId/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createSessionSchema), asyncHandler(handleCreateSession));

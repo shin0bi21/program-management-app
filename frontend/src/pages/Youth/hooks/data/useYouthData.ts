@@ -1,17 +1,11 @@
-import { usePrograms } from '../../../../common/features/programs/hooks/usePrograms';
-import useListQuery from '../../../../query/hooks/useListQuery';
-import { getProgramCycles } from '../../../../common/features/programming/cycles/cycles.api';
+import { useCycleReferences, useProgramReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
 
 export default function useYouthData(assignedOnly: boolean) {
-  const programs = usePrograms({ assignedOnly });
-  const cycles = useListQuery({
-    queryKey: ['program-cycles'],
-    queryFn: ({ signal }) => getProgramCycles({ signal }),
-    errorMessage: 'Could not load cycles',
-  });
+  const programs = useProgramReferences({ assignedOnly });
+  const cycles = useCycleReferences();
 
   return {
-    programs: programs.programs,
+    programs: programs.rows,
     programsLoading: programs.loading,
     programsError: programs.error,
     cycles: cycles.rows,

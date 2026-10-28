@@ -166,42 +166,19 @@ describe('Tasks API', () => {
     })).rejects.toBe(rollback);
   });
 
-  it('returns complete policy-scoped task reference data', async () => {
-    const adminOptions = await request(app)
-      .get('/api/tasks/reference-data')
+  it('returns only task-owned reference choices', async () => {
+    const options = await request(app).get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${adminToken}`);
-    expect(adminOptions.status).toBe(200);
-    expect(adminOptions.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }),
-      expect.objectContaining({ id: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' }),
-      expect.objectContaining({ id: unrelatedStaffId }),
-    ]));
-    expect(adminOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
-    expect(adminOptions.body.categories).toEqual(expect.arrayContaining([
-      { value: 'planning_prep', label: 'Planning / Prep' },
-    ]));
-    expect(adminOptions.body.statuses).toEqual([
+    expect(options.status).toBe(200);
+    expect(Object.keys(options.body).sort()).toEqual(['categories', 'statuses']);
+    expect(options.body.categories).toContainEqual({ value: 'planning_prep', label: 'Planning / Prep' });
+    expect(options.body.statuses).toEqual([
       { value: 'upcoming', label: 'Upcoming' },
       { value: 'active', label: 'Active' },
       { value: 'overdue', label: 'Overdue' },
       { value: 'completed', label: 'Completed' },
       { value: 'cancelled', label: 'Cancelled' },
     ]);
-    expect(adminOptions.body).not.toHaveProperty('cycles');
-
-    const staffOptions = await request(app)
-      .get('/api/tasks/reference-data')
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(staffOptions.status).toBe(200);
-    expect(staffOptions.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId, writable: true }),
-      expect.objectContaining({ id: secondStaffId, writable: false }),
-    ]));
-    expect(staffOptions.body.resources).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: unrelatedStaffId }),
-    ]));
-    expect(staffOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
-    expect(staffOptions.body).not.toHaveProperty('cycles');
   });
 
   it('requires explicit task capabilities at the route boundary', async () => {
@@ -216,13 +193,13 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${readOnlyToken}`)
       .send({ startDate: taskDate, dueDate: taskDate });
     const readOnlyOptions = await request(app)
-      .get('/api/tasks/reference-data')
+      .get('/api/reference-data/staff?feature=tasks')
       .set('Authorization', `Bearer ${readOnlyToken}`);
 
     expect(deniedRead.status).toBe(403);
     expect(deniedWrite.status).toBe(403);
     expect(readOnlyOptions.status).toBe(200);
-    expect(readOnlyOptions.body.resources).not.toEqual(expect.arrayContaining([
+    expect(readOnlyOptions.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ writable: true }),
     ]));
   });

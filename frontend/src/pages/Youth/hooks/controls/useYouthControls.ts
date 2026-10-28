@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
@@ -16,7 +17,7 @@ import type { YouthSortKey } from '../../types';
 
 interface UseYouthControlsOptions {
   role: string | null;
-  programs: Program[];
+  programs: ProgramReference[];
   programsLoading: boolean;
   programsError?: string | null;
   cycles: ProgramCycle[];
@@ -68,12 +69,12 @@ export function useYouthControls({
     {
       id: 'program',
       label: 'Program',
-      options: programs.map(program => ({ value: program.id, label: program.name })),
+      options: toFilterOptions(programs),
     },
     {
       id: 'cycle',
       label: 'Cycle',
-      options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
+      options: toFilterOptions(cycles),
     },
   ], [programs, cycles]);
 

@@ -27,7 +27,7 @@ test('documentation-only changes do not select paid application jobs', () => {
 test('Task backend changes select Task and Hours integration suites', () => {
   assertPlan(['backend/src/services/staff/tasks/taskService.ts'], {
     backendMode: 'focused',
-    backendTestPaths: ['tests/tasks', 'tests/hours'],
+    backendTestPaths: ['tests/tasks', 'tests/hours', 'tests/referenceData'],
     frontend: false,
     static: true,
   });
@@ -37,11 +37,11 @@ test('domain backend changes select only their authoritative suite', () => {
   const cases = [
     ['backend/src/services/accounts/accountService.ts', ['tests/accounts']],
     ['backend/src/services/auth/authService.ts', ['tests/auth']],
-    ['backend/src/services/programming/cohorts/cohortService.ts', ['tests/cohorts']],
+    ['backend/src/services/programming/cohorts/cohortService.ts', ['tests/cohorts', 'tests/referenceData']],
     ['backend/src/services/outreach/leads/leadService.ts', ['tests/public', 'tests/expressionOfInterest', 'tests/leads']],
     ['backend/src/services/preferenceService.ts', ['tests/preferences']],
-    ['backend/src/services/programService.ts', ['tests/programs']],
-    ['backend/src/routes/schoolRoutes.ts', ['tests/schools']],
+    ['backend/src/services/programService.ts', ['tests/programs', 'tests/referenceData']],
+    ['backend/src/routes/schoolRoutes.ts', ['tests/schools', 'tests/referenceData']],
     ['backend/src/services/youth/youthService.ts', ['tests/youth']],
   ] as const;
 
@@ -53,7 +53,7 @@ test('domain backend changes select only their authoritative suite', () => {
 test('shared backend files select every domain that consumes them', () => {
   assertPlan(['backend/src/policies/staffResourcePolicy.ts'], {
     backendMode: 'focused',
-    backendTestPaths: ['tests/tasks', 'tests/hours'],
+    backendTestPaths: ['tests/tasks', 'tests/hours', 'tests/referenceData'],
   });
 
   for (const file of [
@@ -137,4 +137,17 @@ test('main pull requests always validate production packaging', () => {
     { backendImage: true, frontendImage: true, compose: true },
     { baseRef: 'main' },
   );
+});
+
+test('reference lookups select their HTTP matrix and Hours dashboard integration', () => {
+  for (const path of [
+    'backend/src/services/referenceData/staffReferenceData.ts',
+    'backend/src/routes/referenceDataRoutes.ts',
+    'backend/tests/referenceData/referenceData.test.ts',
+  ]) {
+    assertPlan([path], {
+      backendMode: 'focused',
+      backendTestPaths: ['tests/referenceData', 'tests/hours'],
+    });
+  }
 });
