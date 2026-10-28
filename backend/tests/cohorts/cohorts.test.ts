@@ -60,14 +60,14 @@ describe('Cohorts and attendance API', () => {
     const youth = await seedTestUser({ role: 'youth' });
     youthId = youth.userId;
     await sql`
-      INSERT INTO youth_profiles (user_id)
-      VALUES (${youthId})
+      INSERT INTO youth_profiles (user_id, date_of_birth)
+      VALUES (${youthId}, (NOW() AT TIME ZONE 'America/Toronto')::date - INTERVAL '13 years')
     `;
     const secondYouth = await seedTestUser({ role: 'youth' });
     secondYouthId = secondYouth.userId;
     await sql`
-      INSERT INTO youth_profiles (user_id)
-      VALUES (${secondYouthId})
+      INSERT INTO youth_profiles (user_id, date_of_birth)
+      VALUES (${secondYouthId}, (NOW() AT TIME ZONE 'America/Toronto')::date - INTERVAL '14 years')
     `;
 
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;

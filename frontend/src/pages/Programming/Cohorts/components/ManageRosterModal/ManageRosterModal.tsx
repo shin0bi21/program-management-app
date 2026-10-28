@@ -4,8 +4,6 @@ import Button from '../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
 import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
-import { calculateAge } from '../../../../../common/utils/time';
-
 import type { ProgramCohort } from '../../types';
 
 import { useCohortRoster } from '../../hooks/useCohortRoster';
@@ -22,7 +20,6 @@ interface ManageRosterModalProps {
 export default function ManageRosterModal({ cohort, onClose, onSuccess }: ManageRosterModalProps) {
   const {
     youth, search, setSearch, appliedSearch, applySearch, clearSearch,
-    minimumAge, setMinimumAge, maximumAge, setMaximumAge,
     filterYouth, loading, error, refresh,
   } = useCohortRoster(cohort);
   const visibleYouth = useMemo(() => filterYouth(youth), [filterYouth, youth]);
@@ -50,6 +47,7 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
         )}
         <div className="manage-roster-controls">
           <SearchInput
+            className="manage-roster-search"
             label="Search youth"
             value={search}
             appliedValue={appliedSearch}
@@ -58,30 +56,35 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
             onClear={clearSearch}
             placeholder="Search by name or school"
           />
-          <fieldset className="manage-roster-age-filter">
-            <legend>Filter by age</legend>
-            <label htmlFor="roster-minimum-age">
-              Minimum
-              <input
-                id="roster-minimum-age"
-                type="number"
-                min="0"
-                value={minimumAge}
-                onChange={event => setMinimumAge(event.target.value)}
-                placeholder="Any"
-              />
-            </label>
-            <label htmlFor="roster-maximum-age">
-              Maximum
-              <input
-                id="roster-maximum-age"
-                type="number"
-                min="0"
-                value={maximumAge}
-                onChange={event => setMaximumAge(event.target.value)}
-                placeholder="Any"
-              />
-            </label>
+          <fieldset className="manage-roster-age-filter" aria-describedby="roster-age-help">
+            <legend>Min/max age</legend>
+            <div className="manage-roster-age-filter__fields">
+              <label htmlFor="roster-minimum-age">
+                Minimum age
+                <input
+                  id="roster-minimum-age"
+                  type="number"
+                  value={cohort?.minAge ?? ''}
+                  placeholder="Any"
+                  readOnly
+                  disabled
+                />
+              </label>
+              <label htmlFor="roster-maximum-age">
+                Maximum age
+                <input
+                  id="roster-maximum-age"
+                  type="number"
+                  value={cohort?.maxAge ?? ''}
+                  placeholder="Any"
+                  readOnly
+                  disabled
+                />
+              </label>
+            </div>
+            <p id="roster-age-help" className="manage-roster-age-filter__help">
+              Age limits are set on the program.
+            </p>
           </fieldset>
         </div>
         <div className="manage-roster-list" aria-label="Cohort roster">
@@ -104,13 +107,13 @@ export default function ManageRosterModal({ cohort, onClose, onSuccess }: Manage
               <span>
                 <strong>{profile.firstName} {profile.lastName}</strong>
                 <small>
-                  Age {calculateAge(profile.dateOfBirth)}
+                  Age {profile.age ?? '—'}
                   {profile.schoolName ? ` · ${profile.schoolName}` : ''}
                 </small>
               </span>
             </label>
-          )) : (
-            <p className="page-empty">{youth.length ? 'No youth match your search and filters.' : 'No youth profiles found.'}</p>
+          )) : !error && (
+            <p className="page-empty">{youth.length ? 'No youth match your search.' : 'No eligible youth found.'}</p>
           )}
         </div>
       </Modal>

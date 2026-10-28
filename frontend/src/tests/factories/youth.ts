@@ -8,6 +8,7 @@ export function makeYouthProfile(overrides: Partial<YouthProfile> = {}): YouthPr
     status: 'active',
     account: null,
     dateOfBirth: null,
+    age: null,
     schoolId: null,
     schoolName: null,
     cohorts: [],

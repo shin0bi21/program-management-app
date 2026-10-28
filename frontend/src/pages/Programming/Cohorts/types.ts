@@ -25,6 +25,7 @@ export interface CohortRosterYouth {
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
+  age: number | null;
   schoolName: string | null;
   cohorts: Array<{
     id: string;

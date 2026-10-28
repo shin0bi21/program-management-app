@@ -26,10 +26,10 @@ describe('ManageRosterModal', () => {
     vi.clearAllMocks();
     api.getCohortRosterYouth.mockResolvedValue([
       makeYouthProfile({
-        id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', dateOfBirth: '2012-01-01',
+        id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', dateOfBirth: '2012-01-01', age: 14,
         cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, enrollmentRequired: cohort.enrollmentRequired, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }],
       }),
-      makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2009-01-01', schoolName: 'Central School' }),
+      makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2010-01-01', age: 15, schoolName: 'Central School' }),
     ]);
     api.enrollYouth.mockResolvedValue({});
     api.withdrawYouth.mockResolvedValue({});
@@ -53,11 +53,16 @@ describe('ManageRosterModal', () => {
     expect(onSuccess).toHaveBeenCalledOnce();
   });
 
-  it('searches and filters the combined youth list by staff-entered age bounds', async () => {
+  it('shows backend-owned age bounds and searches the eligible youth list', async () => {
     const user = userEvent.setup();
     render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     await screen.findByRole('checkbox', { name: /Already Enrolled/ });
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(12);
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(15);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toBeDisabled();
+
     await user.type(screen.getByRole('textbox', { name: 'Search youth' }), 'central');
     await user.keyboard('{Enter}');
     expect(screen.queryByRole('checkbox', { name: /Already Enrolled/ })).not.toBeInTheDocument();
@@ -65,8 +70,7 @@ describe('ManageRosterModal', () => {
 
     await user.clear(screen.getByRole('textbox', { name: 'Search youth' }));
     await user.keyboard('{Enter}');
-    await user.type(screen.getByRole('spinbutton', { name: 'Minimum' }), '16');
-    expect(screen.queryByRole('checkbox', { name: /Already Enrolled/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Already Enrolled/ })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Not Enrolled/ })).toBeInTheDocument();
   });
 
@@ -91,5 +95,6 @@ describe('ManageRosterModal', () => {
     render(<ManageRosterModal cohort={cohort} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('roster unavailable');
+    expect(screen.queryByText('No eligible youth found.')).not.toBeInTheDocument();
   });
 });

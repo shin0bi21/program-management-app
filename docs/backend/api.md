@@ -203,3 +203,16 @@ plus required unique `programIds: string[]`; an empty array intentionally select
 no programs. They save details and assignments in one transaction. Any removal
 with sessions, enrollment history, or logged hours returns 409 without saving any
 part of the request. Direct cohort deletion follows the same rule.
+
+`GET /cohorts/:cohortId/roster` requires `read:programs` and `read:youth_profiles`,
+plus access to the cohort's program. It returns the full roster candidate list independently
+of Youth table pagination. Ages are calculated on the current Toronto date. New candidates
+must meet the program's inclusive minimum/maximum ages; a missing birth date is eligible
+only when the program has no age limits. Current enrollments remain visible even after
+aging out, so staff can withdraw them. Open-attendance programs do not use this endpoint.
+
+Roster additions require `write:enrollments` and validate current age limits and birth dates
+inside the enrollment transaction. An ineligible member rejects the entire batch. The UI
+requires enrollment-write and youth-read permissions for Manage Roster; assignment editing
+continues to require `write:programs`. The roster's age limits are read-only and configured
+on the program. Youth list ages and age sorting use the same Toronto date boundary.

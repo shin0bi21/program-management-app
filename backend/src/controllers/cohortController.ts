@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createCohort, deleteCohort, updateCohort } from '../services/programming/cohorts/cohortService';
 
+import { getCohortRosterYouth } from '../services/programming/cohorts/cohortRosterService';
 import { listCohorts } from '../services/programming/cohorts/cohortListService';
 
 import type { CreateCohortInput, UpdateCohortInput } from '../validation/cohortSchemas';
@@ -47,4 +48,8 @@ export const handleUpdateCohort = async (req: Request, res: Response) => {
 export const handleDeleteCohort = async (req: Request, res: Response) => {
   await deleteCohort(req.params.cohortId, actor(req));
   res.json({ id: req.params.cohortId });
+};
+
+export const handleGetCohortRosterYouth = async (req: Request, res: Response) => {
+  res.json(await getCohortRosterYouth(req.params.cohortId, actor(req)));
 };
