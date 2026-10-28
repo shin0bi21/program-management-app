@@ -43,6 +43,7 @@
   padding: 12px;
   border-bottom: 1px solid var(--ink-08);
   color: var(--color-ink);
+  overflow-wrap: anywhere;
 }
 
 .table tbody tr:nth-child(even) {
