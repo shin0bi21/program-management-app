@@ -158,7 +158,6 @@ export default function Cohorts() {
                       size="sm"
                       variant="secondary"
                       disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
-                      title={selection.selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
                       onClick={() => setReportTarget(selection.selectedCohort)}
                     >Attendance Report</Button>
                   </div>
