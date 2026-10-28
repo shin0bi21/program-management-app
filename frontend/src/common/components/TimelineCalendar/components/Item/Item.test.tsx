@@ -1,3 +1,4 @@
+import { useState } from 'react';
 // Scope: verifies shared calendar-item actions, detail discovery, and hover dismissal.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,6 +13,26 @@ const itemProps = {
 };
 
 describe('Item', () => {
+  it('anchors the menu after the opening click changes the parent layout', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.matches('.calendar-item')) {
+        const expanded = this.closest('[data-expanded]')?.getAttribute('data-expanded') === 'true';
+        return new DOMRect(20, expanded ? 180 : 40, 120, 32);
+      }
+      return new DOMRect(0, 0, 150, 86);
+    });
+    function SelectableItem() {
+      const [selected, setSelected] = useState(false);
+      return <div data-expanded={String(selected)} onClick={() => setSelected(true)}>
+        <Item {...itemProps} onEdit={vi.fn()} />
+      </div>;
+    }
+    render(<SelectableItem />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Prepare workshop.*Open actions/ }));
+    expect(screen.getByRole('menu')).toHaveStyle({ top: '216px' });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
