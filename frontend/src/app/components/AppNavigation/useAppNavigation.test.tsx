@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { useAppNavigation } from './useAppNavigation';
 
-const floatingMenus = vi.hoisted(() => Array.from({ length: 5 }, () => ({
+const floatingMenus = vi.hoisted(() => Array.from({ length: 3 }, () => ({
   isOpen: false,
   toggle: vi.fn(),
   close: vi.fn(),
@@ -75,20 +75,47 @@ describe('useAppNavigation', () => {
     expect(result.current.permissions.canViewStaff).toBe(true);
   });
 
+  it.each([
+    [['read:sessions'], true],
+    [['read:programs'], false],
+    [[], false],
+  ] as const)('derives Programming access from session read permission: %j', (permissions, visible) => {
+    auth.permissions = [...permissions];
+
+    const { result } = renderHook(() => useAppNavigation(), { wrapper });
+
+    expect(result.current.permissions.canViewProgramming).toBe(visible);
+  });
+
+  it('keeps Programming active for legacy and canonical family paths', async () => {
+    const { result } = renderHook(() => useAppNavigation(), { wrapper });
+
+    act(() => navigateFromRouter('/programming/sessions?sessionId=42'));
+
+    await waitFor(() => expect(result.current.active.programming).toBe(true));
+    expect(result.current.isActive('/programming/calendar')).toBe(false);
+
+    act(() => navigateFromRouter('/programming/calendar'));
+
+    await waitFor(() => expect(result.current.isActive('/programming/calendar')).toBe(true));
+    expect(result.current.active.programming).toBe(true);
+  });
+
   it('keeps menus mutually exclusive and closes navigation state after routing', async () => {
     const { result } = renderHook(() => useAppNavigation(), { wrapper });
     floatingMenus.forEach(menu => menu.close.mockClear());
 
     act(() => result.current.toggleMenu('staff'));
-    expect(floatingMenus[3].toggle).toHaveBeenCalledOnce();
-    expect(floatingMenus[3].close).not.toHaveBeenCalled();
-    [0, 1, 2, 4].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
+    expect(floatingMenus[1].toggle).toHaveBeenCalledOnce();
+    expect(floatingMenus[1].close).not.toHaveBeenCalled();
+    [0, 2].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
 
     floatingMenus.forEach(menu => menu.close.mockClear());
     act(() => result.current.setMobileOpen(true));
-    act(() => result.current.go('/settings/account'));
+    act(() => result.current.go('/programming/calendar'));
 
-    await waitFor(() => expect(result.current.isActive('/settings/account')).toBe(true));
+    await waitFor(() => expect(result.current.isActive('/programming/calendar')).toBe(true));
+    expect(result.current.active.programming).toBe(true);
     expect(result.current.mobileOpen).toBe(false);
     floatingMenus.forEach(menu => expect(menu.close).toHaveBeenCalled());
   });

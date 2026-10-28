@@ -45,6 +45,8 @@ export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
 
 export type ProgramRosterMode = "enrolled" | "open";
 
+export type ProgramTimezone = "America/Toronto";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Addresses {
@@ -235,12 +237,16 @@ export interface ProgramCycles {
 }
 
 export interface Programs {
+  default_day_of_week: Generated<string>;
+  default_end_time: Generated<string>;
+  default_start_time: Generated<string>;
   description: string | null;
   id: Generated<string>;
   max_age: number | null;
   min_age: number | null;
   name: string;
   roster_mode: Generated<ProgramRosterMode>;
+  timezone: Generated<ProgramTimezone>;
 }
 
 export interface SchemaMigrations {

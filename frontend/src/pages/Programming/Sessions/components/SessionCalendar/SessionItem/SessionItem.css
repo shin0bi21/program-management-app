@@ -1,0 +1,4 @@
+.calendar-item.session-item--cancelled {
+  border-color: var(--color-border);
+  background: var(--ink-06);
+}

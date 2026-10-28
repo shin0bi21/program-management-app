@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
 import {
+  createSession,
+  moveSessionDate,
   createSessionAttachment,
   getSessionAttachmentDownloadName,
   getSessions,
@@ -10,11 +12,22 @@ import {
 } from './sessions.api';
 
 vi.mock('../../../http/client', () => ({
-  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn() },
+  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 
 describe('session API', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('moves a session with a date-only command', () => {
+    moveSessionDate('session-1', '2027-01-12');
+    expect(apiClient.put).toHaveBeenCalledWith('/cohorts/sessions/session-1/date', { date: '2027-01-12' });
+  });
+
+  it('creates by program and date so the server resolves the assigned cycle', () => {
+    const data = { programId: 'program-1', sessionTypeId: 'type-1', theme: 'Art', date: '2026-10-27' };
+    createSession(data);
+    expect(apiClient.post).toHaveBeenCalledWith('/cohorts/sessions', data);
+  });
 
   it('serializes session list filters without adding a trailing question mark', () => {
     getSessions({}, undefined, { key: 'date', direction: 'asc' });

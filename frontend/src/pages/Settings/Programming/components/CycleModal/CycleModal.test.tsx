@@ -1,25 +1,30 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setProgramCycle } from '../../../../../common/features/programming/cycles/cycles.api';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import { getCohorts } from '../../../../Programming/Cohorts/cohorts.api';
 import CycleModal from './CycleModal';
 
 vi.mock('../../../../../common/features/programming/cycles/cycles.api', () => ({ setProgramCycle: vi.fn() }));
+
+vi.mock('../../../../Programming/Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
+const programs = [{ id: 'program-1', name: 'Skills' }] as import('../../../../../common/features/programs/types').Program[];
 
 const cycle: ProgramCycle = {
   id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
 };
 
 describe('CycleModal', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); vi.mocked(getCohorts).mockResolvedValue([{ programId: 'program-1', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getCohorts>>); });
 
   it('submits the create form and displays its success status', async () => {
     const user = userEvent.setup();
     vi.mocked(setProgramCycle).mockResolvedValue(cycle);
     const onSaved = vi.fn().mockResolvedValue(undefined);
-    render(<CycleModal isOpen cycle={null} onClose={vi.fn()} onSaved={onSaved} />);
+    render(<CycleModal programs={programs} isOpen cycle={null} onClose={vi.fn()} onSaved={onSaved} />);
 
     await user.type(screen.getByRole('textbox', { name: 'Cycle name' }), 'Fall 2026');
     await user.type(screen.getByLabelText('Starts on'), '2026-09-01');
@@ -27,7 +32,7 @@ describe('CycleModal', () => {
     await user.click(screen.getByRole('button', { name: 'Add Cycle' }));
 
     expect(setProgramCycle).toHaveBeenCalledWith({
-      name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31',
+      name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: ['program-1'],
     });
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(screen.getByText('Cycle created successfully.')).toBeInTheDocument();
@@ -36,11 +41,12 @@ describe('CycleModal', () => {
   it('renders existing cycle fields and the edit submit action', async () => {
     const user = userEvent.setup();
     vi.mocked(setProgramCycle).mockResolvedValue(cycle);
-    render(<CycleModal isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(<CycleModal programs={programs} isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('Fall 2026');
     expect(screen.getByLabelText('Starts on')).toHaveValue('2026-09-01');
     expect(screen.getByLabelText('Ends on')).toHaveValue('2027-01-31');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     expect(await screen.findByText('Cycle updated successfully.')).toBeInTheDocument();
@@ -49,8 +55,9 @@ describe('CycleModal', () => {
   it('keeps the form open and reports save failures', async () => {
     vi.mocked(setProgramCycle).mockRejectedValue(new Error('Cycle dates overlap'));
     const user = userEvent.setup();
-    render(<CycleModal isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(<CycleModal programs={programs} isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle dates overlap');
@@ -61,13 +68,14 @@ describe('CycleModal', () => {
     vi.mocked(setProgramCycle).mockRejectedValue(new Error('Cycle dates overlap'));
     const user = userEvent.setup();
     const props = { onClose: vi.fn(), onSaved: vi.fn() };
-    const view = render(<CycleModal isOpen cycle={cycle} {...props} />);
+    const view = render(<CycleModal programs={programs} isOpen cycle={cycle} {...props} />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle dates overlap');
 
-    view.rerender(<CycleModal isOpen={false} cycle={cycle} {...props} />);
-    view.rerender(<CycleModal isOpen cycle={null} {...props} />);
+    view.rerender(<CycleModal programs={programs} isOpen={false} cycle={cycle} {...props} />);
+    view.rerender(<CycleModal programs={programs} isOpen cycle={null} {...props} />);
 
     expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('');
     expect(screen.getByLabelText('Starts on')).toHaveValue('');

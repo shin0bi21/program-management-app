@@ -16,6 +16,10 @@ const programs: Program[] = [{
   rosterMode: 'enrolled',
   minAge: null,
   maxAge: null,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 }];
 
 describe('usePrograms', () => {

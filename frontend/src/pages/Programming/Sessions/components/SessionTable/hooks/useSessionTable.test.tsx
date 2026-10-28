@@ -40,6 +40,21 @@ describe('useSessionTable', () => {
     ]);
   });
 
+  it('formats dates and hours in the program timezone', () => {
+    const { result } = renderHook(() => useSessionTable({
+      programs: [{ id: 'program-1', name: 'Art', rosterMode: 'open', minAge: null, maxAge: null,
+        defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' }],
+      canWriteAttendance: false, canWriteSessions: false,
+      onTakeAttendance: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),
+    }));
+    const session = makeCohortSession({ startsAt: '2026-08-10T02:00:00Z', endsAt: '2026-08-10T03:00:00Z' });
+    const dateColumn = result.current.find(column => column.id === 'date')!;
+    const timeColumn = result.current.find(column => column.id === 'time')!;
+    if (!('accessorFn' in dateColumn) || !('accessorFn' in timeColumn)) throw new Error('Missing accessors');
+    expect(dateColumn.accessorFn!(session, 0)).toBe('Aug 9, 2026');
+    expect(timeColumn.accessorFn!(session, 0)).toMatch(/10:00.*11:00/);
+  });
+
   it.each([
     [true, false, ['attendance']],
     [false, true, ['edit', 'delete']],

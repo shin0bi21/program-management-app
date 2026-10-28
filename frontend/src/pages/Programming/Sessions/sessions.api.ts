@@ -4,7 +4,6 @@ import type { AttendanceStatus } from '../../../common/features/AttendanceStatus
 import type {
   AttendanceYouth,
   CohortSession,
-  GenerateSessionsInput,
   SessionAttachment,
   SessionListFilters,
   SessionNote,
@@ -13,10 +12,6 @@ import type {
   SessionType,
 } from './types';
 import type { CursorPage, CursorRequest } from '../../../query/types';
-
-interface GenerateSessionsResult {
-  sessions: Array<{ id: string }>;
-}
 
 interface SessionCalendarFilters extends SessionListFilters {
   start: string;
@@ -53,9 +48,19 @@ export function searchAttendanceYouth(search: string, opts?: RequestOptions) {
     : apiClient.get<AttendanceYouth[]>(path);
 }
 
-export function generateSessions(cohortId: string, data: GenerateSessionsInput) {
-  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
+export interface CreateSessionInput {
+  programId: string;
+  sessionTypeId: string;
+  theme: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
 }
+
+export function createSession(data: CreateSessionInput) {
+  return apiClient.post('/cohorts/sessions', data);
+}
+
 
 export function getSessionTypes(opts?: RequestOptions) {
   return opts
@@ -212,6 +217,19 @@ export async function downloadSessionAttachment(sessionId: string, attachment: S
 
 export function updateSession(sessionId: string, data: UpdateSessionInput) {
   return apiClient.put(`/cohorts/sessions/${sessionId}`, data);
+}
+
+export interface MoveSessionResult {
+  id: string;
+  cohortId: string;
+  cohortName: string;
+  cycleId: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export function moveSessionDate(sessionId: string, date: string) {
+  return apiClient.put<MoveSessionResult>(`/cohorts/sessions/${sessionId}/date`, { date });
 }
 
 export function deleteSession(sessionId: string) {

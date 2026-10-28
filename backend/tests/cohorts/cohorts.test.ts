@@ -127,19 +127,19 @@ describe('Cohorts and attendance API', () => {
     const denied = await request(app)
       .post('/api/cohorts/cycles')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: cycleName, startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycleName, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
     expect(denied.status).toBe(403);
 
     const created = await request(app)
       .post('/api/cohorts/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: cycleName, startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycleName, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
     expect(created.status).toBe(201);
 
     const updated = await request(app)
       .put(`/api/cohorts/cycles/${created.body.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: `${cycleName} Updated`, startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
+      .send({ name: `${cycleName} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
 
@@ -164,7 +164,7 @@ describe('Cohorts and attendance API', () => {
   it('creates a dated cohort', async () => {
     const response = await request(app)
       .post('/api/cohorts')
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         programId,
         cycleId: mainCycleId,
@@ -189,7 +189,7 @@ describe('Cohorts and attendance API', () => {
     expect(await sql`SELECT id FROM program_cycles WHERE id = ${mainCycleId}`).toHaveLength(1);
   });
 
-  it('blocks cohorts outside the staff program scope', async () => {
+  it('blocks assignment mutations without write:programs', async () => {
     const [jobReadiness] = await sql<{ id: string }[]>`
       SELECT id FROM programs WHERE name = 'Job Readiness'
     `;
@@ -622,7 +622,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
     const cohortResponse = await request(app)
       .delete(`/api/cohorts/${cohortId}`)
-      .set('Authorization', `Bearer ${staffToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(sessionResponse.status).toBe(409);
     expect(cohortResponse.status).toBe(409);
@@ -655,7 +655,7 @@ describe('Cohorts and attendance API', () => {
   it('creates an open Drop In session with no enrollment roster', async () => {
     const cohort = await request(app)
       .post('/api/cohorts')
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         programId: openProgramId,
         cycleId: mainCycleId,
@@ -1052,7 +1052,7 @@ describe('Cohorts and attendance API', () => {
     expect(response.status).toBe(400);
   });
 
-  it('edits and deletes sessions and cohorts that have no attendance', async () => {
+  it('edits sessions but preserves cohorts with enrollment history', async () => {
     const [disposableCycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
       VALUES (${`Disposable ${Date.now()}`}, ${today}, ${addDays(today, 12)})
@@ -1060,7 +1060,7 @@ describe('Cohorts and attendance API', () => {
     `;
     const cohort = await request(app)
       .post('/api/cohorts')
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         programId,
         cycleId: disposableCycle.id,
@@ -1089,7 +1089,7 @@ describe('Cohorts and attendance API', () => {
     `;
     const incompatibleUpdate = await request(app)
       .put(`/api/cohorts/${disposableCohortId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ cycleId: incompatibleCycle.id });
     expect(incompatibleUpdate.status).toBe(409);
     await sql`DELETE FROM program_cycles WHERE id = ${incompatibleCycle.id}`;
@@ -1113,15 +1113,19 @@ describe('Cohorts and attendance API', () => {
 
     expect((await request(app)
       .put(`/api/cohorts/${disposableCohortId}`)
-      .set('Authorization', `Bearer ${staffToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ cycleId: disposableCycle.id })).status)
       .toBe(200);
 
     expect((await request(app)
       .delete(`/api/cohorts/${disposableCohortId}`)
-      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
+      .set('Authorization', `Bearer ${adminToken}`)).status).toBe(409);
     expect((await sql`SELECT id FROM cohort_enrollments WHERE cohort_id = ${disposableCohortId}`))
-      .toHaveLength(0);
+      .toHaveLength(1);
+    await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${disposableCohortId}`;
+    expect((await request(app)
+      .delete(`/api/cohorts/${disposableCohortId}`)
+      .set('Authorization', `Bearer ${adminToken}`)).status).toBe(200);
     await sql`DELETE FROM program_cycles WHERE id = ${disposableCycle.id}`;
   });
 
@@ -1131,7 +1135,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
     expect((await request(app)
       .delete(`/api/cohorts/${cohortId}`)
-      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
+      .set('Authorization', `Bearer ${adminToken}`)).status).toBe(409);
   });
 
   it('uses attendance foreign keys to block deletion through the cohort tree', async () => {

@@ -1,3 +1,5 @@
+export type ProgramWeekday = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+
 export interface Program {
   id: string;
   name: string;
@@ -5,6 +7,10 @@ export interface Program {
   rosterMode: 'enrolled' | 'open';
   minAge: number | null;
   maxAge: number | null;
+  defaultDayOfWeek: ProgramWeekday;
+  defaultStartTime: string;
+  defaultEndTime: string;
+  timezone: 'America/Toronto';
 }
 
 export interface CreateProgramInput {
@@ -13,6 +19,10 @@ export interface CreateProgramInput {
   rosterMode?: 'enrolled' | 'open';
   minAge?: number | null;
   maxAge?: number | null;
+  defaultDayOfWeek?: ProgramWeekday;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+  timezone?: 'America/Toronto';
 }
 
 export type UpdateProgramInput = CreateProgramInput;

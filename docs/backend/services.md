@@ -15,9 +15,18 @@ Keep product behavior with its capability even when several pages use it. Use `s
 
 Program-cycle reads and mutations belong to
 [`programming/cycles/programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts).
-Cohort creation, updates, and deletion remain in the cohort service. Cycle routes,
-controller handlers, and validation still use the cohort HTTP owners; the
-[`/cohorts/cycles` endpoints](api.md#programming) retain their existing paths and permissions.
+Cohort creation, updates, and deletion remain in the cohort service. The cycle,
+cohort, enrollment, and session routes and controllers own their HTTP capabilities
+separately; existing `/cohorts` URLs remain stable and shared validation types stay
+in `cohortSchemas.ts`.
+
+Program-side checked cycles use `cohorts/assignmentService.ts`; cycle saves replace
+checked programs in the cycle service transaction. Retained relationships keep
+their cohort IDs. Unchecking a relationship with any session, enrollment (including
+withdrawn youth), or logged hours fails the entire save. Assignment and session
+schedule mutations lock program rows, then cycles, then cohort rows; cycle editing
+locks all current programs in ID order before its cycle to serialize both editors.
+Child foreign keys coordinate enrollment and hours insertion with cohort removal.
 
 ## Write the public operations first
 

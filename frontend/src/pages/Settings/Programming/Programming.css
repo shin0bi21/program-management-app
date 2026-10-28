@@ -31,3 +31,10 @@
     min-height: 0;
   }
 }
+
+.program-cycle-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+}

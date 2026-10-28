@@ -18,7 +18,7 @@ describe('cycle API', () => {
   });
 
   it('creates, updates, and deletes cycles through the existing endpoints', () => {
-    const input = { name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31' };
+    const input = { name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: ['program-1'] };
     setProgramCycle(input);
     setProgramCycle(input, 'cycle-1');
     deleteProgramCycle('cycle-1');

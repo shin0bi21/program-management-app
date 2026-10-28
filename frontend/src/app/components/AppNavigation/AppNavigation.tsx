@@ -14,8 +14,8 @@ export default function AppNavigation() {
     permissions, active, go, isActive, toggleMenu,
   } = navigation;
   const {
-    canManageHomepage, canViewYouth, canViewLeads, canViewCohorts,
-    canViewSessions, canViewProgramming, canManageUsers, canManageProgramming,
+    canManageHomepage, canViewYouth, canViewLeads,
+    canViewProgramming, canManageUsers, canManageProgramming,
     canViewTasks, canViewHours, canViewStaff,
   } = permissions;
 
@@ -91,11 +91,8 @@ export default function AppNavigation() {
 
               {canViewYouth && (
                 <button
-                  ref={refs.youth}
-                  onClick={() => toggleMenu('youth')}
-                  aria-haspopup="menu"
-                  aria-expanded={menus.youth.isOpen}
-                  className={`sidebar-link${active.youth || menus.youth.isOpen ? ' active' : ''}`}
+                  onClick={() => go('/youth/profiles')}
+                  className={`sidebar-link${active.youth ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faUsers} /></span>
                   <span>Youth</span>
@@ -104,11 +101,8 @@ export default function AppNavigation() {
 
               {canViewProgramming && (
                 <button
-                  ref={refs.programming}
-                  onClick={() => toggleMenu('programming')}
-                  aria-haspopup="menu"
-                  aria-expanded={menus.programming.isOpen}
-                  className={`sidebar-link${active.programming || menus.programming.isOpen ? ' active' : ''}`}
+                  onClick={() => go('/programming/calendar')}
+                  className={`sidebar-link${active.programming ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
                   <span>Programming</span>
@@ -156,14 +150,6 @@ export default function AppNavigation() {
         </div>
       </aside>
 
-      {canViewYouth && menus.youth.position && (
-        <FloatingMenuPanel menuRef={menus.youth.menuRef} position={menus.youth.position} onClose={menus.youth.close} className="settings-flyout">
-          <button role="menuitem" onClick={() => go('/youth/profiles')} className={`settings-flyout-item${isActive('/youth/profiles') ? ' active' : ''}`}>
-            Profiles
-          </button>
-        </FloatingMenuPanel>
-      )}
-
       {canViewLeads && menus.leads.position && (
         <FloatingMenuPanel
           menuRef={menus.leads.menuRef}
@@ -192,34 +178,6 @@ export default function AppNavigation() {
         <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
           {canViewHours && <button role="menuitem" onClick={() => go('/staff/hours')} className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}>Hours</button>}
           {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
-        </FloatingMenuPanel>
-      )}
-
-      {canViewProgramming && menus.programming.position && (
-        <FloatingMenuPanel
-          menuRef={menus.programming.menuRef}
-          position={menus.programming.position}
-          onClose={menus.programming.close}
-          className="settings-flyout"
-        >
-          {canViewCohorts && (
-            <button
-              role="menuitem"
-              onClick={() => go('/programming/cohorts')}
-              className={`settings-flyout-item${isActive('/programming/cohorts') ? ' active' : ''}`}
-            >
-              Cohorts
-            </button>
-          )}
-          {canViewSessions && (
-            <button
-              role="menuitem"
-              onClick={() => go('/programming/sessions')}
-              className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
-            >
-              Sessions
-            </button>
-          )}
         </FloatingMenuPanel>
       )}
 

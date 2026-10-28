@@ -53,6 +53,10 @@ describe('Programs API', () => {
         rosterMode: 'open',
         minAge: 14,
         maxAge: 18,
+        defaultDayOfWeek: 'wednesday',
+        defaultStartTime: '17:30',
+        defaultEndTime: '19:30',
+        timezone: 'America/Toronto',
       });
 
     expect(res.status).toBe(201);
@@ -62,6 +66,10 @@ describe('Programs API', () => {
       rosterMode: 'open',
       minAge: 14,
       maxAge: 18,
+      defaultDayOfWeek: 'wednesday',
+      defaultStartTime: '17:30',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     }));
     createdProgramId = res.body.id;
   });
@@ -118,6 +126,28 @@ describe('Programs API', () => {
 
     expect(missingMaximum.status).toBe(400);
     expect(reversedRange.status).toBe(400);
+  });
+
+  it('rejects invalid scheduling defaults', async () => {
+    for (const defaults of [
+      { defaultStartTime: '25:00' },
+      { defaultStartTime: '20:00', defaultEndTime: '19:00' },
+      { defaultDayOfWeek: 'holiday' },
+      { timezone: 'America/Vancouver' },
+    ]) {
+      const response = await request(app).post('/api/programs')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Invalid scheduling defaults', ...defaults });
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it('rejects unsupported timezones at the database boundary', async () => {
+    await expect(sql`UPDATE programs SET timezone = 'torotto' WHERE id = ${createdProgramId}`)
+      .rejects.toMatchObject({ code: '22P02' });
+
+    const [program] = await sql`SELECT timezone FROM programs WHERE id = ${createdProgramId}`;
+    expect(program.timezone).toBe('America/Toronto');
   });
 
   it('returns only assigned programs to staff', async () => {

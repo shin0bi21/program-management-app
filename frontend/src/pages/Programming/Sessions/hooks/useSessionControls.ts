@@ -10,7 +10,6 @@ import {
   preferenceColumnWidths,
   preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
-import type { ProgramCohort } from '../../Cohorts/types';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionSortKey, SessionType } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
@@ -37,7 +36,6 @@ interface UseSessionControlsOptions {
   cycles: ProgramCycle[];
   cyclesLoading: boolean;
   cyclesError?: string | null;
-  cohorts: ProgramCohort[];
   sessionTypes: SessionType[];
   sessionTypesLoading: boolean;
   sessionTypesError?: string | null;
@@ -46,7 +44,7 @@ interface UseSessionControlsOptions {
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 export function useSessionControls({
-  role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError, cohorts,
+  role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
   sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
@@ -74,11 +72,6 @@ export function useSessionControls({
     setAppliedSearch('');
   };
 
-  // Stable option sets shared by the header and Add Sessions modal.
-  const schedulableCohorts = useMemo(() => cohorts.filter(cohort =>
-    cohort.state !== 'completed'
-    && (!programIds.length || programIds.includes(cohort.programId))
-    && (!cycleIds.length || cycleIds.includes(cohort.cycleId))), [cohorts, programIds, cycleIds]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
     { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
     { id: 'cycle', label: 'Cycle', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
@@ -113,7 +106,6 @@ export function useSessionControls({
     error,
     view,
     setView,
-    schedulableCohorts,
     search: {
       value: search,
       setValue: setSearch,

@@ -14,3 +14,12 @@ export function createProgram(data: CreateProgramInput) {
 export function updateProgram(programId: string, data: UpdateProgramInput) {
   return apiClient.put<Program>(`/programs/${programId}`, data);
 }
+
+export interface ProgramCycleAssignments {
+  programId: string;
+  cycleIds: string[];
+}
+
+export function setProgramCycles(programId: string, cycleIds: string[]) {
+  return apiClient.put<ProgramCycleAssignments>(`/programs/${programId}/cycles`, { cycleIds });
+}

@@ -9,6 +9,7 @@ import CycleTable from './components/CycleTable/CycleTable';
 import useCycleTable from './components/CycleTable/hooks/useCycleTable';
 import ProgramTable from './components/ProgramTable/ProgramTable';
 import useProgramTable from './components/ProgramTable/hooks/useProgramTable';
+import ProgramCyclesModal from './components/ProgramCyclesModal/ProgramCyclesModal';
 import ProgramModal from './components/ProgramModal/ProgramModal';
 import useProgrammingActions from './hooks/actions/useProgrammingActions';
 import useProgrammingData from './hooks/data/useProgrammingData';
@@ -30,7 +31,7 @@ export default function Programming() {
   const modals = useProgrammingModals();
 
   // Table configuration.
-  const { columns: programColumns } = useProgramTable(modals.program.open);
+  const { columns: programColumns } = useProgramTable(modals.program.open, modals.assignments.open);
   const { columns: cycleColumns } = useCycleTable({
     onEdit: modals.cycle.open,
     onDelete: requestCycleDeletion,
@@ -90,9 +91,22 @@ export default function Programming() {
       onClose={modals.program.close}
       onSaved={data.upsertProgram}
     />
+    {modals.assignments.target && <ProgramCyclesModal
+      key={modals.assignments.target.id}
+      program={modals.assignments.target}
+      cycles={data.cycles}
+      cyclesLoading={data.cyclesLoading}
+      cyclesError={data.cyclesError}
+      onRetryCycles={data.refreshCycles}
+      onClose={modals.assignments.close}
+    />}
     <CycleModal
       isOpen={modals.cycle.target !== undefined}
       cycle={modals.cycle.target ?? null}
+      programs={data.programs}
+      programsReady={!data.programsLoading && !data.programsError}
+      programsError={data.programsError}
+      onRetryPrograms={data.retryPrograms}
       onClose={modals.cycle.close}
       onSaved={data.refreshCycles}
     />

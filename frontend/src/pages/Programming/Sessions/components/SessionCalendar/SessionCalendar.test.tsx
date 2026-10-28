@@ -1,233 +1,158 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import type { ReactElement } from 'react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import { makeCohortSession } from '../../../../../tests/factories/session';
+import { buildDayPeriod } from '../../../../../common/components/TimelineCalendar/utils/periods';
+import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
+import type { Program } from '../../../../../common/features/programs/types';
+import type { CohortSession, SessionListFilters } from '../../types';
 import SessionCalendar from './SessionCalendar';
+import SessionItem from './SessionItem/SessionItem';
 
-const getSessions = vi.fn();
-
-interface MockFullCalendarProps {
-  initialView: string;
-  noEventsText: string;
-  dayMaxEvents: number;
-  headerToolbar: { end: string };
-  datesSet: (range: { start: Date; end: Date }) => void;
-  eventContent: (info: {
-    event: {
-      id: string;
-      title: string;
-      start: Date;
-      end: Date;
-      extendedProps: { programName?: string };
-    };
-  }) => React.ReactNode;
-  events: Array<{
-    id: string;
-    title: string;
-    start: string;
-    end: string;
-    classNames?: string[];
-    extendedProps?: { programName?: string };
-  }>;
-}
-
-interface MockFullCalendarHandle {
-  getApi: () => {
-    changeView: ReturnType<typeof vi.fn>;
-  };
-}
-
-vi.mock('../../sessions.api', () => ({
-  getSessions: (...args: unknown[]) => getSessions(...args),
+type CalendarProps = TimelineCalendarProps<Program, CohortSession>;
+const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
+const api = vi.hoisted(() => ({ getSessions: vi.fn() }));
+vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
+  default: (props: CalendarProps) => {
+    calendarState.props = props;
+    return <div aria-label="Sessions calendar" />;
+  },
 }));
+vi.mock('../../sessions.api', () => ({ getSessions: api.getSessions }));
 
-vi.mock('@fullcalendar/react', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-
-  return {
-    default: React.forwardRef<MockFullCalendarHandle, MockFullCalendarProps>(function MockFullCalendar({
-      initialView,
-      noEventsText,
-      dayMaxEvents,
-      headerToolbar,
-      datesSet,
-      eventContent,
-      events,
-    }: MockFullCalendarProps, ref) {
-      React.useImperativeHandle(ref, () => ({
-        getApi: () => ({ changeView: vi.fn() }),
-      }));
-
-      return (
-        <div
-          data-testid="full-calendar"
-          data-initial-view={initialView}
-          data-view-options={headerToolbar.end}
-          data-day-max-events={dayMaxEvents}
-        >
-          <span>{noEventsText}</span>
-          <button
-            type="button"
-            onClick={() => datesSet({
-              start: new Date('2026-07-01T00:00:00.000Z'),
-              end: new Date('2026-08-01T00:00:00.000Z'),
-            })}
-          >
-            Load calendar range
-          </button>
-          {events.map(event => (
-            <div key={event.id} className={event.classNames?.join(' ')}>
-              {eventContent({
-                event: {
-                  id: event.id,
-                  title: event.title,
-                  start: new Date(event.start),
-                  end: new Date(event.end),
-                  extendedProps: event.extendedProps ?? {},
-                },
-              })}
-            </div>
-          ))}
-        </div>
-      );
-    }),
-  };
-});
-
-const sessions = [
-  {
-    id: 'session-1',
-    cohortId: 'cohort-1',
-    sessionTypeId: 'type-guest-speaker',
-    sessionTypeName: 'Guest Speaker',
-    theme: 'Communication',
-    cohortName: 'Summer 2026',
-    programId: 'program-1',
-    programName: 'Soft Skills',
-    rosterMode: 'enrolled' as const,
-    startsAt: '2099-07-07T21:00:00.000Z',
-    endsAt: '2099-07-07T23:30:00.000Z',
-    cancelledAt: null,
-    description: null,
-  },
-  {
-    id: 'session-2',
-    cohortId: 'cohort-2',
-    sessionTypeId: 'type-regular',
-    sessionTypeName: 'Regular',
-    theme: 'Resumes',
-    cohortName: 'Summer 2026',
-    programId: 'program-2',
-    programName: 'Job Readiness',
-    rosterMode: 'enrolled' as const,
-    startsAt: '2000-07-08T21:00:00.000Z',
-    endsAt: '2000-07-08T23:00:00.000Z',
-    cancelledAt: null,
-    description: null,
-  },
+const programs: Program[] = [
+  { id: 'program-1', name: 'Future Ready', rosterMode: 'enrolled', minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
+  { id: 'program-2', name: 'Job Readiness', rosterMode: 'open', minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
 ];
+const session = makeCohortSession();
+const period = buildDayPeriod(new Date(2026, 7, 10));
+
+function renderCalendar(filters: SessionListFilters = {}, editable = true) {
+  const callbacks = {
+    onSessionSelect: vi.fn(), onSessionEdit: vi.fn(), onSessionDelete: vi.fn(),
+    onAddSession: vi.fn(), onProgramSelect: vi.fn(), onSessionsLoaded: vi.fn(), onErrorChange: vi.fn(),
+  };
+  const rendered = render(<SessionCalendar
+    queryKey={['sessions', 'calendar']}
+    filters={filters}
+    programs={programs}
+    selectedSessionId={session.id}
+    selectedProgramId={programs[0].id}
+    {...callbacks}
+    onAddSession={editable ? callbacks.onAddSession : undefined}
+    onSessionEdit={editable ? callbacks.onSessionEdit : undefined}
+    onSessionDelete={editable ? callbacks.onSessionDelete : undefined}
+  />);
+  return { ...rendered, ...callbacks };
+}
+
+function buildSessionItem(): ReactElement<Parameters<typeof SessionItem>[0]> {
+  return calendarState.props!.buildItem({
+    row: programs[0], data: session,
+    range: { start: '2026-08-10', end: '2026-08-10' },
+    visibleStart: period, visibleEnd: period,
+  }) as ReactElement<Parameters<typeof SessionItem>[0]>;
+}
 
 describe('SessionCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.defineProperty(window, 'innerWidth', {
-      value: 1024,
-      writable: true,
-      configurable: true,
-    });
-    getSessions.mockResolvedValue(sessions);
+    calendarState.props = null;
+    api.getSessions.mockResolvedValue([session]);
   });
 
-  it('loads the visible range and opens the selected session', async () => {
-    const onSessionSelect = vi.fn();
-    const onSessionEdit = vi.fn();
-    const onSessionDelete = vi.fn();
-    const onSessionsLoaded = vi.fn();
-    render(
-      <SessionCalendar
-        queryKey={['sessions', 'calendar']}
-        filters={{}}
-        selectedSessionId="session-1"
-        onSessionsLoaded={onSessionsLoaded}
-        onSessionSelect={onSessionSelect}
-        onSessionEdit={onSessionEdit}
-        onSessionDelete={onSessionDelete}
-      />,
-    );
+  it('loads complete filters with a Toronto range, groups sessions by program and resolves buffered selection records', async () => {
+    const filters: SessionListFilters = {
+      programIds: ['program-1', 'program-2'], cycleIds: ['cycle-1'],
+      sessionTypeIds: ['type-1'], statuses: ['upcoming'], search: 'Communication',
+    };
+    const otherSession = makeCohortSession({ id: 'session-2', programId: 'program-2' });
+    api.getSessions.mockResolvedValue([session, otherSession]);
+    const rendered = renderCalendar(filters);
+    act(() => calendarState.props!.onInitialPeriods!([period]));
 
-    expect(screen.getByTestId('full-calendar')).toHaveAttribute('data-initial-view', 'dayGridMonth');
-    expect(screen.getByTestId('full-calendar')).toHaveAttribute(
-      'data-view-options',
-      'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
-    );
-    expect(screen.getByTestId('full-calendar')).toHaveAttribute('data-day-max-events', '1');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
-    const session = await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
-    });
-    expect(session.closest('.programming-calendar-event--selected')).not.toBeNull();
-    fireEvent.click(session);
-
-    expect(getSessions).toHaveBeenCalledWith({
-      start: '2026-07-01T00:00:00.000Z',
-      end: '2026-08-01T00:00:00.000Z',
-    }, { signal: expect.any(AbortSignal) });
-    expect(onSessionsLoaded).toHaveBeenCalledWith(sessions);
-    expect(onSessionSelect).toHaveBeenCalledWith(sessions[0]);
-    fireEvent.click(screen.getByText('Soft Skills'));
-    fireEvent.click(screen.getByText('5pm – 7:30pm'));
-    expect(onSessionSelect).toHaveBeenCalledTimes(3);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Communication' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Communication' }));
-    expect(onSessionEdit).toHaveBeenCalledWith(sessions[0]);
-    expect(onSessionDelete).toHaveBeenCalledWith(sessions[0]);
-    expect(onSessionSelect).toHaveBeenCalledTimes(3);
+    const requestFilters = {
+      ...filters, start: '2026-06-29T04:00:00Z', end: '2026-09-22T04:00:00Z',
+    };
+    await waitFor(() => expect(api.getSessions).toHaveBeenCalledWith(requestFilters, { signal: expect.any(AbortSignal) }));
+    await waitFor(() => expect(calendarState.props!.items).toEqual({
+      'program-1': [session], 'program-2': [otherSession],
+    }));
+    expect(rendered.queryClient.getQueryData(['sessions', 'calendar', requestFilters])).toEqual([session, otherSession]);
+    expect(rendered.onSessionsLoaded).toHaveBeenLastCalledWith([session, otherSession]);
+    expect(calendarState.props!.rows).toEqual(programs);
+    expect(calendarState.props!.getItemRange(session)).toEqual({ start: '2026-08-10', end: '2026-08-10' });
   });
 
-  it('shows sessions from each selected program', async () => {
-    render(
-      <SessionCalendar
-        queryKey={['sessions', 'calendar']}
-        filters={{ programIds: ['program-1', 'program-2'] }}
-        selectedSessionId=""
-        onSessionSelect={vi.fn()}
-      />,
-    );
+  it('keeps selected program rows and connects program/session selection and edit/delete actions', () => {
+    const rendered = renderCalendar({ programIds: ['program-1'] });
+    const calendar = calendarState.props!;
+    const item = buildSessionItem();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
+    expect(calendar.rows).toEqual([programs[0]]);
+    expect(calendar.selectedRowId).toBe(programs[0].id);
+    expect(item.props.selected).toBe(true);
+    calendar.onCellActivate!({ row: programs[0], rowIndex: 0, period, items: [] });
+    expect(rendered.onAddSession).toHaveBeenCalledWith(programs[0], period.key);
+    calendar.onRowSelect!(programs[0]);
+    calendar.onItemActivate!({ row: programs[0], data: session, range: calendar.getItemRange(session) });
+    item.props.onEdit!();
+    item.props.onDelete!();
 
-    expect(await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
-    })).toBeInTheDocument();
-    expect(screen.getByText('Guest Speaker')).toBeInTheDocument();
-    expect(screen.getByRole('button', {
-      name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
-    })).toBeInTheDocument();
-    await waitFor(() => expect(getSessions).toHaveBeenCalledTimes(1));
+    expect(rendered.onProgramSelect).toHaveBeenCalledWith(programs[0]);
+    expect(rendered.onSessionSelect).toHaveBeenCalledWith(session);
+    expect(rendered.onSessionEdit).toHaveBeenCalledWith(session);
+    expect(rendered.onSessionDelete).toHaveBeenCalledWith(session);
+    expect(calendar.getItemCapabilities!({ row: programs[0], data: session, range: calendar.getItemRange(session) }))
+      .toEqual({ draggable: false, resizable: false });
+    expect(calendar.onItemMove).toBeUndefined();
+    expect(calendar.onItemResize).toBeUndefined();
   });
 
-  it('applies the same status filter used by the table', async () => {
-    getSessions.mockResolvedValue([sessions[0]]);
-    render(
-      <SessionCalendar
-        queryKey={['sessions', 'calendar']}
-        filters={{ statuses: ['upcoming'] }}
-        selectedSessionId=""
-        onSessionSelect={vi.fn()}
-      />,
-    );
+  it('omits write actions for a read-only consumer', () => {
+    renderCalendar({}, false);
+    const item = buildSessionItem();
+    expect(calendarState.props!.onCellActivate).toBeUndefined();
+    expect(item.props.onEdit).toBeUndefined();
+    expect(item.props.onDelete).toBeUndefined();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load calendar range' }));
+  it('enables future session moves within the same program and reconciles the visible buffer', async () => {
+    const future = makeCohortSession({ startsAt: '2099-08-10T21:00:00Z', endsAt: '2099-08-10T23:00:00Z' });
+    const updated = { ...future, cycleId: 'cycle-1', startsAt: '2099-08-11T21:00:00Z', endsAt: '2099-08-11T23:00:00Z' };
+    const move = vi.fn().mockResolvedValue(updated);
+    api.getSessions.mockResolvedValue([future]);
+    const day = buildDayPeriod(new Date(2099, 7, 10));
+    render(<SessionCalendar queryKey={['sessions', 'calendar']} filters={{}} programs={programs}
+      selectedSessionId={future.id} onSessionSelect={vi.fn()} onSessionMove={move} />);
+    act(() => calendarState.props!.onInitialPeriods!([day]));
+    await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([future]));
+    const calendar = calendarState.props!;
+    const context = { row: programs[0], data: future, range: calendar.getItemRange(future) };
+    expect(calendar.getItemCapabilities!(context)).toEqual({ draggable: true, resizable: false });
+    expect(calendar.getItemCapabilities!({ ...context, data: session }).draggable).toBe(false);
+    expect(calendar.getItemCapabilities!({ ...context, data: { ...future, cancelledAt: '2099-01-01T00:00:00Z' } }).draggable).toBe(false);
+    const drop = { row: programs[0], destinationRow: programs[0], item: future,
+      originalRange: context.range, nextRange: { start: '2099-08-11', end: '2099-08-11' } };
+    expect(calendar.canItemMove!(drop)).toBe(true);
+    expect(calendar.canItemMove!({ ...drop, destinationRow: programs[1] })).toBe(false);
+    await act(async () => { await calendar.onItemMove!(drop); });
+    expect(move).toHaveBeenCalledWith(future, '2099-08-11');
+    await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([updated]));
+  });
 
-    expect(await screen.findByRole('button', {
-      name: 'Soft Skills, Communication, Guest Speaker, 5pm – 7:30pm',
-    })).toBeInTheDocument();
-    expect(screen.queryByRole('button', {
-      name: 'Job Readiness, Resumes, Regular, 5pm – 7pm',
-    })).not.toBeInTheDocument();
-    expect(getSessions).toHaveBeenCalledWith(
-      expect.objectContaining({ statuses: ['upcoming'] }),
-      { signal: expect.any(AbortSignal) },
-    );
+  it('reports load failure and retries the range through the page error owner', async () => {
+    api.getSessions.mockRejectedValueOnce(new Error('Could not load sessions'));
+    const rendered = renderCalendar();
+    act(() => calendarState.props!.onInitialPeriods!([period]));
+
+    expect(await screen.findByText('Sessions calendar unavailable')).toBeInTheDocument();
+    expect(rendered.onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      message: 'Could not load sessions', action: expect.objectContaining({ label: 'Retry' }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(rendered.onSessionsLoaded).toHaveBeenLastCalledWith([session]));
+    expect(screen.queryByText('Sessions calendar unavailable')).not.toBeInTheDocument();
   });
 });

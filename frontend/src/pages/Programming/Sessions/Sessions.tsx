@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -9,9 +9,14 @@ import PageErrorOverlay, { type PageErrorItem } from '../../../common/components
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
+import type { Program } from '../../../common/features/programs/types';
+import ProgramOverviewDashboardCard from './components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard';
+import ManageRosterModal from '../Cohorts/components/ManageRosterModal/ManageRosterModal';
+import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
+import type { ProgramCohort } from '../Cohorts/types';
 import { usePrograms } from '../../../common/features/programs/hooks/usePrograms';
 import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from './types';
-import GenerateSessionsModal from './components/GenerateSessionsModal/GenerateSessionsModal';
+import AddSessionModal from './components/AddSessionModal/AddSessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
@@ -30,7 +35,7 @@ const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
-export default function Sessions() {
+export default function Programming() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
   const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
 
@@ -38,10 +43,13 @@ export default function Sessions() {
   const { permissions, role } = useAuth();
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
+  const canReadCohorts = permissions.includes('read:programs');
+  const canManageRoster = permissions.includes('write:enrollments');
+  const canViewYouthReport = canReadCohorts && permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data.
   const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const { cohorts, error: cohortsError, refresh: refreshCohorts } = useCohorts();
+  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts(undefined, canReadCohorts);
   const { cycles, loading: cyclesLoading, error: cyclesError } = useCycles();
   const {
     sessionTypes,
@@ -51,12 +59,12 @@ export default function Sessions() {
 
   // Saved preferences and current view.
   const controls = useSessionControls({
-    role, programs, programsLoading, programsError, cohorts,
+    role, programs, programsLoading, programsError,
     cycles, cyclesLoading, cyclesError,
     sessionTypes, sessionTypesLoading, sessionTypesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
-  const { search, filters, table: tableControls, view, ready: filtersReady, schedulableCohorts } = controls;
+  const { search, filters, table: tableControls, view, ready: filtersReady } = controls;
   const { programIds: selectedProgramIds, cycleIds, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
 
   // Filter configuration.
@@ -70,24 +78,42 @@ export default function Sessions() {
 
   // Selection and actions.
   const selection = useSessionSelection();
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!programsLoading && !programsError && selectedProgramId
+      && !programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(null);
+  }, [programs, programsError, programsLoading, selectedProgramId, setSelectedProgramId]);
+  const selectProgram = (program: Program) => {
+    selection.clearSelectedSession();
+    setSelectedProgramId(program.id);
+  };
+  const selectSession = (session: CohortSession) => {
+    setSelectedProgramId(session.programId);
+    selection.selectSession(session);
+  };
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
   const applyFilter = (category: string, selected: string[]) => {
     selection.clearSelectedSession();
+    setSelectedProgramId(null);
     filters.apply(category, selected);
   };
   const clearFilters = () => {
     selection.clearSelectedSession();
+    setSelectedProgramId(null);
     filters.clear();
   };
+
+  // Roster and reporting workflows for the selected program and cycle.
+  const [rosterTarget, setRosterTarget] = useState<ProgramCohort | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
-  // Generate sessions modal.
-  const [addSessionsOpen, setAddSessionsOpen] = useState(false);
-  const openAddSessionsModal = () => setAddSessionsOpen(true);
-  const closeAddSessionsModal = () => setAddSessionsOpen(false);
+  // Single-session creation from the page or a calendar date.
+  const [addSessionTarget, setAddSessionTarget] = useState<{ programId?: string; date?: string } | null>(null);
+  const closeAddSessionModal = () => setAddSessionTarget(null);
 
   // Edit session modal.
   const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
@@ -95,6 +121,7 @@ export default function Sessions() {
 
   // Table configuration.
   const columns = useSessionTable({
+    programs,
     canWriteAttendance,
     canWriteSessions,
     onTakeAttendance: setAttendanceTarget,
@@ -105,14 +132,29 @@ export default function Sessions() {
   // View initialization and presentation.
   const selectedSession = selection.getSelectedSession(view);
 
-  const dashboard = <SessionDashboard
+  const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
+  const canAddSession = !programsLoading && programs.length > 0;
+  const programCohorts = cohorts.filter(cohort => cohort.programId === selectedProgram?.id
+    && (!cycleIds.length || cycleIds.includes(cohort.cycleId)));
+  const programDashboard = <ProgramOverviewDashboardCard
+    program={selectedProgram}
+    cohorts={programCohorts}
+    loading={cohortsLoading}
+    error={cohortsError}
+    onRetry={() => { void refreshCohorts(); }}
+    canManageRoster={canManageRoster}
+    canViewYouthReport={canViewYouthReport}
+    onManageRoster={setRosterTarget}
+    onViewReport={setReportTarget}
+  />;
+  const dashboard = selectedSession ? <SessionDashboard
     sessionQueryKey={SESSION_QUERY_KEY}
     session={selectedSession}
     canWriteAttendance={canWriteAttendance}
     canWriteSessions={canWriteSessions}
     onAddAttendance={setAttendanceTarget}
     onErrorsChange={setDashboardErrors}
-  />;
+  /> : programDashboard;
 
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
@@ -123,20 +165,30 @@ export default function Sessions() {
     columnWidths={tableControls.columnWidths}
     selectedSessionId={selection.selectedSessionId}
     onSelectedSessionResolved={selection.setSelectedTableSession}
-    onSessionSelect={selection.selectSession}
+    onSessionSelect={selectSession}
     onSortingChange={tableControls.setSorting}
     onColumnWidthsChange={tableControls.setColumnWidths}
     onErrorChange={setViewError}
   />;
 
   const calendar = <SessionCalendar
+    key={JSON.stringify([sessionFilters, actions.calendarRevision])}
+    programs={programs}
+    selectedProgramId={selectedProgram?.id}
+    onProgramSelect={selectProgram}
     queryKey={SESSION_CALENDAR_QUERY_KEY}
     filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
     onSessionsLoaded={selection.setCalendarSessions}
-    onSessionSelect={selection.selectCalendarSession}
+    onSessionSelect={session => {
+      setSelectedProgramId(session.programId);
+      selection.selectCalendarSession(session);
+    }}
+    pendingSessionIds={actions.pendingSessionIds}
+    onSessionMove={canWriteSessions ? actions.moveSession : undefined}
     onSessionEdit={canWriteSessions ? setEditTarget : undefined}
     onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
+    onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
     onErrorChange={setViewError}
   />;
   const viewContent = view === 'table' ? { table } : { calendar };
@@ -145,11 +197,11 @@ export default function Sessions() {
     <>
       <main className="page-container sessions-page" data-view={view}>
         <PageHeader
-          title="Sessions"
+          title="Programming"
           actions={
             canWriteSessions ? (
-              <Button onClick={openAddSessionsModal} disabled={!schedulableCohorts.length}>
-                + Add
+              <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
+                + Add Session
               </Button>
             ) : undefined
           }
@@ -197,6 +249,7 @@ export default function Sessions() {
         />
         <PageErrorOverlay errors={[
           controls.error,
+          actions.moveError,
           programsError,
           cohortsError,
           cyclesError,
@@ -206,7 +259,7 @@ export default function Sessions() {
         ]} />
 
         {!filtersReady ? <p role="status">Loading saved filters…</p> : <PageBody
-          ariaLabel={view === 'table' ? 'Sessions and overview' : 'Sessions calendar and overview'}
+          ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
           dashboard={dashboard}
           {...viewContent}
         />}
@@ -220,21 +273,29 @@ export default function Sessions() {
 
       <EditSessionModal
         session={editTarget}
+        timezone={programs.find(program => program.id === editTarget?.programId)?.timezone ?? 'America/Toronto'}
         onClose={closeEditSessionModal}
         onUpdated={actions.refreshSessionQueries}
       />
 
-      <GenerateSessionsModal
-        cohort={null}
-        cohorts={schedulableCohorts}
-        isOpen={addSessionsOpen}
-        initialCohortId={schedulableCohorts[0]?.id}
-        onClose={closeAddSessionsModal}
-        onSuccess={async () => {
+      {addSessionTarget && <AddSessionModal
+        programs={programs}
+        initialProgramId={addSessionTarget.programId}
+        initialDate={addSessionTarget.date}
+        onClose={closeAddSessionModal}
+        onSaved={async () => {
           await Promise.all([actions.refreshSessionQueries(), refreshCohorts()]);
         }}
-      />
+      />}
 
+      {canReadCohorts && <ManageRosterModal
+        cohort={rosterTarget}
+        onClose={() => setRosterTarget(null)}
+        onSuccess={async () => {
+          await actions.refreshAttendance();
+        }}
+      />}
+      {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
       <ConfirmModal
         action={actions.confirmAction}
         onClose={actions.closeConfirmation}

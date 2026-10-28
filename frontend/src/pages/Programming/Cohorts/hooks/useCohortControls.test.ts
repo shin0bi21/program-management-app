@@ -14,6 +14,10 @@ const programs: Program[] = [{
   rosterMode: 'enrolled',
   minAge: 12,
   maxAge: 15,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 }];
 const tableKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
 

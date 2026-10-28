@@ -25,13 +25,16 @@ const getSessionTypes = vi.fn();
 const deleteSession = vi.fn();
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
-  permissions: ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
+  permissions: ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
 }));
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
     id: 'program-1',
     name: 'Soft Skills',
     description: null,
+
+    defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+
     rosterMode: 'enrolled',
     minAge: 12,
     maxAge: 15,
@@ -57,7 +60,7 @@ vi.mock('./sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   createSessionNote: vi.fn(),
-  generateSessions: vi.fn(),
+  createSession: vi.fn(),
   setSessionAttendance: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));
@@ -77,9 +80,19 @@ vi.mock('../../../common/features/Preferences/preferences.api', () => ({
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   default: ({
     onSessionSelect,
+    onSessionMove,
+    selectedProgramId,
+    onAddSession,
+    programs,
+    onProgramSelect,
     filters,
   }: {
+    selectedProgramId?: string | null;
+    onSessionMove?: unknown;
+    onAddSession?: (program: Program, date: string) => void;
     filters: SessionListFilters;
+    programs: Program[];
+    onProgramSelect: (program: Program) => void;
     onSessionSelect: (session: {
       id: string;
       cohortId: string;
@@ -100,7 +113,9 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
       state: 'upcoming';
     }) => void;
   }) => (
-    <div data-testid="sessions-calendar-view" data-cycle-ids={filters.cycleIds?.join(',')}>
+    <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')}>
+      <button type="button" onClick={() => onProgramSelect(programs[0])}>Program row</button>
+      {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
       <button
         type="button"
         onClick={() =>
@@ -113,6 +128,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
             cohortName: 'Summer 2026',
             programId: 'program-1',
             programName: 'Soft Skills',
+
             rosterMode: 'enrolled',
             startsAt: '2026-07-28T21:00:00.000Z',
             endsAt: '2026-07-28T23:30:00.000Z',
@@ -133,6 +149,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
+    localStorage.clear();
     preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
     preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
@@ -140,11 +157,14 @@ describe('Sessions', () => {
       return value;
     });
     auth.role = 'admin';
-    auth.permissions = ['read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
+    auth.permissions = ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
     programState.programs = [{
       id: 'program-1',
       name: 'Soft Skills',
       description: null,
+
+      defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+
       rosterMode: 'enrolled',
       minAge: 12,
       maxAge: 15,
@@ -162,12 +182,14 @@ describe('Sessions', () => {
       {
         id: 'cohort-1',
         cycleId: 'cycle-1',
+        cycleName: 'Summer 2026',
         programId: 'program-1',
         programName: 'Soft Skills',
+
         rosterMode: 'enrolled',
         name: 'Summer 2026',
-        startsOn: '2026-07-01',
-        endsOn: '2026-09-01',
+        startsOn: '2020-01-01',
+        endsOn: '2100-12-31',
         state: 'active',
         enrolledCount: 1,
         nextSessionAt: null,
@@ -188,6 +210,7 @@ describe('Sessions', () => {
         cohortName: 'Summer 2026',
         programId: 'program-1',
         programName: 'Soft Skills',
+
         rosterMode: 'enrolled',
         startsAt: '2026-07-28T21:00:00.000Z',
         endsAt: '2026-07-28T23:30:00.000Z',
@@ -244,9 +267,9 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
+    expect(await screen.findByText('Select a program to view its current cohort.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add attachments' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add notes' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText('Friday Drop In'));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
@@ -322,7 +345,7 @@ describe('Sessions', () => {
     );
     await screen.findByText('Communication');
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent(
       'No attendance.',
     );
     const initialRequestCount = getSessions.mock.calls.length;
@@ -333,7 +356,7 @@ describe('Sessions', () => {
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
-    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
     expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
@@ -347,10 +370,10 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Programming' })).toBeInTheDocument();
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toHaveTextContent('No attendance.');
+    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');
     expect(await screen.findByText('No attachments.')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
@@ -375,11 +398,67 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    const addButton = await screen.findByRole('button', { name: '+ Add' });
+    const addButton = await screen.findByRole('button', { name: '+ Add Session' });
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
-    expect(screen.getByRole('heading', { name: 'Add Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
+  });
+
+  it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    getCohorts.mockResolvedValue([{
+      id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', name: 'Summer 2026',
+      cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
+      state: 'completed', rosterMode: 'enrolled', enrolledCount: 0, averageAttendance: null,
+    }]);
+    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
+    const addButton = screen.getByRole('button', { name: '+ Add Session' });
+    await waitFor(() => expect(addButton).toBeEnabled());
+    fireEvent.click(addButton);
+    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');
+    expect(screen.getByLabelText('Program')).toBeEnabled();
+    expect(screen.getByLabelText('Session date')).not.toHaveAttribute('max');
+  });
+
+  it('enables calendar moves only for session writers', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    const view = render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'true');
+    auth.permissions = auth.permissions.filter(permission => permission !== 'write:sessions');
+    view.rerender(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
+  });
+
+  it('opens a session with the calendar date and program default times', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Calendar date' }));
+    expect(screen.getByLabelText('Session date')).toHaveValue('2026-07-29');
+    expect(screen.getByLabelText('Start time')).toHaveValue('17:00');
+    expect(screen.getByLabelText('End time')).toHaveValue('19:30');
+  });
+
+  it('switches the dashboard between a program row and a session without losing cohort access', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    auth.permissions.push('write:enrollments');
+    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
+    expect(await screen.findByRole('heading', { name: 'Soft Skills - Summer 2026 Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
+    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
+    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
   });
 
   // Table, calendar, dashboard, and body initialization.
@@ -393,7 +472,7 @@ describe('Sessions', () => {
 
     expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
-    const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
+    const pageHeader = screen.getByRole('heading', { name: 'Programming' }).closest('header');
     const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
     expect(pageHeader).not.toBeNull();
     expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -405,8 +484,8 @@ describe('Sessions', () => {
 
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Sessions and overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByText('Communication'));
 

@@ -4,21 +4,22 @@ import type { CellContext } from '@tanstack/react-table';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { CohortSession } from '../../../types';
+import type { Program } from '../../../../../../common/features/programs/types';
+import { sessionDateTime } from '../../../utils/sessionSchedule';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
 
-const timeFormatter = new Intl.DateTimeFormat('en-CA', {
-  hour: 'numeric',
-  minute: '2-digit',
-});
+const noPrograms: Program[] = [];
 
 export default function useSessionTable({
+  programs = noPrograms,
   canWriteAttendance,
   canWriteSessions,
   onTakeAttendance,
   onEdit,
   onDelete,
 }: {
+  programs?: Program[];
   canWriteAttendance: boolean;
   canWriteSessions: boolean;
   onTakeAttendance: (session: CohortSession) => void;
@@ -29,12 +30,22 @@ export default function useSessionTable({
     { id: 'program', header: 'Program', accessorFn: session => session.programName },
     { id: 'cohort', header: 'Cohort', accessorFn: session => session.cohortName },
     { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
-    { id: 'date', header: 'Date', size: 135, accessorFn: session => formatShortDate(session.startsAt) },
+    {
+      id: 'date', header: 'Date', size: 135,
+      accessorFn: session => {
+        const timezone = programs.find(program => program.id === session.programId)?.timezone ?? 'America/Toronto';
+        return formatShortDate(sessionDateTime(session.startsAt, timezone).date);
+      },
+    },
     {
       id: 'time',
       header: 'Time',
       size: 165,
-      accessorFn: session => `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`,
+      accessorFn: session => {
+        const timezone = programs.find(program => program.id === session.programId)?.timezone ?? 'America/Toronto';
+        const timeFormatter = new Intl.DateTimeFormat('en-CA', { hour: 'numeric', minute: '2-digit', timeZone: timezone });
+        return `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`;
+      },
     },
     {
       id: 'type',
@@ -67,5 +78,5 @@ export default function useSessionTable({
         ]}
       />,
     }] : []),
-  ], [canWriteAttendance, canWriteSessions, onDelete, onEdit, onTakeAttendance]);
+  ], [programs, canWriteAttendance, canWriteSessions, onDelete, onEdit, onTakeAttendance]);
 }
