@@ -34,7 +34,7 @@ describe('SignupSection', () => {
 
     fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: '  Jordan  ' } })
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: '  Test  ' } })
-    fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
+    fireEvent.change(document.getElementById('cohort-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: '  Westview  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Who is filling out this form?' }))
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Youth' }))
@@ -48,7 +48,7 @@ describe('SignupSection', () => {
       expect(mockSubmitPublicLead).toHaveBeenCalledWith({
         youthFirstName: 'Jordan',
         youthLastName: 'Test',
-        age: 14,
+        dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
         school: 'Westview',
         submittedByRole: 'youth',
         contactPhoneNumber: '519-555-0199',
@@ -65,7 +65,7 @@ describe('SignupSection', () => {
 
     fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: 'Jordan' } })
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: 'Test' } })
-    fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
+    fireEvent.change(document.getElementById('cohort-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: 'Westview' } })
     fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '519-555-0199' } })
     fireEvent.click(screen.getByRole('button', { name: /submit/i }))
@@ -83,7 +83,7 @@ describe('SignupSection', () => {
 
     fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: 'Jordan' } })
     fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: 'Test' } })
-    fireEvent.change(document.getElementById('cohort-age')!, { target: { value: '14' } })
+    fireEvent.change(document.getElementById('cohort-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } })
     fireEvent.change(document.getElementById('cohort-school')!, { target: { value: 'Westview' } })
     fireEvent.submit(screen.getByRole('button', { name: /submit/i }).closest('form')!)
 

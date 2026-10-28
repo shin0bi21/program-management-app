@@ -191,12 +191,12 @@ export interface LeadNotes {
 }
 
 export interface Leads {
-  age: number;
   contact_phone_number: string;
   contact_relationship: ContactType;
   converted_youth_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  date_of_birth: Timestamp | null;
   discovery_source: DiscoverySource;
   expression_of_interest_id: string | null;
   id: Generated<string>;

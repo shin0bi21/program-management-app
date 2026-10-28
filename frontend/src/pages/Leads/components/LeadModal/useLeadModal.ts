@@ -13,21 +13,6 @@ import { getErrorMessage } from '../../../../http/errors';
 import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
 
-const valuesForLead = (lead?: Lead): OutreachFormValues => (
-  lead
-    ? {
-        youthFirstName: lead.youthFirstName,
-        youthLastName: lead.youthLastName,
-        age: lead.age,
-        school: lead.school,
-        contactPhoneNumber: lead.contactPhoneNumber,
-        contactRelationship: lead.contactRelationship,
-        discoverySource: lead.discoverySource,
-        notes: lead.notes ?? '',
-      }
-    : outreachFormDefaultValues
-);
-
 export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   isOpen: boolean;
   onClose: () => void;
@@ -66,7 +51,7 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
       const payload = {
         youthFirstName: data.youthFirstName.trim(),
         youthLastName: data.youthLastName.trim(),
-        age: data.age,
+        dateOfBirth: data.dateOfBirth,
         school: data.school.trim(),
         contactPhoneNumber: data.contactPhoneNumber.trim(),
         contactRelationship: data.contactRelationship,
@@ -87,3 +72,19 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
 
   return { register, control, errors, handleSubmit, onValid, submitStatus, error, handleClose };
 }
+
+/** Initializes an edit draft from the saved DOB, leaving legacy dates blank. */
+const valuesForLead = (lead?: Lead): OutreachFormValues => (
+  lead
+    ? {
+        youthFirstName: lead.youthFirstName,
+        youthLastName: lead.youthLastName,
+        dateOfBirth: lead.dateOfBirth ?? '',
+        school: lead.school,
+        contactPhoneNumber: lead.contactPhoneNumber,
+        contactRelationship: lead.contactRelationship,
+        discoverySource: lead.discoverySource,
+        notes: lead.notes ?? '',
+      }
+    : outreachFormDefaultValues
+);

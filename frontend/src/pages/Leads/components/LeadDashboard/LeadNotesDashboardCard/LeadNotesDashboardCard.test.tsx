@@ -20,7 +20,7 @@ const lead: Lead = {
   convertedYouthId: null,
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
-  age: 14,
+  age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: null,
   recommendedProgramName: null,

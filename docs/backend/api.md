@@ -190,6 +190,18 @@ Lead workflow endpoints:
 | `PUT/DELETE` | `/leads/:id/notes/:noteId` | Edit or delete a follow-up note |
 | `POST` | `/leads/:id/sign-up` | Create the youth profile and set the system-owned `signed_up` status |
 
+Lead intake stores `dateOfBirth` instead of an entered age. Public and internal
+create/update requests require a real birth date whose completed Toronto age is 12–19;
+the removed `age` request field is rejected. Responses include nullable `dateOfBirth` and
+nullable derived `age`; existing Leads keep unknown birth dates rather than guessing from
+previous ages, and have no age-based program recommendation until DOB is supplied.
+
+Lead signup uses the stored birth date or the supplied `dateOfBirth`. A legacy Lead with
+no birth date must provide one before profile creation. Signup copies the exact date into
+the Youth profile and saves any correction on the Lead in the same audited transaction.
+Profile creation without cohort enrollment permits ages outside intake's 12–19 range;
+a selected cohort must still permit enrollment and match its current age bounds.
+
 Every Lead note has the `follow_up` category. Note details are editable and notes may be deleted independently of Lead status. Lead status is managed separately; staff may assign `new`, `contacted`, `eligible`, `ineligible`, `deferred`, or `closed`, while `signed_up` remains system-controlled.
 
 For lifecycle, ownership, and implementation, see the [Backend guide](README.md) and the focused documents beside this file. Local commands, testing, and deployment are routed through the root application README.

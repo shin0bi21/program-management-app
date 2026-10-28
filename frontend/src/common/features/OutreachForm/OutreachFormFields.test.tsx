@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
+import { getOutreachDateOfBirthBounds } from './dateOfBirth';
 import OutreachFormFields from './OutreachFormFields';
 import { outreachFormDefaultValues, type OutreachFormValues } from './outreachFormSchema';
 
@@ -33,8 +34,12 @@ describe('OutreachFormFields', () => {
   it('exposes the supported program age range to browser validation', () => {
     render(<TestForm />);
 
-    expect(screen.getByRole('spinbutton', { name: 'Age *' })).toHaveAttribute('min', '12');
-    expect(screen.getByRole('spinbutton', { name: 'Age *' })).toHaveAttribute('max', '19');
+    const input = screen.getByLabelText('Date of Birth *');
+    const bounds = getOutreachDateOfBirthBounds();
+    expect(input).toHaveAttribute('type', 'date');
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('min', bounds.min);
+    expect(input).toHaveAttribute('max', bounds.max);
   });
 
   it('associates controlled select errors with the visible trigger', async () => {

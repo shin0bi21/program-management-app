@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { leadIntakeDateOfBirthSchema } from './leadDateOfBirth';
 
 const optionalTrimmedString = (max: number, tooLongMessage: string) =>
   z.string().trim().max(max, tooLongMessage).optional().or(z.literal(''));
@@ -7,7 +8,7 @@ export const publicLeadSchema = z.object({
   body: z.object({
     youthFirstName: z.string().trim().min(1, 'Youth first name is required').max(120, 'Youth first name is too long'),
     youthLastName: z.string().trim().min(1, 'Youth last name is required').max(120, 'Youth last name is too long'),
-    age: z.coerce.number().int('Age must be a whole number').min(12, 'Age must be 12 or higher').max(19, 'Age must be 19 or lower'),
+    dateOfBirth: leadIntakeDateOfBirthSchema,
     school: z.string().trim().min(1, 'School is required').max(255, 'School is too long'),
     submittedByRole: z.enum(['youth', 'parent', 'guardian'], { error: 'Submitter is required' }),
     discoverySource: z.enum(['online', 'friend_family', 'school', 'community_outreach', 'other'], {

@@ -44,7 +44,7 @@ interface HomepageProgramRow {
 export type PublicLeadInput = {
   youthFirstName: string;
   youthLastName: string;
-  age: number;
+  dateOfBirth: string;
   school: string;
   submittedByRole: 'youth' | 'parent' | 'guardian';
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
@@ -109,7 +109,7 @@ export async function submitPublicLead(data: PublicLeadInput) {
     return createExternalLead({
       youthFirstName: data.youthFirstName.trim(),
       youthLastName: data.youthLastName.trim(),
-      age: data.age,
+      dateOfBirth: data.dateOfBirth,
       school: data.school.trim(),
       discoverySource: data.discoverySource,
       contactPhoneNumber: data.contactPhoneNumber.trim(),

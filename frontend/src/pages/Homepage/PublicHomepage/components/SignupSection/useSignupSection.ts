@@ -27,7 +27,7 @@ export function useSignupSection() {
       await submitPublicLead({
         youthFirstName: data.youthFirstName.trim(),
         youthLastName: data.youthLastName.trim(),
-        age: data.age,
+        dateOfBirth: data.dateOfBirth,
         school: data.school.trim(),
         submittedByRole: data.submittedByRole,
         contactPhoneNumber: data.contactPhoneNumber.trim(),

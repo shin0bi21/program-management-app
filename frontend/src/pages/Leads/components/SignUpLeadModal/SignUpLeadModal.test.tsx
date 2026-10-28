@@ -24,6 +24,7 @@ const lead: Lead = {
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
   age: 14,
+  dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: 'program-1',
   recommendedProgramName: 'Future Ready',
@@ -94,10 +95,21 @@ describe('SignUpLeadModal', () => {
     expect(cohortSelect).toHaveTextContent('Future Ready — Summer 2026');
   });
 
+  it('shows missing birth date and age without inventing a default', () => {
+    renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={{ ...lead, dateOfBirth: null, age: null }} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByLabelText('Date of Birth *')).toHaveValue('');
+    expect(screen.getByLabelText('Date of Birth *')).toBeRequired();
+
+    fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: `${new Date().getFullYear() - 16}-01-01` } });
+    expect(screen.getByText('16')).toBeInTheDocument();
+  });
+
   it('quietly excludes cohorts outside the lead age range', async () => {
     const user = {
       ...lead,
       age: 16,
+      dateOfBirth: `${new Date().getFullYear() - 16}-01-01`,
     };
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={user} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
