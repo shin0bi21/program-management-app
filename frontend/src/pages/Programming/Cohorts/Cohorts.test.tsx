@@ -265,10 +265,7 @@ describe('Cohorts', () => {
     expect(overview).not.toHaveTextContent('Unique youth reached');
     expect(overview).not.toHaveTextContent('Total visits');
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Attendance Report' })).toHaveAttribute(
-      'title',
-      'Drop In reporting is coming soon.',
-    );
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).not.toHaveAttribute('title');
     await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
     expect(screen.queryByRole('menuitem', { name: 'Manage Roster' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Add Sessions' })).not.toBeInTheDocument();

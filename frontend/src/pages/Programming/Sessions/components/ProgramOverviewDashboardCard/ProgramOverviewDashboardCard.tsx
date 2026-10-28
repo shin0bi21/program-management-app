@@ -30,7 +30,6 @@ export default function ProgramOverviewDashboardCard({
   if (program && !error && !loading && currentCohort) {
     const cohort = currentCohort;
     const enrolled = cohort.rosterMode === 'enrolled';
-    const reportDescriptionId = `program-cohort-report-${cohort.id}`;
 
     return <DashboardCard
       key={cohort.id}
@@ -43,8 +42,6 @@ export default function ProgramOverviewDashboardCard({
             size="sm"
             variant="secondary"
             disabled={!enrolled}
-            aria-describedby={!enrolled ? reportDescriptionId : undefined}
-            title={!enrolled ? 'Drop In reporting is coming soon.' : undefined}
             onClick={() => onViewReport(cohort)}
           >Attendance Report</Button>}
         </div>
@@ -55,7 +52,6 @@ export default function ProgramOverviewDashboardCard({
           <div><dt>{enrolled ? 'Enrollment' : 'Youth attended'}</dt><dd>{enrolled ? cohort.enrolledCount : cohort.uniqueAttendeeCount}</dd></div>
           <div><dt>Average attendance</dt><dd>{cohort.averageAttendance === null ? '—' : `${cohort.averageAttendance}%`}</dd></div>
         </dl>
-        {canViewYouthReport && !enrolled && <p id={reportDescriptionId} className="program-dashboard__report-notice">Drop In reporting is coming soon.</p>}
       </section>
     </DashboardCard>;
   }
