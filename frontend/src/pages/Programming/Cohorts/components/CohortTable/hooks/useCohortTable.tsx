@@ -40,7 +40,7 @@ export default function useCohortTable({
       cell: ({ row: { original: cohort } }: CellContext<ProgramCohort, unknown>) => <ActionsMenu
         ariaLabel={`More actions for ${cohort.name}`}
         items={[
-          ...(cohort.rosterMode === 'enrolled'
+          ...(cohort.enrollmentRequired
             ? [{ id: 'manage-roster', label: 'Manage Roster', onClick: () => onManageRoster(cohort) }]
             : []),
           { id: 'edit', label: 'Edit Cohort', onClick: () => onEdit(cohort) },

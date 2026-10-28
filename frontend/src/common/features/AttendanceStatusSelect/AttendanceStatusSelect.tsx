@@ -22,14 +22,14 @@ const openOptions = [
 export default function AttendanceStatusSelect({
   id,
   ariaLabel,
-  rosterMode,
+  enrollmentRequired,
   value,
   disabled = false,
   onChange,
 }: {
   id: string;
   ariaLabel: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   value: AttendanceStatus | '';
   disabled?: boolean;
   onChange: (value: AttendanceStatus | '') => void;
@@ -42,7 +42,7 @@ export default function AttendanceStatusSelect({
       disabled={disabled}
       className={statusClassName(value)}
       onChange={nextValue => onChange(nextValue as AttendanceStatus | '')}
-      options={rosterMode === 'open' ? openOptions : enrolledOptions}
+      options={!enrollmentRequired ? openOptions : enrolledOptions}
     />
   );
 }

@@ -44,7 +44,7 @@ describe('Programming settings', () => {
     vi.mocked(getCohorts).mockResolvedValue([]);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     programState.programs = [{
-      id: 'program-1', name: 'Soft Skills', description: 'Life skills', rosterMode: 'enrolled', minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+      id: 'program-1', name: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }];
     programmingApi.getProgramCycles.mockResolvedValue([{
       id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
@@ -95,7 +95,7 @@ describe('Programming settings', () => {
   it('creates programs from the settings page', async () => {
     const user = userEvent.setup();
     const created = {
-      id: 'program-2', name: 'Job Readiness', description: null, rosterMode: 'enrolled' as const, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+      id: 'program-2', name: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
     programsApi.createProgram.mockResolvedValue(created);
     render(<MemoryRouter><Programming /></MemoryRouter>);

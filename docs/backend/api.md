@@ -117,6 +117,9 @@ restricting bounds to existing cycles.
 
 Program create/update and lookup records include `defaultDayOfWeek` (lowercase weekday),
 `defaultStartTime` and `defaultEndTime` (`HH:mm`), and `timezone` (`America/Toronto`, the only supported program timezone).
+`enrollmentRequired` is a boolean (default `true`): `true` requires youth enrollment;
+`false` allows open attendance. Cohort, session, Youth participation, and public program
+records expose the same flag. Program writes reject the removed `rosterMode` field.
 Existing programs begin with Tuesday, 17:00–19:30, America/Toronto. Defaults only
 apply when creating future sessions; changing them does not rewrite saved timestamps.
 
@@ -165,7 +168,7 @@ conflicts return 409.
 `GET /public/homepage/programs` returns every program ordered by minimum age,
 with null age ranges first, and nests its next three non-cancelled sessions.
 Programs remain present when they have no upcoming sessions; names, descriptions,
-age ranges, and attendance mode come directly from the program record.
+age ranges, and enrollment requirement come directly from the program record.
 
 `GET /public/homepage/images` returns the managed images. Signup availability is
 loaded independently through `GET /public/homepage/signup`, which returns the

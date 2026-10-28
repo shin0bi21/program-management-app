@@ -15,7 +15,7 @@ vi.mock('../../cohorts.api', () => ({
 
 describe('ManageRosterModal', () => {
   const cohort = {
-    id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled' as const,
+    id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
     minAge: 12, maxAge: 15, cycleId: 'cycle-summer-2026', cycleName: 'Summer 2026',
     name: 'Summer 2026', startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active' as const,
     enrolledCount: 1, nextSessionAt: null, nextSessionId: null, averageAttendance: null,
@@ -27,7 +27,7 @@ describe('ManageRosterModal', () => {
     api.getCohortRosterYouth.mockResolvedValue([
       makeYouthProfile({
         id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', dateOfBirth: '2012-01-01',
-        cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, rosterMode: cohort.rosterMode, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }],
+        cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, enrollmentRequired: cohort.enrollmentRequired, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }],
       }),
       makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2009-01-01', schoolName: 'Central School' }),
     ]);

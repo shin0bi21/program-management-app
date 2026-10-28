@@ -661,7 +661,7 @@ describe('Cohorts and attendance API', () => {
         cycleId: mainCycleId,
       });
     expect(cohort.status).toBe(201);
-    expect(cohort.body.rosterMode).toBe('open');
+    expect(cohort.body.enrollmentRequired).toBe(false);
     openCohortId = cohort.body.id;
 
     const generated = await request(app)
@@ -768,7 +768,7 @@ describe('Cohorts and attendance API', () => {
     expect(overview.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: openCohortId,
-        rosterMode: 'open',
+        enrollmentRequired: false,
         enrolledCount: 0,
         uniqueAttendeeCount: 1,
         attendanceRecordedCount: 2,
@@ -788,7 +788,7 @@ describe('Cohorts and attendance API', () => {
       expect.objectContaining({
         id: openCohortId,
         programName: 'Drop In',
-        rosterMode: 'open',
+        enrollmentRequired: false,
         enrolledOn: null,
         presentCount: 1,
       }),

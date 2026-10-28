@@ -34,7 +34,7 @@ export default function useSessionAttendanceModal({
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
-  const isOpenRoster = session?.rosterMode === 'open';
+  const isOpenRoster = session !== null && !session.enrollmentRequired;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
   // A different session starts a fresh attendance draft and submission lifecycle.

@@ -33,7 +33,7 @@ interface HomepageProgramRow {
   programId: string;
   programName: string;
   programDescription: string | null;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
   sessionId: string | null;
@@ -334,7 +334,7 @@ async function homepagePrograms() {
       p.id AS program_id,
       p.name AS program_name,
       p.description AS program_description,
-      p.roster_mode,
+      p.enrollment_required,
       p.min_age,
       p.max_age,
       ranked.session_id,
@@ -355,7 +355,7 @@ async function homepagePrograms() {
     id: string;
     name: string;
     description: string | null;
-    rosterMode: 'enrolled' | 'open';
+    enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
     sessions: Array<{ id: string; theme: string; startsAt: string }>;
@@ -368,7 +368,7 @@ async function homepagePrograms() {
         id: row.programId,
         name: row.programName,
         description: row.programDescription,
-        rosterMode: row.rosterMode,
+        enrollmentRequired: row.enrollmentRequired,
         minAge: row.minAge,
         maxAge: row.maxAge,
         sessions: [],

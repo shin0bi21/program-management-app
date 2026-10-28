@@ -32,7 +32,7 @@ interface AttendanceBreakdown {
 }
 
 interface CohortYouthReport {
-  cohort: { id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' };
+  cohort: { id: string; name: string; programName: string; enrollmentRequired: boolean };
   youth: Array<{
     id: string;
     firstName: string;

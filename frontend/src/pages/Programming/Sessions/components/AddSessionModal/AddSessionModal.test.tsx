@@ -12,7 +12,7 @@ vi.mock('./hooks/useAddSessionModal', () => ({ default: () => ({
 describe('AddSessionModal', () => {
   it('shows one editable date and separate times', () => {
     renderWithQueryClient(<AddSessionModal programs={[{
-      id: 'p1', name: 'Art', rosterMode: 'open', minAge: null, maxAge: null,
+      id: 'p1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }]} initialProgramId="p1" onClose={vi.fn()} onSaved={vi.fn()} />);
     expect(screen.getByLabelText('Session date')).toHaveValue('2026-10-27');

@@ -9,7 +9,7 @@ import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
 const recommendedProgramId = sql`(
   SELECT program.id
   FROM programs program
-  WHERE program.roster_mode = 'enrolled'
+  WHERE program.enrollment_required = TRUE
     AND age BETWEEN program.min_age AND program.max_age
   ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
   LIMIT 1
@@ -18,7 +18,7 @@ const recommendedProgramId = sql`(
 const recommendedProgramName = sql`(
   SELECT program.name
   FROM programs program
-  WHERE program.roster_mode = 'enrolled'
+  WHERE program.enrollment_required = TRUE
     AND age BETWEEN program.min_age AND program.max_age
   ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
   LIMIT 1
@@ -263,9 +263,9 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       const cohorts = await trx<{
         id: string;
         programId: string;
-        rosterMode: 'enrolled' | 'open';
+        enrollmentRequired: boolean;
       }[]>`
-        SELECT pc.id, pc.program_id, p.roster_mode
+        SELECT pc.id, pc.program_id, p.enrollment_required
         FROM program_cohorts pc
         INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
@@ -274,7 +274,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
         FOR UPDATE OF pc
       `;
       if (!cohorts.length) throw new ConflictError('Selected cohort is unavailable');
-      if (cohorts[0].rosterMode === 'open') {
+      if (!cohorts[0].enrollmentRequired) {
         throw new ConflictError('Open attendance cohorts do not use enrollment');
       }
     }

@@ -20,7 +20,7 @@ describe('useCohorts', () => {
       startsOn: '2026-07-01',
       endsOn: '2026-08-31',
       state: 'active',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
       enrolledCount: 10,

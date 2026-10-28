@@ -19,7 +19,7 @@ describe('useAccountData', () => {
     const retryPrograms = vi.fn();
     vi.mocked(usePrograms).mockReturnValue({
       programs: [{
-        id: 'program-1', name: 'Soft Skills', rosterMode: 'enrolled', minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+        id: 'program-1', name: 'Soft Skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
       }],
       upsertProgram: vi.fn(),
       loading: false,

@@ -67,8 +67,8 @@ export default function YouthAttendanceDashboardCard({
                       variant="ghost"
                       className="attendance-card__view"
                       aria-label={`View attendance report for ${cohort.programName} · ${cohort.name}`}
-                      disabled={cohort.rosterMode === 'open'}
-                      title={cohort.rosterMode === 'open' ? undefined : 'View attendance report'}
+                      disabled={!cohort.enrollmentRequired}
+                      title={!cohort.enrollmentRequired ? undefined : 'View attendance report'}
                       onClick={() => onViewReport(cohort)}
                     >
                       <FontAwesomeIcon icon={faEye} aria-hidden="true" />
@@ -88,7 +88,7 @@ export default function YouthAttendanceDashboardCard({
                   )}
                 </div>
               </div>
-              {cohort.rosterMode === 'open' ? (
+              {!cohort.enrollmentRequired ? (
                 <p className="attendance-card__breakdown">
                   {cohort.presentCount} {cohort.presentCount === 1 ? 'visit' : 'visits'}
                 </p>

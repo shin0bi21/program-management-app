@@ -25,7 +25,7 @@ export async function createCohort(data: CreateCohortInput, actor: AccessTokenPa
       (SELECT name FROM program_cycles WHERE id = ${data.cycleId}) AS cycle_name,
       (SELECT starts_on::text FROM program_cycles WHERE id = ${data.cycleId}) AS starts_on,
       (SELECT ends_on::text FROM program_cycles WHERE id = ${data.cycleId}) AS ends_on,
-      (SELECT roster_mode FROM programs WHERE id = ${data.programId}) AS roster_mode,
+      (SELECT enrollment_required FROM programs WHERE id = ${data.programId}) AS enrollment_required,
       (SELECT min_age FROM programs WHERE id = ${data.programId}) AS min_age,
       (SELECT max_age FROM programs WHERE id = ${data.programId}) AS max_age
   `;

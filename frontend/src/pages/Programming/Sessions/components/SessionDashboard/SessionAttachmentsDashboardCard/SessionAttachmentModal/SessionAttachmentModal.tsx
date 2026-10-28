@@ -70,7 +70,7 @@ export default function SessionAttachmentModal({
                 </label>
               ))}
             </div>
-          ) : <p>{session?.rosterMode === 'open' ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
+          ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
         </fieldset>
       </form>
     </Modal>

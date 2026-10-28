@@ -22,7 +22,7 @@ interface SessionNoteDraft {
 }
 
 export interface UseSessionNoteModalOptions {
-  session: Pick<CohortSession, 'id' | 'rosterMode'> | null;
+  session: Pick<CohortSession, 'id' | 'enrollmentRequired'> | null;
   note?: SessionNote | null;
   initialYouthId?: string;
   hideYouthSelection?: boolean;

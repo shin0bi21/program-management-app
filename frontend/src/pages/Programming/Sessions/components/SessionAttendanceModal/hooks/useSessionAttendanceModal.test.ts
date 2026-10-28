@@ -21,7 +21,7 @@ vi.mock('../../../sessions.api', () => ({
   setSessionAttendance: vi.fn(),
 }));
 
-const session = makeCohortSession({ rosterMode: 'enrolled', theme: 'Communication' });
+const session = makeCohortSession({ enrollmentRequired: true, theme: 'Communication' });
 const roster = [{
   youthId: 'youth-1',
   firstName: 'Maya',
@@ -72,7 +72,7 @@ describe('useSessionAttendanceModal', () => {
 
   it('submits every checked-in youth as present for an open roster', async () => {
     vi.mocked(getSessionRoster).mockResolvedValue([]);
-    const openSession = makeCohortSession({ rosterMode: 'open', theme: 'Drop In' });
+    const openSession = makeCohortSession({ enrollmentRequired: false, theme: 'Drop In' });
     const { result } = renderWorkflow({ session: openSession });
 
     await waitFor(() => expect(result.current.rosterLoading).toBe(false));
@@ -109,7 +109,7 @@ describe('useSessionAttendanceModal', () => {
 
   it('does not submit when the initial roster could not load', async () => {
     vi.mocked(getSessionRoster).mockRejectedValue(new Error('Roster unavailable'));
-    const openSession = makeCohortSession({ rosterMode: 'open' });
+    const openSession = makeCohortSession({ enrollmentRequired: false });
     const { result } = renderWorkflow({ session: openSession });
 
     await waitFor(() => expect(result.current.rosterUnavailable).toBe(true));

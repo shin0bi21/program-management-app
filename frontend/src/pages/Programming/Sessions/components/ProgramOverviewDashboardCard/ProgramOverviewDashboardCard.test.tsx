@@ -9,12 +9,12 @@ const program: Program = {
 
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
 
-  rosterMode: 'enrolled', minAge: null, maxAge: null,
+  enrollmentRequired: true, minAge: null, maxAge: null,
 };
 const cohort: ProgramCohort = {
   id: 'cohort-1', programId: program.id, programName: program.name,
 
-  rosterMode: 'enrolled', minAge: null, maxAge: null,
+  enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycleName: 'Fall', name: 'Weekly art',
   startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
@@ -23,7 +23,7 @@ const cohort: ProgramCohort = {
 };
 const openCohort: ProgramCohort = {
   ...cohort, id: 'cohort-2', cycleName: 'Winter', name: 'Drop In art',
-  rosterMode: 'open', startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
+  enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
 };
 const makeProps = () => ({
   program, cohorts: [cohort, openCohort], canManageRoster: true, canViewYouthReport: true,

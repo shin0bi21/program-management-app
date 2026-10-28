@@ -145,11 +145,11 @@ export default function Cohorts() {
               {selection.selectedCohort ? (
                 <>
                   <dl className="cohort-overview">
-                    <div><dt>{selection.selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.rosterMode === 'enrolled' ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
+                    <div><dt>{selection.selectedCohort.enrollmentRequired ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.enrollmentRequired ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
                     <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
                   </dl>
                   <div className="cohort-overview__actions">
-                    {canWriteCohorts && selection.selectedCohort.rosterMode === 'enrolled' && <Button
+                    {canWriteCohorts && selection.selectedCohort.enrollmentRequired && <Button
                       size="sm"
                       variant="secondary"
                       onClick={() => setRosterTarget(selection.selectedCohort)}
@@ -157,7 +157,7 @@ export default function Cohorts() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
+                      disabled={!canViewYouthReport || !selection.selectedCohort.enrollmentRequired}
                       onClick={() => setReportTarget(selection.selectedCohort)}
                     >Attendance Report</Button>
                   </div>

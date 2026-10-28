@@ -6,8 +6,8 @@ import type { SetAttendanceInput } from '../../../validation/cohortSchemas';
 
 export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, sessionId);
-  const sessions = await sql<{ rosterMode: 'enrolled' | 'open' }[]>`
-    SELECT p.roster_mode
+  const sessions = await sql<{ enrollmentRequired: boolean }[]>`
+    SELECT p.enrollment_required
     FROM cohort_sessions cs
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
     INNER JOIN programs p ON p.id = pc.program_id
@@ -15,7 +15,7 @@ export async function getSessionRoster(sessionId: string, actor: AccessTokenPayl
   `;
   if (!sessions.length) throw new NotFoundError('Session not found');
 
-  if (sessions[0].rosterMode === 'open') {
+  if (!sessions[0].enrollmentRequired) {
     return sql`
       SELECT
         u.id AS youth_id,
@@ -61,8 +61,8 @@ export async function setSessionAttendance(
   await assertCanAccessSession(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const sessions = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-      SELECT cs.id, p.roster_mode
+    const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT cs.id, p.enrollment_required
       FROM cohort_sessions cs
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
       INNER JOIN programs p ON p.id = pc.program_id
@@ -72,7 +72,7 @@ export async function setSessionAttendance(
 
     const submittedIds = data.records.map(record => record.youthId);
 
-    if (sessions[0].rosterMode === 'open') {
+    if (!sessions[0].enrollmentRequired) {
       if (data.records.some(record => record.status !== 'present')) {
         throw new ConflictError('Open sessions only record whether a youth attended');
       }

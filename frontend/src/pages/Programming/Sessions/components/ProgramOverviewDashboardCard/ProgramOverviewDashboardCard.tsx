@@ -29,7 +29,7 @@ export default function ProgramOverviewDashboardCard({
 
   if (program && !error && !loading && currentCohort) {
     const cohort = currentCohort;
-    const enrolled = cohort.rosterMode === 'enrolled';
+    const enrolled = cohort.enrollmentRequired;
 
     return <DashboardCard
       key={cohort.id}

@@ -8,7 +8,7 @@ const roster = [
 ];
 
 describe('SessionYouthChecklist', () => {
-  it('renders loading, error, and roster-mode empty states', () => {
+  it('renders loading, error, and enrollment-dependent empty states', () => {
     const props = {
       roster: [],
       selectedYouthIds: [],
@@ -16,22 +16,22 @@ describe('SessionYouthChecklist', () => {
       onToggle: vi.fn(),
     } as const;
     const view = render(
-      <SessionYouthChecklist {...props} rosterMode="enrolled" loading error={undefined} />,
+      <SessionYouthChecklist {...props} enrollmentRequired={true} loading error={undefined} />,
     );
     expect(screen.getByText('Loading youth…')).toBeInTheDocument();
 
     view.rerender(
-      <SessionYouthChecklist {...props} rosterMode="enrolled" loading={false} error="Roster failed" />,
+      <SessionYouthChecklist {...props} enrollmentRequired={true} loading={false} error="Roster failed" />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Roster failed');
 
     view.rerender(
-      <SessionYouthChecklist {...props} rosterMode="open" loading={false} error={undefined} />,
+      <SessionYouthChecklist {...props} enrollmentRequired={false} loading={false} error={undefined} />,
     );
     expect(screen.getByText('No youth have checked into this session yet.')).toBeInTheDocument();
 
     view.rerender(
-      <SessionYouthChecklist {...props} rosterMode="enrolled" loading={false} error={undefined} />,
+      <SessionYouthChecklist {...props} enrollmentRequired={true} loading={false} error={undefined} />,
     );
     expect(screen.getByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
   });
@@ -40,7 +40,7 @@ describe('SessionYouthChecklist', () => {
     const onToggle = vi.fn();
     const view = render(
       <SessionYouthChecklist
-        rosterMode="enrolled"
+        enrollmentRequired={true}
         roster={roster}
         selectedYouthIds={['youth-1']}
         loading={false}
@@ -55,7 +55,7 @@ describe('SessionYouthChecklist', () => {
 
     view.rerender(
       <SessionYouthChecklist
-        rosterMode="enrolled"
+        enrollmentRequired={true}
         roster={roster}
         selectedYouthIds={['youth-1']}
         loading={false}

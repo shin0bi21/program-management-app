@@ -8,9 +8,9 @@ export default function useProgramTable(onEdit: (program: Program) => void, onMa
   const columns = useMemo<TableColumnDef<Program>[]>(() => [
     { id: 'name', header: 'Program', accessorFn: program => program.name },
     {
-      id: 'attendance',
-      header: 'Attendance',
-      accessorFn: program => program.rosterMode === 'open' ? 'Open attendance' : 'Enrollment required',
+      id: 'enrollmentRequired',
+      header: 'Enrollment Required',
+      accessorFn: program => program.enrollmentRequired ? 'Yes' : 'No',
     },
     {
       id: 'ages',

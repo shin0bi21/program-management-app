@@ -48,7 +48,7 @@ const session: CohortSession = {
   cohortName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   theme: 'Communication',
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:00:00.000Z',

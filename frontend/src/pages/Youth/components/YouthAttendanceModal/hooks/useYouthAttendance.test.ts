@@ -12,7 +12,7 @@ vi.mock('../youthAttendance.api', () => ({
 }));
 
 const attendance: YouthCohortAttendance = {
-  cohort: { id: 'cohort-1', name: 'Cohort', programName: 'Program', rosterMode: 'enrolled' },
+  cohort: { id: 'cohort-1', name: 'Cohort', programName: 'Program', enrollmentRequired: true },
   sessions: [{
     id: 'session-1',
     sessionTypeName: 'Regular',

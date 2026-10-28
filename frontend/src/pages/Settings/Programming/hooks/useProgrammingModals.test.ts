@@ -14,7 +14,7 @@ describe('useProgrammingModals', () => {
       id: 'program-1',
       name: 'Skills',
       description: null,
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: null,
       maxAge: null, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }));

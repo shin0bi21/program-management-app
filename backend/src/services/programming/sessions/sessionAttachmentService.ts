@@ -73,14 +73,14 @@ export async function createSessionAttachment(
   try {
     await sql.begin(async tx => {
       const trx = asTransactionSql(tx);
-      const sessions = await trx<{ rosterMode: 'enrolled' | 'open' }[]>`
-        SELECT p.roster_mode FROM cohort_sessions cs
+      const sessions = await trx<{ enrollmentRequired: boolean }[]>`
+        SELECT p.enrollment_required FROM cohort_sessions cs
         INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
         INNER JOIN programs p ON p.id = pc.program_id
         WHERE cs.id = ${sessionId} FOR UPDATE OF cs
       `;
       if (!sessions.length) throw new NotFoundError('Session not found');
-      await assertYouthEligibility(trx, sessionId, sessions[0].rosterMode, data.youthIds);
+      await assertYouthEligibility(trx, sessionId, sessions[0].enrollmentRequired, data.youthIds);
       const rows = await trx<{ id: string }[]>`
         INSERT INTO session_attachments (
           session_id, title, description, storage_key, original_filename,
@@ -116,8 +116,8 @@ export async function updateSessionAttachment(
   await assertCanAccessSession(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const attachments = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-      SELECT sa.id, p.roster_mode
+    const attachments = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT sa.id, p.enrollment_required
       FROM session_attachments sa
       INNER JOIN cohort_sessions cs ON cs.id = sa.session_id
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
@@ -127,7 +127,7 @@ export async function updateSessionAttachment(
     `;
     if (!attachments.length) throw new NotFoundError('Session attachment not found');
 
-    await assertYouthEligibility(trx, sessionId, attachments[0].rosterMode, data.youthIds);
+    await assertYouthEligibility(trx, sessionId, attachments[0].enrollmentRequired, data.youthIds);
     await trx`
       UPDATE session_attachments
       SET title = ${data.title},
@@ -199,11 +199,11 @@ export async function getSessionAttachmentFile(
 async function assertYouthEligibility(
   trx: ReturnType<typeof asTransactionSql>,
   sessionId: string,
-  rosterMode: 'enrolled' | 'open',
+  enrollmentRequired: boolean,
   youthIds: string[],
 ) {
   if (!youthIds.length) return;
-  const eligible = rosterMode === 'open'
+  const eligible = !enrollmentRequired
     ? await trx<{ youthId: string }[]>`
         SELECT ar.youth_id FROM attendance_records ar
         WHERE ar.session_id = ${sessionId} AND ar.status = 'present'

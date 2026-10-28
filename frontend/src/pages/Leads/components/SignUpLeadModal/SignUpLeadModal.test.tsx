@@ -40,7 +40,7 @@ const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Future Ready',
-  rosterMode: 'enrolled' as const,
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
@@ -64,7 +64,7 @@ describe('SignUpLeadModal', () => {
     vi.mocked(getCohorts).mockResolvedValue([
       cohort,
       { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
-      { ...cohort, id: 'cohort-open', name: 'Drop In', rosterMode: 'open' },
+      { ...cohort, id: 'cohort-open', name: 'Drop In', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue(lead);
   });
