@@ -66,23 +66,22 @@ describe('useCohortRoster', () => {
     ]);
   });
 
-  it('loads every youth and preserves controls while cohort identity is unchanged', async () => {
+  it('loads cohort roster candidates and preserves controls while cohort identity is unchanged', async () => {
     const { result, rerender } = renderHook(
       ({ target }: { target: ProgramCohort | null }) => useCohortRoster(target),
       { initialProps: { target: cohort }, wrapper: createWrapper() },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(getCohortRosterYouth).toHaveBeenCalledWith(cohort.id, { signal: expect.any(AbortSignal) });
     expect(result.current.youth.map((profile) => profile.id)).toEqual(['enrolled', 'available']);
 
     act(() => result.current.setSearch('available'));
-    act(() => result.current.setMinimumAge('16'));
     rerender({ target: { ...cohort, name: 'Updated label' } });
     expect(result.current.search).toBe('available');
-    expect(result.current.minimumAge).toBe('16');
 
     rerender({ target: { ...cohort, id: 'cohort-2' } });
     await waitFor(() => expect(result.current.search).toBe(''));
-    expect(result.current.minimumAge).toBe('');
+    await waitFor(() => expect(getCohortRosterYouth).toHaveBeenCalledWith('cohort-2', { signal: expect.any(AbortSignal) }));
   });
 });

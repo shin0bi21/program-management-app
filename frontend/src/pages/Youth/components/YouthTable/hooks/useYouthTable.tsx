@@ -3,7 +3,6 @@ import type { CellContext } from '@tanstack/react-table';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import { calculateAge } from '../../../../../common/utils/time';
 import type { YouthProfile } from '../../../types';
 
 interface UseYouthTableOptions {
@@ -16,7 +15,7 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
   const columns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
     { id: 'firstName', header: 'First Name', accessorFn: profile => profile.firstName },
     { id: 'lastName', header: 'Last Name', accessorFn: profile => profile.lastName },
-    { id: 'age', header: 'Age', accessorFn: profile => calculateAge(profile.dateOfBirth), size: 100 },
+    { id: 'age', header: 'Age', accessorFn: profile => profile.age ?? '—', size: 100 },
     { id: 'school', header: 'School', accessorFn: profile => profile.schoolName ?? '—' },
     { id: 'grade', header: 'Grade', accessorFn: profile => profile.gradeLevel ?? '—', size: 100 },
     {

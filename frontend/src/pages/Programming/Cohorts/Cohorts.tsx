@@ -30,6 +30,7 @@ export default function Cohorts() {
   // Permissions and application services.
   const { permissions, role } = useAuth();
   const canWriteCohorts = permissions.includes('write:programs');
+  const canManageRoster = permissions.includes('write:enrollments') && permissions.includes('read:youth_profiles');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data and preferences.
@@ -78,6 +79,7 @@ export default function Cohorts() {
   // Table configuration.
   const columns = useCohortTable({
     canWrite: canWriteCohorts,
+    canManageRoster,
     onManageRoster: setRosterTarget,
     onEdit: setEditCohortTarget,
     onDelete: actions.requestDelete,
@@ -149,7 +151,7 @@ export default function Cohorts() {
                     <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
                   </dl>
                   <div className="cohort-overview__actions">
-                    {canWriteCohorts && selection.selectedCohort.enrollmentRequired && <Button
+                    {canManageRoster && selection.selectedCohort.enrollmentRequired && <Button
                       size="sm"
                       variant="secondary"
                       onClick={() => setRosterTarget(selection.selectedCohort)}

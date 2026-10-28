@@ -8,6 +8,7 @@ export interface YouthProfile {
     status: 'invited' | 'active' | 'inactive';
   } | null;
   dateOfBirth: string | null;
+  age: number | null;
   schoolId: string | null;
   schoolName: string | null;
   cohorts: Array<{

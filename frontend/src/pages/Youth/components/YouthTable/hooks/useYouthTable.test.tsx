@@ -50,4 +50,13 @@ describe('useYouthTable', () => {
     expect(onEdit).toHaveBeenCalledWith(profile);
     expect(onAddNote).toHaveBeenCalledWith(profile);
   });
+
+  it('displays the authoritative age instead of recalculating the birth date', () => {
+    const { result } = renderHook(() => useYouthTable({ canWrite: false, onEdit: vi.fn(), onAddNote: vi.fn() }));
+    const ageColumn = result.current.columns.find(column => column.id === 'age')!;
+    if (!('accessorFn' in ageColumn)) throw new Error('Age column requires an accessor');
+
+    expect(ageColumn.accessorFn?.(makeYouthProfile({ dateOfBirth: '2000-01-01', age: 14 }), 0)).toBe(14);
+    expect(ageColumn.accessorFn?.(makeYouthProfile({ age: null }), 0)).toBe('—');
+  });
 });

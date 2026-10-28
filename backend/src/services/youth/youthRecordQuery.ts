@@ -6,6 +6,7 @@ export type YouthRecordRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
   DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
   DbRow<Pick<Schools, 'name'>> & {
+    age: number | null;
     status: 'active' | 'inactive';
     cohorts: Array<{
       id: string;
@@ -44,6 +45,7 @@ export const youthRecordColumns = sql`
   u.last_name,
   ${youthActiveStatus} AS status,
   yp.date_of_birth,
+  EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, yp.date_of_birth))::int AS age,
   yp.school_id,
   s.name AS school_name,
   yp.grade_level,

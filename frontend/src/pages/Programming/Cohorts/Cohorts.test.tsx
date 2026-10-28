@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 }));
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
-  permissions: ['read:programs', 'write:programs', 'write:enrollments', 'read:attendance', 'read:sessions'],
+  permissions: ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'],
 }));
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
@@ -80,7 +80,7 @@ describe('Cohorts', () => {
       return value;
     });
     auth.role = 'admin';
-    auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:attendance', 'read:sessions'];
+    auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
     programState.programs = [{
       id: 'program-1',
       name: 'Soft Skills',
@@ -147,6 +147,19 @@ describe('Cohorts', () => {
     );
 
     expect(screen.queryByRole('button', { name: '+ Add Cohort' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [['read:programs', 'write:enrollments', 'read:youth_profiles'], true],
+    [['read:programs', 'write:programs', 'read:youth_profiles'], false],
+    [['read:programs', 'write:enrollments'], false],
+  ] as const)('gates roster management by enrollment and youth access: %j', async (permissions, expected) => {
+    auth.permissions = [...permissions];
+    const user = userEvent.setup();
+    render(<MemoryRouter future={routerFuture}><Cohorts /></MemoryRouter>);
+
+    await user.click((await screen.findByText('Summer 2026')).closest('tr')!);
+    expect(Boolean(screen.queryByRole('button', { name: 'Manage Roster' }))).toBe(expected);
   });
 
   // Saved preferences and the current view.

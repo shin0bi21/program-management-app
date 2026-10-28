@@ -71,6 +71,10 @@ export const cohortYouthReportSchema = z.object({
   query: z.object({ youthId: z.string().uuid('Invalid youth ID').optional() }),
 });
 
+export const cohortRosterSchema = z.object({
+  params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
+});
+
 export const enrollYouthSchema = z.object({
   params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
   body: z.object({

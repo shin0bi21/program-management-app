@@ -1,6 +1,7 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertCanAccessCohort } from '../../../policies/programAccessPolicy';
+import { lockAssignmentProgram } from './assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/cohortSchemas';
 
@@ -8,24 +9,49 @@ export async function enrollYouth(cohortId: string, data: EnrollYouthInput, acto
   await assertCanAccessCohort(actor, cohortId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const cohorts = await trx<{ id: string; enrollmentRequired: boolean }[]>`
-      SELECT pc.id, p.enrollment_required
+    const [assignment] = await trx<{ programId: string }[]>`
+      SELECT program_id FROM program_cohorts WHERE id = ${cohortId}
+    `;
+    if (!assignment) throw new NotFoundError('Cohort not found');
+
+    // Match assignment mutations: lock the program before its cohort, then validate current values.
+    await lockAssignmentProgram(trx, assignment.programId, actor);
+
+    const cohorts = await trx<{
+      id: string;
+      enrollmentRequired: boolean;
+      minAge: number | null;
+      maxAge: number | null;
+    }[]>`
+      SELECT pc.id, p.enrollment_required, p.min_age, p.max_age
       FROM program_cohorts pc
       INNER JOIN programs p ON p.id = pc.program_id
       WHERE pc.id = ${cohortId}
+      FOR UPDATE OF pc
     `;
     if (!cohorts.length) throw new NotFoundError('Cohort not found');
     if (!cohorts[0].enrollmentRequired) {
       throw new ConflictError('Open attendance cohorts do not use enrollment');
     }
 
-    const youth = await trx<{ id: string }[]>`
-      SELECT user_id AS id
+    const age = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
+    const youth = await trx<{ id: string; age: number | null }[]>`
+      SELECT user_id AS id, ${age} AS age
       FROM youth_profiles
       WHERE user_id = ANY(${sql.array(data.youthIds)}::uuid[])
+      ORDER BY user_id
+      FOR SHARE
     `;
     if (youth.length !== data.youthIds.length) {
       throw new NotFoundError('One or more youth profiles were not found');
+    }
+
+    const outsideAgeRange = youth.some(({ age: youthAge }) => (
+      (cohorts[0].minAge !== null && (youthAge === null || youthAge < cohorts[0].minAge))
+      || (cohorts[0].maxAge !== null && (youthAge === null || youthAge > cohorts[0].maxAge))
+    ));
+    if (outsideAgeRange) {
+      throw new ConflictError('One or more youth profiles do not meet this cohort age range');
     }
 
     return trx`
