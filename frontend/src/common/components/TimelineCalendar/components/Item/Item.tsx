@@ -37,33 +37,6 @@ interface ItemProps {
   className?: string;
 }
 
-function getVisibleItemAnchor(trigger: HTMLButtonElement | null, clientX?: number) {
-  if (!trigger) return null;
-
-  const periodCells = trigger.closest('.row')
-    ?.querySelectorAll<HTMLElement>('.cell');
-  // Ranged items can extend offscreen, so anchor details to the hovered visible period.
-  const hoveredPeriod = clientX === undefined || clientX <= 0
-    ? undefined
-    : [...(periodCells ?? [])].find(cell => {
-      const bounds = cell.getBoundingClientRect();
-
-      return clientX >= bounds.left && clientX < bounds.right;
-    });
-
-  const itemBounds = trigger.getBoundingClientRect();
-  const periodBounds = hoveredPeriod?.getBoundingClientRect();
-  const anchorLeft = periodBounds ? Math.max(periodBounds.left, itemBounds.left) : itemBounds.left;
-  const anchorRight = periodBounds ? Math.min(periodBounds.right, itemBounds.right) : itemBounds.right;
-
-  return new DOMRect(
-    anchorLeft,
-    itemBounds.top,
-    anchorRight - anchorLeft,
-    itemBounds.height,
-  );
-}
-
 export default function Item({
   id,
   ariaLabel,
@@ -115,7 +88,6 @@ export default function Item({
     detailAnchorRef.current = null;
     setDetailPosition(null);
   };
-
 
   useLayoutEffect(() => {
     if (pendingMenuAnchorX === null) return;
@@ -321,5 +293,32 @@ export default function Item({
         document.body,
       )}
     </>
+  );
+}
+
+function getVisibleItemAnchor(trigger: HTMLButtonElement | null, clientX?: number) {
+  if (!trigger) return null;
+
+  const periodCells = trigger.closest('.row')
+    ?.querySelectorAll<HTMLElement>('.cell');
+  // Ranged items can extend offscreen, so anchor details to the hovered visible period.
+  const hoveredPeriod = clientX === undefined || clientX <= 0
+    ? undefined
+    : [...(periodCells ?? [])].find(cell => {
+      const bounds = cell.getBoundingClientRect();
+
+      return clientX >= bounds.left && clientX < bounds.right;
+    });
+
+  const itemBounds = trigger.getBoundingClientRect();
+  const periodBounds = hoveredPeriod?.getBoundingClientRect();
+  const anchorLeft = periodBounds ? Math.max(periodBounds.left, itemBounds.left) : itemBounds.left;
+  const anchorRight = periodBounds ? Math.min(periodBounds.right, itemBounds.right) : itemBounds.right;
+
+  return new DOMRect(
+    anchorLeft,
+    itemBounds.top,
+    anchorRight - anchorLeft,
+    itemBounds.height,
   );
 }
